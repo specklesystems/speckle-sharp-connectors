@@ -19,7 +19,7 @@ namespace Speckle.Connectors.Grasshopper8.Components.Operations.Receive;
 
 public class ReceiveComponentOutput
 {
-  public SpeckleCollectionGoo RootObject { get; set; }
+  public SpeckleCollectionWrapperGoo RootObject { get; set; }
 }
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
@@ -117,14 +117,14 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collGen = new CollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
+    var collGen = new GrasshopperCollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
 
     foreach (var map in localToGlobalMaps)
     {
       try
       {
-        var converted = Convert(map.AtomicObject);
-        var path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+        List<GeometryBase> converted = Convert(map.AtomicObject);
+        List<Collection> path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
 
         foreach (var matrix in map.Matrix)
         {
@@ -135,13 +135,13 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
         // note one to many not handled too nice here
         foreach (var geometryBase in converted)
         {
-          var gh = new SpeckleObject()
+          var gh = new SpeckleObjectWrapper()
           {
             Base = map.AtomicObject,
-            Path = path,
+            Path = path.Select(o => o.name).ToList(),
             GeometryBase = geometryBase
           };
-          collGen.AppendSpeckleGrasshopperObject(gh);
+          collGen.AppendSpeckleGrasshopperObject(gh, path);
         }
       }
       catch (ConversionException)
@@ -151,7 +151,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    var goo = new SpeckleCollectionGoo(collGen.RootCollection);
+    var goo = new SpeckleCollectionWrapperGoo(collGen.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
   }
 
@@ -174,53 +174,5 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     throw new SpeckleException("Failed to convert input to rhino");
-  }
-}
-
-// NOTE: We will need GrasshopperCollections (with an extra path element)
-// these will need to be handled now
-internal sealed class CollectionRebuilder
-{
-  public Collection RootCollection { get; }
-
-  private readonly Dictionary<string, Collection> _cache = new();
-
-  public CollectionRebuilder(Collection baseCollection)
-  {
-    RootCollection = new Collection() { name = baseCollection.name, applicationId = baseCollection.applicationId };
-  }
-
-  public void AppendSpeckleGrasshopperObject(SpeckleObject speckleGrasshopperObject)
-  {
-    var collection = GetOrCreateCollectionFromPath(speckleGrasshopperObject.Path);
-    collection.elements.Add(speckleGrasshopperObject);
-  }
-
-  private Collection GetOrCreateCollectionFromPath(IEnumerable<Collection> path)
-  {
-    // TODO - this flows but it can be optimised (ie, concat path first, check cache, iterate only if not in cache)
-    var currentLayerName = "";
-    Collection previousCollection = RootCollection;
-    foreach (var collection in path)
-    {
-      currentLayerName += collection.name;
-      if (_cache.TryGetValue(currentLayerName, out Collection col))
-      {
-        previousCollection = col;
-        continue;
-      }
-
-      var newCollection = new Collection() { name = collection.name, applicationId = collection.applicationId };
-      if (collection["path"] != null)
-      {
-        newCollection["path"] = collection["path"];
-      }
-      _cache[currentLayerName] = newCollection;
-      previousCollection.elements.Add(newCollection);
-
-      previousCollection = newCollection;
-    }
-
-    return previousCollection;
   }
 }

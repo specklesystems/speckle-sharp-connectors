@@ -60,6 +60,9 @@ public static class DisplayMeshExtractor
 #pragma warning restore CA2000
         renderMeshes = [subdMesh];
         break;
+      case RG.Extrusion extrusion:
+        renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ToBrep(), new(0.05, 0.05));
+        break;
       default:
         throw new ConversionException($"Unsupported object for display mesh generation {geometry.GetType().FullName}");
     }

@@ -33,26 +33,29 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
-  private List<SpeckleObject> _previewObjects = new();
+  private List<SpeckleObjectWrapper> _previewObjects = new();
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    SpeckleCollectionGoo res = new();
+    SpeckleCollectionWrapperGoo res = new();
     da.GetData(0, ref res);
     var c = res.Value;
     if (c is null)
     {
       return;
     }
-    Name = c.name;
-    NickName = c.name;
+    Name = c.Collection.name;
+    NickName = c.Collection.name;
 
     var objects = c
-      .elements.Where(el => el is not Collection)
-      .OfType<SpeckleObject>()
-      .Select(o => new SpeckleObjectGoo(o))
+      .Collection.elements.Where(el => el is not SpeckleCollectionWrapper)
+      .OfType<SpeckleObjectWrapper>()
+      .Select(o => new SpeckleObjectWrapperGoo(o))
       .ToList();
-    var collections = c.elements.Where(el => el is Collection).OfType<Collection>().ToList();
+    var collections = c
+      .Collection.elements.Where(el => el is SpeckleCollectionWrapper)
+      .OfType<SpeckleCollectionWrapper>()
+      .ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -69,26 +72,26 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       outputParams.Add(new OutputParamWrapper(param, objects, null));
     }
 
-    foreach (var collection in collections)
+    foreach (SpeckleCollectionWrapper collection in collections)
     {
       // skip empty
-      if (collection.elements.Count == 0)
+      if (collection.Collection.elements.Count == 0)
       {
         continue;
       }
 
-      var hasInnerCollections = collection.elements.Any(el => el is Collection);
-      var topology = collection["topology"] as string; // Note: this is a reminder for the future
-      var nickName = collection.name;
-      if (collection.name.Length > 16)
+      var hasInnerCollections = collection.Collection.elements.Any(el => el is SpeckleCollectionWrapper);
+      var topology = collection.Topology; // Note: this is a reminder for the future
+      var nickName = collection.Collection.name;
+      if (collection.Collection.name.Length > 16)
       {
-        nickName = collection.name[..3];
-        nickName += "..." + collection.name[^3..];
+        nickName = collection.Collection.name[..3];
+        nickName += "..." + collection.Collection.name[^3..];
       }
 
       var param = new Param_GenericObject()
       {
-        Name = collection.name,
+        Name = collection.Collection.name,
         NickName = nickName,
         Access = hasInnerCollections
           ? GH_ParamAccess.item
@@ -98,15 +101,18 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       };
       if (!hasInnerCollections)
       {
-        _previewObjects.AddRange(collection.elements.Cast<SpeckleObject>());
+        _previewObjects.AddRange(collection.Collection.elements.Cast<SpeckleObjectWrapper>());
       }
 
       outputParams.Add(
         new OutputParamWrapper(
           param,
           hasInnerCollections
-            ? new SpeckleCollectionGoo(collection)
-            : collection.elements.OfType<SpeckleObject>().Select(o => new SpeckleObjectGoo(o)).ToList(),
+            ? new SpeckleCollectionWrapperGoo(collection)
+            : collection
+              .Collection.elements.OfType<SpeckleObjectWrapper>()
+              .Select(o => new SpeckleObjectWrapperGoo(o))
+              .ToList(),
           topology
         )
       );
@@ -127,7 +133,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     {
       _previewObjects = new();
 
-      FlattenForPreview(c);
+      FlattenForPreview(c.Collection);
       for (int i = 0; i < outputParams.Count; i++)
       {
         var outParam = Params.Output[i];
@@ -165,7 +171,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         FlattenForPreview(subCol);
       }
 
-      if (element is SpeckleObject sg)
+      if (element is SpeckleObjectWrapper sg)
       {
         _previewObjects.Add(sg);
         var box = sg.GeometryBase.GetBoundingBox(false);

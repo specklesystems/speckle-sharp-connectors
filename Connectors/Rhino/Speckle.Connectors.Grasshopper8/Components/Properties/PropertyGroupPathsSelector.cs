@@ -21,7 +21,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
   {
     var objectPropertyGroups = VolatileData
       .AllData(true)
-      .OfType<SpeckleObjectGoo>()
+      .OfType<SpeckleObjectWrapperGoo>()
       .Select(goo => goo.Value.Base["properties"] is Dictionary<string, object?> dict ? dict : null)
       .Where(dict => dict != null)
       .Cast<Dictionary<string, object?>>()

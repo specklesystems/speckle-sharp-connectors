@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.Grasshopper8.HostApp;
@@ -34,7 +35,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    var rootCollection = new Collection() { name = "Unnamed", applicationId = InstanceGuid.ToString() };
+    string rootName = "Unnamed";
+    Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
+    SpeckleCollectionWrapper rootSpeckleCollectionWrapper = new(rootCollection, new() { rootName }, null);
+
     foreach (var inputParam in Params.Input)
     {
       var data = inputParam.VolatileData.AllData(true).ToList();
@@ -43,8 +47,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      var inputCollections = data.OfType<SpeckleCollectionGoo>().Empty().ToList();
-      var inputNonCollections = data.Where(t => t is not SpeckleCollectionGoo).Empty().ToList();
+      var inputCollections = data.OfType<SpeckleCollectionWrapperGoo>().Empty().ToList();
+      var inputNonCollections = data.Where(t => t is not SpeckleCollectionWrapperGoo).Empty().ToList();
       if (inputCollections.Count != 0 && inputNonCollections.Count != 0)
       {
         // TODO: error out! we want to disallow setting objects and collections in the same parent collection
@@ -54,16 +58,28 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         );
         return;
       }
-      var childCollection = new Collection(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
+
+      List<string> childPath = new() { rootName };
+      childPath.Add(inputParam.NickName);
+      Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
+      SpeckleCollectionWrapper childSpeckleCollectionWrapper =
+        new(childCollection, childPath, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
 
       // if on this port we're only receiving collections, we should become "pass-through" to not create
       // needless nesting
       if (inputCollections.Count == data.Count)
       {
         var nameTest = new HashSet<string>();
-        foreach (var collection in inputCollections)
+        foreach (SpeckleCollectionWrapperGoo collection in inputCollections)
         {
-          foreach (var subCollectionName in collection.Value.elements.OfType<Collection>().Select(v => v.name))
+          // update the speckle collection path
+          collection.Value.Path = new ObservableCollection<string>(childPath);
+
+          foreach (
+            string subCollectionName in collection
+              .Value.Collection.elements.OfType<SpeckleCollectionWrapper>()
+              .Select(v => v.Collection.name)
+          )
           {
             var hasNotSeenNameBefore = nameTest.Add(subCollectionName);
             if (!hasNotSeenNameBefore)
@@ -75,28 +91,29 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
               return;
             }
           }
-          childCollection.elements.AddRange(collection.Value.elements);
+
+          childSpeckleCollectionWrapper.Collection.elements.AddRange(collection.Value.Collection.elements);
         }
-        rootCollection.elements.Add(childCollection);
+
+        rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
         continue;
       }
 
-      childCollection["topology"] = GrasshopperHelpers.GetParamTopology(inputParam);
-
       foreach (var obj in data)
       {
-        SpeckleObjectGoo goo = new();
-        if (goo.CastFrom(obj))
+        SpeckleObjectWrapperGoo wrapperGoo = new();
+        if (wrapperGoo.CastFrom(obj))
         {
-          childCollection.elements.Add(goo.Value);
-          //TODO: add collection path to goo
+          wrapperGoo.Value.Path = childPath;
+          wrapperGoo.Value.Parent = childSpeckleCollectionWrapper;
+          childSpeckleCollectionWrapper.Collection.elements.Add(wrapperGoo.Value);
         }
       }
 
-      rootCollection.elements.Add(childCollection);
+      rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
     }
 
-    dataAccess.SetData(0, new SpeckleCollectionGoo(rootCollection));
+    dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootSpeckleCollectionWrapper));
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)

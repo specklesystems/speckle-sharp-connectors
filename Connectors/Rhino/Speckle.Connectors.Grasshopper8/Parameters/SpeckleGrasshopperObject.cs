@@ -7,18 +7,20 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObject : Base
+public class SpeckleObjectWrapper : Base
 {
   public required Base Base { get; set; }
   public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
-  public List<Collection> Path { get; set; } = new();
+
+  // The list of layer/collection names that forms the full path to this object
+  public List<string> Path { get; set; } = new();
+  public SpeckleCollectionWrapper? Parent { get; set; }
   public Dictionary<string, string> UserStrings { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
@@ -114,9 +116,40 @@ public class SpeckleObject : Base
         break;
     }
   }
+
+  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  {
+    // get or make layers
+    if (!layersAlreadyCreated && bakeLayerIndex < 0)
+    {
+      if (Path.Count > 0 && Parent != null)
+      {
+        bakeLayerIndex = Parent.CreateLayerByPath(doc, Path);
+      }
+    }
+
+    // create attributes
+    using ObjectAttributes att = new() { Name = Name };
+
+    if (Color is int argb)
+    {
+      att.ObjectColor = System.Drawing.Color.FromArgb(argb);
+      att.ColorSource = ObjectColorSource.ColorFromObject;
+      att.LayerIndex = bakeLayerIndex;
+    }
+
+    foreach (var kvp in UserStrings)
+    {
+      att.SetUserString(kvp.Key, kvp.Value);
+    }
+
+    // add to doc
+    Guid guid = doc.Objects.Add(GeometryBase, att);
+    obj_ids.Add(guid);
+  }
 }
 
-public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckleGoo, IGH_BakeAwareObject
+public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -130,22 +163,22 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
   {
     switch (source)
     {
-      case SpeckleObject speckleGrasshopperObject:
+      case SpeckleObjectWrapper speckleGrasshopperObject:
         Value = speckleGrasshopperObject;
         return true;
-      case GH_Goo<SpeckleObject> speckleGrasshopperObjectGoo:
+      case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
         var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
-        Value = new SpeckleObject() { GeometryBase = gooGB, Base = gooConverted };
+        Value = new SpeckleObjectWrapper() { GeometryBase = gooGB, Base = gooConverted };
         return true;
       case ModelObject modelObject:
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          SpeckleObject so =
+          SpeckleObjectWrapper so =
             new()
             {
               GeometryBase = modelGB,
@@ -176,7 +209,7 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
       return true;
     }
 
-    // TODO: cast to material, etc.
+    // TODO: cast to material, modle object, etc.
 
     return false;
   }
@@ -191,29 +224,17 @@ public class SpeckleObjectGoo : GH_Goo<SpeckleObject>, IGH_PreviewData, ISpeckle
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
-
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
-  {
-    // first create collections
-    // create attributes
-
-    // then bake
-  }
-
   public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
 
-  public bool IsBakeCapable => true;
-
-  public SpeckleObjectGoo(SpeckleObject value)
+  public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {
     Value = value;
   }
 
-  public SpeckleObjectGoo() { }
+  public SpeckleObjectWrapperGoo() { }
 }
 
-public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>
+public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject
 {
   public SpeckleObjectParam()
     : this(GH_ParamAccess.item) { }
@@ -230,4 +251,32 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectGoo>
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
 
   protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SO");
+
+  public bool IsBakeCapable =>
+    // False if no data
+    !VolatileData.IsEmpty;
+
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  {
+    // Iterate over all data stored in the parameter
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleObjectWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
+
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  {
+    // Iterate over all data stored in the parameter
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleObjectWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
 }

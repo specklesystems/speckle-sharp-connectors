@@ -48,10 +48,10 @@ public class SendAsyncComponent : GH_AsyncComponent
   public string? Url { get; set; }
   public Client ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
-  public SpeckleCollectionGoo? RootCollection { get; set; }
+  public SpeckleCollectionWrapperGoo? RootCollection { get; set; }
 
   public SpeckleUrlModelResource? OutputParam { get; set; }
-  public SendOperation<SpeckleCollectionGoo> SendOperation { get; private set; }
+  public SendOperation<SpeckleCollectionWrapperGoo> SendOperation { get; private set; }
   public static IServiceScope? Scope { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -130,7 +130,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   {
     // Dependency Injection
     Scope = PriorityLoader.Container.CreateScope();
-    SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionGoo>>();
+    SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     var rhinoConversionSettingsFactory = Scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
     Scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
@@ -249,15 +249,15 @@ public class SendAsyncComponent : GH_AsyncComponent
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.ToFormattedString());
     }
 
-    SpeckleCollectionGoo rootCollection = new();
-    da.GetData(1, ref rootCollection);
-    if (rootCollection is null)
+    SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
+    da.GetData(1, ref rootCollectionWrapper);
+    if (rootCollectionWrapper is null)
     {
       RootCollection = null;
       TriggerAutoSave();
       return;
     }
-    RootCollection = rootCollection;
+    RootCollection = rootCollectionWrapper;
   }
 }
 
@@ -347,7 +347,7 @@ public class SendComponentWorker : WorkerInstance
         throw new InvalidOperationException("Url Resource was null");
       }
 
-      SpeckleCollectionGoo? rootCollection = sendComponent.RootCollection;
+      SpeckleCollectionWrapperGoo? rootCollection = sendComponent.RootCollection;
       if (rootCollection is null)
       {
         throw new InvalidOperationException("Root Collection was null");
@@ -374,7 +374,7 @@ public class SendComponentWorker : WorkerInstance
 
         var result = await sendComponent
           .SendOperation.Execute(
-            new List<SpeckleCollectionGoo>() { rootCollection },
+            new List<SpeckleCollectionWrapperGoo>() { rootCollection },
             sendInfo,
             progress,
             CancellationToken

@@ -53,15 +53,15 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component
       return;
     }
 
-    SpeckleObjectGoo objectGoo = new();
-    dataAccess.GetData(0, ref objectGoo);
+    SpeckleObjectWrapperGoo objectWrapperGoo = new();
+    dataAccess.GetData(0, ref objectWrapperGoo);
 
-    if (objectGoo.Value == null)
+    if (objectWrapperGoo.Value == null)
     {
       return;
     }
 
-    if (objectGoo.Value.Base["properties"] is not Dictionary<string, object?> propertyDict)
+    if (objectWrapperGoo.Value.Base["properties"] is not Dictionary<string, object?> propertyDict)
     {
       return;
     }

@@ -2,7 +2,6 @@ using Grasshopper.Kernel;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Grasshopper8.Components.Collections;
 
@@ -59,39 +58,43 @@ public class FilterObjectsByCollectionPaths : GH_Component
       return;
     }
 
-    SpeckleCollectionGoo collectionGoo = new();
-    dataAccess.GetData(0, ref collectionGoo);
+    SpeckleCollectionWrapperGoo collectionWrapperGoo = new();
+    dataAccess.GetData(0, ref collectionWrapperGoo);
 
-    if (collectionGoo.Value == null)
+    if (collectionWrapperGoo.Value == null)
     {
       return;
     }
 
-    var targetCollection = FindCollection(collectionGoo.Value, path);
-    if (targetCollection["topology"] is not string topology)
+    SpeckleCollectionWrapper targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
+    if (string.IsNullOrEmpty(targetCollectionWrapper.Topology))
     {
-      dataAccess.SetDataList(0, targetCollection.elements);
+      dataAccess.SetDataList(0, targetCollectionWrapper.Collection.elements);
     }
     else
     {
-      var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, targetCollection.elements);
+      var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(
+        targetCollectionWrapper.Topology,
+        targetCollectionWrapper.Collection.elements
+      );
       dataAccess.SetDataTree(0, tree);
     }
   }
 
-  private Collection FindCollection(Collection root, string unifiedPath)
+  private SpeckleCollectionWrapper FindCollection(SpeckleCollectionWrapper root, string unifiedPath)
   {
-    var collectionNames = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
-    Collection currentCollection = root;
-    while (collectionNames.Count != 0)
+    // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
+    List<string> paths = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
+    SpeckleCollectionWrapper currentCollectionWrapper = root;
+    while (paths.Count != 0)
     {
-      currentCollection = currentCollection
-        .elements.OfType<Collection>()
-        .First(col => col.name == collectionNames.First());
-      collectionNames.RemoveAt(0);
-      if (collectionNames.Count == 0)
+      currentCollectionWrapper = currentCollectionWrapper
+        .Collection.elements.OfType<SpeckleCollectionWrapper>()
+        .First(col => col.Collection.name == paths.First());
+      paths.RemoveAt(0);
+      if (paths.Count == 0)
       {
-        return currentCollection;
+        return currentCollectionWrapper;
       }
     }
 
