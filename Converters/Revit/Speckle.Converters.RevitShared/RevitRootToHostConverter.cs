@@ -35,7 +35,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
     switch (target)
     {
       case SOG.Region region:
-        // return ElementId of created region
+        // return only ElementId of created region
         var result = ConvertRegionNativeOrFallback(region, region);
         if (result is string elementId)
         {
@@ -49,6 +49,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
       case DataObject dataObj:
         if (dataObj.displayValue.All(x => x is SOG.Region))
         {
+          // each displayValue object will be a separate Region, convert them and add to list
           foreach (var displayRegion in dataObj.displayValue)
           {
             var resultDisplayRegion = ConvertRegionNativeOrFallback((SOG.Region)displayRegion, dataObj);
@@ -59,7 +60,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
             else
             {
               geometryObjects.AddRange((List<DB.GeometryObject>)resultDisplayRegion);
-              // break here, because fallback converter converted the entire object
+              // break here, because fallback converter already converted the entire object
               break;
             }
           }
