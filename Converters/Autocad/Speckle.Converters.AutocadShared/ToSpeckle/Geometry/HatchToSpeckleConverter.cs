@@ -55,7 +55,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
           }
           // convert and store Meshes
           SOG.Mesh mesh = _brepConverter.Convert(brep);
-          mesh.area = target.Area;
+          mesh.area = adbRegion.Area;
           displayValue.Add(mesh);
 
           // convert and store Regions
