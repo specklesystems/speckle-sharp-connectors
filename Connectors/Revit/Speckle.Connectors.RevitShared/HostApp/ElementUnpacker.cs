@@ -50,7 +50,7 @@ public class ElementUnpacker
   /// <remarks>
   /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
   /// </remarks>
-  public IEnumerable<string> GetUnpackedElementIds(List<string> objectIds)
+  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
   {
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     var docElements = doc.GetElements(objectIds);
