@@ -201,6 +201,15 @@ public sealed class RevitHostObjectBuilder(
             new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape")
           );
         }
+        else if (result is List<string> elementsIds)
+        {
+          // This is the case when conversion returns not a GeometryObject, but e.g. FilledRegion (Element class used in Annotations)
+          // If Regions were a part of DataObject, it can return more than 1 native shape
+          foreach (var elementId in elementsIds)
+          {
+            conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, elementId, "Filled Region"));
+          }
+        }
         else
         {
           throw new ConversionException($"Failed to cast {result.GetType()} to direct shape definition wrapper.");
