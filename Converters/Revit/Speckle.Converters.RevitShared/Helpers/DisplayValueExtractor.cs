@@ -4,6 +4,7 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
@@ -16,6 +17,7 @@ public sealed class DisplayValueExtractor
     (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
     List<SOG.Mesh>
   > _meshByMaterialConverter;
+
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
   private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
@@ -68,6 +70,7 @@ public sealed class DisplayValueExtractor
             }
           }
         }
+
         return areaDisplay;
 
       // handle specific types of objects with multiple parts or children
@@ -82,6 +85,7 @@ public sealed class DisplayValueExtractor
           var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
           railingDisplay.AddRange(GetGeometryDisplayValue(topRail));
         }
+
         return railingDisplay;
 
       // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.
@@ -111,10 +115,12 @@ public sealed class DisplayValueExtractor
     {
       displayValue.Add(GetCurveDisplayValue(curve));
     }
+
     foreach (var polyline in polylines)
     {
       displayValue.Add(_polylineConverter.Convert(polyline));
     }
+
     foreach (var point in points)
     {
       displayValue.Add(_pointConverter.Convert(point));
@@ -157,6 +163,7 @@ public sealed class DisplayValueExtractor
         {
           continue;
         }
+
         value.Add(mesh);
       }
     }
@@ -257,6 +264,7 @@ public sealed class DisplayValueExtractor
           {
             continue;
           }
+
           solids.Add(solid);
           break;
 
@@ -374,6 +382,7 @@ public sealed class DisplayValueExtractor
       currentOptions.DetailLevel = DB.ViewDetailLevel.Fine; // Force detail level to be fine
       return currentOptions;
     }
+
     // NOTE: On steel elements. This is an incomplete solution.
     // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
     // I'm inclined to go with this as a semi-permanent limitation. See:
@@ -390,7 +399,17 @@ public sealed class DisplayValueExtractor
         or DB.BuiltInCategory.OST_StructConnectionShearStuds
     )
     {
-      return new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView }; // TODO/NOTE: in case it's a view filter, it should use that specific view. This is a limiting partial fix.
+      // try-catch is not pretty. we need to understand this better.
+      try
+      {
+        // try to create options with the active view - this will work for the main document and will fail with the linked models. Well, we can safely swallow the exception since we do not care DB.Options for linked models.
+        return new DB.Options() { View = _converterSettings.Current.Document.NotNull().ActiveView };
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // if that fails (which will happen for linked documents), use the current options
+        return currentOptions;
+      }
     }
     return currentOptions;
   }
