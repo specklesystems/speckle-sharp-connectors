@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Grasshopper8.Components;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
 
@@ -252,7 +253,14 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     : base(tag, access) { }
 
   public SpeckleObjectParam(GH_ParamAccess access)
-    : base("Speckle Object", "SO", "Represents a Speckle object", "Speckle", "Params", access) { }
+    : base(
+      "Speckle Object",
+      "SO",
+      "Represents a Speckle object",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.PARAMETERS,
+      access
+    ) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
 

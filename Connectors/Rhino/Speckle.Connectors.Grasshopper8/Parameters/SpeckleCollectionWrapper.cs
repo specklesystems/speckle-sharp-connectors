@@ -6,6 +6,7 @@ using Grasshopper.Rhinoceros;
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.Grasshopper8.Components;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -203,7 +204,14 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     : base(tag, access) { }
 
   public SpeckleCollectionParam(GH_ParamAccess access)
-    : base("Speckle Collection", "SCO", "XXXXX", "Speckle", "Params", access) { }
+    : base(
+      "Speckle Collection",
+      "SCO",
+      "XXXXX",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.PARAMETERS,
+      access
+    ) { }
 
   public override Guid ComponentGuid => new("6E871D5B-B221-4992-882A-EFE6796F3010");
   protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("C");
