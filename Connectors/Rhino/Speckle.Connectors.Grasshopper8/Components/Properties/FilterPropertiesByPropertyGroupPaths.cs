@@ -61,8 +61,8 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component
       return;
     }
 
-    Dictionary<string, SpecklePropertyGoo> properties = objectGoo.Value.Properties;
-    if (properties.Count == 0)
+    SpecklePropertyGroupGoo properties = objectGoo.Value.Properties;
+    if (properties.Value.Count == 0)
     {
       return;
     }
@@ -71,9 +71,9 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component
     dataAccess.SetData(0, result);
   }
 
-  private SpecklePropertyGoo FindProperty(Dictionary<string, SpecklePropertyGoo> root, string unifiedPath)
+  private SpecklePropertyGoo FindProperty(SpecklePropertyGroupGoo root, string unifiedPath)
   {
-    if (!root.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
+    if (!root.Value.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
     {
       throw new SpeckleException($"Did not find property from path: {unifiedPath}");
     }

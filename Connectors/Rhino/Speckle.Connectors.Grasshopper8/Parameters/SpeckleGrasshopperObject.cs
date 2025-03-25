@@ -23,7 +23,7 @@ public class SpeckleObjectWrapper : Base
   public SpeckleCollection? Parent { get; set; }
 
   // A dictionary of property path to property
-  public Dictionary<string, SpecklePropertyGoo> Properties { get; set; } = new();
+  public SpecklePropertyGroupGoo Properties { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
   public string? RenderMaterialName { get; set; }
@@ -140,7 +140,7 @@ public class SpeckleObjectWrapper : Base
       att.LayerIndex = bakeLayerIndex;
     }
 
-    foreach (var kvp in Properties)
+    foreach (var kvp in Properties.Value)
     {
       att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
     }
@@ -180,11 +180,8 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          Dictionary<string, SpecklePropertyGoo> properties = new();
-          foreach (var userText in modelObject.UserText.ToList())
-          {
-            properties.Add(userText.Key, new(userText.Value, new() { userText.Key }));
-          }
+          SpecklePropertyGroupGoo propertyGroup = new();
+          propertyGroup.CastFrom(modelObject.UserText);
 
           SpeckleObject so =
             new()
@@ -194,7 +191,7 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
               Name = modelObject.Name,
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
-              Properties = properties
+              Properties = propertyGroup
             };
 
           Value = so;

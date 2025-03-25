@@ -6,6 +6,10 @@ using Speckle.Connectors.Grasshopper8.HostApp;
 
 namespace Speckle.Connectors.Grasshopper8.Parameters;
 
+/// <summary>
+/// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
+/// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
+/// </summary>
 public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
@@ -23,6 +27,11 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
     Value = value;
   }
 
+  public SpecklePropertyGroupGoo(Dictionary<string, object?> value)
+  {
+    CastFrom(value);
+  }
+
   public override bool CastFrom(object source)
   {
     switch (source)
@@ -30,16 +39,48 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
       case SpecklePropertyGroupGoo specklePropertyGroup:
         Value = specklePropertyGroup.Value;
         return true;
+
       case ModelUserText userText:
         Dictionary<string, SpecklePropertyGoo> dictionary = userText.ToDictionary(
           kvp => kvp.Key,
-          kvp => new SpecklePropertyGoo(kvp.Value, new() { kvp.Key })
+          kvp => new SpecklePropertyGoo(kvp)
         );
         Value = dictionary;
+        return true;
+
+      case Dictionary<string, object?> properties:
+        Dictionary<string, object> flattenedProperties = new();
+        FlattenDictionary(properties, flattenedProperties, "");
+        Dictionary<string, SpecklePropertyGoo> speckleProperties = new();
+        foreach (var kvp in flattenedProperties)
+        {
+          speckleProperties.Add(kvp.Key, new() { Value = kvp.Value });
+        }
+        Value = speckleProperties;
         return true;
     }
 
     return false;
+  }
+
+  // Flattens a dictionary that may contain more dictionaries of the same type
+  private void FlattenDictionary(
+    Dictionary<string, object?> dict,
+    Dictionary<string, object> flattenedDict,
+    string keyPrefix = ""
+  )
+  {
+    foreach (var kvp in dict)
+    {
+      if (kvp.Value is Dictionary<string, object?> childDict)
+      {
+        FlattenDictionary(childDict, flattenedDict, kvp.Key);
+      }
+      else
+      {
+        flattenedDict.Add($"{keyPrefix}{Constants.PROPERTY_PATH_DELIMITER}{kvp.Key}", kvp.Value ?? "");
+      }
+    }
   }
 }
 

@@ -10,27 +10,25 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $" {string.Concat(Constants.PROPERTY_PATH_DELIMITER, Path)} - {Value}";
+  public override string ToString() => $"{Path} - {Value}";
+
+  public string Path { get; set; }
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle property wrapper";
   public override string TypeDescription => "Speckle property wrapper";
 
-  // the list of property group names forming the path to this value pair, including the name of the value
-  public List<string>? Path { get; set; } = new();
-
   public SpecklePropertyGoo() { }
 
-  public SpecklePropertyGoo(object value, List<string>? path)
+  public SpecklePropertyGoo(object value)
   {
     Value = value;
-    Path = path;
   }
 
   public SpecklePropertyGoo(KeyValuePair<string, object> kvp)
   {
     Value = kvp.Value;
-    Path = new() { kvp.Key };
+    Path = kvp.Key;
   }
 
   public override bool CastFrom(object source)
@@ -42,16 +40,16 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
         Path = speckleProperty.Path;
         return true;
       case double d:
-        Value = new SpecklePropertyGoo() { Value = d, Path = new() };
+        Value = new SpecklePropertyGoo() { Value = d, Path = string.Empty };
         return true;
       case int i:
-        Value = new SpecklePropertyGoo() { Value = i, Path = new() };
+        Value = new SpecklePropertyGoo() { Value = i, Path = string.Empty };
         return true;
       case string s:
-        Value = new SpecklePropertyGoo() { Value = s, Path = new() };
+        Value = new SpecklePropertyGoo() { Value = s, Path = string.Empty };
         return true;
       case bool b:
-        Value = new SpecklePropertyGoo() { Value = b, Path = new() };
+        Value = new SpecklePropertyGoo() { Value = b, Path = string.Empty };
         return true;
     }
 
