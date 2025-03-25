@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
+﻿using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 using Speckle.Importers.Ifc.Ara3D.StepParser;
 
 namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
