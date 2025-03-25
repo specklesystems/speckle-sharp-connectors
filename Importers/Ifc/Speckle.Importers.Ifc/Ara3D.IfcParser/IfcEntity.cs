@@ -34,7 +34,6 @@ public class IfcEntity
 
   public override string ToString() => $"{Type}#{Id}";
 
-  [MemberNotNullWhen(true, nameof(Guid))]
   public bool IsIfcRoot => Count >= 4 && this[0] is StepString && (this[1] is StepId) || (this[1] is StepUnassigned);
 
   // Modern IFC files conform to this, but older ones have been observed to have different length IDs.
