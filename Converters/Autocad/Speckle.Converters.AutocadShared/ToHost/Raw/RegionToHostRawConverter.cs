@@ -21,16 +21,14 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
 
     // Converted boundary
     List<(ADB.Entity, Base)> convertedBoundary = _curveConverter.Convert(target.boundary);
-    CheckForNonPlanarLoops(convertedBoundary);
-    ADB.Curve nativeBoundary = (ADB.Curve)convertedBoundary[0].Item1;
+    ADB.Curve nativeBoundary = ValidateCurve(convertedBoundary);
 
     // Converted loops
     var nativeLoops = new List<ADB.Curve>();
     foreach (var loop in target.innerLoops)
     {
       List<(ADB.Entity, Base)> convertedLoop = _curveConverter.Convert(loop);
-      CheckForNonPlanarLoops(convertedLoop);
-      nativeLoops.Add((ADB.Curve)convertedLoop[0].Item1);
+      nativeLoops.Add(ValidateCurve(convertedLoop));
     }
 
     // Add boundary to the ADB.DBObjectCollection
@@ -77,6 +75,12 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
     }
 
     throw new ConversionException($"Region conversion failed: {target}");
+  }
+
+  private ADB.Curve ValidateCurve(List<(ADB.Entity, Base)> convertedResult)
+  {
+    CheckForNonPlanarLoops(convertedResult);
+    return (ADB.Curve)convertedResult[0].Item1;
   }
 
   private void CheckForNonPlanarLoops(List<(ADB.Entity, Base)> convertedResult)

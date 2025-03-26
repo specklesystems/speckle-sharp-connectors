@@ -103,7 +103,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     }
     ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
-    // append loop: System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.
+    // append loop: possible Autodesk.AutoCAD.Runtime.Exception: eInvalidInput
     hatch.AppendLoop(loopType, tempDBObjColl);
     hatch.EvaluateHatch(true);
     dbCurve.Erase();
