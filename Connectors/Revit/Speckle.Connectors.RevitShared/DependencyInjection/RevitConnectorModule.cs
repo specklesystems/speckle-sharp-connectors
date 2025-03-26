@@ -48,12 +48,13 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     // send operation and dependencies
-    serviceCollection.AddScoped<SendOperation<ElementId>>();
+    serviceCollection.AddScoped<SendOperation<DocumentToConvert>>();
     serviceCollection.AddScoped<ElementUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
-    serviceCollection.AddScoped<IRootObjectBuilder<ElementId>, RevitRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
+    serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();

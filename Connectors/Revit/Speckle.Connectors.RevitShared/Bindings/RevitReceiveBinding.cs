@@ -72,9 +72,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
         .Initialize(
           _revitConversionSettingsFactory.Create(
-            DetailLevelType.Coarse, //TODO figure out
+            DetailLevelType.Coarse, // TODO figure out
             null,
-            false
+            false,
+            true
           )
         );
       // Receive host objects

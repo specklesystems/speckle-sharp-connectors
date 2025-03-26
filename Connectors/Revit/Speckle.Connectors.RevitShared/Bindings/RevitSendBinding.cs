@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Exceptions;
@@ -40,6 +41,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly IThreadContext _threadContext;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -63,7 +66,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    LinkedModelHandler linkedModelHandler,
+    IThreadContext threadContext
   )
     : base("sendBinding", bridge)
   {
@@ -80,6 +85,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _linkedModelHandler = linkedModelHandler;
+    _threadContext = threadContext;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -89,8 +96,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
     _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
   }
-
-  private async Task OnDocumentStoreChangedEvent(object _) => await Commands.NotifyDocumentChanged();
 
   public List<ISendFilter> GetSendFilters() =>
     [
@@ -103,7 +108,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     [
       new DetailLevelSetting(DetailLevelType.Medium),
       new ReferencePointSetting(ReferencePointType.InternalOrigin),
-      new SendParameterNullOrEmptyStringsSetting(false)
+      new SendParameterNullOrEmptyStringsSetting(false),
+      new LinkedModelsSetting(true)
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -130,23 +136,23 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           _revitConversionSettingsFactory.Create(
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
-            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard)
+            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
+            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard)
           )
         );
 
-      List<Element> elements = await RefreshElementsOnSender(modelCard.NotNull());
-      List<ElementId> elementIds = elements.Select(el => el.Id).ToList();
+      var elementsByTransform = await RefreshElementsIdsOnSender(modelCard.NotNull());
 
-      if (elementIds.Count == 0)
+      if (elementsByTransform.Count == 0)
       {
         // Handle as CARD ERROR in this function
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
       var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<ElementId>>()
+        .ServiceProvider.GetRequiredService<SendOperation<DocumentToConvert>>()
         .Execute(
-          elementIds,
+          elementsByTransform,
           modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
           _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
           cancellationItem.Token
@@ -176,28 +182,76 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task<List<Element>> RefreshElementsOnSender(SenderModelCard modelCard)
+  private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
       _revitContext.UIApplication.NotNull().ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    if (modelCard.SendFilter is IRevitSendFilter viewFilter)
+    if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
     {
       viewFilter.SetContext(_revitContext);
     }
 
-    var selectedObjects = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    var selectedObjects = await _threadContext.RunOnMainAsync(
+      () => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
+    );
 
-    List<Element> elements = selectedObjects
+    var allElements = selectedObjects
       .Select(uid => activeUIDoc.Document.GetElement(uid))
       .Where(el => el is not null)
       .ToList();
 
+    // split elements between main model and linked models
+    var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
+    var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
+
+    // create context for main document elements
+    List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+
+    // get the linked models setting - this decision belongs at this level
+    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
+
+    // ⚠️ process linked models - RevitSendBinding controls the flow based on settings!
+    // If setting not enabled, we won't unpack (see if-else block)
+    if (linkedModels.Count > 0)
+    {
+      var linkedDocumentContexts = new List<DocumentToConvert>();
+
+      foreach (var linkedModel in linkedModels)
+      {
+        var linkedDoc = linkedModel.GetLinkDocument();
+        if (linkedDoc == null)
+        {
+          continue;
+        }
+
+        var transform = linkedModel.GetTotalTransform().Inverse;
+
+        // decision about whether to process elements is made here, not in the handler
+        // only collects elements from linked models when the setting is enabled
+        if (includeLinkedModels)
+        {
+          // handler is only responsible for element collection mechanics
+          var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc);
+          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
+        }
+        // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
+        // this approach (to signal that warnings are needed) relies on empty element lists which smells and is a bit of an implicit mechanism
+        // buuuuut, it works (for now 👀).
+        else
+        {
+          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>()));
+        }
+      }
+      documentElementContexts.AddRange(linkedDocumentContexts);
+    }
+
+    // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
       var newSelectedObjectIds = new List<string>();
-      foreach (Element element in elements)
+      foreach (Element element in allElements)
       {
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
         newSelectedObjectIds.Add(element.UniqueId);
@@ -211,7 +265,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       );
     }
 
-    return elements;
+    return documentElementContexts;
   }
 
   /// <summary>
@@ -317,7 +371,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     foreach (var sender in _store.GetSenders().ToList())
     {
-      await RefreshElementsOnSender(sender);
+      await RefreshElementsIdsOnSender(sender);
     }
   }
 
