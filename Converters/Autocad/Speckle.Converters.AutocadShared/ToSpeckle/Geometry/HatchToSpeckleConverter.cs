@@ -80,33 +80,38 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
   {
     if (loop.IsPolyline)
     {
-      AG.Point3dCollection vertices = new();
-      int count = 0;
-      foreach (ADB.BulgeVertex bVertex in loop.Polyline)
+      // disposable object, wrapping into "using"
+      using (AG.Point3dCollection vertices = new())
       {
-        // don't add the end point that's the same as the start point
-        AG.Point3d newPt = new(bVertex.Vertex.X, bVertex.Vertex.Y, 0);
-        if (count == 0 || vertices[0].DistanceTo(newPt) > 0.00001)
+        // collect vertices and construct a polyline simultaneously, it will be clear what to use after iterating
+        ADB.Polyline polyline = new() { Closed = true };
+
+        int count = 0;
+        foreach (ADB.BulgeVertex bVertex in loop.Polyline)
         {
-          vertices.Add(newPt);
-          count++;
+          // don't add the end point that's the same as the start point
+          AG.Point3d newPt = new(bVertex.Vertex.X, bVertex.Vertex.Y, 0);
+          if (count == 0 || vertices[0].DistanceTo(newPt) > 0.00001)
+          {
+            vertices.Add(newPt);
+            polyline.AddVertexAt(count, bVertex.Vertex, bVertex.Bulge, 0, 0);
+            count++;
+          }
         }
-      }
 
-      // if only 2 points: that's a circle
-      if (vertices.Count == 2)
-      {
-        AG.Point3d centerPt =
-          new(
-            vertices[0].X + (vertices[1].X - vertices[0].X) / 2,
-            vertices[0].Y + (vertices[1].Y - vertices[0].Y) / 2,
-            0
-          );
-        return new ADB.Circle(centerPt, new AG.Vector3d(0, 0, 1), vertices[0].DistanceTo(vertices[1]) / 2);
+        // if only 2 points, that's a circle
+        if (vertices.Count == 2)
+        {
+          AG.Point3d centerPt =
+            new(
+              vertices[0].X + (vertices[1].X - vertices[0].X) / 2,
+              vertices[0].Y + (vertices[1].Y - vertices[0].Y) / 2,
+              0
+            );
+          return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, vertices[0].DistanceTo(vertices[1]) / 2);
+        }
+        return polyline;
       }
-
-      ADB.Polyline3d polyline = new(ADB.Poly3dType.SimplePoly, vertices, true);
-      return polyline;
     }
 
     throw new ConversionException("Hatch loop conversion failed.");
