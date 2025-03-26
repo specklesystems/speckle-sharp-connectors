@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
@@ -18,109 +19,96 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
   public SOG.Region Convert(ADB.Hatch target)
   {
-    ADB.DBObjectCollection objCollection = new();
+    ADB.Region? regionToConvert = null;
+
     for (int i = 0; i < target.NumberOfLoops; i++)
     {
+      // Create 3d polyline from the HatchLoop
       ADB.HatchLoop loop = target.GetLoopAt(i);
-
-      ADB.Polyline3d polyline = PolylineFromLoop(loop);
+      ADB.Curve polyline = PolylineFromLoop(loop);
+      ADB.DBObjectCollection objCollection = new();
       objCollection.Add(polyline);
-    }
 
-    // Create Regions from every curve. They are NOT ordered (i.e. first doesn't mean external)
-    using (ADB.DBObjectCollection regionCollection = ADB.Region.CreateFromCurves(objCollection))
-    {
-      if (regionCollection.Count > 1)
+      // Convert polyline into an individual Region
+      using (ADB.DBObjectCollection regionCollection = ADB.Region.CreateFromCurves(objCollection))
       {
-        for (int i = 1; i < regionCollection.Count; i++)
+        if (regionCollection.Count != 1)
         {
-          if (i > 0)
+          throw new ConversionException(
+            $"Hatch conversion failed {target}: unexpected number of regions generated from 1 hatch loop"
+          );
+        }
+        ADB.Region loopRegion = (ADB.Region)regionCollection[0];
+
+        // Assign first loop as the main Region, other Regions will be subtracted from it
+        if (i == 0)
+        {
+          regionToConvert = loopRegion;
+        }
+        else
+        {
+          if (regionToConvert == null)
           {
-            // throw new ConversionException("Composite Hatches are not supported");
+            throw new ConversionException($"Hatch conversion failed: {target}");
           }
-          ADB.Region innerRegion = (ADB.Region)regionCollection[i];
-          // substract region from Boundary region
-          //((ADB.Region)regionCollection[0]).BooleanOperation(ADB.BooleanOperationType.BoolSubtract, innerRegion);
-          innerRegion.Dispose();
+          // subtract region from Boundary region
+          double areaBefore = regionToConvert.Area;
+          regionToConvert.BooleanOperation(ADB.BooleanOperationType.BoolSubtract, loopRegion);
+
+          // check if the region did not change after subtraction: means the loop was a separate hatch part
+          if (Math.Abs(areaBefore - regionToConvert.Area) < 0.00001)
+          {
+            throw new ConversionException($"Composite hatches are not supported: {target}");
+          }
         }
       }
-
-      ADB.Region adbRegion = (ADB.Region)regionCollection[0];
-
-      // convert and store Regions
-      SOG.Region convertedRegion = _regionConverter.Convert(adbRegion);
-      convertedRegion.hasHatchPattern = true;
-
-      return convertedRegion;
     }
+
+    if (regionToConvert == null)
+    {
+      throw new ConversionException($"Hatch conversion failed: {target}");
+    }
+
+    // convert and store Regions
+    SOG.Region convertedRegion = _regionConverter.Convert(regionToConvert);
+    convertedRegion.hasHatchPattern = true;
+
+    return convertedRegion;
   }
 
-  // calculates bulge direction: (-) clockwise, (+) counterclockwise
-  private int BulgeDirection(AG.Point2d start, AG.Point2d mid, AG.Point2d end)
+  private ADB.Curve PolylineFromLoop(ADB.HatchLoop loop)
   {
-    // get vectors from points
-    double[] v1 = new double[] { end.X - start.X, end.Y - start.Y, 0 }; // vector from start to end point
-    double[] v2 = new double[] { mid.X - start.X, mid.Y - start.Y, 0 }; // vector from start to mid point
-
-    // calculate cross product z direction
-    double z = v1[0] * v2[1] - v2[0] * v1[1];
-
-    return z > 0 ? -1 : 1;
-  }
-
-  private ADB.Polyline3d PolylineFromLoop(ADB.HatchLoop loop)
-  {
-    // initialize loop Polyline
-    AG.Point3dCollection vertices = new();
-    //ADB.Polyline polyline = new() { Closed = true };
-
-    int count = 0;
     if (loop.IsPolyline)
     {
+      AG.Point3dCollection vertices = new();
+      int count = 0;
       foreach (ADB.BulgeVertex bVertex in loop.Polyline)
       {
-        // last point will repeat the first, ignore it
-        if (count < loop.Polyline.Count - 1)
+        // don't add the end point that's the same as the start point
+        AG.Point3d newPt = new(bVertex.Vertex.X, bVertex.Vertex.Y, 0);
+        if (count == 0 || vertices[0].DistanceTo(newPt) > 0.00001)
         {
-          //polyline.AddVertexAt(count, bVertex.Vertex.Y, bVertex.Bulge, 0, 0);
-          vertices.Add(new AG.Point3d(bVertex.Vertex.X, bVertex.Vertex.Y, 0));
+          vertices.Add(newPt);
           count++;
         }
       }
-    }
-    else
-    {
-      foreach (var loopCurve in loop.Curves)
-      {
-        switch (loopCurve)
-        {
-          case AG.LineSegment2d line:
-            //polyline.AddVertexAt(count, line.StartPoint, 0, 0, 0);
-            vertices.Add(new AG.Point3d(line.StartPoint.X, line.StartPoint.Y, 0));
-            //count++;
-            break;
-          case AG.CircularArc2d arc:
-            AG.Point2d midPoint = arc.EvaluatePoint(arc.StartAngle + (arc.EndAngle - arc.StartAngle) / 2);
-            double measure =
-              (2 * Math.Asin(arc.StartPoint.GetDistanceTo(midPoint) / (2 * arc.Radius)))
-              + (2 * Math.Asin(midPoint.GetDistanceTo(arc.EndPoint) / (2 * arc.Radius)));
-            if (measure <= 0 || measure >= 2 * Math.PI)
-            {
-              throw new ArgumentOutOfRangeException(nameof(loop), "Cannot convert arc with measure <= 0 or >= 2 pi");
-            }
 
-            //var bulge = Math.Tan(measure / 4) * BulgeDirection(arc.StartPoint, midPoint, arc.EndPoint);
-            //polyline.AddVertexAt(count, arc.StartPoint, 0, 0, 0);
-            vertices.Add(new AG.Point3d(arc.StartPoint.X, arc.StartPoint.Y, 0));
-            count++;
-            //polyline.AddVertexAt(count, midPoint, bulge, 0, 0);
-            vertices.Add(new AG.Point3d(midPoint.X, midPoint.Y, 0));
-            count++;
-            break;
-        }
+      // if only 2 points: that's a circle
+      if (vertices.Count == 2)
+      {
+        AG.Point3d centerPt =
+          new(
+            vertices[0].X + (vertices[1].X - vertices[0].X) / 2,
+            vertices[0].Y + (vertices[1].Y - vertices[0].Y) / 2,
+            0
+          );
+        return new ADB.Circle(centerPt, new AG.Vector3d(0, 0, 1), vertices[0].DistanceTo(vertices[1]) / 2);
       }
+
+      ADB.Polyline3d polyline = new(ADB.Poly3dType.SimplePoly, vertices, true);
+      return polyline;
     }
-    var polyline = new ADB.Polyline3d(ADB.Poly3dType.SimplePoly, vertices, true);
-    return polyline;
+
+    throw new ConversionException("Hatch loop conversion failed.");
   }
 }
