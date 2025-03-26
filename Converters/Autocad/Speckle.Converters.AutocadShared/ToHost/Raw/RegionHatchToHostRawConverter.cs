@@ -89,25 +89,17 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     var dbCurve = (ADB.Curve)convertedCurve[0].Item1;
 
     // If Spline, turn into segmented polyline - this is how AutoCAD imports Hatches with Curve boundaries from Rhino
-
-    if (dbCurve is ADB.Spline)
+    if (dbCurve is ADB.Spline spline)
     {
-      AG.Point3dCollection vertices = new();
-
-      ADB.DBObjectCollection splineCollection = new();
-      dbCurve.Explode(splineCollection);
-      foreach (ADB.Spline spline in splineCollection)
+      if (spline.NurbsData.Degree == 1)
       {
-        AG.Point3dCollection ptCollection = new();
-        spline.GetSplitCurves(ptCollection); // this is failing
-
-        foreach (AG.Point3d pt in ptCollection)
-        {
-          vertices.Add(pt);
-        }
+        // for simple polylines ".ToPolylineWithPrecision" distorts the shape, so just applying a list of vertices
+        dbCurve = new ADB.Polyline3d(ADB.Poly3dType.SimplePoly, spline.NurbsData.GetControlPoints(), true);
       }
-
-      dbCurve = new ADB.Polyline3d(ADB.Poly3dType.SimplePoly, vertices, true);
+      else
+      {
+        dbCurve = spline.ToPolylineWithPrecision(10, false, false);
+      }
     }
     ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
