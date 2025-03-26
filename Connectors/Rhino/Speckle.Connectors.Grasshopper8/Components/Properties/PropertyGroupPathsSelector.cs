@@ -1,4 +1,6 @@
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.Parameters;
 
@@ -22,10 +24,19 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     var objectPropertyGroups = VolatileData
       .AllData(true)
       .OfType<SpeckleObjectWrapperGoo>()
-      .Select(goo => goo.Value.Base["properties"] is Dictionary<string, object?> dict ? dict : null)
-      .Where(dict => dict != null)
-      .Cast<Dictionary<string, object?>>()
+      .Select(goo => goo.Value.Properties.Value)
       .ToList();
+
+    // support model objects direct piping also
+    if (objectPropertyGroups.Count != VolatileData.DataCount)
+    {
+      var modelObjects = VolatileData
+        .AllData(true)
+        .OfType<ModelObject>()
+        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties.Value)
+        .ToList();
+      objectPropertyGroups.AddRange(modelObjects);
+    }
 
     if (objectPropertyGroups.Count == 0)
     {
@@ -36,40 +47,15 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 
-  private static List<string> GetPropertyPaths(List<Dictionary<string, object?>> objectPropertyGroups)
+  private static List<string> GetPropertyPaths(List<Dictionary<string, SpecklePropertyGoo>> objectPropertyGroups)
   {
     var result = new HashSet<string>();
     foreach (var dict in objectPropertyGroups)
     {
-      FlattenDictionaryRecursive(dict, string.Empty, result);
+      result.AddRange(
+        dict.Keys.Where(k => !(k.EndsWith(".name") || k.EndsWith(".units") || k.EndsWith(".internalDefinitionName")))
+      );
     }
-
-    return result
-      // This starts sucking, just as the frontend. I'm heavily inclined to make things more simple, and back to key value pairs.
-      .Where(path => !(path.Contains(".name") || path.Contains(".units") || path.Contains(".internalDefinitionName")))
-      .ToList();
-  }
-
-  private static void FlattenDictionaryRecursive(
-    Dictionary<string, object?> dictionary,
-    string parentKey,
-    HashSet<string> result
-  )
-  {
-    foreach (var kvp in dictionary)
-    {
-      string currentKey = string.IsNullOrEmpty(parentKey) ? kvp.Key : $"{parentKey}.{kvp.Key}";
-
-      if (kvp.Value is Dictionary<string, object?> nestedDict)
-      {
-        // If the value is another dictionary, recurse into it
-        FlattenDictionaryRecursive(nestedDict, currentKey, result);
-      }
-      else
-      {
-        // Otherwise, add just the key to the result
-        result.Add(currentKey);
-      }
-    }
+    return result.ToList();
   }
 }

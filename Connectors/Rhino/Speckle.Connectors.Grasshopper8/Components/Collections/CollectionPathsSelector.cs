@@ -1,5 +1,6 @@
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
+using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models.Collections;
 
@@ -53,7 +54,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
       // that has values inside of it.
       if (subCols.Count != col.elements.Count)
       {
-        allPaths.Add(string.Join(" :: ", currentPath));
+        allPaths.Add(string.Join(Constants.LAYER_PATH_DELIMITER, currentPath));
       }
 
       foreach (var subCol in subCols)

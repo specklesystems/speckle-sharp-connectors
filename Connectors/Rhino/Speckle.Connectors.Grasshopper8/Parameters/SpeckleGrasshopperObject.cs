@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.Grasshopper8.Components;
 using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Sdk.Models;
 
@@ -21,7 +22,9 @@ public class SpeckleObjectWrapper : Base
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
   public SpeckleCollectionWrapper? Parent { get; set; }
-  public Dictionary<string, string> UserStrings { get; set; } = new();
+
+  // A dictionary of property path to property
+  public SpecklePropertyGroupGoo Properties { get; set; } = new();
   public string Name { get; set; } = "";
   public int? Color { get; set; }
   public string? RenderMaterialName { get; set; }
@@ -138,9 +141,9 @@ public class SpeckleObjectWrapper : Base
       att.LayerIndex = bakeLayerIndex;
     }
 
-    foreach (var kvp in UserStrings)
+    foreach (var kvp in Properties.Value)
     {
-      att.SetUserString(kvp.Key, kvp.Value);
+      att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
     }
 
     // add to doc
@@ -158,6 +161,11 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override bool IsValid => true;
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
+
+  public SpeckleObjectWrapperGoo(ModelObject mo)
+  {
+    CastFrom(mo);
+  }
 
   public override bool CastFrom(object source)
   {
@@ -178,6 +186,9 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
           var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
+          SpecklePropertyGroupGoo propertyGroup = new();
+          propertyGroup.CastFrom(modelObject.UserText);
+
           SpeckleObjectWrapper so =
             new()
             {
@@ -186,8 +197,9 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
               Name = modelObject.Name,
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
-              UserStrings = modelObject.UserText.ToDictionary(s => s.Key, s => s.Value)
+              Properties = propertyGroup
             };
+
           Value = so;
           return true;
         }
@@ -246,7 +258,14 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     : base(tag, access) { }
 
   public SpeckleObjectParam(GH_ParamAccess access)
-    : base("Speckle Object", "SO", "Represents a Speckle object", "Speckle", "Params", access) { }
+    : base(
+      "Speckle Object",
+      "SO",
+      "Represents a Speckle object",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.PARAMETERS,
+      access
+    ) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
 

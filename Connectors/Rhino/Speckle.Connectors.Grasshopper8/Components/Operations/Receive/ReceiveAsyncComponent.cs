@@ -374,6 +374,7 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
+#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
@@ -474,14 +475,25 @@ public class ReceiveComponentWorker : WorkerInstance
             // note one to many not handled too nice here
             foreach (var geometryBase in converted)
             {
-              SpeckleCollectionWrapper objectCollectionWrapper =
-                collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+              SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+                path
+              );
+
+              // get properties
+              SpecklePropertyGroupGoo propertyGroup = new();
+              propertyGroup.CastFrom(
+                map.AtomicObject is Speckle.Objects.Data.DataObject da
+                  ? da.properties
+                  : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
+              );
+
               var gh = new SpeckleObjectWrapper()
               {
                 Base = map.AtomicObject,
-                Path = path.Select(c => c.name).ToList(),
-                Parent = objectCollectionWrapper,
-                GeometryBase = geometryBase
+                Path = path.Select(p => p.name).ToList(),
+                Parent = objectCollection,
+                GeometryBase = geometryBase,
+                Properties = propertyGroup
               };
 
               collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
@@ -508,6 +520,7 @@ public class ReceiveComponentWorker : WorkerInstance
       done();
     }
   }
+#pragma warning restore CA1506
 
   private List<GeometryBase> Convert(Base input)
   {
