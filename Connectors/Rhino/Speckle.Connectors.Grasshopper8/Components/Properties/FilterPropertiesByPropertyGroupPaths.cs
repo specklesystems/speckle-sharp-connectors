@@ -1,4 +1,6 @@
+using Grasshopper;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.Grasshopper8.Parameters;
 
@@ -24,10 +26,10 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
   {
     pManager.AddParameter(
       new SpeckleObjectParam(),
-      "Object",
+      "Objects",
       "O",
-      "Speckle Object to filter properties from",
-      GH_ParamAccess.item
+      "Speckle Objects to filter properties from",
+      GH_ParamAccess.list
     );
     pManager.AddTextParameter("Paths", "P", "Property Group paths to filter by", GH_ParamAccess.list);
   }
@@ -47,57 +49,76 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
       return;
     }
 
-    SpeckleObjectWrapperGoo objectWrapperGoo = new();
-    da.GetData(0, ref objectWrapperGoo);
+    List<SpeckleObjectWrapperGoo> objectWrapperGoos = new();
+    da.GetDataList(0, objectWrapperGoos);
 
-    if (objectWrapperGoo.Value == null)
+    if (objectWrapperGoos.Count == 0)
     {
       return;
     }
 
-    SpecklePropertyGroupGoo properties = objectWrapperGoo.Value.Properties;
-    if (properties.Value.Count == 0)
+    // we're creating an output param for every property path selected
+    // we're creating a branch in the output tree for every object for that property
+
+    List<OutputParamWrapper> outputParams = new();
+    foreach (string path in paths)
     {
-      return;
-    }
-
-    var outputParams = new List<OutputParamWrapper>();
-    foreach (var path in paths)
-    {
-      SpecklePropertyGoo result = FindProperty(properties, path);
-
-      var param = new Param_GenericObject()
-      {
-        Name = result.Path,
-        NickName = result.Path,
-        Access = GH_ParamAccess.item
-      };
-
-      outputParams.Add(new OutputParamWrapper(param, result));
-
-      if (da.Iteration == 0 && OutputMismatch(outputParams))
-      {
-        OnPingDocument()
-          .ScheduleSolution(
-            5,
-            _ =>
-            {
-              CreateOutputs(outputParams);
-            }
-          );
-      }
-      else
-      {
-        for (int i = 0; i < outputParams.Count; i++)
+      // create the output for this path
+      DataTree<object?> paramResult = new();
+      Param_GenericObject param =
+        new()
         {
-          var outParam = Params.Output[i];
-          var outParamWrapper = outputParams[i];
-          switch (outParam.Access)
+          Name = path,
+          NickName = path,
+          Access = GH_ParamAccess.tree
+        };
+
+      // get the branch and property value for each input object
+      for (int i = 0; i < objectWrapperGoos.Count; i++)
+      {
+        // create the result branch for this object
+        SpeckleObjectWrapperGoo objectGoo = objectWrapperGoos[i];
+        GH_Path objectPath = new GH_Path(i);
+
+        SpecklePropertyGroupGoo properties = objectGoo.Value.Properties;
+        if (properties.Value.Count == 0)
+        {
+          paramResult.Add(null, objectPath);
+          continue;
+        }
+
+        SpecklePropertyGoo objectProperty = FindProperty(properties, path);
+        paramResult.Add(string.IsNullOrEmpty((string)objectProperty.Value) ? null : objectProperty.Value, objectPath);
+      }
+
+      outputParams.Add(new OutputParamWrapper(param, paramResult));
+    }
+
+    if (da.Iteration == 0 && OutputMismatch(outputParams))
+    {
+      OnPingDocument()
+        .ScheduleSolution(
+          5,
+          _ =>
           {
-            case GH_ParamAccess.item:
-              da.SetData(i, outParamWrapper.Values);
-              break;
+            CreateOutputs(outputParams);
           }
+        );
+    }
+    else
+    {
+      for (int i = 0; i < outputParams.Count; i++)
+      {
+        var outParam = Params.Output[i];
+        var outParamWrapper = outputParams[i];
+        switch (outParam.Access)
+        {
+          case GH_ParamAccess.item:
+            da.SetData(i, outParamWrapper.Values);
+            break;
+          case GH_ParamAccess.tree:
+            da.SetDataTree(i, (DataTree<object?>)outParamWrapper.Values);
+            break;
         }
       }
     }
