@@ -162,6 +162,11 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
 
+  public SpeckleObjectWrapperGoo(ModelObject mo)
+  {
+    CastFrom(mo);
+  }
+
   public override bool CastFrom(object source)
   {
     switch (source)
