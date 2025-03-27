@@ -49,12 +49,12 @@ public class LinkedModelHandler
     // send mode → Views (taken from the legacy code)
     if (sendFilter is RevitViewsFilter viewFilter && viewFilter.GetView() != null)
     {
-#if REVIT2024_OR_GREATER
-      // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
         linkedDocument,
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
+#if REVIT2024_OR_GREATER
+      // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
       using var viewCollector = new FilteredElementCollector(
         _revitContext.UIApplication.ActiveUIDocument.Document,
         viewFilter.GetView().NotNull().Id,
@@ -63,10 +63,6 @@ public class LinkedModelHandler
       return viewCollector.WhereElementIsNotElementType().ToElements().ToList();
 #else
       // revit 2023 and below, we can only check if the entire linked model is visible
-      RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument,
-        _revitContext.UIApplication.ActiveUIDocument.Document
-      );
       if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
       {
         return new List<Element>(); // If the linked model is hidden, return no elements
