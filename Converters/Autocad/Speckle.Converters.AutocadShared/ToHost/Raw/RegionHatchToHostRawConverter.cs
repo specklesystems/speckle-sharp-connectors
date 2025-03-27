@@ -1,7 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
-using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -23,16 +22,12 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
 
   public ADB.Hatch Convert(SOG.Region target)
   {
-    // Get the current document and database
-    Document acDoc = _settingsStore.Current.Document;
-    ADB.Database acCurDb = acDoc.Database;
-
-    // Start a transaction
-    ADB.Transaction tr = acCurDb.TransactionManager.StartTransaction();
+    // Access a top-level transaction
+    ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;
     var btr = (ADB.BlockTableRecord)
       tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
 
-    // initialize Hatch, only once, with the boundary
+    // initialize Hatch, append to blockTableRecord
     ADB.Hatch acHatch = new();
     btr.AppendEntity(acHatch);
     tr.AddNewlyCreatedDBObject(acHatch, true);
@@ -46,28 +41,10 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     acHatch.Associative = true;
 
     // convert and assign boundary loop
-    // catch any exception to finish the transaction, throw it later
-    Exception? exception = null;
-    try
+    ConvertAndAssignHatchLoop(btr, tr, acHatch, target.boundary, ADB.HatchLoopTypes.External);
+    foreach (var loop in target.innerLoops)
     {
-      ConvertAndAssignHatchLoop(btr, tr, acHatch, target.boundary, ADB.HatchLoopTypes.External);
-      foreach (var loop in target.innerLoops)
-      {
-        ConvertAndAssignHatchLoop(btr, tr, acHatch, loop, ADB.HatchLoopTypes.Outermost);
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      exception = ex;
-    }
-
-    // Save the new object to the database
-    tr.Commit();
-
-    // throw any possible exception after finishing transaction
-    if (exception != null)
-    {
-      throw exception;
+      ConvertAndAssignHatchLoop(btr, tr, acHatch, loop, ADB.HatchLoopTypes.Outermost);
     }
 
     return acHatch;
