@@ -53,6 +53,12 @@ public class LinkedModelHandler
         linkedDocument.PathName,
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
+
+      // if a section box is "hiding" a linked model, this will make sure it won't be sent
+      if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
+      {
+        return new List<Element>();
+      }
 #if REVIT2024_OR_GREATER
       // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
       using var viewCollector = new FilteredElementCollector(
@@ -70,7 +76,7 @@ public class LinkedModelHandler
         return new List<Element>(); // if the linked model is hidden, return no elements
       }
       // 💩 fallback to getting all elements if the linked model is visible
-      return GetAllElements(linkedDocument);
+      return GetAllElementsForLinkedModelSelection(linkedDocument);
 #endif
     }
 
