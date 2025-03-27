@@ -112,7 +112,9 @@ public class SpeckleObjectWrapper : Base
           display.DrawBrepWires(b, material.Diffuse);
           break;
         case Extrusion e:
-          display.DrawMeshShaded(e.GetMesh(MeshType.Any), material);
+          var eBrep = e.ToBrep();
+          display.DrawBrepShaded(eBrep, material);
+          display.DrawBrepShaded(eBrep, material);
           break;
         case SubD d:
           display.DrawSubDShaded(d, material);
