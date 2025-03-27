@@ -50,7 +50,7 @@ public class LinkedModelHandler
     if (sendFilter is RevitViewsFilter viewFilter && viewFilter.GetView() != null)
     {
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument,
+        linkedDocument.PathName,
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
 #if REVIT2024_OR_GREATER
@@ -165,13 +165,13 @@ public class LinkedModelHandler
     return collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
   }
 
-  private RevitLinkInstance FindLinkInstanceForDocument(Document linkedDocument, Document mainDocument)
+  private RevitLinkInstance FindLinkInstanceForDocument(string linkedDocumentPath, Document mainDocument)
   {
     using var collector = new FilteredElementCollector(mainDocument);
     return collector
       .OfClass(typeof(RevitLinkInstance))
       .Cast<RevitLinkInstance>()
-      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocument.PathName)
+      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
       .NotNull();
   }
 }
