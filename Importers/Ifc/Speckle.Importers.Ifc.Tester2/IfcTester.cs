@@ -16,7 +16,10 @@ public sealed class IfcTester(IClientFactory clientFactory, Importer importer, I
 {
   // Settings, Change these to suit!
   // private readonly ICollection<FilePath> _filePath = [new(@"C:\Users\Jedd\Desktop\GRAPHISOFT_Archicad_Sample_Project-S-Office_v1.0_AC25.ifc")]
-  private readonly IEnumerable<string> _filePaths = Directory.EnumerateFiles(@"C:\Users\Jedd\Desktop\", "*.ifc");
+  private readonly IEnumerable<string> _filePaths = Directory.EnumerateFiles(
+    @"C:\Users\Jedd\Downloads\ToSend\",
+    "*.ifc"
+  );
 
   private readonly Uri _serverUrl = new("https://app.speckle.systems");
   private const string PROJECT_ID = "f3a42bdf24";

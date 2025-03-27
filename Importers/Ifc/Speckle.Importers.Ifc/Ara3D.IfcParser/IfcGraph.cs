@@ -159,6 +159,16 @@ public sealed class IfcGraph
         ifcProjectId = inst.Id;
         AddNode(new IfcProject(this, e));
       }
+      else if (inst.Type.Equals("IFCSIUNIT"))
+      {
+        var e = d.GetInstanceWithData(inst);
+        AddNode(new IfcSiUnit(this, e));
+      }
+      else if (inst.Type.Equals("IFCUNITASSIGNMENT"))
+      {
+        var e = d.GetInstanceWithData(inst);
+        AddNode(new IfcUnitAssignment(this, e));
+      }
       else if (
         inst.Type.Equals("IFCSITE")
         || inst.Type.Equals("IFCBUILDING")
@@ -245,7 +255,7 @@ public sealed class IfcGraph
     return r;
   }
 
-  public IfcNode GetIfcProject() => GetNode(IfcProjectId);
+  public IfcProject GetIfcProject() => (IfcProject)GetNode(IfcProjectId);
 
   public IEnumerable<IfcPropSet> GetPropSets() => GetNodes().OfType<IfcPropSet>();
 

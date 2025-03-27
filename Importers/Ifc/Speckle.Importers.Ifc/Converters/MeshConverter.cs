@@ -4,11 +4,15 @@ using Speckle.Importers.Ifc.Types;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Geometry;
 using Speckle.Objects.Other;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Importers.Ifc.Converters;
 
 [GenerateAutoInterface]
-public sealed class MeshConverter(IRenderMaterialProxyManager renderMaterialManager) : IMeshConverter
+public sealed class MeshConverter(
+  IRenderMaterialProxyManager renderMaterialManager,
+  IUnitContextManager unitContextManager
+) : IMeshConverter
 {
   public Mesh Convert(IfcMesh mesh)
   {
@@ -47,7 +51,7 @@ public sealed class MeshConverter(IRenderMaterialProxyManager renderMaterialMana
         applicationId = Guid.NewGuid().ToString(),
         vertices = vertices,
         faces = faces,
-        units = "m",
+        units = unitContextManager.Units.NotNull(),
       };
 
     renderMaterialManager.AddMeshMapping(renderMaterial, converted);

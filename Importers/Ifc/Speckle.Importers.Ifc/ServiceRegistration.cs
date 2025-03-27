@@ -13,6 +13,7 @@ public static class ServiceRegistration
   {
     services.AddSingleton<IIfcFactory, IfcFactory>();
     services.AddSingleton<IRenderMaterialProxyManager, RenderMaterialProxyManager>();
+    services.AddSingleton<IUnitContextManager, UnitContextManager>();
   }
 
   public static IServiceCollection AddMatchingInterfacesAsTransient(
