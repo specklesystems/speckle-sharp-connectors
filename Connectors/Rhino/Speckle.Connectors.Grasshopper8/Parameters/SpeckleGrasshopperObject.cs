@@ -226,12 +226,21 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
           SpecklePropertyGroupGoo propertyGroup = new();
           propertyGroup.CastFrom(modelObject.UserText);
 
+          // update the converted Base with props as well
+          modelConverted["name"] = modelObject.Name.ToString();
+          Dictionary<string, object?> propertyDict = new();
+          foreach (var entry in propertyGroup.Value)
+          {
+            propertyDict.Add(entry.Key, entry.Value.Value);
+          }
+          modelConverted["properties"] = propertyDict;
+
           SpeckleObjectWrapper so =
             new()
             {
               GeometryBases = new() { modelGB },
               Base = modelConverted,
-              Name = modelObject.Name,
+              Name = modelObject.Name.ToString(),
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
               Properties = propertyGroup
