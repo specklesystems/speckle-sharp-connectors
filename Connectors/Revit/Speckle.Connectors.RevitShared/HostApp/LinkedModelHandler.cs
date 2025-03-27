@@ -65,7 +65,7 @@ public class LinkedModelHandler
       // revit 2023 and below, we can only check if the entire linked model is visible
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
         linkedDocument,
-        _revitContext.UIApplication.ActiveUIDocument.Document
+        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
       if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
       {
