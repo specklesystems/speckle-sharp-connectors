@@ -79,16 +79,11 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
 
   private ADB.Curve ValidateCurve(List<(ADB.Entity, Base)> convertedResult)
   {
-    CheckForNonPlanarLoops(convertedResult);
-    return (ADB.Curve)convertedResult[0].Item1;
-  }
-
-  private void CheckForNonPlanarLoops(List<(ADB.Entity, Base)> convertedResult)
-  {
     if (convertedResult.Count != 1)
     {
       // this will only be the case if it was a non-planar Polycurve: throw error
       throw new ConversionException($"Non-planar Polycurve cannot be used as a Region loop: {convertedResult}");
     }
+    return (ADB.Curve)convertedResult[0].Item1;
   }
 }
