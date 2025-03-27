@@ -101,7 +101,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
         dbCurve = spline.ToPolylineWithPrecision(10, false, false);
       }
     }
-    ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
+    using ADB.ObjectIdCollection tempDBObjColl = CreateTempObjectIdCollection(acBlkTblRec, acTrans, dbCurve);
 
     // append loop: possible Autodesk.AutoCAD.Runtime.Exception: eInvalidInput
     hatch.AppendLoop(loopType, tempDBObjColl);
