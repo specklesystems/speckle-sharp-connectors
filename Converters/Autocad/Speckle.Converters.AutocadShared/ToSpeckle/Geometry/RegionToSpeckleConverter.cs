@@ -88,8 +88,12 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
             throw new ConversionException("Unsupported curve type for Region conversion");
           }
         }
-        // reverse segment collection with arcs, otherwise end-start points of subsequent segments don't match
-        if (segments.Any(x => x is AG.CircularArc3d))
+        // reverse segment collection with arcs in case end-start points of subsequent segments don't match
+        if (
+          segments.Any(x => x is AG.CircularArc3d)
+          && segments.Count > 1
+          && Math.Abs(segments[0].EndPoint.DistanceTo(segments[1].StartPoint)) > 0.00001
+        )
         {
           segments.Reverse();
         }
