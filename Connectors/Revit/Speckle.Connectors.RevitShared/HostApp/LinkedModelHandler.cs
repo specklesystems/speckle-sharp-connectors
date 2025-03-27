@@ -52,7 +52,7 @@ public class LinkedModelHandler
 #if REVIT2024_OR_GREATER
       // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument,
+        linkedDocument.PathName,
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
       using var viewCollector = new FilteredElementCollector(
@@ -64,7 +64,7 @@ public class LinkedModelHandler
 #else
       // revit 2023 and below, we can only check if the entire linked model is visible
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument,
+        linkedDocument.PathName,
         _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
       );
       if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
@@ -168,13 +168,13 @@ public class LinkedModelHandler
     return collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
   }
 
-  private RevitLinkInstance FindLinkInstanceForDocument(Document linkedDocument, Document mainDocument)
+  private RevitLinkInstance FindLinkInstanceForDocument(string linkedDocumentPath, Document mainDocument)
   {
     using var collector = new FilteredElementCollector(mainDocument);
     return collector
       .OfClass(typeof(RevitLinkInstance))
       .Cast<RevitLinkInstance>()
-      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocument.PathName)
+      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
       .NotNull();
   }
 }
