@@ -28,34 +28,32 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     ADB.Database acCurDb = acDoc.Database;
 
     // Start a transaction
-    ADB.Transaction acTrans = acCurDb.TransactionManager.StartTransaction();
-    // Open the Block table for read
-    ADB.BlockTable? acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, ADB.OpenMode.ForRead) as ADB.BlockTable;
-    if (acBlkTbl == null)
-    {
-      throw new ConversionException();
-    }
-
-    // Open the Block table record Model space for write
-    ADB.BlockTableRecord? acBlkTblRec =
-      acTrans.GetObject(acBlkTbl[ADB.BlockTableRecord.ModelSpace], ADB.OpenMode.ForWrite) as ADB.BlockTableRecord;
-    if (acBlkTblRec == null)
-    {
-      throw new ConversionException();
-    }
+    ADB.Transaction tr = acCurDb.TransactionManager.StartTransaction();
+    var btr = (ADB.BlockTableRecord)
+      tr.GetObject(_settingsStore.Current.Document.Database.CurrentSpaceId, ADB.OpenMode.ForWrite);
 
     // initialize Hatch, only once, with the boundary
-    ADB.Hatch acHatch = InitializeHatchObject(acBlkTblRec, acTrans);
+    ADB.Hatch acHatch = new();
+    btr.AppendEntity(acHatch);
+    tr.AddNewlyCreatedDBObject(acHatch, true);
+
+    // Set essential properties of the hatch object
+    acHatch.SetDatabaseDefaults();
+    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "SOLID");
+
+    // Associative property must be set after the hatch object is
+    // appended to the block table record and before AppendLoop
+    acHatch.Associative = true;
 
     // convert and assign boundary loop
     // catch any exception to finish the transaction, throw it later
     Exception? exception = null;
     try
     {
-      ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, target.boundary, ADB.HatchLoopTypes.External);
+      ConvertAndAssignHatchLoop(btr, tr, acHatch, target.boundary, ADB.HatchLoopTypes.External);
       foreach (var loop in target.innerLoops)
       {
-        ConvertAndAssignHatchLoop(acBlkTblRec, acTrans, acHatch, loop, ADB.HatchLoopTypes.Outermost);
+        ConvertAndAssignHatchLoop(btr, tr, acHatch, loop, ADB.HatchLoopTypes.Outermost);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -64,7 +62,7 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     }
 
     // Save the new object to the database
-    acTrans.Commit();
+    tr.Commit();
 
     // throw any possible exception after finishing transaction
     if (exception != null)
@@ -124,22 +122,6 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     tempDBObjColl.Add(loopEntity.ObjectId);
 
     return tempDBObjColl;
-  }
-
-  private ADB.Hatch InitializeHatchObject(ADB.BlockTableRecord acBlkTblRec, ADB.Transaction acTrans)
-  {
-    ADB.Hatch acHatch = new();
-    acBlkTblRec.AppendEntity(acHatch);
-    acTrans.AddNewlyCreatedDBObject(acHatch, true);
-
-    acHatch.SetDatabaseDefaults();
-
-    // Set essential properties of the hatch object: Associative must be set after the hatch object is
-    // appended to the block table record and before AppendLoop
-    acHatch.SetHatchPattern(ADB.HatchPatternType.PreDefined, "SOLID");
-    acHatch.Associative = true;
-
-    return acHatch;
   }
 
   private void CheckForNonPlanarLoops(List<(ADB.Entity, Base)> convertedResult)
