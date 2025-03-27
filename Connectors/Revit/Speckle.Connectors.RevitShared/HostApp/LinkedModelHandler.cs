@@ -62,14 +62,15 @@ public class LinkedModelHandler
       );
       return viewCollector.WhereElementIsNotElementType().ToElements().ToList();
 #else
-      // revit 2023 and below, we can only check if the entire linked model is visible
+      // 🚨 LIMITATION: in Revit 2023 and below, we can only check if the entire linked model is visible,
+      // not individual elements within it. If the linked model is visible, all its elements will be included.
+      // constructor overload pertaining to searching and filtering visible elements from a revit link only added 2024.
       if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
       {
-        return new List<Element>(); // If the linked model is hidden, return no elements
+        return new List<Element>(); // if the linked model is hidden, return no elements
       }
-      // Fallback to getting all elements if the linked model is visible
-      using var collector = new FilteredElementCollector(linkedDocument);
-      return collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
+      // 💩 fallback to getting all elements if the linked model is visible
+      return GetAllElements(linkedDocument);
 #endif
     }
 
