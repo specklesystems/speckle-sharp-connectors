@@ -4,7 +4,7 @@ using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.Grasshopper8.Parameters;
 
-namespace Speckle.Connectors.Grasshopper8.Components.Properties;
+namespace Speckle.Connectors.Grasshopper8.Components.Objects;
 
 public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariableParameterComponent
 {
@@ -18,8 +18,8 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
       "FilterPropertiesByPropertyGroupPaths",
       "pgF",
       "Filters object properties by their property group path",
-      "Speckle",
-      "Properties"
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OBJECTS
     ) { }
 
   protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
@@ -34,10 +34,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
     pManager.AddTextParameter("Paths", "P", "Property Group paths to filter by", GH_ParamAccess.list);
   }
 
-  protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
-  {
-    // pManager.AddParameter(      new SpecklePropertyParam(),      "Properties",      "P",      "The properties of the selected Object",      GH_ParamAccess.tree    );
-  }
+  protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager) { }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -88,7 +85,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
         }
 
         SpecklePropertyGoo objectProperty = FindProperty(properties, path);
-        paramResult.Add(string.IsNullOrEmpty((string)objectProperty.Value) ? null : objectProperty.Value, objectPath);
+        paramResult.Add(objectProperty.Value, objectPath);
       }
 
       outputParams.Add(new OutputParamWrapper(param, paramResult));

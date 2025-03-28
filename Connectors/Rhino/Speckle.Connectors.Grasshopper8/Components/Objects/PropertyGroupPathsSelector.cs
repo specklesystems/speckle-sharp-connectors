@@ -4,7 +4,7 @@ using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Grasshopper8.Components.BaseComponents;
 using Speckle.Connectors.Grasshopper8.Parameters;
 
-namespace Speckle.Connectors.Grasshopper8.Components.Properties;
+namespace Speckle.Connectors.Grasshopper8.Components.Objects;
 
 public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 {
@@ -13,8 +13,8 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       "Property Group Paths Selector",
       "Paths",
       "Allows you to select a set of property group paths for filtering",
-      "Speckle",
-      "Properties"
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OBJECTS
     ) { }
 
   public override Guid ComponentGuid => new Guid("8882BE3A-81F1-4416-B420-58D69E4CC8F1");

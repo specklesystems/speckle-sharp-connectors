@@ -6,7 +6,7 @@ using Speckle.Connectors.Grasshopper8.HostApp;
 using Speckle.Connectors.Grasshopper8.Parameters;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.Grasshopper8.Components.Properties;
+namespace Speckle.Connectors.Grasshopper8.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
 public class CreateSpeckleObject : GH_Component
@@ -67,7 +67,7 @@ public class CreateSpeckleObject : GH_Component
     // convert the geometries
     Base converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometry);
 
-    Objects.Data.DataObject grasshopperObject =
+    Speckle.Objects.Data.DataObject grasshopperObject =
       new()
       {
         name = name,
