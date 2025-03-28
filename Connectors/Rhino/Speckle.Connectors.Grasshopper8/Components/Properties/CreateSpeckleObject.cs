@@ -9,9 +9,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Connectors.Grasshopper8.Components.Properties;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class CreateSpeckleDataObject : GH_Component
+public class CreateSpeckleObject : GH_Component
 {
-  public CreateSpeckleDataObject()
+  public CreateSpeckleObject()
     : base(
       "Create Speckle Object",
       "CSO",
@@ -26,7 +26,7 @@ public class CreateSpeckleDataObject : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter("Geometry", "G", "The geometry of the new Speckle Object", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Geometry", "G", "The geometry of the new Speckle Object", GH_ParamAccess.item);
 
     pManager.AddTextParameter("Name", "N", "Name of the new Speckle Object", GH_ParamAccess.item);
     Params.Input[1].Optional = true;
@@ -45,14 +45,14 @@ public class CreateSpeckleDataObject : GH_Component
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Speckle Data Object", "DO", "The created Speckle Data Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter("Speckle Object", "SO", "The created Speckle Object", GH_ParamAccess.item);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    List<IGH_GeometricGoo> gooGeometries = new();
-    da.GetDataList(0, gooGeometries);
-    List<GeometryBase> geometries = gooGeometries.Select(o => o.GeometricGooToGeometryBase()).ToList();
+    object gooGeometry = new();
+    da.GetData(0, ref gooGeometry);
+    GeometryBase geometry = ((IGH_GeometricGoo)gooGeometry).GeometricGooToGeometryBase();
 
     string name = "";
     da.GetData(1, ref name);
@@ -65,18 +65,13 @@ public class CreateSpeckleDataObject : GH_Component
     properties.CastTo(ref props);
 
     // convert the geometries
-    List<Base> converted = new();
-    foreach (GeometryBase geo in geometries)
-    {
-      var geoConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geo);
-      converted.Add(geoConverted);
-    }
+    Base converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometry);
 
     Objects.Data.DataObject grasshopperObject =
       new()
       {
         name = name,
-        displayValue = converted,
+        displayValue = new() { converted },
         properties = props
       };
 
@@ -84,8 +79,9 @@ public class CreateSpeckleDataObject : GH_Component
       new()
       {
         Base = grasshopperObject,
-        GeometryBases = geometries,
-        Properties = properties
+        GeometryBase = geometry,
+        Properties = properties,
+        Name = name
       };
 
     da.SetData(0, new SpeckleObjectWrapperGoo(so));
