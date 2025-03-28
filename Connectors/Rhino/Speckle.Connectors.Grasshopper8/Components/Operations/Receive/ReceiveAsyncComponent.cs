@@ -375,6 +375,7 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
+#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
@@ -472,17 +473,41 @@ public class ReceiveComponentWorker : WorkerInstance
               converted.ForEach(res => res.Transform(mat));
             }
 
-            // note one to many not handled too nice here
+            // get the collection
+            SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+
+            // get the name and properties
+            SpecklePropertyGroupGoo propertyGroup = new();
+            string name = "";
+            if (map.AtomicObject is Speckle.Objects.Data.DataObject da)
+            {
+              propertyGroup.CastFrom(da.properties);
+              name = da.name;
+            }
+            else
+            {
+              if (map.AtomicObject["properties"] is Dictionary<string, object?> props)
+              {
+                propertyGroup.CastFrom(props);
+              }
+
+              if (map.AtomicObject["name"] is string n)
+              {
+                name = n;
+              }
+            }
+
+            // create objects for every value in converted. This is where one to many is not handled very nicely.
             foreach (var geometryBase in converted)
             {
-              SpeckleCollectionWrapper objectCollectionWrapper =
-                collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
               var gh = new SpeckleObjectWrapper()
               {
                 Base = map.AtomicObject,
-                Path = path.Select(c => c.name).ToList(),
-                Parent = objectCollectionWrapper,
-                GeometryBase = geometryBase
+                Path = path.Select(p => p.name).ToList(),
+                Parent = objectCollection,
+                GeometryBase = geometryBase,
+                Properties = propertyGroup,
+                Name = name
               };
 
               collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
@@ -509,6 +534,7 @@ public class ReceiveComponentWorker : WorkerInstance
       done();
     }
   }
+#pragma warning restore CA1506
 
   private List<GeometryBase> Convert(Base input)
   {

@@ -128,7 +128,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
-  protected string Serialize() => serializer.Serialize(Models);
+  protected string Serialize() => serializer.Serialize(Models.ToList());
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();

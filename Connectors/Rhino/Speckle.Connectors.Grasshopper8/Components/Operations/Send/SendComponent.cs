@@ -36,8 +36,8 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 {
   public SendComponent()
     : base(
-      "Send from Speckle",
-      "SFS",
+      "Send to Speckle",
+      "STS",
       "Send objects to speckle",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS

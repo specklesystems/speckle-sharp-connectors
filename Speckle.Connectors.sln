@@ -10,9 +10,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		CodeMetricsConfig.txt = CodeMetricsConfig.txt
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
+		.config\dotnet-tools.json = .config\dotnet-tools.json
 		global.json = global.json
 		README.md = README.md
-		.config\dotnet-tools.json = .config\dotnet-tools.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Revit", "Revit", "{D92751C8-1039-4005-90B2-913E55E0B8BD}"
@@ -200,6 +200,7 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Converter.Tekla2023", "Converters\Tekla\Speckle.Converter.Tekla2023\Speckle.Converter.Tekla2023.csproj", "{8F9181C2-1808-44C0-A33A-5BAE40C49E63}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Grasshopper8", "Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj", "{8F6AD59B-FE43-41AE-8F47-7B9752BA0085}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSi", "CSi", "{073F40A8-6C95-41C1-A2F3-369FFFCB9520}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Speckle.Connectors.ETABS22", "Connectors\CSi\Speckle.Connectors.ETABS22\Speckle.Connectors.ETABS22.csproj", "{7C49337A-6F7B-47AB-B549-42E799E89CF2}"

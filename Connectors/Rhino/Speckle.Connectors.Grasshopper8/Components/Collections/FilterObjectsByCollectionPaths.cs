@@ -84,7 +84,7 @@ public class FilterObjectsByCollectionPaths : GH_Component
   private SpeckleCollectionWrapper FindCollection(SpeckleCollectionWrapper root, string unifiedPath)
   {
     // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
-    List<string> paths = unifiedPath.Split([" :: "], StringSplitOptions.None).Skip(1).ToList();
+    List<string> paths = unifiedPath.Split([Constants.LAYER_PATH_DELIMITER], StringSplitOptions.None).Skip(1).ToList();
     SpeckleCollectionWrapper currentCollectionWrapper = root;
     while (paths.Count != 0)
     {
