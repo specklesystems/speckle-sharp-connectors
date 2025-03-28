@@ -48,7 +48,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public string? Url { get; set; }
   public Client ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
-  public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
+  public SpeckleCollectionWrapperGoo? RootCollection { get; set; }
 
   public SpeckleUrlModelResource? OutputParam { get; set; }
   public SendOperation<SpeckleCollectionWrapperGoo> SendOperation { get; private set; }
@@ -253,11 +253,11 @@ public class SendAsyncComponent : GH_AsyncComponent
     da.GetData(1, ref rootCollectionWrapper);
     if (rootCollectionWrapper is null)
     {
-      RootCollectionWrapper = null;
+      RootCollection = null;
       TriggerAutoSave();
       return;
     }
-    RootCollectionWrapper = rootCollectionWrapper;
+    RootCollection = rootCollectionWrapper;
   }
 }
 
@@ -314,7 +314,7 @@ public class SendComponentWorker : WorkerInstance
     {
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully sent {((SendAsyncComponent)Parent).RootCollectionWrapper?.Value.GetTotalChildrenCount()} objects to Speckle."
+        $"Successfully sent {((SendAsyncComponent)Parent).RootCollection?.Value.GetTotalChildrenCount()} objects to Speckle."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
@@ -347,8 +347,8 @@ public class SendComponentWorker : WorkerInstance
         throw new InvalidOperationException("Url Resource was null");
       }
 
-      SpeckleCollectionWrapperGoo? rootCollectionWrapper = sendComponent.RootCollectionWrapper;
-      if (rootCollectionWrapper is null)
+      SpeckleCollectionWrapperGoo? rootCollection = sendComponent.RootCollection;
+      if (rootCollection is null)
       {
         throw new InvalidOperationException("Root Collection was null");
       }
@@ -374,7 +374,7 @@ public class SendComponentWorker : WorkerInstance
 
         var result = await sendComponent
           .SendOperation.Execute(
-            new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
+            new List<SpeckleCollectionWrapperGoo>() { rootCollection },
             sendInfo,
             progress,
             CancellationToken
