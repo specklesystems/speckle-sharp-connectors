@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
+﻿using Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 using Speckle.Importers.Ifc.Ara3D.StepParser;
 
 namespace Speckle.Importers.Ifc.Ara3D.IfcParser;
@@ -34,20 +33,19 @@ public class IfcEntity
 
   public override string ToString() => $"{Type}#{Id}";
 
-  [MemberNotNullWhen(true, nameof(Guid))]
   public bool IsIfcRoot => Count >= 4 && this[0] is StepString && (this[1] is StepId) || (this[1] is StepUnassigned);
 
   // Modern IFC files conform to this, but older ones have been observed to have different length IDs.
   // Leaving as a comment for now.
   //&& str.Value.Length == 22;
 
-  public string? Guid => IsIfcRoot ? ((StepString)this[0]).Value.ToString() : null;
+  public string Guid => ((StepString)this[0]).Value.ToString();
 
-  public uint OwnerId => IsIfcRoot ? (this[1] as StepId)?.Id ?? 0 : 0;
+  public uint OwnerId => (this[1] as StepId)?.Id ?? 0;
 
-  public string? Name => IsIfcRoot ? (this[2] as StepString)?.AsString() : null;
+  public string? Name => (this[2] as StepString)?.AsString();
 
-  public string? Description => IsIfcRoot ? (this[3] as StepString)?.AsString() : null;
+  public string? Description => (this[3] as StepString)?.AsString();
 
   public int Count => LineData.Count;
 
