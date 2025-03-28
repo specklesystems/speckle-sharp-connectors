@@ -17,7 +17,11 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 public class SpeckleObjectWrapper : Base
 {
   public required Base Base { get; set; }
-  public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
+
+  // note: how will we send intervals and other gh native objects? do we? maybe not for now
+  // note: this does not handle on to many relationship well.
+  // For receiving data objects, we are wrapping every value in the data object display value, and storing a reference to the same data object in each wrapped object.
+  public required GeometryBase GeometryBase { get; set; }
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
@@ -99,7 +103,9 @@ public class SpeckleObjectWrapper : Base
         display.DrawBrepWires(b, material.Diffuse);
         break;
       case Extrusion e:
-        display.DrawMeshShaded(e.GetMesh(MeshType.Any), material);
+        var eBrep = e.ToBrep();
+        display.DrawBrepShaded(eBrep, material);
+        display.DrawBrepWires(eBrep, material.Diffuse);
         break;
       case SubD d:
         display.DrawSubDShaded(d, material);
@@ -162,6 +168,8 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
 
+  BoundingBox IGH_PreviewData.ClippingBox => Value.GeometryBase.GetBoundingBox(false);
+
   public SpeckleObjectWrapperGoo(ModelObject mo)
   {
     CastFrom(mo);
@@ -189,12 +197,21 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
           SpecklePropertyGroupGoo propertyGroup = new();
           propertyGroup.CastFrom(modelObject.UserText);
 
+          // update the converted Base with props as well
+          modelConverted["name"] = modelObject.Name.ToString();
+          Dictionary<string, object?> propertyDict = new();
+          foreach (var entry in propertyGroup.Value)
+          {
+            propertyDict.Add(entry.Key, entry.Value.Value);
+          }
+          modelConverted["properties"] = propertyDict;
+
           SpeckleObjectWrapper so =
             new()
             {
               GeometryBase = modelGB,
               Base = modelConverted,
-              Name = modelObject.Name,
+              Name = modelObject.Name.ToString(),
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
               Properties = propertyGroup
@@ -215,13 +232,14 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override bool CastTo<T>(ref T target)
   {
     var type = typeof(T);
+
     if (type == typeof(IGH_GeometricGoo))
     {
       target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBase);
       return true;
     }
 
-    // TODO: cast to material, modle object, etc.
+    // TODO: cast to material, etc.
 
     return false;
   }
@@ -235,8 +253,6 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   {
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
-
-  public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
 
   public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {

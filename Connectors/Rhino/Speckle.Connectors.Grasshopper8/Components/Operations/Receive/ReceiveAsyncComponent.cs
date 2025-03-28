@@ -472,28 +472,41 @@ public class ReceiveComponentWorker : WorkerInstance
               converted.ForEach(res => res.Transform(mat));
             }
 
-            // note one to many not handled too nice here
+            // get the collection
+            SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+
+            // get the name and properties
+            SpecklePropertyGroupGoo propertyGroup = new();
+            string name = "";
+            if (map.AtomicObject is Speckle.Objects.Data.DataObject da)
+            {
+              propertyGroup.CastFrom(da.properties);
+              name = da.name;
+            }
+            else
+            {
+              if (map.AtomicObject["properties"] is Dictionary<string, object?> props)
+              {
+                propertyGroup.CastFrom(props);
+              }
+
+              if (map.AtomicObject["name"] is string n)
+              {
+                name = n;
+              }
+            }
+
+            // create objects for every value in converted. This is where one to many is not handled very nicely.
             foreach (var geometryBase in converted)
             {
-              SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
-                path
-              );
-
-              // get properties
-              SpecklePropertyGroupGoo propertyGroup = new();
-              propertyGroup.CastFrom(
-                map.AtomicObject is Speckle.Objects.Data.DataObject da
-                  ? da.properties
-                  : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
-              );
-
               var gh = new SpeckleObjectWrapper()
               {
                 Base = map.AtomicObject,
                 Path = path.Select(p => p.name).ToList(),
                 Parent = objectCollection,
                 GeometryBase = geometryBase,
-                Properties = propertyGroup
+                Properties = propertyGroup,
+                Name = name
               };
 
               collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);

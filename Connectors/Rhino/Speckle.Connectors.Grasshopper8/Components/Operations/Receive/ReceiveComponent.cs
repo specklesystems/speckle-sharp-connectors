@@ -117,7 +117,9 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collGen = new GrasshopperCollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
+    var collectionRebuilder = new GrasshopperCollectionRebuilder(
+      (root as Collection) ?? new Collection() { name = "unnamed" }
+    );
 
     foreach (var map in localToGlobalMaps)
     {
@@ -132,16 +134,44 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
           converted.ForEach(res => res.Transform(mat));
         }
 
-        // note one to many not handled too nice here
+        // get the collection
+        SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+
+        // get the name and properties
+        SpecklePropertyGroupGoo propertyGroup = new();
+        string name = "";
+        if (map.AtomicObject is Speckle.Objects.Data.DataObject da)
+        {
+          propertyGroup.CastFrom(da.properties);
+          name = da.name;
+        }
+        else
+        {
+          if (map.AtomicObject["properties"] is Dictionary<string, object?> props)
+          {
+            propertyGroup.CastFrom(props);
+          }
+
+          if (map.AtomicObject["name"] is string n)
+          {
+            name = n;
+          }
+        }
+
+        // create objects for every value in converted. This is where one to many is not handled very nicely.
         foreach (var geometryBase in converted)
         {
           var gh = new SpeckleObjectWrapper()
           {
             Base = map.AtomicObject,
-            Path = path.Select(o => o.name).ToList(),
-            GeometryBase = geometryBase
+            Path = path.Select(p => p.name).ToList(),
+            Parent = objectCollection,
+            GeometryBase = geometryBase,
+            Properties = propertyGroup,
+            Name = name
           };
-          collGen.AppendSpeckleGrasshopperObject(gh, path);
+
+          collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
         }
       }
       catch (ConversionException)
@@ -151,7 +181,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    var goo = new SpeckleCollectionWrapperGoo(collGen.RootCollectionWrapper);
+    var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
   }
 
