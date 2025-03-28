@@ -5,7 +5,6 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -23,7 +22,6 @@ public class RevitRootObjectBuilder(
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
-  IThreadContext threadContext,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
@@ -35,16 +33,6 @@ public class RevitRootObjectBuilder(
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
-  ) =>
-    threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, sendInfo, onOperationProgressed, ct))
-    );
-
-  private RootObjectBuilderResult BuildSync(
-    IReadOnlyList<DocumentToConvert> documentElementContexts,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
   )
   {
     var doc = converterSettings.Current.Document;
@@ -155,7 +143,7 @@ public class RevitRootObjectBuilder(
         var atomicObjects = atomicObjectByDocumentAndTransform.Elements;
         foreach (Element revitElement in atomicObjects)
         {
-          cancellationToken.ThrowIfCancellationRequested();
+          ct.ThrowIfCancellationRequested();
           string applicationId = revitElement.UniqueId;
           string sourceType = revitElement.GetType().Name;
           try
@@ -241,6 +229,6 @@ public class RevitRootObjectBuilder(
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
-    return new RootObjectBuilderResult(rootObject, results);
+    return Task.FromResult(new RootObjectBuilderResult(rootObject, results));
   }
 }
