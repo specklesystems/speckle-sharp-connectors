@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Grasshopper.Documentation;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.Grasshopper8.Components;
@@ -58,6 +59,21 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
         return true;
       case KeyValuePair<string, string> kvp:
         Value = new SpecklePropertyGoo() { Value = kvp.Value, Path = kvp.Key };
+        return true;
+      case GH_String ghS:
+        Value = new SpecklePropertyGoo() { Value = ghS.Value, Path = string.Empty };
+        return true;
+      case GH_Text t:
+        Value = new SpecklePropertyGoo() { Value = t.Text, Path = string.Empty };
+        return true;
+      case GH_Number n:
+        Value = new SpecklePropertyGoo() { Value = n.Value, Path = string.Empty };
+        return true;
+      case GH_Integer ghI:
+        Value = new SpecklePropertyGoo() { Value = ghI.Value, Path = string.Empty };
+        return true;
+      case GH_Boolean ghB:
+        Value = new SpecklePropertyGoo() { Value = ghB.Value, Path = string.Empty };
         return true;
     }
 
