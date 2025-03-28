@@ -14,7 +14,7 @@ public class SpeckleUrlModelResourceParam : GH_Param<SpeckleUrlModelResourceGoo>
     : base(tag, access) { }
 
   public SpeckleUrlModelResourceParam(GH_ParamAccess access)
-    : base("Speckle URL", "spcklUrl", "A Speckle resource", "Speckle", "Resources", access) { }
+    : base("Speckle URL", "URL", "A Speckle resource", "Speckle", "Resources", access) { }
 
   public override Guid ComponentGuid => new Guid("E5421FC2-F10D-447F-BF23-5C934ABDB2D3");
 }

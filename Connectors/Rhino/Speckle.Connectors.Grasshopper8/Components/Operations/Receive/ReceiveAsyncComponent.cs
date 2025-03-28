@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
@@ -535,10 +536,42 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
 {
   private bool _selected;
 
-  public ReceiveAsyncComponentAttributes(GH_Component owner)
-    : base(owner) { }
+  private class SpeckleComponentButton
+  {
+    public int Height { get; set; } = 26;
+    public Rectangle ButtonBounds { get; set; }
+    public GH_Palette Palette { get; set; }
+    public string Text { get; set; }
+  }
 
-  private Rectangle ButtonBounds { get; set; }
+  private List<SpeckleComponentButton> Buttons { get; set; }
+
+  public ReceiveAsyncComponentAttributes(GH_Component owner)
+    : base(owner)
+  {
+    Buttons = new List<SpeckleComponentButton>()
+    {
+      new SpeckleComponentButton()
+      {
+        Text = "Select project",
+        Palette = GH_Palette.Blue,
+        Height = 18
+      },
+      new SpeckleComponentButton()
+      {
+        Text = "Select model",
+        Palette = GH_Palette.Blue,
+        Height = 18
+      },
+      new SpeckleComponentButton()
+      {
+        Text = "Select version",
+        Palette = GH_Palette.Blue,
+        Height = 18
+      },
+      new SpeckleComponentButton() { Text = "Test 2", Palette = GH_Palette.Black },
+    };
+  }
 
   public override bool Selected
   {
@@ -551,15 +584,19 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
     base.Layout();
 
     var baseRec = GH_Convert.ToRectangle(Bounds);
-    baseRec.Height += 26;
 
-    var btnRec = baseRec;
-    btnRec.Y = btnRec.Bottom - 26;
-    btnRec.Height = 26;
-    btnRec.Inflate(-2, -2);
+    for (int i = 0; i < Buttons.Count; i++)
+    {
+      var button = Buttons[i];
 
-    Bounds = baseRec;
-    ButtonBounds = btnRec;
+      var buttonBounds = i == 0 ? baseRec : Buttons[i - 1].ButtonBounds;
+      buttonBounds.Y = buttonBounds.Bottom;
+      buttonBounds.Height = button.Height;
+      buttonBounds.Width = baseRec.Width;
+      button.ButtonBounds = buttonBounds;
+      baseRec.Height += button.Height;
+      Bounds = baseRec;
+    }
   }
 
   protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
@@ -570,38 +607,51 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
 
     if (channel == GH_CanvasChannel.Objects)
     {
-      if (((ReceiveAsyncComponent)Owner).AutoReceive)
+      // if (((ReceiveAsyncComponent)Owner).AutoReceive)
+      // {
+      //   var autoReceiveButton = GH_Capsule.CreateTextCapsule(
+      //     ButtonBounds,
+      //     ButtonBounds,
+      //     GH_Palette.Blue,
+      //     "Auto Receive",
+      //     2,
+      //     0
+      //   );
+      //
+      //   autoReceiveButton.Render(graphics, Selected, Owner.Locked, false);
+      //   autoReceiveButton.Dispose();
+      // }
+      // else
+      // {
+      //   var palette =
+      //     state == ComponentState.Expired || state == ComponentState.UpToDate || state == ComponentState.Cancelled
+      //       ? GH_Palette.Black
+      //       : GH_Palette.Transparent;
+      //   var text = state != ComponentState.Receiving ? "Receive" : "Receiving...";
+      //
+      //   var button = GH_Capsule.CreateTextCapsule(
+      //     ButtonBounds,
+      //     ButtonBounds,
+      //     palette,
+      //     text,
+      //     2,
+      //     state == ComponentState.Expired ? 10 : 0
+      //   );
+      //   button.Render(graphics, Selected, Owner.Locked, false);
+      //   button.Dispose();
+      // }
+
+      foreach (var button in Buttons)
       {
-        var autoReceiveButton = GH_Capsule.CreateTextCapsule(
-          ButtonBounds,
-          ButtonBounds,
-          GH_Palette.Blue,
-          "Auto Receive",
+        using var b = GH_Capsule.CreateTextCapsule(
+          button.ButtonBounds,
+          button.ButtonBounds,
+          button.Palette,
+          button.Text,
           2,
           0
         );
-
-        autoReceiveButton.Render(graphics, Selected, Owner.Locked, false);
-        autoReceiveButton.Dispose();
-      }
-      else
-      {
-        var palette =
-          state == ComponentState.Expired || state == ComponentState.UpToDate || state == ComponentState.Cancelled
-            ? GH_Palette.Black
-            : GH_Palette.Transparent;
-        var text = state != ComponentState.Receiving ? "Receive" : "Receiving...";
-
-        var button = GH_Capsule.CreateTextCapsule(
-          ButtonBounds,
-          ButtonBounds,
-          palette,
-          text,
-          2,
-          state == ComponentState.Expired ? 10 : 0
-        );
-        button.Render(graphics, Selected, Owner.Locked, false);
-        button.Dispose();
+        b.Render(graphics, Selected, Owner.Locked, false);
       }
     }
   }
@@ -613,26 +663,37 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
       return base.RespondToMouseDown(sender, e);
     }
 
-    if (!((RectangleF)ButtonBounds).Contains(e.CanvasLocation))
+    foreach (var button in Buttons)
     {
-      return base.RespondToMouseDown(sender, e);
+      if (((RectangleF)button.ButtonBounds).Contains(e.CanvasLocation))
+      {
+        Debug.WriteLine($"Button was pressed: {button.Text}");
+        return GH_ObjectResponse.Handled;
+      }
     }
 
-    if (((ReceiveAsyncComponent)Owner).CurrentComponentState == ComponentState.Receiving)
-    {
-      return GH_ObjectResponse.Handled;
-    }
+    return base.RespondToMouseDown(sender, e);
 
-    if (((ReceiveAsyncComponent)Owner).AutoReceive)
-    {
-      ((ReceiveAsyncComponent)Owner).AutoReceive = false;
-      Owner.OnDisplayExpired(true);
-      return GH_ObjectResponse.Handled;
-    }
-
-    // TODO: check if owner has null account/client, and call the reset thing SYNC
-    ((ReceiveAsyncComponent)Owner).CurrentComponentState = ComponentState.Ready;
-    Owner.ExpireSolution(true);
-    return GH_ObjectResponse.Handled;
+    // if (!((RectangleF)ButtonBounds).Contains(e.CanvasLocation))
+    // {
+    //   return base.RespondToMouseDown(sender, e);
+    // }
+    //
+    // if (((ReceiveAsyncComponent)Owner).CurrentComponentState == ComponentState.Receiving)
+    // {
+    //   return GH_ObjectResponse.Handled;
+    // }
+    //
+    // if (((ReceiveAsyncComponent)Owner).AutoReceive)
+    // {
+    //   ((ReceiveAsyncComponent)Owner).AutoReceive = false;
+    //   Owner.OnDisplayExpired(true);
+    //   return GH_ObjectResponse.Handled;
+    // }
+    //
+    // // TODO: check if owner has null account/client, and call the reset thing SYNC
+    // ((ReceiveAsyncComponent)Owner).CurrentComponentState = ComponentState.Ready;
+    // Owner.ExpireSolution(true);
+    // return GH_ObjectResponse.Handled;
   }
 }
