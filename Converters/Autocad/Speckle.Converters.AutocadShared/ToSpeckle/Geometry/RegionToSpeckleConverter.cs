@@ -12,6 +12,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
+  private readonly ITypedConverter<AG.NurbCurve3d, SOG.Curve> _nurbsConverter;
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
@@ -19,6 +20,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
+    ITypedConverter<AG.NurbCurve3d, SOG.Curve> nurbsConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
@@ -26,6 +28,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     _brepConverter = brepConverter;
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
+    _nurbsConverter = nurbsConverter;
     _circleConverter = circleConverter;
     _settingsStore = settingsStore;
   }
@@ -142,6 +145,8 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
         return _lineConverter.Convert(line);
       case AG.CircularArc3d arc:
         return _arcConverter.Convert(arc);
+      case AG.NurbCurve3d nurbs:
+        return _nurbsConverter.Convert(nurbs);
     }
 
     throw new ConversionException($"Unsupported curve type for Region conversion: {curve}");
