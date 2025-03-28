@@ -20,10 +20,7 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
   public override string TypeName => "Speckle property group wrapper";
   public override string TypeDescription => "Speckle property group wrapper";
 
-  public SpecklePropertyGroupGoo()
-  {
-    Value = new();
-  }
+  public SpecklePropertyGroupGoo() { }
 
   public SpecklePropertyGroupGoo(Dictionary<string, SpecklePropertyGoo> value)
   {
@@ -45,7 +42,7 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
 
       case ModelUserText userText:
         Dictionary<string, SpecklePropertyGoo> dictionary = new();
-        foreach (KeyValuePair<string, string> entry in userText)
+        foreach (var entry in userText)
         {
           string key = entry.Key;
           SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
@@ -67,25 +64,6 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
         return true;
     }
 
-    return false;
-  }
-
-  public override bool CastTo<T>(ref T target)
-  {
-    var type = typeof(T);
-    if (type == typeof(Dictionary<string, object?>))
-    {
-      Dictionary<string, object?> dictionary = new();
-      foreach (var entry in Value)
-      {
-        dictionary.Add(entry.Key, entry.Value);
-      }
-
-      target = (T)(object)dictionary;
-      return true;
-    }
-
-    // TODO: cast to material, model object, etc.
     return false;
   }
 

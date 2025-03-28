@@ -117,9 +117,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collectionRebuilder = new GrasshopperCollectionRebuilder(
-      (root as Collection) ?? new Collection() { name = "unnamed" }
-    );
+    var collGen = new GrasshopperCollectionRebuilder((root as Collection) ?? new Collection() { name = "unnamed" });
 
     foreach (var map in localToGlobalMaps)
     {
@@ -134,28 +132,17 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
           converted.ForEach(res => res.Transform(mat));
         }
 
-        // get the collection
-        SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
-
-        // get the properties
-        SpecklePropertyGroupGoo propertyGroup = new();
-        propertyGroup.CastFrom(
-          map.AtomicObject is Speckle.Objects.Data.DataObject da
-            ? da.properties
-            : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
-        );
-
-        // create object
-        var gh = new SpeckleObjectWrapper()
+        // note one to many not handled too nice here
+        foreach (var geometryBase in converted)
         {
-          Base = map.AtomicObject,
-          Path = path.Select(p => p.name).ToList(),
-          Parent = objectCollection,
-          GeometryBases = converted,
-          Properties = propertyGroup
-        };
-
-        collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
+          var gh = new SpeckleObjectWrapper()
+          {
+            Base = map.AtomicObject,
+            Path = path.Select(o => o.name).ToList(),
+            GeometryBase = geometryBase
+          };
+          collGen.AppendSpeckleGrasshopperObject(gh, path);
+        }
       }
       catch (ConversionException)
       {
@@ -164,7 +151,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+    var goo = new SpeckleCollectionWrapperGoo(collGen.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
   }
 

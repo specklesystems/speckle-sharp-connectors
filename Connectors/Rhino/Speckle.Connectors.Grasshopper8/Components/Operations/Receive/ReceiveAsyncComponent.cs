@@ -472,28 +472,32 @@ public class ReceiveComponentWorker : WorkerInstance
               converted.ForEach(res => res.Transform(mat));
             }
 
-            // get the collection
-            SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
-
-            // get the properties
-            SpecklePropertyGroupGoo propertyGroup = new();
-            propertyGroup.CastFrom(
-              map.AtomicObject is Speckle.Objects.Data.DataObject da
-                ? da.properties
-                : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
-            );
-
-            // create object
-            var gh = new SpeckleObjectWrapper()
+            // note one to many not handled too nice here
+            foreach (var geometryBase in converted)
             {
-              Base = map.AtomicObject,
-              Path = path.Select(p => p.name).ToList(),
-              Parent = objectCollection,
-              GeometryBases = converted,
-              Properties = propertyGroup
-            };
+              SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+                path
+              );
 
-            collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
+              // get properties
+              SpecklePropertyGroupGoo propertyGroup = new();
+              propertyGroup.CastFrom(
+                map.AtomicObject is Speckle.Objects.Data.DataObject da
+                  ? da.properties
+                  : map.AtomicObject["properties"] as Dictionary<string, object?> ?? new()
+              );
+
+              var gh = new SpeckleObjectWrapper()
+              {
+                Base = map.AtomicObject,
+                Path = path.Select(p => p.name).ToList(),
+                Parent = objectCollection,
+                GeometryBase = geometryBase,
+                Properties = propertyGroup
+              };
+
+              collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
+            }
           }
           catch (ConversionException)
           {
