@@ -174,7 +174,12 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       if (element is SpeckleObjectWrapper sg)
       {
         _previewObjects.Add(sg);
-        var box = sg.GeometryBase.GetBoundingBox(false);
+        BoundingBox box = new();
+        foreach (var item in sg.GeometryBases)
+        {
+          box.Union(item.GetBoundingBox(false));
+        }
+
         _clippingBox.Union(box);
       }
     }

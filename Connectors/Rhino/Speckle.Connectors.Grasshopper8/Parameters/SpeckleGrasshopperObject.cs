@@ -17,7 +17,11 @@ namespace Speckle.Connectors.Grasshopper8.Parameters;
 public class SpeckleObjectWrapper : Base
 {
   public required Base Base { get; set; }
-  public required GeometryBase GeometryBase { get; set; } // note: how will we send intervals and other gh native objects? do we? maybe not for now
+
+  // note: how will we send intervals and other gh native objects? do we? maybe not for now
+  // note 2: dataobjects have displayvalues that can have multiple pieces of geometry.
+  // note: this handles one to many but doesn't cast well.
+  public required List<GeometryBase> GeometryBases { get; set; }
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
@@ -30,93 +34,105 @@ public class SpeckleObjectWrapper : Base
   public string? RenderMaterialName { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
-  public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
+  public override string ToString() => $"Speckle Wrapper [{GeometryBases.GetType().Name}]";
 
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
-    switch (GeometryBase)
+    foreach (GeometryBase geometryBase in GeometryBases)
     {
-      case Mesh m:
-        args.Display.DrawMeshShaded(m, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-        break;
+      switch (geometryBase)
+      {
+        case Mesh m:
+          args.Display.DrawMeshShaded(m, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
+          break;
 
-      case Brep b:
-        args.Display.DrawBrepShaded(b, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-        args.Display.DrawBrepWires(
-          b,
-          isSelected ? args.WireColour_Selected : args.WireColour,
-          args.DefaultCurveThickness
-        );
-        break;
+        case Brep b:
+          args.Display.DrawBrepShaded(b, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
+          args.Display.DrawBrepWires(
+            b,
+            isSelected ? args.WireColour_Selected : args.WireColour,
+            args.DefaultCurveThickness
+          );
+          break;
 
-      case Extrusion e:
-        args.Display.DrawMeshShaded(
-          e.GetMesh(MeshType.Any),
-          isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial
-        );
-        break;
+        case Extrusion e:
+          args.Display.DrawMeshShaded(
+            e.GetMesh(MeshType.Any),
+            isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial
+          );
+          break;
 
-      case SubD d:
-        args.Display.DrawSubDShaded(d, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
-        args.Display.DrawSubDWires(
-          d,
-          isSelected ? args.WireColour_Selected : args.WireColour,
-          args.DefaultCurveThickness
-        );
-        break;
+        case SubD d:
+          args.Display.DrawSubDShaded(d, isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial);
+          args.Display.DrawSubDWires(
+            d,
+            isSelected ? args.WireColour_Selected : args.WireColour,
+            args.DefaultCurveThickness
+          );
+          break;
 
-      case Curve c:
-        args.Display.DrawCurve(c, isSelected ? args.WireColour_Selected : args.WireColour, args.DefaultCurveThickness);
-        break;
+        case Curve c:
+          args.Display.DrawCurve(
+            c,
+            isSelected ? args.WireColour_Selected : args.WireColour,
+            args.DefaultCurveThickness
+          );
+          break;
 
-      case Rhino.Geometry.Point p:
-        args.Display.DrawPoint(p.Location, isSelected ? args.WireColour_Selected : args.WireColour);
-        break;
+        case Rhino.Geometry.Point p:
+          args.Display.DrawPoint(p.Location, isSelected ? args.WireColour_Selected : args.WireColour);
+          break;
 
-      case PointCloud pc:
-        args.Display.DrawPointCloud(pc, 1, isSelected ? args.WireColour_Selected : args.WireColour);
-        break;
+        case PointCloud pc:
+          args.Display.DrawPointCloud(pc, 1, isSelected ? args.WireColour_Selected : args.WireColour);
+          break;
 
-      case Hatch h:
-        args.Display.DrawHatch(
-          h,
-          isSelected ? args.WireColour_Selected : args.WireColour,
-          isSelected ? args.WireColour_Selected : args.WireColour
-        );
-        break;
+        case Hatch h:
+          args.Display.DrawHatch(
+            h,
+            isSelected ? args.WireColour_Selected : args.WireColour,
+            isSelected ? args.WireColour_Selected : args.WireColour
+          );
+          break;
+      }
     }
   }
 
   public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material)
   {
-    switch (GeometryBase)
+    foreach (GeometryBase geometryBase in GeometryBases)
     {
-      case Mesh m:
-        display.DrawMeshShaded(m, material);
-        break;
-      case Brep b:
-        display.DrawBrepShaded(b, material);
-        display.DrawBrepWires(b, material.Diffuse);
-        break;
-      case Extrusion e:
-        display.DrawMeshShaded(e.GetMesh(MeshType.Any), material);
-        break;
-      case SubD d:
-        display.DrawSubDShaded(d, material);
-        display.DrawSubDWires(d, material.Diffuse, display.DefaultCurveThickness);
-        break;
-      case Curve c:
-        display.DrawCurve(c, material.Diffuse);
-        break;
-      case Rhino.Geometry.Point p:
-        display.DrawPoint(p.Location, material.Diffuse);
-        break;
-      case PointCloud pc:
-        display.DrawPointCloud(pc, 1, material.Diffuse);
-        break;
-      case Hatch h:
-        display.DrawHatch(h, material.Diffuse, material.Diffuse);
-        break;
+      switch (geometryBase)
+      {
+        case Mesh m:
+          display.DrawMeshShaded(m, material);
+          break;
+        case Brep b:
+          display.DrawBrepShaded(b, material);
+          display.DrawBrepWires(b, material.Diffuse);
+          break;
+        case Extrusion e:
+          var eBrep = e.ToBrep();
+          display.DrawBrepShaded(eBrep, material);
+          display.DrawBrepShaded(eBrep, material);
+          break;
+        case SubD d:
+          display.DrawSubDShaded(d, material);
+          display.DrawSubDWires(d, material.Diffuse, display.DefaultCurveThickness);
+          break;
+        case Curve c:
+          display.DrawCurve(c, material.Diffuse);
+          break;
+        case Rhino.Geometry.Point p:
+          display.DrawPoint(p.Location, material.Diffuse);
+          break;
+        case PointCloud pc:
+          display.DrawPointCloud(pc, 1, material.Diffuse);
+          break;
+        case Hatch h:
+          display.DrawHatch(h, material.Diffuse, material.Diffuse);
+          break;
+      }
     }
   }
 
@@ -147,8 +163,11 @@ public class SpeckleObjectWrapper : Base
     }
 
     // add to doc
-    Guid guid = doc.Objects.Add(GeometryBase, att);
-    obj_ids.Add(guid);
+    foreach (GeometryBase geometryBase in GeometryBases)
+    {
+      Guid guid = doc.Objects.Add(geometryBase, att);
+      obj_ids.Add(guid);
+    }
   }
 }
 
@@ -161,6 +180,20 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override bool IsValid => true;
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
+
+  BoundingBox IGH_PreviewData.ClippingBox
+  {
+    get
+    {
+      BoundingBox bb = new();
+      foreach (var geo in Value.GeometryBases)
+      {
+        bb.Union(geo.GetBoundingBox(false));
+      }
+
+      return bb;
+    }
+  }
 
   public SpeckleObjectWrapperGoo(ModelObject mo)
   {
@@ -180,7 +213,11 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
         var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
-        Value = new SpeckleObjectWrapper() { GeometryBase = gooGB, Base = gooConverted };
+        Value = new SpeckleObjectWrapper()
+        {
+          GeometryBases = new() { gooGB },
+          Base = gooConverted
+        };
         return true;
       case ModelObject modelObject:
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
@@ -189,12 +226,21 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
           SpecklePropertyGroupGoo propertyGroup = new();
           propertyGroup.CastFrom(modelObject.UserText);
 
+          // update the converted Base with props as well
+          modelConverted["name"] = modelObject.Name.ToString();
+          Dictionary<string, object?> propertyDict = new();
+          foreach (var entry in propertyGroup.Value)
+          {
+            propertyDict.Add(entry.Key, entry.Value.Value);
+          }
+          modelConverted["properties"] = propertyDict;
+
           SpeckleObjectWrapper so =
             new()
             {
-              GeometryBase = modelGB,
+              GeometryBases = new() { modelGB },
               Base = modelConverted,
-              Name = modelObject.Name,
+              Name = modelObject.Name.ToString(),
               Color = modelObject.Display.Color?.Color.ToArgb(),
               RenderMaterialName = modelObject.Render.Material?.Material?.Name,
               Properties = propertyGroup
@@ -215,13 +261,21 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override bool CastTo<T>(ref T target)
   {
     var type = typeof(T);
+
     if (type == typeof(IGH_GeometricGoo))
     {
-      target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-      return true;
+      if (Value.GeometryBases.Count == 1)
+      {
+        target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBases.First());
+        return true;
+      }
+      else
+      {
+        return false;
+      }
     }
 
-    // TODO: cast to material, modle object, etc.
+    // TODO: cast to material, etc.
 
     return false;
   }
@@ -235,8 +289,6 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   {
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
-
-  public BoundingBox ClippingBox => Value.GeometryBase.GetBoundingBox(false);
 
   public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {
