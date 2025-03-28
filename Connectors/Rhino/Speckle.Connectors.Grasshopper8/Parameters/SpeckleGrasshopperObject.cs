@@ -105,7 +105,7 @@ public class SpeckleObjectWrapper : Base
       case Extrusion e:
         var eBrep = e.ToBrep();
         display.DrawBrepShaded(eBrep, material);
-        display.DrawBrepShaded(eBrep, material);
+        display.DrawBrepWires(eBrep, material.Diffuse);
         break;
       case SubD d:
         display.DrawSubDShaded(d, material);
