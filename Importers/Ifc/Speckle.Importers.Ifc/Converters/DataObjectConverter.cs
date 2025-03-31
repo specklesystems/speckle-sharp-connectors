@@ -11,9 +11,6 @@ public sealed class DataObjectConverter(IGeometryConverter geometryConverter) : 
 {
   public DataObject Convert(IfcModel model, IfcNode node, INodeConverter childrenConverter)
   {
-    if (!node.IsIfcRoot)
-      throw new ArgumentException("Expected to be an IfcRoot", paramName: nameof(node));
-
     // Even if there is no geometry, this will return an empty collection.
     var geo = model.GetGeometry(node.Id);
     List<Base> displayValue = geo != null ? geometryConverter.Convert(geo) : new();
@@ -24,7 +21,7 @@ public sealed class DataObjectConverter(IGeometryConverter geometryConverter) : 
       properties = node.ConvertPropertySets(),
       name = node.Name ?? node.Guid,
       displayValue = displayValue,
-      ["@elements"] = childrenConverter.ConvertChildren(model, node),
+      ["@elements"] = childrenConverter.ConvertChildren(model, node).ToList(),
       ["ifcType"] = node.Type,
       ["expressID"] = node.Id,
       ["ownerId"] = node.OwnerId,
