@@ -2,8 +2,8 @@ using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared;
@@ -13,88 +13,40 @@ public record DirectShapeDefinitionWrapper(string DefinitionId, List<GeometryObj
 public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ITypedConverter<SOG.Region, string> _regionToFilledRegionConverter;
-  private readonly ITypedConverter<Base, List<DB.GeometryObject>> _baseToGeometryConverter;
+  private readonly ITypedConverter<Base, object> _documentationOrBaseToGeometryConverter;
 
   public RevitRootToHostConverter(
-    ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
-    ITypedConverter<SOG.Region, string> regionToFilledRegionConverter,
+    ITypedConverter<Base, object> documentationOrBaseToGeometryConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _baseToGeometryConverter = baseToGeometryConverter;
-    _regionToFilledRegionConverter = regionToFilledRegionConverter;
+    _documentationOrBaseToGeometryConverter = documentationOrBaseToGeometryConverter;
     _converterSettings = converterSettings;
   }
 
   public object Convert(Base target)
   {
-    List<GeometryObject> geometryObjects = new();
-    List<string> regionIds = new();
-
-    switch (target)
-    {
-      case SOG.Region region:
-        // return only ElementId of created region
-        var result = ConvertRegionNativeOrFallback(region, region);
-        if (result is string elementId)
-        {
-          regionIds.Add(elementId);
-          return regionIds;
-        }
-        // use fallback to direct shape conversion if unsuccessful (e.g. ActiveView was not 2d)
-        geometryObjects.AddRange((List<DB.GeometryObject>)result);
-        break;
-
-      case DataObject dataObj:
-        if (dataObj.displayValue.All(x => x is SOG.Region))
-        {
-          // each displayValue object will be a separate Region, convert them and add to list
-          foreach (var displayRegion in dataObj.displayValue)
-          {
-            var resultDisplayRegion = ConvertRegionNativeOrFallback((SOG.Region)displayRegion, dataObj);
-            if (resultDisplayRegion is string elementIdDisplayRegion)
-            {
-              regionIds.Add(elementIdDisplayRegion);
-            }
-            else
-            {
-              geometryObjects.AddRange((List<DB.GeometryObject>)resultDisplayRegion);
-              // break here, because fallback converter already converted the entire object
-              break;
-            }
-          }
-
-          if (geometryObjects.Count == 0)
-          {
-            return regionIds;
-          }
-        }
-        geometryObjects = _baseToGeometryConverter.Convert(target);
-        break;
-
-      default:
-        geometryObjects = _baseToGeometryConverter.Convert(target);
-        break;
-    }
-
+    var result = _documentationOrBaseToGeometryConverter.Convert(target);
     var definitionId = target.applicationId ?? target.id.NotNull();
-    DirectShapeLibrary
-      .GetDirectShapeLibrary(_converterSettings.Current.Document)
-      .AddDefinition(definitionId, geometryObjects);
 
-    return new DirectShapeDefinitionWrapper(definitionId, geometryObjects);
-  }
+    if (result is List<GeometryObject> geometryObjects) // 3d objects converted
+    {
+      if (geometryObjects.Count == 0)
+      {
+        throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
+      }
 
-  private object ConvertRegionNativeOrFallback(SOG.Region region, Base originalObj)
-  {
-    try
-    {
-      return _regionToFilledRegionConverter.Convert(region);
+      DirectShapeLibrary
+        .GetDirectShapeLibrary(_converterSettings.Current.Document)
+        .AddDefinition(definitionId, geometryObjects);
+
+      return new DirectShapeDefinitionWrapper(definitionId, geometryObjects);
     }
-    catch (Autodesk.Revit.Exceptions.ArgumentException)
+
+    if (result is List<string> geometryIds) // documentation elements converted
     {
-      return _baseToGeometryConverter.Convert(originalObj);
+      return geometryIds;
     }
+    throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
   }
 }

@@ -203,7 +203,7 @@ public sealed class RevitHostObjectBuilder(
         }
         else if (result is List<string> elementsIds)
         {
-          // This is the case when conversion returns not a GeometryObject, but e.g. FilledRegion (Element class used in Annotations)
+          // This is the case when conversion returns not a GeometryObject, but Documentation elements (Annotations, Details etc.)
           // If Regions were a part of DataObject, it can return more than 1 native shape
           foreach (var elementId in elementsIds)
           {
