@@ -78,7 +78,7 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
       Dictionary<string, object?> dictionary = new();
       foreach (var entry in Value)
       {
-        dictionary.Add(entry.Key, entry.Value);
+        dictionary.Add(entry.Key, entry.Value.Value);
       }
 
       target = (T)(object)dictionary;
