@@ -29,14 +29,25 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   public object Convert(Base target)
   {
-    // If ActiveView is a Plan view, use PlanView converter (will ignore DirectShapes)
+    // If ActiveView is a vertical 2d view, use PlanView converter (will ignore DirectShapes)
     View activeView = _converterSettings.Current.Document.ActiveView;
-    if (activeView.ViewType == ViewType.FloorPlan)
+    if (
+      activeView.ViewType == ViewType.FloorPlan
+      || activeView.ViewType == ViewType.AreaPlan
+      || activeView.ViewType == ViewType.CeilingPlan
+      || (activeView.ViewType == ViewType.Detail && Math.Abs(activeView.ViewDirection.Z - 1) < 0.00001)
+    )
     {
       return _planViewToGeometryConverter.Convert(target);
     }
 
-    // Otherwise, use default behavior and covert everything to DirectShapes
+    // ignore Receive in any other views (e.g. Section, Elevation, ViewSheet etc.)
+    if (activeView.ViewType != ViewType.ThreeD)
+    {
+      throw new ConversionException($"Receive in '{activeView.ViewType}' View is not supported");
+    }
+
+    // Use default behavior and covert everything to DirectShapes
     List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
 
     if (geometryObjects.Count == 0)
