@@ -66,10 +66,7 @@ public static class Affected
         Console.WriteLine("Affected project group being built: " + group.HostAppSlug);
       }
 
-      if (groups.Count > 0)
-      {
-        return groups.ToArray();
-      }
+      return groups.ToArray();
     }
 
     Console.WriteLine("Using all project groups: " + string.Join(',', Consts.ProjectGroups));
