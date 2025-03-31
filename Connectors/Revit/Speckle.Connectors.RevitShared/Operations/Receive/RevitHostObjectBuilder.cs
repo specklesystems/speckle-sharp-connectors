@@ -208,6 +208,7 @@ public sealed class RevitHostObjectBuilder(
           foreach (var elementId in elementsIds)
           {
             conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, elementId, "Filled Region"));
+            bakedObjectIds.Add(elementId);
           }
         }
         else
