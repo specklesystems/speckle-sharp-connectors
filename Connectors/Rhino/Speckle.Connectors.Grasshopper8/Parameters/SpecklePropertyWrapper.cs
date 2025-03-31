@@ -43,37 +43,48 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
         Path = speckleProperty.Path;
         return true;
       case double d:
-        Value = new SpecklePropertyGoo() { Value = d, Path = string.Empty };
+        Value = d;
+        Path = string.Empty;
         return true;
       case int i:
-        Value = new SpecklePropertyGoo() { Value = i, Path = string.Empty };
+        Value = i;
+        Path = string.Empty;
         return true;
       case string s:
-        Value = new SpecklePropertyGoo() { Value = s, Path = string.Empty };
+        Value = s;
+        Path = string.Empty;
         return true;
       case bool b:
-        Value = new SpecklePropertyGoo() { Value = b, Path = string.Empty };
+        Value = b;
+        Path = string.Empty;
         return true;
       case KeyValuePair<string, object?> kvp:
-        Value = new SpecklePropertyGoo() { Value = kvp.Value ?? "", Path = kvp.Key };
+        Value = kvp.Value ?? "";
+        Path = kvp.Key;
         return true;
       case KeyValuePair<string, string> kvp:
-        Value = new SpecklePropertyGoo() { Value = kvp.Value, Path = kvp.Key };
+        Value = kvp.Value;
+        Path = kvp.Key;
         return true;
       case GH_String ghS:
-        Value = new SpecklePropertyGoo() { Value = ghS.Value, Path = string.Empty };
+        Value = ghS.Value;
+        Path = string.Empty;
         return true;
       case GH_Text t:
-        Value = new SpecklePropertyGoo() { Value = t.Text, Path = string.Empty };
+        Value = t.Text;
+        Path = string.Empty;
         return true;
       case GH_Number n:
-        Value = new SpecklePropertyGoo() { Value = n.Value, Path = string.Empty };
+        Value = n.Value;
+        Path = string.Empty;
         return true;
       case GH_Integer ghI:
-        Value = new SpecklePropertyGoo() { Value = ghI.Value, Path = string.Empty };
+        Value = ghI.Value;
+        Path = string.Empty;
         return true;
       case GH_Boolean ghB:
-        Value = new SpecklePropertyGoo() { Value = ghB.Value, Path = string.Empty };
+        Value = ghB.Value;
+        Path = string.Empty;
         return true;
     }
 
