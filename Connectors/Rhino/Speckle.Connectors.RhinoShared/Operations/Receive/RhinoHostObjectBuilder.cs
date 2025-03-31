@@ -165,6 +165,16 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             FlattenDictionaryToUserStrings(properties, userStrings, "");
             foreach (var kvp in userStrings)
             {
+              // POC: we're skipping properties that end with `.name` , `.units`, etc because this is causing a lot of noise atm.
+              if (
+                kvp.Key.EndsWith(".units")
+                || kvp.Key.EndsWith(".name")
+                || kvp.Key.EndsWith(".internalDefinitionName")
+              )
+              {
+                continue;
+              }
+
               atts.SetUserString(kvp.Key, kvp.Value);
             }
 
@@ -379,6 +389,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return objectIds;
   }
 
+  // changes a properties dictionary to <string,string> to assign as user strings.
   private void FlattenDictionaryToUserStrings(
     Dictionary<string, object?> dict,
     Dictionary<string, string> flattenedDict,
