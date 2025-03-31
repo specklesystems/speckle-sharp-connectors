@@ -288,6 +288,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Common.MeshTriangul
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Performance", "Sdk\Speckle.Performance\Speckle.Performance.csproj", "{65230E97-8EBA-4594-8A17-2847C5E2B459}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.GrasshopperShared", "Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj", "{B6FBB8F4-4E2D-41D9-AC3F-1E30D0C8E87C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -849,6 +851,7 @@ Global
 		{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{B740A025-1035-4A75-865B-7825857D610C} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{65230E97-8EBA-4594-8A17-2847C5E2B459} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
+		{B6FBB8F4-4E2D-41D9-AC3F-1E30D0C8E87C} = {9039209B-7244-483B-B668-D3CE31B304C1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
@@ -907,6 +910,7 @@ Global
 		Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.projitems*{842f4bfd-3997-485d-bab5-9419c1d982f2}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{89c4cbc7-1606-40de-b6da-fbe3aac98395}*SharedItemsImports = 5
 		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{8c14d930-03d2-4e2f-9d8d-a6b57f57a659}*SharedItemsImports = 5
+		Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems*{8f6ad59b-fe43-41ae-8f47-7b9752ba0085}*SharedItemsImports = 5
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{8f9181c2-1808-44c0-a33a-5bae40c49e63}*SharedItemsImports = 5
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{9166cc10-12e1-4a0f-916b-61f6f2004f5a}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{9add1b7a-6401-4202-8613-f668e2fbc0a4}*SharedItemsImports = 13
@@ -924,6 +928,7 @@ Global
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{b12d6a2e-51fd-4197-b442-46c7d8f5e4e4}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{b37d4b9a-8d3f-4fa5-b9c8-e6c5f8a0c1e2}*SharedItemsImports = 13
 		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{b6985672-4704-4f86-a3e0-2310bf8e6d73}*SharedItemsImports = 5
+		Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems*{b6fbb8f4-4e2d-41d9-ac3f-1e30d0c8e87c}*SharedItemsImports = 13
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{bbf2c19e-221e-4aa0-8521-fe75d8f4a2b0}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{c2de264a-aa87-4012-b954-17e3f403a237}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.projitems*{c32274d9-1b66-4d5c-82f9-eb3f10f46752}*SharedItemsImports = 5
