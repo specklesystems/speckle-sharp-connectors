@@ -13,40 +13,42 @@ public record DirectShapeDefinitionWrapper(string DefinitionId, List<GeometryObj
 public class RevitRootToHostConverter : IRootToHostConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ITypedConverter<Base, object> _documentationOrBaseToGeometryConverter;
+  private readonly ITypedConverter<Base, List<DB.GeometryObject>> _baseToGeometryConverter;
+  private readonly ITypedConverter<Base, List<string>> _planViewToGeometryConverter;
 
   public RevitRootToHostConverter(
-    ITypedConverter<Base, object> documentationOrBaseToGeometryConverter,
+    ITypedConverter<Base, List<string>> planViewToGeometryConverter,
+    ITypedConverter<Base, List<DB.GeometryObject>> baseToGeometryConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
-    _documentationOrBaseToGeometryConverter = documentationOrBaseToGeometryConverter;
+    _planViewToGeometryConverter = planViewToGeometryConverter;
+    _baseToGeometryConverter = baseToGeometryConverter;
     _converterSettings = converterSettings;
   }
 
   public object Convert(Base target)
   {
-    var result = _documentationOrBaseToGeometryConverter.Convert(target);
+    // If ActiveView is a Plan view, use PlanView converter (will ignore DirectShapes)
+    View activeView = _converterSettings.Current.Document.ActiveView;
+    if (activeView.ViewType == ViewType.FloorPlan)
+    {
+      return _planViewToGeometryConverter.Convert(target);
+    }
+
+    // Otherwise, use default behavior and covert everything to DirectShapes
+    List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
+
+    if (geometryObjects.Count == 0)
+    {
+      throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
+    }
+
     var definitionId = target.applicationId ?? target.id.NotNull();
+    DirectShapeLibrary
+      .GetDirectShapeLibrary(_converterSettings.Current.Document)
+      .AddDefinition(definitionId, geometryObjects);
 
-    if (result is List<GeometryObject> geometryObjects) // 3d objects converted
-    {
-      if (geometryObjects.Count == 0)
-      {
-        throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
-      }
-
-      DirectShapeLibrary
-        .GetDirectShapeLibrary(_converterSettings.Current.Document)
-        .AddDefinition(definitionId, geometryObjects);
-
-      return new DirectShapeDefinitionWrapper(definitionId, geometryObjects);
-    }
-
-    if (result is List<string> geometryIds) // documentation elements converted
-    {
-      return geometryIds;
-    }
-    throw new ConversionException($"No supported conversion for {target.speckle_type} found.");
+    return new DirectShapeDefinitionWrapper(definitionId, geometryObjects);
   }
 }
