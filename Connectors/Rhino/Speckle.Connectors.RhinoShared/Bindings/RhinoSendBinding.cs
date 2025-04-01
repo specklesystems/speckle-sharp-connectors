@@ -33,8 +33,6 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
-
-  //private readonly List<ISendFilter> _sendFilters;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -67,7 +65,6 @@ public sealed class RhinoSendBinding : ISendBinding
     DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
-    //IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
@@ -82,7 +79,6 @@ public sealed class RhinoSendBinding : ISendBinding
     _store = store;
     _idleManager = idleManager;
     _serviceProvider = serviceProvider;
-    //_sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
@@ -278,8 +274,6 @@ public sealed class RhinoSendBinding : ISendBinding
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
       });
   }
-
-  //public List<ISendFilter> GetSendFilters() => _sendFilters;
 
   public List<ISendFilter> GetSendFilters() =>
     [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter()];
