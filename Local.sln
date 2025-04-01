@@ -895,6 +895,7 @@ Global
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{56680ea7-3599-4d88-83a5-b43ba93ac046}*SharedItemsImports = 5
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{57afb8cb-b310-49e4-9c53-621a614063cf}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{57c1aa51-5be2-40f3-8cb2-8b7d2af0ff5c}*SharedItemsImports = 5
+		Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems*{5ce00778-d651-4e58-a1d6-32d15c0e8387}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems*{5d1e0b0d-56a7-4e13-b9a9-8633e02b8f17}*SharedItemsImports = 13
 		Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems*{5e924b13-b3e8-4724-9ba7-ce82e39866eb}*SharedItemsImports = 5
 		Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems*{5e924b13-b3e8-4724-9ba7-ce82e39866eb}*SharedItemsImports = 5
