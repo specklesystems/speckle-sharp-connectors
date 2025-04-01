@@ -4,6 +4,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -29,7 +30,7 @@ public class LinkedModelHandler
   /// This method handles the specifics of element collection but doesn't make decisions
   /// about whether the linked model should be processed - that's the caller's responsibility.
   /// </summary>
-  public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument)
+  public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument, Transform? transform)
   {
     // send mode → Categories
     if (sendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories is not null)
@@ -51,7 +52,8 @@ public class LinkedModelHandler
     {
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
         linkedDocument.PathName,
-        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
+        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document,
+        transform
       );
 
 #if REVIT2024_OR_GREATER
@@ -166,13 +168,34 @@ public class LinkedModelHandler
     return collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
   }
 
-  private RevitLinkInstance FindLinkInstanceForDocument(string linkedDocumentPath, Document mainDocument)
+  private RevitLinkInstance FindLinkInstanceForDocument(
+    string linkedDocumentPath,
+    Document mainDocument,
+    Transform? transform
+  )
   {
     using var collector = new FilteredElementCollector(mainDocument);
-    return collector
+    var linkInstances = collector
       .OfClass(typeof(RevitLinkInstance))
       .Cast<RevitLinkInstance>()
-      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
-      .NotNull();
+      .Where(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
+      .ToList();
+
+    if (transform != null && linkInstances.Count > 0)
+    {
+      string transformHash = GetTransformHash(transform);
+
+      foreach (var link in linkInstances)
+      {
+        string linkTransformHash = GetTransformHash(link.GetTotalTransform().Inverse);
+
+        if (linkTransformHash == transformHash)
+        {
+          return link;
+        }
+      }
+    }
+    return linkInstances.FirstOrDefault()
+      ?? throw new SpeckleException($"No link instance found for {linkedDocumentPath}");
   }
 }
