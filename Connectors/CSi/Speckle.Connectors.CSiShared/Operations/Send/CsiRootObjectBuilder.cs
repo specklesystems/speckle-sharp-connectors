@@ -7,6 +7,7 @@ using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Extensions;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -37,6 +38,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -46,7 +48,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ISectionUnpacker sectionUnpacker,
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ICsiApplicationService csiApplicationService
+    ICsiApplicationService csiApplicationService,
+    DatabaseTableExtractor databaseTableExtractor
   )
   {
     _converterSettings = converterSettings;
@@ -57,6 +60,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
+    _databaseTableExtractor = databaseTableExtractor;
   }
 
   /// <summary>
@@ -113,6 +117,21 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       // Create and all section proxies (frame and shell)
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
+
+    // sending all analysis results for now
+    // hackady-hack-hack-hack
+    Base analysisPlaceholder = new();
+    var analysisResults = _databaseTableExtractor.GetTableData("Element Forces - Columns").Rows;
+    analysisPlaceholder["analysisResults"] = analysisResults;
+    rootObjectCollection["analysisPlaceholder"] = analysisPlaceholder;
+
+    // refactored into a class [BS - today]
+    // reduce data noise - limit to only send axial forces for now? [BS - today]
+    // need to handle the numerous stations and load combinations associated with a single column. we have the issue that since keys are unique, we only get one entry for a column. nested nested nested dict ? or concatenate the key? [DK / BS]
+    // ui settings - multi-select on load cases / combinations to send [DK - tomorrow]
+    // ui setting to send results (just limit to column forces for now) [DK - tomorrow]
+    // controls - is analysis run? are results available? send only column results for the columns that are selected [BS - today]
+    // sample poc automate function [DK & BS]
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
