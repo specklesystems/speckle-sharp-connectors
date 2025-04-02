@@ -4,10 +4,10 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.ETABSShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Extensions;
-using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -38,7 +38,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
-  private readonly DatabaseTableExtractor _databaseTableExtractor;
+  private readonly EtabsColumnElementForcesExtractor _etabsColumnElementForcesExtractor; // NO! Naughty Bjorn (just poc'ing for now 👀)
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -49,7 +49,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService,
-    DatabaseTableExtractor databaseTableExtractor
+    EtabsColumnElementForcesExtractor etabsColumnElementForcesExtractor
   )
   {
     _converterSettings = converterSettings;
@@ -60,7 +60,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
-    _databaseTableExtractor = databaseTableExtractor;
+    _etabsColumnElementForcesExtractor = etabsColumnElementForcesExtractor;
   }
 
   /// <summary>
@@ -118,20 +118,11 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
-    // sending all analysis results for now
-    // hackady-hack-hack-hack
-    Base analysisPlaceholder = new();
-    var analysisResults = _databaseTableExtractor.GetTableData("Element Forces - Columns").Rows;
-    analysisPlaceholder["analysisResults"] = analysisResults;
-    rootObjectCollection["analysisPlaceholder"] = analysisPlaceholder;
-
-    // refactored into a class [BS - today]
-    // reduce data noise - limit to only send axial forces for now? [BS - today]
-    // need to handle the numerous stations and load combinations associated with a single column. we have the issue that since keys are unique, we only get one entry for a column. nested nested nested dict ? or concatenate the key? [DK / BS]
-    // ui settings - multi-select on load cases / combinations to send [DK - tomorrow]
-    // ui setting to send results (just limit to column forces for now) [DK - tomorrow]
-    // controls - is analysis run? are results available? send only column results for the columns that are selected [BS - today]
-    // sample poc automate function [DK & BS]
+    // TODO: Linking up to UI settings about whether or not to send, maybe some validation etc. Just going to send for now
+    // TODO: Inject correct "extractor" according to which analysis results send settings
+    // TODO: Conversion settings: which load combinations / load cases etc.?
+    Base analysisResults = new() { ["analysisResults"] = _etabsColumnElementForcesExtractor.GetColumnsForces() };
+    rootObjectCollection["analysisResults"] = analysisResults;
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
