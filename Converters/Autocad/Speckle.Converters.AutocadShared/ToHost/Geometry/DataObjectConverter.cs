@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
@@ -9,46 +10,31 @@ namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 [NameAndRankValue(typeof(DataObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<DataObject, List<(ADB.Entity a, Base b)>>
 {
-  private readonly ITypedConverter<SOG.Arc, ADB.Arc> _arcConverter;
+  private readonly ITypedConverter<ICurve, List<(ADB.Entity, Base)>> _curveConverter;
   private readonly ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> _brepXConverter;
-  private readonly ITypedConverter<SOG.Circle, ADB.Circle> _circleConverter;
-  private readonly ITypedConverter<SOG.Curve, ADB.Curve> _curveConverter;
-  private readonly ITypedConverter<SOG.Ellipse, ADB.Ellipse> _ellipseConverter;
   private readonly ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> _extrusionXConverter;
-  private readonly ITypedConverter<SOG.Line, ADB.Line> _lineConverter;
   private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
-  private readonly ITypedConverter<SOG.Polycurve, List<(ADB.Entity a, Base b)>> _polycurveConverter;
-  private readonly ITypedConverter<SOG.Polyline, ADB.Polyline3d> _polylineConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
+  private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
 
   public DataObjectConverter(
-    ITypedConverter<SOG.Arc, ADB.Arc> arcConverter,
+    ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
     ITypedConverter<SOG.BrepX, List<(ADB.Entity a, Base b)>> brepXConverter,
-    ITypedConverter<SOG.Circle, ADB.Circle> circleConverter,
-    ITypedConverter<SOG.Curve, ADB.Curve> curveConverter,
-    ITypedConverter<SOG.Ellipse, ADB.Ellipse> ellipseConverter,
     ITypedConverter<SOG.ExtrusionX, List<(ADB.Entity a, Base b)>> extrusionXConverter,
-    ITypedConverter<SOG.Line, ADB.Line> lineConverter,
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
-    ITypedConverter<SOG.Polycurve, List<(ADB.Entity, Base)>> polycurveConverter,
-    ITypedConverter<SOG.Polyline, ADB.Polyline3d> polylineConverter,
-    ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter
+    ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
   )
   {
-    _arcConverter = arcConverter;
-    _brepXConverter = brepXConverter;
-    _circleConverter = circleConverter;
     _curveConverter = curveConverter;
-    _ellipseConverter = ellipseConverter;
+    _brepXConverter = brepXConverter;
     _extrusionXConverter = extrusionXConverter;
-    _lineConverter = lineConverter;
     _meshConverter = meshConverter;
     _pointConverter = pointConverter;
-    _polycurveConverter = polycurveConverter;
-    _polylineConverter = polylineConverter;
     _subDXConverter = subDXConverter;
+    _regionConverter = regionConverter;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -67,23 +53,11 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   {
     switch (displayObject)
     {
-      case SOG.Arc arc:
-        yield return (_arcConverter.Convert(arc), arc);
-        break;
       case SOG.BrepX brepX:
         foreach (var i in _brepXConverter.Convert(brepX))
         {
           yield return i;
         }
-        break;
-      case SOG.Circle circle:
-        yield return (_circleConverter.Convert(circle), circle);
-        break;
-      case SOG.Curve curve:
-        yield return (_curveConverter.Convert(curve), curve);
-        break;
-      case SOG.Ellipse ellipse:
-        yield return (_ellipseConverter.Convert(ellipse), ellipse);
         break;
       case SOG.ExtrusionX extrusionX:
         foreach (var i in _extrusionXConverter.Convert(extrusionX))
@@ -91,29 +65,26 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
           yield return i;
         }
         break;
-      case SOG.Line line:
-        yield return (_lineConverter.Convert(line), line);
-        break;
       case SOG.Mesh mesh:
         yield return (_meshConverter.Convert(mesh), mesh);
         break;
       case SOG.Point point:
         yield return (_pointConverter.Convert(point), point);
         break;
-      case SOG.Polycurve polycurve:
-        foreach (var i in _polycurveConverter.Convert(polycurve))
+      case ICurve curve:
+        foreach (var result in _curveConverter.Convert(curve))
         {
-          yield return i;
+          yield return result;
         }
-        break;
-      case SOG.Polyline polyline:
-        yield return (_polylineConverter.Convert(polyline), polyline);
         break;
       case SOG.SubDX subDX:
         foreach (var i in _subDXConverter.Convert(subDX))
         {
           yield return i;
         }
+        break;
+      case SOG.Region region:
+        yield return (_regionConverter.Convert(region), region);
         break;
 
       default:
