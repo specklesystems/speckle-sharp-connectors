@@ -15,18 +15,32 @@ namespace Speckle.Importers.Ifc.Tester2;
 public sealed class IfcTester(IClientFactory clientFactory, Importer importer, IAccountManager accountManager)
 {
   // Settings, Change these to suit!
-  private readonly FilePath _filePath =
-    //new(@"C:\Users\Jedd\Desktop\GRAPHISOFT_Archicad_Sample_Project-S-Office_v1.0_AC25.ifc");
-    new(@"C:\Users\Jedd\Desktop\EST-BRE-AF-3D-BT1-30-SD-00001-A-P.ifc");
+  // private readonly ICollection<FilePath> _filePath = [new(@"C:\Users\Jedd\Desktop\GRAPHISOFT_Archicad_Sample_Project-S-Office_v1.0_AC25.ifc")]
+  private readonly IEnumerable<string> _filePaths = Directory.EnumerateFiles(@"C:\Users\Jedd\Desktop\", "*.ifc");
+
   private readonly Uri _serverUrl = new("https://app.speckle.systems");
   private const string PROJECT_ID = "f3a42bdf24";
 
-  public async Task Run()
+  public async Task Run(CancellationToken cancellationToken = default)
   {
     var account = accountManager.GetAccounts(_serverUrl).First();
     using var speckleClient = clientFactory.Create(account);
-    string modelName = _filePath.GetFileName();
-    var existing = await speckleClient.Project.GetWithModels(PROJECT_ID, 1, modelsFilter: new(search: modelName));
+
+    foreach (var path in _filePaths)
+    {
+      await ImportFile(speckleClient, path, cancellationToken);
+    }
+  }
+
+  private async Task ImportFile(Client speckleClient, FilePath filePath, CancellationToken cancellationToken)
+  {
+    string modelName = filePath.GetFileName();
+    var existing = await speckleClient.Project.GetWithModels(
+      PROJECT_ID,
+      1,
+      modelsFilter: new(search: modelName),
+      cancellationToken: cancellationToken
+    );
     string? existingModel = existing.models.items.Count >= 1 ? existing.models.items.First().id : null;
 
     // Convert IFC to Speckle Objects
@@ -35,14 +49,14 @@ public sealed class IfcTester(IClientFactory clientFactory, Importer importer, I
       new()
       {
         ServerUrl = _serverUrl,
-        FilePath = _filePath.ToString(),
+        FilePath = filePath.ToString(),
         ProjectId = PROJECT_ID,
         ModelId = existingModel,
-        ModelName = _filePath.GetFileName(),
+        ModelName = filePath.GetFileName(),
         VersionMessage = "",
-        Token = account.token
+        Token = speckleClient.Account.token
       };
-    var version = await importer.ImportIfc(args, null, default);
+    var version = await importer.ImportIfc(args, null, cancellationToken);
     Console.WriteLine($"File was successfully sent {version.id}");
   }
 }

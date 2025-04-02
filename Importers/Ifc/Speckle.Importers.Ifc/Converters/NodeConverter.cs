@@ -37,8 +37,8 @@ public sealed class NodeConverter(
     };
   }
 
-  public List<Base> ConvertChildren(IfcModel model, IfcNode node)
+  public IEnumerable<Base> ConvertChildren(IfcModel model, IfcNode node)
   {
-    return node.GetChildren().Where(x => x.IsIfcRoot).Select(x => Convert(model, x)).ToList();
+    return node.GetChildren().Where(x => x.IsIfcRoot).Select(x => Convert(model, x));
   }
 }
