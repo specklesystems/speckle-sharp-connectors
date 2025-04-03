@@ -77,4 +77,7 @@
       DestinationFolder="$(DirectRibbonPath)"
       Condition="Exists('$(DirectTeklaPath)')" />
   </Target>
+  <Target Name="RemoveUnnecessaryRuntimes" AfterTargets="Build">
+    <RemoveDir Directories="$(OutputPath)runtimes\win-arm64" />
+  </Target>
 </Project>

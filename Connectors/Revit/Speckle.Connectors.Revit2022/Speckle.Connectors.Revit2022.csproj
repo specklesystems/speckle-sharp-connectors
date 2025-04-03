@@ -4,9 +4,14 @@
     <UseWpf>true</UseWpf>
     <RevitVersion>2022</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2022;REVIT2022_OR_GREATER</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+  
+  <PropertyGroup Label="Make Cef 65 Happy">
+    <!--Due to a bug with old cef and modern ms build, it gets a bit confused with platform targets-->
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <Prefer32bit>false</Prefer32bit>
-    <Configurations>Debug;Release;Local</Configurations>
+    <NoWarn>$(NoWarn);MSB3270</NoWarn>
   </PropertyGroup>
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
