@@ -29,7 +29,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   public object Convert(Base target)
   {
-    // If ActiveView is a vertical 2d view, use PlanView converter (will ignore DirectShapes)
+    // If ActiveView is a 2d view, use PlanView converter (will ignore DirectShapes)
     // Unsupported views already filtered out in HostObjectBuilder
     View activeView = _converterSettings.Current.Document.ActiveView;
     if (activeView.ViewType != ViewType.ThreeD)

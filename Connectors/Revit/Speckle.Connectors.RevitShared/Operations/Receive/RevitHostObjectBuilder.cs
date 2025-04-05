@@ -33,6 +33,7 @@ public sealed class RevitHostObjectBuilder(
   RevitGroupBaker groupManager,
   RevitMaterialBaker materialBaker,
   RootObjectUnpacker rootObjectUnpacker,
+  RevitViewManager viewManager,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
@@ -61,6 +62,13 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
+    // ignore Receive in any other views (e.g. Section, Elevation, ViewSheet etc.)
+    View activeView = converterSettings.Current.Document.ActiveView;
+    if (!viewManager.IsSupportedReceiveView(activeView))
+    {
+      throw new ConversionException($"Receive in '{activeView.ViewType}' View is not supported");
+    }
+
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));
@@ -180,22 +188,6 @@ public sealed class RevitHostObjectBuilder(
         }
 
         // actual conversion happens here!
-
-        // ignore Receive in any other views (e.g. Section, Elevation, ViewSheet etc.)
-        View activeView = converterSettings.Current.Document.ActiveView;
-        if (
-          !(
-            activeView.ViewType == ViewType.ThreeD
-            || activeView.ViewType == ViewType.FloorPlan
-            || activeView.ViewType == ViewType.AreaPlan
-            || activeView.ViewType == ViewType.CeilingPlan
-            || (activeView.ViewType == ViewType.Detail && Math.Abs(activeView.ViewDirection.Z - 1) < 0.00001)
-          )
-        )
-        {
-          throw new ConversionException($"Receive in '{activeView.ViewType}' View is not supported");
-        }
-
         var result = converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
         if (result is DirectShapeDefinitionWrapper)
