@@ -28,21 +28,5 @@ public class RevitViewManager
     }
   }
 
-  public bool Is3dView(View activeView)
-  {
-    if (activeView.ViewType == ViewType.ThreeD)
-    {
-      return true;
-    }
-    return false;
-  }
-
-  private bool IsHorizontalView(View activeView)
-  {
-    if (Math.Abs(activeView.ViewDirection.Z - 1) < 0.00001)
-    {
-      return true;
-    }
-    return false;
-  }
+  private bool IsHorizontalView(View activeView) => Math.Abs(activeView.ViewDirection.Z - 1) < 0.00001;
 }
