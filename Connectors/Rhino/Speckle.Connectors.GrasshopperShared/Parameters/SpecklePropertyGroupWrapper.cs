@@ -1,6 +1,5 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Grasshopper.Rhinoceros;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 
@@ -10,7 +9,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
 /// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
 /// </summary>
-public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
+public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -43,18 +42,6 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
         Value = specklePropertyGroup.Value;
         return true;
 
-      case ModelUserText userText:
-        Dictionary<string, SpecklePropertyGoo> dictionary = new();
-        foreach (KeyValuePair<string, string> entry in userText)
-        {
-          string key = entry.Key;
-          SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
-          dictionary.Add(key, value);
-        }
-
-        Value = dictionary;
-        return true;
-
       case Dictionary<string, object?> properties:
         Dictionary<string, object> flattenedProperties = new();
         FlattenDictionary(properties, flattenedProperties, "");
@@ -67,8 +54,13 @@ public class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpeckleProperty
         return true;
     }
 
-    return false;
+    // Handle case of model objects in rhino 8
+    return HandleModelObjects(source);
   }
+
+#if !RHINO8_OR_GREATER
+  private bool HandleModelObjects(object _) => false;
+#endif
 
   public override bool CastTo<T>(ref T target)
   {

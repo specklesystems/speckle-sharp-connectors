@@ -41,8 +41,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleGrasshopperObject.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleGrasshopperObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceGoo.cs" />

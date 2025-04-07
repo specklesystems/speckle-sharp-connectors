@@ -1,6 +1,5 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
@@ -158,7 +157,7 @@ public class SpeckleObjectWrapper : Base
   }
 }
 
-public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -169,11 +168,6 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
 
   BoundingBox IGH_PreviewData.ClippingBox => Value.GeometryBase.GetBoundingBox(false);
-
-  public SpeckleObjectWrapperGoo(ModelObject mo)
-  {
-    CastFrom(mo);
-  }
 
   public override bool CastFrom(object source)
   {
@@ -190,44 +184,15 @@ public class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_Preview
         var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
         Value = new SpeckleObjectWrapper() { GeometryBase = gooGB, Base = gooConverted };
         return true;
-      case ModelObject modelObject:
-        if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
-        {
-          var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
-          SpecklePropertyGroupGoo propertyGroup = new();
-          propertyGroup.CastFrom(modelObject.UserText);
-
-          // update the converted Base with props as well
-          modelConverted["name"] = modelObject.Name.ToString();
-          Dictionary<string, object?> propertyDict = new();
-          foreach (var entry in propertyGroup.Value)
-          {
-            propertyDict.Add(entry.Key, entry.Value.Value);
-          }
-          modelConverted["properties"] = propertyDict;
-
-          SpeckleObjectWrapper so =
-            new()
-            {
-              GeometryBase = modelGB,
-              Base = modelConverted,
-              Name = modelObject.Name.ToString(),
-              Color = modelObject.Display.Color?.Color.ToArgb(),
-              RenderMaterialName = modelObject.Render.Material?.Material?.Name,
-              Properties = propertyGroup
-            };
-
-          Value = so;
-          return true;
-        }
-        return false;
     }
 
-    return false;
+    // Handle case of model objects in rhino 8
+    return HandleModelObjects(source);
   }
 
-  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
+#if !RHINO8_OR_GREATER
+  private bool HandleModelObjects(object _) => false;
+#endif
 
   public override bool CastTo<T>(ref T target)
   {

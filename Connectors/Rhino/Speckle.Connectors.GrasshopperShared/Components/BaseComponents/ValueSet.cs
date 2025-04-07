@@ -1472,11 +1472,14 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
     foreach (var goo in PersistentData)
     {
+#if RHINO8_OR_GREATER
       if (goo is IGH_ReferencedData id)
       {
         id.UnloadReferencedData();
+        continue;
       }
-      else if (goo is IGH_GeometricGoo geo)
+#endif
+      if (goo is IGH_GeometricGoo geo)
       {
         geo.ClearCaches();
       }
@@ -1513,6 +1516,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       {
         var goo = branch[i];
 
+#if RHINO8_OR_GREATER
         if (
           goo is IGH_ReferencedData id
           && id.IsReferencedData
@@ -1521,13 +1525,10 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
         )
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced {goo.TypeName} could not be found.");
+          continue;
         }
-        else if (
-          goo is IGH_GeometricGoo geo
-          && geo.IsReferencedGeometry
-          && !geo.IsGeometryLoaded
-          && !geo.LoadGeometry()
-        )
+#endif
+        if (goo is IGH_GeometricGoo geo && geo.IsReferencedGeometry && !geo.IsGeometryLoaded && !geo.LoadGeometry())
         {
           AddRuntimeMessage(
             GH_RuntimeMessageLevel.Warning,

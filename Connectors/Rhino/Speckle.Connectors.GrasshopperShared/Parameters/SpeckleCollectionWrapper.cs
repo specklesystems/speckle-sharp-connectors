@@ -2,8 +2,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Grasshopper.Rhinoceros;
-using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.Components;
@@ -134,7 +132,7 @@ public class SpeckleCollectionWrapper : Base
   }
 }
 
-public class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -155,34 +153,15 @@ public class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISp
       case GH_Goo<SpeckleCollectionWrapper> speckleGrasshopperCollectionGoo:
         Value = speckleGrasshopperCollectionGoo.Value;
         return true;
-      case ModelLayer modelLayer:
-        Collection modelCollection = new() { name = modelLayer.Name, elements = new() };
-        Value = new SpeckleCollectionWrapper(
-          modelCollection,
-          GetModelLayerPath(modelLayer),
-          modelLayer.DisplayColor?.ToArgb()
-        );
-        return true;
     }
 
-    return false;
+    // Handle case of model objects in rhino 8
+    return HandleModelObjects(source);
   }
 
-  private List<string> GetModelLayerPath(ModelLayer modellayer)
-  {
-    ModelContentName currentParent = modellayer.Parent;
-    ModelContentName stem = modellayer.Parent.Stem;
-    List<string> path = new() { modellayer.Name };
-    while (currentParent != stem)
-    {
-      path.Add(currentParent);
-      currentParent = currentParent.Parent;
-    }
-    path.Add(stem);
-
-    path.Reverse();
-    return path;
-  }
+#if !RHINO8_OR_GREATER
+  private bool HandleModelObjects(object _) => false;
+#endif
 
   public SpeckleCollectionWrapperGoo() { }
 

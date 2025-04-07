@@ -1,8 +1,10 @@
 using Grasshopper.Kernel.Types;
-using Grasshopper.Rhinoceros.Model;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+#if RHINO8_OR_GREATER
+using Grasshopper.Rhinoceros.Model;
+#endif
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -27,6 +29,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       .Select(goo => goo.Value.Properties.Value)
       .ToList();
 
+#if RHINO8_OR_GREATER
     // support model objects direct piping also
     if (objectPropertyGroups.Count != VolatileData.DataCount)
     {
@@ -37,6 +40,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
         .ToList();
       objectPropertyGroups.AddRange(modelObjects);
     }
+#endif
 
     if (objectPropertyGroups.Count == 0)
     {
