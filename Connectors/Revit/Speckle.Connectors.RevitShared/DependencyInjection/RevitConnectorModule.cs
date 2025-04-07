@@ -61,6 +61,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
+    serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
