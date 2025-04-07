@@ -60,7 +60,7 @@ jobs:
           inputs: '{ 
               "run_id": "${{ github.run_id }}", 
               "semver": "${{ needs.build-windows.outputs.version }}", 
-              "repo": "${{ github.repository }}"
+              "repo": "${{ github.repository }}",
               "public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
               "store_artifacts": ${{ env.IS_TEST_INSTALLER }} 
             }'
