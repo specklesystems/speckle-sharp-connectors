@@ -34,7 +34,7 @@ public static class SpeckleV3Tool
 #elif NAVIS2025
     HostAppVersion.v2025;
 #elif NAVIS2026
-    (HostAppVersion)2026; // TODO: Replace with actual version when available in SDK
+    HostAppVersion.v2026;
 #else
     throw new NotSupportedException("This version is not supported");
 #endif
