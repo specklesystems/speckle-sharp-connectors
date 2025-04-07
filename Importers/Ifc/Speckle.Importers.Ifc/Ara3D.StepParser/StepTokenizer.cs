@@ -16,7 +16,10 @@ public static class StepTokenizer
   {
     var r = new StepTokenType[256];
     for (var i = 0; i < 256; i++)
+    {
       r[i] = GetTokenType((byte)i);
+    }
+
     return r;
   }
 
@@ -24,7 +27,10 @@ public static class StepTokenizer
   {
     var r = new bool[256];
     for (var i = 0; i < 256; i++)
+    {
       r[i] = IsNumberChar((byte)i);
+    }
+
     return r;
   }
 
@@ -32,7 +38,10 @@ public static class StepTokenizer
   {
     var r = new bool[256];
     for (var i = 0; i < 256; i++)
+    {
       r[i] = IsIdentOrDigitChar((byte)i);
+    }
+
     return r;
   }
 
@@ -81,49 +90,49 @@ public static class StepTokenizer
       case (byte)'9':
       case (byte)'+':
       case (byte)'-':
-        return StepTokenType.Number;
+        return StepTokenType.NUMBER;
 
       case (byte)' ':
       case (byte)'\t':
-        return StepTokenType.Whitespace;
+        return StepTokenType.WHITESPACE;
 
       case (byte)'\n':
       case (byte)'\r':
-        return StepTokenType.LineBreak;
+        return StepTokenType.LINE_BREAK;
 
       case (byte)'\'':
       case (byte)'"':
-        return StepTokenType.String;
+        return StepTokenType.STRING;
 
       case (byte)'.':
-        return StepTokenType.Symbol;
+        return StepTokenType.SYMBOL;
 
       case (byte)'#':
-        return StepTokenType.Id;
+        return StepTokenType.ID;
 
       case (byte)';':
-        return StepTokenType.EndOfLine;
+        return StepTokenType.END_OF_LINE;
 
       case (byte)'(':
-        return StepTokenType.BeginGroup;
+        return StepTokenType.BEGIN_GROUP;
 
       case (byte)'=':
-        return StepTokenType.Definition;
+        return StepTokenType.DEFINITION;
 
       case (byte)')':
-        return StepTokenType.EndGroup;
+        return StepTokenType.END_GROUP;
 
       case (byte)',':
-        return StepTokenType.Separator;
+        return StepTokenType.SEPARATOR;
 
       case (byte)'$':
-        return StepTokenType.Unassigned;
+        return StepTokenType.UNASSIGNED;
 
       case (byte)'*':
-        return StepTokenType.Redeclared;
+        return StepTokenType.REDECLARED;
 
       case (byte)'/':
-        return StepTokenType.Comment;
+        return StepTokenType.COMMENT;
 
       case (byte)'a':
       case (byte)'b':
@@ -178,10 +187,10 @@ public static class StepTokenizer
       case (byte)'Y':
       case (byte)'Z':
       case (byte)'_':
-        return StepTokenType.Ident;
+        return StepTokenType.IDENT;
 
       default:
-        return StepTokenType.Unknown;
+        return StepTokenType.UNKNOWN;
     }
   }
 
@@ -204,10 +213,18 @@ public static class StepTokenizer
   public static unsafe byte* AdvancePast(byte* begin, byte* end, string s)
   {
     if (end - begin < s.Length)
+    {
       return null;
+    }
+
     foreach (var c in s)
+    {
       if (*begin++ != (byte)c)
+      {
         return null;
+      }
+    }
+
     return begin;
   }
 
@@ -225,11 +242,13 @@ public static class StepTokenizer
   public static unsafe bool EatWSpace(ref StepToken cur, byte* end)
   {
     while (
-      cur.Type == StepTokenType.Comment || cur.Type == StepTokenType.Whitespace || cur.Type == StepTokenType.LineBreak
+      cur.Type == StepTokenType.COMMENT || cur.Type == StepTokenType.WHITESPACE || cur.Type == StepTokenType.LINE_BREAK
     )
     {
       if (!ParseNextToken(ref cur, end))
+      {
         return false;
+      }
     }
     return true;
   }
@@ -239,7 +258,10 @@ public static class StepTokenizer
   {
     var cur = prev.Span.End();
     if (cur >= end)
+    {
       return false;
+    }
+
     prev = ParseToken(cur, end);
     return true;
   }
@@ -251,52 +273,71 @@ public static class StepTokenizer
 
     switch (type)
     {
-      case StepTokenType.Ident:
+      case StepTokenType.IDENT:
         while (IsIdentLookup[*cur])
+        {
           cur++;
+        }
+
         break;
 
-      case StepTokenType.String:
+      case StepTokenType.STRING:
         // usually it is as single quote,
         // but in rare cases it could be a double quote
         var quoteChar = *(cur - 1);
         while (cur < end)
         {
-          if (*cur++ == quoteChar)
+          if (*cur++ != quoteChar)
           {
-            if (*cur != quoteChar)
-              break;
-            else
-              cur++;
+            continue;
           }
+
+          if (*cur != quoteChar)
+          {
+            break;
+          }
+
+          cur++;
         }
 
         break;
 
-      case StepTokenType.LineBreak:
+      case StepTokenType.LINE_BREAK:
         while (IsLineBreak(*cur))
+        {
           cur++;
+        }
+
         break;
 
-      case StepTokenType.Number:
+      case StepTokenType.NUMBER:
         while (IsNumberLookup[*cur])
+        {
           cur++;
+        }
+
         break;
 
-      case StepTokenType.Symbol:
+      case StepTokenType.SYMBOL:
         while (*cur++ != '.') { }
 
         break;
 
-      case StepTokenType.Id:
+      case StepTokenType.ID:
         while (IsNumberLookup[*cur])
+        {
           cur++;
+        }
+
         break;
 
-      case StepTokenType.Comment:
+      case StepTokenType.COMMENT:
         var prev = *cur++;
         while (cur < end && (prev != '*' || *cur != '/'))
+        {
           prev = *cur++;
+        }
+
         cur++;
         break;
     }

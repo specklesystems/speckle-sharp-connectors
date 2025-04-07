@@ -4,8 +4,8 @@ namespace Speckle.Importers.Ifc.Ara3D.StepParser;
 
 public class StepNode
 {
-  public readonly StepGraph Graph;
-  public readonly StepInstance Entity;
+  public StepGraph Graph { get; }
+  public StepInstance Entity { get; }
 
   public StepNode(StepGraph g, StepInstance e)
   {
@@ -25,14 +25,18 @@ public class StepNode
     else if (value is StepList agg)
     {
       foreach (var v in agg.Values)
+      {
         AddNodes(v);
+      }
     }
   }
 
   public void Init()
   {
     foreach (var a in Entity.AttributeValues)
+    {
       AddNodes(a);
+    }
   }
 
   public override string ToString() => Entity.ToString();
@@ -41,7 +45,10 @@ public class StepNode
   {
     prev ??= new HashSet<StepNode>();
     if (prev.Contains(this))
+    {
       return "_";
+    }
+
     var nodeStr = Nodes.Select(n => n.ToGraph(prev)).JoinStringsWithComma();
     return $"{EntityType}({nodeStr})";
   }

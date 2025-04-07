@@ -25,7 +25,10 @@ public class IfcEntity
   public override bool Equals(object? obj)
   {
     if (obj is IfcEntity other)
+    {
       return Id == other.Id;
+    }
+
     return false;
   }
 

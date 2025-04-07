@@ -7,11 +7,11 @@ public class StepGraph
 {
   public StepDocument Document { get; }
 
-  public readonly Dictionary<uint, StepNode> Lookup = new();
+  private readonly Dictionary<uint, StepNode> _lookup = new();
 
-  public StepNode GetNode(uint id) => Lookup[id];
+  public StepNode GetNode(uint id) => _lookup[id];
 
-  public IEnumerable<StepNode> Nodes => Lookup.Values;
+  public IEnumerable<StepNode> Nodes => _lookup.Values;
 
   public StepGraph(StepDocument doc)
   {
@@ -20,40 +20,28 @@ public class StepGraph
     foreach (var e in doc.GetInstances())
     {
       var node = new StepNode(this, e);
-      Lookup.Add(node.Entity.Id, node);
+      _lookup.Add(node.Entity.Id, node);
     }
 
     foreach (var n in Nodes)
+    {
       n.Init();
+    }
   }
 
   public static StepGraph Create(StepDocument doc) => new(doc);
 
   public string ToValString(StepNode node, int depth) => ToValString(node.Entity.Entity, depth - 1);
 
-  public string ToValString(StepValue value, int depth)
+  public string ToValString(StepValue? value, int depth)
   {
-    if (value == null)
-      return "";
-
-    switch (value)
+    return value switch
     {
-      case StepList stepAggregate:
-        return $"({stepAggregate.Values.Select(v => ToValString(v, depth)).JoinStringsWithComma()})";
-
-      case StepEntity stepEntity:
-        return $"{stepEntity.EntityType}{ToValString(stepEntity.Attributes, depth)}";
-
-      case StepId stepId:
-        return depth <= 0 ? "#" : ToValString(GetNode(stepId.Id), depth - 1);
-
-      case StepNumber stepNumber:
-      case StepRedeclared stepRedeclared:
-      case StepString stepString:
-      case StepSymbol stepSymbol:
-      case StepUnassigned stepUnassigned:
-      default:
-        return value.ToString().NotNull();
-    }
+      null => "",
+      StepList stepAggregate => $"({stepAggregate.Values.Select(v => ToValString(v, depth)).JoinStringsWithComma()})",
+      StepEntity stepEntity => $"{stepEntity.EntityType}{ToValString(stepEntity.Attributes, depth)}",
+      StepId stepId => depth <= 0 ? "#" : ToValString(GetNode(stepId.Id), depth - 1),
+      _ => value.ToString().NotNull(),
+    };
   }
 }

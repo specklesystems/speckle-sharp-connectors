@@ -15,24 +15,28 @@ public sealed class IfcGraph
   public static IfcGraph Load(FilePath fp, ILogger? logger = null) =>
     new IfcGraph(new StepDocument(fp, logger), logger);
 
-  public StepDocument Document { get; }
+  private readonly Dictionary<uint, IfcNode> _nodes = new();
+  private readonly List<IfcRelation> _relations = new();
+  private readonly Dictionary<uint, List<IfcRelation>> _relationsByNode = new();
 
-  public Dictionary<uint, IfcNode> Nodes { get; } = new Dictionary<uint, IfcNode>();
-  public List<IfcRelation> Relations { get; } = new List<IfcRelation>();
-  public Dictionary<uint, List<IfcRelation>> RelationsByNode { get; } = new Dictionary<uint, List<IfcRelation>>();
-  public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new Dictionary<uint, List<IfcPropSet>>();
+  public StepDocument Document { get; }
+  public Dictionary<uint, List<IfcPropSet>> PropertySetsByNode { get; } = new();
 
   public uint IfcProjectId { get; }
 
-  public IfcNode AddNode(IfcNode n) => Nodes[n.Id] = n;
+  public IfcNode AddNode(IfcNode n) => _nodes[n.Id] = n;
 
   public IfcRelation AddRelation(IfcRelation r)
   {
-    Relations.Add(r);
+    _relations.Add(r);
     var id = r.From.Id;
-    if (!RelationsByNode.ContainsKey(id))
-      RelationsByNode[id] = new();
-    RelationsByNode[id].Add(r);
+    if (!_relationsByNode.TryGetValue(id, out List<IfcRelation>? value))
+    {
+      value = new();
+      _relationsByNode[id] = value;
+    }
+
+    value.Add(r);
     return r;
   }
 
@@ -45,7 +49,9 @@ public sealed class IfcGraph
     foreach (var inst in Document.RawInstances)
     {
       if (!inst.IsValid())
+      {
         continue;
+      }
 
       // Property Values
       if (inst.Type.Equals("IFCPROPERTYSINGLEVALUE"))
@@ -184,34 +190,43 @@ public sealed class IfcGraph
     }
 
     if (ifcProjectId <= 0)
+    {
       throw new SpeckleIfcException("There was no IfcProject in the file");
+    }
 
     IfcProjectId = ifcProjectId;
 
     logger?.Log("Creating lookup of property sets");
 
-    foreach (var psr in Relations.OfType<IfcPropSetRelation>())
+    foreach (var psr in _relations.OfType<IfcPropSetRelation>())
     {
       var ps = psr.PropSet;
       foreach (var id in psr.GetRelatedIds())
       {
-        if (!PropertySetsByNode.ContainsKey(id))
-          PropertySetsByNode[id] = [];
-        PropertySetsByNode[id].Add(ps);
+        if (!PropertySetsByNode.TryGetValue(id, out List<IfcPropSet>? value))
+        {
+          value = ([]);
+          PropertySetsByNode[id] = value;
+        }
+
+        value.Add(ps);
       }
     }
 
     logger?.Log("Completed creating model graph");
   }
 
-  public IEnumerable<IfcNode> GetNodes() => Nodes.Values;
+  public IEnumerable<IfcNode> GetNodes() => _nodes.Values;
 
   public IEnumerable<IfcNode> GetNodes(IEnumerable<uint> ids) => ids.Select(GetNode);
 
   public IfcNode GetOrCreateNode(StepInstance lineData, int arg)
   {
     if (arg < 0 || arg >= lineData.AttributeValues.Count)
+    {
       throw new SpeckleIfcException("Argument index out of range");
+    }
+
     return GetOrCreateNode(lineData.AttributeValues[arg]);
   }
 
@@ -220,7 +235,7 @@ public sealed class IfcGraph
 
   public IfcNode GetOrCreateNode(uint id)
   {
-    var r = Nodes.TryGetValue(id, out var node) ? node : AddNode(new IfcNode(this, Document.GetInstanceWithData(id)));
+    var r = _nodes.TryGetValue(id, out var node) ? node : AddNode(new IfcNode(this, Document.GetInstanceWithData(id)));
     Debug.Assert(r.Id == id);
     return r;
   }
@@ -230,9 +245,15 @@ public sealed class IfcGraph
   public List<IfcNode> GetOrCreateNodes(StepInstance line, int arg)
   {
     if (arg < 0 || arg >= line.AttributeValues.Count)
+    {
       throw new SpeckleIfcException("Argument out of range");
+    }
+
     if (line.AttributeValues[arg] is not StepList agg)
+    {
       throw new SpeckleIfcException("Expected a list");
+    }
+
     return GetOrCreateNodes(agg.Values);
   }
 
@@ -240,7 +261,7 @@ public sealed class IfcGraph
 
   public IfcNode GetNode(uint id)
   {
-    var r = Nodes[id];
+    var r = _nodes[id];
     Debug.Assert(r.Id == id);
     return r;
   }
@@ -251,10 +272,10 @@ public sealed class IfcGraph
 
   public IEnumerable<IfcProp> GetProps() => GetNodes().OfType<IfcProp>();
 
-  public IEnumerable<IfcRelationSpatial> GetSpatialRelations() => Relations.OfType<IfcRelationSpatial>();
+  public IEnumerable<IfcRelationSpatial> GetSpatialRelations() => _relations.OfType<IfcRelationSpatial>();
 
-  public IEnumerable<IfcRelationAggregate> GetAggregateRelations() => Relations.OfType<IfcRelationAggregate>();
+  public IEnumerable<IfcRelationAggregate> GetAggregateRelations() => _relations.OfType<IfcRelationAggregate>();
 
   public IReadOnlyList<IfcRelation> GetRelationsFrom(uint id) =>
-    RelationsByNode.TryGetValue(id, out var list) ? list : Array.Empty<IfcRelation>();
+    _relationsByNode.TryGetValue(id, out var list) ? list : Array.Empty<IfcRelation>();
 }
