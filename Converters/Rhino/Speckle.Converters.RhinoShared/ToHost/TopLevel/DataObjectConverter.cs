@@ -65,31 +65,39 @@ public class DataObjectConverter
 
   public object Convert(Base target) => Convert((DataObject)target);
 
+  private List<RG.GeometryBase> GetConvertedGeometry(Base b)
+  {
+    return b switch
+    {
+      SOG.Arc arc => new() { _arcConverter.Convert(arc) },
+      SOG.BrepX brep => _brepConverter.Convert(brep),
+      SOG.Circle circle => new() { _circleConverter.Convert(circle) },
+      SOG.Curve curve => new() { _curveConverter.Convert(curve) },
+      SOG.Ellipse ellipse => new() { _ellipseConverter.Convert(ellipse) },
+      SOG.ExtrusionX extrusion => _extrusionConverter.Convert(extrusion),
+      SOG.Line line => new() { _lineConverter.Convert(line) },
+      SOG.Mesh mesh => new() { _meshConverter.Convert(mesh) },
+      SOG.Pointcloud pointcloud => new() { _pointcloudConverter.Convert(pointcloud) },
+      SOG.Point point => new() { _pointConverter.Convert(point) },
+      SOG.Polycurve polycurve => new() { _polycurveConverter.Convert(polycurve) },
+      SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
+      SOG.Region region => new() { _regionConverter.Convert(region) },
+      SOG.SubDX subd => _subdConverter.Convert(subd),
+      _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
+    };
+  }
+
   public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
   {
     var result = new List<RG.GeometryBase>();
     foreach (var item in target.displayValue)
     {
-      RG.GeometryBase x = item switch
+      var converted = GetConvertedGeometry(item);
+      foreach (var x in converted)
       {
-        SOG.Arc arc => _arcConverter.Convert(arc),
-        SOG.BrepX brep => _brepConverter.Convert(brep).First(),
-        SOG.Circle circle => _circleConverter.Convert(circle),
-        SOG.Curve curve => _curveConverter.Convert(curve),
-        SOG.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
-        SOG.ExtrusionX extrusion => _extrusionConverter.Convert(extrusion).First(),
-        SOG.Line line => _lineConverter.Convert(line),
-        SOG.Mesh mesh => _meshConverter.Convert(mesh),
-        SOG.Pointcloud pointcloud => _pointcloudConverter.Convert(pointcloud),
-        SOG.Point point => _pointConverter.Convert(point),
-        SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
-        SOG.Polyline polyline => _polylineConverter.Convert(polyline),
-        SOG.Region region => _regionConverter.Convert(region),
-        SOG.SubDX subd => _subdConverter.Convert(subd).First(),
-        _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
-      };
-      x.Transform(GetUnitsTransform(item));
-      result.Add(x);
+        x.Transform(GetUnitsTransform(item));
+        result.Add(x);
+      }
     }
 
     return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
