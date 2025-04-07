@@ -7,10 +7,9 @@ namespace Speckle.Connectors.Rhino.Operations.Send.Filters;
 
 public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
 {
-  // TODO we will probably need to make changes on UI side
-  // because currently "Saved Sets" text shows up using the "navisworksSavedSets" id
-  public string Id { get; set; } = "navisworksSavedSets";
+  public string Id { get; set; } = "rhinoLayers";
   public string Name { get; set; } = "Layers";
+  public string Type { get; set; } = "Select";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = [];
