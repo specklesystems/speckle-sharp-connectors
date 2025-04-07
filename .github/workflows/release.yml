@@ -61,7 +61,7 @@ jobs:
               "run_id": "${{ github.run_id }}", 
               "semver": "${{ needs.build-windows.outputs.version }}", 
               "repo": "${{ github.repository }}",
-              "public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
+              "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
               "store_artifacts": ${{ env.IS_TEST_INSTALLER }} 
             }'
           ref: jrm/experiment-similar-ci
