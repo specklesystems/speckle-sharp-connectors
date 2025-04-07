@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Grasshopper.Rhinoceros.Model;
+using Grasshopper.Rhinoceros.Display;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -40,7 +41,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             GeometryBase = modelGB,
             Base = modelConverted,
             Name = modelObject.Name.ToString(),
-            Color = modelObject.Display.Color?.Color.ToArgb(),
+            Color = modelObject.Display.Color is ObjectDisplayColor.Value value
+              ? Color.FromArgb(value.Color.ToArgb())
+              : null,
             RenderMaterialName = modelObject.Render.Material?.Material?.Name,
             Properties = propertyGroup
           };
