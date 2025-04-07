@@ -31,6 +31,8 @@ internal sealed class RevitExternalApplication : IExternalApplication
     return HostAppVersion.v2024;
 #elif REVIT2025
     return HostAppVersion.v2025;
+#elif REVIT2026
+    return HostAppVersion.v2026;
 #else
     throw new NotImplementedException();
 #endif

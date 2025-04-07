@@ -1,45 +1,39 @@
-#if !REVIT2026_OR_GREATER
-using System.Diagnostics;
+﻿#if REVIT2026
 using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
-using CefSharp;
-using Microsoft.Extensions.DependencyInjection;
 using Revit.Async;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.DUI.Bindings;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-internal sealed class RevitCefPlugin : IRevitPlugin
+internal sealed class RevitWebViewPlugin : IRevitPlugin
 {
   private readonly UIControlledApplication _uIControlledApplication;
-  private readonly IServiceProvider _serviceProvider; // should be lazy to ensure the bindings are not created too early
-  private readonly BindingOptions _bindingOptions;
   private readonly RevitContext _revitContext;
-  private readonly CefSharpPanel _cefSharpPanel;
+  private readonly DUI3ControlWebViewDockable _webViewPanel;
   private readonly ISpeckleApplication _speckleApplication;
 
-  public RevitCefPlugin(
+  [System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Style",
+    "IDE0290:Use primary constructor",
+    Justification = "<Pending>"
+  )]
+  public RevitWebViewPlugin(
     UIControlledApplication uIControlledApplication,
-    IServiceProvider serviceProvider,
-    BindingOptions bindingOptions,
     RevitContext revitContext,
-    CefSharpPanel cefSharpPanel,
+    DUI3ControlWebViewDockable webViewPanel,
     ISpeckleApplication speckleApplication
   )
   {
     _uIControlledApplication = uIControlledApplication;
-    _serviceProvider = serviceProvider;
-    _bindingOptions = bindingOptions;
     _revitContext = revitContext;
-    _cefSharpPanel = cefSharpPanel;
+    _webViewPanel = webViewPanel;
     _speckleApplication = speckleApplication;
   }
 
@@ -75,14 +69,14 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          _speckleApplication.HostApplication,
+          "Speckle (Beta) for Revit",
           Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
         )
       );
 
-    string path = typeof(RevitCefPlugin).Assembly.Location;
+    string path = typeof(RevitWebViewPlugin).Assembly.Location;
     dui3Button.Image = LoadPngImgSource(
       $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo16.png",
       path
@@ -107,61 +101,16 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 
     // POC: might be worth to interface this out, we shall see...
     RevitTask.Initialize(uiApplication);
-
-    PostApplicationInit(); // for double-click file open
-  }
-
-  /// <summary>
-  /// Actions to run after UiApplication initialized. This is needed for double-click file open issue.
-  /// </summary>
-  private void PostApplicationInit()
-  {
-    var bindings = _serviceProvider.GetRequiredService<IEnumerable<IBinding>>();
-    // binding the bindings to each bridge
-    foreach (IBinding binding in bindings)
-    {
-      Debug.WriteLine(binding.Name);
-      binding.Parent.AssociateWithBinding(binding);
-    }
-
-    _cefSharpPanel.Browser.IsBrowserInitializedChanged += (sender, e) =>
-    {
-      if (e.NewValue is false)
-      {
-        return;
-      }
-
-#if DEBUG || LOCAL
-      _cefSharpPanel.Browser.ShowDevTools();
-#endif
-      foreach (IBinding binding in bindings)
-      {
-        IBrowserBridge bridge = binding.Parent;
-
-#if REVIT2025_OR_GREATER
-        _cefSharpPanel.Browser.JavascriptObjectRepository.Register(bridge.FrontendBoundName, bridge, _bindingOptions);
-#else
-        _cefSharpPanel.Browser.JavascriptObjectRepository.Register(
-          bridge.FrontendBoundName,
-          bridge,
-          true,
-          _bindingOptions
-        );
-#endif
-      }
-    };
   }
 
   private void RegisterDockablePane()
   {
-    CefSharpSettings.ConcurrentTaskExecution = true;
-
     // Registering dockable pane should happen before UiApplication is initialized with RevitTask.
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      "Speckle (Beta) for Revit",
-      _cefSharpPanel
+      Connector.TabTitle,
+      _webViewPanel
     );
   }
 

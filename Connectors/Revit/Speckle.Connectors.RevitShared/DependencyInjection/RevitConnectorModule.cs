@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
@@ -16,6 +15,11 @@ using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
+#if REVIT2026_OR_GREATER
+using Speckle.Connectors.DUI.WebView;
+#else
+using CefSharp;
+#endif
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
 
@@ -80,7 +84,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<CefSharpPanel>();
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(sp => sp.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
-#else
+#elif !REVIT2026_OR_GREATER
     // different versions for different versions of CEF
     serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
 
@@ -90,6 +94,11 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton(panel);
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
+#else
+    serviceCollection.AddDUIView();
+    serviceCollection.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    serviceCollection.AddSingleton<DUI3ControlWebView>();
+    serviceCollection.AddSingleton<DUI3ControlWebViewDockable>();
 #endif
   }
 }

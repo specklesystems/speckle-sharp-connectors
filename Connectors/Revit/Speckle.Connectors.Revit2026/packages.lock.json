@@ -2,15 +2,6 @@
   "version": 2,
   "dependencies": {
     "net8.0-windows7.0": {
-      "CefSharp.Wpf.NETCore": {
-        "type": "Direct",
-        "requested": "[119.4.30, )",
-        "resolved": "119.4.30",
-        "contentHash": "S8iTV5UAO9my2O4c6mJKtScDrXbPPS9k5cOs247X7xvly4mb0XsLOFmLjXM1/gsuYfYx5Dy0k6mgCwTZMC6NMg==",
-        "dependencies": {
-          "CefSharp.Common.NETCore": "[119.4.30]"
-        }
-      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -30,6 +21,12 @@
           "Microsoft.SourceLink.Common": "8.0.0"
         }
       },
+      "Microsoft.Web.WebView2": {
+        "type": "Direct",
+        "requested": "[1.0.2478.35, )",
+        "resolved": "1.0.2478.35",
+        "contentHash": "iDlxm6Gv4CU64ch4nc4DZXLbb5VRYNJb3IjGC+zJdEVIHjqt8Fed3JeThXIhpIwf49ke4e/CULYJXfNiG0sNhg=="
+      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
@@ -47,19 +44,6 @@
         "requested": "[0.9.6, )",
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
-      },
-      "CefSharp.Common.NETCore": {
-        "type": "Transitive",
-        "resolved": "119.4.30",
-        "contentHash": "nu5zqeOL+ubs723jU/EJWdMNAefzXtucKAewv4Mvh3tLLeoGsGbz0oZM36vIuBgAzhhsE+ZO4uzkdhk6X9JwJA==",
-        "dependencies": {
-          "chromiumembeddedframework.runtime": "[119.4.3]"
-        }
-      },
-      "chromiumembeddedframework.runtime": {
-        "type": "Transitive",
-        "resolved": "119.4.3",
-        "contentHash": "JEYg94tEtdyIIm9hQvZ/vP0/+9w5ebvZFfcJ22NG16BjeEm5y6dC0B86DIsKwwhj1RhnfyEbp8JVKuY8imCO5w=="
       },
       "GraphQL.Client": {
         "type": "Transitive",
@@ -251,6 +235,13 @@
           "Speckle.Sdk.Dependencies": "[3.1.8, )"
         }
       },
+      "speckle.connectors.dui.webview": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
+          "Speckle.Connectors.DUI": "[1.0.0, )"
+        }
+      },
       "speckle.connectors.logging": {
         "type": "Project"
       },
@@ -340,26 +331,11 @@
       }
     },
     "net8.0-windows7.0/win-x64": {
-      "CefSharp.Common.NETCore": {
-        "type": "Transitive",
-        "resolved": "119.4.30",
-        "contentHash": "nu5zqeOL+ubs723jU/EJWdMNAefzXtucKAewv4Mvh3tLLeoGsGbz0oZM36vIuBgAzhhsE+ZO4uzkdhk6X9JwJA==",
-        "dependencies": {
-          "chromiumembeddedframework.runtime": "[119.4.3]"
-        }
-      },
-      "chromiumembeddedframework.runtime": {
-        "type": "Transitive",
-        "resolved": "119.4.3",
-        "contentHash": "JEYg94tEtdyIIm9hQvZ/vP0/+9w5ebvZFfcJ22NG16BjeEm5y6dC0B86DIsKwwhj1RhnfyEbp8JVKuY8imCO5w==",
-        "dependencies": {
-          "chromiumembeddedframework.runtime.win-x64": "119.4.3"
-        }
-      },
-      "chromiumembeddedframework.runtime.win-x64": {
-        "type": "Transitive",
-        "resolved": "119.4.3",
-        "contentHash": "teW7othTAZyUVTlvO2DP7hceibFo1cKcjGXITFzIIhygNQVu2iAeFivzgH9HKK/tU1IUACOSSceaoR99USZ8Sw=="
+      "Microsoft.Web.WebView2": {
+        "type": "Direct",
+        "requested": "[1.0.2478.35, )",
+        "resolved": "1.0.2478.35",
+        "contentHash": "iDlxm6Gv4CU64ch4nc4DZXLbb5VRYNJb3IjGC+zJdEVIHjqt8Fed3JeThXIhpIwf49ke4e/CULYJXfNiG0sNhg=="
       },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Transitive",
