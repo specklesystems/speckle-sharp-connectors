@@ -57,8 +57,14 @@ jobs:
           workflow: Build Installers
           repo: specklesystems/connector-installers
           token: ${{ secrets.CONNECTORS_GH_TOKEN }}
-          inputs: '{ "run_id": "${{ github.run_id }}", "version": "${{ needs.build-windows.outputs.version }}", "public_release": ${{ env.IS_PUBLIC_RELEASE }}, "store_artifacts": ${{ env.IS_TEST_INSTALLER }} }'
-          ref: main
+          inputs: '{ 
+              "run_id": "${{ github.run_id }}", 
+              "semver": "${{ needs.build-windows.outputs.version }}", 
+              "repo": "${{ github.repository }}"
+              "public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
+              "store_artifacts": ${{ env.IS_TEST_INSTALLER }} 
+            }'
+          ref: jrm/experiment-similar-ci
           wait-for-completion: true
           wait-for-completion-interval: 10s
           wait-for-completion-timeout: 10m
