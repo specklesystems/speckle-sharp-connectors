@@ -13,9 +13,11 @@ public class DataObjectConverter
     ITypedConverter<DataObject, List<(RG.GeometryBase a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Arc, RG.ArcCurve> _arcConverter;
+  private readonly ITypedConverter<SOG.BrepX, List<RG.GeometryBase>> _brepConverter;
   private readonly ITypedConverter<SOG.Circle, RG.ArcCurve> _circleConverter;
   private readonly ITypedConverter<SOG.Curve, RG.NurbsCurve> _curveConverter;
   private readonly ITypedConverter<SOG.Ellipse, RG.NurbsCurve> _ellipseConverter;
+  private readonly ITypedConverter<SOG.ExtrusionX, List<RG.GeometryBase>> _extrusionConverter;
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
   private readonly ITypedConverter<SOG.Pointcloud, RG.PointCloud> _pointcloudConverter;
@@ -23,13 +25,16 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Polycurve, RG.PolyCurve> _polycurveConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
+  private readonly ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> _subdConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
+    ITypedConverter<SOG.BrepX, List<RG.GeometryBase>> brepConverter,
     ITypedConverter<SOG.Circle, RG.ArcCurve> circleConverter,
     ITypedConverter<SOG.Curve, RG.NurbsCurve> curveConverter,
     ITypedConverter<SOG.Ellipse, RG.NurbsCurve> ellipseConverter,
+    ITypedConverter<SOG.ExtrusionX, List<RG.GeometryBase>> extrusionConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
     ITypedConverter<SOG.Pointcloud, RG.PointCloud> pointcloudConverter,
@@ -37,13 +42,16 @@ public class DataObjectConverter
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Polycurve, RG.PolyCurve> polycurveConverter,
     ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
+    ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> subdConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _arcConverter = arcConverter;
+    _brepConverter = brepConverter;
     _circleConverter = circleConverter;
     _curveConverter = curveConverter;
     _ellipseConverter = ellipseConverter;
+    _extrusionConverter = extrusionConverter;
     _lineConverter = lineConverter;
     _meshConverter = meshConverter;
     _pointcloudConverter = pointcloudConverter;
@@ -51,6 +59,7 @@ public class DataObjectConverter
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
     _regionConverter = regionConverter;
+    _subdConverter = subdConverter;
     _settingsStore = settingsStore;
   }
 
@@ -64,9 +73,11 @@ public class DataObjectConverter
       RG.GeometryBase x = item switch
       {
         SOG.Arc arc => _arcConverter.Convert(arc),
+        SOG.BrepX brep => _brepConverter.Convert(brep).First(),
         SOG.Circle circle => _circleConverter.Convert(circle),
         SOG.Curve curve => _curveConverter.Convert(curve),
         SOG.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
+        SOG.ExtrusionX extrusion => _extrusionConverter.Convert(extrusion).First(),
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
         SOG.Pointcloud pointcloud => _pointcloudConverter.Convert(pointcloud),
@@ -74,6 +85,7 @@ public class DataObjectConverter
         SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Region region => _regionConverter.Convert(region),
+        SOG.SubDX subd => _subdConverter.Convert(subd).First(),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));
