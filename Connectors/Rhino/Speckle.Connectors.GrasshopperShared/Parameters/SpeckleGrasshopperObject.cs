@@ -29,7 +29,7 @@ public class SpeckleObjectWrapper : Base
   // A dictionary of property path to property
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
   public string Name { get; set; } = "";
-  public int? Color { get; set; }
+  public Color? Color { get; set; }
   public string? RenderMaterialName { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
@@ -139,9 +139,9 @@ public class SpeckleObjectWrapper : Base
     // create attributes
     using ObjectAttributes att = new() { Name = Name };
 
-    if (Color is int argb)
+    if (Color is Color color)
     {
-      att.ObjectColor = System.Drawing.Color.FromArgb(argb);
+      att.ObjectColor = color;
       att.ColorSource = ObjectColorSource.ColorFromObject;
       att.LayerIndex = bakeLayerIndex;
     }

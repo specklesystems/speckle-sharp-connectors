@@ -23,6 +23,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpecklePropertyGroup.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterPropertiesByPropertyGroupPaths.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\LocalToGlobalMapHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperColorBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperCollectionRebuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveAsyncComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />

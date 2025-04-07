@@ -1,4 +1,3 @@
-using Rhino.Geometry;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
@@ -92,17 +91,18 @@ public class GrasshopperHostObjectBuilder : IHostObjectBuilder
       instanceComponentsWithPath.AddRange(transformed);
     }
 
-    // 3 - Bake materials and colors, as they are used later down the line by layers and objects
+    // 3 - Get materials and colors, as they will be stored by layers and objects
     onOperationProgressed.Report(new("Converting materials and colors", null));
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       using var _ = _activityFactory.Start("Render Materials");
+
       //_materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
     }
 
     if (unpackedRoot.ColorProxies != null)
     {
-      //_colorBaker.ParseColors(unpackedRoot.ColorProxies);
+      //ParseColors(unpackedRoot.ColorProxies);
     }
 
     // 5 - Convert atomic objects
@@ -119,38 +119,14 @@ public class GrasshopperHostObjectBuilder : IHostObjectBuilder
           onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
           try
           {
-            // 0: get pre-created layer from cache in layer baker
-            // int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
-
-            // 1: create object attributes for baking
-            string name = obj["name"] as string ?? "";
-
             // 2: convert
             var result = _converter.Convert(obj);
-
-            // 3: bake
-            if (result is GeometryBase geometryBase)
-            {
-              //var guid = BakeObject(geometryBase, obj, atts);
-            }
-            else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
-            {
-              foreach (var gb in geometryBases)
-              {
-                //var guid = BakeObject(gb, obj, atts);
-              }
-            }
-            else if (result is IEnumerable<(object, Base)> fallbackConversionResult) // one to many fallback conversion
-            {
-              //var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
-            }
 
             // 4: log
             conversionResults.Add(
               new GrasshopperReceiveConversionResult(Status.SUCCESS, obj, result, null, result.GetType().ToString())
             );
 
-            // applicationIdMap[obj.applicationId ?? obj.id] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
           catch (Exception ex) when (!ex.IsFatal())

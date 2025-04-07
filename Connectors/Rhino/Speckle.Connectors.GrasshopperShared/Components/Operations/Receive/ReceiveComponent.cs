@@ -1,6 +1,5 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino.Geometry;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
@@ -10,9 +9,7 @@ using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
-using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
@@ -117,92 +114,21 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    var collectionRebuilder = new GrasshopperCollectionRebuilder(
-      (root as Collection) ?? new Collection() { name = "unnamed" }
-    );
+    // TODO: unpack colors and render materials
+    GrasshopperColorBaker colorBaker = new(unpackedRoot);
+
+    GrasshopperCollectionRebuilder collectionRebuilder =
+      new((root as Collection) ?? new Collection() { name = "unnamed" });
+
+    LocalToGlobalMapHandler mapHandler = new(traversalContextUnpacker, collectionRebuilder, colorBaker);
 
     foreach (var map in localToGlobalMaps)
     {
-      try
-      {
-        List<GeometryBase> converted = Convert(map.AtomicObject);
-        List<Collection> path = traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
-
-        foreach (var matrix in map.Matrix)
-        {
-          var mat = GrasshopperHelpers.MatrixToTransform(matrix, "meters");
-          converted.ForEach(res => res.Transform(mat));
-        }
-
-        // get the collection
-        SpeckleCollectionWrapper objectCollection = collectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
-
-        // get the name and properties
-        SpecklePropertyGroupGoo propertyGroup = new();
-        string name = "";
-        if (map.AtomicObject is Speckle.Objects.Data.DataObject da)
-        {
-          propertyGroup.CastFrom(da.properties);
-          name = da.name;
-        }
-        else
-        {
-          if (map.AtomicObject["properties"] is Dictionary<string, object?> props)
-          {
-            propertyGroup.CastFrom(props);
-          }
-
-          if (map.AtomicObject["name"] is string n)
-          {
-            name = n;
-          }
-        }
-
-        // create objects for every value in converted. This is where one to many is not handled very nicely.
-        foreach (var geometryBase in converted)
-        {
-          var gh = new SpeckleObjectWrapper()
-          {
-            Base = map.AtomicObject,
-            Path = path.Select(p => p.name).ToList(),
-            Parent = objectCollection,
-            GeometryBase = geometryBase,
-            Properties = propertyGroup,
-            Name = name
-          };
-
-          collectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
-        }
-      }
-      catch (ConversionException)
-      {
-        // TODO
-      }
+      mapHandler.CreateGrasshopperObjectFromMap(map);
     }
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
-  }
-
-  private List<GeometryBase> Convert(Base input)
-  {
-    var result = ToSpeckleConversionContext.ToHostConverter.Convert(input);
-
-    if (result is GeometryBase geometry)
-    {
-      return [geometry];
-    }
-    if (result is List<GeometryBase> geometryList)
-    {
-      return geometryList;
-    }
-    if (result is List<(GeometryBase, Base)> fallbackConversionResult)
-    {
-      // note special handling for proxying render materials OR we don't care about revit
-      return fallbackConversionResult.Select(t => t.Item1).ToList();
-    }
-
-    throw new SpeckleException("Failed to convert input to rhino");
   }
 }
