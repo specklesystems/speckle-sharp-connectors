@@ -1,3 +1,5 @@
+using Revit.Async;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
@@ -34,8 +36,13 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     _selectionTimer.Start();
 #else
 
-    _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-      _idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged);
+    RevitTask
+      .RunAsync(
+        () =>
+          _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
+            _idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)
+      )
+      .FireAndForget();
 #endif
   }
 

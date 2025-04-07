@@ -20,6 +20,8 @@ public class RevitThreadContext : ThreadContext
 
   protected override Task<T> RunMainAsync<T>(Func<Task<T>> action) => CatchExceptions(action);
 
+  protected override Task RunMain(Action action) => RevitTask.RunAsync(action);
+
   private static async Task<T> CatchExceptions<T>(Func<T> action)
   {
     Exception? ex = null;

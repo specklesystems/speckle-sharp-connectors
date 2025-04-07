@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Revit.Async;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -44,18 +45,23 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-    uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+    RevitTask
+      .RunAsync(() =>
+      {
+        uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-    uiApplication.Application.DocumentOpening += (_, _) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+        uiApplication.Application.DocumentOpening += (_, _) =>
+          _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-    uiApplication.Application.DocumentOpened += (_, _) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+        uiApplication.Application.DocumentOpened += (_, _) =>
+          _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-    // There is no event that we can hook here for double-click file open...
-    // It is kind of harmless since we create this object as "SingleInstance".
-    LoadState();
-    OnDocumentChanged();
+        // There is no event that we can hook here for double-click file open...
+        // It is kind of harmless since we create this object as "SingleInstance".
+        LoadState();
+        OnDocumentChanged();
+      })
+      .FireAndForget();
   }
 
   /// <summary>

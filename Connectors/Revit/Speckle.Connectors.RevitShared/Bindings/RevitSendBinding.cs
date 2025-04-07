@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Revit.Async;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -92,9 +93,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    RevitTask
+      .RunAsync(() =>
+      {
+        revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+          _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+        _store.DocumentChanged += (_, _) =>
+          topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+      })
+      .FireAndForget();
   }
 
   public List<ISendFilter> GetSendFilters() =>
