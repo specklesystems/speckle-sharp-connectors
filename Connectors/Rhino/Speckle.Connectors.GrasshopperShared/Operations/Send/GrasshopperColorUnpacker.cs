@@ -1,3 +1,4 @@
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
