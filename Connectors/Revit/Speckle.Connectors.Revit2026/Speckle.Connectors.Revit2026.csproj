@@ -24,6 +24,8 @@
   <ItemGroup>
     <PackageReference Include="Revit.Async" />
     <PackageReference Include="Microsoft.Web.WebView2" VersionOverride="1.0.2478.35" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
