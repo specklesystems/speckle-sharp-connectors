@@ -32,12 +32,36 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
       value = SplitText(target),
       height = target.TextHeight,
       origin = _pointConverter.Convert(target.Plane.Origin),
-      // set plane to null if text orientation follows camera view
-      plane = target.TextOrientation == TextOrientation.InPlane ? _planeConverter.Convert(target.Plane) : null,
+      plane = GetTextPlane(target),
       alignmentH = (int)target.TextHorizontalAlignment,
       alignmentV = SimplifyVerticalAlignment((int)target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
     };
+
+  private SOG.Plane? GetTextPlane(RG.TextEntity target)
+  {
+    // set plane to null if text orientation follows camera view
+    if (target.TextOrientation != TextOrientation.InPlane)
+    {
+      return null;
+    }
+
+    if (target.TextRotationRadians == 0)
+    {
+      return _planeConverter.Convert(target.Plane);
+    }
+    // adjust text plane if rotation applied
+    RG.Plane rotatedPlane =
+      new()
+      {
+        Origin = target.Plane.Origin,
+        XAxis = target.Plane.XAxis,
+        YAxis = target.Plane.YAxis,
+        ZAxis = target.Plane.ZAxis,
+      };
+    rotatedPlane.Rotate(target.TextRotationRadians, target.Plane.ZAxis);
+    return _planeConverter.Convert(rotatedPlane);
+  }
 
   /// <summary>
   /// Split text into more lines if width formatting is applied.
