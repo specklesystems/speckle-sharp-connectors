@@ -139,13 +139,12 @@ public class SpeckleObjectWrapper : Base
     }
 
     // create attributes
-    using ObjectAttributes att = new() { Name = Name };
+    using ObjectAttributes att = new() { Name = Name, LayerIndex = bakeLayerIndex };
 
     if (Color is Color color)
     {
       att.ObjectColor = color;
       att.ColorSource = ObjectColorSource.ColorFromObject;
-      att.LayerIndex = bakeLayerIndex;
     }
 
     foreach (var kvp in Properties.Value)
@@ -235,7 +234,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public SpeckleObjectWrapperGoo() { }
 }
 
-public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject
+public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject, IGH_PreviewObject
 {
   public SpeckleObjectParam()
     : this(GH_ParamAccess.item) { }
@@ -264,6 +263,28 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // False if no data
     !VolatileData.IsEmpty;
 
+  public bool IsPreviewCapable => !VolatileData.IsEmpty;
+
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      BoundingBox clippingBox = new();
+
+      // Iterate over all data stored in the parameter
+      foreach (var item in VolatileData.AllData(true))
+      {
+        if (item is SpeckleObjectWrapperGoo goo)
+        {
+          var box = goo.Value.GeometryBase.GetBoundingBox(false);
+          clippingBox.Union(box);
+        }
+      }
+      return clippingBox;
+    }
+  }
+  bool IGH_PreviewObject.Hidden { get; set; }
+
   public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
   {
     // Iterate over all data stored in the parameter
@@ -284,6 +305,23 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       if (item is SpeckleObjectWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
+
+  public void DrawViewportWires(IGH_PreviewArgs args)
+  {
+    // todo?
+  }
+
+  public void DrawViewportMeshes(IGH_PreviewArgs args)
+  {
+    var isSelected = args.Document.SelectedObjects().Contains(this);
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleObjectWrapperGoo goo)
+      {
+        goo.Value.DrawPreview(args, isSelected);
       }
     }
   }

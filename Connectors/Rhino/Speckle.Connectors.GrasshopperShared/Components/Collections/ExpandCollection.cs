@@ -166,9 +166,9 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     _clippingBox = new BoundingBox();
     foreach (var element in c.elements)
     {
-      if (element is Collection subCol)
+      if (element is SpeckleCollectionWrapper subCol)
       {
-        FlattenForPreview(subCol);
+        FlattenForPreview(subCol.Collection);
       }
 
       if (element is SpeckleObjectWrapper sg)
@@ -180,7 +180,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     }
   }
 
-  // public override void DrawViewportWires(IGH_PreviewArgs args) => base.DrawViewportWires(args);
   public override void DrawViewportMeshes(IGH_PreviewArgs args)
   {
     if (_previewObjects.Count == 0)
