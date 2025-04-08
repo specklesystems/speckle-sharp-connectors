@@ -79,12 +79,23 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
         // additional alignment subentity props
         ["startStation"] = target.StartStation,
         ["endStation"] = target.EndStation,
-        ["startDirection"] = target.StartDirection,
-        ["endDirection"] = target.EndDirection,
-        ["deflectedAngle"] = target.DeflectedAngle,
-        ["minumumRadius"] = target.MinimumRadius
+        ["startDirection"] = TryGetValue(() => target.StartDirection),
+        ["endDirection"] = TryGetValue(() => target.EndDirection),
+        ["deflectedAngle"] = TryGetValue(() => target.DeflectedAngle),
+        ["minumumRadius"] = TryGetValue(() => target.MinimumRadius)
       };
 
     return arc;
+  }
+  private T? TryGetValue<T>(Func<T> getValue)
+  {
+    try
+    {
+      return getValue();
+    }
+    catch (InvalidOperationException)
+    {
+      return default;
+    }
   }
 }
