@@ -9,9 +9,11 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      SPECKLE_VERSION: "unset"
+      SEMVER: "unset"
+      FILE_VERSION: "unset"
     outputs:
-      version: ${{ steps.set-version.outputs.version }}
+      semver: ${{ steps.set-version.outputs.semver }}
+      file_version: ${{ steps.set-version.outputs.file_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,14 +37,17 @@ jobs:
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: output-${{ env.SPECKLE_VERSION }}
+          name: output-${{ env.SEMVER }}
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
-          compression-level: 0 # no compression      
+          compression-level: 0 # no compression    
+          
       - id: set-version
         name: Set version to output
-        run: echo "version=${{ env.SPECKLE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
+        run: |
+          echo "semver=${{ env.SEMVER }}" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=${{ env.FILE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     runs-on: ubuntu-latest
@@ -60,6 +65,7 @@ jobs:
           inputs: '{ 
               "run_id": "${{ github.run_id }}", 
               "semver": "${{ needs.build-windows.outputs.version }}", 
+              "file_version": "${{ needs.build-windows.outputs.file_version }}", 
               "repo": "${{ github.repository }}",
               "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
               "store_artifacts": ${{ env.IS_TEST_INSTALLER }} 
