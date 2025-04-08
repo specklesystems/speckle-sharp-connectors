@@ -16,6 +16,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   private Document? _doc;
   public string Id { get; set; } = "revitCategories";
   public string Name { get; set; } = "Categories";
+  public string Type { get; set; } = "Custom";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = new();
