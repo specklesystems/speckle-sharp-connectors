@@ -46,19 +46,6 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     polylineValue.Add(spiral.EndPoint.Y);
     polylineValue.Add(0);
 
-    // Civil 3D 2022 has a bug with the spiral definition sometimes throwing an InvalidOperation exception
-    // Catch the error here and set direction to null if this occurs
-    string? spiralDirection;
-    try
-    {
-      spiralDirection = spiral.Direction.ToString();
-    }
-    catch (InvalidOperationException)
-    {
-      // Set the spiralDirection as null
-      spiralDirection = null;
-    }
-
     SOG.Polyline polyline =
       new()
       {
@@ -66,22 +53,34 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
         units = units,
         closed = spiral.StartPoint == spiral.EndPoint,
         // add alignment spiral props
-        length = spiral.Length,
-        ["delta"] = spiral.Delta,
-        ["direction"] = spiralDirection,
-        ["spiralDefinition"] = spiral.SpiralDefinition.ToString(),
-        ["totalX"] = spiral.TotalX,
-        ["totalY"] = spiral.TotalY,
-        ["startStation"] = spiral.StartStation,
-        ["endStation"] = spiral.EndStation,
-        ["startDirection"] = spiral.StartDirection,
-        ["endDirection"] = spiral.EndDirection,
-        ["a"] = spiral.A,
-        ["k"] = spiral.K,
-        ["p"] = spiral.P,
-        ["minimumTransitionLength"] = spiral.MinimumTransitionLength
+        length = TryGetValue(() => spiral.Length),
+        ["delta"] = TryGetValue(() => spiral.Delta),
+        ["direction"] = TryGetValue(() => spiral.Direction.ToString()),
+        ["spiralDefinition"] = TryGetValue(() => spiral.SpiralDefinition.ToString()),
+        ["totalX"] = TryGetValue(() => spiral.TotalX),
+        ["totalY"] = TryGetValue(() => spiral.TotalY),
+        ["startStation"] = TryGetValue(() => spiral.StartStation),
+        ["endStation"] = TryGetValue(() => spiral.EndStation),
+        ["startDirection"] = TryGetValue(() => spiral.StartDirection),
+        ["endDirection"] = TryGetValue(() => spiral.EndDirection),
+        ["a"] = TryGetValue(() => spiral.A),
+        ["k"] = TryGetValue(() => spiral.K),
+        ["p"] = TryGetValue(() => spiral.P),
+        ["minimumTransitionLength"] = TryGetValue(() => spiral.MinimumTransitionLength)
       };
 
     return polyline;
+  }
+
+  private T? TryGetValue<T>(Func<T> getValue)
+  {
+    try
+    {
+      return getValue();
+    }
+    catch(InvalidOperationException)
+    {
+      return default;
+    }
   }
 }
