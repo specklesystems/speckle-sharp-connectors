@@ -16,6 +16,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   private Document? _doc;
   public string Id { get; set; } = "revitCategories";
   public string Name { get; set; } = "Categories";
+  public string Type { get; set; } = "Custom";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = new();
@@ -40,12 +41,17 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
   public List<string> RefreshObjectIds()
   {
-    var objectIds = new List<string>();
     if (SelectedCategories is null)
     {
-      return objectIds;
+      return [];
     }
 
+    // ⚠️ this is ugly, BUT we need to preserve RevitLinkInstances regardless of category.
+    // these get unpacked later in the RefreshElementsIdsOnSender, so if we don't do this, they'll get filtered out here
+    using var linkCollector = new FilteredElementCollector(_doc);
+    var linkInstanceIds = linkCollector.OfClass(typeof(RevitLinkInstance)).Select(link => link.UniqueId).ToList();
+
+    // get elements that match the selected categories (excluding RevitLinkInstance objects)
     var elementIds = SelectedCategories.Select(c => ElementIdHelper.GetElementId(c)).Where(e => e is not null).ToList();
 
     using var categoryFilter = new ElementMulticategoryFilter(elementIds);
@@ -55,7 +61,11 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
       .WhereElementIsViewIndependent()
       .WherePasses(categoryFilter)
       .ToList();
-    objectIds = elements.Select(e => e.UniqueId).ToList();
+
+    // combine both sets
+    var objectIds = elements.Select(e => e.UniqueId).ToList();
+    objectIds.AddRange(linkInstanceIds);
+
     SelectedObjectIds = objectIds;
     return objectIds;
   }

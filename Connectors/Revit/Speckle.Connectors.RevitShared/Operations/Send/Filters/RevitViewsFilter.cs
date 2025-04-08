@@ -12,6 +12,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   private Document? _doc;
   public string Id { get; set; } = "revitViews";
   public string Name { get; set; } = "Views";
+  public string Type { get; set; } = "Custom";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }
@@ -53,10 +54,9 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
   public List<string> RefreshObjectIds()
   {
-    var objectIds = new List<string>();
     if (SelectedView is null)
     {
-      return objectIds;
+      return [];
     }
 
     // Paşa Bilal wants it like this... (three dots = important meaning for ogu)
@@ -75,8 +75,8 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       throw new SpeckleSendFilterException("View not found, please update your model send filter.");
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-    List<Element> elementsInView = viewCollector.ToElements().ToList();
-    objectIds = elementsInView.Select(e => e.UniqueId).ToList();
+    var elementsInView = viewCollector.ToElements();
+    var objectIds = elementsInView.Select(e => e.UniqueId).ToList();
     SelectedObjectIds = objectIds;
     return objectIds;
   }

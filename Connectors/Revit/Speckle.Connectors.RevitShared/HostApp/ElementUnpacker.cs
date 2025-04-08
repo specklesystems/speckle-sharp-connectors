@@ -1,6 +1,8 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -10,10 +12,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 public class ElementUnpacker
 {
   private readonly RevitContext _revitContext;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  public ElementUnpacker(RevitContext revitContext)
+  public ElementUnpacker(RevitContext revitContext, IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
     _revitContext = revitContext;
+    _converterSettings = converterSettings;
   }
 
   /// <summary>
@@ -21,18 +25,21 @@ public class ElementUnpacker
   /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
   /// </summary>
   /// <param name="selectionElements"></param>
+  /// <param name="doc"> We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places <br/>
+  /// 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.<br/>
+  /// 2- Evicting the cache while introducing the settings</param>
   /// <returns></returns>
-  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements)
+  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document? doc = null)
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
-    var atomicObjects = UnpackElements(selectionElements);
+    var atomicObjects = UnpackElements(selectionElements, doc);
 
     // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
     // The behaviour we're looking for:
     // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
     // NOTE: this also conditionally "packs" stacked wall elements if their parent is present. See detailed note inside the function.
-    return PackCurtainWallElementsAndStackedWalls(atomicObjects);
+    return PackCurtainWallElementsAndStackedWalls(atomicObjects, doc);
   }
 
   /// <summary>
@@ -43,38 +50,52 @@ public class ElementUnpacker
   /// <remarks>
   /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
   /// </remarks>
-  public IEnumerable<string> GetUnpackedElementIds(List<string> objectIds)
+  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
   {
     var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     var docElements = doc.GetElements(objectIds);
     return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
   }
 
-  private List<Element> UnpackElements(IEnumerable<Element> elements)
+  // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
+  // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
+  // 2- Evicting the cache while introducing the settings
+  private List<Element> UnpackElements(IEnumerable<Element> elements, Document? doc = null)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    if (doc == null)
+    {
+      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    }
 
     foreach (var element in elements)
     {
       // UNPACK: Groups
       if (element is Group g)
       {
+        // When a group is from a linked model, GetMemberIds may behave differently
+        // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
-        var groupElements = g.GetMemberIds().Select(doc.GetElement);
+        var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(groupElements));
       }
       else if (element is BaseArray baseArray)
       {
-        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement);
-        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement);
+        // For arrays, collect both copied and original members with null checks
+        // This handles cases where some elements might not resolve in linked contexts
+        var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement).Where(el => el != null);
+        var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(arrayElements));
         unpackedElements.AddRange(UnpackElements(originalElements));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
       {
-        var familyElements = familyInstance.GetSubComponentIds().Select(doc.GetElement).ToArray();
+        var familyElements = familyInstance
+          .GetSubComponentIds()
+          .Select(doc.GetElement)
+          .Where(el => el != null)
+          .ToArray();
 
         if (familyElements.Length != 0)
         {
@@ -85,7 +106,7 @@ public class ElementUnpacker
       }
       else if (element is MultistoryStairs multistoryStairs)
       {
-        var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement);
+        var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement).Where(el => el != null);
         unpackedElements.AddRange(UnpackElements(stairs));
       }
       else
@@ -95,13 +116,22 @@ public class ElementUnpacker
     }
     // Why filtering for duplicates? Well, well, well... it's related to the comment above on groups: if a group
     // contains a nested family, GetMemberIds() will return... duplicates of the exploded family components.
-    return unpackedElements.GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
+
+    // Add null check before GroupBy to prevent NullReferenceException when processing linked models with groups
+    // This ensures we don't try to access .Id on any null elements that might have been added during the unpacking process
+    return unpackedElements.Where(el => el != null).GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
   }
 
-  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements)
+  // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
+  // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
+  // 2- Evicting the cache while introducing the settings
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document? doc = null)
   {
     var ids = elements.Select(el => el.Id).ToArray();
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    if (doc == null)
+    {
+      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+    }
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
       || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))

@@ -95,6 +95,28 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
+  public void RemoveModels(List<ModelCard> models)
+  {
+    lock (_models)
+    {
+      var listForMissingModelCards = new List<string>();
+      foreach (var model in models)
+      {
+        var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
+        if (index == -1)
+        {
+          listForMissingModelCards.Add(model.ModelCardId.NotNull());
+        }
+        _models.RemoveAt(index);
+      }
+      SaveState();
+      if (listForMissingModelCards.Count > 0)
+      {
+        throw new ModelNotFoundException($"Model cards with IDs {listForMissingModelCards} not found to remove.");
+      }
+    }
+  }
+
   public IEnumerable<SenderModelCard> GetSenders()
   {
     lock (_models)
@@ -106,7 +128,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
     }
   }
 
-  protected string Serialize() => serializer.Serialize(Models);
+  protected string Serialize() => serializer.Serialize(Models.ToList());
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();

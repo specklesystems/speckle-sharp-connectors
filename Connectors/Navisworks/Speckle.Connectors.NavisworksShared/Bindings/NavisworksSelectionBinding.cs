@@ -38,7 +38,8 @@ public class NavisworksSelectionBinding : ISelectionBinding
   {
     // Ensure there is an active document and a valid selection
     var activeDocument = NavisworksApp.ActiveDocument;
-    if (activeDocument == null || activeDocument.CurrentSelection.SelectedItems.IsEmpty)
+    var selection = activeDocument?.CurrentSelection?.SelectedItems ?? [];
+    if (selection.Count == 0)
     {
       // Return an empty list if no valid selection exists
       return new SelectionInfo([], "No selection available");
@@ -46,8 +47,8 @@ public class NavisworksSelectionBinding : ISelectionBinding
 
     // Ensure only visible elements are processed by filtering using IsElementVisible
     var selectedObjectsIds = new HashSet<string>(
-      activeDocument
-        .CurrentSelection.SelectedItems.Where(_selectionService.IsVisible) // Exclude hidden elements
+      selection
+        .Where(_selectionService.IsVisible) // Exclude hidden elements
         .Select(_selectionService.GetModelItemPath) // Resolve to index paths
     );
 
