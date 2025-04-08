@@ -18,14 +18,26 @@ internal sealed class GrasshopperCollectionRebuilder
 
   public void AppendSpeckleGrasshopperObject(
     SpeckleObjectWrapper speckleGrasshopperObjectWrapper,
-    List<Collection> collectionPath
+    List<Collection> collectionPath,
+    GrasshopperColorBaker colorBaker
   )
   {
-    var collection = GetOrCreateSpeckleCollectionFromPath(collectionPath);
+    // add the object color
+    speckleGrasshopperObjectWrapper.Color = colorBaker.Cache.TryGetValue(
+      speckleGrasshopperObjectWrapper.applicationId ?? "",
+      out var cachedColor
+    )
+      ? cachedColor.Item1
+      : null;
+
+    var collection = GetOrCreateSpeckleCollectionFromPath(collectionPath, colorBaker);
     collection.Collection.elements.Add(speckleGrasshopperObjectWrapper);
   }
 
-  public SpeckleCollectionWrapper GetOrCreateSpeckleCollectionFromPath(List<Collection> path)
+  public SpeckleCollectionWrapper GetOrCreateSpeckleCollectionFromPath(
+    List<Collection> path,
+    GrasshopperColorBaker colorBaker
+  )
   {
     // first check if cache already has this collection
     string fullPath = string.Concat(path);
@@ -51,8 +63,16 @@ internal sealed class GrasshopperCollectionRebuilder
       }
 
       // create and cache if needed
-      Collection newCollection = new() { name = collectionName };
-      SpeckleCollectionWrapper newSpeckleCollectionWrapper = new(newCollection, currentLayerPath, null);
+      Collection newCollection = new() { name = collectionName, applicationId = collection.applicationId };
+      SpeckleCollectionWrapper newSpeckleCollectionWrapper =
+        new(newCollection, currentLayerPath, null)
+        {
+          // get the collection color
+          Color = colorBaker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
+            ? cachedCollectionColor.Item1
+            : null
+        };
+      ;
 
       if (collection["topology"] is string topology)
       {

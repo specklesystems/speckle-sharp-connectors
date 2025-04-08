@@ -28,8 +28,10 @@ public class SpeckleObjectWrapper : Base
 
   // A dictionary of property path to property
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
-  public string Name { get; set; } = "";
-  public int? Color { get; set; }
+  public required string Name { get; set; } = "";
+  public required Color? Color { get; set; }
+
+  public ObjectColorSource? ColorSource { get; set; }
   public string? RenderMaterialName { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
@@ -132,16 +134,16 @@ public class SpeckleObjectWrapper : Base
     {
       if (Path.Count > 0 && Parent != null)
       {
-        bakeLayerIndex = Parent.CreateLayerByPath(doc, Path);
+        bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
       }
     }
 
     // create attributes
     using ObjectAttributes att = new() { Name = Name };
 
-    if (Color is int argb)
+    if (Color is Color color)
     {
-      att.ObjectColor = System.Drawing.Color.FromArgb(argb);
+      att.ObjectColor = color;
       att.ColorSource = ObjectColorSource.ColorFromObject;
       att.LayerIndex = bakeLayerIndex;
     }
@@ -182,7 +184,13 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
         var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
-        Value = new SpeckleObjectWrapper() { GeometryBase = gooGB, Base = gooConverted };
+        Value = new SpeckleObjectWrapper()
+        {
+          GeometryBase = gooGB,
+          Base = gooConverted,
+          Name = "",
+          Color = null
+        };
         return true;
     }
 

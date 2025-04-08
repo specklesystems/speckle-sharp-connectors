@@ -24,15 +24,16 @@ public class SpeckleCollectionWrapper : Base
 
   public string Topology { get; set; }
 
-  public int? Color { get; set; }
+  public Color? Color { get; set; }
 
   public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
 
-  public SpeckleCollectionWrapper(Collection value, List<string> path, int? color)
+  public SpeckleCollectionWrapper(Collection value, List<string> path, Color? color)
   {
     Collection = value;
     Path = new ObservableCollection<string>(path);
     Color = color;
+    applicationId = value.applicationId;
 
     // add listener on path changing.
     // this can be triggered by a create collection node, that changes the path of this collection.
@@ -56,22 +57,23 @@ public class SpeckleCollectionWrapper : Base
     }
   }
 
-  public void Bake(
-    RhinoDoc doc,
-    List<Guid> obj_ids,
-    List<string> path,
-    bool bakeObjects,
-    List<Sdk.Models.Base>? elements = null
-  )
+  /// <summary>
+  /// Bakes this collection as a layer, in its path structure.
+  /// </summary>
+  /// <param name="doc"></param>
+  /// <param name="obj_ids"></param>
+  /// <param name="bakeObjects"></param>
+  /// <returns>The index of the baked layer</returns>
+  public int Bake(RhinoDoc doc, List<Guid> obj_ids, bool bakeObjects)
   {
+    var path = Path.ToList();
     if (!LayerExists(doc, path, out int currentLayerIndex))
     {
-      currentLayerIndex = CreateLayerByPath(doc, path);
+      currentLayerIndex = CreateLayerByPath(doc, path, Color, obj_ids);
     }
 
     // then bake elements in this collection
-    List<Sdk.Models.Base> e = elements ?? Collection.elements;
-    foreach (var obj in e)
+    foreach (var obj in Collection.elements)
     {
       if (obj is SpeckleObjectWrapper so)
       {
@@ -82,10 +84,11 @@ public class SpeckleCollectionWrapper : Base
       }
       else if (obj is SpeckleCollectionWrapper c)
       {
-        path.Add(c.Collection.name);
-        Bake(doc, obj_ids, path, bakeObjects, c.Collection.elements);
+        c.Bake(doc, obj_ids, bakeObjects);
       }
     }
+
+    return currentLayerIndex;
   }
 
   private bool LayerExists(RhinoDoc doc, List<string> path, out int layerIndex)
@@ -95,13 +98,18 @@ public class SpeckleCollectionWrapper : Base
     return layerIndex != -1;
   }
 
-  private int CreateLayer(RhinoDoc doc, string name, Guid parentId)
+  private int CreateLayer(RhinoDoc doc, string name, Guid parentId, Color? color)
   {
     Layer layer = new() { Name = name, ParentLayerId = parentId };
+    if (color is not null)
+    {
+      layer.Color = color.Value;
+    }
+
     return doc.Layers.Add(layer);
   }
 
-  public int CreateLayerByPath(RhinoDoc doc, List<string> path)
+  private int CreateLayerByPath(RhinoDoc doc, List<string> path, Color? color, List<Guid> obj_ids)
   {
     if (path.Count == 0 || doc == null)
     {
@@ -122,9 +130,11 @@ public class SpeckleCollectionWrapper : Base
       }
       else
       {
-        currentLayerIndex = CreateLayer(doc, layerName, currentLayerId);
+        currentLayerIndex = CreateLayer(doc, layerName, currentLayerId, color);
         currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
+        obj_ids.Add(currentLayerId);
       }
+
       parentLayerIndex = currentLayerIndex;
     }
 
@@ -205,7 +215,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
+        goo.Value.Bake(doc, obj_ids, true);
       }
     }
   }
@@ -217,7 +227,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, goo.Value.Path.ToList(), true, goo.Value.Collection.elements);
+        goo.Value.Bake(doc, obj_ids, true);
       }
     }
   }

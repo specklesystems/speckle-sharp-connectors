@@ -4,6 +4,7 @@ using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -41,6 +42,20 @@ public static class GrasshopperHelpers
         throw new UnitNotSupportedException($"The Unit System \"{unitSystem}\" is unsupported.");
     }
   }
+
+  /// <summary>
+  /// Retrieves a unique Speckle application id from the rgb value.
+  /// </summary>
+  /// <remarks> Uses the rgb value since color names are not unique </remarks>
+  public static string GetSpeckleApplicationId(this Color color) => $"color_{color}";
+
+  /// <summary>
+  /// Retrieves a unique Speckle application id from the path of the collection
+  /// </summary>
+  /// <param name="collectionWrapper"></param>
+  /// <returns></returns>
+  public static string GetSpeckleApplicationId(this SpeckleCollectionWrapper collectionWrapper) =>
+    $"{string.Join(Constants.LAYER_PATH_DELIMITER, collectionWrapper.Path)}";
 
   public static Transform MatrixToTransform(Matrix4x4 matrix, string units)
   {

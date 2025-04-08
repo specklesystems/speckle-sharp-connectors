@@ -30,7 +30,6 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddRhinoConverters().AddConnectorUtils();
 
       // receive
-      services.AddTransient<IHostObjectBuilder, GrasshopperHostObjectBuilder>();
       services.AddTransient<GrasshopperReceiveOperation>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddScoped<RootObjectUnpacker>();
