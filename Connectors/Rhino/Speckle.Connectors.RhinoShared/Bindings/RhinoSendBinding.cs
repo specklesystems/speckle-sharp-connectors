@@ -188,7 +188,7 @@ public sealed class RhinoSendBinding : ISendBinding
       });
 
     RhinoDoc.LayerTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(() =>
+      _topLevelExceptionHandler.CatchUnhandled(async () =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -218,6 +218,7 @@ public sealed class RhinoSendBinding : ISendBinding
           }
         }
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+        await Commands.RefreshSendFilters();
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
