@@ -40,7 +40,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ToSpeckleConversionContext.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />

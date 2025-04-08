@@ -1,17 +1,19 @@
+using System.Runtime.InteropServices;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
+[Guid("BF517D60-B853-4C61-9574-AD8A718B995B")]
 public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariableParameterComponent
 {
-  /// <summary>
-  /// Gets the unique ID for this component. Do not change this ID after release.
-  /// </summary>
-  public override Guid ComponentGuid => new Guid("BF517D60-B853-4C61-9574-AD8A718B995B");
+  public override Guid ComponentGuid => GetType().GUID;
+
+  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("fP");
 
   public FilterPropertiesByPropertyGroupPaths()
     : base(

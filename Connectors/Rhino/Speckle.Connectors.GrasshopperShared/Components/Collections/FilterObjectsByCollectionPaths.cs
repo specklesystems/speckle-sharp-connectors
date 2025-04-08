@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -12,9 +13,12 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
 ///
 /// To extract those objects out, you should select that specific sub path as well.
 /// </summary>
+[Guid("77CAEE94-F0B9-4611-897C-71F2A22BA311")]
 public class FilterObjectsByCollectionPaths : GH_Component
 {
-  public override Guid ComponentGuid => new("77CAEE94-F0B9-4611-897C-71F2A22BA311");
+  public override Guid ComponentGuid => GetType().GUID;
+
+  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("fO");
 
   public FilterObjectsByCollectionPaths()
     : base(
