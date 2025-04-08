@@ -64,12 +64,22 @@ public class SpeckleCollectionWrapper : Base
   /// <param name="obj_ids"></param>
   /// <param name="bakeObjects"></param>
   /// <returns>The index of the baked layer</returns>
-  public int Bake(RhinoDoc doc, List<Guid> obj_ids, bool bakeObjects)
+  public int Bake(RhinoDoc doc, List<Guid> obj_ids, bool bakeObjects, int parentLayerIndex = -1)
   {
     var path = Path.ToList();
     if (!LayerExists(doc, path, out int currentLayerIndex))
     {
-      currentLayerIndex = CreateLayerByPath(doc, path, Color, obj_ids);
+      if (parentLayerIndex != -1)
+      {
+        Guid parentLayerId = doc.Layers[parentLayerIndex].Id;
+        currentLayerIndex = CreateLayer(doc, Collection.name, parentLayerId, Color);
+        Guid currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
+        obj_ids.Add(currentLayerId);
+      }
+      else
+      {
+        currentLayerIndex = CreateLayerByPath(doc, path, Color, obj_ids);
+      }
     }
 
     // then bake elements in this collection
@@ -84,7 +94,7 @@ public class SpeckleCollectionWrapper : Base
       }
       else if (obj is SpeckleCollectionWrapper c)
       {
-        c.Bake(doc, obj_ids, bakeObjects);
+        c.Bake(doc, obj_ids, bakeObjects, currentLayerIndex);
       }
     }
 
