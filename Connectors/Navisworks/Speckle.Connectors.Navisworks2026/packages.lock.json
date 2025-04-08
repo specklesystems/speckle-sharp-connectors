@@ -302,7 +302,8 @@
         "dependencies": {
           "Speckle.Connectors.DUI": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Navisworks.API": "[2026.0.1, )"
+          "Speckle.Navisworks.API": "[2026.0.1, )",
+          "System.Reactive": "[6.0.0, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
