@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -32,7 +33,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     DocumentModelStorageSchema documentModelStorageSchema,
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEvents events
   )
     : base(jsonSerializer)
   {
@@ -45,23 +47,21 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-    RevitTask
-      .RunAsync(() =>
-      {
-        uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
+    events.Add(() =>
+    {
+      uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 
-        uiApplication.Application.DocumentOpening += (_, _) =>
-          _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+      uiApplication.Application.DocumentOpening += (_, _) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-        uiApplication.Application.DocumentOpened += (_, _) =>
-          _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
+      uiApplication.Application.DocumentOpened += (_, _) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
 
-        // There is no event that we can hook here for double-click file open...
-        // It is kind of harmless since we create this object as "SingleInstance".
-        LoadState();
-        OnDocumentChanged();
-      })
-      .FireAndForget();
+      // There is no event that we can hook here for double-click file open...
+      // It is kind of harmless since we create this object as "SingleInstance".
+      LoadState();
+      OnDocumentChanged();
+    });
   }
 
   /// <summary>

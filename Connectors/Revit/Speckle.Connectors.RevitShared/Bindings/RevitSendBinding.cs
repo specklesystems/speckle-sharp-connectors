@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Revit.Async;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -18,6 +17,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -69,7 +69,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IEvents events
   )
     : base("sendBinding", bridge)
   {
@@ -93,15 +94,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    RevitTask
-      .RunAsync(() =>
-      {
-        revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-          _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-        _store.DocumentChanged += (_, _) =>
-          topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
-      })
-      .FireAndForget();
+    events.Add(() =>
+    {
+      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    });
   }
 
   public List<ISendFilter> GetSendFilters() =>
