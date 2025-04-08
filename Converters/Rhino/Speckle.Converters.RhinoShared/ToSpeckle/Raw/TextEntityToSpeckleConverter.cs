@@ -66,11 +66,12 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
   /// <summary>
   /// Split text into more lines if width formatting is applied.
   /// Approximation of Rhino text splitting, not precise: in Rhino, depends on the font and specific characters.
+  /// Only useful to keep approximately same amount of text lines and line width
   /// </summary>
   private string SplitText(RG.TextEntity target)
   {
     // return, if formatting doesn't affect the text width
-    if (target.FormatWidth == 0 || target.TextModelWidth > target.FormatWidth)
+    if (!target.TextIsWrapped)
     {
       return target.PlainText;
     }
