@@ -121,8 +121,19 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     // TODO: Linking up to UI settings about whether or not to send, maybe some validation etc. Just going to send for now
     // TODO: Inject correct "extractor" according to which analysis results send settings
     // TODO: Conversion settings: which load combinations / load cases etc.?
-    Base analysisResults = new() { ["columnForces"] = _etabsColumnElementForcesExtractor.GetColumnsForces() };
-    rootObjectCollection["analysisResults"] = analysisResults;
+    bool sendAnalysisResults = true; // TODO: replace with UI setting
+    if (sendAnalysisResults)
+    {
+      if (!_csiApplicationService.SapModel.GetModelIsLocked()) // Don't know if there's a better way to ensure analysis is run
+      {
+        _logger.LogError("Model unlocked. No access to analysis results.");
+      }
+      else
+      {
+        Base analysisResults = new() { ["columnForces"] = _etabsColumnElementForcesExtractor.GetColumnsForces() };
+        rootObjectCollection["analysisResults"] = analysisResults;
+      }
+    }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
