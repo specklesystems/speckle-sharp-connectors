@@ -4,6 +4,7 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -29,7 +30,7 @@ public class LinkedModelHandler
   /// This method handles the specifics of element collection but doesn't make decisions
   /// about whether the linked model should be processed - that's the caller's responsibility.
   /// </summary>
-  public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument)
+  public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument, Transform? transform)
   {
     // send mode → Categories
     if (sendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories is not null)
@@ -51,7 +52,8 @@ public class LinkedModelHandler
     {
       RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
         linkedDocument.PathName,
-        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document
+        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document,
+        transform
       );
 
 #if REVIT2024_OR_GREATER
@@ -166,13 +168,44 @@ public class LinkedModelHandler
     return collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToList();
   }
 
-  private RevitLinkInstance FindLinkInstanceForDocument(string linkedDocumentPath, Document mainDocument)
+  /// <summary>
+  /// Finds a specific RevitLinkInstance that corresponds to a linked document with a matching transform.
+  /// </summary>
+  /// <param name="linkedDocumentPath">The file path of the linked document</param>
+  /// <param name="transform">The transform to match (expected to already be an inverse transform).
+  /// When provided with multiple instances of the same linked document, this is used to find the specific instance.</param>
+  /// <param name="mainDocument">The main Revit document containing the link instances</param>
+  /// <returns>The matching RevitLinkInstance, or the first available instance if no match is found</returns>
+  private RevitLinkInstance FindLinkInstanceForDocument(
+    string linkedDocumentPath,
+    Document mainDocument,
+    Transform? transform
+  )
   {
     using var collector = new FilteredElementCollector(mainDocument);
-    return collector
+    var linkInstances = collector
       .OfClass(typeof(RevitLinkInstance))
       .Cast<RevitLinkInstance>()
-      .FirstOrDefault(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
-      .NotNull();
+      .Where(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
+      .ToList();
+
+    // if no transform or only one instance, just return the first
+    if (transform == null || linkInstances.Count <= 1)
+    {
+      return linkInstances.FirstOrDefault()
+        ?? throw new SpeckleException($"No link instance found for {linkedDocumentPath}");
+    }
+
+    // a match consists of not only the linked document path name but the transformation too (think linked instances)
+    // precompute our target hash once
+    string targetHash = GetTransformHash(transform);
+
+    // directly find the matching instance
+    var matchingInstance = linkInstances.FirstOrDefault(link =>
+      GetTransformHash(link.GetTotalTransform().Inverse) == targetHash
+    );
+
+    // return matching with a fallback to first (main) instance in case something goes funky with the hash
+    return matchingInstance ?? linkInstances.First();
   }
 }
