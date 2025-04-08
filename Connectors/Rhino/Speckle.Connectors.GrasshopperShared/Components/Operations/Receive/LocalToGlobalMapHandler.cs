@@ -45,7 +45,10 @@ internal sealed class LocalToGlobalMapHandler
       }
 
       // get the collection
-      SpeckleCollectionWrapper objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(path);
+      SpeckleCollectionWrapper objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+        path,
+        _colorBaker
+      );
 
       // get the name and properties
       SpecklePropertyGroupGoo propertyGroup = new();
@@ -68,11 +71,6 @@ internal sealed class LocalToGlobalMapHandler
         }
       }
 
-      // get the color
-      Color? color = _colorBaker.Cache.TryGetValue(map.AtomicObject.applicationId ?? "", out var cachedColor)
-        ? cachedColor.Item1
-        : null;
-
       // create objects for every value in converted. This is where one to many is not handled very nicely.
       foreach (var geometryBase in converted)
       {
@@ -83,11 +81,12 @@ internal sealed class LocalToGlobalMapHandler
           Parent = objectCollection,
           GeometryBase = geometryBase,
           Properties = propertyGroup,
-          Color = color,
-          Name = name
+          Name = name,
+          Color = null,
+          applicationId = map.AtomicObject.applicationId
         };
 
-        CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path);
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path, _colorBaker);
       }
     }
     catch (ConversionException)

@@ -40,7 +40,10 @@ public class CreateSpeckleObject : GH_Component
     );
     Params.Input[2].Optional = true;
 
-    // TODO: add render material and color
+    pManager.AddColourParameter("Color", "c", "The color of the new Speckle Object", GH_ParamAccess.item);
+    Params.Input[3].Optional = true;
+
+    // TODO: add render material
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -60,6 +63,9 @@ public class CreateSpeckleObject : GH_Component
     SpecklePropertyGroupGoo properties = new();
     da.GetData(2, ref properties);
 
+    Color? color = null;
+    da.GetData(3, ref color);
+
     // convert the properties
     Dictionary<string, object?> props = new();
     properties.CastTo(ref props);
@@ -67,12 +73,16 @@ public class CreateSpeckleObject : GH_Component
     // convert the geometries
     Base converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometry);
 
+    // generate an application Id
+    Guid guid = Guid.NewGuid();
+
     Speckle.Objects.Data.DataObject grasshopperObject =
       new()
       {
         name = name,
         displayValue = new() { converted },
-        properties = props
+        properties = props,
+        applicationId = guid.ToString()
       };
 
     SpeckleObjectWrapper so =
@@ -81,7 +91,9 @@ public class CreateSpeckleObject : GH_Component
         Base = grasshopperObject,
         GeometryBase = geometry,
         Properties = properties,
-        Name = name
+        Color = color,
+        Name = name,
+        applicationId = guid.ToString()
       };
 
     da.SetData(0, new SpeckleObjectWrapperGoo(so));

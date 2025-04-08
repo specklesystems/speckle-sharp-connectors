@@ -12,13 +12,22 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
   {
     if (source is ModelLayer modelLayer)
     {
-      Collection modelCollection = new() { name = modelLayer.Name, elements = new() };
+      Collection modelCollection =
+        new()
+        {
+          name = modelLayer.Name,
+          elements = new(),
+          applicationId = modelLayer.Id?.ToString()
+        };
 
-      Value = new SpeckleCollectionWrapper(
-        modelCollection,
-        GetModelLayerPath(modelLayer),
-        modelLayer.DisplayColor?.ToArgb()
-      );
+      // get color
+      Color? layerColor = null;
+      if (modelLayer.DisplayColor is ModelColor color)
+      {
+        layerColor = Color.FromArgb(color.ToArgb());
+      }
+
+      Value = new SpeckleCollectionWrapper(modelCollection, GetModelLayerPath(modelLayer), layerColor);
       return true;
     }
 
