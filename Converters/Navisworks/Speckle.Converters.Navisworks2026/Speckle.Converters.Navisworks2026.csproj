@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <DefineConstants>$(DefineConstants);NAVIS2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2026.0.1" ExcludeAssets="runtime"/>
+    <PackageReference Include="System.Reactive" VersionOverride="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+  
+  <!-- Includes -->
+  <Import Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems" Label="Shared"/>
+
+</Project>
