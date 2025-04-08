@@ -1,3 +1,4 @@
+using System.Reflection;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
@@ -14,6 +15,7 @@ using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2026_OR_GREATER
 using Speckle.Connectors.DUI.WebView;
@@ -31,6 +33,7 @@ public static class ServiceRegistration
     serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     // Storage Schema
     serviceCollection.AddScoped<DocumentModelStorageSchema>();

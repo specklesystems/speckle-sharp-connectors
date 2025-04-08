@@ -70,7 +70,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
-    IEvents events
+    IRevitEvents events
   )
     : base("sendBinding", bridge)
   {

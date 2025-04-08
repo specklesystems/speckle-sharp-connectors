@@ -19,7 +19,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     IBrowserBridge parent,
     IAppIdleManager idleManager,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IEvents events
+    IRevitEvents events
   )
     : base("selectionBinding", parent)
   {

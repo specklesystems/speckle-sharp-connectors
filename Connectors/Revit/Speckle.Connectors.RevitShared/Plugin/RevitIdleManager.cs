@@ -19,7 +19,7 @@ public sealed class RevitIdleManager : AppIdleManager
     RevitContext revitContext,
     IIdleCallManager idleCallManager,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IEvents events
+    IRevitEvents events
   )
     : base(idleCallManager)
   {

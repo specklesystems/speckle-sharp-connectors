@@ -6,7 +6,7 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Connectors.RevitShared;
 
 [GenerateAutoInterface]
-public class Events(ITopLevelExceptionHandler topLevelExceptionHandler) : IEvents
+public class RevitEvents(ITopLevelExceptionHandler topLevelExceptionHandler) : IRevitEvents
 {
   public void Add(Func<Task> handler) =>
     RevitTask.RunAsync(() => topLevelExceptionHandler.FireAndForget(handler)).FireAndForget();
