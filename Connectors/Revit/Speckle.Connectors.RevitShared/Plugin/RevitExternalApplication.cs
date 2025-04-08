@@ -60,8 +60,8 @@ internal sealed class RevitExternalApplication : IExternalApplication
     }
     catch (Exception e) when (!e.IsFatal())
     {
-      _container?
-        .GetRequiredService<ILoggerFactory>()
+      _container
+        ?.GetRequiredService<ILoggerFactory>()
         .CreateLogger<RevitExternalApplication>()
         .LogCritical(e, "Unhandled exception");
       // POC: feedback?
