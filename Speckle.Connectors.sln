@@ -291,6 +291,11 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.GrasshopperShared", "Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj", "{B6FBB8F4-4E2D-41D9-AC3F-1E30D0C8E87C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Grasshopper7", "Connectors\Rhino\Speckle.Connectors.Grasshopper7\Speckle.Connectors.Grasshopper7.csproj", "{2DE56E09-67D5-4F23-A97E-EE2D1293E5EC}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026", "2026", "{4AF5F22C-9C84-4492-B759-62CDA23278EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2026", "Connectors\Navisworks\Speckle.Connectors.Navisworks2026\Speckle.Connectors.Navisworks2026.csproj", "{FE797118-07CB-44A7-A779-68FF3B69EE40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Navisworks2026", "Converters\Navisworks\Speckle.Converters.Navisworks2026\Speckle.Converters.Navisworks2026.csproj", "{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -731,6 +736,18 @@ Global
 		{2DE56E09-67D5-4F23-A97E-EE2D1293E5EC}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{2DE56E09-67D5-4F23-A97E-EE2D1293E5EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2DE56E09-67D5-4F23-A97E-EE2D1293E5EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Local|Any CPU.Build.0 = Local|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE797118-07CB-44A7-A779-68FF3B69EE40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Local|Any CPU.Build.0 = Local|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -861,6 +878,9 @@ Global
 		{65230E97-8EBA-4594-8A17-2847C5E2B459} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{B6FBB8F4-4E2D-41D9-AC3F-1E30D0C8E87C} = {9039209B-7244-483B-B668-D3CE31B304C1}
 		{2DE56E09-67D5-4F23-A97E-EE2D1293E5EC} = {19006AA9-C099-467C-B07A-C64B3BFDA1F4}
+		{4AF5F22C-9C84-4492-B759-62CDA23278EB} = {7B95C512-C1CD-4110-A9A9-CECCD9630353}
+		{FE797118-07CB-44A7-A779-68FF3B69EE40} = {4AF5F22C-9C84-4492-B759-62CDA23278EB}
+		{F8CC203D-E0DC-42DA-99C1-CA07FDBCECCC} = {4AF5F22C-9C84-4492-B759-62CDA23278EB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
