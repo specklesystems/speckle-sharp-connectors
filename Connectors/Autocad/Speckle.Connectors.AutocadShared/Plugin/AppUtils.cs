@@ -14,7 +14,9 @@ public static class AppUtils
 #endif
 
   public static HostAppVersion Version =>
-#if AUTOCAD2025 || CIVIL3D2025
+#if AUTOCAD2026 || CIVIL3D2026
+    HostAppVersion.v2026;
+#elif AUTOCAD2025 || CIVIL3D2025
     HostAppVersion.v2025;
 #elif AUTOCAD2024 || CIVIL3D2024
     HostAppVersion.v2024;
