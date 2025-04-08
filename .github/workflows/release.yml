@@ -41,8 +41,8 @@ jobs:
           path: output/*.*
           if-no-files-found: error
           retention-days: 1
-          compression-level: 0 # no compression    
-          
+          compression-level: 0 # no compression
+
       - id: set-version
         name: Set version to output
         run: |
@@ -62,13 +62,13 @@ jobs:
           workflow: Build Installers
           repo: specklesystems/connector-installers
           token: ${{ secrets.CONNECTORS_GH_TOKEN }}
-          inputs: '{ 
-              "run_id": "${{ github.run_id }}", 
-              "semver": "${{ needs.build-windows.outputs.version }}", 
-              "file_version": "${{ needs.build-windows.outputs.file_version }}", 
-              "repo": "${{ github.repository }}",
-              "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}, 
-              "store_artifacts": ${{ env.IS_TEST_INSTALLER }} 
+          inputs: '{
+            "run_id": "${{ github.run_id }}",
+            "semver": "${{ needs.build-windows.outputs.semver }}",
+            "file_version": "${{ needs.build-windows.outputs.file_version }}",
+            "repo": "${{ github.repository }}",
+            "is_public_release": ${{ env.IS_PUBLIC_RELEASE }},
+            "store_artifacts": ${{ env.IS_TEST_INSTALLER }}
             }'
           ref: jrm/experiment-similar-ci
           wait-for-completion: true
