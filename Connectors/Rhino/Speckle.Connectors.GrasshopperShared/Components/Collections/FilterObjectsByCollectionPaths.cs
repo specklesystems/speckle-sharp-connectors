@@ -71,9 +71,9 @@ public class FilterObjectsByCollectionPaths : GH_Component
     }
 
     SpeckleCollectionWrapper targetCollectionWrapper = collectionWrapperGoo.Value;
-    // the collection paths selector will omit the target collection from the path.
-    // this name needs to be added back in.
-    if (path != "_")
+    // the collection paths selector will omit the target collection from the path of nested collections.
+    // test for the target collection name, which will only happen if there are objects directly inside the collection.
+    if (path != collectionWrapperGoo.Value.Collection.name)
     {
       targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
     }

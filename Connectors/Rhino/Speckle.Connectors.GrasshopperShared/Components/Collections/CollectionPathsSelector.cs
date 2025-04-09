@@ -44,7 +44,8 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
         }
         else
         {
-          paths.Add("_");
+          // include the input collection only if there are objects directly inside
+          paths.Add(col.Collection.name);
         }
       }
     }
