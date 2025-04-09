@@ -20,7 +20,13 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
   public CreateCollection()
-    : base("Create collection", "Create collection", "Creates a new collection", "Speckle", "Collections") { }
+    : base(
+      "Create collection",
+      "cC",
+      "Creates a new collection",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.COLLECTIONS
+    ) { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

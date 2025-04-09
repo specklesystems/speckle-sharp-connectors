@@ -3,9 +3,7 @@ using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
-using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
@@ -35,7 +33,7 @@ internal sealed class LocalToGlobalMapHandler
   {
     try
     {
-      List<GeometryBase> converted = Convert(map.AtomicObject);
+      List<GeometryBase> converted = SpeckleConversionContext.ConvertToHost(map.AtomicObject);
       var path = _traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
 
       foreach (var matrix in map.Matrix)
@@ -93,19 +91,5 @@ internal sealed class LocalToGlobalMapHandler
     {
       // TODO
     }
-  }
-
-  private List<GeometryBase> Convert(Base input)
-  {
-    var result = ToSpeckleConversionContext.ToHostConverter.Convert(input);
-
-    return result switch
-    {
-      GeometryBase geometry => [geometry],
-      List<GeometryBase> geometryList => geometryList,
-      IEnumerable<(GeometryBase, Base)> fallbackConversionResult
-        => fallbackConversionResult.Select(t => t.Item1).ToList(), // note special handling for proxying render materials OR we don't care about revit
-      _ => throw new SpeckleException("Failed to convert input to rhino")
-    };
   }
 }

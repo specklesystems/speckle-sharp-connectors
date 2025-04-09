@@ -13,7 +13,7 @@ public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterCom
   public CreateSpecklePropertyGroup()
     : base(
       "Create Speckle Property Group",
-      "CSO",
+      "CSP",
       "Creates a property group for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS

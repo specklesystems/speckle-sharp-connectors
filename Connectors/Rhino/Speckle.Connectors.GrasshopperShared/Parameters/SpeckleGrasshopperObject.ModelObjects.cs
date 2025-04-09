@@ -3,9 +3,9 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
-using Speckle.Connectors.GrasshopperShared.HostApp;
 using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Display;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -22,7 +22,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     {
       if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
       {
-        var modelConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(modelGB);
+        var modelConverted = SpeckleConversionContext.ConvertToSpeckle(modelGB);
         SpecklePropertyGroupGoo propertyGroup = new();
         propertyGroup.CastFrom(modelObject.UserText);
 

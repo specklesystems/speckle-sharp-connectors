@@ -71,7 +71,7 @@ public class CreateSpeckleObject : GH_Component
     properties.CastTo(ref props);
 
     // convert the geometries
-    Base converted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(geometry);
+    Base converted = SpeckleConversionContext.ConvertToSpeckle(geometry);
 
     // generate an application Id
     Guid guid = Guid.NewGuid();
