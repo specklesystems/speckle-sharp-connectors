@@ -1,4 +1,6 @@
+#if !AUTOCAD2025_OR_GREATER
 using System.IO;
+#endif
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;

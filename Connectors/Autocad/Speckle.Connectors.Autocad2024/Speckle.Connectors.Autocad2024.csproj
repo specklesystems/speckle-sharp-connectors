@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <AutoCADVersion>2024</AutoCADVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWpf>true</UseWpf>
     <DefineConstants>$(DefineConstants);AUTOCAD;AUTOCAD2024;AUTOCAD2022_OR_GREATER;AUTOCAD2023_OR_GREATER;AUTOCAD2024_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>

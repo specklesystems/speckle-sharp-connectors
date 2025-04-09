@@ -25,8 +25,6 @@
   </Target>
 
   <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <PlatformTarget>x64</PlatformTarget>
-    <UseWpf>true</UseWpf>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
