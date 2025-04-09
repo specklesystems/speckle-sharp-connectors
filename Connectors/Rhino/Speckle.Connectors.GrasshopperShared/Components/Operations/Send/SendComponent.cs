@@ -1,13 +1,10 @@
 using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
@@ -19,26 +16,28 @@ public class SendComponentInput
 {
   public SpeckleUrlModelResource Resource { get; }
   public SpeckleCollectionWrapperGoo Input { get; }
+  public bool Run { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input)
+  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run)
   {
     Resource = resource;
     Input = input;
+    Run = run;
   }
 }
 
-public class SendComponentOutput(SpeckleUrlModelResource resource)
+public class SendComponentOutput(SpeckleUrlModelResource? resource)
 {
-  public SpeckleUrlModelResource Resource { get; } = resource;
+  public SpeckleUrlModelResource? Resource { get; } = resource;
 }
 
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
   public SendComponent()
     : base(
-      "Send to Speckle",
-      "STS",
-      "Send objects to speckle",
+      "(Sync) Publish",
+      "sP",
+      "Publish a collection to Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
     ) { }
@@ -47,18 +46,20 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 
   public string? Url { get; private set; }
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("S");
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("sP");
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Model",
-      "model",
-      "The collection model object to send",
+      "Collection",
+      "collection",
+      "The model collection to publish",
       GH_ParamAccess.item
     );
+
+    pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -82,12 +83,23 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
     da.GetData(1, ref rootCollectionWrapper);
 
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper);
+    bool run = false;
+    da.GetData(2, ref run);
+
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run);
   }
 
   protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
   {
-    da.SetData(0, result.Resource);
+    if (result.Resource is null)
+    {
+      Message = "Not Published";
+    }
+    else
+    {
+      da.SetData(0, result.Resource);
+      Message = "Done";
+    }
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -115,10 +127,10 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     CancellationToken cancellationToken = default
   )
   {
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+    if (!input.Run)
+    {
+      return new(null);
+    }
 
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();

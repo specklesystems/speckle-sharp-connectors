@@ -27,13 +27,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 public class ReceiveAsyncComponent : GH_AsyncComponent
 {
   public ReceiveAsyncComponent()
-    : base(
-      "Async Receive",
-      "aR",
-      "Receive objects async from speckle",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OPERATIONS
-    )
+    : base("Load", "L", "Load a model from Speckle", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
   {
     BaseWorker = new ReceiveComponentWorker(this);
     Attributes = new ReceiveAsyncComponentAttributes(this);
@@ -41,7 +35,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("aR");
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("L");
 
   public string InputType { get; set; }
   public bool AutoReceive { get; set; }
@@ -70,9 +64,9 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Model",
-      "model",
-      "The model object for the received version",
+      "Collection",
+      "collection",
+      "The model collection of the loaded version",
       GH_ParamAccess.item
     );
   }
@@ -381,7 +375,7 @@ public class ReceiveComponentWorker : WorkerInstance
     {
       if (UrlModelResource is null)
       {
-        throw new InvalidOperationException("Url Resource was null");
+        throw new InvalidOperationException("Model Resource was null");
       }
 
       // Means it's a copy paste of an empty non-init component; set the record and exit fast unless ReceiveOnOpen is true.
@@ -526,7 +520,7 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
           ButtonBounds,
           ButtonBounds,
           GH_Palette.Blue,
-          "Auto Receive",
+          "Auto Load",
           2,
           0
         );
@@ -540,7 +534,7 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
           state == ComponentState.Expired || state == ComponentState.UpToDate || state == ComponentState.Cancelled
             ? GH_Palette.Black
             : GH_Palette.Transparent;
-        var text = state != ComponentState.Receiving ? "Receive" : "Receiving...";
+        var text = state != ComponentState.Receiving ? "Load" : "Loading...";
 
         var button = GH_Capsule.CreateTextCapsule(
           ButtonBounds,

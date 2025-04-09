@@ -30,7 +30,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Layer", "L", "Collection that was created", GH_ParamAccess.tree);
+    pManager.AddGenericParameter("Collection", "C", "Created parent collection", GH_ParamAccess.tree);
   }
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
@@ -130,7 +130,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   {
     var myParam = new Param_GenericObject
     {
-      Name = $"Layer {Params.Input.Count + 1}",
+      Name = $"Collection {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
       Access = GH_ParamAccess.tree // always tree
