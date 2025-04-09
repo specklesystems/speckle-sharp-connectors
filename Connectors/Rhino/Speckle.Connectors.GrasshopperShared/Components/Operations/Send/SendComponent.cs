@@ -1,13 +1,10 @@
 using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
@@ -36,9 +33,9 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 {
   public SendComponent()
     : base(
-      "Send to Speckle",
-      "STS",
-      "Send objects to speckle",
+      "(Sync) Publish",
+      "sP",
+      "Publish a collection to Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
     ) { }
@@ -47,16 +44,16 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 
   public string? Url { get; private set; }
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("S");
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("sP");
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Model",
-      "model",
-      "The collection model object to send",
+      "Collection",
+      "collection",
+      "The model collection to publish",
       GH_ParamAccess.item
     );
   }
@@ -115,11 +112,6 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     CancellationToken cancellationToken = default
   )
   {
-    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
-
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();

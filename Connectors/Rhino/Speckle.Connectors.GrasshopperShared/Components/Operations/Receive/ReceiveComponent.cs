@@ -23,15 +23,15 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
 {
   public ReceiveComponent()
     : base(
-      "Receive from Speckle",
-      "RFS",
-      "Receive objects from speckle",
+      "(Sync) Load",
+      "sL",
+      "Load a model from Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
     ) { }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("R");
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("sL");
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -42,9 +42,9 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Model",
-      "model",
-      "The model object for the received version",
+      "Collection",
+      "collection",
+      "The model collection of the loaded version",
       GH_ParamAccess.item
     );
   }
@@ -55,7 +55,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     da.GetData(0, ref url);
     if (url is null)
     {
-      throw new SpeckleException("Speckle url is null");
+      throw new SpeckleException("Speckle model resource is null");
     }
 
     return url;

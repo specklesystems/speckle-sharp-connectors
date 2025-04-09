@@ -43,7 +43,13 @@ public class SpeckleSelectModelComponent : GH_Component
   protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("URL");
 
   public SpeckleSelectModelComponent()
-    : base("Speckle Model URL", "URL", "User selectable model from speckle", "Speckle", "Models")
+    : base(
+      "Speckle Model URL",
+      "URL",
+      "User selectable model from Speckle",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OPERATIONS
+    )
   {
     ProjectContextMenuButton = new GhContextMenuButton(
       "Select Project",

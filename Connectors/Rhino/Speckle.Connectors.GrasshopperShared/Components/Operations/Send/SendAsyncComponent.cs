@@ -12,8 +12,6 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Registration;
-using Speckle.Converters.Common;
-using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
@@ -26,9 +24,9 @@ public class SendAsyncComponent : GH_AsyncComponent
 {
   public SendAsyncComponent()
     : base(
-      "Async Send",
-      "aS",
-      "Send objects async to speckle",
+      "Publish",
+      "P",
+      "Publish a collection to Speckle",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
     )
@@ -39,7 +37,7 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("aS");
+  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("P");
 
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool AutoSend { get; set; }
@@ -59,8 +57,8 @@ public class SendAsyncComponent : GH_AsyncComponent
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Model",
-      "model",
+      "Collection",
+      "collection",
       "The collection model object to send",
       GH_ParamAccess.item
     );
@@ -85,7 +83,7 @@ public class SendAsyncComponent : GH_AsyncComponent
 
     var autoSendMi = Menu_AppendItem(
       menu,
-      "Send automatically",
+      "Publish automatically",
       (s, e) =>
       {
         AutoSend = !AutoSend;
@@ -101,7 +99,7 @@ public class SendAsyncComponent : GH_AsyncComponent
       AutoSend
     );
     autoSendMi.ToolTipText =
-      "Toggle automatic data sending. If set, any change in any of the input parameters of this component will start sending.\n Please be aware that if a new send starts before an old one is finished, the previous operation is cancelled.";
+      "Toggle automatic data publishing. If set, any change in any of the input parameters of this component will start publishing.\n Please be aware that if a new publish starts before an old one is finished, the previous operation is cancelled.";
 
     if (Url != null)
     {
@@ -116,7 +114,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     {
       Menu_AppendItem(
         menu,
-        "Cancel Send",
+        "Cancel Publish",
         (s, e) =>
         {
           CurrentComponentState = ComponentState.Expired;
@@ -131,10 +129,6 @@ public class SendAsyncComponent : GH_AsyncComponent
     // Dependency Injection
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    var rhinoConversionSettingsFactory = Scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
-    Scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
 
     var accountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
@@ -314,11 +308,11 @@ public class SendComponentWorker : WorkerInstance
     {
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully sent {((SendAsyncComponent)Parent).RootCollectionWrapper?.Value.GetTotalChildrenCount()} objects to Speckle."
+        $"Successfully published {((SendAsyncComponent)Parent).RootCollectionWrapper?.Value.GetTotalChildrenCount()} objects to Speckle."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Send duration: {_stopwatch.ElapsedMilliseconds / 1000f}s"
+        $"Publish duration: {_stopwatch.ElapsedMilliseconds / 1000f}s"
       );
     }
   }
@@ -445,7 +439,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
           ButtonBounds,
           ButtonBounds,
           GH_Palette.Blue,
-          "Auto Send",
+          "Auto Publish",
           2,
           0
         );
@@ -460,7 +454,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
             ? GH_Palette.Black
             : GH_Palette.Transparent;
 
-        var text = state == ComponentState.Sending ? "Sending..." : "Send";
+        var text = state == ComponentState.Sending ? "Publishing..." : "Publish";
 
         var button = GH_Capsule.CreateTextCapsule(
           ButtonBounds,
