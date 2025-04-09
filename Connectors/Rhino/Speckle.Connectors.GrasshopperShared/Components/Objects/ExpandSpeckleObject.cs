@@ -46,6 +46,18 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
     NickName = o.Name;
 
     List<OutputParamWrapper> outputParams = CreateOutputParamsFromSpeckleObject(objectWrapperGoo.Value.Base);
+
+    // add color and render material proxies
+    if (objectWrapperGoo.Value.Color is Color color)
+    {
+      outputParams.Add(CreateOutputParamByKeyValue("color", color, GH_ParamAccess.item));
+    }
+
+    if (objectWrapperGoo.Value.RenderMaterialName is string renderMaterial)
+    {
+      outputParams.Add(CreateOutputParamByKeyValue("renderMaterial", renderMaterial, GH_ParamAccess.item));
+    }
+
     if (da.Iteration == 0 && OutputMismatch(outputParams))
     {
       OnPingDocument()

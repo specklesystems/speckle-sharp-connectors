@@ -192,11 +192,11 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     }
 
     // Handle case of model objects in rhino 8
-    return HandleModelObjects(source);
+    return CastFromModelObject(source);
   }
 
 #if !RHINO8_OR_GREATER
-  private bool HandleModelObjects(object _) => false;
+  private bool CastFromModelObject(object _) => false;
 #endif
 
   public override bool CastTo<T>(ref T target)

@@ -35,7 +35,18 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     var paths = new List<string>();
     foreach (SpeckleCollectionWrapper col in collections)
     {
-      paths.AddRange(GetPaths(col.Collection));
+      // note: we are skipping the input collection, to make the output paths more intuitive
+      foreach (var element in col.Collection.elements)
+      {
+        if (element is SpeckleCollectionWrapper childCollectionWrapper)
+        {
+          paths.AddRange(GetPaths(childCollectionWrapper.Collection));
+        }
+        else
+        {
+          paths.Add("_");
+        }
+      }
     }
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
