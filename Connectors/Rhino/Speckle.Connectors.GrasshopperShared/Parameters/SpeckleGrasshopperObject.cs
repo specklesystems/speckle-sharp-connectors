@@ -168,8 +168,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
 
-  BoundingBox IGH_PreviewData.ClippingBox => Value.GeometryBase.GetBoundingBox(false);
-
   public override bool CastFrom(object source)
   {
     switch (source)
@@ -182,7 +180,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         return true;
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
-        var gooConverted = ToSpeckleConversionContext.ToSpeckleConverter.Convert(gooGB);
+        var gooConverted = SpeckleConversionContext.ConvertToSpeckle(gooGB);
         Value = new SpeckleObjectWrapper()
         {
           GeometryBase = gooGB,
@@ -226,6 +224,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
+  BoundingBox IGH_PreviewData.ClippingBox => Value.GeometryBase.GetBoundingBox(false);
+
   public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {
     Value = value;
@@ -263,28 +263,6 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // False if no data
     !VolatileData.IsEmpty;
 
-  public bool IsPreviewCapable => !VolatileData.IsEmpty;
-
-  public BoundingBox ClippingBox
-  {
-    get
-    {
-      BoundingBox clippingBox = new();
-
-      // Iterate over all data stored in the parameter
-      foreach (var item in VolatileData.AllData(true))
-      {
-        if (item is SpeckleObjectWrapperGoo goo)
-        {
-          var box = goo.Value.GeometryBase.GetBoundingBox(false);
-          clippingBox.Union(box);
-        }
-      }
-      return clippingBox;
-    }
-  }
-  bool IGH_PreviewObject.Hidden { get; set; }
-
   public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
   {
     // Iterate over all data stored in the parameter
@@ -308,6 +286,28 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       }
     }
   }
+
+  public bool IsPreviewCapable => !VolatileData.IsEmpty;
+
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      BoundingBox clippingBox = new();
+
+      // Iterate over all data stored in the parameter
+      foreach (var item in VolatileData.AllData(true))
+      {
+        if (item is SpeckleObjectWrapperGoo goo)
+        {
+          var box = goo.Value.GeometryBase.GetBoundingBox(false);
+          clippingBox.Union(box);
+        }
+      }
+      return clippingBox;
+    }
+  }
+  bool IGH_PreviewObject.Hidden { get; set; }
 
   public void DrawViewportWires(IGH_PreviewArgs args)
   {

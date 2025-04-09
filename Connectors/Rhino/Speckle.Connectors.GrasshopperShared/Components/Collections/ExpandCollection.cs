@@ -1,24 +1,30 @@
 using System.Collections;
+using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
-using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
 
 #pragma warning disable CA1711
+[Guid("69BC8CFB-A72F-4A83-9263-F3399DDA2E5E")]
 public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 #pragma warning restore CA1711
 {
-  public override Guid ComponentGuid => new("69BC8CFB-A72F-4A83-9263-F3399DDA2E5E");
+  public ExpandCollection()
+    : base(
+      "Expand Collection",
+      "eC",
+      "Expands a collection into its children",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.COLLECTIONS
+    ) { }
+
+  public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("eC");
-
-  public ExpandCollection()
-    : base("Expand Collection", "expand", "Expands a new collection", "Speckle", "Collections") { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -32,8 +38,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
-
-  private List<SpeckleObjectWrapper> _previewObjects = new();
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -99,10 +103,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
             ? GH_ParamAccess.list
             : GH_ParamAccess.tree // we will directly set objects out; note access can be list or tree based on whether it will be a path based collection
       };
-      if (!hasInnerCollections)
-      {
-        _previewObjects.AddRange(collection.Collection.elements.Cast<SpeckleObjectWrapper>());
-      }
 
       outputParams.Add(
         new OutputParamWrapper(
@@ -131,9 +131,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     }
     else
     {
-      _previewObjects = new();
-
-      FlattenForPreview(c.Collection);
       for (int i = 0; i < outputParams.Count; i++)
       {
         var outParam = Params.Output[i];
@@ -155,41 +152,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
             break;
         }
       }
-    }
-  }
-
-  private BoundingBox _clippingBox;
-  public override BoundingBox ClippingBox => _clippingBox;
-
-  private void FlattenForPreview(Collection c)
-  {
-    _clippingBox = new BoundingBox();
-    foreach (var element in c.elements)
-    {
-      if (element is SpeckleCollectionWrapper subCol)
-      {
-        FlattenForPreview(subCol.Collection);
-      }
-
-      if (element is SpeckleObjectWrapper sg)
-      {
-        _previewObjects.Add(sg);
-        var box = sg.GeometryBase.GetBoundingBox(false);
-        _clippingBox.Union(box);
-      }
-    }
-  }
-
-  public override void DrawViewportMeshes(IGH_PreviewArgs args)
-  {
-    if (_previewObjects.Count == 0)
-    {
-      return;
-    }
-    var isSelected = args.Document.SelectedObjects().Contains(this);
-    foreach (var elem in _previewObjects)
-    {
-      elem.DrawPreview(args, isSelected);
     }
   }
 

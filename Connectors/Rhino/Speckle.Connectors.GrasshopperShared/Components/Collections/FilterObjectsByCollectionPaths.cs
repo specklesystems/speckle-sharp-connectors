@@ -25,8 +25,8 @@ public class FilterObjectsByCollectionPaths : GH_Component
       "FilterObjectsByCollectionPaths",
       "ocF",
       "Filters model objects by their collection path",
-      "Speckle",
-      "Collections"
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.COLLECTIONS
     ) { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)

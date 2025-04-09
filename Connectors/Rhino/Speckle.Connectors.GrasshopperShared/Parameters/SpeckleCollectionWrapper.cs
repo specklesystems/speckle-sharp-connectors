@@ -4,6 +4,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
@@ -191,7 +192,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
   }
 }
 
-public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH_BakeAwareObject
+public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH_BakeAwareObject, IGH_PreviewObject
 {
   public SpeckleCollectionParam()
     : this(GH_ParamAccess.item) { }
@@ -238,6 +239,62 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
       if (item is SpeckleCollectionWrapperGoo goo)
       {
         goo.Value.Bake(doc, obj_ids, true);
+      }
+    }
+  }
+
+  private BoundingBox _clippingBox;
+  public BoundingBox ClippingBox => _clippingBox;
+
+  bool IGH_PreviewObject.Hidden { get; set; }
+
+  public bool IsPreviewCapable => !VolatileData.IsEmpty;
+
+  private List<SpeckleObjectWrapper> _previewObjects = new();
+
+  public void DrawViewportMeshes(IGH_PreviewArgs args)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleCollectionWrapperGoo goo)
+      {
+        FlattenForPreview(goo.Value.Collection);
+      }
+    }
+
+    if (_previewObjects.Count == 0)
+    {
+      return;
+    }
+
+    var isSelected = args.Document.SelectedObjects().Contains(this);
+    foreach (var elem in _previewObjects)
+    {
+      elem.DrawPreview(args, isSelected);
+    }
+  }
+
+  public void DrawViewportWires(IGH_PreviewArgs args)
+  {
+    // todo?
+  }
+
+  private void FlattenForPreview(Collection c)
+  {
+    _clippingBox = new BoundingBox();
+    _previewObjects = new();
+    foreach (var element in c.elements)
+    {
+      if (element is SpeckleCollectionWrapper subCol)
+      {
+        FlattenForPreview(subCol.Collection);
+      }
+
+      if (element is SpeckleObjectWrapper sg)
+      {
+        _previewObjects.Add(sg);
+        var box = sg.GeometryBase.GetBoundingBox(false);
+        _clippingBox.Union(box);
       }
     }
   }

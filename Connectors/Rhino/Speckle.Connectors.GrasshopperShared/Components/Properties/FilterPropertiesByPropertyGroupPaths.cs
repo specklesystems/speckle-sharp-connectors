@@ -6,7 +6,7 @@ using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
+namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
 
 [Guid("BF517D60-B853-4C61-9574-AD8A718B995B")]
 public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariableParameterComponent

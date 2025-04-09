@@ -1,21 +1,24 @@
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
+using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
 /// <summary>
 /// Handles grasshopper wide converters. We don't need new converters, unless the document changes - this class should handle this (untested).
 /// </summary>
-public static class ToSpeckleConversionContext
+public static class SpeckleConversionContext
 {
   private static IServiceScope? Scope { get; set; }
-  public static IRootToHostConverter ToHostConverter { get; private set; }
-  public static IRootToSpeckleConverter ToSpeckleConverter { get; private set; }
+  private static IRootToHostConverter ToHostConverter { get; set; }
+  private static IRootToSpeckleConverter ToSpeckleConverter { get; set; }
 
-  static ToSpeckleConversionContext()
+  static SpeckleConversionContext()
   {
     RhinoDoc.ActiveDocumentChanged += RhinoDocOnActiveDocumentChanged;
     InitializeConverters();
@@ -35,5 +38,21 @@ public static class ToSpeckleConversionContext
 
     ToHostConverter = Scope.ServiceProvider.GetService<IRootToHostConverter>();
     ToSpeckleConverter = Scope.ServiceProvider.GetService<IRootToSpeckleConverter>();
+  }
+
+  public static Base ConvertToSpeckle(GeometryBase geo) => ToSpeckleConverter.Convert(geo);
+
+  public static List<GeometryBase> ConvertToHost(Base input)
+  {
+    var result = ToHostConverter.Convert(input);
+
+    return result switch
+    {
+      GeometryBase geometry => [geometry],
+      List<GeometryBase> geometryList => geometryList,
+      IEnumerable<(GeometryBase, Base)> fallbackConversionResult
+        => fallbackConversionResult.Select(t => t.Item1).ToList(), // note special handling for proxying render materials OR we don't care about revit
+      _ => throw new SpeckleException("Failed to convert input to rhino")
+    };
   }
 }

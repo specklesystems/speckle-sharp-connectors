@@ -6,14 +6,14 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Grasshopper.Rhinoceros.Model;
 #endif
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
+namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
 
 public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 {
   public PropertyGroupPathsSelector()
     : base(
       "Property Group Paths Selector",
-      "Paths",
+      "pSelect",
       "Allows you to select a set of property group paths for filtering",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS

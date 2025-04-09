@@ -11,10 +11,10 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
   public CollectionPathsSelector()
     : base(
       "Collection Paths Selector",
-      "Paths",
+      "cSelect",
       "Allows you to select a set of collection paths for filtering",
-      "Speckle",
-      "Collections"
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.COLLECTIONS
     ) { }
 
   public override Guid ComponentGuid => new Guid("65FC4D58-2209-41B6-9B22-BE51C8B28604");
