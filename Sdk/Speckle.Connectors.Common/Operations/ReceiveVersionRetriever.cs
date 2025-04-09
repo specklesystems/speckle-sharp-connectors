@@ -13,7 +13,7 @@ public class ReceiveVersionRetriever(IClientFactory clientFactory) : IReceiveVer
     CancellationToken cancellationToken
   )
   {
-    using Client apiClient = clientFactory.Create(account);
+    using var apiClient = clientFactory.Create(account);
 
     var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
     return version;
@@ -26,7 +26,7 @@ public class ReceiveVersionRetriever(IClientFactory clientFactory) : IReceiveVer
     CancellationToken cancellationToken
   )
   {
-    using Client apiClient = clientFactory.Create(account);
+    using var apiClient = clientFactory.Create(account);
 
     await apiClient.Version.Received(
       new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 using Speckle.Connectors.Common.Builders;
@@ -8,7 +9,6 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
-using Speckle.Sdk.Host;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Testing;
@@ -24,8 +24,6 @@ public class ReceiveOperationTests : MoqTest
   [Test]
   public async Task Execute()
   {
-    TypeLoader.Reset();
-    TypeLoader.Initialize(Assembly.GetExecutingAssembly());
 
     var hostObjectBuilder = Create<IHostObjectBuilder>();
     var accountService = Create<IAccountService>();
@@ -67,7 +65,9 @@ public class ReceiveOperationTests : MoqTest
 
     threadContext.Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<Base>>>(), false)).ReturnsAsync(@base);
 
-    var receiveOperation = new ReceiveOperation(
+    var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
+    var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(
+      sp,
       hostObjectBuilder.Object,
       accountService.Object,
       receiveProgress.Object,
@@ -83,9 +83,6 @@ public class ReceiveOperationTests : MoqTest
   [Test]
   public async Task ReceiveData()
   {
-    TypeLoader.Reset();
-    TypeLoader.Initialize(Assembly.GetExecutingAssembly());
-
     var hostObjectBuilder = Create<IHostObjectBuilder>();
     var accountService = Create<IAccountService>();
     var receiveProgress = Create<IReceiveProgress>();
@@ -124,7 +121,8 @@ public class ReceiveOperationTests : MoqTest
       .Setup(x => x.Receive2(serverUrl, projectId, referencedObject, token, It.IsAny<PassthroughProgress>(), ct))
       .ReturnsAsync(@base);
 
-    var receiveOperation = new ReceiveOperation(
+    var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
+    var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(sp,
       hostObjectBuilder.Object,
       accountService.Object,
       receiveProgress.Object,
