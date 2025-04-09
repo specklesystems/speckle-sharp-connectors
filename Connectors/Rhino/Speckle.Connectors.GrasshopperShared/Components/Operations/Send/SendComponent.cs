@@ -16,17 +16,19 @@ public class SendComponentInput
 {
   public SpeckleUrlModelResource Resource { get; }
   public SpeckleCollectionWrapperGoo Input { get; }
+  public bool Run { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input)
+  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run)
   {
     Resource = resource;
     Input = input;
+    Run = run;
   }
 }
 
-public class SendComponentOutput(SpeckleUrlModelResource resource)
+public class SendComponentOutput(SpeckleUrlModelResource? resource)
 {
-  public SpeckleUrlModelResource Resource { get; } = resource;
+  public SpeckleUrlModelResource? Resource { get; } = resource;
 }
 
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
@@ -56,6 +58,8 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       "The model collection to publish",
       GH_ParamAccess.item
     );
+
+    pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -79,12 +83,23 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
     da.GetData(1, ref rootCollectionWrapper);
 
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper);
+    bool run = false;
+    da.GetData(2, ref run);
+
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run);
   }
 
   protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
   {
-    da.SetData(0, result.Resource);
+    if (result.Resource is null)
+    {
+      Message = "Not Published";
+    }
+    else
+    {
+      da.SetData(0, result.Resource);
+      Message = "Done";
+    }
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -112,6 +127,11 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     CancellationToken cancellationToken = default
   )
   {
+    if (!input.Run)
+    {
+      return new(null);
+    }
+
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();

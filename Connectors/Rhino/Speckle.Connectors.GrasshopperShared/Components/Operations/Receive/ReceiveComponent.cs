@@ -14,12 +14,24 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
+public class ReceiveComponentInput
+{
+  public SpeckleUrlModelResource Resource { get; }
+  public bool Run { get; }
+
+  public ReceiveComponentInput(SpeckleUrlModelResource resource, bool run)
+  {
+    Resource = resource;
+    Run = run;
+  }
+}
+
 public class ReceiveComponentOutput
 {
   public SpeckleCollectionWrapperGoo RootObject { get; set; }
 }
 
-public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlModelResource, ReceiveComponentOutput>
+public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
   public ReceiveComponent()
     : base(
@@ -36,6 +48,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam(GH_ParamAccess.item));
+    pManager.AddBooleanParameter("Run", "r", "Run the load operation", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -49,7 +62,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     );
   }
 
-  protected override SpeckleUrlModelResource GetInput(IGH_DataAccess da)
+  protected override ReceiveComponentInput GetInput(IGH_DataAccess da)
   {
     SpeckleUrlModelResource? url = null;
     da.GetData(0, ref url);
@@ -58,21 +71,36 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
       throw new SpeckleException("Speckle model resource is null");
     }
 
-    return url;
+    bool run = false;
+    da.GetData(1, ref run);
+
+    return new(url, run);
   }
 
   protected override void SetOutput(IGH_DataAccess da, ReceiveComponentOutput result)
   {
-    da.SetData(0, result.RootObject);
-    Message = "Done";
+    if (result.RootObject is null)
+    {
+      Message = "Not Loaded";
+    }
+    else
+    {
+      da.SetData(0, result.RootObject);
+      Message = "Done";
+    }
   }
 
   protected override async Task<ReceiveComponentOutput> PerformScopedTask(
-    SpeckleUrlModelResource input,
+    ReceiveComponentInput input,
     IServiceScope scope,
     CancellationToken cancellationToken = default
   )
   {
+    if (!input.Run)
+    {
+      return new();
+    }
+
     // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
     var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
@@ -81,7 +109,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     // Do the thing 👇🏼
 
     // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-    var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Server));
+    var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server));
 
     if (account is null)
     {
@@ -89,7 +117,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<SpeckleUrlMode
     }
 
     using var client = clientFactory.Create(account);
-    var receiveInfo = await input.GetReceiveInfo(client, cancellationToken).ConfigureAwait(false);
+    var receiveInfo = await input.Resource.GetReceiveInfo(client, cancellationToken).ConfigureAwait(false);
 
     var progress = new Progress<CardProgress>(_ =>
     {
