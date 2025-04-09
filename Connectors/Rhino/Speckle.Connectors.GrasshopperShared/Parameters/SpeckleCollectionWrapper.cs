@@ -177,11 +177,11 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
     }
 
     // Handle case of model objects in rhino 8
-    return HandleModelObjects(source);
+    return CastFromModelLayer(source);
   }
 
 #if !RHINO8_OR_GREATER
-  private bool HandleModelObjects(object _) => false;
+  private bool CastFromModelLayer(object _) => false;
 #endif
 
   public SpeckleCollectionWrapperGoo() { }
@@ -254,6 +254,9 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
+    _previewObjects = new();
+    _clippingBox = new();
+
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleCollectionWrapperGoo goo)
@@ -281,8 +284,6 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   private void FlattenForPreview(Collection c)
   {
-    _clippingBox = new BoundingBox();
-    _previewObjects = new();
     foreach (var element in c.elements)
     {
       if (element is SpeckleCollectionWrapper subCol)

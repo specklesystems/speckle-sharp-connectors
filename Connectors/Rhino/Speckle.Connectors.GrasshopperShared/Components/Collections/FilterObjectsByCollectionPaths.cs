@@ -70,7 +70,14 @@ public class FilterObjectsByCollectionPaths : GH_Component
       return;
     }
 
-    SpeckleCollectionWrapper targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
+    SpeckleCollectionWrapper targetCollectionWrapper = collectionWrapperGoo.Value;
+    // the collection paths selector will omit the target collection from the path of nested collections.
+    // test for the target collection name, which will only happen if there are objects directly inside the collection.
+    if (path != collectionWrapperGoo.Value.Collection.name)
+    {
+      targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
+    }
+
     if (string.IsNullOrEmpty(targetCollectionWrapper.Topology))
     {
       dataAccess.SetDataList(0, targetCollectionWrapper.Collection.elements);
@@ -88,7 +95,7 @@ public class FilterObjectsByCollectionPaths : GH_Component
   private SpeckleCollectionWrapper FindCollection(SpeckleCollectionWrapper root, string unifiedPath)
   {
     // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
-    List<string> paths = unifiedPath.Split([Constants.LAYER_PATH_DELIMITER], StringSplitOptions.None).Skip(1).ToList();
+    List<string> paths = unifiedPath.Split([Constants.LAYER_PATH_DELIMITER], StringSplitOptions.None).ToList();
     SpeckleCollectionWrapper currentCollectionWrapper = root;
     while (paths.Count != 0)
     {

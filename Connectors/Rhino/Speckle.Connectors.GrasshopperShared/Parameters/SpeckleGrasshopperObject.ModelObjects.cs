@@ -16,7 +16,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     CastFrom(mo);
   }
 
-  private bool HandleModelObjects(object source)
+  private bool CastFromModelObject(object source)
   {
     if (source is ModelObject modelObject)
     {

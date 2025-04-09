@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
 {
-  private bool HandleModelObjects(object source)
+  private bool CastFromModelObject(object source)
   {
     if (source is ModelUserText userText)
     {

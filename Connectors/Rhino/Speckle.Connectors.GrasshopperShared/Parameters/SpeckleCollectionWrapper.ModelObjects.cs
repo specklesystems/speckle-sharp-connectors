@@ -8,7 +8,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
 {
-  private bool HandleModelObjects(object source)
+  private bool CastFromModelLayer(object source)
   {
     if (source is ModelLayer modelLayer)
     {
