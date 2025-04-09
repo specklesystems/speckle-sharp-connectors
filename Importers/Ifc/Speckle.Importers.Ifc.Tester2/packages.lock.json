@@ -204,6 +204,19 @@
         "resolved": "4.5.1",
         "contentHash": "Zh8t8oqolRaFa9vmOZfdQm/qKejdqz0J9kr7o2Fu0vPeoH3BL1EOXipKWwkWtLT1JPzjByrF19fGuFlNbmPpiw=="
       },
+      "speckle.connectors.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
+          "Speckle.Connectors.Logging": "[1.0.0, )",
+          "Speckle.Objects": "[3.2.0, )",
+          "Speckle.Sdk": "[3.2.0, )",
+          "Speckle.Sdk.Dependencies": "[3.2.0, )"
+        }
+      },
+      "speckle.connectors.logging": {
+        "type": "Project"
+      },
       "speckle.importers.ifc": {
         "type": "Project",
         "dependencies": {
@@ -211,6 +224,7 @@
           "Ara3D.Logging": "[1.4.5, )",
           "Ara3D.Utils": "[1.4.5, )",
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Objects": "[3.2.0, )",
           "Speckle.Sdk": "[3.2.0, )"
         }
