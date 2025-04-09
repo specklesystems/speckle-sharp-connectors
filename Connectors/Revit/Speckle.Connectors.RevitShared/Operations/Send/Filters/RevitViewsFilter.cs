@@ -12,6 +12,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   private Document? _doc;
   public string Id { get; set; } = "revitViews";
   public string Name { get; set; } = "Views";
+  public string Type { get; set; } = "Custom";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }

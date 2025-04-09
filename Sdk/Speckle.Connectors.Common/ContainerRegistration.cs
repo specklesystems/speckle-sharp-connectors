@@ -10,7 +10,7 @@ namespace Speckle.Connectors.Common;
 
 public static class ContainerRegistration
 {
-  public static void AddConnectorUtils(this IServiceCollection serviceCollection)
+  public static void AddConnectors(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
