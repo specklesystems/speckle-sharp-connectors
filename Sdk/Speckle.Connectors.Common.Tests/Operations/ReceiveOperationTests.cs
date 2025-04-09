@@ -24,7 +24,6 @@ public class ReceiveOperationTests : MoqTest
   [Test]
   public async Task Execute()
   {
-
     var hostObjectBuilder = Create<IHostObjectBuilder>();
     var accountService = Create<IAccountService>();
     var receiveProgress = Create<IReceiveProgress>();
@@ -122,7 +121,8 @@ public class ReceiveOperationTests : MoqTest
       .ReturnsAsync(@base);
 
     var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
-    var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(sp,
+    var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(
+      sp,
       hostObjectBuilder.Object,
       accountService.Object,
       receiveProgress.Object,
