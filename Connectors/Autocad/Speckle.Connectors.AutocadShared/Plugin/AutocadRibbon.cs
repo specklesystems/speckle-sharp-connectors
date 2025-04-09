@@ -7,7 +7,6 @@ using Speckle.Sdk;
 using System.IO;
 #endif
 
-
 namespace Speckle.Connectors.Autocad.Plugin;
 
 public class AutocadRibbon
