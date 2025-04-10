@@ -1,5 +1,4 @@
-﻿#if REVIT2026
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -7,10 +6,11 @@ using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using Revit.Async;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Revit.Plugin;
+namespace Speckle.Connectors.Revit2026.Plugin;
 
 internal sealed class RevitWebViewPlugin : IRevitPlugin
 {
@@ -132,4 +132,3 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
     return null;
   }
 }
-#endif

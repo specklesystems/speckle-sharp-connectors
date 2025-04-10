@@ -1,14 +1,8 @@
-﻿#if REVIT2026
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using Autodesk.Revit.UI;
-using Speckle.Connectors.DUI.WebView;
 
-namespace Speckle.Connectors.Revit.Plugin;
+namespace Speckle.Connectors.Revit2026.Plugin;
 
-/// <summary>
-/// Wrapper that takes the <see cref="Speckle.Connectors.DUI.WebView.DUI3ControlWebView"/> and wraps it so that it can implement a revit specific
-/// interface
-/// </summary>
 public sealed partial class DUI3ControlWebViewDockable : UserControl, Autodesk.Revit.UI.IDockablePaneProvider
 {
   public DUI3ControlWebViewDockable(DUI3ControlWebView dUI3ControlWebView)
@@ -26,4 +20,3 @@ public sealed partial class DUI3ControlWebViewDockable : UserControl, Autodesk.R
     };
   }
 }
-#endif

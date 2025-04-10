@@ -18,7 +18,7 @@ using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2026_OR_GREATER
-using Speckle.Connectors.DUI.WebView;
+using Speckle.Connectors.Revit2026.Plugin;
 #else
 using CefSharp;
 #endif
@@ -98,8 +98,8 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
-    serviceCollection.AddDUIView();
     serviceCollection.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<DUI3ControlWebView>());
     serviceCollection.AddSingleton<DUI3ControlWebView>();
     serviceCollection.AddSingleton<DUI3ControlWebViewDockable>();
 #endif
