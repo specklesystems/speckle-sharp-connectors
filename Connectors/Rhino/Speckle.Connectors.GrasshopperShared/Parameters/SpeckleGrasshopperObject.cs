@@ -30,9 +30,7 @@ public class SpeckleObjectWrapper : Base
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
   public required string Name { get; set; } = "";
   public required Color? Color { get; set; }
-
-  public ObjectColorSource? ColorSource { get; set; }
-  public string? RenderMaterialName { get; set; }
+  public required SpeckleMaterialWrapper? Material { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
   public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
@@ -147,6 +145,15 @@ public class SpeckleObjectWrapper : Base
       att.ColorSource = ObjectColorSource.ColorFromObject;
     }
 
+    if (Material is SpeckleMaterialWrapper materialWrapper)
+    {
+      int matIndex = materialWrapper.Bake(doc, materialWrapper.Base.name);
+      if (matIndex >= 0)
+      {
+        att.MaterialIndex = matIndex;
+      }
+    }
+
     foreach (var kvp in Properties.Value)
     {
       att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
@@ -186,7 +193,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           GeometryBase = gooGB,
           Base = gooConverted,
           Name = "",
-          Color = null
+          Color = null,
+          Material = null
         };
         return true;
     }

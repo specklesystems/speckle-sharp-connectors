@@ -43,7 +43,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   {
     string rootName = "Unnamed";
     Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
-    SpeckleCollectionWrapper rootSpeckleCollectionWrapper = new(rootCollection, new() { rootName }, null);
+    SpeckleCollectionWrapper rootSpeckleCollectionWrapper = new(rootCollection, new() { rootName }, null, null);
 
     foreach (var inputParam in Params.Input)
     {
@@ -69,7 +69,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       childPath.Add(inputParam.NickName);
       Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
       SpeckleCollectionWrapper childSpeckleCollectionWrapper =
-        new(childCollection, childPath, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
+        new(childCollection, childPath, null, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
 
       // if on this port we're only receiving collections, we should become "pass-through" to not create
       // needless nesting

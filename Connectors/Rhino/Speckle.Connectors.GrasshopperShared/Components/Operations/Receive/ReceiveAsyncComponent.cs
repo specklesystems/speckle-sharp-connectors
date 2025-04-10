@@ -443,12 +443,14 @@ public class ReceiveComponentWorker : WorkerInstance
         );
 
         // TODO: unpack colors and render materials
-        GrasshopperColorBaker colorBaker = new(unpackedRoot);
+        GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
+        GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
 
         GrasshopperCollectionRebuilder collectionRebuilder =
           new((Root as Collection) ?? new Collection() { name = "unnamed" });
 
-        LocalToGlobalMapHandler mapHandler = new(traversalContextUnpacker, collectionRebuilder, colorBaker);
+        LocalToGlobalMapHandler mapHandler =
+          new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
 
         int count = 0;
         int total = localToGlobalMaps.Count;

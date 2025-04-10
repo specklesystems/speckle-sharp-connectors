@@ -27,13 +27,21 @@ public class SpeckleCollectionWrapper : Base
 
   public Color? Color { get; set; }
 
+  public SpeckleMaterialWrapper? Material { get; set; }
+
   public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
 
-  public SpeckleCollectionWrapper(Collection value, List<string> path, Color? color)
+  public SpeckleCollectionWrapper(
+    Collection value,
+    List<string> path,
+    Color? color,
+    SpeckleMaterialWrapper? materialWrapper
+  )
   {
     Collection = value;
     Path = new ObservableCollection<string>(path);
     Color = color;
+    Material = materialWrapper;
     applicationId = value.applicationId;
 
     // add listener on path changing.

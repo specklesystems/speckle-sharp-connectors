@@ -11,16 +11,19 @@ internal sealed class LocalToGlobalMapHandler
 {
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
   public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
-  private readonly GrasshopperColorBaker _colorBaker;
+  private readonly GrasshopperColorUnpacker _colorUnpacker;
+  private readonly GrasshopperMaterialUnpacker _materialBaker;
 
   public LocalToGlobalMapHandler(
     TraversalContextUnpacker traversalContextUnpacker,
     GrasshopperCollectionRebuilder collectionRebuilder,
-    GrasshopperColorBaker colorBaker
+    GrasshopperColorUnpacker colorUnpacker,
+    GrasshopperMaterialUnpacker materialUnpacker
   )
   {
     _traversalContextUnpacker = traversalContextUnpacker;
-    _colorBaker = colorBaker;
+    _colorUnpacker = colorUnpacker;
+    _materialBaker = materialUnpacker;
     CollectionRebuilder = collectionRebuilder;
   }
 
@@ -45,7 +48,8 @@ internal sealed class LocalToGlobalMapHandler
       // get the collection
       SpeckleCollectionWrapper objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
         path,
-        _colorBaker
+        _colorUnpacker,
+        _materialBaker
       );
 
       // get the name and properties
@@ -81,10 +85,11 @@ internal sealed class LocalToGlobalMapHandler
           Properties = propertyGroup,
           Name = name,
           Color = null,
+          Material = null,
           applicationId = map.AtomicObject.applicationId
         };
 
-        CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path, _colorBaker);
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path, _colorUnpacker, _materialBaker);
       }
     }
     catch (ConversionException)

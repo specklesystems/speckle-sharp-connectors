@@ -22,14 +22,14 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     // set the input collection name to "Grasshopper Model"
     var rootCollection = new Collection { name = "Grasshopper model", elements = input[0].Value.Collection.elements };
 
-    // create unpackers for colors and render materials
-    GrasshopperColorUnpacker colorUnpacker = new();
+    // TODO:create packers for colors and render materials
+    GrasshopperColorPacker colorPacker = new();
 
     // reconstruct the input collection by substituting all of the objectgoos with base
-    Collection collection = ReplaceAndRebuild(rootCollection, colorUnpacker);
+    Collection collection = ReplaceAndRebuild(rootCollection, colorPacker);
 
     // add proxies
-    collection[ProxyKeys.COLOR] = colorUnpacker.ColorProxies.Values.ToList();
+    collection[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
 
     // TODO: Not getting any conversion results yet
     var result = new RootObjectBuilderResult(collection, []);
@@ -39,11 +39,11 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
   /// <summary>
   /// Unwraps collection wrappers and object wrapppers.
-  /// Also unpacks colors into proxies while unwrapping.
+  /// Also packs colors into proxies while unwrapping.
   /// </summary>
   /// <param name="c"></param>
   /// <returns></returns>
-  private Collection ReplaceAndRebuild(Collection c, GrasshopperColorUnpacker colorUnpacker)
+  private Collection ReplaceAndRebuild(Collection c, GrasshopperColorPacker colorPacker)
   {
     // Iterate over the current collection's elements
     var myCollection = new Collection() { name = c.name };
@@ -68,16 +68,16 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
           applicationId = appId
         };
 
-        // unpack color and render material
-        colorUnpacker.ProcessColor(appId, collectionWrapper.Color);
+        // TODO: unpack color and render material
+        colorPacker.ProcessColor(appId, collectionWrapper.Color);
 
-        var unwrapped = ReplaceAndRebuild(newCollection, colorUnpacker);
+        var unwrapped = ReplaceAndRebuild(newCollection, colorPacker);
         myCollection.elements.Add(unwrapped);
       }
       else if (element is SpeckleObjectWrapper so)
       {
-        // unpack color and render material
-        colorUnpacker.ProcessColor(so.applicationId, so.Color);
+        // TODO: unpack color and render material
+        colorPacker.ProcessColor(so.applicationId, so.Color);
 
         // If it's not a Collection, replace the non-Collection element
         myCollection.elements.Add(so.Base);

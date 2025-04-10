@@ -53,9 +53,9 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
       outputParams.Add(CreateOutputParamByKeyValue("color", color, GH_ParamAccess.item));
     }
 
-    if (objectWrapperGoo.Value.RenderMaterialName is string renderMaterial)
+    if (objectWrapperGoo.Value.Material is SpeckleMaterialWrapper materialWrapper)
     {
-      outputParams.Add(CreateOutputParamByKeyValue("renderMaterial", renderMaterial, GH_ParamAccess.item));
+      outputParams.Add(CreateOutputParamByKeyValue("renderMaterial", materialWrapper, GH_ParamAccess.item));
     }
 
     if (da.Iteration == 0 && OutputMismatch(outputParams))

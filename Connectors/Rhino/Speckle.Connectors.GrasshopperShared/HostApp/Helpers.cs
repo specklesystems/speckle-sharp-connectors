@@ -4,11 +4,13 @@ using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
+using Rhino.Render;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
+using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
@@ -48,6 +50,14 @@ public static class GrasshopperHelpers
   /// </summary>
   /// <remarks> Uses the rgb value since color names are not unique </remarks>
   public static string GetSpeckleApplicationId(this Color color) => $"color_{color}";
+
+  /// <summary>
+  /// Creates a unique Speckle application id from the display material properties.
+  /// </summary>
+  /// <param name="mat"></param>
+  /// <returns></returns>
+  public static string GetSpeckleApplicationId(this Rhino.Display.DisplayMaterial mat) =>
+    $"material_{mat.Transparency}_{mat.Diffuse}_{mat.Emission}_{mat.Shine}_{mat.Specular}";
 
   /// <summary>
   /// Retrieves a unique Speckle application id from the path of the collection
