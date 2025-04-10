@@ -298,6 +298,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Autocad2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Autocad2026", "Converters\Autocad\Speckle.Converters.Autocad2026\Speckle.Converters.Autocad2026.csproj", "{57D5EEC9-082C-4882-BA7A-956088A2B820}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Civil3d2026", "Converters\Civil3d\Speckle.Converters.Civil3d2026\Speckle.Converters.Civil3d2026.csproj", "{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Civil3d2026", "Connectors\Autocad\Speckle.Connectors.Civil3d2026\Speckle.Connectors.Civil3d2026.csproj", "{EC0E8472-2C5F-424B-B868-7BBA272DF611}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -749,6 +753,18 @@ Global
 		{57D5EEC9-082C-4882-BA7A-956088A2B820}.Local|Any CPU.Build.0 = Local|Any CPU
 		{57D5EEC9-082C-4882-BA7A-956088A2B820}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57D5EEC9-082C-4882-BA7A-956088A2B820}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Local|Any CPU.Build.0 = Local|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Local|Any CPU.Build.0 = Local|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -882,6 +898,8 @@ Global
 		{1D9F4468-A382-4D25-8195-F93A884B14DA} = {804E065F-914C-414A-AF84-009312C3CFF6}
 		{7D3E31A4-9C75-4B9B-835D-AFDE85A25469} = {1D9F4468-A382-4D25-8195-F93A884B14DA}
 		{57D5EEC9-082C-4882-BA7A-956088A2B820} = {1D9F4468-A382-4D25-8195-F93A884B14DA}
+		{17AFD669-AECB-4A45-AE09-BD1BF8248BDA} = {1D9F4468-A382-4D25-8195-F93A884B14DA}
+		{EC0E8472-2C5F-424B-B868-7BBA272DF611} = {1D9F4468-A382-4D25-8195-F93A884B14DA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
