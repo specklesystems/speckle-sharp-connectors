@@ -66,8 +66,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     {
       var param = new Param_GenericObject()
       {
-        Name = "Inner objects",
-        NickName = "Inner Objs",
+        Name = "_objects",
+        NickName = "_objs",
         Description =
           "Some collections may contain a mix of objects and other collections. Here we output the atomic objects from within this collection.",
         Access = GH_ParamAccess.list

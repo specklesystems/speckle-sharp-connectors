@@ -70,23 +70,25 @@ public class FilterObjectsByCollectionPaths : GH_Component
       return;
     }
 
-    SpeckleCollectionWrapper targetCollectionWrapper = collectionWrapperGoo.Value;
     // the collection paths selector will omit the target collection from the path of nested collections.
-    // test for the target collection name, which will only happen if there are objects directly inside the collection.
-    if (path != collectionWrapperGoo.Value.Collection.name)
-    {
-      targetCollectionWrapper = FindCollection(collectionWrapperGoo.Value, path);
-    }
+    // the discard ("_") will be used to indicate objects found directly in the target collection.
+    // find collection should search inside the input collection.
+
+    SpeckleCollectionWrapper targetCollectionWrapper =
+      path == "_objects" ? collectionWrapperGoo.Value : FindCollection(collectionWrapperGoo.Value, path);
 
     if (string.IsNullOrEmpty(targetCollectionWrapper.Topology))
     {
-      dataAccess.SetDataList(0, targetCollectionWrapper.Collection.elements);
+      dataAccess.SetDataList(
+        0,
+        targetCollectionWrapper.Collection.elements.Where(e => e is SpeckleObjectWrapper).ToList()
+      );
     }
     else
     {
       var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(
         targetCollectionWrapper.Topology,
-        targetCollectionWrapper.Collection.elements
+        targetCollectionWrapper.Collection.elements.Where(e => e is SpeckleObjectWrapper).ToList()
       );
       dataAccess.SetDataTree(0, tree);
     }
