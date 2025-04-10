@@ -39,7 +39,8 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2022", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2024", "net48"),
-        new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows")
+        new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows"),
+        new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows")
       ]
     ),
     new(
