@@ -23,9 +23,8 @@ public class TextDotToSpeckleConverter : ITypedConverter<RG.TextDot, SO.Text>
       value = target.Text,
       height = target.FontHeight,
       origin = _pointConverter.Convert(target.Point),
-      alignmentH = SO.AlignmentHorizontal.Left,
-      alignmentV = SO.AlignmentVertical.Top,
-      // null to indicate use of screen units
-      units = Units.None
+      alignmentH = SO.AlignmentHorizontal.Center,
+      alignmentV = SO.AlignmentVertical.Center,
+      units = Units.None // to indicate use of screen units
     };
 }
