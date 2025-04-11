@@ -17,7 +17,6 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -70,7 +69,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
-    IRevitEvents events
+    IRevitTask revitTask
   )
     : base("sendBinding", bridge)
   {
@@ -94,7 +93,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    events.Add(() =>
+    revitTask.Run(() =>
     {
       revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
         _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));

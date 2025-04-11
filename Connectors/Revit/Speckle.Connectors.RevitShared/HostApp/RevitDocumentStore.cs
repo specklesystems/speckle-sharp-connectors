@@ -6,7 +6,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -33,7 +33,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext,
-    IRevitEvents events
+    IRevitTask revitTask
   )
     : base(jsonSerializer)
   {
@@ -46,7 +46,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
-    events.Add(() =>
+    revitTask.Run(() =>
     {
       uiApplication.ViewActivated += (s, e) => _topLevelExceptionHandler.CatchUnhandled(() => OnViewActivated(s, e));
 

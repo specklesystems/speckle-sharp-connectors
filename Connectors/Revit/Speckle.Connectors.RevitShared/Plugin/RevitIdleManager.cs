@@ -1,7 +1,6 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -19,14 +18,14 @@ public sealed class RevitIdleManager : AppIdleManager
     RevitContext revitContext,
     IIdleCallManager idleCallManager,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IRevitEvents events
+    IRevitTask revitTask
   )
     : base(idleCallManager)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _uiApplication = revitContext.UIApplication.NotNull();
     _idleCallManager = idleCallManager;
-    events.Add(
+    revitTask.Run(
       () => _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e) // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
     );
   }

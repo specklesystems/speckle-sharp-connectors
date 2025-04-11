@@ -3,9 +3,9 @@ using Autodesk.Revit.UI;
 
 namespace Speckle.Connectors.Revit2026.Plugin;
 
-public sealed partial class DUI3ControlWebViewDockable : UserControl, Autodesk.Revit.UI.IDockablePaneProvider
+public sealed class RevitControlWebViewDockable : UserControl, Autodesk.Revit.UI.IDockablePaneProvider
 {
-  public DUI3ControlWebViewDockable(DUI3ControlWebView dUI3ControlWebView)
+  public RevitControlWebViewDockable(RevitControlWebView dUI3ControlWebView)
   {
     Content = dUI3ControlWebView;
   }

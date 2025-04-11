@@ -1,6 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.RevitShared;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -19,7 +19,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     IBrowserBridge parent,
     IAppIdleManager idleManager,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IRevitEvents events
+    IRevitTask revitTask
   )
     : base("selectionBinding", parent)
   {
@@ -32,7 +32,7 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     _selectionTimer.Start();
 #else
 
-    events.Add(
+    revitTask.Run(
       () =>
         _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
           idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)

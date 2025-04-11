@@ -4,7 +4,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
-using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
@@ -12,37 +11,19 @@ using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit2026.Plugin;
 
-internal sealed class RevitWebViewPlugin : IRevitPlugin
+internal sealed class RevitWebViewPlugin(
+  UIControlledApplication uIControlledApplication,
+  RevitContext revitContext,
+  RevitControlWebViewDockable webViewPanel,
+  ISpeckleApplication speckleApplication)
+  : IRevitPlugin
 {
-  private readonly UIControlledApplication _uIControlledApplication;
-  private readonly RevitContext _revitContext;
-  private readonly DUI3ControlWebViewDockable _webViewPanel;
-  private readonly ISpeckleApplication _speckleApplication;
-
-  [System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Style",
-    "IDE0290:Use primary constructor",
-    Justification = "<Pending>"
-  )]
-  public RevitWebViewPlugin(
-    UIControlledApplication uIControlledApplication,
-    RevitContext revitContext,
-    DUI3ControlWebViewDockable webViewPanel,
-    ISpeckleApplication speckleApplication
-  )
-  {
-    _uIControlledApplication = uIControlledApplication;
-    _revitContext = revitContext;
-    _webViewPanel = webViewPanel;
-    _speckleApplication = speckleApplication;
-  }
-
   public void Initialise()
   {
     // Create and register panels before app initialized. this is needed for double-click file open
-    CreateTabAndRibbonPanel(_uIControlledApplication);
+    CreateTabAndRibbonPanel(uIControlledApplication);
     RegisterDockablePane();
-    _uIControlledApplication.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
+    uIControlledApplication.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
   }
 
   public void Shutdown()
@@ -78,15 +59,15 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
 
     string path = typeof(RevitWebViewPlugin).Assembly.Location;
     dui3Button.Image = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo16.png",
+      $"Speckle.Connectors.Revit{speckleApplication.HostApplicationVersion}.Assets.logo16.png",
       path
     );
     dui3Button.LargeImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTipImage = LoadPngImgSource(
-      $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
+      $"Speckle.Connectors.Revit{speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
     dui3Button.ToolTip = "Speckle (Beta) for Revit";
@@ -97,20 +78,20 @@ internal sealed class RevitWebViewPlugin : IRevitPlugin
   private void OnApplicationInitialized(object? sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
   {
     var uiApplication = new UIApplication(sender as Application);
-    _revitContext.UIApplication = uiApplication;
+    revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    RevitTask.Initialize(uiApplication);
+    global::Revit.Async.RevitTask.Initialize(uiApplication);
   }
 
   private void RegisterDockablePane()
   {
     // Registering dockable pane should happen before UiApplication is initialized with RevitTask.
     // Otherwise pane cannot be registered for double-click file open.
-    _uIControlledApplication.RegisterDockablePane(
+    uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
       Connector.TabTitle,
-      _webViewPanel
+      webViewPanel
     );
   }
 

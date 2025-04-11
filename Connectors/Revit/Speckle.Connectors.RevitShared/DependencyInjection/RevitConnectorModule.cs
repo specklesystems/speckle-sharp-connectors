@@ -99,9 +99,9 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
     serviceCollection.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
-    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<DUI3ControlWebView>());
-    serviceCollection.AddSingleton<DUI3ControlWebView>();
-    serviceCollection.AddSingleton<DUI3ControlWebViewDockable>();
+    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<RevitControlWebView>());
+    serviceCollection.AddSingleton<RevitControlWebView>();
+    serviceCollection.AddSingleton<RevitControlWebViewDockable>();
 #endif
   }
 }

@@ -4,16 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Revit.Plugin;
 
 namespace Speckle.Connectors.Revit2026.Plugin;
 
-public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
+public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
+  private readonly IRevitTask _revitTask;
 
-  public DUI3ControlWebView(IServiceProvider serviceProvider)
+  public RevitControlWebView(IServiceProvider serviceProvider, IRevitTask revitTask)
   {
     _serviceProvider = serviceProvider;
+    _revitTask = revitTask;
     InitializeComponent();
 
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
@@ -32,13 +35,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
-
-    //always invoke even on the main thread because it's better somehow
-    Browser.Dispatcher.Invoke(
-      //fire and forget
-      () => Browser.ExecuteScriptAsync(script),
-      DispatcherPriority.Background
-    );
+    _revitTask.Run(() => Browser.ExecuteScriptAsync(script));
   }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
