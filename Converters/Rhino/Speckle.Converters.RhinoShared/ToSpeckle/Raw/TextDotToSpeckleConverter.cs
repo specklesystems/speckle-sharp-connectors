@@ -1,4 +1,5 @@
 ﻿using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -22,9 +23,9 @@ public class TextDotToSpeckleConverter : ITypedConverter<RG.TextDot, SO.Text>
       value = target.Text,
       height = target.FontHeight,
       origin = _pointConverter.Convert(target.Point),
-      alignmentH = 1,
-      alignmentV = 1,
+      alignmentH = SO.AlignmentHorizontal.Left,
+      alignmentV = SO.AlignmentVertical.Top,
       // null to indicate use of screen units
-      units = null
+      units = Units.None
     };
 }
