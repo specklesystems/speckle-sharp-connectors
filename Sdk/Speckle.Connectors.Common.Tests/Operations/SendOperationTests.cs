@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -29,6 +30,8 @@ public class SendOperationTests : MoqTest
   public async Task Execute()
 #pragma warning restore CA1506
   {
+    var services = new ServiceCollection();
+    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var accountService = Create<IAccountService>();
@@ -54,7 +57,7 @@ public class SendOperationTests : MoqTest
       .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<SerializeProcessResults>>>(), false))
       .ReturnsAsync(serializeProcessResults);
 
-    var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
+    var sp = services.BuildServiceProvider();
 
     var sendOperation = ActivatorUtilities.CreateInstance<SendOperation<object>>(
       sp,
@@ -80,6 +83,9 @@ public class SendOperationTests : MoqTest
   public async Task Send()
 #pragma warning restore CA1506
   {
+    var services = new ServiceCollection();
+    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
+
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var accountService = Create<IAccountService>();
@@ -116,7 +122,7 @@ public class SendOperationTests : MoqTest
 
     sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).Returns(Task.CompletedTask);
 
-    var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
+    var sp = services.BuildServiceProvider();
 
     var sendOperation = ActivatorUtilities.CreateInstance<SendOperation<object>>(
       sp,
