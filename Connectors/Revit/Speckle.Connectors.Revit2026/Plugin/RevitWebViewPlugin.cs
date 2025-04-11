@@ -15,8 +15,8 @@ internal sealed class RevitWebViewPlugin(
   UIControlledApplication uIControlledApplication,
   RevitContext revitContext,
   RevitControlWebViewDockable webViewPanel,
-  ISpeckleApplication speckleApplication)
-  : IRevitPlugin
+  ISpeckleApplication speckleApplication
+) : IRevitPlugin
 {
   public void Initialise()
   {

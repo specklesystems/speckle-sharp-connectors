@@ -12,9 +12,10 @@ public class RevitTask(ITopLevelExceptionHandler topLevelExceptionHandler) : IRe
 
   public void Run(Action handler) =>
     global::Revit.Async.RevitTask.RunAsync(() => topLevelExceptionHandler.CatchUnhandled(handler)).FireAndForget();
-  
+
   public Task RunAsync(Func<Task> handler) =>
     global::Revit.Async.RevitTask.RunAsync(() => topLevelExceptionHandler.CatchUnhandledAsync(handler));
+
   public Task RunAsync(Action handler) =>
     global::Revit.Async.RevitTask.RunAsync(() => topLevelExceptionHandler.CatchUnhandled(handler));
 }
