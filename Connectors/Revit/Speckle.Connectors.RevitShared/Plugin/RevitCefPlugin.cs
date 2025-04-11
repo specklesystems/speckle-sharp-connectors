@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,7 +100,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
 
   private void OnApplicationInitialized(object? sender, Autodesk.Revit.DB.Events.ApplicationInitializedEventArgs e)
   {
-    var uiApplication = new UIApplication(sender as Application);
+    var uiApplication = new UIApplication(sender as Autodesk.Revit.ApplicationServices.Application);
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
