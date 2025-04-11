@@ -29,11 +29,12 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
   public SO.Text Convert(RG.TextEntity target) =>
     new()
     {
-      value = SplitText(target),
+      value = target.PlainText,
       height = target.TextHeight,
+      maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
       origin = _pointConverter.Convert(target.Plane.Origin),
       plane = GetTextPlane(target),
-      alignmentH = (int)target.TextHorizontalAlignment,
+      alignmentH = (SO.AlignmentHorizontal)target.TextHorizontalAlignment,
       alignmentV = SimplifyVerticalAlignment((int)target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
     };
@@ -63,32 +64,6 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
     return _planeConverter.Convert(rotatedPlane);
   }
 
-  /// <summary>
-  /// Split text into more lines if width formatting is applied.
-  /// Approximation of Rhino text splitting, not precise: in Rhino, depends on the font and specific characters.
-  /// Only useful to keep approximately same amount of text lines and line width
-  /// </summary>
-  private string SplitText(RG.TextEntity target)
-  {
-    // return, if formatting doesn't affect the text width
-    if (!target.TextIsWrapped)
-    {
-      return target.PlainText;
-    }
-    // determine maximum cropped string length (average for all lines)
-    string plainText = target.PlainText.EndsWith("\r\n") ? target.PlainText[..^2] : target.PlainText;
-    string[] lines = plainText.Split(["\r\n"], StringSplitOptions.None);
-    int maxCharCropped = (int)(1.7 * target.TextModelWidth / target.TextHeight);
-
-    // assemble list of cropped strings
-    List<string> newLines = new();
-    foreach (var line in lines)
-    {
-      newLines.AddRange(SplitLine(line, maxCharCropped));
-    }
-    return string.Join("\r\n", newLines);
-  }
-
   private List<string> SplitLine(string line, int maxChars)
   {
     List<string> newLines = new();
@@ -109,5 +84,9 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
   /// <summary>
   /// Simplify alignment to just 3 options: Top (1-2), Middle (3), Bottom (4-6)
   /// </summary>
-  private int SimplifyVerticalAlignment(int alignment) => alignment < 3 ? 0 : (alignment == 3 ? 1 : 2);
+  private SO.AlignmentVertical SimplifyVerticalAlignment(int alignment)
+  {
+    int simpleAlignment = alignment < 3 ? 0 : (alignment == 3 ? 1 : 2);
+    return (SO.AlignmentVertical)simpleAlignment;
+  }
 }
