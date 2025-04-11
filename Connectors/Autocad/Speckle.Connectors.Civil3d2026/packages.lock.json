@@ -29,17 +29,17 @@
       },
       "Speckle.AutoCAD.API": {
         "type": "Direct",
-        "requested": "[2025.0.0, )",
-        "resolved": "2025.0.0",
-        "contentHash": "dqEgZ+bTqAG0tx0WwdnTZcbNKH2igzhOr3SMXtRYai7yIqXiz5btZ4Mf2bmfxbmxLucww3GKVpdZoI+PSZlMuQ=="
+        "requested": "[2026.0.0, )",
+        "resolved": "2026.0.0",
+        "contentHash": "WlkV81PmbK/ftoM7aGpU6LGosKbePBQej9MO/m63rFMozX89tsitEhE12o58wu7K/4FmRUdAMolYtdK20EDBnw=="
       },
       "Speckle.Civil3D.API": {
         "type": "Direct",
-        "requested": "[2025.0.0, )",
-        "resolved": "2025.0.0",
-        "contentHash": "zWxdzk7M2JE1+PgIpGrCycDUwbmTqJ+YCNMaJPbjUgVKoAiI5w7Ou9ynbFgmQkRuYrkTflbL+s799Fw62PJixQ==",
+        "requested": "[2026.0.0, )",
+        "resolved": "2026.0.0",
+        "contentHash": "JcQvKvA3KC+9hzJiWlaZ3REtvqJV+AFHPIU5J6Xp7JHlNyhnaalN37WXpWIKhNAUwL9ppUBOXMZpQupbFytUwg==",
         "dependencies": {
-          "Speckle.AutoCAD.API": "2025.0.0"
+          "Speckle.AutoCAD.API": "2026.0.0"
         }
       },
       "Speckle.InterfaceGenerator": {
@@ -248,11 +248,11 @@
       "speckle.connectors.logging": {
         "type": "Project"
       },
-      "speckle.converters.civil3d2025": {
+      "speckle.converters.civil3d2026": {
         "type": "Project",
         "dependencies": {
-          "Speckle.AutoCAD.API": "[2025.0.0, )",
-          "Speckle.Civil3d.API": "[2025.0.0, )",
+          "Speckle.AutoCAD.API": "[2026.0.0, )",
+          "Speckle.Civil3d.API": "[2026.0.0, )",
           "Speckle.Connectors.DUI.WebView": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }

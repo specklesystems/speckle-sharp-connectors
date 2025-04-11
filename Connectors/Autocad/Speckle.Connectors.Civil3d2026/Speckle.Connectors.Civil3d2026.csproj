@@ -8,12 +8,12 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" ExcludeAssets="runtime"/>
-    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2025.0.0" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2026.0.0" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2026.0.0" ExcludeAssets="runtime"/>
   </ItemGroup>  
   
   <ItemGroup>   
-    <ProjectReference Include="..\..\..\Converters\Civil3d\Speckle.Converters.Civil3d2025\Speckle.Converters.Civil3d2025.csproj" />
+    <ProjectReference Include="..\..\..\Converters\Civil3d\Speckle.Converters.Civil3d2026\Speckle.Converters.Civil3d2026.csproj" />   
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
