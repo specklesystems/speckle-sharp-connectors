@@ -8,7 +8,6 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.TeklaShared;
-using Speckle.Sdk.Host;
 using Tekla.Structures.Dialog;
 using Tekla.Structures.Model;
 using Tekla.Structures.Model.Operations;
