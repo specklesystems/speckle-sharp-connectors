@@ -9,18 +9,20 @@ public class TestThreadContext(bool isMain) : ThreadContext
 
   public Funcs? Func { get; set; }
 
-  protected override void RunMain(Action action)
+  protected override Task RunMain(Action action)
   {
     action();
     Func.Should().BeNull();
     Func = Funcs.RunMain;
+    return Task.CompletedTask;
   }
 
-  protected override void RunWorker(Action action)
+  protected override Task RunWorker(Action action)
   {
     action();
     Func.Should().BeNull();
     Func = Funcs.RunWorker;
+    return Task.CompletedTask;
   }
 
   protected override async Task<T> WorkerToMainAsync<T>(Func<Task<T>> action)

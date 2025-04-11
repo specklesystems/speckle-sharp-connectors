@@ -20,7 +20,8 @@ public static class Consts
         new("Connectors/Revit/Speckle.Connectors.Revit2022", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2023", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2024", "net48"),
-        new("Connectors/Revit/Speckle.Connectors.Revit2025", "net8.0-windows")
+        new("Connectors/Revit/Speckle.Connectors.Revit2025", "net8.0-windows"),
+        new("Connectors/Revit/Speckle.Connectors.Revit2026", "net8.0-windows")
       ]
     ),
     new(
