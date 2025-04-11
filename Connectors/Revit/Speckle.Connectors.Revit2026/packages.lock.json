@@ -245,13 +245,6 @@
           "Speckle.Sdk.Dependencies": "[3.1.8, )"
         }
       },
-      "speckle.connectors.dui.webview": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Web.WebView2": "[1.0.1938.49, )",
-          "Speckle.Connectors.DUI": "[1.0.0, )"
-        }
-      },
       "speckle.connectors.logging": {
         "type": "Project"
       },
