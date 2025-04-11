@@ -15,7 +15,10 @@ public class IfcRelation : IfcEntity
     : base(graph, lineData)
   {
     if (!IsIfcRoot)
+    {
       throw new SpeckleIfcException("Expected relation to be an IFC root entity");
+    }
+
     From = from;
     To = to;
   }

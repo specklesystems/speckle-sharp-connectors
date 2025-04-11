@@ -15,7 +15,10 @@ public class IfcPropSetRelation : IfcRelation
     {
       var node = Graph.GetNode(From);
       if (node is not IfcPropSet r)
+      {
         throw new SpeckleIfcException($"Expected a property set not {node} from id {From}");
+      }
+
       return r;
     }
   }

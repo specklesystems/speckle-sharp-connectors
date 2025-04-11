@@ -6,7 +6,7 @@ namespace Speckle.Importers.Ifc.Types;
 public sealed class IfcFactory : IIfcFactory
 {
   //probably never disposing this
-  private static readonly IntPtr _ptr = Importers.Ifc.Native.WebIfc.InitializeApi();
+  private static readonly IntPtr s_ptr = Importers.Ifc.Native.WebIfc.InitializeApi();
 
   public IfcModel Open(string fullPath)
   {
@@ -14,7 +14,7 @@ public sealed class IfcFactory : IIfcFactory
     {
       throw new ArgumentException($"File does not exist: {fullPath}");
     }
-    return new(Importers.Ifc.Native.WebIfc.LoadModel(_ptr, fullPath));
+    return new(Importers.Ifc.Native.WebIfc.LoadModel(s_ptr, fullPath));
   }
 
   public string Version => Importers.Ifc.Native.WebIfc.GetVersion();
