@@ -25,14 +25,19 @@ public class SpeckleMaterialWrapper : Base
   /// Creates the material in the document
   /// </summary>
   /// <param name="doc"></param>
-  /// <param name="name"></param>
+  /// <param name="name">The name override, if any. Used for param baking where the nickname is changed by the user, or no name is available.</param>
   /// <returns>The index of the created material in the material table</returns>
-  public int Bake(RhinoDoc doc, string name)
+  public int Bake(RhinoDoc doc, string? name = null)
   {
-    // first set the material name to be the nickname of this param
     Material bakeMaterial = new();
     bakeMaterial.CopyFrom(RhinoMaterial);
-    bakeMaterial.Name = name;
+
+    // set the material name
+    // this should be the given name in the rhino material *unless* an override name is passed in
+    if (name != null)
+    {
+      bakeMaterial.Name = name;
+    }
 
     return doc.Materials.Add(bakeMaterial);
   }
@@ -67,6 +72,9 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         return true;
       case Material material:
         Value = new() { Base = ToSpeckleRenderMaterial(material), RhinoMaterial = material };
+        return true;
+      case SpeckleRenderMaterial speckleMaterial:
+        Value = new() { Base = speckleMaterial, RhinoMaterial = ToRhinoMaterial(speckleMaterial) };
         return true;
     }
 
@@ -178,10 +186,23 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
       SpecularColor = mat.Specular,
       Shine = mat.Shine,
     };
+
+  private Material ToRhinoMaterial(SpeckleRenderMaterial mat) =>
+    new()
+    {
+      Name = mat.name,
+      DiffuseColor = mat.diffuseColor,
+      EmissionColor = mat.emissiveColor,
+      Transparency = 1 - mat.opacity,
+      Shine = mat["shine"] is double shine ? shine : default,
+      IndexOfRefraction = mat["ior"] is double ior ? ior : default
+    };
 }
 
-public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_BakeAwareData
+public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_BakeAwareObject
 {
+  private const string NICKNAME = "Speckle Material";
+
   public SpeckleMaterialParam()
     : this(GH_ParamAccess.item) { }
 
@@ -193,7 +214,7 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
 
   public SpeckleMaterialParam(GH_ParamAccess access)
     : base(
-      "Speckle Material",
+      NICKNAME,
       "SM",
       "Represents a Speckle material",
       ComponentCategories.PRIMARY_RIBBON,
@@ -205,47 +226,61 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
 
   protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SM");
 
-  public bool IsBakeCapable =>
-    // False if no data
+  bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> _)
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleMaterialWrapperGoo goo)
       {
-        int bakeIndex = goo.Value.Bake(doc, NickName);
+        // get the param nickname if it is a custom name.
+        // this is used to override the name of the material.
+        // the nickname should also be used in case of an empty name on the rhino material
+        string? name =
+          NickName != NICKNAME
+            ? NickName
+            : string.IsNullOrEmpty(goo.Value.RhinoMaterial.Name)
+              ? NickName
+              : null;
+
+        int bakeIndex = goo.Value.Bake(doc, name);
 
         if (bakeIndex == -1)
         {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to add material {NickName} to document.");
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to add material {name} to document.");
         }
       }
     }
   }
 
-  public bool BakeGeometry(RhinoDoc doc, ObjectAttributes att, out Guid obj_guid)
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
   {
-    obj_guid = Guid.Empty;
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleMaterialWrapperGoo goo)
       {
-        int bakeIndex = goo.Value.Bake(doc, NickName);
+        // get the param nickname if it is a custom name.
+        // this is used to override the name of the material.
+        // the nickname should also be used in case of an empty name on the rhino material
+        string? name =
+          NickName != NICKNAME
+            ? NickName
+            : string.IsNullOrEmpty(goo.Value.RhinoMaterial.Name)
+              ? NickName
+              : null;
+
+        int bakeIndex = goo.Value.Bake(doc, name);
         if (bakeIndex == -1)
         {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to add material {NickName} to document.");
-          return false;
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to add material {name} to document.");
         }
 
-        obj_guid = doc.Materials[bakeIndex].Id;
-        return true;
+        obj_ids.Add(doc.Materials[bakeIndex].Id);
       }
     }
-
-    return false;
   }
 }

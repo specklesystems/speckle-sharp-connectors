@@ -117,8 +117,8 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
             switch (x)
             {
               case Base xBase:
-                List<GeometryBase> converted = SpeckleConversionContext.ConvertToHost(xBase);
-                nativeObjects.AddRange(converted);
+                List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(xBase);
+                nativeObjects.AddRange(converted.Select(o => o.Item1));
                 break;
               default:
                 nativeObjects.Add(x);
@@ -135,8 +135,8 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
         default:
           if (prop.Value is Base baseValue)
           {
-            List<GeometryBase> converted = SpeckleConversionContext.ConvertToHost(baseValue);
-            result.Add(CreateOutputParamByKeyValue(prop.Key, converted, GH_ParamAccess.list));
+            List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(baseValue);
+            result.Add(CreateOutputParamByKeyValue(prop.Key, converted.Select(o => o.Item1), GH_ParamAccess.list));
           }
           else
           {

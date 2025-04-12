@@ -31,7 +31,7 @@ internal sealed class GrasshopperMaterialUnpacker
     {
       try
       {
-        // get the material wrapper for the render amterial proxy
+        // get the material wrapper for the render material proxy
         string materialId = materialProxy.applicationId ?? materialProxy.value.name;
         if (ConvertedCache.TryGetValue(materialId, out SpeckleMaterialWrapper? materialWrapper))
         {
@@ -39,7 +39,7 @@ internal sealed class GrasshopperMaterialUnpacker
         }
         else
         {
-          // convert the render material to a material wrappe
+          // convert the render material to a material wrapper
           SpeckleMaterialWrapperGoo wrapperGoo = new();
           wrapperGoo.CastFrom(materialProxy.value);
           materialWrapper = wrapperGoo.Value;
