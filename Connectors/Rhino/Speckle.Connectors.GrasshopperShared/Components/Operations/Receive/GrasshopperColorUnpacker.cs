@@ -27,24 +27,6 @@ internal sealed class GrasshopperColorUnpacker
     {
       try
       {
-        /*
-        ObjectColorSource source = ObjectColorSource.ColorFromObject;
-        if (colorProxy["source"] is string proxySource)
-        {
-          switch (proxySource)
-          {
-            case "layer":
-              continue; // skip any colors with source = layer, since object color default source is by layer
-            case "block":
-              source = ObjectColorSource.ColorFromParent;
-              break;
-            case "material":
-              source = ObjectColorSource.ColorFromMaterial;
-              break;
-          }
-        }
-        */
-
         foreach (string objectId in colorProxy.objects)
         {
           Color convertedColor = Color.FromArgb(colorProxy.value);
