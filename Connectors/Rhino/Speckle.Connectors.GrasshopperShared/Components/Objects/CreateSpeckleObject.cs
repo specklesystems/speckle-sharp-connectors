@@ -44,6 +44,8 @@ public class CreateSpeckleObject : GH_Component
     Params.Input[3].Optional = true;
 
     // TODO: add render material
+    pManager.AddGenericParameter("Material", "m", "The material of the new Speckle Object", GH_ParamAccess.item);
+    Params.Input[4].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -66,12 +68,23 @@ public class CreateSpeckleObject : GH_Component
     Color? color = null;
     da.GetData(3, ref color);
 
+    //IGH_Param? material = null;
+    IGH_Goo? material = null;
+    da.GetData(4, ref material);
+
     // convert the properties
     Dictionary<string, object?> props = new();
     properties.CastTo(ref props);
 
     // convert the geometries
     Base converted = SpeckleConversionContext.ConvertToSpeckle(geometry);
+
+    // convert the material
+    SpeckleMaterialWrapperGoo matWrapper = new();
+    if (material != null)
+    {
+      matWrapper.CastFrom(material);
+    }
 
     // generate an application Id
     Guid guid = Guid.NewGuid();
@@ -92,6 +105,7 @@ public class CreateSpeckleObject : GH_Component
         GeometryBase = geometry,
         Properties = properties,
         Color = color,
+        Material = matWrapper.Value,
         Name = name,
         applicationId = guid.ToString()
       };

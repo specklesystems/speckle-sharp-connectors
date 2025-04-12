@@ -42,16 +42,15 @@ public static class SpeckleConversionContext
 
   public static Base ConvertToSpeckle(GeometryBase geo) => ToSpeckleConverter.Convert(geo);
 
-  public static List<GeometryBase> ConvertToHost(Base input)
+  public static List<(GeometryBase, Base)> ConvertToHost(Base input)
   {
     var result = ToHostConverter.Convert(input);
 
     return result switch
     {
-      GeometryBase geometry => [geometry],
-      List<GeometryBase> geometryList => geometryList,
-      IEnumerable<(GeometryBase, Base)> fallbackConversionResult
-        => fallbackConversionResult.Select(t => t.Item1).ToList(), // note special handling for proxying render materials OR we don't care about revit
+      GeometryBase geometry => [(geometry, input)],
+      List<GeometryBase> geometryList => geometryList.Select(o => (o, input)).ToList(),
+      IEnumerable<(GeometryBase, Base)> fallbackConversionResult => fallbackConversionResult.ToList(),
       _ => throw new SpeckleException("Failed to convert input to rhino")
     };
   }

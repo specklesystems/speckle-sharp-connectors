@@ -13,30 +13,39 @@ internal sealed class GrasshopperCollectionRebuilder
   public GrasshopperCollectionRebuilder(Collection baseCollection)
   {
     Collection newCollection = new() { name = baseCollection.name, applicationId = baseCollection.applicationId };
-    RootCollectionWrapper = new SpeckleCollectionWrapper(newCollection, new() { baseCollection.name }, null);
+    RootCollectionWrapper = new SpeckleCollectionWrapper(newCollection, new() { baseCollection.name }, null, null);
   }
 
   public void AppendSpeckleGrasshopperObject(
     SpeckleObjectWrapper speckleGrasshopperObjectWrapper,
     List<Collection> collectionPath,
-    GrasshopperColorBaker colorBaker
+    GrasshopperColorUnpacker colorUnpacker,
+    GrasshopperMaterialUnpacker materialUnpacker
   )
   {
-    // add the object color
-    speckleGrasshopperObjectWrapper.Color = colorBaker.Cache.TryGetValue(
+    // add the object color and material
+    speckleGrasshopperObjectWrapper.Color = colorUnpacker.Cache.TryGetValue(
       speckleGrasshopperObjectWrapper.applicationId ?? "",
       out var cachedColor
     )
-      ? cachedColor.Item1
+      ? cachedColor
       : null;
 
-    var collection = GetOrCreateSpeckleCollectionFromPath(collectionPath, colorBaker);
+    speckleGrasshopperObjectWrapper.Material = materialUnpacker.Cache.TryGetValue(
+      speckleGrasshopperObjectWrapper.applicationId ?? "",
+      out var cachedMaterial
+    )
+      ? cachedMaterial
+      : null;
+
+    var collection = GetOrCreateSpeckleCollectionFromPath(collectionPath, colorUnpacker, materialUnpacker);
     collection.Collection.elements.Add(speckleGrasshopperObjectWrapper);
   }
 
   public SpeckleCollectionWrapper GetOrCreateSpeckleCollectionFromPath(
     List<Collection> path,
-    GrasshopperColorBaker colorBaker
+    GrasshopperColorUnpacker colorUnpacker,
+    GrasshopperMaterialUnpacker materialUnpacker
   )
   {
     // first check if cache already has this collection
@@ -65,11 +74,17 @@ internal sealed class GrasshopperCollectionRebuilder
       // create and cache if needed
       Collection newCollection = new() { name = collectionName, applicationId = collection.applicationId };
       SpeckleCollectionWrapper newSpeckleCollectionWrapper =
-        new(newCollection, currentLayerPath, null)
+        new(newCollection, currentLayerPath, null, null)
         {
-          // get the collection color
-          Color = colorBaker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
-            ? cachedCollectionColor.Item1
+          // get the collection color and material
+          Color = colorUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
+            ? cachedCollectionColor
+            : null,
+          Material = materialUnpacker.Cache.TryGetValue(
+            collection.applicationId ?? "",
+            out var cachedCollectionMaterial
+          )
+            ? cachedCollectionMaterial
             : null
         };
       ;

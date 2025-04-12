@@ -3,12 +3,12 @@ using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
-internal sealed class GrasshopperColorUnpacker
+internal sealed class GrasshopperColorPacker
 {
   // stores map of color id to color proxy
   public Dictionary<string, ColorProxy> ColorProxies { get; } = new();
 
-  public GrasshopperColorUnpacker() { }
+  public GrasshopperColorPacker() { }
 
   /// <summary>
   /// Processes an object or collections's color and adds the id to a color proxy in <see cref="ColorProxies"/>

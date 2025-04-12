@@ -2,6 +2,7 @@
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros;
 using Grasshopper.Rhinoceros.Model;
+using Rhino;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -20,14 +21,23 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
           applicationId = modelLayer.Id?.ToString()
         };
 
-      // get color
+      // get color and material
       Color? layerColor = null;
       if (modelLayer.DisplayColor is ModelColor color)
       {
         layerColor = Color.FromArgb(color.ToArgb());
       }
 
-      Value = new SpeckleCollectionWrapper(modelCollection, GetModelLayerPath(modelLayer), layerColor);
+      SpeckleMaterialWrapper? layerMaterial = null;
+      if (modelLayer.Material.Id is Guid id)
+      {
+        var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
+        SpeckleMaterialWrapperGoo materialGoo = new();
+        materialGoo.CastFrom(mat);
+        layerMaterial = materialGoo.Value;
+      }
+
+      Value = new SpeckleCollectionWrapper(modelCollection, GetModelLayerPath(modelLayer), layerColor, layerMaterial);
       return true;
     }
 

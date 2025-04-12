@@ -50,6 +50,17 @@ public static class GrasshopperHelpers
   public static string GetSpeckleApplicationId(this Color color) => $"color_{color}";
 
   /// <summary>
+  /// Creates a unique Speckle application id from the display material properties.
+  /// </summary>
+  /// <param name="mat"></param>
+  /// <returns></returns>
+  public static string GetSpeckleApplicationId(this Rhino.Display.DisplayMaterial mat) =>
+    $"material_{mat.Transparency}_{mat.Diffuse}_{mat.Emission}_{mat.Shine}_{mat.Specular}";
+
+  public static string GetSpeckleApplicationId(this SpeckleMaterialWrapper matWrapper) =>
+    $"material_{matWrapper.Base.opacity}_{matWrapper.Base.diffuse}_{matWrapper.Base.emissive}_{matWrapper.Base.metalness}_{matWrapper.Base.roughness}";
+
+  /// <summary>
   /// Retrieves a unique Speckle application id from the path of the collection
   /// </summary>
   /// <param name="collectionWrapper"></param>

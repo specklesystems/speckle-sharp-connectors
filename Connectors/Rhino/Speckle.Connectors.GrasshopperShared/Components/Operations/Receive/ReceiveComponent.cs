@@ -142,13 +142,15 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    // TODO: unpack colors and render materials
-    GrasshopperColorBaker colorBaker = new(unpackedRoot);
+    // unpack colors and render materials
+    GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
+    GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
 
     GrasshopperCollectionRebuilder collectionRebuilder =
       new((root as Collection) ?? new Collection() { name = "unnamed" });
 
-    LocalToGlobalMapHandler mapHandler = new(traversalContextUnpacker, collectionRebuilder, colorBaker);
+    LocalToGlobalMapHandler mapHandler =
+      new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
 
     foreach (var map in localToGlobalMaps)
     {

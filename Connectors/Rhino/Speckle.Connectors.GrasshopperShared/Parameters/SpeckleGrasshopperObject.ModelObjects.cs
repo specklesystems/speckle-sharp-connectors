@@ -35,8 +35,13 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         }
         modelConverted["properties"] = propertyDict;
 
-        // get the object color
+        // get the object color and material
         ObjectDisplayColor.Value? color = modelObject.Display.Color;
+        SpeckleMaterialWrapperGoo? materialWrapper = new();
+        if (GetMaterialFromModelObject(modelObject) is Rhino.Render.RenderMaterial renderMat)
+        {
+          materialWrapper.CastFrom(renderMat);
+        }
 
         SpeckleObjectWrapper so =
           new()
@@ -45,8 +50,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             Base = modelConverted,
             Name = modelObject.Name.ToString(),
             Color = color is null ? null : Color.FromArgb(color.Value.Color.ToArgb()),
-            ColorSource = color?.Source,
-            RenderMaterialName = modelObject.Render.Material?.Material?.Name,
+            Material = materialWrapper.Value,
             Properties = propertyGroup,
             applicationId = modelObject.Id?.ToString()
           };
@@ -62,5 +66,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
     RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
+
+  private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject) =>
+    RhinoDoc.ActiveDoc.RenderMaterials.Find(modelObject.Render.Material?.Material.Id ?? Guid.Empty);
 }
 #endif

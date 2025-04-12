@@ -1,16 +1,15 @@
-using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
-internal sealed class GrasshopperColorBaker
+internal sealed class GrasshopperColorUnpacker
 {
   // stores map of object id to color and color source
-  public Dictionary<string, (Color, ObjectColorSource)> Cache { get; private set; } = new();
+  public Dictionary<string, Color> Cache { get; private set; } = new();
 
-  public GrasshopperColorBaker(RootObjectUnpackerResult root)
+  public GrasshopperColorUnpacker(RootObjectUnpackerResult root)
   {
     if (root.ColorProxies != null)
     {
@@ -28,28 +27,12 @@ internal sealed class GrasshopperColorBaker
     {
       try
       {
-        ObjectColorSource source = ObjectColorSource.ColorFromObject;
-        if (colorProxy["source"] is string proxySource)
-        {
-          switch (proxySource)
-          {
-            case "layer":
-              continue; // skip any colors with source = layer, since object color default source is by layer
-            case "block":
-              source = ObjectColorSource.ColorFromParent;
-              break;
-            case "material":
-              source = ObjectColorSource.ColorFromMaterial;
-              break;
-          }
-        }
-
         foreach (string objectId in colorProxy.objects)
         {
           Color convertedColor = Color.FromArgb(colorProxy.value);
-          if (!Cache.TryGetValue(objectId, out (Color, ObjectColorSource) _))
+          if (!Cache.TryGetValue(objectId, out Color _))
           {
-            Cache.Add(objectId, (convertedColor, source));
+            Cache.Add(objectId, convertedColor);
           }
         }
       }
