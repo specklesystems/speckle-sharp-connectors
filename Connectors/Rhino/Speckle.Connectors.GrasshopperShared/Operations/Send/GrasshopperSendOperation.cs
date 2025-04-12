@@ -24,12 +24,14 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
     // TODO:create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
+    GrasshopperMaterialPacker materialPacker = new();
 
     // reconstruct the input collection by substituting all of the objectgoos with base
-    Collection collection = ReplaceAndRebuild(rootCollection, colorPacker);
+    Collection collection = ReplaceAndRebuild(rootCollection, colorPacker, materialPacker);
 
     // add proxies
     collection[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
+    collection[ProxyKeys.MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
 
     // TODO: Not getting any conversion results yet
     var result = new RootObjectBuilderResult(collection, []);
@@ -39,11 +41,15 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
   /// <summary>
   /// Unwraps collection wrappers and object wrapppers.
-  /// Also packs colors into proxies while unwrapping.
+  /// Also packs colors and Render Materials into proxies while unwrapping.
   /// </summary>
   /// <param name="c"></param>
   /// <returns></returns>
-  private Collection ReplaceAndRebuild(Collection c, GrasshopperColorPacker colorPacker)
+  private Collection ReplaceAndRebuild(
+    Collection c,
+    GrasshopperColorPacker colorPacker,
+    GrasshopperMaterialPacker materialPacker
+  )
   {
     // Iterate over the current collection's elements
     var myCollection = new Collection() { name = c.name };
@@ -68,16 +74,18 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
           applicationId = appId
         };
 
-        // TODO: unpack color and render material
+        // unpack color and render material
         colorPacker.ProcessColor(appId, collectionWrapper.Color);
+        materialPacker.ProcessMaterial(appId, collectionWrapper.Material);
 
-        var unwrapped = ReplaceAndRebuild(newCollection, colorPacker);
+        var unwrapped = ReplaceAndRebuild(newCollection, colorPacker, materialPacker);
         myCollection.elements.Add(unwrapped);
       }
       else if (element is SpeckleObjectWrapper so)
       {
-        // TODO: unpack color and render material
+        // unpack color and render material
         colorPacker.ProcessColor(so.applicationId, so.Color);
+        materialPacker.ProcessMaterial(so.applicationId, so.Material);
 
         // If it's not a Collection, replace the non-Collection element
         myCollection.elements.Add(so.Base);
