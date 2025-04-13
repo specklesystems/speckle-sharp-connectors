@@ -1,3 +1,4 @@
+using System.Reflection;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -265,7 +266,17 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
 
-  protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SO");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_param_object.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   public bool IsBakeCapable =>
     // False if no data

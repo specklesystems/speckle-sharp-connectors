@@ -1,3 +1,4 @@
+using System.Reflection;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -224,7 +225,17 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
 
   public override Guid ComponentGuid => new("1A08CF79-2072-4B14-9430-E4465FF0C0FE");
 
-  protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("SM");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_param_material.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;
