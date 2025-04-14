@@ -6,8 +6,6 @@
     <Civil3DVersion>2023</Civil3DVersion>
     <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D2023;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
   </PropertyGroup>
 
   <ItemGroup>
