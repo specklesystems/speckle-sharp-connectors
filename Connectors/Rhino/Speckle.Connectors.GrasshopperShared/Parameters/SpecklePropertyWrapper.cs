@@ -134,32 +134,3 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
     return false;
   }
 }
-
-/* Don't need this for now
-[Guid("B3101D12-DA73-45DF-B617-16E1C65BB37C")]
-public class SpecklePropertyParam : GH_Param<SpecklePropertyGoo>
-{
-  public SpecklePropertyParam(GH_ParamAccess access)
-    : base(
-      "Speckle Property",
-      "SPO",
-      "Represents a Speckle Property",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.PARAMETERS,
-      access
-    ) { }
-
-  public override Guid ComponentGuid => GetType().GUID;
-
-  protected override Bitmap Icon => BitmapBuilder.CreateHexagonalBitmap("P");
-
-  public SpecklePropertyParam()
-    : this(GH_ParamAccess.item) { }
-
-  public SpecklePropertyParam(IGH_InstanceDescription tag)
-    : base(tag) { }
-
-  public SpecklePropertyParam(IGH_InstanceDescription tag, GH_ParamAccess access)
-    : base(tag, access) { }
-}
-*/
