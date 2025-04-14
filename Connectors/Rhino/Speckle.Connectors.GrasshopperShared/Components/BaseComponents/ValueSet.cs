@@ -1578,20 +1578,15 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       persistentData.Contains(goo)
     ));
 
-    // if (
-    //   RhinoInside.Revit.Operator.CompareMethodFromPattern(SearchPattern)
-    //   != RhinoInside.Revit.Operator.CompareMethod.Equals
-    // )
-    // {
-    //   items = items.Where(x =>
-    //     string.IsNullOrEmpty(SearchPattern) || RhinoInside.Revit.Operator.IsSymbolNameLike(x.Name, SearchPattern)
-    //   );
-    // }
-
+    // apply search
     if (!string.IsNullOrWhiteSpace(SearchPattern))
     {
-      // TODO: search
-      items = items.Where(item => item.Name.Contains(SearchPattern));
+      if (Operator.CompareMethodFromPattern(SearchPattern) != Operator.CompareMethod.Equals)
+      {
+        items = items.Where(x =>
+          string.IsNullOrEmpty(SearchPattern) || Operator.IsSymbolNameLike(x.Name, SearchPattern)
+        );
+      }
     }
 
     _listItems = items.ToList();
@@ -1838,24 +1833,104 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
   #endregion
 }
 
-// [EditorBrowsable(EditorBrowsableState.Never)]
-// public class ValuePicker : ValueSet<IGH_Goo>
-// {
-//   static readonly Guid s_componentGuid = new Guid("AFB12752-3ACB-4ACF-8102-16982A69CDAE");
-//   public override Guid ComponentGuid => s_componentGuid;
-//   public override GH_Exposure Exposure => GH_Exposure.secondary;
-//   public override string TypeName => "Data";
-//
-//   protected override IGH_Goo InstantiateT() => new GH_ObjectWrapper();
-//
-//   public ValuePicker()
-//     : base(
-//       name: "Value Picker",
-//       nickname: string.Empty,
-//       description: "A value picker for comparable values",
-//       category: "Params",
-//       subcategory: "Input"
-//     ) { }
-// }
-
 #pragma warning restore IDE0040
+
+internal static class Operator
+{
+  public enum CompareMethod
+  {
+    Nothing,
+    Equals,
+    StartsWith, // <
+    EndsWith, // >
+    Contains, // ?
+    Wildcard, // :
+    Regex, // ;
+  }
+
+  public static CompareMethod CompareMethodFromPattern(string pattern)
+  {
+    bool not = false;
+    return CompareMethodFromPattern(ref pattern, ref not);
+  }
+
+  public static CompareMethod CompareMethodFromPattern(ref string pattern, ref bool not)
+  {
+    if (pattern is null)
+    {
+      return CompareMethod.Nothing;
+    }
+
+    if (string.IsNullOrEmpty(pattern))
+    {
+      return CompareMethod.Equals;
+    }
+
+    switch (pattern[0])
+    {
+      case '~':
+        not = !not;
+        pattern = pattern[1..];
+        return CompareMethodFromPattern(ref pattern, ref not);
+      case '<':
+        pattern = pattern[1..];
+        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.StartsWith;
+      case '>':
+        pattern = pattern[1..];
+        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.EndsWith;
+      case '?':
+        pattern = pattern[1..];
+        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Contains;
+      case ':':
+        pattern = pattern[1..];
+        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Wildcard;
+      case ';':
+        pattern = pattern[1..];
+        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Regex;
+      default:
+        return CompareMethod.Equals;
+    }
+  }
+
+  public static bool IsSymbolNameLike(this string source, string pattern)
+  {
+    if (pattern is null)
+    {
+      return true;
+    }
+
+    if (pattern == source)
+    {
+      return true;
+    }
+
+    bool not = false;
+    switch (CompareMethodFromPattern(ref pattern, ref not))
+    {
+      case CompareMethod.Nothing:
+        return not ^ false;
+      case CompareMethod.Equals:
+        return not ^ string.Equals(source, pattern, StringComparison.Ordinal);
+      case CompareMethod.StartsWith:
+        return not ^ source.StartsWith(pattern, StringComparison.Ordinal);
+      case CompareMethod.EndsWith:
+        return not ^ source.EndsWith(pattern, StringComparison.Ordinal);
+      case CompareMethod.Contains:
+        return not ^ (source.IndexOf(pattern, StringComparison.Ordinal) >= 0);
+      /*
+      case CompareMethod.Wildcard:
+        return not
+          ^ Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(
+            source,
+            pattern,
+            Microsoft.VisualBasic.CompareMethod.Text
+          );
+        */
+      case CompareMethod.Regex:
+        var regex = new System.Text.RegularExpressions.Regex(pattern);
+        return not ^ regex.IsMatch(source);
+    }
+
+    return false;
+  }
+}
