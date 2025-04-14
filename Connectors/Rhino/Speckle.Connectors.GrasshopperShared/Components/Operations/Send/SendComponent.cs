@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
@@ -46,7 +47,17 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 
   public string? Url { get; private set; }
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("sP");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_operations_syncpublish.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

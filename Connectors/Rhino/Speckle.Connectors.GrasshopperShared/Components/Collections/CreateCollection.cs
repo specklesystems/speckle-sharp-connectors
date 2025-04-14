@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -15,7 +16,17 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => new("BDCE743E-7BDB-479B-AA81-19854AB5A254");
 
-  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("cC");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_collections_create.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 

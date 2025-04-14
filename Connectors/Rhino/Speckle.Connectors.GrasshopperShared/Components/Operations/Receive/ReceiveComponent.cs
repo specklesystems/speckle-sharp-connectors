@@ -1,3 +1,4 @@
+using System.Reflection;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Instances;
@@ -43,7 +44,17 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     ) { }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("sL");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_operations_syncload.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
