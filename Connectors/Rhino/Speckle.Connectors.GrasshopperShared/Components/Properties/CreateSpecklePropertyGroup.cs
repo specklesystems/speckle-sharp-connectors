@@ -1,11 +1,11 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
-using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
+namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
 
 [Guid("A3FD5CBF-DFB0-44DF-9988-04466EB8E5E6")]
 public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterComponent
@@ -21,7 +21,17 @@ public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterCom
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("cP");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_properties_create.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 

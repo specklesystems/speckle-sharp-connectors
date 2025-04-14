@@ -21,7 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\ExpandSpeckleObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleObject.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpecklePropertyGroup.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\CreateSpecklePropertyGroup.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\FilterPropertiesByPropertyGroupPaths.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\PropertyGroupPathsSelector.cs" />
@@ -77,5 +77,25 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_param_properties.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_collections_create.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_inputs_model.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_create.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_load.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_publish.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_properties_create.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_syncload.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_syncpublish.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_collection_selector.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_properties_selector.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_properties_query.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_query.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\speckle_collections_expand.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_expand.png" />
   </ItemGroup>
 </Project>

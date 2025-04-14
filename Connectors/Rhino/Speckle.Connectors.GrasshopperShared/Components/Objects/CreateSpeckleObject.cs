@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
@@ -22,7 +23,17 @@ public class CreateSpeckleObject : GH_Component
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("cO");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_objects_create.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -18,6 +19,18 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     ) { }
 
   public override Guid ComponentGuid => new Guid("65FC4D58-2209-41B6-9B22-BE51C8B28604");
+
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_collection_selector.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   protected override void LoadVolatileData()
   {

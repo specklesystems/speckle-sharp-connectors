@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -18,7 +19,17 @@ public class FilterObjectsByCollectionPaths : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateCircleIconBitmap("fO");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_objects_query.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   public FilterObjectsByCollectionPaths()
     : base(

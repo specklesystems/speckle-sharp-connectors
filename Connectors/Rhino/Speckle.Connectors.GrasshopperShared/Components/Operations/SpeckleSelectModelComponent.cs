@@ -1,3 +1,4 @@
+using System.Reflection;
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +41,17 @@ public class SpeckleSelectModelComponent : GH_Component
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("URL");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_inputs_model.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   public SpeckleSelectModelComponent()
     : base(

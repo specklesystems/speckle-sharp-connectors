@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Timers;
 using Grasshopper.GUI;
@@ -37,7 +38,17 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap Icon => BitmapBuilder.CreateSquareIconBitmap("P");
+  protected override Bitmap? Icon
+  {
+    get
+    {
+      Assembly assembly = GetType().Assembly;
+      var stream = assembly.GetManifestResourceStream(
+        assembly.GetName().Name + "." + "Resources" + ".speckle_operations_publish.png"
+      );
+      return stream != null ? new Bitmap(stream) : null;
+    }
+  }
 
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool AutoSend { get; set; }
