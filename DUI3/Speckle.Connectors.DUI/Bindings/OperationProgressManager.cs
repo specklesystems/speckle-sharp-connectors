@@ -75,5 +75,5 @@ public class OperationProgressManager : IOperationProgressManager
   }
 
   private static void SendProgress(IBrowserBridge bridge, string modelCardId, ModelCardProgress progress) =>
-    bridge.Send2(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
+    bridge.SendProgress(SET_MODEL_PROGRESS_UI_COMMAND_NAME, new { modelCardId, progress });
 }

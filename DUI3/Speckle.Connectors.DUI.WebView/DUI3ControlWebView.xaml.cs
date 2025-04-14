@@ -41,6 +41,8 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
     );
   }
 
+  public void SendProgress(string script) => ExecuteScript(script);
+
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
   {
     if (!e.IsSuccess)

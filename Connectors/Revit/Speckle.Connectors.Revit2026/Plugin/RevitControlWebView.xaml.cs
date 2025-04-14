@@ -38,8 +38,23 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
     _revitTask.Run(() => Browser.ExecuteScriptAsync(script));
   }
 
+  public void SendProgress(string script)
+  {
+    if (!Browser.IsInitialized)
+    {
+      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
+    }
+    //always invoke even on the main thread because it's better somehow
+    Browser.Dispatcher.Invoke(
+      //fire and forget
+      () => Browser.ExecuteScriptAsync(script),
+      DispatcherPriority.Background
+    );
+  }
+
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
   {
+    Console.WriteLine(CoreWebView2Environment.GetAvailableBrowserVersionString());
     if (!e.IsSuccess)
     {
       throw new InvalidOperationException("Webview Failed to initialize", e.InitializationException);

@@ -46,7 +46,7 @@ public class TeklaSelectionBinding : ISelectionBinding
   private void UpdateSelection()
   {
     SelectionInfo selInfo = GetSelection();
-    Parent.Send2(SELECTION_EVENT, selInfo);
+    Parent.Send(SELECTION_EVENT, selInfo);
   }
 
   public SelectionInfo GetSelection()
