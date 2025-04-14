@@ -4,7 +4,6 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
-using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
