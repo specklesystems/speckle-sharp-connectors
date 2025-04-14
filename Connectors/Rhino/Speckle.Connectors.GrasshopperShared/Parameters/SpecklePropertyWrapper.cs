@@ -1,9 +1,5 @@
-using System.Runtime.InteropServices;
 using Grasshopper.Documentation;
-using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Speckle.Connectors.GrasshopperShared.Components;
-using Speckle.Connectors.GrasshopperShared.HostApp;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -139,6 +135,7 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
   }
 }
 
+/* Don't need this for now
 [Guid("B3101D12-DA73-45DF-B617-16E1C65BB37C")]
 public class SpecklePropertyParam : GH_Param<SpecklePropertyGoo>
 {
@@ -165,3 +162,4 @@ public class SpecklePropertyParam : GH_Param<SpecklePropertyGoo>
   public SpecklePropertyParam(IGH_InstanceDescription tag, GH_ParamAccess access)
     : base(tag, access) { }
 }
+*/
