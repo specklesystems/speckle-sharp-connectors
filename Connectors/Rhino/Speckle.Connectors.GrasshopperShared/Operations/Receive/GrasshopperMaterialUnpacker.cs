@@ -3,7 +3,7 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
+namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 internal sealed class GrasshopperMaterialUnpacker
 {

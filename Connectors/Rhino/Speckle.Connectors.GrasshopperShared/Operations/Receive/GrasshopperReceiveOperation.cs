@@ -44,7 +44,7 @@ public class GrasshopperReceiveOperation
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = _clientFactory.Create(account);
+    using IClient apiClient = _clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
     var version = await apiClient

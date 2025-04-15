@@ -351,7 +351,7 @@ public class SpeckleSelectModelComponent : GH_Component
       return;
     }
 
-    Client client = _clientFactory.Create(_account);
+    IClient client = _clientFactory.Create(_account);
 
     LastFetchedProjects = client.ActiveUser.GetProjects(10, null, null).Result;
     ProjectContextMenuButton.Enabled = true;
@@ -444,7 +444,7 @@ public class SpeckleSelectModelComponent : GH_Component
       throw new SpeckleException("No account found for server URL");
     }
 
-    Client client = _clientFactory.Create(_account);
+    IClient client = _clientFactory.Create(_account);
 
     var project = client.Project.Get(resource.ProjectId).Result;
     OnProjectSelected(project, false);

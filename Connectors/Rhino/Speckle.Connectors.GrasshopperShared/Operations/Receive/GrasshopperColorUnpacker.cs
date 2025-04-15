@@ -2,7 +2,7 @@ using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
+namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 internal sealed class GrasshopperColorUnpacker
 {
