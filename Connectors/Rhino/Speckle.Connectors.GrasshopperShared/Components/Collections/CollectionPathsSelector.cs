@@ -11,7 +11,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 {
   public CollectionPathsSelector()
     : base(
-      "Collection Paths Selector",
+      "Collection Selector",
       "cSelect",
       "Allows you to select a set of collection paths for filtering",
       ComponentCategories.PRIMARY_RIBBON,
@@ -26,7 +26,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     {
       Assembly assembly = GetType().Assembly;
       var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_collection_selector.png"
+        assembly.GetName().Name + "." + "Resources" + ".speckle_inputs_collection.png"
       );
       return stream != null ? new Bitmap(stream) : null;
     }

@@ -377,7 +377,7 @@ public class SendComponentWorker : WorkerInstance
           //sendComponent.Message = $"{p.Status}";
         });
 
-        var result = await sendComponent
+        SendOperationResult? result = await sendComponent
           .SendOperation.Execute(
             new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
             sendInfo,
@@ -386,11 +386,11 @@ public class SendComponentWorker : WorkerInstance
           )
           .ConfigureAwait(false);
 
-        // TODO: need the created version id here from the send result, not the rootobj id
         SpeckleUrlModelVersionResource? createdVersion =
-          new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId, result.RootObjId);
+          new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId, result.VersionId);
         OutputParam = createdVersion;
-        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+        sendComponent.Url =
+          $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}@{result.VersionId}";
 
         // DONE
         done();

@@ -91,11 +91,13 @@
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_syncload.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_syncpublish.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_collection_selector.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_properties_selector.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_properties_query.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_query.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_collections_expand.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_expand.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_inputs_collection.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\speckle_inputs_property.png" />
   </ItemGroup>
 </Project>

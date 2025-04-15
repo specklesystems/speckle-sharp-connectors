@@ -13,9 +13,9 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 {
   public PropertyGroupPathsSelector()
     : base(
-      "Property Group Paths Selector",
+      "Property Selector",
       "pSelect",
-      "Allows you to select a set of property group paths for filtering",
+      "Allows you to select a set of property paths for filtering",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
@@ -28,7 +28,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     {
       Assembly assembly = GetType().Assembly;
       var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_properties_selector.png"
+        assembly.GetName().Name + "." + "Resources" + ".speckle_inputs_property.png"
       );
       return stream != null ? new Bitmap(stream) : null;
     }
