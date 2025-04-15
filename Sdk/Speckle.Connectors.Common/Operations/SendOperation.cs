@@ -40,15 +40,15 @@ public sealed class SendOperation<T>(
     buildResult.RootObject["version"] = 3;
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (rootObjId, convertedReferences) = await threadContext.RunOnWorkerAsync(
+    var (results, versionId) = await threadContext.RunOnWorkerAsync(
       () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
     );
     ct.ThrowIfCancellationRequested();
 
-    return new(rootObjId, convertedReferences, buildResult.ConversionResults);
+    return new(results.RootId, versionId, results.ConvertedReferences, buildResult.ConversionResults);
   }
 
-  public async Task<SerializeProcessResults> Send(
+  public async Task<(SerializeProcessResults, string)> Send(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
@@ -80,14 +80,15 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
+    var versionId = await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
 
-    return sendResult;
+    return (sendResult, versionId);
   }
 }
 
 public record SendOperationResult(
   string RootObjId,
+  string VersionId,
   IReadOnlyDictionary<Id, ObjectReference> ConvertedReferences,
-  IEnumerable<SendConversionResult> ConversionResults
+  IReadOnlyList<SendConversionResult> ConversionResults
 );
