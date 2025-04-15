@@ -22,12 +22,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\ExpandSpeckleObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\CreateSpecklePropertyGroup.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperMaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\FilterPropertiesByPropertyGroupPaths.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\PropertyGroupPathsSelector.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\LocalToGlobalMapHandler.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperColorUnpacker.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperCollectionRebuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\LocalToGlobalMapHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperColorUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveAsyncComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperMaterialPacker.cs" />

@@ -6,7 +6,7 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
+namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 internal sealed class LocalToGlobalMapHandler
 {
