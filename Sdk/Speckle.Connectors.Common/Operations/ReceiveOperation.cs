@@ -30,7 +30,7 @@ public sealed class ReceiveOperation(
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = clientFactory.Create(account);
+    using var apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
     var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);

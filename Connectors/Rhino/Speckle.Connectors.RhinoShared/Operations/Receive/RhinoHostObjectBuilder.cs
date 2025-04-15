@@ -16,6 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using DataObject = Speckle.Objects.Data.DataObject;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -34,6 +35,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
+
+  private const string PROPERTY_PATH_DELIMITER = ".";
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -155,6 +158,25 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             // 1: create object attributes for baking
             string name = obj["name"] as string ?? "";
             using ObjectAttributes atts = new() { LayerIndex = layerIndex, Name = name };
+            Dictionary<string, string> userStrings = new();
+            Dictionary<string, object?> properties = obj is DataObject dataObj
+              ? dataObj.properties
+              : obj["properties"] as Dictionary<string, object?> ?? new();
+            FlattenDictionaryToUserStrings(properties, userStrings, "");
+            foreach (var kvp in userStrings)
+            {
+              // POC: we're skipping properties that end with `.name` , `.units`, etc because this is causing a lot of noise atm.
+              if (
+                kvp.Key.EndsWith(".units")
+                || kvp.Key.EndsWith(".name")
+                || kvp.Key.EndsWith(".internalDefinitionName")
+              )
+              {
+                continue;
+              }
+
+              atts.SetUserString(kvp.Key, kvp.Value);
+            }
 
             // 2: convert
             var result = _converter.Convert(obj);
@@ -187,7 +209,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             if (conversionIds.Count == 0)
             {
               // TODO: add this condition to report object - same as in autocad
-              throw new SpeckleException($"Failed to convert object.");
+              throw new SpeckleException("Object did not convert to any native geometry");
             }
 
             // 4: log
@@ -365,5 +387,27 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     return objectIds;
+  }
+
+  // changes a properties dictionary to <string,string> to assign as user strings.
+  private void FlattenDictionaryToUserStrings(
+    Dictionary<string, object?> dict,
+    Dictionary<string, string> flattenedDict,
+    string keyPrefix = ""
+  )
+  {
+    foreach (var kvp in dict)
+    {
+      string newKey = string.IsNullOrEmpty(keyPrefix) ? kvp.Key : $"{keyPrefix}{PROPERTY_PATH_DELIMITER}{kvp.Key}";
+
+      if (kvp.Value is Dictionary<string, object?> childDict)
+      {
+        FlattenDictionaryToUserStrings(childDict, flattenedDict, newKey);
+      }
+      else
+      {
+        flattenedDict.Add(newKey, kvp.Value?.ToString() ?? "");
+      }
+    }
   }
 }
