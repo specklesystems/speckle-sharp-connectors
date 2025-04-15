@@ -120,7 +120,7 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).Returns(Task.CompletedTask);
+    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 
@@ -135,7 +135,8 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var result = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
+    var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
     result.Should().Be(serializeProcessResults);
+    version.Should().Be("version");
   }
 }
