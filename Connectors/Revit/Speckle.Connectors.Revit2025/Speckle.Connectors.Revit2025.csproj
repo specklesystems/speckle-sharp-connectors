@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CefSharp.Wpf.NETCore" IncludeAssets="compile" VersionOverride="119.4.30.0" />
+    <PackageReference Include="CefSharp.Wpf.NETCore" NoWarn="NU1903" IncludeAssets="compile" VersionOverride="119.4.30.0" />
     <PackageReference Include="Revit.Async" />
   </ItemGroup>
 
