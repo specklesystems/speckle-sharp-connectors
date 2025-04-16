@@ -1,8 +1,6 @@
 using Autodesk.Revit.DB;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.RevitShared.Services;
 
@@ -16,25 +14,14 @@ public sealed class ScalingServiceToSpeckle : IScalingServiceToSpeckle
   // POC: this seems like the reverse relationship
   public ScalingServiceToSpeckle(RevitContext revitContext)
   {
-    // As part of CNX-1431, we see that scaling must always be w.r.t. the main model
-    // for linked models, Revit already handles the scaling (if any) between main and linked models internally
-    // since we cache main model elements and not linked model elements (linked model elements always require reconversion),
-    // consecutive sends would see the second send being initialized with the settings of the linked model which is wrong
-    // hence why the below enforces using the main model doc
-    var mainModelDoc =
-      revitContext.UIApplication.NotNull().ActiveUIDocument
-      ?? throw new SpeckleException("Unable to retrieve active UI document");
-    DB.Units documentUnits = mainModelDoc.Document.GetUnits();
-    FormatOptions formatOptions = documentUnits.GetFormatOptions(SpecTypeId.Length);
-    var lengthUnitsTypeId = formatOptions.GetUnitTypeId();
-    _defaultLengthConversionFactor = ScaleStatic(1, lengthUnitsTypeId);
+    // Always use the main document's scaling factor to ensure consistency for both main model and linked model elements
+    // this need became apparent for CNX-1431 fix
+    _defaultLengthConversionFactor = revitContext.GetMainDocumentScalingFactor();
   }
 
   // POC: throughout Revit conversions there's lots of comparison to check the units are valid
-  // atm we seem to be expecting that this is correct and that the scaling will be fixed for the duration
-  // of a conversion, but...  I have some concerns that the units and the conversion may change
-  // this needs to be considered and perhaps scaling should be part of the context, or at least part of the IRevitConversionContextStack
-  // see comments on above ScalingServiceToSpeckle as to why this is not an issue for linked models - but maybe other gremlins exist?
+  // atm we assume that the scaling is fixed for the duration of a conversion and completely dependent on the main
+  // model settings (not linked models), hence the explicit GetMainDocumentScalingFactor in RevitContext
   public double ScaleLength(double length) => length * _defaultLengthConversionFactor;
 
   // POC: not sure about this???
