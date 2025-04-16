@@ -24,12 +24,13 @@ public static class Connector
 
   public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
+    string hpstAppExePath,
     Application application,
     HostAppVersion version
   )
   {
     var (logging, tracing, metrics, updateService) = Observability.Initialize(
-      application.Name,
+      hpstAppExePath,
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
@@ -76,7 +77,7 @@ public static class Connector
     );
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     serviceCollection.AddTransient<IUpdateService>(sp => new UpdateService(updateService));
-    
+
     return new LoggingDisposable(tracing, metrics);
   }
 }

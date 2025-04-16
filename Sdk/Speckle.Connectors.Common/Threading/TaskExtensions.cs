@@ -1,4 +1,3 @@
-
 namespace Speckle.Connectors.Common.Threading;
 
 public static class TaskExtensions

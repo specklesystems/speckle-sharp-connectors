@@ -9,13 +9,21 @@ using Speckle.Sdk.Logging;
 namespace Speckle.Connectors.Common;
 
 public partial interface IUpdateService : IDisposable;
+
 [GenerateAutoInterface]
 public sealed class UpdateService(ConnectorUpdateService updateService) : IUpdateService
 {
-  
   public Task<Version?> CheckForUpdatesAsync() => updateService.CheckForUpdatesAsync();
+
   public Task PrepareUpdateAsync(Version version) => updateService.PrepareUpdateAsync(version);
+
   public void FinalizeUpdate(bool needRestart) => updateService.FinalizeUpdate(needRestart);
+
+  public bool IsUpdatePrepared(Version version) => updateService.IsUpdatePrepared(version);
+
+  public void LaunchUpdater(Version version, bool restart = false, string restartArguments = "") =>
+    updateService.LaunchUpdater(version, restart, restartArguments);
+
   [AutoInterfaceIgnore]
   public void Dispose() => updateService.Dispose();
 }

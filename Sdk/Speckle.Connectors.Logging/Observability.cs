@@ -6,7 +6,7 @@ namespace Speckle.Connectors.Logging;
 public static class Observability
 {
   public static (LoggerProvider, IDisposable, IDisposable, ConnectorUpdateService) Initialize(
-    string name,
+    string hpstAppExePath,
     string applicationAndVersion,
     string slug,
     string connectorVersion,
@@ -22,7 +22,13 @@ public static class Observability
     );
     var tracing = TracingBuilder.Initialize(observability.Tracing, resourceBuilder);
     var metrics = MetricsBuilder.Initialize(observability.Metrics, resourceBuilder);
-    var updater = new ConnectorUpdateService(name, slug, logging.CreateLogger<ConnectorUpdateService>(), logging.CreateLogger<ConnectorFeedResolver>());
+    var updater = new ConnectorUpdateService(
+      hpstAppExePath,
+      slug,
+      logging.CreateLogger<ConnectorUpdateService>(),
+      logging.CreateLogger<ConnectorFeedResolver>(),
+      logging.CreateLogger<InnoSetupExecutor>()
+    );
     return (logging, tracing, metrics, updater);
   }
 }

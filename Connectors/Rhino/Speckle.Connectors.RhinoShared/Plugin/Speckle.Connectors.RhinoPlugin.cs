@@ -1,4 +1,6 @@
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
@@ -45,7 +47,8 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
       var services = new ServiceCollection();
-      _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
+      var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
+      _disposableLogger = services.Initialize(path, HostApplications.Rhino, GetVersion());
       services.AddRhino();
       services.AddRhinoConverters();
 
@@ -62,8 +65,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       return LoadReturnCode.ErrorShowDialog;
     }
   }
-  
-  
+
   private async Task<bool> CheckForUpdatesAsync()
   {
     var updateServices = Container.GetRequiredService<IUpdateService>();
@@ -72,7 +74,15 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     {
       return false;
     }
-    await updateServices.PrepareUpdateAsync(version);
+
+    if (!updateServices.IsUpdatePrepared(version))
+    {
+      await updateServices.PrepareUpdateAsync(version);
+    }
+
+    updateServices.LaunchUpdater(version);
+    // Terminate the running application so that the updater can overwrite files
+    RhinoApp.Exit(false);
     return true;
   }
 

@@ -1,10 +1,10 @@
-﻿#if NET48
-using System.Net.Http;
-#endif
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using Onova.Services;
+#if NET48
+using System.Net.Http;
+#endif
 
 namespace Speckle.Connectors.Logging.Updates;
 
@@ -14,20 +14,15 @@ public class ConnectorFeedResolver(string slug, ILogger<ConnectorFeedResolver> l
   {
     public ConnectorVersion[] Versions { get; init; }
   }
-  
+
   private readonly Dictionary<Version, ConnectorVersion> _versions = new();
-  public async Task<IReadOnlyList<Version>> GetPackageVersionsAsync(
-    CancellationToken cancellationToken)
+
+  public async Task<IReadOnlyList<Version>> GetPackageVersionsAsync(CancellationToken cancellationToken)
   {
     var feed = $"https://releases.speckle.dev/manager2/feeds/{slug.ToLowerInvariant()}-v3.json";
     logger.LogInformation($"Getting package versions from {feed}");
     using HttpClient client = new();
-    using var response = await client
-      .GetAsync(
-        new Uri(feed),
-        cancellationToken
-      )
-      .ConfigureAwait(false);
+    using var response = await client.GetAsync(new Uri(feed), cancellationToken).ConfigureAwait(false);
 
     response.EnsureSuccessStatusCode();
 
@@ -53,8 +48,12 @@ public class ConnectorFeedResolver(string slug, ILogger<ConnectorFeedResolver> l
     return _versions.Keys.ToList();
   }
 
-  public async Task DownloadPackageAsync(Version version, string destFilePath, IProgress<double>? progress = null,
-    CancellationToken cancellationToken = default)
+  public async Task DownloadPackageAsync(
+    Version version,
+    string destFilePath,
+    IProgress<double>? progress = null,
+    CancellationToken cancellationToken = default
+  )
   {
     if (!_versions.TryGetValue(version, out var connectorVersion))
     {
