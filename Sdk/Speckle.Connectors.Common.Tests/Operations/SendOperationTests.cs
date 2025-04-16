@@ -51,11 +51,12 @@ public class SendOperationTests : MoqTest
     rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
+    var versionId = "versionId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
     threadContext
-      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<SerializeProcessResults>>>(), false))
-      .ReturnsAsync(serializeProcessResults);
+      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, string)>>>(), false))
+      .ReturnsAsync((serializeProcessResults, versionId));
 
     var sp = services.BuildServiceProvider();
 
@@ -74,6 +75,7 @@ public class SendOperationTests : MoqTest
     result.Should().NotBeNull();
     rootResult.RootObject["version"].Should().Be(3);
     result.RootObjId.Should().Be(rootId);
+    result.VersionId.Should().Be(versionId);
     result.ConvertedReferences.Should().BeSameAs(refs);
     result.ConversionResults.Should().BeSameAs(conversionResults);
   }
@@ -120,7 +122,7 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).Returns(Task.CompletedTask);
+    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 
@@ -135,7 +137,8 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var result = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
+    var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
     result.Should().Be(serializeProcessResults);
+    version.Should().Be("version");
   }
 }
