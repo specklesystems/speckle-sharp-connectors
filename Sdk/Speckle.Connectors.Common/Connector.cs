@@ -3,8 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Logging;
-using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Application = Speckle.Sdk.Application;
 
 namespace Speckle.Connectors.Common;
 
@@ -28,7 +28,8 @@ public static class Connector
     HostAppVersion version
   )
   {
-    var (logging, tracing, metrics) = Observability.Initialize(
+    var (logging, tracing, metrics, updateService) = Observability.Initialize(
+      application.Name,
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
@@ -71,9 +72,11 @@ public static class Connector
       application,
       HostApplications.GetVersion(version),
       Assembly.GetExecutingAssembly().GetVersion(),
-      typeof(Point).Assembly
+      typeof(Speckle.Objects.Geometry.Point).Assembly
     );
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
+    serviceCollection.AddTransient<IUpdateService>(sp => new UpdateService(updateService));
+    
     return new LoggingDisposable(tracing, metrics);
   }
 }

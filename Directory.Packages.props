@@ -19,9 +19,11 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
+    <PackageVersion Include="NuGet.Versioning" Version="6.13.2" />
     <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="4.6.0" />
+    <PackageVersion Include="Onova" Version="2.6.13" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
@@ -55,6 +57,7 @@
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />
-    <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" /> <!-- allows for non-windows platforms to target net48 without error -->
+    <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+    <!-- allows for non-windows platforms to target net48 without error -->
   </ItemGroup>
 </Project>

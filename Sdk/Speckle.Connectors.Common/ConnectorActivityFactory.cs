@@ -1,12 +1,26 @@
 ﻿using System.Runtime.CompilerServices;
 using Speckle.Connectors.Logging;
+using Speckle.Connectors.Logging.Updates;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
 
-public sealed class ConnectorActivityFactory(ISpeckleApplication application) : ISdkActivityFactory, IDisposable
+public partial interface IUpdateService : IDisposable;
+[GenerateAutoInterface]
+public sealed class UpdateService(ConnectorUpdateService updateService) : IUpdateService
+{
+  
+  public Task<Version?> CheckForUpdatesAsync() => updateService.CheckForUpdatesAsync();
+  public Task PrepareUpdateAsync(Version version) => updateService.PrepareUpdateAsync(version);
+  public void FinalizeUpdate(bool needRestart) => updateService.FinalizeUpdate(needRestart);
+  [AutoInterfaceIgnore]
+  public void Dispose() => updateService.Dispose();
+}
+
+public sealed class ConnectorActivityFactory(ISpeckleApplication application) : ISdkActivityFactory
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 

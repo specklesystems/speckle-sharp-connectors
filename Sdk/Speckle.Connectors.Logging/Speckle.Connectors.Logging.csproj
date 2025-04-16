@@ -21,5 +21,7 @@
     <PackageReference Include="Serilog.Extensions.Logging"  PrivateAssets="all"/>
     <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all"/>
     <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all"/>
+    <PackageReference Include="NuGet.Versioning" PrivateAssets="all"/> 
+    <PackageReference Include="Onova"  PrivateAssets="all"/>
   </ItemGroup>
 </Project>
