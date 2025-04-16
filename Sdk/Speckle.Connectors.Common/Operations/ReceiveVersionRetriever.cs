@@ -1,0 +1,36 @@
+﻿using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Credentials;
+
+namespace Speckle.Connectors.Common.Operations;
+
+[GenerateAutoInterface]
+public class ReceiveVersionRetriever(IClientFactory clientFactory) : IReceiveVersionRetriever
+{
+  public async Task<Speckle.Sdk.Api.GraphQL.Models.Version> GetVersion(
+    Account account,
+    ReceiveInfo receiveInfo,
+    CancellationToken cancellationToken
+  )
+  {
+    using var apiClient = clientFactory.Create(account);
+
+    var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
+    return version;
+  }
+
+  public async Task VersionReceived(
+    Account account,
+    Speckle.Sdk.Api.GraphQL.Models.Version version,
+    ReceiveInfo receiveInfo,
+    CancellationToken cancellationToken
+  )
+  {
+    using var apiClient = clientFactory.Create(account);
+
+    await apiClient.Version.Received(
+      new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
+      cancellationToken
+    );
+  }
+}
