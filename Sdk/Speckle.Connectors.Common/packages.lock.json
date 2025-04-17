@@ -317,7 +317,7 @@
         "contentHash": "20DtS+FsDRsOD9+AU3TwNFZ0qrKo5f6f7B5ZR9wStsIHHHC9k7DpjbCvuNtmnSjx54MD+TJC7wV2f5iyGVPj1A=="
       }
     },
-    "net6.0": {
+    "net6.0-windows7.0": {
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Direct",
         "requested": "[2.2.0, )",
@@ -594,7 +594,7 @@
         "contentHash": "20DtS+FsDRsOD9+AU3TwNFZ0qrKo5f6f7B5ZR9wStsIHHHC9k7DpjbCvuNtmnSjx54MD+TJC7wV2f5iyGVPj1A=="
       }
     },
-    "net8.0": {
+    "net8.0-windows7.0": {
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Direct",
         "requested": "[2.2.0, )",

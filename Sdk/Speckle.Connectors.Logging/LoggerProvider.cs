@@ -8,6 +8,8 @@ public sealed class LoggerProvider : IDisposable
 
   internal LoggerProvider(ILoggerFactory provider) => _provider = provider;
 
+  internal ILogger<T> CreateLogger<T>() => _provider.CreateLogger<T>();
+
   public Logger CreateLogger(string categoryName) => new(_provider.CreateLogger(categoryName));
 
   public void Dispose() => _provider.Dispose();

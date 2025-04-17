@@ -1,6 +1,9 @@
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Rhino.PlugIns;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
@@ -44,13 +47,15 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
       var services = new ServiceCollection();
-      _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
+      var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
+      _disposableLogger = services.Initialize(path, HostApplications.Rhino, GetVersion());
       services.AddRhino();
       services.AddRhinoConverters();
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
       Container.UseDUI();
+      CheckForUpdatesAsync().WaitAndRunTask();
 
       return LoadReturnCode.Success;
     }
@@ -59,6 +64,26 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       errorMessage = e.ToFormattedString();
       return LoadReturnCode.ErrorShowDialog;
     }
+  }
+
+  private async Task<bool> CheckForUpdatesAsync()
+  {
+    var updateServices = Container.GetRequiredService<IUpdateService>();
+    var version = await updateServices.CheckForUpdatesAsync();
+    if (version is null)
+    {
+      return false;
+    }
+
+    if (!updateServices.IsUpdatePrepared(version))
+    {
+      await updateServices.PrepareUpdateAsync(version);
+    }
+
+    updateServices.LaunchUpdater(version);
+    // Terminate the running application so that the updater can overwrite files
+    RhinoApp.Exit(false);
+    return true;
   }
 
   private HostAppVersion GetVersion()

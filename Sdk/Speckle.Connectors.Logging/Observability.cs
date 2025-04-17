@@ -1,10 +1,12 @@
 ﻿using Speckle.Connectors.Logging.Internal;
+using Speckle.Connectors.Logging.Updates;
 
 namespace Speckle.Connectors.Logging;
 
 public static class Observability
 {
-  public static (LoggerProvider, IDisposable, IDisposable) Initialize(
+  public static (LoggerProvider, IDisposable, IDisposable, ConnectorUpdateService) Initialize(
+    string hpstAppExePath,
     string applicationAndVersion,
     string slug,
     string connectorVersion,
@@ -20,6 +22,13 @@ public static class Observability
     );
     var tracing = TracingBuilder.Initialize(observability.Tracing, resourceBuilder);
     var metrics = MetricsBuilder.Initialize(observability.Metrics, resourceBuilder);
-    return (logging, tracing, metrics);
+    var updater = new ConnectorUpdateService(
+      hpstAppExePath,
+      slug,
+      logging.CreateLogger<ConnectorUpdateService>(),
+      logging.CreateLogger<ConnectorFeedResolver>(),
+      logging.CreateLogger<InnoSetupExecutor>()
+    );
+    return (logging, tracing, metrics, updater);
   }
 }
