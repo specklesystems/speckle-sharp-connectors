@@ -1,8 +1,8 @@
 using Autodesk.Revit.DB;
-using Revit.Async;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.RevitShared.Helpers;
@@ -23,13 +23,15 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   private readonly RevitContext _revitContext;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IRevitTask _revitTask;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
     IBrowserBridge parent,
     RevitContext revitContext,
     ISpeckleApplication speckleApplication,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IRevitTask revitTask
   )
   {
     Name = "baseBinding";
@@ -38,6 +40,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _revitContext = revitContext;
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _revitTask = revitTask;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
@@ -105,7 +108,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
         var view = revitViewsFilter.GetView();
         if (view is not null)
         {
-          await RevitTask
+          await _revitTask
             .RunAsync(() =>
             {
               _revitContext.UIApplication.ActiveUIDocument.ActiveView = view;
@@ -170,7 +173,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
-    await RevitTask
+    await _revitTask
       .RunAsync(() =>
       {
         activeUIDoc.Selection.SetElementIds(objectIds);

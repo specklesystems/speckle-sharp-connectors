@@ -68,7 +68,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IRevitTask revitTask
   )
     : base("sendBinding", bridge)
   {
@@ -92,9 +93,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    revitTask.Run(() =>
+    {
+      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    });
   }
 
   public List<ISendFilter> GetSendFilters() =>

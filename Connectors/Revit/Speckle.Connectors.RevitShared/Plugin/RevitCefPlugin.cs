@@ -1,3 +1,4 @@
+#if !REVIT2026_OR_GREATER
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -6,7 +7,6 @@ using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -104,7 +104,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    RevitTask.Initialize(uiApplication);
+    global::Revit.Async.RevitTask.Initialize(uiApplication);
 
     PostApplicationInit(); // for double-click file open
   }
@@ -181,3 +181,4 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     return null;
   }
 }
+#endif
