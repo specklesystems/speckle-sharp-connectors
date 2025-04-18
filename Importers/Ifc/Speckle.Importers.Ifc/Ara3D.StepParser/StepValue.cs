@@ -18,8 +18,8 @@ public class StepValue;
 
 public class StepEntity : StepValue
 {
-  public readonly ByteSpan EntityType;
-  public readonly StepList Attributes;
+  public ByteSpan EntityType { get; }
+  public StepList Attributes { get; }
 
   public StepEntity(ByteSpan entityType, StepList attributes)
   {
@@ -33,7 +33,7 @@ public class StepEntity : StepValue
 
 public class StepList : StepValue
 {
-  public readonly List<StepValue> Values;
+  public List<StepValue> Values { get; }
 
   public StepList(List<StepValue> values) => Values = values;
 
@@ -44,12 +44,12 @@ public class StepList : StepValue
 
 public class StepString : StepValue
 {
-  public readonly ByteSpan Value;
+  public ByteSpan Value { get; }
 
   public static StepString Create(StepToken token)
   {
     var span = token.Span;
-    Debug.Assert(token.Type == StepTokenType.String);
+    Debug.Assert(token.Type == StepTokenType.STRING);
     Debug.Assert(span.Length >= 2);
     Debug.Assert(span.First() == '\'' || span.First() == '"');
     Debug.Assert(span.Last() == '\'' || span.Last() == '"');
@@ -63,7 +63,7 @@ public class StepString : StepValue
 
 public class StepSymbol : StepValue
 {
-  public readonly ByteSpan Name;
+  public ByteSpan Name { get; }
 
   public StepSymbol(ByteSpan name) => Name = name;
 
@@ -71,7 +71,7 @@ public class StepSymbol : StepValue
 
   public static StepSymbol Create(StepToken token)
   {
-    Debug.Assert(token.Type == StepTokenType.Symbol);
+    Debug.Assert(token.Type == StepTokenType.SYMBOL);
     var span = token.Span;
     Debug.Assert(span.Length >= 2);
     Debug.Assert(span.First() == '.');
@@ -82,7 +82,7 @@ public class StepSymbol : StepValue
 
 public class StepNumber : StepValue
 {
-  public readonly ByteSpan Span;
+  public ByteSpan Span { get; }
   public double Value => Span.ToDouble();
 
   public StepNumber(ByteSpan span) => Span = span;
@@ -91,7 +91,7 @@ public class StepNumber : StepValue
 
   public static StepNumber Create(StepToken token)
   {
-    Debug.Assert(token.Type == StepTokenType.Number);
+    Debug.Assert(token.Type == StepTokenType.NUMBER);
     var span = token.Span;
     return new(span);
   }
@@ -99,7 +99,7 @@ public class StepNumber : StepValue
 
 public class StepId : StepValue
 {
-  public readonly uint Id;
+  public uint Id { get; }
 
   public StepId(uint id) => Id = id;
 
@@ -107,7 +107,7 @@ public class StepId : StepValue
 
   public static unsafe StepId Create(StepToken token)
   {
-    Debug.Assert(token.Type == StepTokenType.Id);
+    Debug.Assert(token.Type == StepTokenType.ID);
     var span = token.Span;
     Debug.Assert(span.Length >= 2);
     Debug.Assert(span.First() == '#');
@@ -123,17 +123,17 @@ public class StepId : StepValue
 
 public class StepUnassigned : StepValue
 {
-  public static readonly StepUnassigned Default = new();
+  private static readonly StepUnassigned s_default = new();
 
   public override string ToString() => "$";
 
   public static StepUnassigned Create(StepToken token)
   {
-    Debug.Assert(token.Type == StepTokenType.Unassigned);
+    Debug.Assert(token.Type == StepTokenType.UNASSIGNED);
     var span = token.Span;
     Debug.Assert(span.Length == 1);
     Debug.Assert(span.First() == '$');
-    return Default;
+    return s_default;
   }
 }
 
@@ -145,10 +145,9 @@ public class StepRedeclared : StepValue
 
   public static StepRedeclared Create(StepToken token)
   {
-    Debug.Assert(token.Type == StepTokenType.Redeclared);
-    var span = token.Span;
-    Debug.Assert(span.Length == 1);
-    Debug.Assert(span.First() == '*');
+    Debug.Assert(token.Type == StepTokenType.REDECLARED);
+    Debug.Assert(token.Span.Length == 1);
+    Debug.Assert(token.Span.First() == '*');
     return Default;
   }
 }

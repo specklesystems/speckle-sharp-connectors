@@ -15,7 +15,7 @@
   
   <PropertyGroup Label="Ignored Compile Warnings">
     <NoWarn>
-      IDE1006;IDE0130;IDE0011;CA1051;CA1720;CA1002;CA1054;CA1028;CA1721;CA1502;CA1065;NU5104;
+      CA1720;CA1065;CA1502;
       $(NoWarn)
     </NoWarn>
   </PropertyGroup>

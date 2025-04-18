@@ -13,7 +13,7 @@ namespace Speckle.Importers.Ifc.Ara3D.IfcParser.Schema;
 // https://standards.buildingsmart.org/IFC/RELEASE/IFC2x3/TC1/HTML/ifcproductextension/lexical/ifcelementquantity.htm
 public class IfcPropSet : IfcNode
 {
-  public readonly StepList? PropertyIdList;
+  public StepList? PropertyIdList { get; }
 
   public IfcPropSet(IfcGraph graph, StepInstance lineData, StepList? propertyIdList)
     : base(graph, lineData)
@@ -31,7 +31,10 @@ public class IfcPropSet : IfcNode
       var id = PropertyId(i);
       var node = Graph.GetNode(id);
       if (node is not IfcProp prop)
+      {
         throw new SpeckleIfcException($"Expected a property not {node} from id {id}");
+      }
+
       yield return prop;
     }
   }
