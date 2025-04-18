@@ -24,7 +24,7 @@ public static class ServiceRegistration
 {
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddConnectorUtils();
+    serviceCollection.AddConnectors();
     serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
 

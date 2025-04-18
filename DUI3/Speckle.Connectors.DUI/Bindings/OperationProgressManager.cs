@@ -31,7 +31,6 @@ public class OperationProgressManager : IOperationProgressManager
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
     {
-      Console.WriteLine($"Progress: {args.Status} - {args.Progress}");
       SetModelProgress(
         bridge,
         modelCardId,
@@ -70,6 +69,7 @@ public class OperationProgressManager : IOperationProgressManager
     {
       return;
     }
+    Console.WriteLine($"Progress: {progress.Status} - {progress.Progress}");
     s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
     SendProgress(bridge, modelCardId, progress);
   }

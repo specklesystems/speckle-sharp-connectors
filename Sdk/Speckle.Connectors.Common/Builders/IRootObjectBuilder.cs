@@ -31,4 +31,4 @@ public interface IRootObjectBuilder<in T>
 //   );
 // }
 
-public record RootObjectBuilderResult(Base RootObject, IEnumerable<SendConversionResult> ConversionResults);
+public record RootObjectBuilderResult(Base RootObject, IReadOnlyList<SendConversionResult> ConversionResults);

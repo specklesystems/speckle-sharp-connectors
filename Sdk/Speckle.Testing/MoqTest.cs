@@ -1,6 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
+using Speckle.Sdk;
 
 namespace Speckle.Testing;
 
@@ -17,4 +20,11 @@ public abstract class MoqTest
 
   protected Mock<T> Create<T>(MockBehavior behavior = MockBehavior.Strict)
     where T : class => Repository.Create<T>(behavior);
+
+  protected IServiceCollection CreateServices(params Assembly[] assemblies)
+  {
+    var services = new ServiceCollection();
+    services.AddSpeckleSdk(new("Tests", "tests"), "test", assemblies);
+    return services;
+  }
 }

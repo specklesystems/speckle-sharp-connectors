@@ -7,26 +7,13 @@ using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.GeometryObject>>
+public class BaseToHostGeometryObjectConverter(
+  ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
+  ITypedConverter<ICurve, DB.CurveArray> curveConverter,
+  ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
+  ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter
+) : ITypedConverter<Base, List<DB.GeometryObject>>
 {
-  private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
-  private readonly ITypedConverter<ICurve, DB.CurveArray> _curveConverter;
-  private readonly ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> _meshConverter;
-  private readonly ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> _encodedObjectConverter;
-
-  public BaseToHostGeometryObjectConverter(
-    ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
-    ITypedConverter<ICurve, DB.CurveArray> curveConverter,
-    ITypedConverter<SOG.Mesh, List<DB.GeometryObject>> meshConverter,
-    ITypedConverter<SOG.IRawEncodedObject, List<DB.GeometryObject>> encodedObjectConverter
-  )
-  {
-    _pointConverter = pointConverter;
-    _curveConverter = curveConverter;
-    _meshConverter = meshConverter;
-    _encodedObjectConverter = encodedObjectConverter;
-  }
-
   public List<DB.GeometryObject> Convert(Base target)
   {
     List<DB.GeometryObject> result = new();
@@ -34,19 +21,19 @@ public class BaseToHostGeometryObjectConverter : ITypedConverter<Base, List<DB.G
     switch (target)
     {
       case SOG.Point point:
-        var xyz = _pointConverter.Convert(point);
+        var xyz = pointConverter.Convert(point);
         result.Add(DB.Point.Create(xyz));
         break;
       case ICurve curve:
-        var curves = _curveConverter.Convert(curve).Cast<DB.GeometryObject>();
+        var curves = curveConverter.Convert(curve).Cast<DB.GeometryObject>();
         result.AddRange(curves);
         break;
       case SOG.Mesh mesh:
-        var meshes = _meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
+        var meshes = meshConverter.Convert(mesh).Cast<DB.GeometryObject>();
         result.AddRange(meshes);
         break;
       case SOG.IRawEncodedObject elon:
-        var res = _encodedObjectConverter.Convert(elon);
+        var res = encodedObjectConverter.Convert(elon);
         result.AddRange(res);
         break;
       default:

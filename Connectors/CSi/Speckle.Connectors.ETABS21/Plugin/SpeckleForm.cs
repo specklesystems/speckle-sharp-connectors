@@ -1,5 +1,5 @@
+using Speckle.Connectors.Common;
 using Speckle.Connectors.ETABSShared;
-using Speckle.Sdk.Host;
 
 // NOTE: Plugin entry point must match the assembly name, otherwise ETABS hits you with a "Not found" error when loading plugin
 // Disabling error below to prioritize DUI3 project structure. Name of cPlugin class cannot be changed

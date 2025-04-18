@@ -3,12 +3,12 @@ using System.Diagnostics;
 using Ara3D.Utils;
 //using JetBrains.Profiler.SelfApi;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Speckle.Importers.Ifc;
 using Speckle.Importers.Ifc.Ara3D.IfcParser;
 using Speckle.Importers.Ifc.Converters;
 using Speckle.Importers.Ifc.Tester;
 using Speckle.Importers.Ifc.Types;
+using Speckle.Sdk.Serialisation.V2;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Sdk.SQLite;
 
@@ -40,15 +40,13 @@ ms = ms2;
 ms2 = stopwatch.ElapsedMilliseconds;
 Console.WriteLine($"Converted to Speckle Bases: {ms2 - ms} ms");
 
+var factory = serviceProvider.GetRequiredService<ISerializeProcessFactory>();
 var cache = $"C:\\Users\\adam\\Git\\temp\\{Guid.NewGuid()}.db";
 using var sqlite = new SqLiteJsonCacheManager($"Data Source={cache};", 2);
-await using var process2 = new SerializeProcess(
-  new Progress(true),
+await using var process2 = factory.CreateSerializeProcess(
   sqlite,
   new DummyServerObjectManager(),
-  new BaseChildFinder(new BasePropertyGatherer()),
-  new BaseSerializer(sqlite, new ObjectSerializerFactory(new BasePropertyGatherer())),
-  new NullLoggerFactory(),
+  new Progress(true),
   default,
   new SerializeProcessOptions(SkipServer: true)
 );
