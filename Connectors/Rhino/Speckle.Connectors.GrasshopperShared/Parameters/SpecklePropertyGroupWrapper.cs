@@ -78,7 +78,6 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       return true;
     }
 
-    // TODO: cast to material, model object, etc.
     return false;
   }
 
