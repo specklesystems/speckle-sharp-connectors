@@ -21,7 +21,8 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         Value = new()
         {
           Base = ToSpeckleRenderMaterial(renderMaterial),
-          RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow)
+          RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow),
+          RhinoRenderMaterialId = renderMaterial.Id
         };
 
         return true;
@@ -33,7 +34,8 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
           Value = new()
           {
             Base = ToSpeckleRenderMaterial(renderMaterial),
-            RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow)
+            RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow),
+            RhinoRenderMaterialId = renderMaterial.Id
           };
 
           return true;
