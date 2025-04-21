@@ -21,7 +21,7 @@ public class SpeckleObjectWrapper : Base
   // note: how will we send intervals and other gh native objects? do we? maybe not for now
   // note: this does not handle on to many relationship well.
   // For receiving data objects, we are wrapping every value in the data object display value, and storing a reference to the same data object in each wrapped object.
-  public required GeometryBase GeometryBase { get; set; }
+  public required GeometryBase? GeometryBase { get; set; }
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
@@ -34,7 +34,7 @@ public class SpeckleObjectWrapper : Base
   public required SpeckleMaterialWrapper? Material { get; set; }
 
   // RenderMaterial, ColorProxies, Properties (?)
-  public override string ToString() => $"Speckle Wrapper [{GeometryBase.GetType().Name}]";
+  public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
@@ -234,7 +234,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     Value.DrawPreviewRaw(args.Pipeline, args.Material);
   }
 
-  BoundingBox IGH_PreviewData.ClippingBox => Value.GeometryBase.GetBoundingBox(false);
+  BoundingBox IGH_PreviewData.ClippingBox =>
+    Value.GeometryBase is null ? new() : Value.GeometryBase.GetBoundingBox(false);
 
   public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
   {
@@ -318,9 +319,9 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       // Iterate over all data stored in the parameter
       foreach (var item in VolatileData.AllData(true))
       {
-        if (item is SpeckleObjectWrapperGoo goo)
+        if (item is SpeckleObjectWrapperGoo goo && goo.Value.GeometryBase is GeometryBase gb)
         {
-          var box = goo.Value.GeometryBase.GetBoundingBox(false);
+          var box = gb.GetBoundingBox(false);
           clippingBox.Union(box);
         }
       }

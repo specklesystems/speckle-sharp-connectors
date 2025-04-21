@@ -33,9 +33,9 @@ public class FilterObjectsByCollectionPaths : GH_Component
 
   public FilterObjectsByCollectionPaths()
     : base(
-      "FilterObjectsByCollectionPaths",
-      "ocF",
-      "Filters model objects by their collection path",
+      "QuerySpeckleObjects",
+      "qO",
+      "Finds Speckle model objects by their collection path",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }
