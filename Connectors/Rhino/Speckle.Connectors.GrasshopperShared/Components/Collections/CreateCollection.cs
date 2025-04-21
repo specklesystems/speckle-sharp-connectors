@@ -82,6 +82,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       SpeckleCollectionWrapper childSpeckleCollectionWrapper =
         new(childCollection, childPath, null, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
 
+      // handle collection inputs
       // if on this port we're only receiving collections, we should become "pass-through" to not create
       // needless nesting
       if (inputCollections.Count == data.Count)
@@ -116,7 +117,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      foreach (var obj in data)
+      // handle object inputs
+      foreach (var obj in inputNonCollections)
       {
         SpeckleObjectWrapperGoo wrapperGoo = new();
         if (wrapperGoo.CastFrom(obj))
