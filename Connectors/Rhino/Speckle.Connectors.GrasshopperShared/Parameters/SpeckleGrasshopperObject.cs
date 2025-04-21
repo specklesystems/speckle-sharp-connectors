@@ -26,14 +26,11 @@ public class SpeckleObjectWrapper : Base
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
   public SpeckleCollectionWrapper? Parent { get; set; }
-
-  // A dictionary of property path to property
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
   public required string Name { get; set; } = "";
   public required Color? Color { get; set; }
   public required SpeckleMaterialWrapper? Material { get; set; }
 
-  // RenderMaterial, ColorProxies, Properties (?)
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
@@ -54,10 +51,7 @@ public class SpeckleObjectWrapper : Base
         break;
 
       case Extrusion e:
-        args.Display.DrawMeshShaded(
-          e.GetMesh(MeshType.Any),
-          isSelected ? args.ShadeMaterial_Selected : args.ShadeMaterial
-        );
+        args.Display.DrawExtrusionWires(e, isSelected ? args.WireColour_Selected : args.WireColour);
         break;
 
       case SubD d:
@@ -207,6 +201,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
 #if !RHINO8_OR_GREATER
   private bool CastFromModelObject(object _) => false;
+
+  private bool CastToModelObject<T>(ref T _) => false;
 #endif
 
   public override bool CastTo<T>(ref T target)
@@ -219,9 +215,38 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return true;
     }
 
-    // TODO: cast to material, etc.
+    if (type == typeof(ObjectAttributes))
+    {
+      ObjectAttributes atts = new() { Name = Value.Name };
 
-    return false;
+      if (Value.Color is Color color)
+      {
+        atts.ObjectColor = color;
+        atts.ColorSource = ObjectColorSource.ColorFromObject;
+      }
+
+      /* POC: not setting material for now, since this would require bake
+      if (Value.Material is SpeckleMaterialWrapper materialWrapper)
+      {
+        int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Base.name);
+        if (matIndex >= 0)
+        {
+          atts.MaterialIndex = matIndex;
+          atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+        }
+      }
+      */
+
+      foreach (var kvp in Value.Properties.Value)
+      {
+        atts.SetUserString(kvp.Key, kvp.Value.Value.ToString());
+      }
+
+      target = (T)(object)atts;
+      return true;
+    }
+
+    return CastToModelObject(ref target);
   }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)

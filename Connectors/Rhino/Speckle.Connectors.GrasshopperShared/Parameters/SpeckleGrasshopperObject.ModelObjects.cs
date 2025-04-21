@@ -7,6 +7,7 @@ using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Display;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
+using Rhino.DocObjects;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -15,6 +16,23 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public SpeckleObjectWrapperGoo(ModelObject mo)
   {
     CastFrom(mo);
+  }
+
+  private bool CastToModelObject<T>(ref T target)
+  {
+    var type = typeof(T);
+
+    if (type == typeof(ModelObject))
+    {
+      // create attributes
+      ObjectAttributes atts = new();
+      CastTo<ObjectAttributes>(ref atts);
+      ModelObject modelObject = new(RhinoDoc.ActiveDoc, atts, Value.GeometryBase);
+      target = (T)(object)modelObject;
+      return true;
+    }
+
+    return false;
   }
 
   private bool CastFromModelObject(object source)

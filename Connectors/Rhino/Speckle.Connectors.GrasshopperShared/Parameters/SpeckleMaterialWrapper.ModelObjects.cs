@@ -14,12 +14,9 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
 {
   private bool CastFromModelRenderMaterial(object source)
   {
-    if (source is ModelRenderMaterial modelMaterial)
+    switch (source)
     {
-      if (modelMaterial.Id is Guid id)
-      {
-        Rhino.Render.RenderMaterial renderMaterial = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
-
+      case Rhino.Render.RenderMaterial renderMaterial:
         renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow);
         Value = new()
         {
@@ -28,8 +25,21 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         };
 
         return true;
-      }
-      return false;
+      case ModelRenderMaterial modelMaterial:
+        if (modelMaterial.Id is Guid id)
+        {
+          Rhino.Render.RenderMaterial renderMaterial = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
+          renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow);
+          Value = new()
+          {
+            Base = ToSpeckleRenderMaterial(renderMaterial),
+            RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow)
+          };
+
+          return true;
+        }
+
+        return false;
     }
 
     return false;
