@@ -214,7 +214,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBase);
       return true;
     }
-   
+
     return CastToModelObject(ref target);
   }
 
