@@ -263,6 +263,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         modelCard.SendFilter.IdMap,
         newSelectedObjectIds
       );
+
+      // In UI, we are not explicitly trigger UpdateModel to save the state into file for some edge cases. Instead we save it directly via document model store.
+      // Comment in the UI -> """ otherwise it is leading cleanup on document store bc of deferred action when we switched to the another doc"""
+      _store.SaveState();
     }
 
     return documentElementContexts;

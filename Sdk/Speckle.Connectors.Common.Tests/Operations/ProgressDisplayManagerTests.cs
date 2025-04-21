@@ -4,7 +4,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Transports;
 using Speckle.Testing;
 
-namespace Speckle.Connectors.Tests;
+namespace Speckle.Connectors.Common.Tests.Operations;
 
 public class ProgressDisplayManagerTests : MoqTest
 {
