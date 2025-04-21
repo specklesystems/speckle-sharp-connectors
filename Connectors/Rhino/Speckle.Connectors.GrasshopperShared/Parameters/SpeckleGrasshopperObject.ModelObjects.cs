@@ -32,6 +32,39 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return true;
     }
 
+    if (type == typeof(ObjectAttributes))
+    {
+      ObjectAttributes atts = new() { Name = Value.Name };
+
+      if (Value.Color is Color color)
+      {
+        atts.ObjectColor = color;
+        atts.ColorSource = ObjectColorSource.ColorFromObject;
+      }
+
+      // POC: only set material if it exists in the doc. Avoiding baking during cast.
+      if (
+        Value.Material is SpeckleMaterialWrapper materialWrapper
+        && materialWrapper.RhinoRenderMaterialId != Guid.Empty
+      )
+      {
+        Rhino.Render.RenderMaterial renderMaterial = RhinoDoc.ActiveDoc.RenderMaterials.Find(
+          materialWrapper.RhinoRenderMaterialId
+        );
+
+        atts.RenderMaterial = renderMaterial;
+        atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+
+      foreach (var kvp in Value.Properties.Value)
+      {
+        atts.SetUserString(kvp.Key, kvp.Value.Value.ToString());
+      }
+
+      target = (T)(object)atts;
+      return true;
+    }
+
     return false;
   }
 
@@ -88,6 +121,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
 
   private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.RenderMaterials.Find(modelObject.Render.Material?.Material.Id ?? Guid.Empty);
+    RhinoDoc.ActiveDoc.RenderMaterials.Find(modelObject.Render.Material?.Material?.Id ?? Guid.Empty);
 }
 #endif

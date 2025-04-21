@@ -20,7 +20,10 @@ public class SpeckleMaterialWrapper : Base
 
   public required Material RhinoMaterial { get; set; }
 
-  public override string ToString() => $"Speckle Wrapper [{typeof(Rhino.Render.RenderMaterial)}]";
+  // The guid of the rhino render material that corresponds to the rhino material, if it exists.
+  public required Guid RhinoRenderMaterialId { get; set; }
+
+  public override string ToString() => $"Speckle Wrapper [{typeof(Material)}]";
 
   /// <summary>
   /// Creates the material in the document
@@ -68,14 +71,25 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         Value = new()
         {
           Base = ToSpeckleRenderMaterial(materialGoo.Value),
-          RhinoMaterial = ToRhinoMaterial(materialGoo.Value)
+          RhinoMaterial = ToRhinoMaterial(materialGoo.Value),
+          RhinoRenderMaterialId = Guid.Empty
         };
         return true;
       case Material material:
-        Value = new() { Base = ToSpeckleRenderMaterial(material), RhinoMaterial = material };
+        Value = new()
+        {
+          Base = ToSpeckleRenderMaterial(material),
+          RhinoMaterial = material,
+          RhinoRenderMaterialId = Guid.Empty
+        };
         return true;
       case SpeckleRenderMaterial speckleMaterial:
-        Value = new() { Base = speckleMaterial, RhinoMaterial = ToRhinoMaterial(speckleMaterial) };
+        Value = new()
+        {
+          Base = speckleMaterial,
+          RhinoMaterial = ToRhinoMaterial(speckleMaterial),
+          RhinoRenderMaterialId = Guid.Empty
+        };
         return true;
     }
 

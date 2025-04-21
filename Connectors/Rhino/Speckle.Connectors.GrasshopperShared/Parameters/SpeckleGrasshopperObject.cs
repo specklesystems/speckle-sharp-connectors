@@ -215,37 +215,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return true;
     }
 
-    if (type == typeof(ObjectAttributes))
-    {
-      ObjectAttributes atts = new() { Name = Value.Name };
-
-      if (Value.Color is Color color)
-      {
-        atts.ObjectColor = color;
-        atts.ColorSource = ObjectColorSource.ColorFromObject;
-      }
-
-      /* POC: not setting material for now, since this would require bake
-      if (Value.Material is SpeckleMaterialWrapper materialWrapper)
-      {
-        int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Base.name);
-        if (matIndex >= 0)
-        {
-          atts.MaterialIndex = matIndex;
-          atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-        }
-      }
-      */
-
-      foreach (var kvp in Value.Properties.Value)
-      {
-        atts.SetUserString(kvp.Key, kvp.Value.Value.ToString());
-      }
-
-      target = (T)(object)atts;
-      return true;
-    }
-
     return CastToModelObject(ref target);
   }
 
