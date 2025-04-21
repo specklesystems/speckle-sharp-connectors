@@ -313,7 +313,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
       if (element is SpeckleObjectWrapper sg)
       {
         _previewObjects.Add(sg);
-        var box = sg.GeometryBase.GetBoundingBox(false);
+        var box = sg.GeometryBase is null ? new() : sg.GeometryBase.GetBoundingBox(false);
         _clippingBox.Union(box);
       }
     }

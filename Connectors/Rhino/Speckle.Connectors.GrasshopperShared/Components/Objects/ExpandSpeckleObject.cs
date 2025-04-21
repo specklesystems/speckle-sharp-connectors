@@ -6,6 +6,7 @@ using Grasshopper.Kernel.Parameters;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
@@ -53,8 +54,8 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
       return;
     }
     var o = objectWrapperGoo.Value;
-    Name = o.Name ?? o.speckle_type;
-    NickName = o.Name;
+    Name = string.IsNullOrEmpty(o.Name) ? o.Base.speckle_type : o.Name;
+    NickName = Name;
 
     List<OutputParamWrapper> outputParams = CreateOutputParamsFromSpeckleObject(objectWrapperGoo.Value.Base);
 
@@ -108,11 +109,7 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
       return result;
     }
 
-    foreach (
-      var prop in @base.GetMembers(
-        DynamicBaseMemberType.Instance | DynamicBaseMemberType.Dynamic | DynamicBaseMemberType.SchemaComputed
-      )
-    )
+    foreach (var prop in @base.GetMembers(DynamicBaseMemberType.Instance | DynamicBaseMemberType.Dynamic))
     {
       // Convert and add to corresponding output structure
       var value = prop.Value;
@@ -144,13 +141,59 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
           result.Add(CreateOutputParamByKeyValue(prop.Key, propertyGoo, GH_ParamAccess.item));
           break;
         default:
+          // POC: for props of type Base, we probably want to output a wrapper object instead of the converted base, in case the user wants to use the wrapped base directly
           if (prop.Value is Base baseValue)
           {
-            List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(baseValue);
-            result.Add(CreateOutputParamByKeyValue(prop.Key, converted.Select(o => o.Item1), GH_ParamAccess.list));
+            try
+            {
+              // convert the base and create a wrapper for each result
+              List<(GeometryBase, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(baseValue);
+              List<SpeckleObjectWrapperGoo> convertedWrappers = new();
+              foreach ((GeometryBase g, Base b) in convertedBase)
+              {
+                SpeckleObjectWrapper convertedWrapper =
+                  new()
+                  {
+                    Base = b,
+                    GeometryBase = g,
+                    Name = b["name"] as string ?? "",
+                    Color = null,
+                    Material = null
+                  };
+                convertedWrappers.Add(new(convertedWrapper));
+              }
+              result.Add(CreateOutputParamByKeyValue(prop.Key, convertedWrappers, GH_ParamAccess.list));
+            }
+            catch (ConversionException)
+            {
+              // some classes, like RawEncoding, have no direct conversion or fallback value.
+              // when this is the case, wrap it to allow users to further expand the object.
+              SpeckleObjectWrapper convertedWrapper =
+                new()
+                {
+                  Base = baseValue,
+                  GeometryBase = null,
+                  Name = baseValue["name"] as string ?? "",
+                  Color = null,
+                  Material = null
+                };
+              result.Add(
+                CreateOutputParamByKeyValue(
+                  prop.Key,
+                  new SpeckleObjectWrapperGoo(convertedWrapper),
+                  GH_ParamAccess.item
+                )
+              );
+            }
           }
           else
           {
+            // we don't want to output dynamic property keys
+            if (prop.Key == nameof(baseValue.DynamicPropertyKeys))
+            {
+              continue;
+            }
+
             result.Add(CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item));
           }
           break;
