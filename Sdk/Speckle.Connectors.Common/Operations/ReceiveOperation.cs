@@ -11,11 +11,11 @@ namespace Speckle.Connectors.Common.Operations;
 
 public sealed class ReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
-  IAccountService accountService,
+  AccountService accountService,
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
-  IReceiveVersionRetriever receiveVersionRetriever,
+  IClientFactory clientFactory,
   IThreadContext threadContext
 )
 {
@@ -30,8 +30,10 @@ public sealed class ReceiveOperation(
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
+    using var apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
-    var version = await receiveVersionRetriever.GetVersion(account, receiveInfo, cancellationToken);
+
+    var version = await apiClient.Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken);
 
     cancellationToken.ThrowIfCancellationRequested();
     var commitObject = await threadContext.RunOnWorkerAsync(
@@ -48,12 +50,15 @@ public sealed class ReceiveOperation(
       .ConfigureAwait(false);
 
     cancellationToken.ThrowIfCancellationRequested();
-    await receiveVersionRetriever.VersionReceived(account, version, receiveInfo, cancellationToken);
+    await apiClient.Version.Received(
+      new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
+      cancellationToken
+    );
 
     return res;
   }
 
-  public async Task<Base> ReceiveData(
+  private async Task<Base> ReceiveData(
     Account account,
     Speckle.Sdk.Api.GraphQL.Models.Version version,
     ReceiveInfo receiveInfo,

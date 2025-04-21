@@ -122,16 +122,15 @@ public sealed class RhinoSendBinding : ISendBinding
 
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
     RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
-      await _topLevelExceptionHandler.CatchUnhandledAsync(async () =>
+    {
+      var newUnit = e.Document.ModelUnitSystem;
+      if (newUnit != PreviousUnitSystem)
       {
-        var newUnit = e.Document.ModelUnitSystem;
-        if (newUnit != PreviousUnitSystem)
-        {
-          PreviousUnitSystem = newUnit;
+        PreviousUnitSystem = newUnit;
 
-          await InvalidateAllSender();
-        }
-      });
+        await InvalidateAllSender();
+      }
+    };
 
     RhinoDoc.AddRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
