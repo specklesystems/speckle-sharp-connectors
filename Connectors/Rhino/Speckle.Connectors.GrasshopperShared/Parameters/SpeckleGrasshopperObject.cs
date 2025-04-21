@@ -152,6 +152,7 @@ public class SpeckleObjectWrapper : Base
       if (matIndex >= 0)
       {
         att.MaterialIndex = matIndex;
+        att.MaterialSource = ObjectMaterialSource.MaterialFromObject;
       }
     }
 
