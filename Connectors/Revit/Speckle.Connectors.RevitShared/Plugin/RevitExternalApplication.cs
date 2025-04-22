@@ -7,7 +7,6 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;
-using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.Revit.Plugin;
 

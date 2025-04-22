@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 
@@ -12,6 +13,15 @@ public class TeklaPointConverter : ITypedConverter<TG.Point, SOG.Point>
     _settingsStore = settingsStore;
   }
 
-  public SOG.Point Convert(TG.Point target) =>
-    new SOG.Point(target.X, target.Y, target.Z, _settingsStore.Current.SpeckleUnits);
+  public SOG.Point Convert(TG.Point target)
+  {
+    double conversionFactor = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
+
+    return new SOG.Point(
+      target.X * conversionFactor,
+      target.Y * conversionFactor,
+      target.Z * conversionFactor,
+      _settingsStore.Current.SpeckleUnits
+    );
+  }
 }

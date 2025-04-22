@@ -13,7 +13,25 @@ public static class SupportedCategoriesUtils
   /// <returns></returns>
   public static bool IsSupportedCategory(Category? category)
   {
-    if (category is null || !category.IsVisibleInUI)
+    if (category is null)
+    {
+      return false;
+    }
+
+    // stacked walls are "not visible in the ui" whereas they clearly are.
+    // see [CNX-1301: Revit Stacked Walls are not sending](https://linear.app/speckle/issue/CNX-1301/revit-stacked-walls-are-not-sending)
+#if REVIT2023_OR_GREATER
+    if (category.BuiltInCategory == BuiltInCategory.OST_StackedWalls)
+    {
+      return true;
+    }
+#else
+    if (category.Name == "Stacked Walls")
+    {
+      return true;
+    }
+#endif
+    if (!category.IsVisibleInUI) //&& category.BuiltInCategory != BuiltInCategory.OST_StackedWalls)
     {
       return false;
     }
