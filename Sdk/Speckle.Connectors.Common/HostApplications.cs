@@ -1,4 +1,4 @@
-﻿using Speckle.Sdk;
+﻿/*using Speckle.Sdk;
 
 namespace Speckle.Connectors.Common;
 
@@ -40,3 +40,4 @@ public static class HostApplications
     AdvanceSteel = new("Advance Steel", "advancesteel"),
     Other = new("Other", "other");
 }
+*/
