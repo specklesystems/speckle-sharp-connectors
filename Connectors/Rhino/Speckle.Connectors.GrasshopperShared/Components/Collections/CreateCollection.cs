@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
-using System.Reflection;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
@@ -15,18 +15,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 #pragma warning restore CA1711
 {
   public override Guid ComponentGuid => new("BDCE743E-7BDB-479B-AA81-19854AB5A254");
-
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_collections_create.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_collections_create;
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 

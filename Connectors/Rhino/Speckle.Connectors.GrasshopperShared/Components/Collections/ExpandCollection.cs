@@ -1,10 +1,10 @@
 using System.Collections;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
@@ -24,18 +24,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_collections_expand.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_collections_expand;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

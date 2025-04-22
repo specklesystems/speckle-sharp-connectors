@@ -1,8 +1,8 @@
-using System.Reflection;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -109,17 +109,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
 public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>
 {
   public override Guid ComponentGuid => new("AF4757C3-BA33-4ACD-A92B-C80356043129");
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_param_properties.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_param_properties;
 
   public SpecklePropertyGroupParam()
     : this(GH_ParamAccess.item) { }
@@ -132,9 +122,9 @@ public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>
 
   public SpecklePropertyGroupParam(GH_ParamAccess access)
     : base(
-      "Speckle Property Group",
-      "SPGO",
-      "Represents a Dictionary property group",
+      "Speckle Properties",
+      "SP",
+      "Represents a set of Speckle Properties",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
       access

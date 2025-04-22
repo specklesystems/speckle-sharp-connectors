@@ -1,8 +1,8 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
@@ -18,18 +18,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
 public class FilterObjectsByCollectionPaths : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
-
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_objects_query.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_objects_query;
 
   public FilterObjectsByCollectionPaths()
     : base(
@@ -46,7 +35,7 @@ public class FilterObjectsByCollectionPaths : GH_Component
       new SpeckleCollectionParam(),
       "Collection",
       "C",
-      "Collection to filter objects from",
+      "Collection to query objects from",
       GH_ParamAccess.item
     );
     pManager.AddTextParameter("Path", "P", "Collection path to filter by", GH_ParamAccess.item);

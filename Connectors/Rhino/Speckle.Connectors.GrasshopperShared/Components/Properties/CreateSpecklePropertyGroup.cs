@@ -1,9 +1,9 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
 
@@ -12,26 +12,16 @@ public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterCom
 {
   public CreateSpecklePropertyGroup()
     : base(
-      "Create Speckle Property Group",
+      "Create Speckle Properties",
       "CSP",
-      "Creates a property group for Speckle objects",
+      "Creates a set of properties for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_properties_create.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_properties_create;
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 

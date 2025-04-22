@@ -1,6 +1,6 @@
-using System.Reflection;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.Components;
+using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -26,16 +26,5 @@ public class SpeckleUrlModelResourceParam : GH_Param<SpeckleUrlModelResourceGoo>
     ) { }
 
   public override Guid ComponentGuid => new Guid("E5421FC2-F10D-447F-BF23-5C934ABDB2D3");
-
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_param_model.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_param_model;
 }
