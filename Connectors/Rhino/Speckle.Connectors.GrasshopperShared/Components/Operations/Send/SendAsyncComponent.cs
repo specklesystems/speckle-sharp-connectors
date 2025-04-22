@@ -317,9 +317,15 @@ public class SendComponentWorker : WorkerInstance
     var hasWarnings = RuntimeMessages.Count > 0;
     if (!hasWarnings)
     {
+      /* POC: cannot use GetTotalChildrenCount() on the root collection, because this contains subcollection wrappers which are not recognized by our typeloader. Will throw exception as result.
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
         $"Successfully published {((SendAsyncComponent)Parent).RootCollectionWrapper?.Value.Collection.GetTotalChildrenCount()} objects to Speckle."
+      );
+      */
+      Parent.AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Remark,
+        $"Successfully published to Speckle. Right-click to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
