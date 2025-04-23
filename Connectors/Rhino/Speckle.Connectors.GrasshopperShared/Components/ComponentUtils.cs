@@ -8,7 +8,7 @@ public static class ComponentCategories
   public const string COLLECTIONS = "    Collections";
   public const string OBJECTS = "   Objects";
   public const string PARAMETERS = " Parameters";
-  public const string DEVELOPER = " Dev";
+  public const string DEVELOPER = "Dev";
 }
 
 public enum ComponentState
