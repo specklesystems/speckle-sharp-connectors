@@ -9,55 +9,63 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
+namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 
 [Guid("C491D26C-84CB-4684-8BD2-AA78D0F2FE53")]
-public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
+public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterComponent
 {
-  public ExpandSpeckleObject()
+  public DeconstructSpeckleParam()
     : base(
-      "Expand Speckle Object",
-      "ESO",
-      "Expands a Speckle Object into its properties",
+      "Deconstruct",
+      "D",
+      "Deconstructs any Speckle param into its atomic parts",
       ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
+      ComponentCategories.DEVELOPER
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_expand;
+  protected override Bitmap Icon => Resources.speckle_deconstruct;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddParameter(new SpeckleObjectParam(), "Object", "O", "Speckle Object to expand", GH_ParamAccess.item);
+    pManager.AddGenericParameter(
+      "Speckle Param",
+      "SP",
+      "Speckle param to deconstruct. Expects Collections, Objects, or Materials",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    SpeckleObjectWrapperGoo objectWrapperGoo = new();
-    da.GetData(0, ref objectWrapperGoo);
+    object data = new();
+    da.GetData(0, ref data);
 
-    if (objectWrapperGoo is null)
+    List<OutputParamWrapper> outputParams = new();
+
+    switch (data)
     {
-      return;
+      case SpeckleObjectWrapperGoo obj:
+        Name = string.IsNullOrEmpty(obj.Value.Name) ? obj.Value.Base.speckle_type : obj.Value.Name;
+        outputParams = CreateOutputParamsFromBase(obj.Value.Base, obj.Value.Color, obj.Value.Material);
+        break;
+      case SpeckleCollectionWrapperGoo coll:
+        Name = string.IsNullOrEmpty(coll.Value.Collection.name)
+          ? coll.Value.Collection.speckle_type
+          : coll.Value.Collection.name;
+        outputParams = CreateOutputParamsFromBase(coll.Value.Collection, coll.Value.Color, coll.Value.Material);
+        break;
+      case SpeckleMaterialWrapperGoo matGoo:
+        Name = string.IsNullOrEmpty(matGoo.Value.Base.name) ? matGoo.Value.Base.speckle_type : matGoo.Value.Base.name;
+        outputParams = CreateOutputParamsFromBase(matGoo.Value.Base);
+        break;
+      default:
+        return;
     }
-    var o = objectWrapperGoo.Value;
-    Name = string.IsNullOrEmpty(o.Name) ? o.Base.speckle_type : o.Name;
+
     NickName = Name;
-
-    List<OutputParamWrapper> outputParams = CreateOutputParamsFromSpeckleObject(objectWrapperGoo.Value.Base);
-
-    // add color and render material proxies
-    if (objectWrapperGoo.Value.Color is Color color)
-    {
-      outputParams.Add(CreateOutputParamByKeyValue("color", color, GH_ParamAccess.item));
-    }
-
-    if (objectWrapperGoo.Value.Material is SpeckleMaterialWrapper materialWrapper)
-    {
-      outputParams.Add(CreateOutputParamByKeyValue("renderMaterial", materialWrapper, GH_ParamAccess.item));
-    }
 
     if (da.Iteration == 0 && OutputMismatch(outputParams))
     {
@@ -89,15 +97,19 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
     }
   }
 
-  private List<OutputParamWrapper> CreateOutputParamsFromSpeckleObject(Base @base)
+  private List<OutputParamWrapper> CreateOutputParamsFromBase(
+    Base @base,
+    Color? color = null,
+    SpeckleMaterialWrapper? materialWrapper = null
+  )
   {
     List<OutputParamWrapper> result = new();
-
     if (@base == null)
     {
       return result;
     }
 
+    // cycle through base props
     foreach (var prop in @base.GetMembers(DynamicBaseMemberType.Instance | DynamicBaseMemberType.Dynamic))
     {
       // Convert and add to corresponding output structure
@@ -107,89 +119,120 @@ public class ExpandSpeckleObject : GH_Component, IGH_VariableParameterComponent
         case null:
           result.Add(CreateOutputParamByKeyValue(prop.Key, null, GH_ParamAccess.item));
           break;
+
         case IList list:
           List<object> nativeObjects = new();
           foreach (var x in list)
           {
             switch (x)
             {
-              case Base xBase:
-                List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(xBase);
-                nativeObjects.AddRange(converted.Select(o => o.Item1));
+              case SpeckleCollectionWrapper collWrapper:
+                nativeObjects.Add(new SpeckleCollectionWrapperGoo(collWrapper));
                 break;
+
+              case SpeckleObjectWrapper objWrapper:
+                nativeObjects.Add(new SpeckleObjectWrapperGoo(objWrapper));
+                break;
+
+              case Base xBase:
+                nativeObjects.Add(ConvertOrCreateWrapper(prop.Key, xBase));
+                break;
+
               default:
                 nativeObjects.Add(x);
                 break;
             }
           }
+
           result.Add(CreateOutputParamByKeyValue(prop.Key, nativeObjects, GH_ParamAccess.list));
           break;
+
         case Dictionary<string, object?> dict: // this should be treated a properties dict
           SpecklePropertyGroupGoo propertyGoo = new();
           propertyGoo.CastFrom(dict);
           result.Add(CreateOutputParamByKeyValue(prop.Key, propertyGoo, GH_ParamAccess.item));
           break;
-        default:
-          // POC: for props of type Base, we probably want to output a wrapper object instead of the converted base, in case the user wants to use the wrapped base directly
-          if (prop.Value is Base baseValue)
-          {
-            try
-            {
-              // convert the base and create a wrapper for each result
-              List<(GeometryBase, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(baseValue);
-              List<SpeckleObjectWrapperGoo> convertedWrappers = new();
-              foreach ((GeometryBase g, Base b) in convertedBase)
-              {
-                SpeckleObjectWrapper convertedWrapper =
-                  new()
-                  {
-                    Base = b,
-                    GeometryBase = g,
-                    Name = b["name"] as string ?? "",
-                    Color = null,
-                    Material = null
-                  };
-                convertedWrappers.Add(new(convertedWrapper));
-              }
-              result.Add(CreateOutputParamByKeyValue(prop.Key, convertedWrappers, GH_ParamAccess.list));
-            }
-            catch (ConversionException)
-            {
-              // some classes, like RawEncoding, have no direct conversion or fallback value.
-              // when this is the case, wrap it to allow users to further expand the object.
-              SpeckleObjectWrapper convertedWrapper =
-                new()
-                {
-                  Base = baseValue,
-                  GeometryBase = null,
-                  Name = baseValue["name"] as string ?? "",
-                  Color = null,
-                  Material = null
-                };
-              result.Add(
-                CreateOutputParamByKeyValue(
-                  prop.Key,
-                  new SpeckleObjectWrapperGoo(convertedWrapper),
-                  GH_ParamAccess.item
-                )
-              );
-            }
-          }
-          else
-          {
-            // we don't want to output dynamic property keys
-            if (prop.Key == nameof(baseValue.DynamicPropertyKeys))
-            {
-              continue;
-            }
 
-            result.Add(CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item));
+        case SpeckleCollectionWrapper collWrapper:
+          result.Add(
+            CreateOutputParamByKeyValue(prop.Key, new SpeckleCollectionWrapperGoo(collWrapper), GH_ParamAccess.item)
+          );
+          break;
+
+        case SpeckleObjectWrapper objWrapper:
+          result.Add(
+            CreateOutputParamByKeyValue(prop.Key, new SpeckleObjectWrapperGoo(objWrapper), GH_ParamAccess.item)
+          );
+          break;
+
+        case Base baseValue:
+          result.Add(ConvertOrCreateWrapper(prop.Key, baseValue));
+          break;
+
+        default:
+          // we don't want to output dynamic property keys
+          if (prop.Key == nameof(Base.DynamicPropertyKeys))
+          {
+            continue;
           }
+
+          result.Add(CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item));
           break;
       }
     }
 
+    // add color and render material
+    if (color is not null)
+    {
+      result.Add(CreateOutputParamByKeyValue("color", color, GH_ParamAccess.item));
+    }
+
+    if (materialWrapper is not null)
+    {
+      SpeckleMaterialWrapperGoo materialWrapperGoo = new(materialWrapper);
+      result.Add(CreateOutputParamByKeyValue("renderMaterial", materialWrapperGoo, GH_ParamAccess.item));
+    }
+
     return result;
+  }
+
+  private OutputParamWrapper ConvertOrCreateWrapper(string propKey, Base @base)
+  {
+    try
+    {
+      // convert the base and create a wrapper for each result
+      List<(GeometryBase, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(@base);
+      List<SpeckleObjectWrapperGoo> convertedWrappers = new();
+      foreach ((GeometryBase g, Base b) in convertedBase)
+      {
+        SpeckleObjectWrapper convertedWrapper =
+          new()
+          {
+            Base = b,
+            GeometryBase = g,
+            Name = b["name"] as string ?? "",
+            Color = null,
+            Material = null
+          };
+        convertedWrappers.Add(new(convertedWrapper));
+      }
+      return CreateOutputParamByKeyValue(propKey, convertedWrappers, GH_ParamAccess.list);
+    }
+    catch (ConversionException)
+    {
+      // some classes, like RawEncoding, have no direct conversion or fallback value.
+      // when this is the case, wrap it to allow users to further expand the object.
+      SpeckleObjectWrapper convertedWrapper =
+        new()
+        {
+          Base = @base,
+          GeometryBase = null,
+          Name = @base["name"] as string ?? "",
+          Color = null,
+          Material = null
+        };
+      return CreateOutputParamByKeyValue(propKey, new SpeckleObjectWrapperGoo(convertedWrapper), GH_ParamAccess.item);
+    }
   }
 
   private OutputParamWrapper CreateOutputParamByKeyValue(string key, object? value, GH_ParamAccess access)

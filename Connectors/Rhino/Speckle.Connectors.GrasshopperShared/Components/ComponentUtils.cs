@@ -4,10 +4,11 @@ namespace Speckle.Connectors.GrasshopperShared.Components;
 public static class ComponentCategories
 {
   public const string PRIMARY_RIBBON = "Speckle";
-  public const string OPERATIONS = "    Operations";
-  public const string COLLECTIONS = "   Collections";
-  public const string OBJECTS = "  Objects";
-  public const string PARAMETERS = "Parameters";
+  public const string OPERATIONS = "     Operations";
+  public const string COLLECTIONS = "    Collections";
+  public const string OBJECTS = "   Objects";
+  public const string PARAMETERS = " Parameters";
+  public const string DEVELOPER = "Dev";
 }
 
 public enum ComponentState

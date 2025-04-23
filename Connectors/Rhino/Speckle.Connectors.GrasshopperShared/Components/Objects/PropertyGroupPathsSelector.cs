@@ -7,7 +7,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Grasshopper.Rhinoceros.Model;
 #endif
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
+namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 {

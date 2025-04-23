@@ -21,12 +21,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\ExpandSpeckleObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleObject.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\CreateSpecklePropertyGroup.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\FilterPropertiesByPropertyGroupPaths.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Properties\PropertyGroupPathsSelector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetObjectProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\LocalToGlobalMapHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
@@ -64,9 +64,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Speckle.Connectors.Grasshopper8Info.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Components\Properties\" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <CustomToolNamespace>Speckle.Connectors.GrasshopperShared.Properties</CustomToolNamespace>
@@ -75,5 +72,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_filter.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_deconstruct.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Components\Dev\" />
   </ItemGroup>
 </Project>

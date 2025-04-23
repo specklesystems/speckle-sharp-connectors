@@ -6,20 +6,20 @@ using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
+namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("BF517D60-B853-4C61-9574-AD8A718B995B")]
-public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariableParameterComponent
+public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => Resources.speckle_properties_query;
 
-  public FilterPropertiesByPropertyGroupPaths()
+  public GetObjectProperties()
     : base(
-      "QueryPropertyValues",
-      "qP",
-      "Finds property values on a Speckle Object from their key",
+      "GetObjectPropertyValues",
+      "goP",
+      "Retrieves the values of the properties inside Speckle Objects at the specified keys",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
@@ -30,10 +30,10 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
       new SpeckleObjectParam(),
       "Objects",
       "O",
-      "Speckle Objects to filter properties from",
+      "Speckle Objects to retrieve properties",
       GH_ParamAccess.list
     );
-    pManager.AddTextParameter("Paths", "P", "Property Group paths to filter by", GH_ParamAccess.list);
+    pManager.AddTextParameter("Keys", "K", "Property keys to filter by", GH_ParamAccess.list);
   }
 
   protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager) { }
@@ -59,7 +59,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
     // we're creating an output param for every property path selected
     // we're creating a branch in the output tree for every object for that property
 
-    List<OutputParamWrapper> outputParams = new();
+    List<PropertyOutputParamWrapper> outputParams = new();
     foreach (string path in paths)
     {
       // create the output for this path
@@ -90,7 +90,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
         paramResult.Add(objectProperty.Value, objectPath);
       }
 
-      outputParams.Add(new OutputParamWrapper(param, paramResult));
+      outputParams.Add(new PropertyOutputParamWrapper(param, paramResult));
     }
 
     if (da.Iteration == 0 && OutputMismatch(outputParams))
@@ -133,7 +133,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
     return currentGoo;
   }
 
-  private bool OutputMismatch(List<OutputParamWrapper> outputParams)
+  private bool OutputMismatch(List<PropertyOutputParamWrapper> outputParams)
   {
     if (Params.Output.Count != outputParams.Count)
     {
@@ -158,7 +158,7 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
     return false;
   }
 
-  private void CreateOutputs(List<OutputParamWrapper> outputParams)
+  private void CreateOutputs(List<PropertyOutputParamWrapper> outputParams)
   {
     // TODO: better, nicer handling of creation/removal
     while (Params.Output.Count > 0)
@@ -204,4 +204,4 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
   public void VariableParameterMaintenance() { }
 }
 
-public record OutputParamWrapper(Param_GenericObject Param, object Values);
+public record PropertyOutputParamWrapper(Param_GenericObject Param, object Values);
