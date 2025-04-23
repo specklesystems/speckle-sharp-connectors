@@ -108,7 +108,10 @@ public class GetCollectionObjects : GH_Component
       switch (element)
       {
         case SpeckleCollectionWrapper childCollectionWrapper:
-          GetAllObjectsFromCollection(childCollectionWrapper);
+          foreach (var item in GetAllObjectsFromCollection(childCollectionWrapper))
+          {
+            yield return item;
+          }
           break;
         case SpeckleObjectWrapper objectWrapper:
           yield return objectWrapper;
