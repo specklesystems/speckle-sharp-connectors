@@ -41,6 +41,14 @@
   <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
 
   <ItemGroup>
+    <Compile Update="C:\Users\Claire\GitHub\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Update="C:\Users\Claire\GitHub\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Properties\Resources.resx">
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>

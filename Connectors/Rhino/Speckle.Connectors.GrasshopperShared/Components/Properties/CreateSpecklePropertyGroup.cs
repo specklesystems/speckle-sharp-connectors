@@ -33,7 +33,7 @@ public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterCom
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Property Group", "P", "Group of properties that was created", GH_ParamAccess.tree);
+    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.tree);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
