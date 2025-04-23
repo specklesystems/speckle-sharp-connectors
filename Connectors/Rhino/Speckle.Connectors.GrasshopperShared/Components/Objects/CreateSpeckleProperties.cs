@@ -5,12 +5,12 @@ using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
+namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("A3FD5CBF-DFB0-44DF-9988-04466EB8E5E6")]
-public class CreateSpecklePropertyGroup : GH_Component, IGH_VariableParameterComponent
+public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterComponent
 {
-  public CreateSpecklePropertyGroup()
+  public CreateSpeckleProperties()
     : base(
       "Create Speckle Properties",
       "CSP",
