@@ -9,7 +9,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
 
 /// <summary>
-/// Given a collection, this component will output the objects in the collection or any child collection according to input paths
+/// Given a collection, this component will output the objects in the subcollection corresponding to the input path
 /// </summary>
 [Guid("77CAEE94-F0B9-4611-897C-71F2A22BA311")]
 public class GetCollectionObjects : GH_Component
