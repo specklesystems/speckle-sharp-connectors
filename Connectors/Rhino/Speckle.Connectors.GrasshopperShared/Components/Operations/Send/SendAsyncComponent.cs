@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Timers;
 using Grasshopper.GUI;
@@ -12,6 +11,7 @@ using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -38,17 +38,7 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_operations_publish.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_operations_publish;
 
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool AutoSend { get; set; }

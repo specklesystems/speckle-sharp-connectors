@@ -442,50 +442,11 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
-    // Menu_AppendWireDisplay(menu);
-    // Menu_AppendDisconnectWires(menu);
-    //
-    // Menu_AppendPreProcessParameter(menu);
-    // Menu_AppendPrincipalParameter(menu);
-    // Menu_AppendReverseParameter(menu);
-    // Menu_AppendFlattenParameter(menu);
-    // Menu_AppendGraftParameter(menu);
-    // Menu_AppendSimplifyParameter(menu);
-    // Menu_AppendPostProcessParameter(menu);
-
     if (Kind == GH_ParamKind.floating || Kind == GH_ParamKind.input)
     {
-      // Menu_AppendSeparator(menu);
-      // if (Menu_CustomSingleValueItem() is ToolStripMenuItem single)
-      // {
-      //   // single.Enabled &= SourceCount == 0;
-      //   // menu.Items.Add(single);
-      // }
-      // else
-      // {
-      //   // Menu_AppendPromptOne(menu);
-      // }
-      //
-      // if (Menu_CustomMultiValueItem() is ToolStripMenuItem more)
-      // {
-      //   // more.Enabled &= SourceCount == 0;
-      //   // menu.Items.Add(more);
-      // }
-      // else
-      // {
-      //   // Menu_AppendPromptMore(menu);
-      // }
-
-      // Menu_AppendManageCollection(menu);
-
-      // Menu_AppendSeparator(menu);
       Menu_AppendDestroyPersistent(menu);
-      // Menu_AppendInternaliseData(menu);
 
-      if (Exposure != GH_Exposure.hidden)
-      {
-        // Menu_AppendExtractParameter(menu);
-      }
+      if (Exposure != GH_Exposure.hidden) { }
     }
   }
 
@@ -494,7 +455,6 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     var detail = Menu_AppendItem(menu, "Layout");
     Menu_AppendItem(detail.DropDown, "List", (s, a) => Menu_LayoutLevel(1), true, LayoutLevel == 1);
     Menu_AppendItem(detail.DropDown, "Details", (s, a) => Menu_LayoutLevel(2), true, LayoutLevel == 2);
-    //Menu_AppendItem(detail.DropDown, "Tiles", (s, a) => Menu_LayoutLevel(3), true, LayoutLevel == 3);
   }
 
   private void Menu_LayoutLevel(int value)
@@ -1834,103 +1794,3 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 }
 
 #pragma warning restore IDE0040
-
-internal static class Operator
-{
-  public enum CompareMethod
-  {
-    Nothing,
-    Equals,
-    StartsWith, // <
-    EndsWith, // >
-    Contains, // ?
-    Wildcard, // :
-    Regex, // ;
-  }
-
-  public static CompareMethod CompareMethodFromPattern(string pattern)
-  {
-    bool not = false;
-    return CompareMethodFromPattern(ref pattern, ref not);
-  }
-
-  public static CompareMethod CompareMethodFromPattern(ref string pattern, ref bool not)
-  {
-    if (pattern is null)
-    {
-      return CompareMethod.Nothing;
-    }
-
-    if (string.IsNullOrEmpty(pattern))
-    {
-      return CompareMethod.Equals;
-    }
-
-    switch (pattern[0])
-    {
-      case '~':
-        not = !not;
-        pattern = pattern[1..];
-        return CompareMethodFromPattern(ref pattern, ref not);
-      case '<':
-        pattern = pattern[1..];
-        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.StartsWith;
-      case '>':
-        pattern = pattern[1..];
-        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.EndsWith;
-      case '?':
-        pattern = pattern[1..];
-        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Contains;
-      case ':':
-        pattern = pattern[1..];
-        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Wildcard;
-      case ';':
-        pattern = pattern[1..];
-        return string.IsNullOrEmpty(pattern) ? CompareMethod.Equals : CompareMethod.Regex;
-      default:
-        return CompareMethod.Equals;
-    }
-  }
-
-  public static bool IsSymbolNameLike(this string source, string pattern)
-  {
-    if (pattern is null)
-    {
-      return true;
-    }
-
-    if (pattern == source)
-    {
-      return true;
-    }
-
-    bool not = false;
-    switch (CompareMethodFromPattern(ref pattern, ref not))
-    {
-      case CompareMethod.Nothing:
-        return not ^ false;
-      case CompareMethod.Equals:
-        return not ^ string.Equals(source, pattern, StringComparison.Ordinal);
-      case CompareMethod.StartsWith:
-        return not ^ source.StartsWith(pattern, StringComparison.Ordinal);
-      case CompareMethod.EndsWith:
-        return not ^ source.EndsWith(pattern, StringComparison.Ordinal);
-      case CompareMethod.Contains:
-        return not ^ (source.IndexOf(pattern, StringComparison.Ordinal) >= 0);
-      /*
-      case CompareMethod.Wildcard:
-        return not
-          ^ Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(
-            source,
-            pattern,
-            Microsoft.VisualBasic.CompareMethod.Text
-          );
-        */
-      case CompareMethod.Regex:
-        var regex = new System.Text.RegularExpressions.Regex(pattern);
-        return not ^ regex.IsMatch(source);
-    }
-
-    return false;
-  }
-}

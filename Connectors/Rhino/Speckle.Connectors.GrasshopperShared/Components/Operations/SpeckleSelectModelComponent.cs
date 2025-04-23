@@ -1,10 +1,10 @@
-using System.Reflection;
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -41,17 +41,7 @@ public class SpeckleSelectModelComponent : GH_Component
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
 
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_inputs_model.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_inputs_model;
 
   public SpeckleSelectModelComponent()
     : base(

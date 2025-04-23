@@ -21,10 +21,16 @@
     <Description>Description of Speckle.Connectors.Grasshopper7</Description>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="GrasshopperAsyncComponent" />
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="7.13.21348.13001" />
     <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="7.13.21348.13001" />
+    <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,4 +39,10 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <EmbeddedResource Update="C:\Users\Claire\GitHub\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Properties\Resources.resx">
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>

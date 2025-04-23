@@ -1,10 +1,10 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Properties;
 
@@ -13,23 +13,13 @@ public class FilterPropertiesByPropertyGroupPaths : GH_Component, IGH_VariablePa
 {
   public override Guid ComponentGuid => GetType().GUID;
 
-  protected override Bitmap? Icon
-  {
-    get
-    {
-      Assembly assembly = GetType().Assembly;
-      var stream = assembly.GetManifestResourceStream(
-        assembly.GetName().Name + "." + "Resources" + ".speckle_properties_query.png"
-      );
-      return stream != null ? new Bitmap(stream) : null;
-    }
-  }
+  protected override Bitmap Icon => Resources.speckle_properties_query;
 
   public FilterPropertiesByPropertyGroupPaths()
     : base(
-      "FilterPropertiesByPropertyGroupPaths",
-      "pgF",
-      "Filters object properties by their property group path",
+      "QueryPropertyValues",
+      "qP",
+      "Finds property values on a Speckle Object from their key",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
