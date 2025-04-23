@@ -23,6 +23,7 @@
 
   <PropertyGroup>
     <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
   <ItemGroup>
