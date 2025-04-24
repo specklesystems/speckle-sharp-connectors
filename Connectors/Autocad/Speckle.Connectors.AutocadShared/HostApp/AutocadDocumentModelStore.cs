@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -9,17 +10,16 @@ public class AutocadDocumentStore : DocumentModelStore
   private const string NULL_DOCUMENT_NAME = "Null Doc";
   private string _previousDocName;
   private readonly AutocadDocumentManager _autocadDocumentManager;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public AutocadDocumentStore(
+    ILogger<DocumentModelStore> logger,
     IJsonSerializer jsonSerializer,
     AutocadDocumentManager autocadDocumentManager,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer)
+    : base(logger, jsonSerializer)
   {
     _autocadDocumentManager = autocadDocumentManager;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
     _previousDocName = NULL_DOCUMENT_NAME;
 
     // POC: Will be addressed to move it into AutocadContext!

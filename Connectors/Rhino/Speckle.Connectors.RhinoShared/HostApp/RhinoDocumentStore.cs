@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -7,14 +8,16 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoDocumentStore : DocumentModelStore
 {
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private const string SPECKLE_KEY = "Speckle_DUI3";
   public override bool IsDocumentInit { get; set; } = true; // Note: because of rhino implementation details regarding expiry checking of sender cards.
 
-  public RhinoDocumentStore(IJsonSerializer jsonSerializer, ITopLevelExceptionHandler topLevelExceptionHandler)
-    : base(jsonSerializer)
+  public RhinoDocumentStore(
+    ILogger<DocumentModelStore> logger,
+    IJsonSerializer jsonSerializer,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+    : base(logger, jsonSerializer)
   {
-    _topLevelExceptionHandler = topLevelExceptionHandler;
     RhinoDoc.BeginOpenDocument += (_, _) => topLevelExceptionHandler.CatchUnhandled(() => IsDocumentInit = false);
     RhinoDoc.EndOpenDocument += (_, e) =>
       topLevelExceptionHandler.CatchUnhandled(() =>

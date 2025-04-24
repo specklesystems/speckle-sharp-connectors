@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -19,10 +20,11 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
   private string _lastSavedState = string.Empty;
 
   public NavisworksDocumentModelStore(
+    ILogger<DocumentModelStore> logger,
     IJsonSerializer jsonSerializer,
     ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer)
+    : base(logger, jsonSerializer)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
     LoadState();
