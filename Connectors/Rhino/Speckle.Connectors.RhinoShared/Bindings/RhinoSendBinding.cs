@@ -16,7 +16,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.Rhino.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -33,6 +32,7 @@ public sealed class RhinoSendBinding : ISendBinding
 
   private readonly DocumentModelStore _store;
   private readonly IServiceProvider _serviceProvider;
+  private readonly List<ISendFilter> _sendFilters;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly IOperationProgressManager _operationProgressManager;
@@ -65,6 +65,7 @@ public sealed class RhinoSendBinding : ISendBinding
     DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
+    IEnumerable<ISendFilter> sendFilters,
     IServiceProvider serviceProvider,
     ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
@@ -79,6 +80,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _store = store;
     _idleManager = idleManager;
     _serviceProvider = serviceProvider;
+    _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _operationProgressManager = operationProgressManager;
@@ -122,16 +124,15 @@ public sealed class RhinoSendBinding : ISendBinding
 
     // NOTE: BE CAREFUL handling things in this event handler since it is triggered whenever we save something into file!
     RhinoDoc.DocumentPropertiesChanged += async (_, e) =>
-      await _topLevelExceptionHandler.CatchUnhandledAsync(async () =>
+    {
+      var newUnit = e.Document.ModelUnitSystem;
+      if (newUnit != PreviousUnitSystem)
       {
-        var newUnit = e.Document.ModelUnitSystem;
-        if (newUnit != PreviousUnitSystem)
-        {
-          PreviousUnitSystem = newUnit;
+        PreviousUnitSystem = newUnit;
 
-          await InvalidateAllSender();
-        }
-      });
+        await InvalidateAllSender();
+      }
+    };
 
     RhinoDoc.AddRhinoObject += (_, e) =>
       _topLevelExceptionHandler.CatchUnhandled(() =>
@@ -189,7 +190,7 @@ public sealed class RhinoSendBinding : ISendBinding
       });
 
     RhinoDoc.LayerTableEvent += (_, args) =>
-      _topLevelExceptionHandler.CatchUnhandled(async () =>
+      _topLevelExceptionHandler.CatchUnhandled(() =>
       {
         if (!_store.IsDocumentInit)
         {
@@ -219,7 +220,6 @@ public sealed class RhinoSendBinding : ISendBinding
           }
         }
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
-        await Commands.RefreshSendFilters();
       });
 
     // Catches and stores changed material ids. These are then used in the expiry checks to invalidate all objects that have assigned any of those material ids.
@@ -277,8 +277,7 @@ public sealed class RhinoSendBinding : ISendBinding
       });
   }
 
-  public List<ISendFilter> GetSendFilters() =>
-    [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter()];
+  public List<ISendFilter> GetSendFilters() => _sendFilters;
 
   public List<ICardSetting> GetSendSettings() => [];
 

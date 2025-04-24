@@ -22,7 +22,6 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
 
   public string Id { get; set; } = "navisworksSavedSets";
   public string Name { get; set; } = "Saved Sets";
-  public string Type { get; set; } = "Select";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public List<string> SelectedObjectIds { get; set; } = [];

@@ -10,15 +10,14 @@ namespace Speckle.Connectors.Common;
 
 public static class ContainerRegistration
 {
-  public static void AddConnectors(this IServiceCollection serviceCollection)
+  public static void AddConnectorUtils(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
-
     // send operation and dependencies
     serviceCollection.AddSingleton<ICancellationManager, CancellationManager>();
     serviceCollection.AddScoped<RootObjectUnpacker>();
     serviceCollection.AddScoped<ReceiveOperation>();
-    serviceCollection.AddSingleton<IAccountService, AccountService>();
+    serviceCollection.AddSingleton<AccountService>();
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));
   }

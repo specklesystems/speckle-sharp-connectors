@@ -1,11 +1,9 @@
+using System.IO;
 using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Windows;
 using Speckle.Sdk;
-#if !AUTOCAD2025_OR_GREATER && !CIVIL3D2025_OR_GREATER
-using System.IO;
-#endif
 
 namespace Speckle.Connectors.Autocad.Plugin;
 

@@ -26,17 +26,7 @@ public class RevitRootToHostConverter : IRootToHostConverter
 
   public object Convert(Base target)
   {
-    // TODO: We should scope 2d elements properly in revit. It is outside of reference geometry workflows right now.
-    // // If ActiveView is a 2d view, use PlanView converter (will ignore DirectShapes)
-    // // Unsupported views already filtered out in HostObjectBuilder
-    // View activeView = _converterSettings.Current.Document.ActiveView;
-    // if (activeView.ViewType != ViewType.ThreeD)
-    // {
-    //   return _planViewToGeometryConverter.Convert(target);
-    // }
-
-    // Use default behavior and covert everything to DirectShapes
-    List<DB.GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
+    List<GeometryObject> geometryObjects = _baseToGeometryConverter.Convert(target);
 
     if (geometryObjects.Count == 0)
     {

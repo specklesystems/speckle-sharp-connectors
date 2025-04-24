@@ -24,7 +24,7 @@ public static class SharedRegistration
 {
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddConnectors();
+    serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<DefaultThreadContext, AutocadDocumentStore>();
     serviceCollection.AddDUIView();
 

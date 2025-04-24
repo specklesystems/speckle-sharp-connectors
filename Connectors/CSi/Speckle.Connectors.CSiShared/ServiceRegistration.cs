@@ -24,7 +24,7 @@ public static class ServiceRegistration
   {
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
-    services.AddConnectors();
+    services.AddConnectorUtils();
     services.AddDUI<DefaultThreadContext, CsiDocumentModelStore>();
     services.AddDUIView();
 

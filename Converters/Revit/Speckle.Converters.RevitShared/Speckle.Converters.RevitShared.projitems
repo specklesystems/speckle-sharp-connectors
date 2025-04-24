@@ -31,7 +31,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ReferencePointType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\BaseToHostGeometryObjectConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\PlanViewToHostGeometryObjectConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\ArcConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CircleConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CurveConverterToHost.cs" />
@@ -43,7 +42,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PlaneConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PointConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\PolylineConverterToHost.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\RegionConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\TransformConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\LocalToGlobalToDirectShapeConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />

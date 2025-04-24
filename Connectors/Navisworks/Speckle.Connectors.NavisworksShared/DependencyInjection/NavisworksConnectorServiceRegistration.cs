@@ -26,7 +26,7 @@ public static class NavisworksConnectorServiceRegistration
   public static void AddNavisworks(this IServiceCollection serviceCollection)
   {
     // Register Core functionality
-    serviceCollection.AddConnectors();
+    serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<DefaultThreadContext, NavisworksDocumentModelStore>();
     serviceCollection.AddDUIView();
 

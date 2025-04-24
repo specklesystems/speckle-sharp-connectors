@@ -233,7 +233,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         if (includeLinkedModels)
         {
           // handler is only responsible for element collection mechanics
-          var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc, transform);
+          var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc);
           linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
         }
         // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
@@ -380,7 +380,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// </summary>
   private async Task CheckFilterExpiration()
   {
-    // NOTE: below code seems like more make sense in terms of performance, but it causes unmanaged exception on Revit
+    // NOTE: below code seems like more make sense in terms of performance but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
     // var views = viewCollector.OfClass(typeof(View)).Cast<View>().Select(v => v.Id).ToList();
     // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();

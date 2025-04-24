@@ -32,7 +32,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
-    serviceCollection.AddConnectors();
+    serviceCollection.AddConnectorUtils();
     serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
 

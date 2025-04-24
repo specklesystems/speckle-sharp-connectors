@@ -27,11 +27,6 @@ public class ModelCard : DiscriminatedObject
   public string? WorkspaceId { get; set; }
 
   /// <summary>
-  /// Workspace slug.
-  /// </summary>
-  public string? WorkspaceSlug { get; set; }
-
-  /// <summary>
   /// Account id that model card created with it initially.
   /// </summary>
   public string? AccountId { get; set; }

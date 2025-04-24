@@ -88,7 +88,6 @@ public class ConfigBinding : IBinding
     _jsonCacheManager.UpdateObject("accounts", str);
   }
 
-  // TODO: need to be replaced with `GetAccountsConfig` function after some amount of time to not confuse ourselves.
   public AccountsConfig? GetUserSelectedAccountId()
   {
     var rawConfig = _jsonCacheManager.GetObject("accounts");
@@ -112,60 +111,6 @@ public class ConfigBinding : IBinding
       return null;
     }
   }
-
-  public AccountsConfig? GetAccountsConfig()
-  {
-    var rawConfig = _jsonCacheManager.GetObject("accounts");
-    if (rawConfig is null)
-    {
-      return null;
-    }
-
-    try
-    {
-      var config = _serializer.Deserialize<AccountsConfig>(rawConfig);
-      if (config is null)
-      {
-        throw new SerializationException("Failed to deserialize accounts config");
-      }
-
-      return config;
-    }
-    catch (SerializationException)
-    {
-      return null;
-    }
-  }
-
-  public void SetUserSelectedWorkspaceId(string workspaceId)
-  {
-    var str = _serializer.Serialize(new WorkspacesConfig() { UserSelectedWorkspaceId = workspaceId });
-    _jsonCacheManager.UpdateObject("workspaces", str);
-  }
-
-  public WorkspacesConfig? GetWorkspacesConfig()
-  {
-    var rawConfig = _jsonCacheManager.GetObject("workspaces");
-    if (rawConfig is null)
-    {
-      return null;
-    }
-
-    try
-    {
-      var config = _serializer.Deserialize<WorkspacesConfig>(rawConfig);
-      if (config is null)
-      {
-        throw new SerializationException("Failed to deserialize workspaces config");
-      }
-
-      return config;
-    }
-    catch (SerializationException)
-    {
-      return null;
-    }
-  }
 }
 
 /// <summary>
@@ -179,9 +124,4 @@ public class ConnectorConfig
 public class AccountsConfig
 {
   public string? UserSelectedAccountId { get; set; }
-}
-
-public class WorkspacesConfig
-{
-  public string? UserSelectedWorkspaceId { get; set; }
 }

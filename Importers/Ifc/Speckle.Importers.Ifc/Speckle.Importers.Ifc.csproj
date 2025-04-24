@@ -24,7 +24,7 @@
     <PackageReference Include="Ara3D.Buffers"  />
     <PackageReference Include="Ara3D.Logging"  />
     <PackageReference Include="Ara3D.Utils" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Speckle.Objects" />
     <PackageReference Include="Speckle.Sdk" />
   </ItemGroup>
@@ -39,10 +39,5 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </None>
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>
 </Project>

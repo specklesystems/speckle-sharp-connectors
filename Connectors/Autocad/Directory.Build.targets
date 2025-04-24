@@ -23,16 +23,4 @@
     <Message Text="Civil3D Version $(Civil3DVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
   </Target>
-
-  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
-    <StartArguments>/product C3D</StartArguments>
-  </PropertyGroup>
 </Project>

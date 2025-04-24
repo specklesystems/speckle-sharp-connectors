@@ -2,7 +2,6 @@ using Speckle.Common.MeshTriangulation;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.DoubleNumerics;
-using Speckle.Sdk.Common;
 using Tekla.Structures.Solid;
 
 namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
@@ -18,8 +17,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
 
   public SOG.Mesh Convert(TSM.Solid target)
   {
-    double conversionFactor = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
-
+    // early return extruded Mesh
     // if there are exactly 2 opposite facing contours with holes (inner loops)
     var facesAsPolygons = GetFacesAsPolygons(target);
     var facesToExtrude = facesAsPolygons.Where(lst => lst.Count > 1).ToList();
@@ -68,9 +66,9 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
           }
 
           int index = currentIndex++;
-          vertices.Add(vertex.X * conversionFactor);
-          vertices.Add(vertex.Y * conversionFactor);
-          vertices.Add(vertex.Z * conversionFactor);
+          vertices.Add(vertex.X);
+          vertices.Add(vertex.Y);
+          vertices.Add(vertex.Z);
           faceVertices.Add(index);
         }
 
@@ -106,15 +104,14 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
 
   private SOG.Mesh Mesh3ToSpeckleMesh(Mesh3 mesh3)
   {
-    double conversionFactor = Units.GetConversionFactor(Units.Millimeters, _settingsStore.Current.SpeckleUnits);
     var vertices = new List<double>();
     var faces = new List<int>();
 
     foreach (var v in mesh3.Vertices)
     {
-      vertices.Add(v.X * conversionFactor);
-      vertices.Add(v.Y * conversionFactor);
-      vertices.Add(v.Z * conversionFactor);
+      vertices.Add(v.X);
+      vertices.Add(v.Y);
+      vertices.Add(v.Z);
     }
 
     for (int i = 0; i < mesh3.Triangles.Count; i += 3)

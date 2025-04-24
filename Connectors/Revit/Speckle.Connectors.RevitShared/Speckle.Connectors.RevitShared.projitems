@@ -25,7 +25,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\HideWarningsFailuresPreprocessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IdStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IStorageSchema.cs" />
