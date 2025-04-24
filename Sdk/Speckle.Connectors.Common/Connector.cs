@@ -30,10 +30,8 @@ public static class Connector
     HostAppVersion version
   )
   {
-    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
-
     var (logging, tracing, metrics) = Observability.Initialize(
-      application.Name + " " + HostApplications.GetVersion(version),
+      application.Name + " " + version,
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
 #if DEBUG || LOCAL
@@ -71,6 +69,7 @@ public static class Connector
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
+    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
     serviceCollection.AddSpeckleSdk(application, version, Assembly.GetExecutingAssembly().GetVersion());
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return new LoggingDisposable(tracing, metrics);
