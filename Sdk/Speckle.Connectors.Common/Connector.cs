@@ -5,6 +5,8 @@ using Speckle.Connectors.Common.Common;
 using Speckle.Connectors.Logging;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common;
 
@@ -24,12 +26,12 @@ public static class Connector
 
   public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
-    Application application,
+    HostApplication application,
     HostAppVersion version
   )
   {
     var (logging, tracing, metrics) = Observability.Initialize(
-      application.Name + " " + HostApplications.GetVersion(version),
+      application.Name + " " + version,
       application.Slug,
       Assembly.GetExecutingAssembly().GetVersion(),
 #if DEBUG || LOCAL
@@ -67,12 +69,8 @@ public static class Connector
     );
 
     serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
-    serviceCollection.AddSpeckleSdk(
-      application,
-      HostApplications.GetVersion(version),
-      Assembly.GetExecutingAssembly().GetVersion(),
-      typeof(Point).Assembly
-    );
+    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
+    serviceCollection.AddSpeckleSdk(application, version, Assembly.GetExecutingAssembly().GetVersion());
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return new LoggingDisposable(tracing, metrics);
   }
