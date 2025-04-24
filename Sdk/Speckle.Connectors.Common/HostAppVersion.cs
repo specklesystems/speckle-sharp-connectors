@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.Common;
+﻿/*namespace Speckle.Connectors.Common;
 
 public enum HostAppVersion
 {
@@ -22,3 +22,4 @@ public enum HostAppVersion
   v716,
   v717,
 }
+*/
