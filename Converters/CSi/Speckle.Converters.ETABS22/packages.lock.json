@@ -214,7 +214,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.2.0, )"
+          "Speckle.Objects": "[3.2.1, )"
         }
       },
       "Microsoft.Extensions.Logging": {
@@ -243,18 +243,18 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.2.0, )",
-        "resolved": "3.2.0",
-        "contentHash": "ZgsbDz31Rq87Gtej2soLjTTBaRnnERKvs0QCT2AjGD4Vn5QwqnagPDqFTndWz+w6vG4t2hZH56QfqAmyIiuPag==",
+        "requested": "[3.2.1, )",
+        "resolved": "3.2.1",
+        "contentHash": "hmRbn1JpnOtV1J6Gg8xnSQChXo9J7RaVIDPPM0vOzdmfMdCdKvB7Jp6gAqoCp6IG4QywD5j0rdVilbOuLzWrcQ==",
         "dependencies": {
-          "Speckle.Sdk": "3.2.0"
+          "Speckle.Sdk": "3.2.1"
         }
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[3.2.0, )",
-        "resolved": "3.2.0",
-        "contentHash": "DI3ljov8FMIAIosm3quAXlgYKWS+AJriaFC9dGBJh4y1xg4jvD8Tpx4h7Wd3Bib9BsH6Bhe5BUwACLv7dJKxIg==",
+        "requested": "[3.2.1, )",
+        "resolved": "3.2.1",
+        "contentHash": "dGrqQQjok4Tn6a5nxddaTUhHM3w4uXzwjrnfayQaUx+Zc/nUgZ8l7QJ4DzZvbclxx4chaSLFSngljMPyqf5riA==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -263,14 +263,14 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.2.0"
+          "Speckle.Sdk.Dependencies": "3.2.1"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.2.0, )",
-        "resolved": "3.2.0",
-        "contentHash": "wgUjHJN8lPF47tAht+2gm8yF2dIQXxTXhoJttzb+89o2ej1jrdwxTUQP1EtfjnixK6QApJ809QQqTbJm5sdaqA=="
+        "requested": "[3.2.1, )",
+        "resolved": "3.2.1",
+        "contentHash": "OjliIPLiCTnWI4icFLtCZycLPFHCpz2K7NklLxn8WzvIvKdedQZiLkuAFz8i2fiU5/CzBohU0daY6OppNrC3Gg=="
       }
     }
   }
