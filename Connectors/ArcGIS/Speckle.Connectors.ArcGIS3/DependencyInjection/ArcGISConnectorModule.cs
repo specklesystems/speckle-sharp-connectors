@@ -38,7 +38,6 @@ public static class ArcGISConnectorModule
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // register send operation and dependencies
     serviceCollection.AddSingleton<IBinding, ArcGISSendBinding>();
@@ -59,8 +58,5 @@ public static class ArcGISConnectorModule
     serviceCollection.AddScoped<IHostObjectBuilder, ArcGISHostObjectBuilder>();
 
     serviceCollection.AddScoped<MapMembersUtils>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }
