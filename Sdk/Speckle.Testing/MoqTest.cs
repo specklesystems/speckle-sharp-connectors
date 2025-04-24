@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 using Speckle.Sdk;
+using Speckle.Sdk.Host;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Testing;
 
@@ -24,7 +26,8 @@ public abstract class MoqTest
   protected IServiceCollection CreateServices(params Assembly[] assemblies)
   {
     var services = new ServiceCollection();
-    services.AddSpeckleSdk(new("Tests", "tests"), "test", assemblies);
+    TypeLoader.Initialize([typeof(Base).Assembly, .. assemblies]);
+    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
     return services;
   }
 }
