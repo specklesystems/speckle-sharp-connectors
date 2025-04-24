@@ -135,7 +135,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
                 break;
 
               case Base xBase:
-                nativeObjects.Add(ConvertOrCreateWrapper(prop.Key, xBase));
+                nativeObjects.AddRange(ConvertOrCreateWrapper(xBase));
                 break;
 
               default:
@@ -166,7 +166,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           break;
 
         case Base baseValue:
-          result.Add(ConvertOrCreateWrapper(prop.Key, baseValue));
+          result.Add(CreateOutputParamByKeyValue(prop.Key, ConvertOrCreateWrapper(baseValue), GH_ParamAccess.list));
           break;
 
         default:
@@ -196,7 +196,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     return result;
   }
 
-  private OutputParamWrapper ConvertOrCreateWrapper(string propKey, Base @base)
+  private List<SpeckleObjectWrapperGoo> ConvertOrCreateWrapper(Base @base)
   {
     try
     {
@@ -216,7 +216,8 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           };
         convertedWrappers.Add(new(convertedWrapper));
       }
-      return CreateOutputParamByKeyValue(propKey, convertedWrappers, GH_ParamAccess.list);
+
+      return convertedWrappers;
     }
     catch (ConversionException)
     {
@@ -231,7 +232,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           Color = null,
           Material = null
         };
-      return CreateOutputParamByKeyValue(propKey, new SpeckleObjectWrapperGoo(convertedWrapper), GH_ParamAccess.item);
+      return new() { new SpeckleObjectWrapperGoo(convertedWrapper) };
     }
   }
 
