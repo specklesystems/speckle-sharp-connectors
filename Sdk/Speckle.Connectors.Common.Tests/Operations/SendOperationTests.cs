@@ -1,5 +1,6 @@
-﻿using System.Reflection;
+using System.Reflection;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 using Speckle.Connectors.Common.Builders;
@@ -7,6 +8,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Host;
@@ -29,8 +31,9 @@ public class SendOperationTests : MoqTest
   public async Task Execute()
 #pragma warning restore CA1506
   {
-    TypeLoader.Reset();
-    TypeLoader.Initialize(Assembly.GetExecutingAssembly());
+    var services = new ServiceCollection();
+    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
+    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var accountService = Create<IAccountService>();
@@ -50,13 +53,17 @@ public class SendOperationTests : MoqTest
     rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
+    var versionId = "versionId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
     threadContext
-      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<SerializeProcessResults>>>(), false))
-      .ReturnsAsync(serializeProcessResults);
+      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, string)>>>(), false))
+      .ReturnsAsync((serializeProcessResults, versionId));
 
-    var sendOperation = new SendOperation<object>(
+    var sp = services.BuildServiceProvider();
+
+    var sendOperation = ActivatorUtilities.CreateInstance<SendOperation<object>>(
+      sp,
       rootObjectBuilder.Object,
       sendConversionCache.Object,
       accountService.Object,
@@ -70,15 +77,20 @@ public class SendOperationTests : MoqTest
     result.Should().NotBeNull();
     rootResult.RootObject["version"].Should().Be(3);
     result.RootObjId.Should().Be(rootId);
+    result.VersionId.Should().Be(versionId);
     result.ConvertedReferences.Should().BeSameAs(refs);
     result.ConversionResults.Should().BeSameAs(conversionResults);
   }
 
   [Test]
+#pragma warning disable CA1506
   public async Task Send()
+#pragma warning restore CA1506
   {
-    TypeLoader.Reset();
-    TypeLoader.Initialize(Assembly.GetExecutingAssembly());
+    var services = new ServiceCollection();
+    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
+    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
+
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var accountService = Create<IAccountService>();
@@ -113,9 +125,12 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).Returns(Task.CompletedTask);
+    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
 
-    var sendOperation = new SendOperation<object>(
+    var sp = services.BuildServiceProvider();
+
+    var sendOperation = ActivatorUtilities.CreateInstance<SendOperation<object>>(
+      sp,
       rootObjectBuilder.Object,
       sendConversionCache.Object,
       accountService.Object,
@@ -125,7 +140,8 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var result = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
+    var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
     result.Should().Be(serializeProcessResults);
+    version.Should().Be("version");
   }
 }

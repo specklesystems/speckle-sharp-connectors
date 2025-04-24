@@ -24,7 +24,7 @@ public static class ServiceRegistration
 {
   public static void AddRevit(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddConnectorUtils();
+    serviceCollection.AddConnectors();
     serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
 
@@ -61,6 +61,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
+    serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());

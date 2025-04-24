@@ -6,8 +6,6 @@
     <AutoCADVersion>2023</AutoCADVersion>
     <DefineConstants>$(DefineConstants);AUTOCAD;AUTOCAD2023;AUTOCAD2022_OR_GREATER;AUTOCAD2023_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
-    <StartAction>Program</StartAction>
-    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
   </PropertyGroup>
   
   <ItemGroup>

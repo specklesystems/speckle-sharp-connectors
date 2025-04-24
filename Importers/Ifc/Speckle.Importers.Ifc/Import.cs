@@ -16,7 +16,6 @@ public static class Import
 {
   public static ServiceProvider GetServiceProvider()
   {
-    TypeLoader.Initialize(typeof(Base).Assembly, typeof(Point).Assembly);
     var serviceCollection = new ServiceCollection();
     serviceCollection.AddIFCImporter();
     return serviceCollection.BuildServiceProvider();
@@ -24,6 +23,7 @@ public static class Import
 
   public static void AddIFCImporter(this ServiceCollection serviceCollection)
   {
+    TypeLoader.Initialize([typeof(Base).Assembly, typeof(Point).Assembly]);
     serviceCollection.AddSpeckleSdk(new("IFC", "ifc"), HostAppVersion.v2024, "IFC-Importer");
     serviceCollection.AddSpeckleWebIfc();
     serviceCollection.AddSingleton<Importer>();
