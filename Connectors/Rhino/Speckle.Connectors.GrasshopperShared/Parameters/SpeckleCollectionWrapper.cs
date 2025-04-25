@@ -191,7 +191,14 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
 
 #if !RHINO8_OR_GREATER
   private bool CastFromModelLayer(object _) => false;
+
+  private bool CastToModelLayer<T>(ref T _) => false;
 #endif
+
+  public override bool CastTo<T>(ref T target)
+  {
+    return CastToModelLayer(ref target);
+  }
 
   public SpeckleCollectionWrapperGoo() { }
 

@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 public class GrasshopperReceiveOperation
 {
-  private readonly AccountService _accountService;
+  private readonly IAccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
   private readonly ISdkActivityFactory _activityFactory;
@@ -18,7 +18,7 @@ public class GrasshopperReceiveOperation
   private readonly IClientFactory _clientFactory;
 
   public GrasshopperReceiveOperation(
-    AccountService accountService,
+    IAccountService accountService,
     IServerTransportFactory serverTransportFactory,
     IProgressDisplayManager progressDisplayManager,
     ISdkActivityFactory activityFactory,
