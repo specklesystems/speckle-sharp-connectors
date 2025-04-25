@@ -7,6 +7,7 @@ using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.CSiShared;
+using Speckle.Sdk.Host;
 
 namespace Speckle.Connectors.CSiShared;
 
@@ -35,7 +36,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
     services.AddCsiConverters();
   }
 
-  protected abstract Speckle.Sdk.Application GetHostApplication();
+  protected abstract HostApplication GetHostApplication();
 
   protected abstract HostAppVersion GetVersion();
 
