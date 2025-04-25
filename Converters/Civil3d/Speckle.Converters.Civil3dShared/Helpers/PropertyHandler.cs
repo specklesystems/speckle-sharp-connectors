@@ -17,6 +17,7 @@ public sealed class PropertyHandler
     catch (Exception e)
       when (e is InvalidOperationException
         || e is ArgumentException argEx && !argEx.IsFatal()
+        || e is Autodesk.AutoCAD.Runtime.Exception acEx && !acEx.IsFatal() // eNotApplicable
         || e is Autodesk.Civil.CivilException civilEx && !civilEx.IsFatal()
       )
     {
