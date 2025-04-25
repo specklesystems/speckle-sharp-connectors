@@ -90,4 +90,16 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
 
     return arc;
   }
+
+  private T? TryGetValue<T>(Func<T> getValue)
+  {
+    try
+    {
+      return getValue();
+    }
+    catch (InvalidOperationException)
+    {
+      return default;
+    }
+  }
 }
