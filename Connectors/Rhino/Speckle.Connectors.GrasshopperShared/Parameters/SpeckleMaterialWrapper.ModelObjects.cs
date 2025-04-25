@@ -1,5 +1,6 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Render;
 using Rhino;
 using Rhino.DocObjects;
@@ -18,6 +19,14 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
   {
     switch (source)
     {
+      case ModelObject modelObject:
+        if (modelObject.Render.Material?.Material is ModelRenderMaterial modelRenderMaterial)
+        {
+          return CastFromModelRenderMaterial(modelRenderMaterial);
+        }
+
+        return false;
+
       case Rhino.Render.RenderMaterial renderMaterial:
         renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow);
         Value = new()
@@ -28,28 +37,20 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         };
 
         return true;
+
       case ModelRenderMaterial modelMaterial:
         if (modelMaterial.Id is Guid id)
         {
           // this id can be the default render material id {defadefa-defa-defa-defa-defadefadefa} which tbh can't test for and will return null on find
           // assuming an id always exists and if failed to find, we'll use default.
-          Rhino.Render.RenderMaterial renderMaterial =
+          Rhino.Render.RenderMaterial matRenderMaterial =
             RhinoDoc.ActiveDoc.RenderMaterials.Find(id) ?? Material.DefaultMaterial.RenderMaterial;
-
-          if (renderMaterial is null)
+          if (matRenderMaterial is null)
           {
             throw new SpeckleException($"Failed to find ModelRenderMaterial with guid: {id}");
           }
 
-          renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow);
-          Value = new()
-          {
-            Base = ToSpeckleRenderMaterial(renderMaterial),
-            RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow),
-            RhinoRenderMaterialId = renderMaterial.Id
-          };
-
-          return true;
+          return CastFromModelRenderMaterial(matRenderMaterial);
         }
 
         return false;
