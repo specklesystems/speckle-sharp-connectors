@@ -11,6 +11,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Host;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
@@ -31,7 +32,8 @@ public class SendOperationTests : MoqTest
 #pragma warning restore CA1506
   {
     var services = new ServiceCollection();
-    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
+    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
+    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var accountService = Create<IAccountService>();
@@ -86,7 +88,8 @@ public class SendOperationTests : MoqTest
 #pragma warning restore CA1506
   {
     var services = new ServiceCollection();
-    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
+    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
+    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
 
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
