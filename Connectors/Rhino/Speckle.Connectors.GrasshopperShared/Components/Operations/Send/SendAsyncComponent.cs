@@ -45,7 +45,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public bool JustPastedIn { get; set; }
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
-  public IClient ApiClient { get; set; }
+  public Client ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
