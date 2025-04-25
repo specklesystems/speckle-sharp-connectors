@@ -1,4 +1,4 @@
-using Speckle.InterfaceGenerator;
+﻿using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 

@@ -11,7 +11,6 @@
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="GrasshopperAsyncComponent" Version="1.2.3" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
     <PackageVersion Include="JetBrains.Profiler.SelfApi" Version="2.5.12" />
     <PackageVersion Include="LibTessDotNet" Version="1.1.15" />
     <PackageVersion Include="Moq" Version="4.20.70" />
@@ -55,6 +54,6 @@
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <GlobalPackageReference Include="Speckle.InterfaceGenerator" Version="0.9.6" />
-    <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+    <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" /> <!-- allows for non-windows platforms to target net48 without error -->
   </ItemGroup>
 </Project>
