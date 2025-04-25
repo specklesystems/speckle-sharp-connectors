@@ -1,6 +1,7 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Rhinoceros;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -12,21 +13,26 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
 {
   private bool CastFromModelObject(object source)
   {
-    if (source is ModelUserText userText)
+    switch (source)
     {
-      Dictionary<string, SpecklePropertyGoo> dictionary = new();
-      foreach (KeyValuePair<string, string> entry in userText)
-      {
-        string key = entry.Key;
-        SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
-        dictionary.Add(key, value);
-      }
+      case ModelObject modelObject:
+        return CastFromModelObject(modelObject.UserText);
 
-      Value = dictionary;
-      return true;
+      case ModelUserText userText:
+        Dictionary<string, SpecklePropertyGoo> dictionary = new();
+        foreach (KeyValuePair<string, string> entry in userText)
+        {
+          string key = entry.Key;
+          SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
+          dictionary.Add(key, value);
+        }
+
+        Value = dictionary;
+        return true;
+
+      default:
+        return false;
     }
-
-    return false;
   }
 }
 #endif
