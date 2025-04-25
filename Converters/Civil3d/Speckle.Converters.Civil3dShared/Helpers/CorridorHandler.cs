@@ -1,7 +1,6 @@
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.Helpers;
