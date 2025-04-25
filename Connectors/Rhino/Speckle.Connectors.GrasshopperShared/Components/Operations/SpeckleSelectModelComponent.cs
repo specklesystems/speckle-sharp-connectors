@@ -29,7 +29,7 @@ public class SpeckleSelectModelComponent : GH_Component
   private string? _storedModelId;
   private string? _storedVersionId;
 
-  private readonly AccountService _accountService;
+  private readonly IAccountService _accountService;
   private readonly AccountManager _accountManager;
   private readonly IClientFactory _clientFactory;
 
@@ -72,7 +72,7 @@ public class SpeckleSelectModelComponent : GH_Component
     );
 
     Attributes = new SpeckleSelectModelComponentAttributes(this);
-    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
+    _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
     _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
     var account = _accountManager.GetDefaultAccount();
