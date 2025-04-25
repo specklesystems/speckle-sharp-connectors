@@ -84,7 +84,7 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
 
     return polyline;
   }
-  
+
   private T? TryGetValue<T>(Func<T> getValue)
   {
     try
