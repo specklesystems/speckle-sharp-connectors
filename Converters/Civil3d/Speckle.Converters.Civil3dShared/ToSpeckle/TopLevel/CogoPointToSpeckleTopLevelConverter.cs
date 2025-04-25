@@ -1,8 +1,8 @@
 using Speckle.Converters.Civil3dShared.Extensions;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Data;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
@@ -31,12 +31,8 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Civil3dObject Convert(CDB.CogoPoint target)
   {
-    string name = "";
-    try
-    {
-      name = target.PointName;
-    }
-    catch (Autodesk.Civil.CivilException e) when (!e.IsFatal()) { } // throws if name doesn't exist
+    PropertyHandler propHandler = new();
+    string? name = propHandler.TryGetValue(() => target.PointName, out string? pointName) ? pointName : ""; // throws if name doesnt exist
 
     // extract display value as point
     SOG.Point displayPoint = _pointConverter.Convert(target.Location);
@@ -47,7 +43,7 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     Civil3dObject civilObject =
       new()
       {
-        name = name,
+        name = name ?? "",
         type = target.GetType().ToString().Split('.').Last(),
         baseCurves = null,
         elements = new(),

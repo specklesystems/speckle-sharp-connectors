@@ -1,4 +1,4 @@
-using Speckle.Sdk;
+using Speckle.Converters.Civil3dShared.Helpers;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -37,12 +37,9 @@ public class PropertySetDefinitionHandler
         ["defaultValue"] = propertyDefinition.DefaultData
       };
 
-      try
-      {
-        // accessing unit type prop can be expected to throw if it's not applicable to the definition
-        propertyDict["units"] = propertyDefinition.UnitType.GetTypeDisplayName(true);
-      }
-      catch (Exception e) when (!e.IsFatal()) { }
+      // accessing unit type prop can be expected to throw if it's not applicable to the definition
+      PropertyHandler propHandler = new();
+      propHandler.TryAddToDictionary(propertyDict, "units", () => propertyDefinition.UnitType.GetTypeDisplayName(true));
 
       propertyDefinitionsDict[propertyName] = propertyDict;
     }

@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -6,15 +7,10 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 public class AlignmentSubentitySpiralToSpeckleRawConverter
   : ITypedConverter<(CDB.AlignmentSubEntitySpiral, CDB.Alignment), SOG.Polyline>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public AlignmentSubentitySpiralToSpeckleRawConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
-    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
-  )
+  public AlignmentSubentitySpiralToSpeckleRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
   {
-    _planeConverter = planeConverter;
     _settingsStore = settingsStore;
   }
 
@@ -46,41 +42,35 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     polylineValue.Add(spiral.EndPoint.Y);
     polylineValue.Add(0);
 
-    // Civil 3D 2022 has a bug with the spiral definition sometimes throwing an InvalidOperation exception
-    // Catch the error here and set direction to null if this occurs
-    string? spiralDirection;
-    try
-    {
-      spiralDirection = spiral.Direction.ToString();
-    }
-    catch (InvalidOperationException)
-    {
-      // Set the spiralDirection as null
-      spiralDirection = null;
-    }
-
     SOG.Polyline polyline =
       new()
       {
         value = polylineValue,
         units = units,
-        closed = spiral.StartPoint == spiral.EndPoint,
-        // add alignment spiral props
-        length = spiral.Length,
-        ["delta"] = spiral.Delta,
-        ["direction"] = spiralDirection,
-        ["spiralDefinition"] = spiral.SpiralDefinition.ToString(),
-        ["totalX"] = spiral.TotalX,
-        ["totalY"] = spiral.TotalY,
-        ["startStation"] = spiral.StartStation,
-        ["endStation"] = spiral.EndStation,
-        ["startDirection"] = spiral.StartDirection,
-        ["endDirection"] = spiral.EndDirection,
-        ["a"] = spiral.A,
-        ["k"] = spiral.K,
-        ["p"] = spiral.P,
-        ["minimumTransitionLength"] = spiral.MinimumTransitionLength
+        closed = spiral.StartPoint == spiral.EndPoint
       };
+
+    // create a properties dictionary for additional props. These all can throw
+    PropertyHandler propHandler = new();
+    Dictionary<string, object?> props = new() { };
+    propHandler.TryAddToDictionary(props, "length", () => spiral.Length);
+    propHandler.TryAddToDictionary(props, "spiralDirection", () => spiral.Direction.ToString());
+    propHandler.TryAddToDictionary(props, "delta", () => spiral.Delta);
+    propHandler.TryAddToDictionary(props, "direction", () => spiral.SpiralDefinition.ToString());
+    propHandler.TryAddToDictionary(props, "totalX", () => spiral.TotalX);
+    propHandler.TryAddToDictionary(props, "totalY", () => spiral.TotalY);
+    propHandler.TryAddToDictionary(props, "startStation", () => spiral.StartStation);
+    propHandler.TryAddToDictionary(props, "endStation", () => spiral.EndStation);
+    propHandler.TryAddToDictionary(props, "startDirection", () => spiral.StartDirection);
+    propHandler.TryAddToDictionary(props, "endDirection", () => spiral.EndDirection);
+    propHandler.TryAddToDictionary(props, "a", () => spiral.A);
+    propHandler.TryAddToDictionary(props, "k", () => spiral.K);
+    propHandler.TryAddToDictionary(props, "p", () => spiral.P);
+    propHandler.TryAddToDictionary(props, "minimumTransitionLength", () => spiral.MinimumTransitionLength);
+    if (props.Count > 0)
+    {
+      polyline["properties"] = props;
+    }
 
     return polyline;
   }

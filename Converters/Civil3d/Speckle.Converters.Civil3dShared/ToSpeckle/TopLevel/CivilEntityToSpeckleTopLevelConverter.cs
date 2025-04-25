@@ -4,7 +4,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Objects.Data;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
@@ -40,12 +39,10 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
 
   public Civil3dObject Convert(CDB.Entity target)
   {
-    string name = target.DisplayName;
-    try
-    {
-      name = target.Name; // this will throw for some entities like labels
-    }
-    catch (Exception e) when (!e.IsFatal()) { }
+    PropertyHandler propHandler = new();
+    string name = propHandler.TryGetValue(() => target.Name, out string? tarName)
+      ? tarName ?? target.DisplayName
+      : target.DisplayName; // this will throw for some entities like labels
 
     // get basecurve
     List<ICurve>? baseCurves = _baseCurveExtractor.GetBaseCurves(target);
