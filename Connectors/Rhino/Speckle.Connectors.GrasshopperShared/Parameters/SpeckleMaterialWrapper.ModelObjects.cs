@@ -20,9 +20,9 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
     switch (source)
     {
       case ModelObject modelObject:
-        if (modelObject.Render.Material?.Material is ModelRenderMaterial renderMaterial)
+        if (modelObject.Render.Material?.Material is ModelRenderMaterial modelRenderMaterial)
         {
-          return CastFromModelRenderMaterial(renderMaterial);
+          return CastFromModelRenderMaterial(modelRenderMaterial);
         }
 
         return false;
