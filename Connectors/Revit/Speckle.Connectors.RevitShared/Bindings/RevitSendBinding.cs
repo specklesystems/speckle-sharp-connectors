@@ -231,7 +231,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           continue;
         }
 
-        var transform = linkedModel.GetTotalTransform().Inverse;
+        // transform maps linked model elements into the main model's reference point coordinate system
+        // first apply the user's reference point transform (setting) then adjust for the linked model's placement relative to host.
+        Transform transform = (mainModelTransform ?? Transform.Identity).Multiply(
+          linkedModel.GetTotalTransform().Inverse
+        );
 
         // decision about whether to process elements is made here, not in the handler
         // only collects elements from linked models when the setting is enabled
