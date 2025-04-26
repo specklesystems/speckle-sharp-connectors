@@ -206,8 +206,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
 
-    // create context for main document elements
-    List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+    // should ideally reuse the initialized value from the scoped IConverterSettingsStore<RevitConversionSettings>.
+    // but, it's scoped and to avoid bigger scarier changes I'm re-fetching the setting here (inexpensive operation?)
+    Transform? mainModelTransform = _toSpeckleSettingsManager.GetReferencePointSetting(modelCard);
+    List<DocumentToConvert> documentElementContexts =
+    [
+      new(mainModelTransform, activeUIDoc.Document, elementsOnMainModel)
+    ];
 
     // get the linked models setting - this decision belongs at this level
     bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
