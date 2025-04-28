@@ -241,11 +241,11 @@ public class RevitRootObjectBuilder(
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
-    // Store transform matrix data in a serializable format
+    // we want to store transform data for chosen reference point setting
     if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
       var transformData = ReferencePointSerializationHelper.SerializeTransformToRootObject(transform);
-      rootObject["referencePointTransform"] = transformData;
+      rootObject["referencePointTransform"] = transformData; // TODO: standardise with ProxyKey?
     }
 
     return new RootObjectBuilderResult(rootObject, results);

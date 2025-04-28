@@ -8,6 +8,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointSerializationHelper
 {
+  // creating all these const probably not necessary?
   private const string ORIGIN_X = "originX";
   private const string ORIGIN_Y = "originY";
   private const string ORIGIN_Z = "originZ";
@@ -35,6 +36,7 @@ public static class ReferencePointSerializationHelper
   /// </remarks>
   public static Dictionary<string, double> SerializeTransformToRootObject(Transform transform)
   {
+    // best type for this? dict? Base?
     var transformData = new Dictionary<string, double>
     {
       // Origin components

@@ -24,6 +24,8 @@ public class ReferencePointConverter(
 
   public DB.XYZ ConvertToInternalCoordinates(DB.XYZ p, bool isPoint)
   {
+    // NOTE: I don't like the fact, that I'm using the cache here and not the converterSettings.
+    // TODO: to discuss
     if (revitToHostCacheSingleton.ReferencePointTransform is DB.Transform transform)
     {
       return isPoint ? transform.OfPoint(p) : transform.OfVector(p);

@@ -61,8 +61,8 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    // try extract reference point transform from root object
-    // if not available (valid case; other sourceApplication or older commit) we default to InternalOrigin
+    // if root object has "referencePointTransform" we create a DB.Transform from it
+    // if not available (which is a valid case; other sourceApplication or older commit) we default to InternalOrigin
     if (
       rootObject.DynamicPropertyKeys.Contains("referencePointTransform")
       && rootObject["referencePointTransform"] is Dictionary<string, object> transformData

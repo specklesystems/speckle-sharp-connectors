@@ -77,7 +77,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, // TODO figure out
-            null, // RevitHostObjectBuilder gets this information
+            null, // TODO: do better. currently RevitHostObjectBuilder gets this information, hence why ReferencePointConverter.cs is gross
             false,
             true
           )
