@@ -8,6 +8,8 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
@@ -51,6 +53,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
 
     Commands = new ReceiveBindingUICommands(parent);
   }
+
+  public List<ICardSetting> GetReceiveSettings() => [new ReferencePointSetting(ReferencePointType.InternalOrigin)];
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
