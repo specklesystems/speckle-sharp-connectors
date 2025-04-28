@@ -8,11 +8,9 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.Revit.Operations.Receive.Settings;
-using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
@@ -30,7 +28,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
-  private readonly ToHostSettingsManager _toHostSettingsManager;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
@@ -42,7 +40,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     ILogger<RevitReceiveBinding> logger,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    ToHostSettingsManager toHostSettingsManager
+    RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     Parent = parent;
@@ -53,12 +51,10 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
-    _toHostSettingsManager = toHostSettingsManager;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
 
     Commands = new ReceiveBindingUICommands(parent);
   }
-
-  public List<ICardSetting> GetReceiveSettings() => [new ReferencePointSetting(ReferencePointType.InternalOrigin)];
 
   public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
@@ -81,7 +77,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, // TODO figure out
-            _toHostSettingsManager.GetReferencePointSetting(ReferencePointType.Survey), // TODO: hard-coding for now!!
+            _revitToHostCacheSingleton.ReferencePointTransform,
             false,
             true
           )

@@ -61,6 +61,66 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
+    // try extract reference point transform from root object
+    // if not available (valid case; other sourceApplication or older commit) we default to InternalOrigin
+    if (rootObject.DynamicPropertyKeys.Contains("referencePointTransform"))
+    {
+      // Get the value using the indexer
+      if (rootObject["referencePointTransform"] is Dictionary<string, object> transformData)
+      {
+        try
+        {
+          // Extract origin
+          XYZ origin =
+            new(
+              Convert.ToDouble(transformData["originX"]),
+              Convert.ToDouble(transformData["originY"]),
+              Convert.ToDouble(transformData["originZ"])
+            );
+
+          // Extract basis vectors
+          XYZ basisX =
+            new(
+              Convert.ToDouble(transformData["basisXX"]),
+              Convert.ToDouble(transformData["basisXY"]),
+              Convert.ToDouble(transformData["basisXZ"])
+            );
+          XYZ basisY =
+            new(
+              Convert.ToDouble(transformData["basisYX"]),
+              Convert.ToDouble(transformData["basisYY"]),
+              Convert.ToDouble(transformData["basisYZ"])
+            );
+          XYZ basisZ =
+            new(
+              Convert.ToDouble(transformData["basisZX"]),
+              Convert.ToDouble(transformData["basisZY"]),
+              Convert.ToDouble(transformData["basisZZ"])
+            );
+
+          // Create the transform
+          Autodesk.Revit.DB.Transform referencePointTransform = Autodesk.Revit.DB.Transform.Identity;
+          referencePointTransform.Origin = origin;
+          referencePointTransform.BasisX = basisX;
+          referencePointTransform.BasisY = basisY;
+          referencePointTransform.BasisZ = basisZ;
+
+          // Store in singleton for use in RevitReceiveBinding
+          revitToHostCacheSingleton.ReferencePointTransform = referencePointTransform;
+        }
+#pragma warning disable CA1031
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+          logger.LogWarning(ex, "Failed to reconstruct reference point transform from metadata. Using default.");
+        }
+      }
+    }
+    else
+    {
+      revitToHostCacheSingleton.ReferencePointTransform = null;
+    }
+
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));

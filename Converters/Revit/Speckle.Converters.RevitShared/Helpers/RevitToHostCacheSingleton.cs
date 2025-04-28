@@ -9,4 +9,9 @@ public class RevitToHostCacheSingleton
   /// They needed to be set while creating "TessellatedFace".
   /// </summary>
   public Dictionary<string, DB.ElementId> MaterialsByObjectId { get; } = new();
+
+  /// <summary>
+  /// Stores the reference point transform extracted from the model
+  /// </summary>
+  public DB.Transform? ReferencePointTransform { get; set; }
 }
