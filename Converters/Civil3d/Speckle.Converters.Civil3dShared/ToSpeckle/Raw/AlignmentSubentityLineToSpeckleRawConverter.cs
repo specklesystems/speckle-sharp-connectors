@@ -41,9 +41,21 @@ public class AlignmentSubentityLineToSpeckleRawConverter : ITypedConverter<CDB.A
       units = _settingsStore.Current.SpeckleUnits,
 
       // additional alignment props
-      ["direction"] = target.Direction,
+      ["direction"] = TryGetValue(() => target.Direction),
       ["startStation"] = target.StartStation,
       ["endStation"] = target.EndStation
     };
+  }
+
+  private T? TryGetValue<T>(Func<T> getValue)
+  {
+    try
+    {
+      return getValue();
+    }
+    catch (InvalidOperationException)
+    {
+      return default;
+    }
   }
 }
