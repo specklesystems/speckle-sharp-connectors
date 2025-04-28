@@ -64,12 +64,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)

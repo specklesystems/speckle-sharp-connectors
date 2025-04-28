@@ -32,8 +32,8 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
+    serviceCollection.AddConnectors<RhinoHostObjectBuilder, DefaultThreadContext>();
+    serviceCollection.AddDUI<RhinoDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings
@@ -58,7 +58,6 @@ public static class ServiceRegistration
 
     // register send operation and dependencies
     serviceCollection.AddScoped<SendOperation<RhinoObject>>();
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     serviceCollection.AddScoped<IRootObjectBuilder<RhinoObject>, RhinoRootObjectBuilder>();
     serviceCollection.AddScoped<
@@ -83,8 +82,5 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 
     serviceCollection.AddScoped<PropertiesExtractor>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

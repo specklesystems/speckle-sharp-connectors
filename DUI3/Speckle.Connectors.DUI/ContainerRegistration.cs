@@ -1,31 +1,31 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
-using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
 {
-  public static void AddDUI<TThreadContext, TDocumentStore>(this IServiceCollection serviceCollection)
+  public static void AddDUI<TDocumentStore, THostObjectBuilder, TThreadContext>(this IServiceCollection serviceCollection,
+    
+    Application application,
+    string applicationVersion,
+    string? speckleVersion = null,
+    IEnumerable<Assembly>? assemblies = null)
     where TDocumentStore : DocumentModelStore
+    where THostObjectBuilder : class, IHostObjectBuilder
     where TThreadContext : IThreadContext, new()
   {
-    // context always newed up on host app's main/ui thread
-    serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
+    serviceCollection.AddConnectors<THostObjectBuilder, TThreadContext>(application, applicationVersion, speckleVersion, assemblies);
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
-
-    serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
-
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IdleCallManager)).NotNull());
-    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetAssembly(typeof(IServerTransportFactory)).NotNull());
-
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>
       sp.GetRequiredService<TopLevelExceptionHandlerBinding>()
     );

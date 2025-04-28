@@ -51,9 +51,6 @@ public static class SharedRegistration
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
 
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
-
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
     serviceCollection.AddSingleton<IBinding, AccountBinding>();
@@ -81,8 +78,6 @@ public static class SharedRegistration
 
   public static void LoadReceive(this IServiceCollection serviceCollection)
   {
-    // traversal
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     // Object Builders
     serviceCollection.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();

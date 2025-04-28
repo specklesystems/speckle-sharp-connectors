@@ -1,9 +1,8 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
-using Speckle.Sdk.Host;
-using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
@@ -23,8 +22,12 @@ public static class Import
 
   public static void AddIFCImporter(this ServiceCollection serviceCollection)
   {
-    TypeLoader.Initialize([typeof(Base).Assembly, typeof(Point).Assembly]);
-    serviceCollection.AddSpeckleSdk(new("IFC", "ifc"), HostAppVersion.v2024, "IFC-Importer");
+    serviceCollection.AddSpeckleSdk(
+      new("IFC", "ifc"),
+      HostAppVersion.v2024.ToString(),
+      "IFC-Importer",
+      typeof(Point).Assembly
+    );
     serviceCollection.AddSpeckleWebIfc();
     serviceCollection.AddSingleton<Importer>();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
