@@ -242,33 +242,9 @@ public class RevitRootObjectBuilder(
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
     // Store transform matrix data in a serializable format
-    if (converterSettings.Current.ReferencePointTransform != null)
+    if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
-      var transform = converterSettings.Current.ReferencePointTransform;
-
-      // Create a dictionary to hold the transform data
-      var transformData = new Dictionary<string, double>
-      {
-        // Origin
-        ["originX"] = transform.Origin.X,
-        ["originY"] = transform.Origin.Y,
-        ["originZ"] = transform.Origin.Z,
-
-        // Basis vectors
-        ["basisXX"] = transform.BasisX.X,
-        ["basisXY"] = transform.BasisX.Y,
-        ["basisXZ"] = transform.BasisX.Z,
-
-        ["basisYX"] = transform.BasisY.X,
-        ["basisYY"] = transform.BasisY.Y,
-        ["basisYZ"] = transform.BasisY.Z,
-
-        ["basisZX"] = transform.BasisZ.X,
-        ["basisZY"] = transform.BasisZ.Y,
-        ["basisZZ"] = transform.BasisZ.Z
-      };
-
-      // Add to root object
+      var transformData = ReferencePointSerializationHelper.SerializeTransformToRootObject(transform);
       rootObject["referencePointTransform"] = transformData;
     }
 
