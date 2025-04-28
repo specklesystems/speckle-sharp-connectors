@@ -77,7 +77,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, // TODO figure out
-            _revitToHostCacheSingleton.ReferencePointTransform,
+            null, // RevitHostObjectBuilder gets this information
             false,
             true
           )
