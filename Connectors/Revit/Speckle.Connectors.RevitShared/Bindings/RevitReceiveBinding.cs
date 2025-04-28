@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Receive.Settings;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
@@ -29,6 +30,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly ToHostSettingsManager _toHostSettingsManager;
   private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
@@ -39,7 +41,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    ToHostSettingsManager toHostSettingsManager
   )
   {
     Parent = parent;
@@ -50,6 +53,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
+    _toHostSettingsManager = toHostSettingsManager;
 
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -77,7 +81,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
         .Initialize(
           _revitConversionSettingsFactory.Create(
             DetailLevelType.Coarse, // TODO figure out
-            null,
+            _toHostSettingsManager.GetReferencePointSetting(ReferencePointType.Survey), // TODO: hard-coding for now!!
             false,
             true
           )
