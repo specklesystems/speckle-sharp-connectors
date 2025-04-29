@@ -8,97 +8,52 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointHelper
 {
-  // creating all these const probably not necessary?
-  private const string ORIGIN_X = "originX";
-  private const string ORIGIN_Y = "originY";
-  private const string ORIGIN_Z = "originZ";
-
-  private const string BASIS_XX = "basisXX";
-  private const string BASIS_XY = "basisXY";
-  private const string BASIS_XZ = "basisXZ";
-
-  private const string BASIS_YX = "basisYX";
-  private const string BASIS_YY = "basisYY";
-  private const string BASIS_YZ = "basisYZ";
-
-  private const string BASIS_ZX = "basisZX";
-  private const string BASIS_ZY = "basisZY";
-  private const string BASIS_ZZ = "basisZZ";
+  public const string REFERENCE_POINT_TRANSFORM_KEY = "referencePointTransform";
 
   /// <summary>
-  /// "Serializes" a Revit Transform to a dictionary and attaches it to the root object.
-  /// The transform represents the reference point setting on used on send
+  /// Changes Revit Transform to a double array.
+  /// Uses a 16-element column-major matrix representation. See https://speckle.guide/dev/objects.html
   /// </summary>
-  /// <remarks>
-  /// This allows models to maintain their spatial context when transferred between Revit instances
-  /// with different reference point settings. If a model was created relative to Project Base or
-  /// Survey Point, it will be properly positioned when received.
-  /// </remarks>
-  public static Dictionary<string, double> AddTransformToRootObject(Transform transform)
+  public static double[] CreateTransformDataForRootObject(Transform transform)
   {
-    // best type for this? dict? Base?
-    var transformData = new Dictionary<string, double>
+    var matrix = new double[]
     {
-      [BASIS_XX] = transform.BasisX.X,
-      [BASIS_YX] = transform.BasisY.X,
-      [BASIS_ZX] = transform.BasisZ.X,
-      [ORIGIN_X] = transform.Origin.X,
-
-      // Origin components
-      [ORIGIN_Y] = transform.Origin.Y,
-      [ORIGIN_Z] = transform.Origin.Z,
-
-      // BasisX components
-      [BASIS_XY] = transform.BasisX.Y,
-      [BASIS_XZ] = transform.BasisX.Z,
-
-      // BasisY components
-
-      [BASIS_YY] = transform.BasisY.Y,
-      [BASIS_YZ] = transform.BasisY.Z,
-
-      // BasisZ components
-      [BASIS_ZY] = transform.BasisZ.Y,
-      [BASIS_ZZ] = transform.BasisZ.Z
+      transform.BasisX.X,
+      transform.BasisX.Y,
+      transform.BasisX.Z,
+      0,
+      transform.BasisY.X,
+      transform.BasisY.Y,
+      transform.BasisY.Z,
+      0,
+      transform.BasisZ.X,
+      transform.BasisZ.Y,
+      transform.BasisZ.Z,
+      0,
+      transform.Origin.X,
+      transform.Origin.Y,
+      transform.Origin.Z,
+      1
     };
 
-    return transformData;
+    return matrix;
   }
 
   /// <summary>
-  /// Extracts and reconstructs the transform from the dictionary stored in the root object
+  /// Extracts and reconstructs a transform from the matrix data stored on root object
   /// </summary>
-  public static Transform? GetTransformFromRootObject(Dictionary<string, object> transformData)
+  public static Transform? GetTransformFromRootObject(double[]? matrixData)
   {
-    // Extract origin
-    XYZ origin =
-      new(
-        Convert.ToDouble(transformData[ORIGIN_X]),
-        Convert.ToDouble(transformData[ORIGIN_Y]),
-        Convert.ToDouble(transformData[ORIGIN_Z])
-      );
+    if (matrixData == null || matrixData.Length != 16)
+    {
+      return null;
+    }
 
-    // Extract basis vectors
-    XYZ basisX =
-      new(
-        Convert.ToDouble(transformData[BASIS_XX]),
-        Convert.ToDouble(transformData[BASIS_XY]),
-        Convert.ToDouble(transformData[BASIS_XZ])
-      );
-
-    XYZ basisY =
-      new(
-        Convert.ToDouble(transformData[BASIS_YX]),
-        Convert.ToDouble(transformData[BASIS_YY]),
-        Convert.ToDouble(transformData[BASIS_YZ])
-      );
-
-    XYZ basisZ =
-      new(
-        Convert.ToDouble(transformData[BASIS_ZX]),
-        Convert.ToDouble(transformData[BASIS_ZY]),
-        Convert.ToDouble(transformData[BASIS_ZZ])
-      );
+    // Extract components from the matrix
+    XYZ basisX = new(matrixData[0], matrixData[1], matrixData[2]);
+    XYZ basisY = new(matrixData[4], matrixData[5], matrixData[6]);
+    XYZ basisZ = new(matrixData[8], matrixData[9], matrixData[10]);
+    XYZ origin = new(matrixData[12], matrixData[13], matrixData[14]);
 
     // Create the transform
     Transform transform = Transform.Identity;

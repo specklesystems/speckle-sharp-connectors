@@ -63,11 +63,11 @@ public sealed class RevitHostObjectBuilder(
   {
     Autodesk.Revit.DB.Transform? referencePointTransform = null;
     if (
-      rootObject.DynamicPropertyKeys.Contains("referencePointTransform")
-      && rootObject["referencePointTransform"] is Dictionary<string, object> transformData
+      rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
+      && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is double[] matrixData
     )
     {
-      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformData);
+      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(matrixData);
     }
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
