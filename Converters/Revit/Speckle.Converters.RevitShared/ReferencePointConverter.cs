@@ -7,10 +7,8 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// POC: reference point functionality needs to be revisited (we are currently baking in these transforms into all geometry using the point and vector converters, and losing the transform).
 /// This converter uses the transform in the reference point setting and provides methods to transform points
 /// </summary>
-public class ReferencePointConverter(
-  IConverterSettingsStore<RevitConversionSettings> converterSettings,
-  RevitToHostCacheSingleton revitToHostCacheSingleton
-) : IReferencePointConverter
+public class ReferencePointConverter(IConverterSettingsStore<RevitConversionSettings> converterSettings)
+  : IReferencePointConverter
 {
   public DB.XYZ ConvertToExternalCoordinates(DB.XYZ p, bool isPoint)
   {
@@ -24,9 +22,7 @@ public class ReferencePointConverter(
 
   public DB.XYZ ConvertToInternalCoordinates(DB.XYZ p, bool isPoint)
   {
-    // NOTE: I don't like the fact, that I'm using the cache here and not the converterSettings.
-    // TODO: to discuss
-    if (revitToHostCacheSingleton.ReferencePointTransform is DB.Transform transform)
+    if (converterSettings.Current.ReferencePointTransform is DB.Transform transform)
     {
       return isPoint ? transform.OfPoint(p) : transform.OfVector(p);
     }

@@ -6,7 +6,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// Helper class for working with transform data coming from reference point setting
 /// This allows preserving the reference point information between operations.
 /// </summary>
-public static class ReferencePointSerializationHelper
+public static class ReferencePointHelper
 {
   // creating all these const probably not necessary?
   private const string ORIGIN_X = "originX";
@@ -34,28 +34,30 @@ public static class ReferencePointSerializationHelper
   /// with different reference point settings. If a model was created relative to Project Base or
   /// Survey Point, it will be properly positioned when received.
   /// </remarks>
-  public static Dictionary<string, double> SerializeTransformToRootObject(Transform transform)
+  public static Dictionary<string, double> AddTransformToRootObject(Transform transform)
   {
     // best type for this? dict? Base?
     var transformData = new Dictionary<string, double>
     {
-      // Origin components
+      [BASIS_XX] = transform.BasisX.X,
+      [BASIS_YX] = transform.BasisY.X,
+      [BASIS_ZX] = transform.BasisZ.X,
       [ORIGIN_X] = transform.Origin.X,
+
+      // Origin components
       [ORIGIN_Y] = transform.Origin.Y,
       [ORIGIN_Z] = transform.Origin.Z,
 
       // BasisX components
-      [BASIS_XX] = transform.BasisX.X,
       [BASIS_XY] = transform.BasisX.Y,
       [BASIS_XZ] = transform.BasisX.Z,
 
       // BasisY components
-      [BASIS_YX] = transform.BasisY.X,
+
       [BASIS_YY] = transform.BasisY.Y,
       [BASIS_YZ] = transform.BasisY.Z,
 
       // BasisZ components
-      [BASIS_ZX] = transform.BasisZ.X,
       [BASIS_ZY] = transform.BasisZ.Y,
       [BASIS_ZZ] = transform.BasisZ.Z
     };
@@ -66,7 +68,7 @@ public static class ReferencePointSerializationHelper
   /// <summary>
   /// Extracts and reconstructs the transform from the dictionary stored in the root object
   /// </summary>
-  public static Transform? DeserializeTransformFromRootObject(Dictionary<string, object> transformData)
+  public static Transform? GetTransformFromRootObject(Dictionary<string, object> transformData)
   {
     // Extract origin
     XYZ origin =

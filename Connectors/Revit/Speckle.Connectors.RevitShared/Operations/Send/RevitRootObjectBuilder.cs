@@ -244,7 +244,7 @@ public class RevitRootObjectBuilder(
     // we want to store transform data for chosen reference point setting
     if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
-      var transformData = ReferencePointSerializationHelper.SerializeTransformToRootObject(transform);
+      var transformData = ReferencePointHelper.AddTransformToRootObject(transform);
       rootObject["referencePointTransform"] = transformData; // TODO: standardise with ProxyKey?
     }
 

@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\LevelExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\ReferencePointSerializationHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\ReferencePointHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToHostCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitToSpeckleCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />

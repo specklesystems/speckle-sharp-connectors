@@ -61,15 +61,13 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    // if root object has "referencePointTransform" we create a DB.Transform from it
-    // if not available (which is a valid case; other sourceApplication or older commit) we default to InternalOrigin
+    Autodesk.Revit.DB.Transform? referencePointTransform = null;
     if (
       rootObject.DynamicPropertyKeys.Contains("referencePointTransform")
       && rootObject["referencePointTransform"] is Dictionary<string, object> transformData
     )
     {
-      revitToHostCacheSingleton.ReferencePointTransform =
-        ReferencePointSerializationHelper.DeserializeTransformFromRootObject(transformData);
+      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformData);
     }
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
@@ -121,7 +119,17 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings with
+          {
+            ReferencePointTransform = referencePointTransform
+          }
+        )
+      )
+      {
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      }
       transactionManager.CommitTransaction();
     }
 
