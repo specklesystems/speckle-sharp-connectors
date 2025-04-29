@@ -25,14 +25,14 @@ internal sealed class GrasshopperCollectionRebuilder
   {
     // add the object color and material
     speckleGrasshopperObjectWrapper.Color = colorUnpacker.Cache.TryGetValue(
-      speckleGrasshopperObjectWrapper.applicationId ?? "",
+      speckleGrasshopperObjectWrapper.Base.applicationId ?? "",
       out var cachedColor
     )
       ? cachedColor
       : null;
 
     speckleGrasshopperObjectWrapper.Material = materialUnpacker.Cache.TryGetValue(
-      speckleGrasshopperObjectWrapper.applicationId ?? "",
+      speckleGrasshopperObjectWrapper.Base.applicationId ?? "",
       out var cachedMaterial
     )
       ? cachedMaterial

@@ -105,6 +105,7 @@ public class CreateSpeckleObject : GH_Component
     da.GetData(5, ref inputMaterial);
 
     // keep track of mutation
+    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
     bool mutated = false;
 
     // process the object
@@ -132,29 +133,7 @@ public class CreateSpeckleObject : GH_Component
     if (inputGeometry != null)
     {
       result.Value.GeometryBase = inputGeometry.GeometricGooToGeometryBase();
-      // create a data object to hold this geometry
-      Speckle.Objects.Data.DataObject geometryDataObject =
-        new()
-        {
-          name = "",
-          properties = new(),
-          displayValue = new() { SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase) }
-        };
-
-      result.Value.Base = geometryDataObject;
-      mutated = true;
-    }
-    else if (result.Value.Base is not Speckle.Objects.Data.DataObject)
-    {
-      Speckle.Objects.Data.DataObject dataObject =
-        new()
-        {
-          name = result.Value.Base["name"] as string ?? "",
-          properties = result.Value.Base["properties"] as Dictionary<string, object?> ?? new(),
-          displayValue = new() { result.Value.Base }
-        };
-
-      result.Value.Base = dataObject;
+      result.Value.Base = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
       mutated = true;
     }
 
@@ -162,7 +141,6 @@ public class CreateSpeckleObject : GH_Component
     if (inputName != null)
     {
       result.Value.Name = inputName;
-      result.Value.Base["name"] = inputName;
       mutated = true;
     }
 
@@ -182,18 +160,16 @@ public class CreateSpeckleObject : GH_Component
       result.Value.Properties = propGoo;
       Dictionary<string, object?> props = new();
       propGoo.CastTo(ref props);
-      result.Value.Base["properties"] = props;
       mutated = true;
     }
 
-    // process color
+    // process color (no mutation)
     if (inputColor != null)
     {
       result.Value.Color = inputColor;
-      mutated = true;
     }
 
-    // process  material
+    // process  material (no mutation)
     if (inputMaterial != null)
     {
       SpeckleMaterialWrapperGoo matWrapperGoo = new();
@@ -207,7 +183,6 @@ public class CreateSpeckleObject : GH_Component
       }
 
       result.Value.Material = matWrapperGoo.Value;
-      mutated = true;
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
@@ -216,7 +191,6 @@ public class CreateSpeckleObject : GH_Component
       : result.Value.applicationId != null
         ? result.Value.applicationId
         : Guid.NewGuid().ToString();
-    result.Value.applicationId = applicationId;
     result.Value.Base.applicationId = applicationId;
 
     // set all the data

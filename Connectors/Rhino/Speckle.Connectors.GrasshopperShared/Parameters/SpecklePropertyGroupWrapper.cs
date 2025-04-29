@@ -104,6 +104,31 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       }
     }
   }
+
+  public override bool Equals(object obj)
+  {
+    if (obj is not SpecklePropertyGroupGoo propertyGroupGoo || Value.Count != propertyGroupGoo.Value.Count)
+    {
+      return false;
+    }
+
+    foreach (var entry in Value)
+    {
+      if (
+        propertyGroupGoo.Value.TryGetValue(entry.Key, out SpecklePropertyGoo compareProp)
+        && entry.Value.Value != compareProp.Value
+      )
+      {
+        return false;
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  public override int GetHashCode() => base.GetHashCode();
 }
 
 public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>

@@ -159,6 +159,34 @@ public class SpeckleObjectWrapper : Base
     Guid guid = doc.Objects.Add(GeometryBase, att);
     obj_ids.Add(guid);
   }
+
+  /// <summary>
+  /// Determines similarity of two SpeckleObjectWrappers.
+  /// If the path, name, and properties of the wrappers are the same, they should be considered similar.
+  /// This should be used to pack similar objects into one `DataObject` on send.
+  /// </summary>
+  /// <param name="objWrapper">The object wrapper to compare to</param>
+  /// <returns></returns>
+  /// <remarks> Application Id is not considered in similarity, because these can be unique to objects inside the same displayvalue for proxy reasons</remarks>
+  public bool SmellsLike(SpeckleObjectWrapper objWrapper)
+  {
+    if (Path != objWrapper.Path)
+    {
+      return false;
+    }
+
+    if (Name != objWrapper.Name)
+    {
+      return false;
+    }
+
+    if (!Properties.Equals(objWrapper.Properties))
+    {
+      return false;
+    }
+
+    return true;
+  }
 }
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
@@ -171,6 +199,12 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public override string TypeName => "Speckle object wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper objects.";
 
+  /// <summary>
+  /// Casts from Speckle objects, geometry base, and model objects.
+  /// All non-Speckle objects will be converted to its geometry equivalent.
+  /// </summary>
+  /// <param name="source"></param>
+  /// <returns></returns>
   public override bool CastFrom(object source)
   {
     switch (source)
@@ -236,7 +270,17 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     Value = value;
   }
 
-  public SpeckleObjectWrapperGoo() { }
+  public SpeckleObjectWrapperGoo()
+  {
+    Value = new()
+    {
+      Base = new(),
+      GeometryBase = null,
+      Color = null,
+      Material = null,
+      Name = ""
+    };
+  }
 }
 
 public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject, IGH_PreviewObject

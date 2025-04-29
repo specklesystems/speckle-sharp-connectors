@@ -29,7 +29,9 @@ internal sealed class LocalToGlobalMapHandler
   }
 
   /// <summary>
-  /// Creates a grasshopper speckle object from a local to global map, and appends it to the collection rebuilder
+  /// Creates a grasshopper speckle object from a local to global map, and appends it to the collection rebuilder.
+  /// POC: TODO: this should decimate dataobjects into their display values, while storing the same properties etc
+  /// This is because we don't want to be storing one-to-many maps in the object wrapper, this will complicate mutations
   /// </summary>
   /// <param name="map"></param>
   ///
@@ -75,12 +77,15 @@ internal sealed class LocalToGlobalMapHandler
       }
 
       // create objects for every value in converted. This is where one to many is not handled very nicely.
-      // eg: for a data object with multiple base in display, this will create a speckle object wrapper for every base and store the same parent data object in `Base`
+      // we will decimate dataobjects and multi-object display values here
+      // meaning for every value in the display value, we will create a grasshopper wrapper, while preserving app id, name, props, etc
+      // similar objects will be re-packaged on send
       foreach ((GeometryBase geometryBase, Base original) in converted)
       {
+        original.applicationId ??= map.AtomicObject.applicationId ?? Guid.NewGuid().ToString(); // check for null ids, we don't want nulls on the wrapped base
         var gh = new SpeckleObjectWrapper()
         {
-          Base = map.AtomicObject,
+          Base = original,
           Path = path.Select(p => p.name).ToList(),
           Parent = objectCollection,
           GeometryBase = geometryBase,
@@ -88,7 +93,7 @@ internal sealed class LocalToGlobalMapHandler
           Name = name,
           Color = null,
           Material = null,
-          applicationId = original.applicationId // we want to set the app id of the original base, eg the mesh inside the display value of a revit object, for render materials
+          applicationId = null // keep this null, as it will be generated on send after processing all wrappers
         };
 
         CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path, _colorUnpacker, _materialUnpacker);
