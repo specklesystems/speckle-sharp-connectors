@@ -4,7 +4,7 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
-public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Text>
+public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Text>
 {
   private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
@@ -26,7 +26,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
   /// </summary>
   /// <param name="target">The Rhino TextEntity to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
-  public SO.Text Convert(RG.TextEntity target) =>
+  public SA.Text Convert(RG.TextEntity target) =>
     new()
     {
       value = target.PlainText,
@@ -34,7 +34,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
       maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
       origin = _pointConverter.Convert(target.Plane.Origin),
       plane = GetTextPlane(target),
-      alignmentH = (SO.AlignmentHorizontal)target.TextHorizontalAlignment,
+      alignmentH = SimplifyHorizontalAlignment((int)target.TextHorizontalAlignment),
       alignmentV = SimplifyVerticalAlignment((int)target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
     };
@@ -51,7 +51,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
     {
       return _planeConverter.Convert(target.Plane);
     }
-    // adjust text plane if rotation applied
+    // adjust text plane if rotation applied. Use a new plane to not modify existing object
     RG.Plane rotatedPlane =
       new()
       {
@@ -64,29 +64,21 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SO.Te
     return _planeConverter.Convert(rotatedPlane);
   }
 
-  private List<string> SplitLine(string line, int maxChars)
+  /// <summary>
+  /// Simplify alignment from 4 to 3 options: Left (0, 3), Center (1), Right (2)
+  /// </summary>
+  private SA.AlignmentHorizontal SimplifyHorizontalAlignment(int alignment)
   {
-    List<string> newLines = new();
-
-    if (line.Length > maxChars)
-    {
-      newLines.Add(line[..maxChars]);
-      newLines.AddRange(SplitLine(line[maxChars..], maxChars));
-    }
-    else
-    {
-      newLines.Add(line);
-    }
-
-    return newLines;
+    int simpleAlignment = alignment < 3 ? alignment : 0;
+    return (SA.AlignmentHorizontal)simpleAlignment;
   }
 
   /// <summary>
-  /// Simplify alignment to just 3 options: Top (1-2), Middle (3), Bottom (4-6)
+  /// Simplify alignment from 5 to just 3 options: Top (0-2), Middle (3), Bottom (4-6)
   /// </summary>
-  private SO.AlignmentVertical SimplifyVerticalAlignment(int alignment)
+  private SA.AlignmentVertical SimplifyVerticalAlignment(int alignment)
   {
     int simpleAlignment = alignment < 3 ? 0 : (alignment == 3 ? 1 : 2);
-    return (SO.AlignmentVertical)simpleAlignment;
+    return (SA.AlignmentVertical)simpleAlignment;
   }
 }
