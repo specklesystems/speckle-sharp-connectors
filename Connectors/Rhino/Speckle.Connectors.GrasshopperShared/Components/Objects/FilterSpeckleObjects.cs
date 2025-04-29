@@ -131,7 +131,7 @@ public class FilterSpeckleObjects : GH_Component
       }
 
       // filter by application id
-      if (!MatchesSearchPattern(appId, inputObjects[i].Value.applicationId ?? ""))
+      if (!MatchesSearchPattern(appId, inputObjects[i].Value.Base.applicationId ?? ""))
       {
         continue;
       }

@@ -105,7 +105,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             Color = color is null ? null : Color.FromArgb(color.Value.Color.ToArgb()),
             Material = materialWrapper.Value,
             Properties = propertyGroup,
-            applicationId = modelObject.Id?.ToString()
+            applicationId = null // keep this null, processed on send
           };
 
         Value = so;
