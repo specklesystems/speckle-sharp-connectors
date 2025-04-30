@@ -80,7 +80,7 @@ Target(
   () =>
   {
     DeleteFiles("**/*.lock.json");
-    Restore("Speckle.Connectors.slnx");
+    Restore("Speckle.Connectors.sln");
   }
 );
 
@@ -88,14 +88,14 @@ Target(
   DEEP_CLEAN,
   () =>
   {
-    CleanSolution("Speckle.Connectors.slnx", "debug");
+    CleanSolution("Speckle.Connectors.sln", "debug");
   }
 );
 Target(
   DEEP_CLEAN_LOCAL,
   () =>
   {
-    CleanSolution("Local.slnx", "Local");
+    CleanSolution("Local.sln", "Local");
   }
 );
 
