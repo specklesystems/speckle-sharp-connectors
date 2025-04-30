@@ -1,4 +1,5 @@
 ﻿using Microsoft.Build.Construction;
+using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace Build;
 
@@ -52,5 +53,17 @@ public static class Solutions
         "Could not find in CONNECTOR solution: " + localProjects.First().Value.ProjectName
       );
     }
+  }
+
+  public static async Task GenerateLocalSlnx()
+  {
+    var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.sln");
+    var connectors = await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+    connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Objects\\Speckle.Objects.csproj");
+    connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk\\Speckle.Sdk.csproj");
+    connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
+    var localSln = Path.Combine(Environment.CurrentDirectory, "Local.slnx");
+    using var x = File.OpenWrite(localSln);
+    await SolutionSerializers.SlnXml.SaveAsync(x, connectors, default);
   }
 }

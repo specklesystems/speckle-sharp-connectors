@@ -15,6 +15,7 @@ const string ZIP = "zip";
 const string RESTORE_TOOLS = "restore-tools";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
+const string GEN_SOLUTIONS = "generate-solutions";
 const string DEEP_CLEAN = "deep-clean";
 const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 const string DETECT_AFFECTED = "detect-affected";
@@ -183,6 +184,7 @@ Target(
 );
 
 Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
+Target(GEN_SOLUTIONS, Solutions.GenerateLocalSlnx);
 
 Target(
   TEST,
