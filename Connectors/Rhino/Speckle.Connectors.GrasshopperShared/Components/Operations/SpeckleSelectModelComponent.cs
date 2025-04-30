@@ -1,6 +1,7 @@
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -8,6 +9,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -33,13 +35,21 @@ public class SpeckleSelectModelComponent : GH_Component
   private readonly AccountManager _accountManager;
   private readonly IClientFactory _clientFactory;
 
-  public ResourceCollection<Project>? LastFetchedProjects { get; set; }
-  public ResourceCollection<Model>? LastFetchedModels { get; set; }
-  public ResourceCollection<Version>? LastFetchedVersions { get; set; }
+  public override Guid ComponentGuid => new("9638B3B5-C469-4570-B69F-686D8DA5C48D");
+
+  private ResourceCollection<Project>? LastFetchedProjects { get; set; }
+  private ResourceCollection<Model>? LastFetchedModels { get; set; }
+  private ResourceCollection<Version>? LastFetchedVersions { get; set; }
+
+  private int FetchedVersionCount { get; set; } = 10;
 
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
+
+  private ToolStripDropDown? ProjectDropDown { get; set; }
+  private ToolStripDropDown? ModelDropDown { get; set; }
+  private ToolStripDropDown? VersionDropDown { get; set; }
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
 
@@ -79,50 +89,96 @@ public class SpeckleSelectModelComponent : GH_Component
     OnAccountSelected(account);
   }
 
-  private bool PopulateVersionMenu(ToolStripDropDown menu)
+  private SearchToolStripMenuItem? SearchProjectToolStripMenuItem { get; set; }
+  private SearchToolStripMenuItem? SearchModelToolStripMenuItem { get; set; }
+
+  private async Task RefetchProjects(string searchText)
   {
-    if (LastFetchedVersions is null)
+    if (_account != null && ProjectDropDown != null)
     {
-      Menu_AppendItem(menu, "No versions were fetched");
+      Client client = _clientFactory.Create(_account);
+      LastFetchedProjects = await client
+        .ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText))
+        .ConfigureAwait(true);
+      PopulateProjectMenuItems(ProjectDropDown);
+    }
+  }
+
+  private async Task RefetchModels(string searchText)
+  {
+    if (_account != null && ModelDropDown != null && _project != null)
+    {
+      Client client = _clientFactory.Create(_account);
+      var result = await client
+        .Project.GetWithModels(_project.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
+        .ConfigureAwait(true);
+      LastFetchedModels = result.models;
+      PopulateModelMenuItems(ModelDropDown);
+    }
+  }
+
+  private bool PopulateProjectMenu(ToolStripDropDown menu)
+  {
+    ProjectDropDown = menu;
+    ProjectDropDown.Closed += (sender, args) =>
+    {
+      SearchProjectToolStripMenuItem = null;
+    };
+    if (LastFetchedProjects == null)
+    {
+      Menu_AppendItem(menu, "No projects were fetched");
       return true;
     }
 
-    if (LastFetchedVersions.items.Count == 0)
-    {
-      Menu_AppendItem(menu, "Model has no versions");
-      return true;
-    }
-
-    Menu_AppendItem(menu, "Search...", null, null, false, false);
-    Menu_AppendSeparator(menu);
-    Menu_AppendItem(
-      menu,
-      "Latest Version",
-      (_, _) => OnVersionSelected(null),
-      null,
-      _version != null,
-      _version == null
-    );
-
-    foreach (var version in LastFetchedVersions.items)
-    {
-      var desc = string.IsNullOrEmpty(version.message) ? "No description" : version.message;
-
-      Menu_AppendItem(
-        menu,
-        $"{version.id} - {desc}",
-        (_, _) => OnVersionSelected(version),
-        null,
-        _version?.id != version.id,
-        _version?.id == version.id
-      );
-    }
+    PopulateProjectMenuItems(menu);
 
     return true;
   }
 
+  private void PopulateProjectMenuItems(ToolStripDropDown menu)
+  {
+    var lastIndex = menu.Items.Count - 1;
+    if (lastIndex >= 0)
+    {
+      // clean the existing items because we re-populate when user search
+      for (int i = lastIndex; i > 1; i--)
+      {
+        menu.Items.RemoveAt(i);
+      }
+    }
+
+    if (LastFetchedProjects == null)
+    {
+      return;
+    }
+
+    if (SearchProjectToolStripMenuItem == null)
+    {
+      SearchProjectToolStripMenuItem = new SearchToolStripMenuItem(menu, RefetchProjects);
+    }
+
+    Menu_AppendSeparator(menu);
+
+    foreach (var project in LastFetchedProjects.items)
+    {
+      var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
+      Menu_AppendItem(
+        menu,
+        $"{project.name} - {desc}",
+        (_, _) => OnProjectSelected(project),
+        _project?.id != project.id,
+        _project?.id == project.id
+      );
+    }
+  }
+
   private bool PopulateModelMenu(ToolStripDropDown menu)
   {
+    ModelDropDown = menu;
+    ModelDropDown.Closed += (sender, args) =>
+    {
+      SearchModelToolStripMenuItem = null;
+    };
     if (LastFetchedModels == null)
     {
       Menu_AppendItem(menu, "No models were fetched");
@@ -135,7 +191,33 @@ public class SpeckleSelectModelComponent : GH_Component
       return true;
     }
 
-    Menu_AppendItem(menu, "Search...", null, null, false, false);
+    PopulateModelMenuItems(menu);
+
+    return true;
+  }
+
+  private void PopulateModelMenuItems(ToolStripDropDown menu)
+  {
+    var lastIndex = menu.Items.Count - 1;
+    if (lastIndex >= 0)
+    {
+      // clean the existing items because we re-populate when user search
+      for (int i = lastIndex; i > 1; i--)
+      {
+        menu.Items.RemoveAt(i);
+      }
+    }
+
+    if (LastFetchedModels == null)
+    {
+      return;
+    }
+
+    if (SearchModelToolStripMenuItem == null)
+    {
+      SearchModelToolStripMenuItem = new SearchToolStripMenuItem(menu, RefetchModels);
+    }
+
     Menu_AppendSeparator(menu);
 
     foreach (var model in LastFetchedModels.items)
@@ -151,34 +233,90 @@ public class SpeckleSelectModelComponent : GH_Component
         _model?.id == model.id
       );
     }
+  }
+
+  private bool PopulateVersionMenu(ToolStripDropDown menu)
+  {
+    VersionDropDown = menu;
+    VersionDropDown.AutoClose = false;
+    if (LastFetchedVersions is null)
+    {
+      Menu_AppendItem(menu, "No versions were fetched");
+      return true;
+    }
+
+    if (LastFetchedVersions.items.Count == 0)
+    {
+      Menu_AppendItem(menu, "Model has no versions");
+      return true;
+    }
+
+    PopulateVersionMenuItems(menu);
 
     return true;
   }
 
-  private bool PopulateProjectMenu(ToolStripDropDown menu)
+  private void PopulateVersionMenuItems(ToolStripDropDown menu)
   {
-    if (LastFetchedProjects == null)
+    menu.Items.Clear();
+
+    if (LastFetchedVersions == null)
     {
-      Menu_AppendItem(menu, "No projects were fetched");
-      return true;
+      return;
     }
 
-    Menu_AppendItem(menu, "Search...", null, null, false, false);
+    Menu_AppendItem(menu, "Latest Version", (_, _) => OnVersionSelected(null), null, true, _version == null);
     Menu_AppendSeparator(menu);
-
-    foreach (var project in LastFetchedProjects.items)
+    foreach (var version in LastFetchedVersions.items)
     {
-      var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
-      Menu_AppendItem(
+      var desc = string.IsNullOrEmpty(version.message) ? "No description" : version.message;
+
+      var versionItem = Menu_AppendItem(
         menu,
-        $"{project.name} - {desc}",
-        (_, _) => OnProjectSelected(project),
-        _project?.id != project.id,
-        _project?.id == project.id
+        $"{version.id} - {desc}",
+        (_, _) => OnVersionSelected(version),
+        null,
+        true,
+        _version?.id == version.id
       );
+      if (version.referencedObject is null)
+      {
+        versionItem.Enabled = false;
+        versionItem.ToolTipText = @"Upgrade to load older versions";
+      }
     }
 
-    return true;
+    if (LastFetchedVersions.items.Count >= FetchedVersionCount)
+    {
+      Menu_AppendSeparator(menu);
+      Menu_AppendItem(menu, "\u2795 Show more...", async (_, _) => await FetchMoreVersions(menu), null, true, false);
+    }
+  }
+
+  private async Task FetchMoreVersions(ToolStripDropDown menu)
+  {
+    if (_account != null && _model != null && _project != null)
+    {
+      FetchedVersionCount += 10;
+      Client client = _clientFactory.Create(_account);
+      var newVersionsResult = await client
+        .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
+        .ConfigureAwait(true);
+      LastFetchedVersions = newVersionsResult.versions;
+      PopulateVersionMenuItems(menu);
+    }
+  }
+
+#pragma warning disable IDE0060
+  private void OnProjectSearchItemClicked(object _)
+#pragma warning restore IDE0060
+  {
+    RhinoApp.WriteLine("Project search item clicked");
+  }
+
+  private void OnModelSearchItemClicked(object _)
+  {
+    RhinoApp.WriteLine("Model search item clicked");
   }
 
   private void OnAccountSelected(Account? account, bool expire = true, bool redraw = true)
@@ -191,6 +329,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void OnProjectSelected(Project? project, bool expire = true, bool redraw = true)
   {
+    ProjectDropDown?.Close();
     _project = project;
     var suffix = ProjectContextMenuButton.Enabled
       ? "Right-click to select another project."
@@ -213,6 +352,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void OnModelSelected(Model? model, bool expire = true, bool redraw = true)
   {
+    ModelDropDown?.Close();
     _model = model;
     var suffix = ModelContextMenuButton.Enabled
       ? "Right-click to select another model."
@@ -235,6 +375,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void OnVersionSelected(Version? version, bool expire = true, bool redraw = true)
   {
+    VersionDropDown?.Close();
     _version = version;
     var suffix = VersionContextMenuButton.Enabled
       ? "Right-click to select another version."
@@ -263,8 +404,6 @@ public class SpeckleSelectModelComponent : GH_Component
       ExpireSolution(true);
     }
   }
-
-  public override Guid ComponentGuid => new("9638B3B5-C469-4570-B69F-686D8DA5C48D");
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -374,7 +513,7 @@ public class SpeckleSelectModelComponent : GH_Component
       return;
     }
 
-    LastFetchedVersions = client.Model.GetWithVersions(_model.id, _project.id, 10).Result.versions;
+    LastFetchedVersions = client.Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount).Result.versions;
     VersionContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedVersionId))
