@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -38,40 +39,68 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    Dictionary<string, SpecklePropertyGoo> properties = new();
+    // Create a data tree to store output
+    GH_Structure<SpecklePropertyGroupGoo> outputTree = new();
+    Dictionary<string, List<SpecklePropertyGoo>> properties = new();
+    int branchCount = Params.Input.First().VolatileData.PathCount;
+
+    // Check for structure of all inputs to see matching branches
     foreach (var inputParam in Params.Input)
     {
-      if (properties.ContainsKey(inputParam.NickName))
+      string inputName = inputParam.NickName;
+      if (branchCount != inputParam.VolatileData.PathCount)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Duplicate property name found: {inputParam.NickName}.");
-
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Input property values had different branch structure.");
         return;
       }
 
-      var data = inputParam.VolatileData.AllData(true).OfType<object>().ToList();
-
-      if (data.Count > 1)
+      if (properties.ContainsKey(inputName))
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Cannot support list properties yet.");
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Duplicate property name found: {inputName}.");
         return;
       }
 
-      SpecklePropertyGoo propGoo = new();
-      if (!propGoo.CastFrom(data.Count == 0 ? "" : data.First()))
+      properties.Add(inputName, new());
+
+      // create property for the branch of the input
+      for (int i = 0; i < branchCount; i++)
       {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Parameter {inputParam.NickName} should not contain anything other than strings, doubles, ints, and bools."
-        );
+        var data = inputParam.VolatileData.get_Branch(i).OfType<object>().ToList();
+        if (data.Count > 1)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Cannot support list properties yet.");
+          return;
+        }
 
-        return;
+        SpecklePropertyGoo propGoo = new();
+        if (!propGoo.CastFrom(data.Count == 0 ? "" : data.First()))
+        {
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Error,
+            $"Parameter {inputParam.NickName} should not contain anything other than strings, doubles, ints, and bools."
+          );
+
+          return;
+        }
+
+        propGoo.Path = inputName;
+        properties[inputName].Add(propGoo);
       }
-
-      propGoo.Path = inputParam.Name;
-      properties.Add(inputParam.Name, propGoo);
     }
 
-    da.SetData(0, new SpecklePropertyGroupGoo(properties));
+    // now create the property groups
+    for (int i = 0; i < branchCount; i++)
+    {
+      var currentProps = new Dictionary<string, SpecklePropertyGoo>();
+      foreach (var kvp in properties)
+      {
+        currentProps[kvp.Key] = kvp.Value[i];
+      }
+
+      outputTree.Append(new SpecklePropertyGroupGoo(currentProps), new GH_Path(i));
+    }
+
+    da.SetDataTree(0, outputTree);
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
@@ -91,7 +120,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       Name = $"Property {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
-      Access = GH_ParamAccess.item
+      Access = GH_ParamAccess.tree
     };
 
     myParam.NickName = myParam.Name;
