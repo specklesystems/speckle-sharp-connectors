@@ -14,22 +14,28 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObjectWrapper : Base
+public class SpeckleObjectWrapper : SpeckleWrapper
 {
-  public required Base Base { get; set; }
+  public override required Base Base { get; set; }
 
-  // note: how will we send intervals and other gh native objects? do we? maybe not for now
-  // note: this does not handle on to many relationship well.
-  // For receiving data objects, we are wrapping every value in the data object display value, and storing a reference to the same data object in each wrapped object.
+  /// <summary>
+  /// The GeometryBase corresponding to the <see cref="SpeckleWrapper.Base"/>
+  /// </summary>
+  /// <remarks>
+  /// POC: how will we send intervals and other gh native objects? do we? maybe not for now?
+  /// Objects using fallback conversion (eg DataObjects) will create one wrapper per geometry in the display value.
+  /// </remarks>
   public required GeometryBase? GeometryBase { get; set; }
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
   public SpeckleCollectionWrapper? Parent { get; set; }
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
+
+  /// <summary>
+  /// The name of the object. If this wrapper is a result of fallback conversion, this will store the parent name.
+  /// </summary>
   public required string Name { get; set; } = "";
-  public required Color? Color { get; set; }
-  public required SpeckleMaterialWrapper? Material { get; set; }
 
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
@@ -224,7 +230,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           Base = gooConverted,
           Name = "",
           Color = null,
-          Material = null
+          Material = null,
+          WrapperGuid = null,
+          ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
     }
@@ -278,7 +286,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       GeometryBase = null,
       Color = null,
       Material = null,
-      Name = ""
+      Name = "",
+      WrapperGuid = null,
     };
   }
 }

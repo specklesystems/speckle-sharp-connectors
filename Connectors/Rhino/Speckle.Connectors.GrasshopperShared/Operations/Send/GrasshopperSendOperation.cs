@@ -140,7 +140,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
         // check if the object wrapper smells like existing object wrappers.
         if (objectWrapper.SmellsLike(wrappers.FirstOrDefault()))
         {
-          objectWrapper.applicationId = processedId;
+          objectWrapper.WrapperGuid = processedId;
           _applicationIdCache[processedId].Add(objectWrapper);
           return;
         }
@@ -149,7 +149,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
     // if no similar wrappers found, create a new appid and store this.
     string newId = Guid.NewGuid().ToString();
-    objectWrapper.applicationId = newId;
+    objectWrapper.WrapperGuid = newId;
     processedIds.Add(newId);
     _applicationIdCache.Add(newId, new() { objectWrapper });
     return;

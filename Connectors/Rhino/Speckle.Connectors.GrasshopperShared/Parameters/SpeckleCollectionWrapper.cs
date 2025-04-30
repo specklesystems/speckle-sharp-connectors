@@ -15,35 +15,39 @@ using Layer = Rhino.DocObjects.Layer;
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
-public class SpeckleCollectionWrapper : Base
+public class SpeckleCollectionWrapper : SpeckleWrapper
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
-  // the original collection
-  public Collection Collection { get; set; }
+  private Collection StoredCollection { get; set; }
+
+  public override required Base Base
+  {
+    get => StoredCollection;
+    set
+    {
+      if (value is not Collection coll)
+      {
+        throw new ArgumentException("Cannot create collection wrapper from a non-Collection Base");
+      }
+
+      StoredCollection = coll;
+    }
+  }
+
+  public Collection Collection => StoredCollection;
 
   // the list of layer names that build up the path to this collection, including this collection name
   public ObservableCollection<string> Path { get; set; }
 
+  public List<SpeckleWrapper> Elements { get; set; } = new();
+
   public string Topology { get; set; }
-
-  public Color? Color { get; set; }
-
-  public SpeckleMaterialWrapper? Material { get; set; }
 
   public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
 
-  public SpeckleCollectionWrapper(
-    Collection value,
-    List<string> path,
-    Color? color,
-    SpeckleMaterialWrapper? materialWrapper
-  )
+  public SpeckleCollectionWrapper(List<string> path)
   {
-    Collection = value;
     Path = new ObservableCollection<string>(path);
-    Color = color;
-    Material = materialWrapper;
-    applicationId = value.applicationId;
 
     // add listener on path changing.
     // this can be triggered by a create collection node, that changes the path of this collection.
@@ -54,7 +58,7 @@ public class SpeckleCollectionWrapper : Base
   private void OnPathChanged(object sender, NotifyCollectionChangedEventArgs e)
   {
     var newPath = e.NewItems.Cast<string>().ToList();
-    foreach (var element in Collection.elements)
+    foreach (var element in Elements)
     {
       if (element is SpeckleObjectWrapper o)
       {
@@ -93,7 +97,7 @@ public class SpeckleCollectionWrapper : Base
     }
 
     // then bake elements in this collection
-    foreach (var obj in Collection.elements)
+    foreach (var obj in Elements)
     {
       if (obj is SpeckleObjectWrapper so)
       {
@@ -277,7 +281,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        FlattenForPreview(goo.Value.Collection);
+        FlattenForPreview(goo.Value);
       }
     }
 
@@ -298,19 +302,19 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     // todo?
   }
 
-  private void FlattenForPreview(Collection c)
+  private void FlattenForPreview(SpeckleCollectionWrapper collWrapper)
   {
-    foreach (var element in c.elements)
+    foreach (var element in collWrapper.Elements)
     {
-      if (element is SpeckleCollectionWrapper subCol)
+      if (element is SpeckleCollectionWrapper subCollWrapper)
       {
-        FlattenForPreview(subCol.Collection);
+        FlattenForPreview(subCollWrapper);
       }
 
-      if (element is SpeckleObjectWrapper sg)
+      if (element is SpeckleObjectWrapper objWrapper)
       {
-        _previewObjects.Add(sg);
-        var box = sg.GeometryBase is null ? new() : sg.GeometryBase.GetBoundingBox(false);
+        _previewObjects.Add(objWrapper);
+        var box = objWrapper.GeometryBase is null ? new() : objWrapper.GeometryBase.GetBoundingBox(false);
         _clippingBox.Union(box);
       }
     }

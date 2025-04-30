@@ -8,15 +8,15 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
 public abstract record SpeckleUrlModelResource(string Server, string ProjectId)
 {
-  public abstract Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default);
+  public abstract Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default);
 
-  public abstract Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default);
+  public abstract Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default);
 }
 
 public record SpeckleUrlLatestModelVersionResource(string Server, string ProjectId, string ModelId)
   : SpeckleUrlModelResource(Server, ProjectId)
 {
-  public override async Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default)
+  public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
   {
     Project project = await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     ModelWithVersions model = await client
@@ -38,7 +38,7 @@ public record SpeckleUrlLatestModelVersionResource(string Server, string Project
     return info;
   }
 
-  public override async Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default)
+  public override async Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default)
   {
     // We don't care about the return info, we just want to be sure we have access and everything exists.
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
@@ -57,7 +57,7 @@ public record SpeckleUrlLatestModelVersionResource(string Server, string Project
 public record SpeckleUrlModelVersionResource(string Server, string ProjectId, string ModelId, string VersionId)
   : SpeckleUrlModelResource(Server, ProjectId)
 {
-  public override async Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default)
+  public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
   {
     Project project = await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     Model model = await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
@@ -77,7 +77,7 @@ public record SpeckleUrlModelVersionResource(string Server, string ProjectId, st
     return info;
   }
 
-  public override async Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default)
+  public override async Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default)
   {
     // We don't care about the return info, we just want to be sure we have access and everything exists.
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
@@ -96,9 +96,9 @@ public record SpeckleUrlModelVersionResource(string Server, string ProjectId, st
 public record SpeckleUrlModelObjectResource(string Server, string ProjectId, string ObjectId)
   : SpeckleUrlModelResource(Server, ProjectId)
 {
-  public override Task<ReceiveInfo> GetReceiveInfo(Client client, CancellationToken cancellationToken = default) =>
+  public override Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default) =>
     throw new NotImplementedException("Object Resources are not supported yet");
 
-  public override Task<SendInfo> GetSendInfo(Client client, CancellationToken cancellationToken = default) =>
+  public override Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default) =>
     throw new NotImplementedException("Object Resources are not supported yet");
 }

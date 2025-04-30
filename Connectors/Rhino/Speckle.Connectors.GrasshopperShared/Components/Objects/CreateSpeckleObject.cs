@@ -186,12 +186,9 @@ public class CreateSpeckleObject : GH_Component
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
-    string applicationId = mutated
+    result.Value.ApplicationId = mutated
       ? Guid.NewGuid().ToString()
-      : result.Value.applicationId != null
-        ? result.Value.applicationId
-        : Guid.NewGuid().ToString();
-    result.Value.Base.applicationId = applicationId;
+      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
 
     // set all the data
     da.SetData(0, result.Value);
