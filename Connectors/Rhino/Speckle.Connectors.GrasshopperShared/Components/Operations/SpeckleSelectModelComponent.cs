@@ -1,7 +1,6 @@
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -305,18 +304,6 @@ public class SpeckleSelectModelComponent : GH_Component
       LastFetchedVersions = newVersionsResult.versions;
       PopulateVersionMenuItems(menu);
     }
-  }
-
-#pragma warning disable IDE0060
-  private void OnProjectSearchItemClicked(object _)
-#pragma warning restore IDE0060
-  {
-    RhinoApp.WriteLine("Project search item clicked");
-  }
-
-  private void OnModelSearchItemClicked(object _)
-  {
-    RhinoApp.WriteLine("Model search item clicked");
   }
 
   private void OnAccountSelected(Account? account, bool expire = true, bool redraw = true)
