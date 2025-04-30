@@ -77,18 +77,20 @@ void CleanSolution(string solution, string configuration)
 
 Target(
   CLEAN_LOCKS,
-  () =>
+  Consts.Solutions,
+  s =>
   {
     DeleteFiles("**/*.lock.json");
-    Restore("Speckle.Connectors.sln");
+    Restore(s);
   }
 );
 
 Target(
   DEEP_CLEAN,
-  () =>
+  Consts.Solutions,
+  s =>
   {
-    CleanSolution("Speckle.Connectors.sln", "debug");
+    CleanSolution(s, "debug");
   }
 );
 Target(
