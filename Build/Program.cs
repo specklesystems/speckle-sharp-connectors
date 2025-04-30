@@ -94,7 +94,7 @@ Target(
   DEEP_CLEAN_LOCAL,
   () =>
   {
-    CleanSolution("Local.sln", "local");
+    CleanSolution("Local.sln", "Local");
   }
 );
 
@@ -239,6 +239,7 @@ Target(
   async () =>
   {
     var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     foreach (var group in await Affected.GetAffectedProjectGroups())
     {
       Console.WriteLine($"Zipping: {group.HostAppSlug} as {version}");
@@ -280,7 +281,8 @@ Target(
 
     string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
     Console.WriteLine($"GITHUB_ENV: {githubEnv}");
-    File.AppendAllText(githubEnv, $"SPECKLE_VERSION={version}{Environment.NewLine}");
+    File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
+    File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
   }
 );
 
