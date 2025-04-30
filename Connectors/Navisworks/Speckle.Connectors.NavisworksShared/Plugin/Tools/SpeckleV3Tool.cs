@@ -1,4 +1,4 @@
-﻿using Speckle.Sdk.Host;
+﻿using Speckle.Connectors.Common;
 
 namespace Speckle.Connector.Navisworks.Plugin.Tools;
 
@@ -14,7 +14,7 @@ public static class SpeckleV3Tool
   public const string RIBBON_STRINGS = "NavisworksRibbon.name";
   public const string PLUGIN_SUFFIX = ".Speckle";
 
-  public static HostApplication App =>
+  public static Speckle.Sdk.Application App =>
 #if NAVIS
     HostApplications.Navisworks;
 #else
