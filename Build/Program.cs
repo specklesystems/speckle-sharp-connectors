@@ -184,7 +184,7 @@ Target(
 );
 
 Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
-Target(GEN_SOLUTIONS, Solutions.GenerateLocalSlnx);
+Target(GEN_SOLUTIONS, Solutions.GenerateSolutions);
 
 Target(
   TEST,

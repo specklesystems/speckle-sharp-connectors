@@ -1,4 +1,5 @@
 ﻿using Microsoft.Build.Construction;
+using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace Build;
@@ -55,15 +56,41 @@ public static class Solutions
     }
   }
 
+  public static async Task GenerateSolutions()
+  {
+    await GenerateLocalSlnx();
+    await GenerateConnector("ArcGIS");
+    await GenerateConnector("Revit");
+  }
+
   public static async Task GenerateLocalSlnx()
   {
-    var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.sln");
-    var connectors = await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+    var connectors = await GetFullSlnx();
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Objects\\Speckle.Objects.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk\\Speckle.Sdk.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
-    var localSln = Path.Combine(Environment.CurrentDirectory, "Local.slnx");
-    using var x = File.OpenWrite(localSln);
-    await SolutionSerializers.SlnXml.SaveAsync(x, connectors, default);
+    var localSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.slnx");
+    await SolutionSerializers.SlnXml.SaveAsync(localSln, connectors, default);
   }
+  
+  public static async Task GenerateConnector(string slug)
+  {
+    Console.WriteLine($"Generating connector: {slug}");
+    var connectors = await GetFullSlnx();
+    var foldersToRemove = connectors.SolutionFolders
+      .Where(x => !x.Path.Equals("/Connectors/") && x.Path.StartsWith("/Connectors/") && !x.Path.Contains(slug)).ToList();
+    foreach (var folderToRemove in foldersToRemove)
+    {
+      Console.WriteLine($"Removing folder: {folderToRemove.Path}");
+      connectors.RemoveFolder(folderToRemove);
+    }
+    var localSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.slnx");
+    await SolutionSerializers.SlnXml.SaveAsync(localSln, connectors, default);
+  }
+  
+   public static async Task<SolutionModel> GetFullSlnx()
+    {
+      var connectorsSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Speckle.Connectors.slnx");
+     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+    }
 }
