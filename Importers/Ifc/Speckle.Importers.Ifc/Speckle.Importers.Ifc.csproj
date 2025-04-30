@@ -25,9 +25,15 @@
     <PackageReference Include="Ara3D.Logging"  />
     <PackageReference Include="Ara3D.Utils" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="8.0.0" />
-    <PackageReference Include="Speckle.Objects" />
-    <PackageReference Include="Speckle.Sdk" />
   </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
+    <ProjectReference Include="..\..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
+    <ProjectReference Include="..\..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
+  </ItemGroup> 
+  <ItemGroup Condition="'$(Configuration)' != 'Local'">
+    <PackageReference Include="Speckle.Sdk" />
+    <PackageReference Include="Speckle.Objects" />
+  </ItemGroup> 
 
 
   <ItemGroup>

@@ -61,6 +61,17 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
+    // TODO: formalise getting transform info from rootObject. this dict access is gross.
+    Autodesk.Revit.DB.Transform? referencePointTransform = null;
+    if (
+      rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
+      && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is Dictionary<string, object> transformDict
+      && transformDict.TryGetValue("transform", out var transformValue)
+    )
+    {
+      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformValue);
+    }
+
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));
@@ -110,7 +121,17 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings with
+          {
+            ReferencePointTransform = referencePointTransform
+          }
+        )
+      )
+      {
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      }
       transactionManager.CommitTransaction();
     }
 
