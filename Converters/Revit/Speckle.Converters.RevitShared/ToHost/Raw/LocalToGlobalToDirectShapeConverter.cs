@@ -32,7 +32,8 @@ public class LocalToGlobalToDirectShapeConverter
   {
     // 1- set ds category
     // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
-    // hence the below. but this isn't robust. is it valid to throw exception of builtInCategory isn't found?
+    // hence the below. but this isn't robust. is it valid to throw exception if builtInCategory isn't found?
+    // if builtInCategory was on atomicObject level, should we include fallback to that?
     string? category = null;
 
     if (target.atomicObject is DataObject dataObject)
