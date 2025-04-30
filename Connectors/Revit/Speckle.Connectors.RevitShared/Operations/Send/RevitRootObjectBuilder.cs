@@ -241,6 +241,13 @@ public class RevitRootObjectBuilder(
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
+    // we want to store transform data for chosen reference point setting
+    if (converterSettings.Current.ReferencePointTransform is Transform transform)
+    {
+      var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
+      rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+    }
+
     return new RootObjectBuilderResult(rootObject, results);
   }
 }
