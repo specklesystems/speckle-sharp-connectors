@@ -174,9 +174,6 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
         case ReferencePointType.InternalOrigin:
           break;
-
-        default:
-          break;
       }
 
       return referencePointTransform;
