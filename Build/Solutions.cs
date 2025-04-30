@@ -59,8 +59,11 @@ public static class Solutions
   public static async Task GenerateSolutions()
   {
     await GenerateLocalSlnx();
-    await GenerateConnector("ArcGIS");
-    await GenerateConnector("Revit");
+    foreach (string solutionSlug in Consts.SolutionSlugs)
+    {
+      await GenerateConnector(solutionSlug);
+      
+    }
   }
 
   public static async Task GenerateLocalSlnx()
@@ -75,13 +78,11 @@ public static class Solutions
   
   public static async Task GenerateConnector(string slug)
   {
-    Console.WriteLine($"Generating connector: {slug}");
     var connectors = await GetFullSlnx();
     var foldersToRemove = connectors.SolutionFolders
       .Where(x => !x.Path.Equals("/Connectors/") && x.Path.StartsWith("/Connectors/") && !x.Path.Contains(slug)).ToList();
     foreach (var folderToRemove in foldersToRemove)
     {
-      Console.WriteLine($"Removing folder: {folderToRemove.Path}");
       connectors.RemoveFolder(folderToRemove);
     }
     var localSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.slnx");

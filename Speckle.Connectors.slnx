@@ -66,15 +66,11 @@
   </Folder>
   <Folder Name="/Connectors/CSi/" />
   <Folder Name="/Connectors/CSi/ETABS21/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS21/Speckle.Connectors.ETABS21.csproj">
-      <BuildType Solution="Local|*" Project="Debug" />
-    </Project>
+    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS21/Speckle.Connectors.ETABS21.csproj" />
     <Project Path="Converters/CSi/Speckle.Converters.ETABS21/Speckle.Converters.ETABS21.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/ETABS22/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS22/Speckle.Connectors.ETABS22.csproj">
-      <BuildType Solution="Local|*" Project="Debug" />
-    </Project>
+    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS22/Speckle.Connectors.ETABS22.csproj" />
     <Project Path="Converters/CSi/Speckle.Converters.ETABS22/Speckle.Converters.ETABS22.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/Shared/">
@@ -137,10 +133,6 @@
     <Project Path="Connectors/Revit/Speckle.Connectors.Revit2025/Speckle.Connectors.Revit2025.csproj" />
     <Project Path="Converters/Revit/Speckle.Converters.Revit2025/Speckle.Converters.Revit2025.csproj" />
   </Folder>
-  <Folder Name="/Connectors/Revit/2026/">
-    <Project Path="Connectors/Revit/Speckle.Connectors.Revit2026/Speckle.Connectors.Revit2026.csproj" />
-    <Project Path="Converters/Revit/Speckle.Converters.Revit2026/Speckle.Converters.Revit2026.csproj" />
-  </Folder>
   <Folder Name="/Connectors/Revit/Shared/">
     <Project Path="Connectors/Revit/Speckle.Connectors.RevitShared.Cef/Speckle.Connectors.RevitShared.Cef.shproj" />
     <Project Path="Connectors/Revit/Speckle.Connectors.RevitShared/Speckle.Connectors.RevitShared.shproj" />
@@ -180,26 +172,20 @@
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Ifc/">
     <Project Path="Importers/Ifc/Speckle.Importers.Ifc.Tester/Speckle.Importers.Ifc.Tester.csproj" />
-    <Project Path="Importers/Ifc/Speckle.Importers.Ifc.Tester2/Speckle.Importers.Ifc.Tester2.csproj">
-      <BuildType Solution="Local|*" Project="Debug" />
-    </Project>
+    <Project Path="Importers/Ifc/Speckle.Importers.Ifc.Tester2/Speckle.Importers.Ifc.Tester2.csproj" />
     <Project Path="Importers/Ifc/Speckle.Importers.Ifc/Speckle.Importers.Ifc.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
     <Project Path="DUI3/Speckle.Connectors.DUI.Tests/Speckle.Connectors.DUI.Tests.csproj" />
     <Project Path="DUI3/Speckle.Connectors.DUI.WebView/Speckle.Connectors.DUI.WebView.csproj" />
     <Project Path="DUI3/Speckle.Connectors.DUI/Speckle.Connectors.DUI.csproj" />
-    <Project Path="Sdk/Speckle.Common.MeshTriangulation/Speckle.Common.MeshTriangulation.csproj">
-      <BuildType Solution="Local|*" Project="Debug" />
-    </Project>
+    <Project Path="Sdk/Speckle.Common.MeshTriangulation/Speckle.Common.MeshTriangulation.csproj" />
     <Project Path="Sdk/Speckle.Connectors.Common.Tests/Speckle.Connectors.Common.Tests.csproj" />
     <Project Path="Sdk/Speckle.Connectors.Common/Speckle.Connectors.Common.csproj" />
     <Project Path="Sdk/Speckle.Connectors.Logging/Speckle.Connectors.Logging.csproj" />
     <Project Path="Sdk/Speckle.Converters.Common.Tests/Speckle.Converters.Common.Tests.csproj" />
     <Project Path="Sdk/Speckle.Converters.Common/Speckle.Converters.Common.csproj" />
-    <Project Path="Sdk/Speckle.Performance/Speckle.Performance.csproj">
-      <BuildType Solution="Local|*" Project="Debug" />
-    </Project>
+    <Project Path="Sdk/Speckle.Performance/Speckle.Performance.csproj" />
     <Project Path="Sdk/Speckle.Testing/Speckle.Testing.csproj" />
   </Folder>
 </Solution>
