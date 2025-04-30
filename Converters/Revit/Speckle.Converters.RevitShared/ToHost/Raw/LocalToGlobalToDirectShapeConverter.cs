@@ -31,6 +31,8 @@ public class LocalToGlobalToDirectShapeConverter
   public DB.DirectShape Convert((Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix) target)
   {
     // 1- set ds category
+    // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
+    // hence the below. but this isn't robust. is it valid to throw exception of builtInCategory isn't found?
     string? category = null;
 
     if (target.atomicObject is DataObject dataObject)
