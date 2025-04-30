@@ -62,7 +62,6 @@ public static class Solutions
     foreach (string solutionSlug in Consts.SolutionSlugs)
     {
       await GenerateConnector(solutionSlug);
-      
     }
   }
 
@@ -75,12 +74,15 @@ public static class Solutions
     var localSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(localSln, connectors, default);
   }
-  
+
   public static async Task GenerateConnector(string slug)
   {
     var connectors = await GetFullSlnx();
-    var foldersToRemove = connectors.SolutionFolders
-      .Where(x => !x.Path.Equals("/Connectors/") && x.Path.StartsWith("/Connectors/") && !x.Path.Contains(slug)).ToList();
+    var foldersToRemove = connectors
+      .SolutionFolders.Where(x =>
+        !x.Path.Equals("/Connectors/") && x.Path.StartsWith("/Connectors/") && !x.Path.Contains(slug)
+      )
+      .ToList();
     foreach (var folderToRemove in foldersToRemove)
     {
       connectors.RemoveFolder(folderToRemove);
@@ -88,10 +90,10 @@ public static class Solutions
     var localSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(localSln, connectors, default);
   }
-  
-   public static async Task<SolutionModel> GetFullSlnx()
-    {
-      var connectorsSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Speckle.Connectors.slnx");
-     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
-    }
+
+  public static async Task<SolutionModel> GetFullSlnx()
+  {
+    var connectorsSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Speckle.Connectors.slnx");
+    return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+  }
 }
