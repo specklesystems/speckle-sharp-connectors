@@ -3,7 +3,6 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
@@ -32,16 +31,14 @@ public class LocalToGlobalToDirectShapeConverter
   public DB.DirectShape Convert((Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix) target)
   {
     // 1- set ds category
+    // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
     string? category = null;
 
     if (target.atomicObject is DataObject dataObject)
     {
       if (dataObject.properties.TryGetValue("builtInCategory", out var builtInCategory))
       {
-        // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
-        // for this reason, we want to be loud about this as we need the category in order to classify the objects on receive
-        // avoid same thing happening again
-        category = builtInCategory.NotNull("builtInCategory").ToString();
+        category = builtInCategory?.ToString();
       }
     }
 
