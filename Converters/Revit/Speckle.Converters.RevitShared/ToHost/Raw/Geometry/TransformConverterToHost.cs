@@ -48,7 +48,7 @@ public class TransformConverterToHost : ITypedConverter<(Matrix4x4 matrix, strin
     {
       double scale = transform.Scale; // Will throw if not conformal
     }
-    catch (InvalidOperationException)
+    catch (Exception)
     {
       throw new SpeckleException("Transform was not conformal. Skew, non uniform scale is currently not supported.");
     }
