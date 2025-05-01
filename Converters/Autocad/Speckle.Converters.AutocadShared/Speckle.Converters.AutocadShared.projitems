@@ -52,6 +52,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\RegionToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SurfaceToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\Solid3dToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\TextToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BrepToSpeckleRawConverter.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SubDMeshToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoxToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CircularArc3dToSpeckleRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBTextToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\IntervalToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineSegment3dToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PlaneToSpeckleRawConverter.cs" />
