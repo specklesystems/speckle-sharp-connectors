@@ -415,9 +415,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Connectors.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[3.2.2, )",
-          "Speckle.Sdk.Dependencies": "[3.2.2, )"
+          "Speckle.Connectors.Common": "[1.0.0, )"
         }
       },
       "speckle.connectors.dui.webview": {
