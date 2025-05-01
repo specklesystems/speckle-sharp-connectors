@@ -22,10 +22,13 @@ public static class Program
     {
       using (new RhinoCore([], WindowStyle.NoWindow))
       {
-        using var doc = RhinoDoc.Open("C:\\Users\\adam\\Downloads\\objects.dwg", out var _);
+        using var doc = RhinoDoc.Open(
+          @"C:\Users\Jedd\Downloads\visualization_-_condominium_with_skylight.3dm",
+          out var _
+        );
         var services = new ServiceCollection();
-        var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
-        services.Initialize(path, HostApplications.Rhino, HostAppVersion.v2026);
+        // var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
+        services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
         services.AddRhino(false);
         services.AddRhinoConverters();
         //override default

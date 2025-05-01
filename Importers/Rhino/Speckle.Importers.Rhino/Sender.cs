@@ -34,11 +34,11 @@ public class Sender(
       {
         return;
       }
-      var projectId = "projectId";
-      var modelId = "modelId";
-      var accountId = "accountId";
-      var url = new Uri("https://localhost");
-      var sendInfo = new SendInfo(accountId, url, projectId, modelId, string.Empty);
+      var projectId = "f3a42bdf24";
+      var modelId = "99823dc746";
+      var url = new Uri("https://app.speckle.systems");
+
+      var sendInfo = new SendInfo("", url, projectId, modelId, string.Empty);
 
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
       var buildResults = await operation.Build(rhinoObjects, sendInfo, new Progress(), CancellationToken.None);
