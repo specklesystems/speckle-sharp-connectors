@@ -12,8 +12,14 @@ internal sealed class GrasshopperCollectionRebuilder
 
   public GrasshopperCollectionRebuilder(Collection baseCollection)
   {
-    Collection newCollection = new() { name = baseCollection.name, applicationId = baseCollection.applicationId };
-    RootCollectionWrapper = new SpeckleCollectionWrapper(newCollection, new() { baseCollection.name }, null, null);
+    RootCollectionWrapper = new SpeckleCollectionWrapper(new() { baseCollection.name })
+    {
+      Base = new Collection(),
+      Name = baseCollection.name,
+      Color = null,
+      Material = null,
+      ApplicationId = baseCollection.applicationId ?? Guid.NewGuid().ToString(),
+    };
   }
 
   public void AppendSpeckleGrasshopperObject(
@@ -38,8 +44,8 @@ internal sealed class GrasshopperCollectionRebuilder
       ? cachedMaterial
       : null;
 
-    var collection = GetOrCreateSpeckleCollectionFromPath(collectionPath, colorUnpacker, materialUnpacker);
-    collection.Collection.elements.Add(speckleGrasshopperObjectWrapper);
+    var collWrapper = GetOrCreateSpeckleCollectionFromPath(collectionPath, colorUnpacker, materialUnpacker);
+    collWrapper.Elements.Add(speckleGrasshopperObjectWrapper);
   }
 
   public SpeckleCollectionWrapper GetOrCreateSpeckleCollectionFromPath(
@@ -72,11 +78,12 @@ internal sealed class GrasshopperCollectionRebuilder
       }
 
       // create and cache if needed
-      Collection newCollection = new() { name = collectionName, applicationId = collection.applicationId };
       SpeckleCollectionWrapper newSpeckleCollectionWrapper =
-        new(newCollection, currentLayerPath, null, null)
+        new(currentLayerPath)
         {
-          // get the collection color and material
+          Base = new Collection(),
+          Name = collectionName,
+          ApplicationId = collection.applicationId,
           Color = colorUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
             ? cachedCollectionColor
             : null,
@@ -85,19 +92,16 @@ internal sealed class GrasshopperCollectionRebuilder
             out var cachedCollectionMaterial
           )
             ? cachedCollectionMaterial
-            : null
+            : null,
         };
-      ;
 
       if (collection["topology"] is string topology)
       {
         newSpeckleCollectionWrapper.Topology = topology;
-        newCollection["topology"] = topology;
       }
 
       _cache[key] = newSpeckleCollectionWrapper;
-      previousCollectionWrapper.Collection.elements.Add(newSpeckleCollectionWrapper);
-
+      previousCollectionWrapper.Elements.Add(newSpeckleCollectionWrapper);
       previousCollectionWrapper = newSpeckleCollectionWrapper;
     }
 

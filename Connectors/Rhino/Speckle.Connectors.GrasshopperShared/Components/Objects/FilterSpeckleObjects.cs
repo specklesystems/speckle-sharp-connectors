@@ -125,7 +125,7 @@ public class FilterSpeckleObjects : GH_Component
       }
 
       // filter by material name
-      if (!MatchesSearchPattern(material, inputObjects[i].Value.Material?.Base.name ?? ""))
+      if (!MatchesSearchPattern(material, inputObjects[i].Value.Material?.Name ?? ""))
       {
         continue;
       }

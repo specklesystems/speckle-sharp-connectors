@@ -81,7 +81,14 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
         layerMaterial = materialGoo.Value;
       }
 
-      Value = new SpeckleCollectionWrapper(modelCollection, GetModelLayerPath(modelLayer), layerColor, layerMaterial);
+      Value = new SpeckleCollectionWrapper(GetModelLayerPath(modelLayer))
+      {
+        Name = modelLayer.Name,
+        Base = modelCollection,
+        Color = layerColor,
+        Material = layerMaterial
+      };
+
       return true;
     }
 

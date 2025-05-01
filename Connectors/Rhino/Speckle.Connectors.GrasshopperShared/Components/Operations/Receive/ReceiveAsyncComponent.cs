@@ -48,7 +48,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
 
   // DI props
-  public Client ApiClient { get; private set; }
+  public IClient ApiClient { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }

@@ -42,8 +42,16 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
     string rootName = "Unnamed";
-    Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
-    SpeckleCollectionWrapper rootSpeckleCollectionWrapper = new(rootCollection, new() { rootName }, null, null);
+    Collection rootCollection = new();
+    SpeckleCollectionWrapper rootSpeckleCollectionWrapper =
+      new(new() { rootName })
+      {
+        Base = rootCollection,
+        Name = rootName,
+        Color = null,
+        Material = null,
+        ApplicationId = InstanceGuid.ToString()
+      };
 
     foreach (var inputParam in Params.Input)
     {
@@ -67,9 +75,16 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       List<string> childPath = new() { rootName };
       childPath.Add(inputParam.NickName);
-      Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
       SpeckleCollectionWrapper childSpeckleCollectionWrapper =
-        new(childCollection, childPath, null, null) { Topology = GrasshopperHelpers.GetParamTopology(inputParam) };
+        new(childPath)
+        {
+          Base = new Collection(),
+          Name = inputParam.NickName,
+          Color = null,
+          Material = null,
+          Topology = GrasshopperHelpers.GetParamTopology(inputParam),
+          ApplicationId = inputParam.InstanceGuid.ToString(),
+        };
 
       // handle collection inputs
       // if on this port we're only receiving collections, we should become "pass-through" to not create
@@ -77,15 +92,13 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       if (inputCollections.Count == data.Count)
       {
         var nameTest = new HashSet<string>();
-        foreach (SpeckleCollectionWrapperGoo collection in inputCollections)
+        foreach (SpeckleCollectionWrapperGoo wrapperGoo in inputCollections)
         {
           // update the speckle collection path
-          collection.Value.Path = new ObservableCollection<string>(childPath);
+          wrapperGoo.Value.Path = new ObservableCollection<string>(childPath);
 
           foreach (
-            string subCollectionName in collection
-              .Value.Collection.elements.OfType<SpeckleCollectionWrapper>()
-              .Select(v => v.Collection.name)
+            string subCollectionName in wrapperGoo.Value.Elements.OfType<SpeckleCollectionWrapper>().Select(c => c.Name)
           )
           {
             var hasNotSeenNameBefore = nameTest.Add(subCollectionName);
@@ -99,10 +112,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
             }
           }
 
-          childSpeckleCollectionWrapper.Collection.elements.AddRange(collection.Value.Collection.elements);
+          childSpeckleCollectionWrapper.Elements.AddRange(wrapperGoo.Value.Elements);
         }
 
-        rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
+        rootSpeckleCollectionWrapper.Elements.Add(childSpeckleCollectionWrapper);
         continue;
       }
 
@@ -114,11 +127,11 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         {
           wrapperGoo.Value.Path = childPath;
           wrapperGoo.Value.Parent = childSpeckleCollectionWrapper;
-          childSpeckleCollectionWrapper.Collection.elements.Add(wrapperGoo.Value);
+          childSpeckleCollectionWrapper.Elements.Add(wrapperGoo.Value);
         }
       }
 
-      rootSpeckleCollectionWrapper.Collection.elements.Add(childSpeckleCollectionWrapper);
+      rootSpeckleCollectionWrapper.Elements.Add(childSpeckleCollectionWrapper);
     }
 
     dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootSpeckleCollectionWrapper));

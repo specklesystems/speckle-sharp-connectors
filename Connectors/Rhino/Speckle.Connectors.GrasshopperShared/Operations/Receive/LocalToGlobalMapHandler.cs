@@ -82,7 +82,6 @@ internal sealed class LocalToGlobalMapHandler
       // similar objects will be re-packaged on send
       foreach ((GeometryBase geometryBase, Base original) in converted)
       {
-        original.applicationId ??= map.AtomicObject.applicationId ?? Guid.NewGuid().ToString(); // check for null ids, we don't want nulls on the wrapped base
         var gh = new SpeckleObjectWrapper()
         {
           Base = original,
@@ -93,7 +92,8 @@ internal sealed class LocalToGlobalMapHandler
           Name = name,
           Color = null,
           Material = null,
-          applicationId = null // keep this null, as it will be generated on send after processing all wrappers
+          WrapperGuid = map.AtomicObject.applicationId,
+          ApplicationId = original.applicationId ?? Guid.NewGuid().ToString() // create if none
         };
 
         CollectionRebuilder.AppendSpeckleGrasshopperObject(gh, path, _colorUnpacker, _materialUnpacker);
