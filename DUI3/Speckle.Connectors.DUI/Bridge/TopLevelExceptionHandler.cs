@@ -18,17 +18,11 @@ namespace Speckle.Connectors.DUI.Bridge;
 /// Attempting to swallow them may lead to data corruption, deadlocking, or things worse than a managed host app crash.
 /// </remarks>
 [GenerateAutoInterface]
-public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
+public sealed class TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger) : ITopLevelExceptionHandler
 {
-  private readonly ILogger<TopLevelExceptionHandler> _logger;
   public string Name => nameof(TopLevelExceptionHandler);
 
-  private const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
-
-  public TopLevelExceptionHandler(ILogger<TopLevelExceptionHandler> logger)
-  {
-    _logger = logger;
-  }
+  public const string UNHANDLED_LOGGER_TEMPLATE = "An unhandled Exception occured";
 
   /// <summary>
   /// Invokes the given <paramref name="function"/> within a <see langword="try"/>/<see langword="catch"/> block,
@@ -62,13 +56,13 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+      logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
       // _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex).Wait();
       return new(ex);
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
   }
@@ -100,14 +94,14 @@ public sealed class TopLevelExceptionHandler : ITopLevelExceptionHandler
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
+        logger.LogError(ex, UNHANDLED_LOGGER_TEMPLATE);
         // await _eventAggregator.GetEvent<ExceptionEvent>().PublishAsync(ex);
         return new(ex);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
+      logger.LogCritical(ex, UNHANDLED_LOGGER_TEMPLATE);
       throw;
     }
   }

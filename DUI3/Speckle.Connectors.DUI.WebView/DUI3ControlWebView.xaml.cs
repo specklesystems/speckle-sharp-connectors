@@ -19,7 +19,8 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
       _serviceProvider
         .GetRequiredService<ITopLevelExceptionHandler>()
-        .CatchUnhandled(() => OnInitialized(sender, args));
+        .CatchUnhandled(() => OnInitialized(sender, args))
+        .ShowExceptionDialog("Could not initialize WebView2 for Speckle.");
   }
 
   public bool IsBrowserInitialized => Browser.IsInitialized;
@@ -43,7 +44,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
   {
-    if (!e.IsSuccess)
+    if (e.IsSuccess)
     {
       throw new InvalidOperationException("Webview Failed to initialize", e.InitializationException);
     }
