@@ -95,7 +95,7 @@ public class SpeckleSelectModelComponent : GH_Component
   {
     if (_account != null && ProjectDropDown != null)
     {
-      Client client = _clientFactory.Create(_account);
+      IClient client = _clientFactory.Create(_account);
       LastFetchedProjects = await client
         .ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText))
         .ConfigureAwait(true);
@@ -107,7 +107,7 @@ public class SpeckleSelectModelComponent : GH_Component
   {
     if (_account != null && ModelDropDown != null && _project != null)
     {
-      Client client = _clientFactory.Create(_account);
+      IClient client = _clientFactory.Create(_account);
       var result = await client
         .Project.GetWithModels(_project.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
         .ConfigureAwait(true);
@@ -312,7 +312,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (_account != null && _model != null && _project != null)
     {
       FetchedVersionCount += 10;
-      Client client = _clientFactory.Create(_account);
+      IClient client = _clientFactory.Create(_account);
       var newVersionsResult = await client
         .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
         .ConfigureAwait(true);
