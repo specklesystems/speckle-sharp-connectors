@@ -76,10 +76,11 @@ public class CreateSpeckleObject : GH_Component
 
     pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
 
-    pManager.AddGenericParameter(
+    pManager.AddParameter(
+      new SpeckleMaterialParam(),
       "Material",
-      "m",
-      "The material of the Speckle Object. Display Materials, Model Materials, and Speckle Materials are accepted.",
+      "M",
+      "The material of the Speckle Object.",
       GH_ParamAccess.item
     );
   }
@@ -158,8 +159,6 @@ public class CreateSpeckleObject : GH_Component
       }
 
       result.Value.Properties = propGoo;
-      Dictionary<string, object?> props = new();
-      propGoo.CastTo(ref props);
       mutated = true;
     }
 
@@ -186,12 +185,9 @@ public class CreateSpeckleObject : GH_Component
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
-    string applicationId = mutated
+    result.Value.ApplicationId = mutated
       ? Guid.NewGuid().ToString()
-      : result.Value.applicationId != null
-        ? result.Value.applicationId
-        : Guid.NewGuid().ToString();
-    result.Value.Base.applicationId = applicationId;
+      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
 
     // set all the data
     da.SetData(0, result.Value);

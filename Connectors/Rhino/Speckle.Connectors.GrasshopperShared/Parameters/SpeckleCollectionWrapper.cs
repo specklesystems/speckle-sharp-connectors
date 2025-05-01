@@ -15,35 +15,54 @@ using Layer = Rhino.DocObjects.Layer;
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
-public class SpeckleCollectionWrapper : Base
+public class SpeckleCollectionWrapper : SpeckleWrapper
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
-  // the original collection
+  public override required Base Base
+  {
+    get => Collection;
+    set
+    {
+      if (value is not Collection coll)
+      {
+        throw new ArgumentException("Cannot create collection wrapper from a non-Collection Base");
+      }
+
+      Collection = coll;
+    }
+  }
+
   public Collection Collection { get; set; }
 
   // the list of layer names that build up the path to this collection, including this collection name
   public ObservableCollection<string> Path { get; set; }
 
-  public string Topology { get; set; }
+  public List<SpeckleWrapper> Elements { get; set; } = new();
 
-  public Color? Color { get; set; }
-
-  public SpeckleMaterialWrapper? Material { get; set; }
-
-  public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
-
-  public SpeckleCollectionWrapper(
-    Collection value,
-    List<string> path,
-    Color? color,
-    SpeckleMaterialWrapper? materialWrapper
-  )
+  /// <summary>
+  /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamicall on <see cref="Collection"/>
+  /// </summary>
+  public string? Topology
   {
-    Collection = value;
+    get => Collection[Constants.TOPOLOGY_PROP] as string;
+    set => Collection[Constants.TOPOLOGY_PROP] = value;
+  }
+
+  /// <summary>
+  /// The color of the <see cref="Base"/>
+  /// </summary>
+  public required Color? Color { get; set; }
+
+  /// <summary>
+  /// The material of the <see cref="Base"/>
+  /// </summary>
+  public required SpeckleMaterialWrapper? Material { get; set; }
+
+  public override string ToString() => $"{Name} [{Elements.Count}]";
+
+  public SpeckleCollectionWrapper(List<string> path)
+  {
     Path = new ObservableCollection<string>(path);
-    Color = color;
-    Material = materialWrapper;
-    applicationId = value.applicationId;
 
     // add listener on path changing.
     // this can be triggered by a create collection node, that changes the path of this collection.
@@ -54,7 +73,7 @@ public class SpeckleCollectionWrapper : Base
   private void OnPathChanged(object sender, NotifyCollectionChangedEventArgs e)
   {
     var newPath = e.NewItems.Cast<string>().ToList();
-    foreach (var element in Collection.elements)
+    foreach (var element in Elements)
     {
       if (element is SpeckleObjectWrapper o)
       {
@@ -93,7 +112,7 @@ public class SpeckleCollectionWrapper : Base
     }
 
     // then bake elements in this collection
-    foreach (var obj in Collection.elements)
+    foreach (var obj in Elements)
     {
       if (obj is SpeckleObjectWrapper so)
       {
@@ -166,8 +185,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() =>
-    $@"Speckle Collection Goo [{m_value.Collection?.name} ({Value.Collection.elements.Count})]";
+  public override string ToString() => $@"Speckle Collection Goo [{m_value.Name} ({Value.Elements.Count})]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle collection wrapper";
@@ -277,7 +295,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        FlattenForPreview(goo.Value.Collection);
+        FlattenForPreview(goo.Value);
       }
     }
 
@@ -298,19 +316,19 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
     // todo?
   }
 
-  private void FlattenForPreview(Collection c)
+  private void FlattenForPreview(SpeckleCollectionWrapper collWrapper)
   {
-    foreach (var element in c.elements)
+    foreach (var element in collWrapper.Elements)
     {
-      if (element is SpeckleCollectionWrapper subCol)
+      if (element is SpeckleCollectionWrapper subCollWrapper)
       {
-        FlattenForPreview(subCol.Collection);
+        FlattenForPreview(subCollWrapper);
       }
 
-      if (element is SpeckleObjectWrapper sg)
+      if (element is SpeckleObjectWrapper objWrapper)
       {
-        _previewObjects.Add(sg);
-        var box = sg.GeometryBase is null ? new() : sg.GeometryBase.GetBoundingBox(false);
+        _previewObjects.Add(objWrapper);
+        var box = objWrapper.GeometryBase is null ? new() : objWrapper.GeometryBase.GetBoundingBox(false);
         _clippingBox.Union(box);
       }
     }

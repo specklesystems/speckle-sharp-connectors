@@ -50,7 +50,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       string inputName = inputParam.NickName;
       if (branchCount != inputParam.VolatileData.PathCount)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Input property values had different branch structure.");
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Input property values had different branch structure.");
         return;
       }
 
@@ -73,7 +73,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
         }
 
         SpecklePropertyGoo propGoo = new();
-        if (!propGoo.CastFrom(data.Count == 0 ? "" : data.First()))
+        if (!propGoo.CastFrom(data.Count == 0 ? null : data.First()))
         {
           AddRuntimeMessage(
             GH_RuntimeMessageLevel.Error,

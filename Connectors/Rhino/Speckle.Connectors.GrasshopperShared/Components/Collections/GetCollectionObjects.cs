@@ -4,7 +4,6 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
 
@@ -80,7 +79,7 @@ public class GetCollectionObjects : GH_Component
       targetCollectionWrapper =
         path == "_objects" ? collectionWrapperGoo.Value : FindCollection(collectionWrapperGoo.Value, path);
       filteredObjects = targetCollectionWrapper
-        .Collection.elements.Where(e => e is SpeckleObjectWrapper)
+        .Elements.Where(e => e is SpeckleObjectWrapper)
         .Select(e => (SpeckleObjectWrapper)e)
         .ToList();
     }
@@ -103,7 +102,7 @@ public class GetCollectionObjects : GH_Component
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (Base element in collectionWrapper.Collection.elements)
+    foreach (SpeckleWrapper element in collectionWrapper.Elements)
     {
       switch (element)
       {
@@ -128,8 +127,8 @@ public class GetCollectionObjects : GH_Component
     while (paths.Count != 0)
     {
       currentCollectionWrapper = currentCollectionWrapper
-        .Collection.elements.OfType<SpeckleCollectionWrapper>()
-        .First(col => col.Collection.name == paths.First());
+        .Elements.OfType<SpeckleCollectionWrapper>()
+        .First(wrapper => wrapper.Name == paths.First());
       paths.RemoveAt(0);
       if (paths.Count == 0)
       {

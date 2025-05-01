@@ -114,15 +114,17 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
 
     foreach (var entry in Value)
     {
-      if (
-        propertyGroupGoo.Value.TryGetValue(entry.Key, out SpecklePropertyGoo compareProp)
-        && entry.Value.Value != compareProp.Value
-      )
+      if (propertyGroupGoo.Value.TryGetValue(entry.Key, out SpecklePropertyGoo compareProp))
+      {
+        if (entry.Value.Value != compareProp.Value)
+        {
+          return false;
+        }
+      }
+      else
       {
         return false;
       }
-
-      return false;
     }
 
     return true;
