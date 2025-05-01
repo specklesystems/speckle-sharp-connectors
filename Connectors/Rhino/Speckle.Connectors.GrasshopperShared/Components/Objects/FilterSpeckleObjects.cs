@@ -63,9 +63,17 @@ public class FilterSpeckleObjects : GH_Component
   {
     pManager.AddParameter(
       new SpeckleObjectParam(),
-      "Filtered Objects",
+      "Objects",
       "O",
-      "The filtered objects that match the queries",
+      "The objects that match the queries",
+      GH_ParamAccess.tree
+    );
+
+    pManager.AddParameter(
+      new SpeckleObjectParam(),
+      "Culled Objects",
+      "co",
+      "The objects that did not match the queries",
       GH_ParamAccess.tree
     );
   }
@@ -91,13 +99,14 @@ public class FilterSpeckleObjects : GH_Component
     string speckleId = "";
     dataAccess.GetData(5, ref speckleId);
 
-    List<SpeckleObjectWrapper> filteredObjects = new();
-
+    List<SpeckleObjectWrapper> matchedObjects = new();
+    List<SpeckleObjectWrapper> removedObjects = new();
     for (int i = 0; i < inputObjects.Count; i++)
     {
       // filter by name
       if (!MatchesSearchPattern(name, inputObjects[i].Value.Name))
       {
+        removedObjects.Add(inputObjects[i].Value);
         continue;
       }
 
@@ -121,32 +130,37 @@ public class FilterSpeckleObjects : GH_Component
 
       if (!foundProperty)
       {
+        removedObjects.Add(inputObjects[i].Value);
         continue;
       }
 
       // filter by material name
       if (!MatchesSearchPattern(material, inputObjects[i].Value.Material?.Name ?? ""))
       {
+        removedObjects.Add(inputObjects[i].Value);
         continue;
       }
 
       // filter by application id
       if (!MatchesSearchPattern(appId, inputObjects[i].Value.Base.applicationId ?? ""))
       {
+        removedObjects.Add(inputObjects[i].Value);
         continue;
       }
 
       // filter by speckle id
       if (!MatchesSearchPattern(speckleId, inputObjects[i].Value.Base.id ?? ""))
       {
+        removedObjects.Add(inputObjects[i].Value);
         continue;
       }
 
-      filteredObjects.Add(inputObjects[i].Value);
+      matchedObjects.Add(inputObjects[i].Value);
     }
 
     // Set output objects
-    dataAccess.SetDataList(0, filteredObjects);
+    dataAccess.SetDataList(0, matchedObjects);
+    dataAccess.SetDataList(1, removedObjects);
   }
 
   private bool MatchesSearchPattern(string searchPattern, string target)
