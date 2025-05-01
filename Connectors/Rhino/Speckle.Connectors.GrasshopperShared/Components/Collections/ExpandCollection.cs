@@ -89,8 +89,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       var nickName = childWrapper.Name;
       if (nickName.Length > 16)
       {
-        nickName = nickName[..3];
-        nickName += "..." + nickName[^3..];
+        nickName = childWrapper.Name[..6];
+        nickName += "..." + childWrapper.Name[^6..];
       }
 
       var param = new Param_GenericObject()
