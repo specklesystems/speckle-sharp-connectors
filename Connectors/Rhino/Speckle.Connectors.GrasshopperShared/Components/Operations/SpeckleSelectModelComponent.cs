@@ -237,7 +237,6 @@ public class SpeckleSelectModelComponent : GH_Component
   private bool PopulateVersionMenu(ToolStripDropDown menu)
   {
     VersionDropDown = menu;
-    VersionDropDown.AutoClose = false;
     if (LastFetchedVersions is null)
     {
       Menu_AppendItem(menu, "No versions were fetched");
@@ -288,7 +287,23 @@ public class SpeckleSelectModelComponent : GH_Component
     if (LastFetchedVersions.items.Count >= FetchedVersionCount)
     {
       Menu_AppendSeparator(menu);
-      Menu_AppendItem(menu, "\u2795 Show more...", async (_, _) => await FetchMoreVersions(menu), null, true, false);
+
+      var addMoreButton = new Button() { Text = @"➕ Show more...", Size = new Size(400, 48) };
+
+      addMoreButton.Click += async (sender, args) =>
+      {
+        await FetchMoreVersions(menu);
+      };
+
+      var addMoreButtonHost = new ToolStripControlHost(addMoreButton)
+      {
+        Name = "Show more...",
+        AutoSize = false,
+        Margin = new Padding(4),
+        Padding = new Padding(2)
+      };
+
+      menu.Items.Insert(menu.Items.Count, addMoreButtonHost);
     }
   }
 
