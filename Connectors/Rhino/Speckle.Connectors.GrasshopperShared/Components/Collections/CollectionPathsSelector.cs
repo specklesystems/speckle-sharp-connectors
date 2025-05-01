@@ -60,7 +60,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 
     void GetPathsInternal(SpeckleCollectionWrapper w)
     {
-      currentPath.Add(w.Collection.name);
+      currentPath.Add(w.Name);
       var subCols = w.Elements.OfType<SpeckleCollectionWrapper>().ToList();
 
       // NOTE: here we're basically outputting only paths that correspond to a collection

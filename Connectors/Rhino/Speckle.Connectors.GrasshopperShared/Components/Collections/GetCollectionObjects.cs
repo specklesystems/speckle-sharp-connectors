@@ -128,7 +128,7 @@ public class GetCollectionObjects : GH_Component
     {
       currentCollectionWrapper = currentCollectionWrapper
         .Elements.OfType<SpeckleCollectionWrapper>()
-        .First(col => col.Collection.name == paths.First());
+        .First(wrapper => wrapper.Name == paths.First());
       paths.RemoveAt(0);
       if (paths.Count == 0)
       {

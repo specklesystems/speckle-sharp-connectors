@@ -42,14 +42,15 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
     string rootName = "Unnamed";
-    Collection rootCollection = new() { name = rootName, applicationId = InstanceGuid.ToString() };
+    Collection rootCollection = new();
     SpeckleCollectionWrapper rootSpeckleCollectionWrapper =
       new(new() { rootName })
       {
         Base = rootCollection,
+        Name = rootName,
         Color = null,
         Material = null,
-        WrapperGuid = null
+        ApplicationId = InstanceGuid.ToString()
       };
 
     foreach (var inputParam in Params.Input)
@@ -74,15 +75,15 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       List<string> childPath = new() { rootName };
       childPath.Add(inputParam.NickName);
-      Collection childCollection = new(inputParam.NickName) { applicationId = inputParam.InstanceGuid.ToString() };
       SpeckleCollectionWrapper childSpeckleCollectionWrapper =
         new(childPath)
         {
-          Base = childCollection,
+          Base = new Collection(),
+          Name = inputParam.NickName,
           Color = null,
           Material = null,
-          WrapperGuid = null,
-          Topology = GrasshopperHelpers.GetParamTopology(inputParam)
+          Topology = GrasshopperHelpers.GetParamTopology(inputParam),
+          ApplicationId = inputParam.InstanceGuid.ToString(),
         };
 
       // handle collection inputs
@@ -97,9 +98,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           wrapperGoo.Value.Path = new ObservableCollection<string>(childPath);
 
           foreach (
-            string subCollectionName in wrapperGoo
-              .Value.Elements.OfType<SpeckleCollectionWrapper>()
-              .Select(v => v.Collection.name)
+            string subCollectionName in wrapperGoo.Value.Elements.OfType<SpeckleCollectionWrapper>().Select(c => c.Name)
           )
           {
             var hasNotSeenNameBefore = nameTest.Add(subCollectionName);

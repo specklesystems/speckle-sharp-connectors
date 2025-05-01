@@ -49,16 +49,16 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     {
       case SpeckleObjectWrapperGoo obj:
         Name = string.IsNullOrEmpty(obj.Value.Name) ? obj.Value.Base.speckle_type : obj.Value.Name;
-        outputParams = CreateOutputParamsFromBase(obj.Value.Base, obj.Value.Color, obj.Value.Material);
+        outputParams = CreateOutputParamsFromBase(obj.Value.Base);
         break;
       case SpeckleCollectionWrapperGoo coll:
         Name = string.IsNullOrEmpty(coll.Value.Collection.name)
           ? coll.Value.Collection.speckle_type
           : coll.Value.Collection.name;
-        outputParams = CreateOutputParamsFromBase(coll.Value.Collection, coll.Value.Color, coll.Value.Material);
+        outputParams = CreateOutputParamsFromBase(coll.Value.Collection);
         break;
       case SpeckleMaterialWrapperGoo matGoo:
-        Name = string.IsNullOrEmpty(matGoo.Value.Base.name) ? matGoo.Value.Base.speckle_type : matGoo.Value.Base.name;
+        Name = string.IsNullOrEmpty(matGoo.Value.Name) ? matGoo.Value.Material.speckle_type : matGoo.Value.Name;
         outputParams = CreateOutputParamsFromBase(matGoo.Value.Base);
         break;
       default:
@@ -97,11 +97,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     }
   }
 
-  private List<OutputParamWrapper> CreateOutputParamsFromBase(
-    Base @base,
-    Color? color = null,
-    SpeckleMaterialWrapper? materialWrapper = null
-  )
+  private List<OutputParamWrapper> CreateOutputParamsFromBase(Base @base)
   {
     List<OutputParamWrapper> result = new();
     if (@base == null)
@@ -179,18 +175,6 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           result.Add(CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item));
           break;
       }
-    }
-
-    // add color and render material
-    if (color is not null)
-    {
-      result.Add(CreateOutputParamByKeyValue("color", color, GH_ParamAccess.item));
-    }
-
-    if (materialWrapper is not null)
-    {
-      SpeckleMaterialWrapperGoo materialWrapperGoo = new(materialWrapper);
-      result.Add(CreateOutputParamByKeyValue("renderMaterial", materialWrapperGoo, GH_ParamAccess.item));
     }
 
     return result;

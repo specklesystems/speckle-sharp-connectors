@@ -33,9 +33,20 @@ public class SpeckleObjectWrapper : SpeckleWrapper
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
 
   /// <summary>
-  /// The name of the object. If this wrapper is a result of fallback conversion, this will store the parent name.
+  /// The color of the <see cref="Base"/>
   /// </summary>
-  public required string Name { get; set; } = "";
+  public Color? Color { get; set; }
+
+  /// <summary>
+  /// The material of the <see cref="Base"/>
+  /// </summary>
+  public SpeckleMaterialWrapper? Material { get; set; }
+
+  /// <summary>
+  /// Represents the guid of this <see cref="SpeckleObjectWrapper"/>
+  /// </summary>
+  /// <remarks>This property will usually be assigned in create components, or in publish components, and may differ from <see cref="Base.applicationId"/></remarks>
+  public required string? WrapperGuid { get; set; }
 
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
@@ -135,6 +146,11 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       {
         bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
       }
+
+      if (bakeLayerIndex < 0)
+      {
+        return;
+      }
     }
 
     // create attributes
@@ -148,7 +164,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
     if (Material is SpeckleMaterialWrapper materialWrapper)
     {
-      int matIndex = materialWrapper.Bake(doc, materialWrapper.Base.name);
+      int matIndex = materialWrapper.Bake(doc, materialWrapper.Name);
       if (matIndex >= 0)
       {
         att.MaterialIndex = matIndex;
@@ -193,13 +209,28 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
     return true;
   }
+
+  public SpeckleObjectWrapper Copy() =>
+    new()
+    {
+      Base = Base.ShallowCopy(),
+      GeometryBase = GeometryBase,
+      Color = Color,
+      Material = Material,
+      WrapperGuid = WrapperGuid,
+      ApplicationId = ApplicationId,
+      Parent = Parent,
+      Properties = Properties,
+      Name = Name,
+      Path = Path
+    };
 }
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $@"Speckle Object Goo [{m_value.Base?.speckle_type}]";
+  public override string ToString() => $@"Speckle Object Goo [{m_value.Base.speckle_type}]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle object wrapper";
@@ -215,11 +246,11 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     switch (source)
     {
-      case SpeckleObjectWrapper speckleGrasshopperObject:
-        Value = speckleGrasshopperObject;
+      case SpeckleObjectWrapper wrapper:
+        Value = wrapper.Copy();
         return true;
       case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
-        Value = speckleGrasshopperObjectGoo.Value;
+        Value = speckleGrasshopperObjectGoo.Value.Copy();
         return true;
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
@@ -286,7 +317,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       GeometryBase = null,
       Color = null,
       Material = null,
-      Name = "",
       WrapperGuid = null,
     };
   }

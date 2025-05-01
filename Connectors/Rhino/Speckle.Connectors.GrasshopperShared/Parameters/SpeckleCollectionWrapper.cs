@@ -18,11 +18,9 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public class SpeckleCollectionWrapper : SpeckleWrapper
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
-  private Collection StoredCollection { get; set; }
-
   public override required Base Base
   {
-    get => StoredCollection;
+    get => Collection;
     set
     {
       if (value is not Collection coll)
@@ -30,20 +28,37 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
         throw new ArgumentException("Cannot create collection wrapper from a non-Collection Base");
       }
 
-      StoredCollection = coll;
+      Collection = coll;
     }
   }
 
-  public Collection Collection => StoredCollection;
+  public Collection Collection { get; set; }
 
   // the list of layer names that build up the path to this collection, including this collection name
   public ObservableCollection<string> Path { get; set; }
 
   public List<SpeckleWrapper> Elements { get; set; } = new();
 
-  public string Topology { get; set; }
+  /// <summary>
+  /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamicall on <see cref="Collection"/>
+  /// </summary>
+  public string? Topology
+  {
+    get => Collection[Constants.TOPOLOGY_PROP] as string;
+    set => Collection[Constants.TOPOLOGY_PROP] = value;
+  }
 
-  public override string ToString() => $"{Collection.name} [{Collection.elements.Count}]";
+  /// <summary>
+  /// The color of the <see cref="Base"/>
+  /// </summary>
+  public required Color? Color { get; set; }
+
+  /// <summary>
+  /// The material of the <see cref="Base"/>
+  /// </summary>
+  public required SpeckleMaterialWrapper? Material { get; set; }
+
+  public override string ToString() => $"{Name} [{Elements.Count}]";
 
   public SpeckleCollectionWrapper(List<string> path)
   {
@@ -170,8 +185,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() =>
-    $@"Speckle Collection Goo [{m_value.Collection?.name} ({Value.Collection.elements.Count})]";
+  public override string ToString() => $@"Speckle Collection Goo [{m_value.Name} ({Value.Elements.Count})]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle collection wrapper";

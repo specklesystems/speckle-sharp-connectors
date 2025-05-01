@@ -48,8 +48,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     {
       return;
     }
-    Name = wrapper.Collection.name;
-    NickName = wrapper.Collection.name;
+    Name = wrapper.Name;
+    NickName = wrapper.Name;
 
     var objects = wrapper
       .Elements.Where(el => el is not SpeckleCollectionWrapper)
@@ -86,7 +86,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
       var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
       var topology = childWrapper.Topology; // Note: this is a reminder for the future
-      var nickName = childWrapper.Collection.name;
+      var nickName = childWrapper.Name;
       if (nickName.Length > 16)
       {
         nickName = nickName[..3];
@@ -95,7 +95,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
       var param = new Param_GenericObject()
       {
-        Name = childWrapper.Collection.name,
+        Name = childWrapper.Name,
         NickName = nickName,
         Access = hasInnerCollections
           ? GH_ParamAccess.item
