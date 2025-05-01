@@ -28,7 +28,7 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
   /// <returns>The converted Speckle Text object.</returns>
   public Text Convert(ADB.DBText target) =>
     // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling. Needs to be added as Transforms
-    // AlignmentPoint can be ignored, as it results in a Rotation
+    // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
     new()
     {
       value = target.TextString,
@@ -36,8 +36,8 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       maxWidth = null,
       origin = _pointConverter.Convert(target.Position),
       plane = GetTextPlane(target),
-      alignmentH = SimplifyHorizontalAlignment(target.Justify),
-      alignmentV = SimplifyVerticalAlignment(target.Justify),
+      alignmentH = SA.AlignmentHorizontal.Left,
+      alignmentV = SA.AlignmentVertical.Bottom,
       units = _settingsStore.Current.SpeckleUnits
     };
 
@@ -51,33 +51,5 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
     }
 
     return _planeConverter.Convert(plane);
-  }
-
-  /// <summary>
-  /// Simplify alignment from 4 to 3 options: Left (0, 3), Center (1), Right (2)
-  /// </summary>
-  private SA.AlignmentHorizontal SimplifyHorizontalAlignment(ADB.AttachmentPoint attachPoint)
-  {
-    // Bottom Center: BaseMid
-    if (attachPoint == ADB.AttachmentPoint.BaseMid)
-    {
-      return SA.AlignmentHorizontal.Center;
-    }
-
-    // Remaining types to default to .Left: Bottom Left (BaseAlign, BaseFit, BaseLeft), Middle Left (BaseMid), Top Left ()
-    return SA.AlignmentHorizontal.Left;
-  }
-
-  /// <summary>
-  /// Simplify alignment from 5 to just 3 options: Top (0-2), Middle (3), Bottom (4-6)
-  /// </summary>
-  private SA.AlignmentVertical SimplifyVerticalAlignment(ADB.AttachmentPoint attachPoint)
-  {
-    //
-    if (attachPoint == ADB.AttachmentPoint.BaseMid)
-    {
-      return SA.AlignmentVertical.Center;
-    }
-    return SA.AlignmentVertical.Bottom;
   }
 }
