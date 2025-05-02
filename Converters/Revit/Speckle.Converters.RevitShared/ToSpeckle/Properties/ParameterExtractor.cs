@@ -125,7 +125,8 @@ public class ParameterExtractor
         var (internalDefinitionName, humanReadableName, groupName, units) =
           _parameterDefinitionHandler.HandleDefinition(parameter);
 
-        // NOTE: ids don't really have much meaning; if we discover the opposite, we can bring them back. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        // NOTE: general assumption is that ids don't really have much meaning. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        // NOTE: subsequent request resulting in certain IDs being brought back. See [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name) in GetValue() method
         if (internalDefinitionName.EndsWith("_ID") || internalDefinitionName.EndsWith("_PARAM_ID"))
         {
           continue;
@@ -216,6 +217,13 @@ public class ParameterExtractor
         if (elId == DB.ElementId.InvalidElementId)
         {
           return null;
+        }
+
+        // NOTE: first check if this is a "Type ID" parameter, if so return the actual ID
+        // explicit (aka hacky) check here related to [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name)
+        if (parameter.Definition.Name.Equals("Type ID", StringComparison.OrdinalIgnoreCase))
+        {
+          return elId.ToString();
         }
 
         if (_elementNameCache.TryGetValue(elId, out object? value))
