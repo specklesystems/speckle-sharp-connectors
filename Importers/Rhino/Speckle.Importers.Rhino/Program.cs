@@ -24,8 +24,8 @@ public static class Program
       {
         using var doc = RhinoDoc.Open("C:\\Users\\adam\\Downloads\\objects.dwg", out var _);
         var services = new ServiceCollection();
-        var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
-        services.Initialize(path, HostApplications.Rhino, HostAppVersion.v2026);
+       // var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
+        services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
         services.AddRhino(false);
         services.AddRhinoConverters();
         //override default
