@@ -10,7 +10,6 @@
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
-    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
   </ItemGroup> 
   <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
     <PackageReference Include="Speckle.Objects" />
