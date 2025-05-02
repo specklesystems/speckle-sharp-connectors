@@ -33,7 +33,6 @@ public sealed class RevitHostObjectBuilder(
   RevitGroupBaker groupManager,
   RevitMaterialBaker materialBaker,
   RootObjectUnpacker rootObjectUnpacker,
-  RevitViewManager viewManager,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
@@ -62,11 +61,15 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    // ignore Receive in any other views (e.g. Section, Elevation, ViewSheet etc.)
-    View activeView = converterSettings.Current.Document.ActiveView;
-    if (!viewManager.IsSupportedReceiveView(activeView))
+    // TODO: formalise getting transform info from rootObject. this dict access is gross.
+    Autodesk.Revit.DB.Transform? referencePointTransform = null;
+    if (
+      rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
+      && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is Dictionary<string, object> transformDict
+      && transformDict.TryGetValue("transform", out var transformValue)
+    )
     {
-      throw new ConversionException($"Receive in '{activeView.ViewType}' View is not supported");
+      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformValue);
     }
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
@@ -118,7 +121,17 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings with
+          {
+            ReferencePointTransform = referencePointTransform
+          }
+        )
+      )
+      {
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      }
       transactionManager.CommitTransaction();
     }
 
@@ -208,16 +221,6 @@ public sealed class RevitHostObjectBuilder(
           conversionResults.Add(
             new(Status.SUCCESS, localToGlobalMap.AtomicObject, directShapes.UniqueId, "Direct Shape")
           );
-        }
-        else if (result is List<string> elementsIds)
-        {
-          // This is the case when conversion returns not a GeometryObject, but Documentation elements (Annotations, Details etc.)
-          // If Regions were a part of DataObject, it can return more than 1 native shape
-          foreach (var elementId in elementsIds)
-          {
-            conversionResults.Add(new(Status.SUCCESS, localToGlobalMap.AtomicObject, elementId, "Filled Region"));
-            bakedObjectIds.Add(elementId);
-          }
         }
         else
         {
