@@ -222,6 +222,6 @@ public class CreateSpeckleObject : GH_Component
     da.SetData(3, result.Value.Properties);
     da.SetData(4, result.Value.Color);
     da.SetData(5, result.Value.Material);
-    da.SetData(5, path);
+    da.SetData(6, path);
   }
 }
