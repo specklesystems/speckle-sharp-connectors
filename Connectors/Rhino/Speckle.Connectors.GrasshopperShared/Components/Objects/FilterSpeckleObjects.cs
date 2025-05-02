@@ -80,7 +80,7 @@ public class FilterSpeckleObjects : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    List<SpeckleObjectWrapperGoo> inputObjects = new();
+    List<SpeckleObjectWrapperGoo?> inputObjects = new();
     dataAccess.GetDataList(0, inputObjects);
 
     if (inputObjects.Count == 0)
@@ -103,10 +103,17 @@ public class FilterSpeckleObjects : GH_Component
     List<SpeckleObjectWrapper> removedObjects = new();
     for (int i = 0; i < inputObjects.Count; i++)
     {
-      // filter by name
-      if (!MatchesSearchPattern(name, inputObjects[i].Value.Name))
+      SpeckleObjectWrapperGoo? inputObject = inputObjects[i];
+      if (inputObject is null)
       {
-        removedObjects.Add(inputObjects[i].Value);
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A null input object was detected.");
+        return;
+      }
+
+      // filter by name
+      if (!MatchesSearchPattern(name, inputObject.Value.Name))
+      {
+        removedObjects.Add(inputObject.Value);
         continue;
       }
 
@@ -118,7 +125,7 @@ public class FilterSpeckleObjects : GH_Component
       }
       else
       {
-        foreach (string key in inputObjects[i].Value.Properties.Value.Keys)
+        foreach (string key in inputObject.Value.Properties.Value.Keys)
         {
           if (MatchesSearchPattern(property, key))
           {
@@ -130,32 +137,32 @@ public class FilterSpeckleObjects : GH_Component
 
       if (!foundProperty)
       {
-        removedObjects.Add(inputObjects[i].Value);
+        removedObjects.Add(inputObject.Value);
         continue;
       }
 
       // filter by material name
-      if (!MatchesSearchPattern(material, inputObjects[i].Value.Material?.Name ?? ""))
+      if (!MatchesSearchPattern(material, inputObject.Value.Material?.Name ?? ""))
       {
-        removedObjects.Add(inputObjects[i].Value);
+        removedObjects.Add(inputObject.Value);
         continue;
       }
 
       // filter by application id
-      if (!MatchesSearchPattern(appId, inputObjects[i].Value.Base.applicationId ?? ""))
+      if (!MatchesSearchPattern(appId, inputObject.Value.Base.applicationId ?? ""))
       {
-        removedObjects.Add(inputObjects[i].Value);
+        removedObjects.Add(inputObject.Value);
         continue;
       }
 
       // filter by speckle id
-      if (!MatchesSearchPattern(speckleId, inputObjects[i].Value.Base.id ?? ""))
+      if (!MatchesSearchPattern(speckleId, inputObject.Value.Base.id ?? ""))
       {
-        removedObjects.Add(inputObjects[i].Value);
+        removedObjects.Add(inputObject.Value);
         continue;
       }
 
-      matchedObjects.Add(inputObjects[i].Value);
+      matchedObjects.Add(inputObject.Value);
     }
 
     // Set output objects
