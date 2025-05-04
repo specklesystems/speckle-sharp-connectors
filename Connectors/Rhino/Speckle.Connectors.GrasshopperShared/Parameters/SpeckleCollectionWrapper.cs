@@ -62,7 +62,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
   /// <summary>
   /// Constructor that will create an observable collection from the input path.
-  /// <see cref="Collection"/> MUST be set before <see cref="SpeckleWrapper.Name", since name will update the input collection's name as well./>
+  /// <see cref="Collection"/> MUST be set before <see cref="SpeckleWrapper.Name"/> since name will update the input collection's name as well./>
   /// </summary>
   /// <param name="path"></param>
   public SpeckleCollectionWrapper(List<string> path)
