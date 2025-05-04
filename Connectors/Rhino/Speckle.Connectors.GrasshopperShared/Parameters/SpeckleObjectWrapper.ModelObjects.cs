@@ -8,6 +8,7 @@ using Grasshopper.Rhinoceros.Display;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 using Rhino.DocObjects;
+using Grasshopper.Rhinoceros.Render;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -77,6 +78,34 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
       target = (T)(object)atts;
       return true;
+    }
+
+    if (type == typeof(ModelRenderMaterial))
+    {
+      if (Value.Material is SpeckleMaterialWrapper matWrapper)
+      {
+        SpeckleMaterialWrapperGoo matWrapperGoo = new(matWrapper);
+        ModelRenderMaterial modelMat = new();
+        if (matWrapperGoo.CastTo<ModelRenderMaterial>(ref modelMat))
+        {
+          target = (T)(object)modelMat;
+          return true;
+        }
+      }
+    }
+
+    if (type == typeof(ModelLayer))
+    {
+      if (Value.Parent is SpeckleCollectionWrapper collWrapper)
+      {
+        SpeckleCollectionWrapperGoo collWrapperGoo = new(collWrapper);
+        ModelLayer modelLayer = new();
+        if (collWrapperGoo.CastTo<ModelLayer>(ref modelLayer))
+        {
+          target = (T)(object)modelLayer;
+          return true;
+        }
+      }
     }
 
     return false;
