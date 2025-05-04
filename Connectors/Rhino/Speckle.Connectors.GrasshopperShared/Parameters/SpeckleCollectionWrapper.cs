@@ -60,6 +60,11 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
   public override string ToString() => $"{Name} [{Elements.Count}]";
 
+  /// <summary>
+  /// Constructor that will create an observable collection from the input path.
+  /// <see cref="Collection"/> MUST be set before <see cref="SpeckleWrapper.Name", since name will update the input collection's name as well./>
+  /// </summary>
+  /// <param name="path"></param>
   public SpeckleCollectionWrapper(List<string> path)
   {
     Path = new ObservableCollection<string>(path);
@@ -70,9 +75,17 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
     Path.CollectionChanged += OnPathChanged;
   }
 
+  /// <summary>
+  /// Will attempt to retrieve an existing Layer from the <see cref="Path"/>.
+  /// </summary>
+  /// <returns>Index of existing layer if found, or -1 if not.</returns>
+  public int GetLayerIndex() => RhinoDoc.ActiveDoc.Layers.FindByFullPath(string.Join("::", Path), -1);
+
   private void OnPathChanged(object sender, NotifyCollectionChangedEventArgs e)
   {
     var newPath = e.NewItems.Cast<string>().ToList();
+
+    // then update paths of all children
     foreach (var element in Elements)
     {
       if (element is SpeckleObjectWrapper o)
@@ -81,6 +94,8 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       }
       else if (element is SpeckleCollectionWrapper c)
       {
+        // don't forget to add the child collection name to the path
+        newPath.Add(c.Name);
         c.Path = new ObservableCollection<string>(newPath);
       }
     }

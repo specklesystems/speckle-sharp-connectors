@@ -27,6 +27,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       // create attributes
       ObjectAttributes atts = new();
       CastTo<ObjectAttributes>(ref atts);
+
+      // create model object
       ModelObject modelObject = new(RhinoDoc.ActiveDoc, atts, Value.GeometryBase);
       target = (T)(object)modelObject;
       return true;
@@ -43,6 +45,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       }
 
       // POC: only set material if it exists in the doc. Avoiding baking during cast.
+      // ModelObject.Render.Material has no setter, so we are handling it here.
       if (
         Value.Material is SpeckleMaterialWrapper materialWrapper
         && materialWrapper.RhinoRenderMaterialId != Guid.Empty
@@ -54,6 +57,17 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
         atts.RenderMaterial = renderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+
+      // POC: only set layer if it exists in the doc. Avoid baking during cast.
+      // ModelObject.Layer has no setter, so we are handling it here.
+      if (Value.Parent is SpeckleCollectionWrapper collectionWrapper)
+      {
+        int layerIndex = collectionWrapper.GetLayerIndex();
+        if (layerIndex != -1)
+        {
+          atts.LayerIndex = layerIndex;
+        }
       }
 
       foreach (var kvp in Value.Properties.Value)
@@ -78,15 +92,23 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         SpecklePropertyGroupGoo propertyGroup = new();
         propertyGroup.CastFrom(modelObject.UserText);
 
+        // get the object layer
+
+        SpeckleCollectionWrapperGoo collWrapperGoo = new();
+        SpeckleCollectionWrapper? collWrapper = collWrapperGoo.CastFrom(modelObject.Layer)
+          ? collWrapperGoo.Value
+          : null;
+
         // update the converted Base with props as well
         modelConverted.applicationId = modelObject.Id?.ToString();
-        modelConverted["name"] = modelObject.Name.ToString();
+        modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
         Dictionary<string, object?> propertyDict = new();
         foreach (var entry in propertyGroup.Value)
         {
           propertyDict.Add(entry.Key, entry.Value.Value);
         }
-        modelConverted["properties"] = propertyDict;
+
+        modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
 
         // get the object color and material
         ObjectDisplayColor.Value? color = modelObject.Display.Color;
@@ -101,6 +123,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           {
             GeometryBase = modelGB,
             Base = modelConverted,
+            Parent = collWrapper,
             Name = modelObject.Name.ToString(),
             Color = color is null ? null : Color.FromArgb(color.Value.Color.ToArgb()),
             Material = materialWrapper.Value,
