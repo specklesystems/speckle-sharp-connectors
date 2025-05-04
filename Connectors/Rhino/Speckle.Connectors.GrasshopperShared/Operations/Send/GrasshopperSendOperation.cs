@@ -26,15 +26,16 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     // TODO: Send info is used in other connectors to get the project ID to populate the SendConversionCache
     Console.WriteLine($"Send Info {sendInfo}");
 
-    // set the input collection name to "Grasshopper Model"
-    input[0].Value.Name = "Grasshopper Model";
+    // deep copy input (to not mutate input) and set the input collection name to "Grasshopper Model"
+    var inputCollectionGoo = (SpeckleCollectionWrapperGoo)input[0].Duplicate();
+    inputCollectionGoo.Value.Name = "Grasshopper Model";
 
     // create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
     GrasshopperMaterialPacker materialPacker = new();
 
     // unwrap the input collection to remove all wrappers
-    Collection root = Unwrap(input[0].Value, colorPacker, materialPacker);
+    Collection root = Unwrap(inputCollectionGoo.Value, colorPacker, materialPacker);
 
     // add proxies
     root[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
@@ -48,22 +49,13 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
   // Unwraps collection wrappers and object wrapppers.
   // Also packs colors and Render Materials into proxies while unwrapping.
-  // We need to make sure we are not mutating input Base objects in this operation.
   private Collection Unwrap(
     SpeckleCollectionWrapper wrapper,
     GrasshopperColorPacker colorPacker,
     GrasshopperMaterialPacker materialPacker
   )
   {
-    // create a new collection from the wrapper collection
-    // this is to prevent mutating the input collection on publish.
-    Collection currentColl =
-      new()
-      {
-        name = wrapper.Name,
-        applicationId = wrapper.ApplicationId,
-        ["topology"] = wrapper.Topology
-      };
+    Collection currentColl = wrapper.Collection;
 
     // unpack color and render material
     colorPacker.ProcessColor(wrapper.ApplicationId, wrapper.Color);
@@ -71,17 +63,16 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
     // iterate through this wrapper's elements to unwrap children
     HashSet<string> collObjectIds = new();
-    for (int i = 0; i < wrapper.Elements.Count; i++)
+    foreach (SpeckleWrapper wrapperElement in wrapper.Elements)
     {
-      SpeckleWrapper wrapperElement = wrapper.Elements[i];
       if (wrapperElement is SpeckleCollectionWrapper collWrapper)
       {
         // create an application id for this collection if none exists. This will be used for color and render material proxies
         collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
 
-        // create a new collection from this wrapper, to prevent mutating the input collection
-        Collection newColl = Unwrap(collWrapper, colorPacker, materialPacker);
-        currentColl.elements.Add(newColl);
+        // add to collection and continue unwrap
+        currentColl.elements.Add(collWrapper.Collection);
+        Unwrap(collWrapper, colorPacker, materialPacker);
       }
       else if (wrapperElement is SpeckleObjectWrapper so)
       {
@@ -138,11 +129,10 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
       }
     }
 
-    // if no similar wrappers found, create a new appid and store this.
-    string newId = Guid.NewGuid().ToString();
-    objectWrapper.WrapperGuid = newId;
-    processedIds.Add(newId);
-    _applicationIdCache.Add(newId, new() { objectWrapper });
+    // if no similar wrappers found, store this id (or create new one if it doesnt exist).
+    objectWrapper.WrapperGuid = objectWrapper.Base.applicationId ?? Guid.NewGuid().ToString();
+    processedIds.Add(objectWrapper.WrapperGuid);
+    _applicationIdCache.Add(objectWrapper.WrapperGuid, new() { objectWrapper });
     return;
   }
 }

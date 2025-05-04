@@ -1,3 +1,4 @@
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models.Collections;
 
@@ -12,13 +13,14 @@ internal sealed class GrasshopperCollectionRebuilder
 
   public GrasshopperCollectionRebuilder(Collection baseCollection)
   {
-    RootCollectionWrapper = new SpeckleCollectionWrapper(new() { baseCollection.name })
+    RootCollectionWrapper = new SpeckleCollectionWrapper()
     {
       Base = new Collection(),
       Name = baseCollection.name,
       Color = null,
       Material = null,
       ApplicationId = baseCollection.applicationId ?? Guid.NewGuid().ToString(),
+      Path = new() { baseCollection.name }
     };
   }
 
@@ -79,11 +81,12 @@ internal sealed class GrasshopperCollectionRebuilder
 
       // create and cache if needed
       SpeckleCollectionWrapper newSpeckleCollectionWrapper =
-        new(currentLayerPath)
+        new()
         {
           Base = new Collection(),
           Name = collectionName,
           ApplicationId = collection.applicationId,
+          Path = currentLayerPath,
           Color = colorUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
             ? cachedCollectionColor
             : null,
@@ -95,7 +98,7 @@ internal sealed class GrasshopperCollectionRebuilder
             : null,
         };
 
-      if (collection["topology"] is string topology)
+      if (collection[Constants.TOPOLOGY_PROP] is string topology)
       {
         newSpeckleCollectionWrapper.Topology = topology;
       }
