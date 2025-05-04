@@ -55,7 +55,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleGrasshopperObject.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.cs" />

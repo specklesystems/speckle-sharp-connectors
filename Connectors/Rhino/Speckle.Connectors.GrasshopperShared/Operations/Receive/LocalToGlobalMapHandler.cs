@@ -65,12 +65,12 @@ internal sealed class LocalToGlobalMapHandler
       }
       else
       {
-        if (map.AtomicObject["properties"] is Dictionary<string, object?> props)
+        if (map.AtomicObject[Constants.PROPERTIES_PROP] is Dictionary<string, object?> props)
         {
           propertyGroup.CastFrom(props);
         }
 
-        if (map.AtomicObject["name"] is string n)
+        if (map.AtomicObject[Constants.NAME_PROP] is string n)
         {
           name = n;
         }

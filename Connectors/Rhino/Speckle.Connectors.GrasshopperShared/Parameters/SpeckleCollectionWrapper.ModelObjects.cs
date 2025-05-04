@@ -81,12 +81,13 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
         layerMaterial = materialGoo.Value;
       }
 
-      Value = new SpeckleCollectionWrapper(GetModelLayerPath(modelLayer))
+      Value = new SpeckleCollectionWrapper()
       {
-        Name = modelLayer.Name,
         Base = modelCollection,
+        Name = modelLayer.Name,
         Color = layerColor,
-        Material = layerMaterial
+        Material = layerMaterial,
+        Path = GetModelLayerPath(modelLayer)
       };
 
       return true;
@@ -95,21 +96,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
     return false;
   }
 
-  private List<string> GetModelLayerPath(ModelLayer modellayer)
-  {
-    ModelContentName currentParent = modellayer.Parent;
-    ModelContentName stem = modellayer.Parent.Stem;
-    List<string> path = new() { modellayer.Name };
-    while (currentParent != stem)
-    {
-      path.Add(currentParent);
-      currentParent = currentParent.Parent;
-    }
-    path.Add(stem);
-
-    path.Reverse();
-    return path;
-  }
+  private List<string> GetModelLayerPath(ModelLayer modellayer) => modellayer.Path.Split().ToList();
 }
 
 #endif
