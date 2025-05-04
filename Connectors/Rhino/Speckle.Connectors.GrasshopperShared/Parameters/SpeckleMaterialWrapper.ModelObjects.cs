@@ -77,7 +77,13 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
       }
       else
       {
-        target = (T)(object)(new ModelRenderMaterial(Value.RhinoMaterial));
+        var atts = new ModelRenderMaterial.Attributes()
+        {
+          Name = Value.Name,
+          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, RhinoDoc.ActiveDoc)
+        };
+
+        target = (T)(object)(new ModelRenderMaterial(atts));
         return true;
       }
     }

@@ -156,7 +156,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   {
     var myParam = new Param_GenericObject
     {
-      Name = $"Collection {Params.Input.Count + 1}",
+      Name = $"Sub-Collection {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
       Access = GH_ParamAccess.tree // always tree
