@@ -73,7 +73,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
       }
 
       SpeckleMaterialWrapper? layerMaterial = null;
-      if (modelLayer.Material.Id is Guid id)
+      if (modelLayer.Material?.Id is Guid id)
       {
         var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
         SpeckleMaterialWrapperGoo materialGoo = new();

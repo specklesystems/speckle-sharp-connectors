@@ -163,14 +163,19 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         Value = so;
         return true;
       }
-      return false;
+      else
+      {
+        throw new InvalidOperationException(
+          $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
+        );
+      }
     }
 
     return false;
   }
 
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty).Geometry;
+    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 
   private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject) =>
     RhinoDoc.ActiveDoc.RenderMaterials.Find(modelObject.Render.Material?.Material?.Id ?? Guid.Empty);
