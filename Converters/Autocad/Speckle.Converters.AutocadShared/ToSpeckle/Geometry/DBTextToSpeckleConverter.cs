@@ -5,11 +5,11 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.ToSpeckle.Geometry;
 
 [NameAndRankValue(typeof(ADB.DBText), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class TextToSpeckleConverter : IToSpeckleTopLevelConverter
+public class DBTextToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<ADB.DBText, SA.Text> _textConverter;
 
-  public TextToSpeckleConverter(ITypedConverter<ADB.DBText, SA.Text> textConverter)
+  public DBTextToSpeckleConverter(ITypedConverter<ADB.DBText, SA.Text> textConverter)
   {
     _textConverter = textConverter;
   }
