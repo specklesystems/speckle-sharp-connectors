@@ -14,7 +14,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
   // 1 - objects with the same name, properties, and application id are packaged into a data object. this can happen when receiving data objects.
   // 2 - mutated objects (put into a diff collection) that originally came from the same display value should be assigned a new application id.
   // note: if any original objects that came from the same display value were mutated in geometry, props, or name, in the create speckle object node, they will already be assigned a new appId
-  private readonly Dictionary<string, List<SpeckleObjectWrapper>> _applicationIdCache = new();
+  //private readonly Dictionary<string, List<SpeckleObjectWrapper>> _applicationIdCache = new();
 
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<SpeckleCollectionWrapperGoo> input,
@@ -62,7 +62,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     materialPacker.ProcessMaterial(wrapper.ApplicationId, wrapper.Material);
 
     // iterate through this wrapper's elements to unwrap children
-    HashSet<string> collObjectIds = new();
+    // HashSet<string> collObjectIds = new();
     foreach (SpeckleWrapper wrapperElement in wrapper.Elements)
     {
       if (wrapperElement is SpeckleCollectionWrapper collWrapper)
@@ -77,7 +77,12 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
       else if (wrapperElement is SpeckleObjectWrapper so)
       {
         // process the object first. This may result in application id mutations, so this must be done before processing color and materials.
-        ProcessObjectWrapper(so, ref collObjectIds);
+        //ProcessObjectWrapper(so, ref collObjectIds);
+        DataObject dataObject = ConvertWrappersToDataObject(
+          new List<SpeckleObjectWrapper>() { so },
+          so.ApplicationId ?? Guid.NewGuid().ToString()
+        );
+        currentColl.elements.Add(dataObject);
 
         // unpack color and render material
         colorPacker.ProcessColor(so.ApplicationId, so.Color);
@@ -85,32 +90,38 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
       }
     }
 
+    /*
     // now package all corresponding wrappers of app ids in the hashset into dataobjects, and add to collection
     foreach (string collObjectId in collObjectIds)
     {
       if (_applicationIdCache.TryGetValue(collObjectId, out var wrappers))
       {
-        // create a data object for this id.
-        // should be able to use the name and props of first wrapper since this should be the same for all wrappers after processing
-        Dictionary<string, object?> props = new();
-        wrappers.First().Properties.CastTo<Dictionary<string, object?>>(ref props);
-
-        DataObject dataObject =
-          new()
-          {
-            displayValue = wrappers.Select(o => o.Base).ToList(),
-            name = wrappers.First().Name,
-            properties = props,
-            applicationId = collObjectId
-          };
-
+        DataObject dataObject = ConvertWrappersToDataObject(wrappers, collObjectId);
         currentColl.elements.Add(dataObject);
       }
     }
+    */
 
     return currentColl;
   }
 
+  // creates a data object from the input wrappers.
+  // assumes these wrappers have been processed for similarity, so that the name and props of all wrappers are the same.
+  private DataObject ConvertWrappersToDataObject(List<SpeckleObjectWrapper> wrappers, string appId)
+  {
+    Dictionary<string, object?> props = new();
+    wrappers.First().Properties.CastTo<Dictionary<string, object?>>(ref props);
+
+    return new()
+    {
+      displayValue = wrappers.Select(o => o.Base).ToList(),
+      name = wrappers.First().Name,
+      properties = props,
+      applicationId = appId
+    };
+  }
+
+  /*
   // will cache the object wrappers and group them by similarity.
   private void ProcessObjectWrapper(SpeckleObjectWrapper objectWrapper, ref HashSet<string> processedIds)
   {
@@ -135,4 +146,5 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     _applicationIdCache.Add(objectWrapper.WrapperGuid, new() { objectWrapper });
     return;
   }
+  */
 }
