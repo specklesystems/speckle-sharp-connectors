@@ -1,6 +1,7 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.DoubleNumerics;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -33,14 +34,24 @@ public class TransformConverterToHost : ITypedConverter<(Matrix4x4 matrix, strin
 
     // apply to new transform
     transform.Origin = t;
-    transform.BasisX = vX.Normalize();
-    transform.BasisY = vY.Normalize();
-    transform.BasisZ = vZ.Normalize();
+    transform.BasisX = vX;
+    transform.BasisY = vY;
+    transform.BasisZ = vZ;
 
     // TODO: check below needed?
     // // apply doc transform
     // var docTransform = GetDocReferencePointTransform(Doc);
     // var internalTransform = docTransform.Multiply(_transform);
+
+    // Check if transform is conformal (no skew, uniform scale)
+    try
+    {
+      double scale = transform.Scale; // Will throw if not conformal
+    }
+    catch (Exception)
+    {
+      throw new SpeckleException("Transform was not conformal. Skew, non uniform scale is currently not supported.");
+    }
 
     return transform;
   }
