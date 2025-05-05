@@ -45,6 +45,8 @@ public class SearchToolStripMenuItem
     return item;
   }
 
+  public void AddMenuSeparator() => ParentDropDown.Items.Add(new ToolStripSeparator());
+
   private void AddSearchBox()
   {
     var textBox = new TextBox

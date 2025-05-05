@@ -43,13 +43,11 @@ public class SpeckleSelectModelComponent : GH_Component
   private int FetchedVersionCount { get; set; } = 10;
 
   private readonly ProjectMenuHandler _projectMenuHandler;
+  private readonly ModelMenuHandler _modelMenuHandler;
 
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
-
-  private ToolStripDropDown? ProjectDropDown { get; set; }
-  private ToolStripDropDown? ModelDropDown { get; set; }
   private ToolStripDropDown? VersionDropDown { get; set; }
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
@@ -71,19 +69,11 @@ public class SpeckleSelectModelComponent : GH_Component
     OnAccountSelected(account);
 
     _projectMenuHandler = new ProjectMenuHandler(FetchProjects);
-    _projectMenuHandler.ProjectSelected += (sender, args) =>
-    {
-      _project = args.SelectedProject;
-    };
-
     ProjectContextMenuButton = _projectMenuHandler.ProjectContextMenuButton;
 
-    ModelContextMenuButton = new GhContextMenuButton(
-      "Select Model",
-      "Select Project",
-      "Right-click to select a model",
-      PopulateModelMenu
-    );
+    _modelMenuHandler = new ModelMenuHandler(FetchModels);
+    ModelContextMenuButton = _modelMenuHandler.ModelContextMenuButton;
+
     VersionContextMenuButton = new GhContextMenuButton(
       "Select Version",
       "Select Version",
@@ -92,6 +82,7 @@ public class SpeckleSelectModelComponent : GH_Component
     );
 
     _projectMenuHandler.ProjectSelected += OnProjectSelected;
+    _modelMenuHandler.ModelSelected += OnModelSelected;
   }
 
   /// <summary>
@@ -110,89 +101,64 @@ public class SpeckleSelectModelComponent : GH_Component
     return projects;
   }
 
-  private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
+  /// <summary>
+  /// Callback function to retrieve models with the search text
+  /// </summary>
+  private async Task<ResourceCollection<Model>> FetchModels(string searchText)
+  {
+    if (_account == null || _project == null)
+    {
+      return new ResourceCollection<Model>();
+    }
+
+    IClient client = _clientFactory.Create(_account);
+    var projectWithModels = await client
+      .Project.GetWithModels(_project.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
+      .ConfigureAwait(true);
+    LastFetchedModels = projectWithModels.models;
+    return projectWithModels.models;
+  }
+
+  private async Task FetchMoreVersions(ToolStripDropDown menu)
+  {
+    if (_account != null && _model != null && _project != null)
+    {
+      FetchedVersionCount += 10;
+      IClient client = _clientFactory.Create(_account);
+      var newVersionsResult = await client
+        .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
+        .ConfigureAwait(true);
+      LastFetchedVersions = newVersionsResult.versions;
+      PopulateVersionMenuItems(menu);
+    }
+  }
+
+  private async void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
   {
     _project = e.SelectedProject;
-    LastFetchedModels = null;
-    OnModelSelected(null, true, true); // TODO: check why we need to define `expire` and `redraw`
-  }
-
-  private SearchToolStripMenuItem? SearchProjectToolStripMenuItem { get; set; }
-  private SearchToolStripMenuItem? SearchModelToolStripMenuItem { get; set; }
-
-  private async Task RefetchModels(string searchText)
-  {
-    if (_account != null && ModelDropDown != null && _project != null)
+    if (_account != null && _project != null)
     {
       IClient client = _clientFactory.Create(_account);
-      var result = await client
-        .Project.GetWithModels(_project.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
+      var projectWithModels = await client.Project.GetWithModels(_project.id, 10).ConfigureAwait(true);
+      LastFetchedModels = projectWithModels.models;
+      _modelMenuHandler.Models = LastFetchedModels;
+      _modelMenuHandler.RedrawMenuButton(null);
+      ModelContextMenuButton.Enabled = true;
+      Attributes.ExpireLayout();
+    }
+  }
+
+  private async void OnModelSelected(object sender, ModelSelectedEventArgs e)
+  {
+    _model = e.SelectedModel;
+    if (_account != null && _project != null && _model != null)
+    {
+      IClient client = _clientFactory.Create(_account);
+      var modelWithVersions = await client
+        .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
         .ConfigureAwait(true);
-      LastFetchedModels = result.models;
-      PopulateModelMenuItems(ModelDropDown);
-    }
-  }
-
-  private bool PopulateModelMenu(ToolStripDropDown menu)
-  {
-    ModelDropDown = menu;
-    ModelDropDown.Closed += (sender, args) =>
-    {
-      SearchModelToolStripMenuItem = null;
-    };
-    if (LastFetchedModels == null)
-    {
-      Menu_AppendItem(menu, "No models were fetched");
-      return true;
-    }
-
-    if (LastFetchedModels.items.Count == 0)
-    {
-      Menu_AppendItem(menu, "Project has no models");
-      return true;
-    }
-
-    PopulateModelMenuItems(menu);
-
-    return true;
-  }
-
-  private void PopulateModelMenuItems(ToolStripDropDown menu)
-  {
-    var lastIndex = menu.Items.Count - 1;
-    if (lastIndex >= 0)
-    {
-      // clean the existing items because we re-populate when user search
-      for (int i = lastIndex; i > 1; i--)
-      {
-        menu.Items.RemoveAt(i);
-      }
-    }
-
-    if (LastFetchedModels == null)
-    {
-      return;
-    }
-
-    if (SearchModelToolStripMenuItem == null)
-    {
-      SearchModelToolStripMenuItem = new SearchToolStripMenuItem(menu, RefetchModels);
-    }
-
-    Menu_AppendSeparator(menu);
-
-    foreach (var model in LastFetchedModels.items)
-    {
-      var desc = string.IsNullOrEmpty(model.description) ? "No description" : model.description;
-
-      Menu_AppendItem(
-        menu,
-        $"{model.name} - {desc}",
-        (_, _) => OnModelSelected(model),
-        null,
-        _model?.id != model.id,
-        _model?.id == model.id
-      );
+      LastFetchedVersions = modelWithVersions.versions;
+      VersionContextMenuButton.Enabled = true;
     }
   }
 
@@ -269,49 +235,12 @@ public class SpeckleSelectModelComponent : GH_Component
     }
   }
 
-  private async Task FetchMoreVersions(ToolStripDropDown menu)
-  {
-    if (_account != null && _model != null && _project != null)
-    {
-      FetchedVersionCount += 10;
-      IClient client = _clientFactory.Create(_account);
-      var newVersionsResult = await client
-        .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
-        .ConfigureAwait(true);
-      LastFetchedVersions = newVersionsResult.versions;
-      PopulateVersionMenuItems(menu);
-    }
-  }
-
   private void OnAccountSelected(Account? account)
   {
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     LastFetchedProjects = null;
     // OnProjectSelected(null, expire, redraw);
-  }
-
-  private void OnModelSelected(Model? model, bool expire = true, bool redraw = true)
-  {
-    ModelDropDown?.Close();
-    _model = model;
-    var suffix = ModelContextMenuButton.Enabled
-      ? "Right-click to select another model."
-      : "Selection is disabled due to component input.";
-    if (_model != null)
-    {
-      ModelContextMenuButton.Name = _model.name;
-      ModelContextMenuButton.NickName = _model.id;
-      ModelContextMenuButton.Description = $"{_model.description ?? "No description"}\n\n{suffix}";
-    }
-    else
-    {
-      ModelContextMenuButton.Name = "Select Model";
-      ModelContextMenuButton.NickName = "Model";
-      ModelContextMenuButton.Description = "Right-click to select model";
-    }
-    LastFetchedVersions = null;
-    OnVersionSelected(null, expire, redraw);
   }
 
   private void OnVersionSelected(Version? version, bool expire = true, bool redraw = true)
@@ -415,23 +344,22 @@ public class SpeckleSelectModelComponent : GH_Component
     if (_account == null)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please select an account in the right click menu");
-      //ProjectContextMenuButton.Enabled = false;
+      ProjectContextMenuButton.Enabled = false;
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
     IClient client = _clientFactory.Create(_account);
-
     LastFetchedProjects = client.ActiveUser.GetProjects(10, null, null).Result;
     _projectMenuHandler.Projects = LastFetchedProjects;
 
-    //ProjectContextMenuButton.Enabled = true;
+    ProjectContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedProjectId))
     {
-      //var project = client.Project.Get(_storedProjectId!).Result;
-      //OnProjectSelected(project, false);
+      var project = client.Project.Get(_storedProjectId!).Result;
+      _projectMenuHandler.RedrawMenuButton(project);
     }
 
     if (_project == null)
@@ -447,7 +375,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (_justPastedIn && !string.IsNullOrEmpty(_storedModelId))
     {
       var model = client.Model.Get(_storedModelId!, _project.id).Result;
-      OnModelSelected(model, false);
+      _modelMenuHandler.RedrawMenuButton(model);
     }
 
     if (_model == null)
@@ -484,7 +412,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void SetComponentButtonsState(bool enabled)
   {
-    //ProjectContextMenuButton.Enabled = enabled;
+    ProjectContextMenuButton.Enabled = enabled;
     ModelContextMenuButton.Enabled = enabled;
     VersionContextMenuButton.Enabled = enabled;
   }
@@ -525,11 +453,11 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       case SpeckleUrlLatestModelVersionResource latestVersionResource:
         var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
-        OnModelSelected(model, false);
+        _modelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource versionResource:
         var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
-        OnModelSelected(m, false);
+        _modelMenuHandler.RedrawMenuButton(m);
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
         OnVersionSelected(v, false);
         break;
@@ -588,7 +516,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public override void ExpirePreview(bool redraw)
   {
-    //ProjectContextMenuButton.ExpirePreview(redraw);
+    ProjectContextMenuButton.ExpirePreview(redraw);
     ModelContextMenuButton.ExpirePreview(redraw);
     VersionContextMenuButton.ExpirePreview(redraw);
     base.ExpirePreview(redraw);

@@ -34,6 +34,27 @@ public class ProjectMenuHandler
     );
   }
 
+  public void RedrawMenuButton(Project? project)
+  {
+    var suffix = ProjectContextMenuButton.Enabled
+      ? "Right-click to select another project."
+      : "Selection is disabled due to component input.";
+    if (project != null)
+    {
+      ProjectContextMenuButton.Name = project.name;
+      ProjectContextMenuButton.NickName = project.id;
+      ProjectContextMenuButton.Description = $"{project.description ?? "No description"}\n\n{suffix}";
+    }
+    else
+    {
+      ProjectContextMenuButton.Name = "Select Project";
+      ProjectContextMenuButton.NickName = "Project";
+      ProjectContextMenuButton.Description = "Right-click to select project";
+    }
+    // TODO: can't redraw the canvas
+    ProjectContextMenuButton.ExpirePreview(true);
+  }
+
   private async Task Refetch(string searchText)
   {
     Projects = await _fetchProjects.Invoke(searchText);
@@ -74,12 +95,12 @@ public class ProjectMenuHandler
     if (_searchItem == null)
     {
       _searchItem = new SearchToolStripMenuItem(menu, Refetch);
-      Menu_AppendSeparator(menu);
+      _searchItem.AddMenuSeparator();
     }
 
     if (Projects.items.Count == 0 && !string.IsNullOrEmpty(_searchItem.SearchText))
     {
-      var noProjectsFoundButton = Menu_AppendItem(menu, "No projects found.");
+      var noProjectsFoundButton = _searchItem.AddMenuItem("No projects found.");
       noProjectsFoundButton.BackColor = Color.MistyRose;
       return;
     }
@@ -88,8 +109,7 @@ public class ProjectMenuHandler
     {
       var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
 
-      Menu_AppendItem(
-        menu,
+      _searchItem?.AddMenuItem(
         $"{project.name} - {desc}",
         (_, _) => OnProjectSelected(project),
         SelectedProject?.id != project.id,
@@ -102,42 +122,7 @@ public class ProjectMenuHandler
   {
     _menu?.Close();
     SelectedProject = project;
-    var suffix = ProjectContextMenuButton.Enabled
-      ? "Right-click to select another project."
-      : "Selection is disabled due to component input.";
-    if (SelectedProject != null)
-    {
-      ProjectContextMenuButton.Name = SelectedProject.name;
-      ProjectContextMenuButton.NickName = SelectedProject.id;
-      ProjectContextMenuButton.Description = $"{SelectedProject.description ?? "No description"}\n\n{suffix}";
-    }
-    else
-    {
-      ProjectContextMenuButton.Name = "Select Project";
-      ProjectContextMenuButton.NickName = "Project";
-      ProjectContextMenuButton.Description = "Right-click to select project";
-    }
+    RedrawMenuButton(project);
     ProjectSelected?.Invoke(this, new ProjectSelectedEventArgs(project));
   }
-
-  private static ToolStripMenuItem Menu_AppendItem(
-    ToolStripDropDown menu,
-    string text,
-    EventHandler? click = null,
-    bool? visible = null,
-    bool? isChecked = null
-  )
-  {
-    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false };
-    item.Click += click;
-    if (visible == false)
-    {
-      item.Visible = false;
-    }
-
-    menu.Items.Add(item);
-    return item;
-  }
-
-  private static void Menu_AppendSeparator(ToolStripDropDown menu) => menu.Items.Add(new ToolStripSeparator());
 }
