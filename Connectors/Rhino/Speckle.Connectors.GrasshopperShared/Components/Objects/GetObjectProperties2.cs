@@ -104,27 +104,40 @@ public class GetObjectProperties2 : GH_Component, IGH_VariableParameterComponent
 
   private void CreateOutputs(List<string> outputParams)
   {
-    // TODO: better, nicer handling of creation/removal
-    while (Params.Output.Count > 0)
+    // Ensure we have the required count of output parameters
+    while (Params.Output.Count != outputParams.Count)
     {
-      Params.UnregisterOutputParameter(Params.Output[^1]);
+      if (Params.Output.Count > outputParams.Count) // if too many, unregister
+      {
+        Params.UnregisterOutputParameter(Params.Output[^1]);
+      }
+
+      if (Params.Output.Count < outputParams.Count) // if too little, add some
+      {
+        var param = new Param_GenericObject
+        {
+          Name = "newParam",
+          NickName = "newParam",
+          MutableNickName = false,
+          Access = GH_ParamAccess.item
+        };
+        Params.RegisterOutputParam(param);
+      }
     }
 
+    // now unify names and nicknames
+    int index = 0;
     foreach (var newParam in outputParams)
     {
-      var param = new Param_GenericObject
-      {
-        Name = newParam,
-        NickName = newParam,
-        MutableNickName = false,
-        Access = GH_ParamAccess.item
-      };
-      Params.RegisterOutputParam(param);
+      Params.Output[index].NickName = newParam;
+      Params.Output[index].Name = newParam;
+      index++;
     }
 
+    // now we can update the output params
     Params.OnParametersChanged();
     VariableParameterMaintenance();
-    ExpireSolution(false); // NOTE: was false!
+    ExpireSolution(false);
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index) => false;
