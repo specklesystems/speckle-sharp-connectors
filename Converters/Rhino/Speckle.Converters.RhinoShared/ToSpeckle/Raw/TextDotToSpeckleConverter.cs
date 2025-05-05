@@ -1,0 +1,30 @@
+﻿using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
+
+namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
+
+public class TextDotToSpeckleConverter : ITypedConverter<RG.TextDot, SA.Text>
+{
+  private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
+
+  public TextDotToSpeckleConverter(ITypedConverter<RG.Point3d, SOG.Point> pointConverter)
+  {
+    _pointConverter = pointConverter;
+  }
+
+  /// <summary>
+  /// Converts a Rhino TextDot to a Speckle Text object.
+  /// </summary>
+  /// <param name="target">The Rhino TextDot to convert.</param>
+  /// <returns>The converted Speckle Text object.</returns>
+  public SA.Text Convert(RG.TextDot target) =>
+    new()
+    {
+      value = target.Text,
+      height = target.FontHeight,
+      origin = _pointConverter.Convert(target.Point),
+      alignmentH = SA.AlignmentHorizontal.Center,
+      alignmentV = SA.AlignmentVertical.Center,
+      units = Units.None // to indicate use of screen units
+    };
+}
