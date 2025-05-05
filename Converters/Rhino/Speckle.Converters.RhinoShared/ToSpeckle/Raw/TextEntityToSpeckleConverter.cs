@@ -34,8 +34,8 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
       maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
       origin = _pointConverter.Convert(target.Plane.Origin),
       plane = GetTextPlane(target),
-      alignmentH = SimplifyHorizontalAlignment((int)target.TextHorizontalAlignment),
-      alignmentV = SimplifyVerticalAlignment((int)target.TextVerticalAlignment),
+      alignmentH = SimplifyHorizontalAlignment(target.TextHorizontalAlignment),
+      alignmentV = SimplifyVerticalAlignment(target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
     };
 
@@ -67,18 +67,32 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
   /// <summary>
   /// Simplify alignment from 4 to 3 options: Left (0, 3), Center (1), Right (2)
   /// </summary>
-  private SA.AlignmentHorizontal SimplifyHorizontalAlignment(int alignment)
+  private SA.AlignmentHorizontal SimplifyHorizontalAlignment(TextHorizontalAlignment alignment)
   {
-    int simpleAlignment = alignment < 3 ? alignment : 0;
-    return (SA.AlignmentHorizontal)simpleAlignment;
+    return alignment switch
+    {
+      TextHorizontalAlignment.Left => SA.AlignmentHorizontal.Left,
+      TextHorizontalAlignment.Center => SA.AlignmentHorizontal.Center,
+      TextHorizontalAlignment.Right => SA.AlignmentHorizontal.Right,
+      _ => SA.AlignmentHorizontal.Left, // .Auto alignment - only applies to Leaders that we don't support yet
+    };
   }
 
   /// <summary>
   /// Simplify alignment from 5 to just 3 options: Top (0-2), Middle (3), Bottom (4-6)
   /// </summary>
-  private SA.AlignmentVertical SimplifyVerticalAlignment(int alignment)
+  private SA.AlignmentVertical SimplifyVerticalAlignment(TextVerticalAlignment alignment)
   {
-    int simpleAlignment = alignment < 3 ? 0 : (alignment == 3 ? 1 : 2);
-    return (SA.AlignmentVertical)simpleAlignment;
+    return alignment switch
+    {
+      TextVerticalAlignment.Top => SA.AlignmentVertical.Top,
+      TextVerticalAlignment.MiddleOfTop => SA.AlignmentVertical.Top,
+      TextVerticalAlignment.BottomOfTop => SA.AlignmentVertical.Top,
+      TextVerticalAlignment.Middle => SA.AlignmentVertical.Center,
+      TextVerticalAlignment.MiddleOfBottom => SA.AlignmentVertical.Bottom,
+      TextVerticalAlignment.Bottom => SA.AlignmentVertical.Bottom,
+      TextVerticalAlignment.BottomOfBoundingBox => SA.AlignmentVertical.Bottom,
+      _ => SA.AlignmentVertical.Top, // .Auto alignment - only applies to Leaders that we don't support yet
+    };
   }
 }
