@@ -1,14 +1,12 @@
 using System.Runtime.InteropServices;
-using Grasshopper;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
-[Guid("BF517D60-B853-4C61-9574-AD8A718B995B")]
+[Guid("116F08A5-BAA7-45B3-B6C8-469E452C9AC7")]
 public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => GetType().GUID;
@@ -31,7 +29,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
       "Objects",
       "O",
       "Speckle Objects to retrieve properties",
-      GH_ParamAccess.list
+      GH_ParamAccess.item
     );
     pManager.AddTextParameter("Keys", "K", "Property keys to filter by", GH_ParamAccess.list);
   }
@@ -48,77 +46,27 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
       return;
     }
 
-    List<SpeckleObjectWrapperGoo> objectWrapperGoos = new();
-    da.GetDataList(0, objectWrapperGoos);
-
-    if (objectWrapperGoos.Count == 0)
-    {
-      return;
-    }
-
-    // we're creating an output param for every property path selected
-    // we're creating a branch in the output tree for every object for that property
-
-    List<PropertyOutputParamWrapper> outputParams = new();
-    foreach (string path in paths)
-    {
-      // create the output for this path
-      DataTree<object?> paramResult = new();
-      Param_GenericObject param =
-        new()
-        {
-          Name = path,
-          NickName = path,
-          Access = GH_ParamAccess.tree
-        };
-
-      // get the branch and property value for each input object
-      for (int i = 0; i < objectWrapperGoos.Count; i++)
-      {
-        // create the result branch for this object
-        SpeckleObjectWrapperGoo objectGoo = objectWrapperGoos[i];
-        GH_Path objectPath = new GH_Path(i);
-
-        SpecklePropertyGroupGoo properties = objectGoo.Value.Properties;
-        if (properties.Value.Count == 0)
-        {
-          paramResult.Add(null, objectPath);
-          continue;
-        }
-
-        SpecklePropertyGoo objectProperty = FindProperty(properties, path);
-        paramResult.Add(objectProperty.Value, objectPath);
-      }
-
-      outputParams.Add(new PropertyOutputParamWrapper(param, paramResult));
-    }
-
-    if (da.Iteration == 0 && OutputMismatch(outputParams))
+    if (OutputMismatch(paths))
     {
       OnPingDocument()
         .ScheduleSolution(
           5,
           _ =>
           {
-            CreateOutputs(outputParams);
+            CreateOutputs(paths);
           }
         );
     }
     else
     {
-      for (int i = 0; i < outputParams.Count; i++)
+      SpeckleObjectWrapperGoo objectWrapperGoo = new();
+      da.GetData(0, ref objectWrapperGoo);
+
+      for (int i = 0; i < paths.Count; i++)
       {
-        var outParam = Params.Output[i];
-        var outParamWrapper = outputParams[i];
-        switch (outParam.Access)
-        {
-          case GH_ParamAccess.item:
-            da.SetData(i, outParamWrapper.Values);
-            break;
-          case GH_ParamAccess.tree:
-            da.SetDataTree(i, (DataTree<object?>)outParamWrapper.Values);
-            break;
-        }
+        var name = paths[i];
+        SpecklePropertyGoo objectProperty = FindProperty(objectWrapperGoo.Value.Properties, name);
+        da.SetData(i, objectProperty.Value);
       }
     }
   }
@@ -133,7 +81,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
     return currentGoo;
   }
 
-  private bool OutputMismatch(List<PropertyOutputParamWrapper> outputParams)
+  private bool OutputMismatch(List<string> outputParams)
   {
     if (Params.Output.Count != outputParams.Count)
     {
@@ -144,11 +92,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
     foreach (var newParam in outputParams)
     {
       var oldParam = Params.Output[count];
-      if (
-        oldParam.NickName != newParam.Param.NickName
-        || oldParam.Name != newParam.Param.Name
-        || oldParam.Access != newParam.Param.Access
-      )
+      if (oldParam.NickName != newParam || oldParam.Name != newParam)
       {
         return true;
       }
@@ -158,26 +102,39 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
     return false;
   }
 
-  private void CreateOutputs(List<PropertyOutputParamWrapper> outputParams)
+  private void CreateOutputs(List<string> outputParams)
   {
-    // TODO: better, nicer handling of creation/removal
-    while (Params.Output.Count > 0)
+    // Ensure we have the required count of output parameters
+    while (Params.Output.Count != outputParams.Count)
     {
-      Params.UnregisterOutputParameter(Params.Output[^1]);
+      if (Params.Output.Count > outputParams.Count) // if too many, unregister
+      {
+        Params.UnregisterOutputParameter(Params.Output[^1]);
+      }
+
+      if (Params.Output.Count < outputParams.Count) // if too little, add some
+      {
+        var param = new Param_GenericObject
+        {
+          Name = "newParam",
+          NickName = "newParam",
+          MutableNickName = false,
+          Access = GH_ParamAccess.item
+        };
+        Params.RegisterOutputParam(param);
+      }
     }
 
+    // now unify names and nicknames
+    int index = 0;
     foreach (var newParam in outputParams)
     {
-      var param = new Param_GenericObject
-      {
-        Name = newParam.Param.Name,
-        NickName = newParam.Param.NickName,
-        MutableNickName = false,
-        Access = newParam.Param.Access
-      };
-      Params.RegisterOutputParam(param);
+      Params.Output[index].NickName = newParam;
+      Params.Output[index].Name = newParam;
+      index++;
     }
 
+    // now we can update the output params
     Params.OnParametersChanged();
     VariableParameterMaintenance();
     ExpireSolution(false);
@@ -203,5 +160,3 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 
   public void VariableParameterMaintenance() { }
 }
-
-public record PropertyOutputParamWrapper(Param_GenericObject Param, object Values);
