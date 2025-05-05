@@ -8,9 +8,9 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class SpeckleObjectPassthrough : GH_Component
+public class CreateSpeckleObject : GH_Component
 {
-  public SpeckleObjectPassthrough()
+  public CreateSpeckleObject()
     : base(
       "Speckle Object",
       "SO",
