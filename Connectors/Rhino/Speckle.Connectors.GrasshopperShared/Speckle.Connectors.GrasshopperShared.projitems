@@ -24,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetObjectProperties2.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\SearchToolStripMenuItem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetObjectProperties.cs" />
