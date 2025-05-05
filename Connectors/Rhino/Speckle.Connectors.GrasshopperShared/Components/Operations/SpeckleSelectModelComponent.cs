@@ -42,6 +42,8 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private int FetchedVersionCount { get; set; } = 10;
 
+  private readonly ProjectMenuHandler _projectMenuHandler;
+
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
@@ -61,12 +63,21 @@ public class SpeckleSelectModelComponent : GH_Component
       ComponentCategories.OPERATIONS
     )
   {
-    ProjectContextMenuButton = new GhContextMenuButton(
-      "Select Project",
-      "Select Project",
-      "Right-click to select project",
-      PopulateProjectMenu
-    );
+    Attributes = new SpeckleSelectModelComponentAttributes(this);
+    _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
+    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
+    _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
+    var account = _accountManager.GetDefaultAccount();
+    OnAccountSelected(account);
+
+    _projectMenuHandler = new ProjectMenuHandler(FetchProjects);
+    _projectMenuHandler.ProjectSelected += (sender, args) =>
+    {
+      _project = args.SelectedProject;
+    };
+
+    ProjectContextMenuButton = _projectMenuHandler.ProjectContextMenuButton;
+
     ModelContextMenuButton = new GhContextMenuButton(
       "Select Model",
       "Select Project",
@@ -80,28 +91,34 @@ public class SpeckleSelectModelComponent : GH_Component
       PopulateVersionMenu
     );
 
-    Attributes = new SpeckleSelectModelComponentAttributes(this);
-    _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
-    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
-    _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
-    var account = _accountManager.GetDefaultAccount();
-    OnAccountSelected(account);
+    _projectMenuHandler.ProjectSelected += OnProjectSelected;
+  }
+
+  /// <summary>
+  /// Callback function to retrieve projects with the search text
+  /// </summary>
+  private async Task<ResourceCollection<Project>> FetchProjects(string searchText)
+  {
+    if (_account == null)
+    {
+      return new ResourceCollection<Project>();
+    }
+
+    IClient client = _clientFactory.Create(_account);
+    var projects = await client.ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText));
+    LastFetchedProjects = projects;
+    return projects;
+  }
+
+  private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
+  {
+    _project = e.SelectedProject;
+    LastFetchedModels = null;
+    OnModelSelected(null, true, true); // TODO: check why we need to define `expire` and `redraw`
   }
 
   private SearchToolStripMenuItem? SearchProjectToolStripMenuItem { get; set; }
   private SearchToolStripMenuItem? SearchModelToolStripMenuItem { get; set; }
-
-  private async Task RefetchProjects(string searchText)
-  {
-    if (_account != null && ProjectDropDown != null)
-    {
-      IClient client = _clientFactory.Create(_account);
-      LastFetchedProjects = await client
-        .ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText))
-        .ConfigureAwait(true);
-      PopulateProjectMenuItems(ProjectDropDown);
-    }
-  }
 
   private async Task RefetchModels(string searchText)
   {
@@ -113,61 +130,6 @@ public class SpeckleSelectModelComponent : GH_Component
         .ConfigureAwait(true);
       LastFetchedModels = result.models;
       PopulateModelMenuItems(ModelDropDown);
-    }
-  }
-
-  private bool PopulateProjectMenu(ToolStripDropDown menu)
-  {
-    ProjectDropDown = menu;
-    ProjectDropDown.Closed += (sender, args) =>
-    {
-      SearchProjectToolStripMenuItem = null;
-    };
-    if (LastFetchedProjects == null)
-    {
-      Menu_AppendItem(menu, "No projects were fetched");
-      return true;
-    }
-
-    PopulateProjectMenuItems(menu);
-
-    return true;
-  }
-
-  private void PopulateProjectMenuItems(ToolStripDropDown menu)
-  {
-    var lastIndex = menu.Items.Count - 1;
-    if (lastIndex >= 0)
-    {
-      // clean the existing items because we re-populate when user search
-      for (int i = lastIndex; i > 1; i--)
-      {
-        menu.Items.RemoveAt(i);
-      }
-    }
-
-    if (LastFetchedProjects == null)
-    {
-      return;
-    }
-
-    if (SearchProjectToolStripMenuItem == null)
-    {
-      SearchProjectToolStripMenuItem = new SearchToolStripMenuItem(menu, RefetchProjects);
-    }
-
-    Menu_AppendSeparator(menu);
-
-    foreach (var project in LastFetchedProjects.items)
-    {
-      var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
-      Menu_AppendItem(
-        menu,
-        $"{project.name} - {desc}",
-        (_, _) => OnProjectSelected(project),
-        _project?.id != project.id,
-        _project?.id == project.id
-      );
     }
   }
 
@@ -321,35 +283,12 @@ public class SpeckleSelectModelComponent : GH_Component
     }
   }
 
-  private void OnAccountSelected(Account? account, bool expire = true, bool redraw = true)
+  private void OnAccountSelected(Account? account)
   {
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     LastFetchedProjects = null;
-    OnProjectSelected(null, expire, redraw);
-  }
-
-  private void OnProjectSelected(Project? project, bool expire = true, bool redraw = true)
-  {
-    ProjectDropDown?.Close();
-    _project = project;
-    var suffix = ProjectContextMenuButton.Enabled
-      ? "Right-click to select another project."
-      : "Selection is disabled due to component input.";
-    if (_project != null)
-    {
-      ProjectContextMenuButton.Name = _project.name;
-      ProjectContextMenuButton.NickName = _project.id;
-      ProjectContextMenuButton.Description = $"{_project.description ?? "No description"}\n\n{suffix}";
-    }
-    else
-    {
-      ProjectContextMenuButton.Name = "Select Project";
-      ProjectContextMenuButton.NickName = "Project";
-      ProjectContextMenuButton.Description = "Right-click to select project";
-    }
-    LastFetchedModels = null;
-    OnModelSelected(null, expire, redraw);
+    // OnProjectSelected(null, expire, redraw);
   }
 
   private void OnModelSelected(Model? model, bool expire = true, bool redraw = true)
@@ -457,7 +396,7 @@ public class SpeckleSelectModelComponent : GH_Component
       try
       {
         var account = _accountManager.GetAccount(_storedUserId);
-        OnAccountSelected(account, false);
+        OnAccountSelected(account);
       }
       catch (SpeckleAccountManagerException e)
       {
@@ -468,7 +407,7 @@ public class SpeckleSelectModelComponent : GH_Component
       if (_storedServer != null && _account == null)
       {
         var account = _accountService.GetAccountWithServerUrlFallback(_storedUserId ?? "", new Uri(_storedServer));
-        OnAccountSelected(account, false);
+        OnAccountSelected(account);
       }
     }
 
@@ -476,7 +415,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (_account == null)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please select an account in the right click menu");
-      ProjectContextMenuButton.Enabled = false;
+      //ProjectContextMenuButton.Enabled = false;
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
@@ -485,12 +424,14 @@ public class SpeckleSelectModelComponent : GH_Component
     IClient client = _clientFactory.Create(_account);
 
     LastFetchedProjects = client.ActiveUser.GetProjects(10, null, null).Result;
-    ProjectContextMenuButton.Enabled = true;
+    _projectMenuHandler.Projects = LastFetchedProjects;
+
+    //ProjectContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedProjectId))
     {
-      var project = client.Project.Get(_storedProjectId!).Result;
-      OnProjectSelected(project, false);
+      //var project = client.Project.Get(_storedProjectId!).Result;
+      //OnProjectSelected(project, false);
     }
 
     if (_project == null)
@@ -543,7 +484,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void SetComponentButtonsState(bool enabled)
   {
-    ProjectContextMenuButton.Enabled = enabled;
+    //ProjectContextMenuButton.Enabled = enabled;
     ModelContextMenuButton.Enabled = enabled;
     VersionContextMenuButton.Enabled = enabled;
   }
@@ -568,7 +509,7 @@ public class SpeckleSelectModelComponent : GH_Component
     var resource = resources.First();
 
     var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
-    OnAccountSelected(account, false);
+    OnAccountSelected(account);
 
     if (_account == null)
     {
@@ -577,8 +518,8 @@ public class SpeckleSelectModelComponent : GH_Component
 
     IClient client = _clientFactory.Create(_account);
 
-    var project = client.Project.Get(resource.ProjectId).Result;
-    OnProjectSelected(project, false);
+    //var project = client.Project.Get(resource.ProjectId).Result;
+    //OnProjectSelected(project, false);
 
     switch (resource)
     {
@@ -647,7 +588,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public override void ExpirePreview(bool redraw)
   {
-    ProjectContextMenuButton.ExpirePreview(redraw);
+    //ProjectContextMenuButton.ExpirePreview(redraw);
     ModelContextMenuButton.ExpirePreview(redraw);
     VersionContextMenuButton.ExpirePreview(redraw);
     base.ExpirePreview(redraw);

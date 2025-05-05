@@ -27,6 +27,24 @@ public class SearchToolStripMenuItem
     RegisterEvents();
   }
 
+  public ToolStripMenuItem AddMenuItem(
+    string text,
+    EventHandler? click = null,
+    bool? visible = null,
+    bool? isChecked = null
+  )
+  {
+    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false };
+    item.Click += click;
+    if (visible == false)
+    {
+      item.Visible = false;
+    }
+
+    ParentDropDown.Items.Add(item);
+    return item;
+  }
+
   private void AddSearchBox()
   {
     var textBox = new TextBox
