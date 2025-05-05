@@ -27,17 +27,17 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
   /// <param name="target">The AutoCAD DBText to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
   public Text Convert(ADB.DBText target) =>
-    // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling. Needs to be added as Transforms
+    // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling
     // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
     new()
     {
       value = target.TextString,
       height = target.Height,
-      maxWidth = null,
+      maxWidth = null, // always 1 line
       origin = _pointConverter.Convert(target.Position),
       plane = GetTextPlane(target),
-      alignmentH = SA.AlignmentHorizontal.Left,
-      alignmentV = SA.AlignmentVertical.Bottom,
+      alignmentH = SA.AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
+      alignmentV = SA.AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
       units = _settingsStore.Current.SpeckleUnits
     };
 
