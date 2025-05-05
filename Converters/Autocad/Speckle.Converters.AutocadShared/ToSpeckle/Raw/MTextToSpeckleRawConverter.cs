@@ -31,10 +31,10 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
     // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
     new()
     {
-      value = target.TextString,
+      value = target.Text,
       height = target.Height,
-      maxWidth = null, // always 1 line
-      origin = _pointConverter.Convert(target.Position),
+      maxWidth = target.Width,
+      origin = _pointConverter.Convert(target.Location),
       plane = GetTextPlane(target),
       alignmentH = SA.AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
       alignmentV = SA.AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
@@ -43,11 +43,11 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
 
   private SOG.Plane? GetTextPlane(ADB.MText target)
   {
-    AG.Plane plane = new(target.Position, target.Normal);
+    AG.Plane plane = new(target.Location, target.Normal);
 
     if (target.Rotation != 0)
     {
-      plane.RotateBy(target.Rotation, target.Normal, target.Position);
+      plane.RotateBy(target.Rotation, target.Normal, target.Location);
     }
 
     return _planeConverter.Convert(plane);
