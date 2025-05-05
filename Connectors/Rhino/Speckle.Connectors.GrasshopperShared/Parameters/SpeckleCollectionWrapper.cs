@@ -116,6 +116,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       ApplicationId = ApplicationId,
       Name = Name,
       Path = Path,
+      Topology = Topology,
       Elements = Elements
         .Select(e =>
           e is SpeckleCollectionWrapper c
