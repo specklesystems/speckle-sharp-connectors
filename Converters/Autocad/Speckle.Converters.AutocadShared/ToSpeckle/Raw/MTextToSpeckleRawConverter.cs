@@ -22,13 +22,11 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
   }
 
   /// <summary>
-  /// Converts AutoCAD DBText to a Speckle Text object.
+  /// Converts AutoCAD MText to a Speckle Text object.
   /// </summary>
-  /// <param name="target">The AutoCAD DBText to convert.</param>
+  /// <param name="target">The AutoCAD MText to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
   public Text Convert(ADB.MText target) =>
-    // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling
-    // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
     new()
     {
       value = target.Text,
@@ -69,16 +67,13 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
       or ADB.AttachmentPoint.MiddleCenter
       or ADB.AttachmentPoint.BottomCenter
       or ADB.AttachmentPoint.BaseCenter
-      or ADB.AttachmentPoint.BottomMid
-      or ADB.AttachmentPoint.MiddleMid
-      or ADB.AttachmentPoint.TopMid
         => SA.AlignmentHorizontal.Center,
       ADB.AttachmentPoint.TopRight
       or ADB.AttachmentPoint.MiddleRight
       or ADB.AttachmentPoint.BottomRight
       or ADB.AttachmentPoint.BaseRight
         => SA.AlignmentHorizontal.Right,
-      _ => SA.AlignmentHorizontal.Left, // .Auto alignment - only applies to Leaders that we don't support yet
+      _ => SA.AlignmentHorizontal.Left,
     };
   }
 
@@ -110,7 +105,7 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
       or ADB.AttachmentPoint.BottomFit
       or ADB.AttachmentPoint.BottomMid
         => SA.AlignmentVertical.Bottom,
-      _ => SA.AlignmentVertical.Top, // .Auto alignment - only applies to Leaders that we don't support yet
+      _ => SA.AlignmentVertical.Top,
     };
   }
 }
