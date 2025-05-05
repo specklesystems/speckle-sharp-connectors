@@ -32,12 +32,12 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
     new()
     {
       value = target.Text,
-      height = target.Height,
+      height = target.TextHeight,
       maxWidth = target.Width,
       origin = _pointConverter.Convert(target.Location),
       plane = GetTextPlane(target),
-      alignmentH = SA.AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
-      alignmentV = SA.AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
+      alignmentH = GetHorizontalAlignment(target.Attachment),
+      alignmentV = GetVerticalAlignment(target.Attachment),
       units = _settingsStore.Current.SpeckleUnits
     };
 
@@ -51,5 +51,66 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
     }
 
     return _planeConverter.Convert(plane);
+  }
+
+  /// <summary>
+  /// Simplify horizontal text alignment to 3 options: Left, Center, Right
+  /// </summary>
+  private SA.AlignmentHorizontal GetHorizontalAlignment(ADB.AttachmentPoint attachmentPt)
+  {
+    return attachmentPt switch
+    {
+      ADB.AttachmentPoint.TopLeft
+      or ADB.AttachmentPoint.MiddleLeft
+      or ADB.AttachmentPoint.BottomLeft
+      or ADB.AttachmentPoint.BaseLeft
+        => SA.AlignmentHorizontal.Left,
+      ADB.AttachmentPoint.TopCenter
+      or ADB.AttachmentPoint.MiddleCenter
+      or ADB.AttachmentPoint.BottomCenter
+      or ADB.AttachmentPoint.BaseCenter
+      or ADB.AttachmentPoint.BottomMid
+      or ADB.AttachmentPoint.MiddleMid
+      or ADB.AttachmentPoint.TopMid
+        => SA.AlignmentHorizontal.Center,
+      ADB.AttachmentPoint.TopRight
+      or ADB.AttachmentPoint.MiddleRight
+      or ADB.AttachmentPoint.BottomRight
+      or ADB.AttachmentPoint.BaseRight
+        => SA.AlignmentHorizontal.Right,
+      _ => SA.AlignmentHorizontal.Left, // .Auto alignment - only applies to Leaders that we don't support yet
+    };
+  }
+
+  /// <summary>
+  /// Simplify vertical text alignment to 3 options: Top, Middle, Bottom
+  /// </summary>
+  private SA.AlignmentVertical GetVerticalAlignment(ADB.AttachmentPoint attachmentPt)
+  {
+    return attachmentPt switch
+    {
+      ADB.AttachmentPoint.TopLeft
+      or ADB.AttachmentPoint.TopCenter
+      or ADB.AttachmentPoint.TopRight
+      or ADB.AttachmentPoint.TopMid
+      or ADB.AttachmentPoint.TopAlign
+      or ADB.AttachmentPoint.TopFit
+        => SA.AlignmentVertical.Top,
+      ADB.AttachmentPoint.MiddleLeft
+      or ADB.AttachmentPoint.MiddleCenter
+      or ADB.AttachmentPoint.MiddleRight
+      or ADB.AttachmentPoint.MiddleAlign
+      or ADB.AttachmentPoint.MiddleFit
+      or ADB.AttachmentPoint.MiddleMid
+        => SA.AlignmentVertical.Center,
+      ADB.AttachmentPoint.BottomLeft
+      or ADB.AttachmentPoint.BottomCenter
+      or ADB.AttachmentPoint.BottomRight
+      or ADB.AttachmentPoint.BottomAlign
+      or ADB.AttachmentPoint.BottomFit
+      or ADB.AttachmentPoint.BottomMid
+        => SA.AlignmentVertical.Bottom,
+      _ => SA.AlignmentVertical.Top, // .Auto alignment - only applies to Leaders that we don't support yet
+    };
   }
 }
