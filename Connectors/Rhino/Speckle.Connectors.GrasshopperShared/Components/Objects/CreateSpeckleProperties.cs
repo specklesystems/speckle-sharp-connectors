@@ -63,7 +63,12 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       var actualValue = value?.GetType().GetProperty("Value").GetValue(value); // note: unsure if reflection here hurts our performance
       if (!success || value == null || actualValue == null)
       {
-        continue;
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
+        );
+
+        return;
       }
 
       properties[Params.Input[i].NickName] = actualValue;
