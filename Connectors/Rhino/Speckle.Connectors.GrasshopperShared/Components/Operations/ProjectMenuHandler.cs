@@ -1,5 +1,4 @@
 using Speckle.Sdk.Api.GraphQL.Models;
-using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 

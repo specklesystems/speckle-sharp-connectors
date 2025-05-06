@@ -1,5 +1,4 @@
 using Speckle.Sdk.Api.GraphQL.Models;
-using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
@@ -33,6 +32,11 @@ public class ModelMenuHandler
       "Right-click to select a model",
       PopulateMenu
     );
+  }
+
+  public void Reset()
+  {
+    RedrawMenuButton(null);
   }
 
   private async Task Refetch(string searchText)

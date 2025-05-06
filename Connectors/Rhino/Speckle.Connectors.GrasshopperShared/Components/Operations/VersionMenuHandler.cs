@@ -1,5 +1,4 @@
 ﻿using Speckle.Sdk.Api.GraphQL.Models;
-using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
@@ -31,6 +30,12 @@ public class VersionMenuHandler
       "Right-click to select a version",
       PopulateMenu
     );
+  }
+
+  public void Reset()
+  {
+    FetchedVersionCount = 10;
+    RedrawMenuButton(null);
   }
 
   private async Task Refetch(int versionCount)
