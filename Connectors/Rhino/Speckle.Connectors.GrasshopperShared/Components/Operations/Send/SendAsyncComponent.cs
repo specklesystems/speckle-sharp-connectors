@@ -9,13 +9,13 @@ using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 
@@ -24,33 +24,10 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
 public class SendAsyncComponent : GH_AsyncComponent
 {
-  private ResourceCollection<Project>? LastFetchedProjects { get; set; }
-  private ResourceCollection<Model>? LastFetchedModels { get; set; }
-
-  public GhContextMenuButton ProjectContextMenuButton { get; set; }
-  public GhContextMenuButton ModelContextMenuButton { get; set; }
-
-  private ToolStripDropDown? ProjectDropDown { get; set; }
-  private ToolStripDropDown? ModelDropDown { get; set; }
-
-  public SendAsyncComponent()
-    : base(
-      "Publish",
-      "P",
-      "Publish a collection to Speckle",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OPERATIONS
-    )
-  {
-    BaseWorker = new SendComponentWorker(this);
-    Attributes = new SendAsyncComponentAttributes(this);
-  }
-
   public override Guid ComponentGuid => GetType().GUID;
-
   protected override Bitmap Icon => Resources.speckle_operations_publish;
-
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
+
   public bool AutoSend { get; set; }
   public bool JustPastedIn { get; set; }
   public double OverallProgress { get; set; }
@@ -63,9 +40,77 @@ public class SendAsyncComponent : GH_AsyncComponent
   public SendOperation<SpeckleCollectionWrapperGoo> SendOperation { get; private set; }
   public static IServiceScope? Scope { get; set; }
 
+  private readonly AccountService _accountService;
+  private readonly AccountManager _accountManager;
+  private readonly IClientFactory _clientFactory;
+
+  private Account? _account;
+
+  private SpeckleOperationWizard SpeckleOperationWizard { get; }
+
+  public GhContextMenuButton WorkspaceContextMenuButton { get; }
+  public GhContextMenuButton ProjectContextMenuButton { get; }
+  public GhContextMenuButton ModelContextMenuButton { get; }
+
+  public SendAsyncComponent()
+    : base(
+      "Publish",
+      "P",
+      "Publish a collection to Speckle",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OPERATIONS
+    )
+  {
+    BaseWorker = new SendComponentWorker(this);
+    Attributes = new SendAsyncComponentAttributes(this);
+
+    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
+    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
+    _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
+
+    InitializeAccount();
+
+    SpeckleOperationWizard = new SpeckleOperationWizard(_account!, RefreshComponent, false);
+
+    // Bind the buttons from wizard for component attributes
+    WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
+    ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
+    ModelContextMenuButton = SpeckleOperationWizard.ModelMenuHandler.ModelContextMenuButton;
+  }
+
+  private void InitializeAccount()
+  {
+    var userSelectedAccountId = _accountService.GetUserSelectedAccountId();
+    Account? account =
+      userSelectedAccountId != null
+        ? _accountManager.GetAccount(userSelectedAccountId)
+        : _accountManager.GetDefaultAccount();
+    OnAccountSelected(account);
+  }
+
+  private void OnAccountSelected(Account? account)
+  {
+    _account = account;
+    Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
+    SpeckleOperationWizard?.SetProjects(null);
+    ExpireSolution(true);
+  }
+
+  private Task RefreshComponent()
+  {
+    ExpireSolution(true);
+    return Task.CompletedTask;
+  }
+
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddParameter(new SpeckleUrlModelResourceParam());
+    var urlIndex = pManager.AddTextParameter(
+      "Speckle Url",
+      "Url",
+      "Speckle URL that contains project and model information",
+      GH_ParamAccess.item
+    );
+    pManager[urlIndex].Optional = true;
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -135,8 +180,29 @@ public class SendAsyncComponent : GH_AsyncComponent
     }
   }
 
+  private void SetComponentButtonsState(bool enabled)
+  {
+    WorkspaceContextMenuButton.Enabled = enabled;
+    ProjectContextMenuButton.Enabled = enabled;
+    ModelContextMenuButton.Enabled = enabled;
+  }
+
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    string? urlInput = null;
+    if (da.GetData(0, ref urlInput))
+    {
+      // Lock button interactions before anything else, to ensure any input (even invalid ones) lock the state.
+      SetComponentButtonsState(false);
+
+      // TODO: check validation of URL
+      if (urlInput == null || string.IsNullOrEmpty(urlInput))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input url was empty or null");
+        return;
+      }
+    }
+
     // Dependency Injection
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
@@ -414,11 +480,23 @@ public class SendComponentWorker : WorkerInstance
 public class SendAsyncComponentAttributes : GH_ComponentAttributes
 {
   private bool _selected;
+  private readonly SendAsyncComponent _typedOwner;
 
   public SendAsyncComponentAttributes(GH_Component owner)
-    : base(owner) { }
+    : base(owner)
+  {
+    _typedOwner = (SendAsyncComponent)owner;
+  }
 
-  private Rectangle ButtonBounds { get; set; }
+  public override void AppendToAttributeTree(List<IGH_Attributes> attributes)
+  {
+    base.AppendToAttributeTree(attributes);
+    _typedOwner.WorkspaceContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
+    _typedOwner.ProjectContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
+    _typedOwner.ModelContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
+  }
+
+  private Rectangle PublishButtonBounds { get; set; }
 
   public override bool Selected
   {
@@ -431,20 +509,68 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
     base.Layout();
 
     var baseRec = GH_Convert.ToRectangle(Bounds);
-    baseRec.Height += 26;
+    baseRec.Height += 26 * 4;
 
-    var btnRec = baseRec;
-    btnRec.Y = btnRec.Bottom - 26;
-    btnRec.Height = 26;
-    btnRec.Inflate(-2, -2);
+    var btnWorkspace = baseRec;
+    btnWorkspace.Y = btnWorkspace.Bottom - 26 * 4;
+    btnWorkspace.Height = 26;
+    btnWorkspace.Inflate(-2, -2);
+
+    var btnProject = btnWorkspace;
+    btnProject.Y = btnWorkspace.Bottom + 2;
+
+    var btnModel = btnWorkspace;
+    btnModel.Y = btnProject.Bottom + 2;
+
+    var btnPublish = btnWorkspace;
+    btnPublish.Y = btnModel.Bottom + 6;
 
     Bounds = baseRec;
-    ButtonBounds = btnRec;
+    PublishButtonBounds = btnPublish;
+
+    InitialiseAttributes();
+
+    _typedOwner.WorkspaceContextMenuButton.Attributes.Pivot = btnWorkspace.Location;
+    _typedOwner.WorkspaceContextMenuButton.Attributes.Bounds = btnWorkspace;
+    _typedOwner.ProjectContextMenuButton.Attributes.Pivot = btnProject.Location;
+    _typedOwner.ProjectContextMenuButton.Attributes.Bounds = btnProject;
+    _typedOwner.ModelContextMenuButton.Attributes.Pivot = btnModel.Location;
+    _typedOwner.ModelContextMenuButton.Attributes.Bounds = btnModel;
+  }
+
+  private void InitialiseAttributes()
+  {
+    _typedOwner.WorkspaceContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.WorkspaceContextMenuButton
+    )
+    {
+      Parent = this,
+      Pivot = Pivot
+    };
+
+    _typedOwner.ProjectContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.ProjectContextMenuButton
+    )
+    {
+      Parent = this,
+    };
+
+    _typedOwner.ModelContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.ModelContextMenuButton
+    )
+    {
+      Parent = this,
+      Pivot = Pivot
+    };
   }
 
   protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
   {
     base.Render(canvas, graphics, channel);
+
+    _typedOwner.WorkspaceContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
+    _typedOwner.ProjectContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
+    _typedOwner.ModelContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
 
     var state = ((SendAsyncComponent)Owner).CurrentComponentState;
 
@@ -453,8 +579,8 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
       if (((SendAsyncComponent)Owner).AutoSend)
       {
         var autoSendButton = GH_Capsule.CreateTextCapsule(
-          ButtonBounds,
-          ButtonBounds,
+          PublishButtonBounds,
+          PublishButtonBounds,
           GH_Palette.Blue,
           "Auto Publish",
           2,
@@ -474,8 +600,8 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
         var text = state == ComponentState.Sending ? "Publishing..." : "Publish";
 
         var button = GH_Capsule.CreateTextCapsule(
-          ButtonBounds,
-          ButtonBounds,
+          PublishButtonBounds,
+          PublishButtonBounds,
           palette,
           text,
           2,
@@ -491,7 +617,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
   {
     if (e.Button == MouseButtons.Left)
     {
-      if (((RectangleF)ButtonBounds).Contains(e.CanvasLocation))
+      if (((RectangleF)PublishButtonBounds).Contains(e.CanvasLocation))
       {
         if (((SendAsyncComponent)Owner).AutoSend)
         {
