@@ -1,5 +1,8 @@
-﻿using Speckle.InterfaceGenerator;
+﻿using System.Runtime.Serialization;
+using Speckle.InterfaceGenerator;
+using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -9,7 +12,10 @@ namespace Speckle.Connectors.Common.Operations;
 /// This can safely be registered as singleton.
 /// </summary>
 [GenerateAutoInterface]
-public class AccountService(IAccountManager accountManager) : IAccountService
+public class AccountService(
+  IAccountManager accountManager,
+  ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
+) : IAccountService
 {
   /// <summary>
   /// Account to retrieve with its id, if not exist try to retrieve from matching serverUrl.
@@ -31,4 +37,33 @@ public class AccountService(IAccountManager accountManager) : IAccountService
         ?? throw new SpeckleAccountManagerException($"No any account found that matches with server {serverUrl}");
     }
   }
+
+  public string? GetUserSelectedAccountId()
+  {
+    var jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config");
+    var rawConfig = jsonCacheManager.GetObject("accounts");
+    if (rawConfig is null)
+    {
+      return null;
+    }
+    try
+    {
+      var config = JsonConvert.DeserializeObject<AccountsConfig>(rawConfig);
+      if (config is null)
+      {
+        throw new SerializationException("Failed to deserialize accounts config");
+      }
+
+      return config.UserSelectedAccountId;
+    }
+    catch (SerializationException)
+    {
+      return null;
+    }
+  }
+}
+
+public class AccountsConfig
+{
+  public string? UserSelectedAccountId { get; set; }
 }
