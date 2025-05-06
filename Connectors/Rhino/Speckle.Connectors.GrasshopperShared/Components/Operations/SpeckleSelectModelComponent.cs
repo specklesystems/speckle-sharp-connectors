@@ -8,7 +8,6 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -17,9 +16,6 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
 public class SpeckleSelectModelComponent : GH_Component
 {
-  private Project? _project;
-  private Model? _model;
-  private Version? _version;
   private Account? _account;
 
   private bool _justPastedIn;
@@ -30,7 +26,7 @@ public class SpeckleSelectModelComponent : GH_Component
   private string? _storedModelId;
   private string? _storedVersionId;
 
-  private readonly IAccountService _accountService;
+  private readonly AccountService _accountService;
   private readonly AccountManager _accountManager;
   private readonly IClientFactory _clientFactory;
 
@@ -40,13 +36,11 @@ public class SpeckleSelectModelComponent : GH_Component
   private ResourceCollection<Model>? LastFetchedModels { get; set; }
   private ResourceCollection<Version>? LastFetchedVersions { get; set; }
 
-  private readonly ProjectMenuHandler _projectMenuHandler;
-  private readonly ModelMenuHandler _modelMenuHandler;
-  private readonly VersionMenuHandler _versionMenuHandler;
-
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
   public GhContextMenuButton VersionContextMenuButton { get; set; }
+
+  public ReceiveWizard ReceiveWizard { get; }
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
 
@@ -60,129 +54,24 @@ public class SpeckleSelectModelComponent : GH_Component
     )
   {
     Attributes = new SpeckleSelectModelComponentAttributes(this);
-    _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
+    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
     _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
 
     // TODO: fix this default behavior, use `userSelectedAccountId`
     var account = _accountManager.GetDefaultAccount();
     OnAccountSelected(account);
+    ReceiveWizard = new ReceiveWizard(account!, RefreshComponent); // TODO: Nullability of account need to be handled before
 
-    _projectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
-    ProjectContextMenuButton = _projectMenuHandler.ProjectContextMenuButton;
-
-    _modelMenuHandler = new ModelMenuHandler(FetchModels);
-    ModelContextMenuButton = _modelMenuHandler.ModelContextMenuButton;
-
-    _versionMenuHandler = new VersionMenuHandler(FetchMoreVersions);
-    VersionContextMenuButton = _versionMenuHandler.VersionContextMenuButton;
-
-    _projectMenuHandler.ProjectSelected += OnProjectSelected;
-    _modelMenuHandler.ModelSelected += OnModelSelected;
-    _versionMenuHandler.VersionSelected += OnVersionSelected;
+    ProjectContextMenuButton = ReceiveWizard.ProjectContextMenuButton;
+    ModelContextMenuButton = ReceiveWizard.ModelContextMenuButton;
+    VersionContextMenuButton = ReceiveWizard.VersionContextMenuButton;
   }
 
-  /// <summary>
-  /// Callback function to retrieve projects with the search text
-  /// </summary>
-  private async Task<ResourceCollection<Project>> FetchProjects(string searchText)
+  private Task RefreshComponent()
   {
-    if (_account == null)
-    {
-      return new ResourceCollection<Project>();
-    }
-
-    IClient client = _clientFactory.Create(_account);
-    var projects = await client.ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText));
-    LastFetchedProjects = projects;
-    return projects;
-  }
-
-  /// <summary>
-  /// Callback function to retrieve models with the search text
-  /// </summary>
-  private async Task<ResourceCollection<Model>> FetchModels(string searchText)
-  {
-    if (_account == null || _project == null)
-    {
-      return new ResourceCollection<Model>();
-    }
-
-    IClient client = _clientFactory.Create(_account);
-    var projectWithModels = await client
-      .Project.GetWithModels(_project.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
-      .ConfigureAwait(true);
-    LastFetchedModels = projectWithModels.models;
-    return projectWithModels.models;
-  }
-
-  /// <summary>
-  /// Callback function to retrieve amount of versions
-  /// </summary>
-  private async Task<ResourceCollection<Version>> FetchMoreVersions(int versionCount)
-  {
-    if (_account == null || _project == null || _model == null)
-    {
-      return new ResourceCollection<Version>();
-    }
-
-    IClient client = _clientFactory.Create(_account);
-    var newVersionsResult = await client
-      .Model.GetWithVersions(_model.id, _project.id, versionCount)
-      .ConfigureAwait(true);
-    LastFetchedVersions = newVersionsResult.versions;
-    return newVersionsResult.versions;
-  }
-
-  private async void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
-  {
-    _project = e.SelectedProject;
-    if (_account != null && _project != null)
-    {
-      // Get models after project selected
-      IClient client = _clientFactory.Create(_account);
-      var projectWithModels = await client.Project.GetWithModels(_project.id, 10).ConfigureAwait(true);
-      LastFetchedModels = projectWithModels.models;
-      _modelMenuHandler.Models = LastFetchedModels;
-
-      // Reset internal states for the next steps for SolveInstance
-      _model = null;
-      _version = null;
-
-      // Redraw the menu handlers to clear their visual state
-      _modelMenuHandler.Reset();
-      _versionMenuHandler.Reset();
-      ModelContextMenuButton.Enabled = true;
-
-      ExpireSolution(true);
-    }
-  }
-
-  private async void OnModelSelected(object sender, ModelSelectedEventArgs e)
-  {
-    _model = e.SelectedModel;
-    if (_account != null && _project != null && _model != null)
-    {
-      // Get versions after model selected
-      IClient client = _clientFactory.Create(_account);
-      var modelWithVersions = await client.Model.GetWithVersions(_model.id, _project.id, 10).ConfigureAwait(true);
-      LastFetchedVersions = modelWithVersions.versions;
-      _versionMenuHandler.Versions = LastFetchedVersions;
-
-      // Reset internal states for the next steps for SolveInstance
-      _version = null;
-
-      // Redraw the menu handlers to clear their visual state
-      _versionMenuHandler.Reset();
-      VersionContextMenuButton.Enabled = true;
-      ExpireSolution(true);
-    }
-  }
-
-  private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
-  {
-    _version = e.SelectedVersion;
     ExpireSolution(true);
+    return Task.CompletedTask;
   }
 
   private void OnAccountSelected(Account? account)
@@ -270,56 +159,76 @@ public class SpeckleSelectModelComponent : GH_Component
 
     IClient client = _clientFactory.Create(_account);
     LastFetchedProjects = client.ActiveUser.GetProjects(10, null, null).Result;
-    _projectMenuHandler.Projects = LastFetchedProjects;
+    ReceiveWizard.LastFetchedProjects = LastFetchedProjects;
 
     ProjectContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedProjectId))
     {
       var project = client.Project.Get(_storedProjectId!).Result;
-      _projectMenuHandler.RedrawMenuButton(project);
+      // TODO: need to set
+      ReceiveWizard.ProjectMenuHandler.RedrawMenuButton(project);
     }
 
-    if (_project == null)
+    if (ReceiveWizard.SelectedProject == null)
     {
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    LastFetchedModels = client.Project.GetWithModels(_project.id, 10).Result.models;
+    LastFetchedModels = client.Project.GetWithModels(ReceiveWizard.SelectedProject.id, 10).Result.models;
     ModelContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedModelId))
     {
-      var model = client.Model.Get(_storedModelId!, _project.id).Result;
-      _modelMenuHandler.RedrawMenuButton(model);
+      var model = client.Model.Get(_storedModelId!, ReceiveWizard.SelectedProject.id).Result;
+      // TODO: need to set
+      ReceiveWizard.ModelMenuHandler.RedrawMenuButton(model);
     }
 
-    if (_model == null)
+    if (ReceiveWizard.SelectedModel == null)
     {
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    LastFetchedVersions = client.Model.GetWithVersions(_model.id, _project.id, 10).Result.versions;
+    LastFetchedVersions = client
+      .Model.GetWithVersions(ReceiveWizard.SelectedModel.id, ReceiveWizard.SelectedProject.id, 10)
+      .Result.versions;
     VersionContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedVersionId))
     {
-      var version = client.Version.Get(_storedVersionId!, _project.id).Result;
-      _versionMenuHandler.RedrawMenuButton(version);
+      var version = client.Version.Get(_storedVersionId!, ReceiveWizard.SelectedProject.id).Result;
+      // TODO: need to set
+      ReceiveWizard.VersionMenuHandler.RedrawMenuButton(version);
     }
 
-    if (_version == null)
+    if (ReceiveWizard.SelectedVersion == null)
     {
       // If no version selected, output `latest` resource
-      da.SetData(0, new SpeckleUrlLatestModelVersionResource(_account.serverInfo.url, _project.id, _model.id));
+      da.SetData(
+        0,
+        new SpeckleUrlLatestModelVersionResource(
+          _account.serverInfo.url,
+          ReceiveWizard.SelectedProject.id,
+          ReceiveWizard.SelectedModel.id
+        )
+      );
       return;
     }
 
     // If all data points are selected, output specific version.
-    da.SetData(0, new SpeckleUrlModelVersionResource(_account.serverInfo.url, _project.id, _model.id, _version.id));
+    da.SetData(
+      0,
+      new SpeckleUrlModelVersionResource(
+        _account.serverInfo.url,
+        ReceiveWizard.SelectedProject.id,
+        ReceiveWizard.SelectedModel.id,
+        ReceiveWizard.SelectedVersion.id
+      )
+    );
   }
 
   protected override void AfterSolveInstance()
@@ -372,13 +281,13 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       case SpeckleUrlLatestModelVersionResource latestVersionResource:
         var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
-        _modelMenuHandler.RedrawMenuButton(model);
+        ReceiveWizard.ModelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource versionResource:
         var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
-        _modelMenuHandler.RedrawMenuButton(m);
+        ReceiveWizard.ModelMenuHandler.RedrawMenuButton(m);
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        _versionMenuHandler.RedrawMenuButton(v);
+        ReceiveWizard.VersionMenuHandler.RedrawMenuButton(v);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");
@@ -412,9 +321,9 @@ public class SpeckleSelectModelComponent : GH_Component
     var baseRes = base.Write(writer);
     writer.SetString("Server", _account?.serverInfo.url);
     writer.SetString("User", _account?.id);
-    writer.SetString("Project", _project?.id);
-    writer.SetString("Model", _model?.id);
-    writer.SetString("Version", _version?.id);
+    writer.SetString("Project", ReceiveWizard.SelectedProject?.id);
+    writer.SetString("Model", ReceiveWizard.SelectedModel?.id);
+    writer.SetString("Version", ReceiveWizard.SelectedVersion?.id);
 
     return baseRes;
   }

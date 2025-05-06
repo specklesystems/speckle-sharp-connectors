@@ -26,8 +26,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\ModelMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\ProjectMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\ReceiveWizard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\SearchToolStripMenuItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendWizard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\VersionMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\WorkspaceMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetObjectProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />

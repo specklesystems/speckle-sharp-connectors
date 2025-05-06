@@ -11,8 +11,8 @@ namespace Speckle.Connectors.Common.Operations;
 
 public sealed class ReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
-  IAccountService accountService,
-  IReceiveProgress receiveProgress,
+  AccountService accountService,
+  ReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
   IReceiveVersionRetriever receiveVersionRetriever,
@@ -65,7 +65,7 @@ public sealed class ReceiveOperation(
     Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
       receiveInfo.ProjectId,
-      version.referencedObject,
+      version.referencedObject!,
       account.token,
       onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
       cancellationToken: cancellationToken
