@@ -108,7 +108,7 @@ public class WorkspaceMenuHandler
     WorkspaceSelected?.Invoke(this, new WorkspaceSelectedEventArgs(workspace));
   }
 
-  private void RedrawMenuButton(Workspace? workspace)
+  public void RedrawMenuButton(Workspace? workspace)
   {
     var suffix = WorkspaceContextMenuButton.Enabled
       ? "Right-click to select another workspace."

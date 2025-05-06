@@ -17,6 +17,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
   public override void AppendToAttributeTree(List<IGH_Attributes> attributes)
   {
     base.AppendToAttributeTree(attributes);
+    _typedOwner.WorkspaceContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
     _typedOwner.ProjectContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
     _typedOwner.ModelContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
     _typedOwner.VersionContextMenuButton.Attributes?.AppendToAttributeTree(attributes);
@@ -24,47 +25,45 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
 
   private void InitialiseAttributes()
   {
-    if (_typedOwner.ProjectContextMenuButton.Attributes == null)
+    _typedOwner.WorkspaceContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.WorkspaceContextMenuButton
+    )
     {
-      _typedOwner.ProjectContextMenuButton.Attributes = new GhContextMenuButtonAttributes(
-        _typedOwner.ProjectContextMenuButton
-      )
-      {
-        Parent = this,
-      };
-    }
+      Parent = this,
+    };
 
-    if (_typedOwner.ModelContextMenuButton.Attributes == null)
+    _typedOwner.ProjectContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.ProjectContextMenuButton
+    )
     {
-      _typedOwner.ModelContextMenuButton.Attributes = new GhContextMenuButtonAttributes(
-        _typedOwner.ModelContextMenuButton
-      )
-      {
-        Parent = this,
-        Pivot = Pivot
-      };
-    }
+      Parent = this,
+    };
 
-    if (_typedOwner.VersionContextMenuButton.Attributes == null)
+    _typedOwner.ModelContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.ModelContextMenuButton
+    )
     {
-      _typedOwner.VersionContextMenuButton.Attributes = new GhContextMenuButtonAttributes(
-        _typedOwner.VersionContextMenuButton
-      )
-      {
-        Parent = this,
-        Pivot = Pivot
-      };
-    }
+      Parent = this,
+      Pivot = Pivot
+    };
+
+    _typedOwner.VersionContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
+      _typedOwner.VersionContextMenuButton
+    )
+    {
+      Parent = this,
+      Pivot = Pivot
+    };
   }
 
   protected override void Layout()
   {
     base.Layout();
     var baseRec = GH_Convert.ToRectangle(Bounds);
-    baseRec.Height += 26 * 3;
+    baseRec.Height += 26 * 4;
 
     var btnRec = baseRec;
-    btnRec.Y = baseRec.Bottom - 26 * 3;
+    btnRec.Y = baseRec.Bottom - 26 * 4;
     btnRec.Height = 26;
     btnRec.Inflate(-2, -2);
 
@@ -74,15 +73,20 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
     var btnRec3 = btnRec;
     btnRec3.Y = btnRec2.Bottom + 2;
 
+    var btnRec4 = btnRec;
+    btnRec4.Y = btnRec3.Bottom + 2;
+
     Bounds = baseRec;
     InitialiseAttributes();
     // Both pivot and bounds require updating to proper render buttons on location
-    _typedOwner.ProjectContextMenuButton.Attributes.Pivot = btnRec.Location;
-    _typedOwner.ProjectContextMenuButton.Attributes.Bounds = btnRec;
-    _typedOwner.ModelContextMenuButton.Attributes.Pivot = btnRec2.Location;
-    _typedOwner.ModelContextMenuButton.Attributes.Bounds = btnRec2;
-    _typedOwner.VersionContextMenuButton.Attributes.Pivot = btnRec3.Location;
-    _typedOwner.VersionContextMenuButton.Attributes.Bounds = btnRec3;
+    _typedOwner.WorkspaceContextMenuButton.Attributes.Pivot = btnRec.Location;
+    _typedOwner.WorkspaceContextMenuButton.Attributes.Bounds = btnRec;
+    _typedOwner.ProjectContextMenuButton.Attributes.Pivot = btnRec2.Location;
+    _typedOwner.ProjectContextMenuButton.Attributes.Bounds = btnRec2;
+    _typedOwner.ModelContextMenuButton.Attributes.Pivot = btnRec3.Location;
+    _typedOwner.ModelContextMenuButton.Attributes.Bounds = btnRec3;
+    _typedOwner.VersionContextMenuButton.Attributes.Pivot = btnRec4.Location;
+    _typedOwner.VersionContextMenuButton.Attributes.Bounds = btnRec4;
   }
 
   protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
@@ -90,6 +94,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
     base.Render(canvas, graphics, channel);
     // Draw custom buttons and dropdowns
 
+    _typedOwner.WorkspaceContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
     _typedOwner.ProjectContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
     _typedOwner.ModelContextMenuButton.Attributes.RenderToCanvas(canvas, channel);
     _typedOwner.VersionContextMenuButton.Attributes.RenderToCanvas(canvas, channel);

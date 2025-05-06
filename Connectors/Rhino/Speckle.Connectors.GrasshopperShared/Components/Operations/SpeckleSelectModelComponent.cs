@@ -9,6 +9,8 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
@@ -21,6 +23,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private string? _storedUserId;
   private string? _storedServer;
+  private string? _storedWorkspaceId;
   private string? _storedProjectId;
   private string? _storedModelId;
   private string? _storedVersionId;
@@ -31,6 +34,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public override Guid ComponentGuid => new("9638B3B5-C469-4570-B69F-686D8DA5C48D");
 
+  public GhContextMenuButton WorkspaceContextMenuButton { get; }
   public GhContextMenuButton ProjectContextMenuButton { get; }
   public GhContextMenuButton ModelContextMenuButton { get; }
   public GhContextMenuButton VersionContextMenuButton { get; }
@@ -58,6 +62,7 @@ public class SpeckleSelectModelComponent : GH_Component
     OnAccountSelected(account);
     SpeckleOperationWizard = new SpeckleOperationWizard(account!, RefreshComponent, false); // TODO: Nullability of account need to be handled before
 
+    WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
     ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
     ModelContextMenuButton = SpeckleOperationWizard.ModelMenuHandler.ModelContextMenuButton;
     VersionContextMenuButton = SpeckleOperationWizard!.VersionMenuHandler!.VersionContextMenuButton; // TODO: fix this shit later when we split
@@ -88,7 +93,9 @@ public class SpeckleSelectModelComponent : GH_Component
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
   }
 
+#pragma warning disable CA1502
   protected override void SolveInstance(IGH_DataAccess da)
+#pragma warning restore CA1502
   {
     // Deal with inputs
     string? urlInput = null;
@@ -153,9 +160,29 @@ public class SpeckleSelectModelComponent : GH_Component
     }
 
     IClient client = _clientFactory.Create(_account);
-    var projects = client.ActiveUser.GetProjects(10, null, null).Result;
-    SpeckleOperationWizard?.SetProjects(projects);
+    var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
+    SpeckleOperationWizard.SetWorkspaces(workspaces);
 
+    // TODO: select default workspace
+    var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
+    Workspace? selectedWorkspace = activeWorkspace ?? (workspaces.items.Count > 0 ? workspaces.items[0] : null);
+
+    if (selectedWorkspace != null)
+    {
+      _storedWorkspaceId = selectedWorkspace.id;
+      SpeckleOperationWizard.WorkspaceMenuHandler.RedrawMenuButton(selectedWorkspace);
+    }
+    else
+    {
+      return;
+    }
+
+    WorkspaceContextMenuButton.Enabled = true;
+
+    var projects = client
+      .ActiveUser.GetProjects(10, null, new UserProjectsFilter(workspaceId: _storedWorkspaceId))
+      .Result;
+    SpeckleOperationWizard?.SetProjects(projects);
     ProjectContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedProjectId))
@@ -237,6 +264,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private void SetComponentButtonsState(bool enabled)
   {
+    WorkspaceContextMenuButton.Enabled = enabled;
     ProjectContextMenuButton.Enabled = enabled;
     ModelContextMenuButton.Enabled = enabled;
     VersionContextMenuButton.Enabled = enabled;
