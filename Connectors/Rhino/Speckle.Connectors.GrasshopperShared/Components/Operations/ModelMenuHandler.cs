@@ -1,4 +1,5 @@
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
@@ -12,6 +13,7 @@ public class ModelSelectedEventArgs(Model? model) : EventArgs
 /// </summary>
 public class ModelMenuHandler
 {
+  private readonly Account _account;
   private readonly Func<string, Task<ResourceCollection<Model>>> _fetchModels;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
@@ -23,12 +25,13 @@ public class ModelMenuHandler
 
   public GhContextMenuButton ModelContextMenuButton { get; set; }
 
-  public ModelMenuHandler(Func<string, Task<ResourceCollection<Model>>> fetchModels)
+  public ModelMenuHandler(Account account, Func<string, Task<ResourceCollection<Model>>> fetchModels)
   {
+    _account = account;
     _fetchModels = fetchModels;
     ModelContextMenuButton = new GhContextMenuButton(
       "Select Model",
-      "Select Project",
+      "Select Model",
       "Right-click to select a model",
       PopulateMenu
     );
@@ -43,10 +46,11 @@ public class ModelMenuHandler
   private bool PopulateMenu(ToolStripDropDown menu)
   {
     _menu = menu;
-    _menu.Closed += (sender, args) =>
+    _menu.Closed += (_, _) =>
     {
       _searchItem = null;
     };
+
     if (Models == null)
     {
       _searchItem?.AddMenuItem("No models were fetched");
@@ -102,8 +106,6 @@ public class ModelMenuHandler
 
   public void RedrawMenuButton(Model? model)
   {
-    ModelContextMenuButton.ExpirePreview(true);
-    ModelContextMenuButton.Enabled = true;
     var suffix = ModelContextMenuButton.Enabled
       ? "Right-click to select another model."
       : "Selection is disabled due to component input.";

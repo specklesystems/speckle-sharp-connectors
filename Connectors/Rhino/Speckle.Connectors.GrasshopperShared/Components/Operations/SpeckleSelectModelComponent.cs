@@ -44,6 +44,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   private readonly ProjectMenuHandler _projectMenuHandler;
   private readonly ModelMenuHandler _modelMenuHandler;
+  private readonly VersionMenuHandler _versionMenuHandler;
 
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
@@ -65,24 +66,23 @@ public class SpeckleSelectModelComponent : GH_Component
     _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
     _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
+
+    // TODO: fix this default behavior, use `userSelectedAccountId`
     var account = _accountManager.GetDefaultAccount();
     OnAccountSelected(account);
 
-    _projectMenuHandler = new ProjectMenuHandler(FetchProjects);
+    _projectMenuHandler = new ProjectMenuHandler(account!, FetchProjects); // TODO: Nullability of account need to be handled before
     ProjectContextMenuButton = _projectMenuHandler.ProjectContextMenuButton;
 
-    _modelMenuHandler = new ModelMenuHandler(FetchModels);
+    _modelMenuHandler = new ModelMenuHandler(account!, FetchModels);
     ModelContextMenuButton = _modelMenuHandler.ModelContextMenuButton;
 
-    VersionContextMenuButton = new GhContextMenuButton(
-      "Select Version",
-      "Select Version",
-      "Right-click to select a version",
-      PopulateVersionMenu
-    );
+    _versionMenuHandler = new VersionMenuHandler(account!, FetchMoreVersions);
+    VersionContextMenuButton = _versionMenuHandler.VersionContextMenuButton;
 
     _projectMenuHandler.ProjectSelected += OnProjectSelected;
     _modelMenuHandler.ModelSelected += OnModelSelected;
+    _versionMenuHandler.VersionSelected += OnVersionSelected;
   }
 
   /// <summary>
@@ -119,18 +119,22 @@ public class SpeckleSelectModelComponent : GH_Component
     return projectWithModels.models;
   }
 
-  private async Task FetchMoreVersions(ToolStripDropDown menu)
+  /// <summary>
+  /// Callback function to retrieve amount of versions
+  /// </summary>
+  private async Task<ResourceCollection<Version>> FetchMoreVersions(int versionCount)
   {
-    if (_account != null && _model != null && _project != null)
+    if (_account == null || _project == null || _model == null)
     {
-      FetchedVersionCount += 10;
-      IClient client = _clientFactory.Create(_account);
-      var newVersionsResult = await client
-        .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
-        .ConfigureAwait(true);
-      LastFetchedVersions = newVersionsResult.versions;
-      PopulateVersionMenuItems(menu);
+      return new ResourceCollection<Version>();
     }
+
+    IClient client = _clientFactory.Create(_account);
+    var newVersionsResult = await client
+      .Model.GetWithVersions(_model.id, _project.id, versionCount)
+      .ConfigureAwait(true);
+    LastFetchedVersions = newVersionsResult.versions;
+    return newVersionsResult.versions;
   }
 
   private async void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
@@ -138,13 +142,22 @@ public class SpeckleSelectModelComponent : GH_Component
     _project = e.SelectedProject;
     if (_account != null && _project != null)
     {
+      // Get models after project selected
       IClient client = _clientFactory.Create(_account);
       var projectWithModels = await client.Project.GetWithModels(_project.id, 10).ConfigureAwait(true);
       LastFetchedModels = projectWithModels.models;
       _modelMenuHandler.Models = LastFetchedModels;
+
+      // Reset internal states for the next steps for SolveInstance
+      _model = null;
+      _version = null;
+
+      // Redraw the menu handlers to clear their visual state
       _modelMenuHandler.RedrawMenuButton(null);
+      _versionMenuHandler.RedrawMenuButton(null);
       ModelContextMenuButton.Enabled = true;
-      Attributes.ExpireLayout();
+
+      ExpireSolution(true);
     }
   }
 
@@ -153,86 +166,28 @@ public class SpeckleSelectModelComponent : GH_Component
     _model = e.SelectedModel;
     if (_account != null && _project != null && _model != null)
     {
+      // Get versions after model selected
       IClient client = _clientFactory.Create(_account);
       var modelWithVersions = await client
         .Model.GetWithVersions(_model.id, _project.id, FetchedVersionCount)
         .ConfigureAwait(true);
       LastFetchedVersions = modelWithVersions.versions;
+      _versionMenuHandler.Versions = LastFetchedVersions;
+
+      // Reset internal states for the next steps for SolveInstance
+      _version = null;
+
+      // Redraw the menu handlers to clear their visual state
+      _versionMenuHandler.RedrawMenuButton(null);
       VersionContextMenuButton.Enabled = true;
+      ExpireSolution(true);
     }
   }
 
-  private bool PopulateVersionMenu(ToolStripDropDown menu)
+  private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
   {
-    VersionDropDown = menu;
-    if (LastFetchedVersions is null)
-    {
-      Menu_AppendItem(menu, "No versions were fetched");
-      return true;
-    }
-
-    if (LastFetchedVersions.items.Count == 0)
-    {
-      Menu_AppendItem(menu, "Model has no versions");
-      return true;
-    }
-
-    PopulateVersionMenuItems(menu);
-
-    return true;
-  }
-
-  private void PopulateVersionMenuItems(ToolStripDropDown menu)
-  {
-    menu.Items.Clear();
-
-    if (LastFetchedVersions == null)
-    {
-      return;
-    }
-
-    Menu_AppendItem(menu, "Latest Version", (_, _) => OnVersionSelected(null), null, true, _version == null);
-    Menu_AppendSeparator(menu);
-    foreach (var version in LastFetchedVersions.items)
-    {
-      var desc = string.IsNullOrEmpty(version.message) ? "No description" : version.message;
-
-      var versionItem = Menu_AppendItem(
-        menu,
-        $"{version.id} - {desc}",
-        (_, _) => OnVersionSelected(version),
-        null,
-        true,
-        _version?.id == version.id
-      );
-      if (version.referencedObject is null)
-      {
-        versionItem.Enabled = false;
-        versionItem.ToolTipText = @"Upgrade to load older versions";
-      }
-    }
-
-    if (LastFetchedVersions.items.Count >= FetchedVersionCount)
-    {
-      Menu_AppendSeparator(menu);
-
-      var addMoreButton = new Button() { Text = @"➕ Show more...", Size = new Size(400, 48) };
-
-      addMoreButton.Click += async (sender, args) =>
-      {
-        await FetchMoreVersions(menu);
-      };
-
-      var addMoreButtonHost = new ToolStripControlHost(addMoreButton)
-      {
-        Name = "Show more...",
-        AutoSize = false,
-        Margin = new Padding(4),
-        Padding = new Padding(2)
-      };
-
-      menu.Items.Insert(menu.Items.Count, addMoreButtonHost);
-    }
+    _version = e.SelectedVersion;
+    ExpireSolution(true);
   }
 
   private void OnAccountSelected(Account? account)
@@ -240,39 +195,7 @@ public class SpeckleSelectModelComponent : GH_Component
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     LastFetchedProjects = null;
-    // OnProjectSelected(null, expire, redraw);
-  }
-
-  private void OnVersionSelected(Version? version, bool expire = true, bool redraw = true)
-  {
-    VersionDropDown?.Close();
-    _version = version;
-    var suffix = VersionContextMenuButton.Enabled
-      ? "Right-click to select another version."
-      : "Selection is disabled due to component input.";
-    if (_version != null)
-    {
-      VersionContextMenuButton.Name = _version.id;
-      VersionContextMenuButton.NickName = _version.id;
-      VersionContextMenuButton.Description = $"{_version.message ?? "No message"}\n\n{suffix}";
-    }
-    else if (_model != null)
-    {
-      VersionContextMenuButton.NickName = "Latest Version";
-      VersionContextMenuButton.Name = "Latest Version";
-      VersionContextMenuButton.Description = "Gets the latest version from the selected model";
-    }
-    else
-    {
-      VersionContextMenuButton.Name = "Select Version";
-      VersionContextMenuButton.NickName = "Version";
-      VersionContextMenuButton.Description = "Right-click to select version";
-    }
-    if (expire)
-    {
-      ExpirePreview(redraw);
-      ExpireSolution(true);
-    }
+    ExpireSolution(true);
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -390,8 +313,9 @@ public class SpeckleSelectModelComponent : GH_Component
     if (_justPastedIn && !string.IsNullOrEmpty(_storedVersionId))
     {
       var version = client.Version.Get(_storedVersionId!, _project.id).Result;
-      OnVersionSelected(version);
+      _versionMenuHandler.RedrawMenuButton(version);
     }
+
     if (_version == null)
     {
       // If no version selected, output `latest` resource
@@ -459,7 +383,7 @@ public class SpeckleSelectModelComponent : GH_Component
         var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
         _modelMenuHandler.RedrawMenuButton(m);
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        OnVersionSelected(v, false);
+        _versionMenuHandler.RedrawMenuButton(v);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");

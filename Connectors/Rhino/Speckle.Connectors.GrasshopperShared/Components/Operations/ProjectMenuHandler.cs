@@ -1,4 +1,5 @@
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
@@ -12,6 +13,7 @@ public class ProjectSelectedEventArgs(Project? project) : EventArgs
 /// </summary>
 public class ProjectMenuHandler
 {
+  private readonly Account _account;
   private readonly Func<string, Task<ResourceCollection<Project>>> _fetchProjects;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
@@ -23,8 +25,9 @@ public class ProjectMenuHandler
 
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
 
-  public ProjectMenuHandler(Func<string, Task<ResourceCollection<Project>>> fetchProjects)
+  public ProjectMenuHandler(Account account, Func<string, Task<ResourceCollection<Project>>> fetchProjects)
   {
+    _account = account;
     _fetchProjects = fetchProjects;
     ProjectContextMenuButton = new GhContextMenuButton(
       "Select Project",
@@ -51,8 +54,6 @@ public class ProjectMenuHandler
       ProjectContextMenuButton.NickName = "Project";
       ProjectContextMenuButton.Description = "Right-click to select project";
     }
-    // TODO: can't redraw the canvas
-    ProjectContextMenuButton.ExpirePreview(true);
   }
 
   private async Task Refetch(string searchText)
