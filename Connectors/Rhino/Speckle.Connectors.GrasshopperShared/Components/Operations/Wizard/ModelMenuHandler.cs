@@ -21,7 +21,7 @@ public class ModelMenuHandler
 
   public event EventHandler<ModelSelectedEventArgs>? ModelSelected;
 
-  public GhContextMenuButton ModelContextMenuButton { get; set; }
+  public GhContextMenuButton ModelContextMenuButton { get; }
 
   public ModelMenuHandler(Func<string, Task<ResourceCollection<Model>>> fetchModels)
   {

@@ -19,7 +19,7 @@ public class VersionMenuHandler
 
   public event EventHandler<VersionSelectedEventArgs>? VersionSelected;
 
-  public GhContextMenuButton VersionContextMenuButton { get; set; }
+  public GhContextMenuButton VersionContextMenuButton { get; }
 
   public VersionMenuHandler(Func<int, Task<ResourceCollection<Version>>> fetchVersions)
   {

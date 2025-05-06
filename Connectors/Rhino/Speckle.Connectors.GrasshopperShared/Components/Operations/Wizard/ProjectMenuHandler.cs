@@ -21,7 +21,7 @@ public class ProjectMenuHandler
 
   public event EventHandler<ProjectSelectedEventArgs>? ProjectSelected;
 
-  public GhContextMenuButton ProjectContextMenuButton { get; set; }
+  public GhContextMenuButton ProjectContextMenuButton { get; }
 
   public ProjectMenuHandler(Func<string, Task<ResourceCollection<Project>>> fetchProjects)
   {

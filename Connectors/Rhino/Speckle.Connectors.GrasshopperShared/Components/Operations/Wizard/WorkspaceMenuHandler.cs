@@ -18,7 +18,7 @@ public class WorkspaceMenuHandler
 
   public event EventHandler<WorkspaceSelectedEventArgs>? WorkspaceSelected;
 
-  public GhContextMenuButton WorkspaceContextMenuButton { get; set; }
+  public GhContextMenuButton WorkspaceContextMenuButton { get; }
 
   public WorkspaceMenuHandler(Func<string, Task<ResourceCollection<Workspace>>> fetchWorkspaces)
   {
