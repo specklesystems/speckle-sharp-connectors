@@ -40,7 +40,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       "sP",
       "Publish a collection to Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OPERATIONS
+      ComponentCategories.DEVELOPER
     ) { }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
@@ -133,7 +133,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       return new(null);
     }
 
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 

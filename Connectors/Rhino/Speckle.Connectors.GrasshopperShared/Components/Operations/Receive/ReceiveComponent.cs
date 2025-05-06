@@ -40,7 +40,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       "sL",
       "Load a model from Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OPERATIONS
+      ComponentCategories.DEVELOPER
     ) { }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
@@ -103,7 +103,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     }
 
     // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 

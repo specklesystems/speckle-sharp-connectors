@@ -141,7 +141,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    var accountManager = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -225,7 +225,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(IGH_DataAccess da, IAccountService accountManager, IClientFactory clientFactory)
+  private void ParseInput(IGH_DataAccess da, AccountService accountManager, IClientFactory clientFactory)
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);

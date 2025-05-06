@@ -8,10 +8,14 @@ using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
+/// <summary>
+/// Wizard to handle cascading selections in an order Workspace, Project, Model and Version for operations.
+/// Wraps the UI components with it and exposes the state of the selection to consumer.
+/// </summary>
 public class SpeckleOperationWizard
 {
-  internal Account? SelectedAccount;
-  internal readonly IClientFactory ClientFactory;
+  private Account? _selectedAccount;
+  private readonly IClientFactory _clientFactory;
 
   public Workspace? SelectedWorkspace { get; private set; }
   public Project? SelectedProject { get; private set; }
@@ -23,18 +27,21 @@ public class SpeckleOperationWizard
   public ModelMenuHandler ModelMenuHandler { get; }
   public VersionMenuHandler? VersionMenuHandler { get; }
 
-  internal readonly Func<Task> RefreshComponent;
+  private readonly Func<Task> _refreshComponent;
 
   public ResourceCollection<Workspace>? LastFetchedWorkspaces { get; set; }
   public ResourceCollection<Project>? LastFetchedProjects { get; set; }
   public ResourceCollection<Model>? LastFetchedModels { get; set; }
   public ResourceCollection<Version>? LastFetchedVersions { get; set; }
 
+  /// <param name="account"> Account to get relevant menus for selection.</param>
+  /// <param name="refreshComponent"> Callback function to trigger when component need to refresh itself.</param>
+  /// <param name="isSender"> Whether it will be used in sender or receiver. Accordingly, the wizard will manage versions or not.</param>
   public SpeckleOperationWizard(Account account, Func<Task> refreshComponent, bool isSender)
   {
-    RefreshComponent = refreshComponent;
-    SelectedAccount = account;
-    ClientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
+    _refreshComponent = refreshComponent;
+    _selectedAccount = account;
+    _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
 
     WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces);
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
@@ -52,7 +59,7 @@ public class SpeckleOperationWizard
 
   public void SetAccount(Account account)
   {
-    SelectedAccount = account;
+    _selectedAccount = account;
     SelectedWorkspace = null;
     SelectedProject = null;
     SelectedModel = null;
@@ -84,12 +91,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Workspace>> FetchWorkspaces(string searchText)
   {
-    if (SelectedAccount == null)
+    if (_selectedAccount == null)
     {
       return new ResourceCollection<Workspace>();
     }
 
-    IClient client = ClientFactory.Create(SelectedAccount);
+    IClient client = _clientFactory.Create(_selectedAccount);
     var workspaces = await client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText));
     LastFetchedWorkspaces = workspaces;
     return workspaces;
@@ -100,12 +107,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Project>> FetchProjects(string searchText)
   {
-    if (SelectedAccount == null)
+    if (_selectedAccount == null)
     {
       return new ResourceCollection<Project>();
     }
 
-    IClient client = ClientFactory.Create(SelectedAccount);
+    IClient client = _clientFactory.Create(_selectedAccount);
     var projects = await client.ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText));
     LastFetchedProjects = projects;
     return projects;
@@ -116,12 +123,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Model>> FetchModels(string searchText)
   {
-    if (SelectedAccount == null || SelectedProject == null)
+    if (_selectedAccount == null || SelectedProject == null)
     {
       return new ResourceCollection<Model>();
     }
 
-    IClient client = ClientFactory.Create(SelectedAccount);
+    IClient client = _clientFactory.Create(_selectedAccount);
     var projectWithModels = await client
       .Project.GetWithModels(SelectedProject.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
       .ConfigureAwait(true);
@@ -143,12 +150,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Version>> FetchMoreVersions(int versionCount)
   {
-    if (SelectedAccount == null || SelectedProject == null || SelectedModel == null)
+    if (_selectedAccount == null || SelectedProject == null || SelectedModel == null)
     {
       return new ResourceCollection<Version>();
     }
 
-    IClient client = ClientFactory.Create(SelectedAccount);
+    IClient client = _clientFactory.Create(_selectedAccount);
     var newVersionsResult = await client
       .Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount)
       .ConfigureAwait(true);
@@ -166,7 +173,7 @@ public class SpeckleOperationWizard
     ProjectMenuHandler.Reset();
     ModelMenuHandler.Reset();
     VersionMenuHandler?.Reset();
-    RefreshComponent.Invoke();
+    _refreshComponent.Invoke();
   }
 
   private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
@@ -177,7 +184,7 @@ public class SpeckleOperationWizard
     ModelMenuHandler.Reset();
     VersionMenuHandler?.Reset();
 
-    RefreshComponent.Invoke();
+    _refreshComponent.Invoke();
   }
 
   private void OnModelSelected(object sender, ModelSelectedEventArgs e)
@@ -186,13 +193,13 @@ public class SpeckleOperationWizard
 
     VersionMenuHandler?.Reset();
 
-    RefreshComponent.Invoke();
+    _refreshComponent.Invoke();
   }
 
   private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
   {
     SelectedVersion = e.SelectedVersion;
 
-    RefreshComponent.Invoke();
+    _refreshComponent.Invoke();
   }
 }
