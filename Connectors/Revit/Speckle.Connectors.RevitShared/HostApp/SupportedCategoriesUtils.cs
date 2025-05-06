@@ -41,7 +41,8 @@ public static class SupportedCategoriesUtils
       case CategoryType.Annotation:
         return
 #if REVIT2023_OR_GREATER
-          category.BuiltInCategory == BuiltInCategory.OST_Grids;
+          category.BuiltInCategory == BuiltInCategory.OST_Grids
+          || category.BuiltInCategory == BuiltInCategory.OST_TextNotes;
 #else
           category.Name == "OST_Grids";
 #endif

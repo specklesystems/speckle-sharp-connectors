@@ -21,6 +21,7 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
   private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<DB.TextNote, SA.Text> _textnoteConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -33,6 +34,7 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.Curve, ICurve> curveConverter,
     ITypedConverter<DB.PolyLine, SOG.Polyline> polylineConverter,
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
+    ITypedConverter<DB.TextNote, SA.Text> textnoteConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
@@ -42,6 +44,7 @@ public sealed class DisplayValueExtractor
     _curveConverter = curveConverter;
     _polylineConverter = polylineConverter;
     _pointConverter = pointConverter;
+    _textnoteConverter = textnoteConverter;
     _pointcloudConverter = pointcloudConverter;
     _logger = logger;
     _converterSettings = converterSettings;
@@ -58,6 +61,8 @@ public sealed class DisplayValueExtractor
         return new() { GetCurveDisplayValue(modelCurve.GeometryCurve) };
       case DB.Grid grid:
         return new() { GetCurveDisplayValue(grid.Curve) };
+      case DB.TextNote textnote:
+        return new() { GetTextnoteDisplayValue(textnote) };
       case DB.Area area:
         List<Base> areaDisplay = new();
         using (var options = new DB.SpatialElementBoundaryOptions())
@@ -97,6 +102,8 @@ public sealed class DisplayValueExtractor
   }
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
+
+  private Base GetTextnoteDisplayValue(DB.TextNote textnote) => _textnoteConverter.Convert(textnote);
 
   private List<Base> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
