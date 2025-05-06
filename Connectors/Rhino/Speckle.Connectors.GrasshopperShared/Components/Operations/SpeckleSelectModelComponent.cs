@@ -2,15 +2,14 @@ using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
@@ -32,15 +31,11 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public override Guid ComponentGuid => new("9638B3B5-C469-4570-B69F-686D8DA5C48D");
 
-  private ResourceCollection<Project>? LastFetchedProjects { get; set; }
-  private ResourceCollection<Model>? LastFetchedModels { get; set; }
-  private ResourceCollection<Version>? LastFetchedVersions { get; set; }
+  public GhContextMenuButton ProjectContextMenuButton { get; }
+  public GhContextMenuButton ModelContextMenuButton { get; }
+  public GhContextMenuButton VersionContextMenuButton { get; }
 
-  public GhContextMenuButton ProjectContextMenuButton { get; set; }
-  public GhContextMenuButton ModelContextMenuButton { get; set; }
-  public GhContextMenuButton VersionContextMenuButton { get; set; }
-
-  public ReceiveWizard ReceiveWizard { get; }
+  private SpeckleOperationWizard SpeckleOperationWizard { get; }
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
 
@@ -61,11 +56,11 @@ public class SpeckleSelectModelComponent : GH_Component
     // TODO: fix this default behavior, use `userSelectedAccountId`
     var account = _accountManager.GetDefaultAccount();
     OnAccountSelected(account);
-    ReceiveWizard = new ReceiveWizard(account!, RefreshComponent); // TODO: Nullability of account need to be handled before
+    SpeckleOperationWizard = new SpeckleOperationWizard(account!, RefreshComponent, false); // TODO: Nullability of account need to be handled before
 
-    ProjectContextMenuButton = ReceiveWizard.ProjectContextMenuButton;
-    ModelContextMenuButton = ReceiveWizard.ModelContextMenuButton;
-    VersionContextMenuButton = ReceiveWizard.VersionContextMenuButton;
+    ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
+    ModelContextMenuButton = SpeckleOperationWizard.ModelMenuHandler.ModelContextMenuButton;
+    VersionContextMenuButton = SpeckleOperationWizard!.VersionMenuHandler!.VersionContextMenuButton; // TODO: fix this shit later when we split
   }
 
   private Task RefreshComponent()
@@ -78,7 +73,7 @@ public class SpeckleSelectModelComponent : GH_Component
   {
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
-    LastFetchedProjects = null;
+    SpeckleOperationWizard?.SetProjects(null);
     ExpireSolution(true);
   }
 
@@ -158,8 +153,8 @@ public class SpeckleSelectModelComponent : GH_Component
     }
 
     IClient client = _clientFactory.Create(_account);
-    LastFetchedProjects = client.ActiveUser.GetProjects(10, null, null).Result;
-    ReceiveWizard.LastFetchedProjects = LastFetchedProjects;
+    var projects = client.ActiveUser.GetProjects(10, null, null).Result;
+    SpeckleOperationWizard?.SetProjects(projects);
 
     ProjectContextMenuButton.Enabled = true;
 
@@ -167,53 +162,55 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       var project = client.Project.Get(_storedProjectId!).Result;
       // TODO: need to set
-      ReceiveWizard.ProjectMenuHandler.RedrawMenuButton(project);
+      SpeckleOperationWizard?.ProjectMenuHandler.RedrawMenuButton(project);
     }
 
-    if (ReceiveWizard.SelectedProject == null)
+    if (SpeckleOperationWizard?.SelectedProject == null)
     {
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    LastFetchedModels = client.Project.GetWithModels(ReceiveWizard.SelectedProject.id, 10).Result.models;
+    var models = client.Project.GetWithModels(SpeckleOperationWizard.SelectedProject.id, 10).Result.models;
+    SpeckleOperationWizard.SetModels(models);
     ModelContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedModelId))
     {
-      var model = client.Model.Get(_storedModelId!, ReceiveWizard.SelectedProject.id).Result;
+      var model = client.Model.Get(_storedModelId!, SpeckleOperationWizard.SelectedProject.id).Result;
       // TODO: need to set
-      ReceiveWizard.ModelMenuHandler.RedrawMenuButton(model);
+      SpeckleOperationWizard.ModelMenuHandler.RedrawMenuButton(model);
     }
 
-    if (ReceiveWizard.SelectedModel == null)
+    if (SpeckleOperationWizard.SelectedModel == null)
     {
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    LastFetchedVersions = client
-      .Model.GetWithVersions(ReceiveWizard.SelectedModel.id, ReceiveWizard.SelectedProject.id, 10)
+    var versions = client
+      .Model.GetWithVersions(SpeckleOperationWizard.SelectedModel.id, SpeckleOperationWizard.SelectedProject.id, 10)
       .Result.versions;
+    SpeckleOperationWizard.SetVersions(versions);
     VersionContextMenuButton.Enabled = true;
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedVersionId))
     {
-      var version = client.Version.Get(_storedVersionId!, ReceiveWizard.SelectedProject.id).Result;
+      var version = client.Version.Get(_storedVersionId!, SpeckleOperationWizard.SelectedProject.id).Result;
       // TODO: need to set
-      ReceiveWizard.VersionMenuHandler.RedrawMenuButton(version);
+      SpeckleOperationWizard?.VersionMenuHandler?.RedrawMenuButton(version);
     }
 
-    if (ReceiveWizard.SelectedVersion == null)
+    if (SpeckleOperationWizard!.SelectedVersion == null)
     {
       // If no version selected, output `latest` resource
       da.SetData(
         0,
         new SpeckleUrlLatestModelVersionResource(
           _account.serverInfo.url,
-          ReceiveWizard.SelectedProject.id,
-          ReceiveWizard.SelectedModel.id
+          SpeckleOperationWizard.SelectedProject.id,
+          SpeckleOperationWizard.SelectedModel.id
         )
       );
       return;
@@ -224,9 +221,9 @@ public class SpeckleSelectModelComponent : GH_Component
       0,
       new SpeckleUrlModelVersionResource(
         _account.serverInfo.url,
-        ReceiveWizard.SelectedProject.id,
-        ReceiveWizard.SelectedModel.id,
-        ReceiveWizard.SelectedVersion.id
+        SpeckleOperationWizard.SelectedProject.id,
+        SpeckleOperationWizard.SelectedModel.id,
+        SpeckleOperationWizard.SelectedVersion.id
       )
     );
   }
@@ -281,13 +278,15 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       case SpeckleUrlLatestModelVersionResource latestVersionResource:
         var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
-        ReceiveWizard.ModelMenuHandler.RedrawMenuButton(model);
+        SpeckleOperationWizard?.ModelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource versionResource:
         var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
-        ReceiveWizard.ModelMenuHandler.RedrawMenuButton(m);
+        SpeckleOperationWizard?.ModelMenuHandler.RedrawMenuButton(m);
+
+        // TODO: this wont be the case when we have separation between send and receive components
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        ReceiveWizard.VersionMenuHandler.RedrawMenuButton(v);
+        SpeckleOperationWizard?.VersionMenuHandler?.RedrawMenuButton(v);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");
@@ -321,9 +320,9 @@ public class SpeckleSelectModelComponent : GH_Component
     var baseRes = base.Write(writer);
     writer.SetString("Server", _account?.serverInfo.url);
     writer.SetString("User", _account?.id);
-    writer.SetString("Project", ReceiveWizard.SelectedProject?.id);
-    writer.SetString("Model", ReceiveWizard.SelectedModel?.id);
-    writer.SetString("Version", ReceiveWizard.SelectedVersion?.id);
+    writer.SetString("Project", SpeckleOperationWizard?.SelectedProject?.id);
+    writer.SetString("Model", SpeckleOperationWizard?.SelectedModel?.id);
+    writer.SetString("Version", SpeckleOperationWizard?.SelectedVersion?.id);
 
     return baseRes;
   }

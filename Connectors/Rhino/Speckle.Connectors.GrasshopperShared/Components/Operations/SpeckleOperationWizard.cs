@@ -4,45 +4,46 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
-public class SendWizard
+public class SpeckleOperationWizard
 {
   internal Account? SelectedAccount;
   internal readonly IClientFactory ClientFactory;
 
-  public Workspace? SelectedWorkspace { get; internal set; }
-  public Project? SelectedProject { get; internal set; }
-  public Model? SelectedModel { get; internal set; }
+  public Workspace? SelectedWorkspace { get; private set; }
+  public Project? SelectedProject { get; private set; }
+  public Model? SelectedModel { get; private set; }
+  public Version? SelectedVersion { get; private set; }
 
   public WorkspaceMenuHandler WorkspaceMenuHandler { get; }
   public ProjectMenuHandler ProjectMenuHandler { get; }
   public ModelMenuHandler ModelMenuHandler { get; }
-  private readonly Func<Task> _refreshComponent;
+  public VersionMenuHandler? VersionMenuHandler { get; }
 
-  public GhContextMenuButton WorkspaceContextMenuButton { get; }
-  public GhContextMenuButton ProjectContextMenuButton { get; }
-  public GhContextMenuButton ModelContextMenuButton { get; }
+  internal readonly Func<Task> RefreshComponent;
 
   public ResourceCollection<Workspace>? LastFetchedWorkspaces { get; set; }
   public ResourceCollection<Project>? LastFetchedProjects { get; set; }
   public ResourceCollection<Model>? LastFetchedModels { get; set; }
+  public ResourceCollection<Version>? LastFetchedVersions { get; set; }
 
-  public SendWizard(Account account, Func<Task> refreshComponent)
+  public SpeckleOperationWizard(Account account, Func<Task> refreshComponent, bool isSender)
   {
-    _refreshComponent = refreshComponent;
+    RefreshComponent = refreshComponent;
     SelectedAccount = account;
     ClientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
 
     WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces);
-    WorkspaceContextMenuButton = WorkspaceMenuHandler.WorkspaceContextMenuButton;
-
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
-    ProjectContextMenuButton = ProjectMenuHandler.ProjectContextMenuButton;
-
     ModelMenuHandler = new ModelMenuHandler(FetchModels);
-    ModelContextMenuButton = ModelMenuHandler.ModelContextMenuButton;
+    if (!isSender)
+    {
+      VersionMenuHandler = new VersionMenuHandler(FetchMoreVersions);
+      VersionMenuHandler.VersionSelected += OnVersionSelected;
+    }
 
     WorkspaceMenuHandler.WorkspaceSelected += OnWorkspaceSelected;
     ProjectMenuHandler.ProjectSelected += OnProjectSelected;
@@ -58,6 +59,24 @@ public class SendWizard
     LastFetchedWorkspaces = null;
     LastFetchedProjects = null;
     LastFetchedModels = null;
+  }
+
+  public void SetWorkspaces(ResourceCollection<Workspace> workspaces)
+  {
+    LastFetchedWorkspaces = workspaces;
+    WorkspaceMenuHandler.Workspaces = workspaces;
+  }
+
+  public void SetProjects(ResourceCollection<Project>? projects)
+  {
+    LastFetchedProjects = projects;
+    ProjectMenuHandler.Projects = projects;
+  }
+
+  public void SetModels(ResourceCollection<Model> models)
+  {
+    LastFetchedModels = models;
+    ModelMenuHandler.Models = models;
   }
 
   /// <summary>
@@ -110,24 +129,70 @@ public class SendWizard
     return projectWithModels.models;
   }
 
+  public void SetVersions(ResourceCollection<Version> versions)
+  {
+    if (VersionMenuHandler != null)
+    {
+      LastFetchedVersions = versions;
+      VersionMenuHandler.Versions = versions;
+    }
+  }
+
+  /// <summary>
+  /// Callback function to retrieve amount of versions
+  /// </summary>
+  private async Task<ResourceCollection<Version>> FetchMoreVersions(int versionCount)
+  {
+    if (SelectedAccount == null || SelectedProject == null || SelectedModel == null)
+    {
+      return new ResourceCollection<Version>();
+    }
+
+    IClient client = ClientFactory.Create(SelectedAccount);
+    var newVersionsResult = await client
+      .Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount)
+      .ConfigureAwait(true);
+    LastFetchedVersions = newVersionsResult.versions;
+    return newVersionsResult.versions;
+  }
+
   private void OnWorkspaceSelected(object sender, WorkspaceSelectedEventArgs e)
   {
     SelectedWorkspace = e.SelectedWorkspace;
+
     SelectedProject = null;
     SelectedModel = null;
-    _refreshComponent.Invoke();
+
+    ProjectMenuHandler.Reset();
+    ModelMenuHandler.Reset();
+    VersionMenuHandler?.Reset();
+    RefreshComponent.Invoke();
   }
 
   private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
   {
     SelectedProject = e.SelectedProject;
+
     SelectedModel = null;
-    _refreshComponent.Invoke();
+    ModelMenuHandler.Reset();
+    VersionMenuHandler?.Reset();
+
+    RefreshComponent.Invoke();
   }
 
   private void OnModelSelected(object sender, ModelSelectedEventArgs e)
   {
     SelectedModel = e.SelectedModel;
-    _refreshComponent.Invoke();
+
+    VersionMenuHandler?.Reset();
+
+    RefreshComponent.Invoke();
+  }
+
+  private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
+  {
+    SelectedVersion = e.SelectedVersion;
+
+    RefreshComponent.Invoke();
   }
 }

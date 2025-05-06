@@ -34,6 +34,8 @@ public class ProjectMenuHandler
     );
   }
 
+  public void Reset() => RedrawMenuButton(null);
+
   public void RedrawMenuButton(Project? project)
   {
     var suffix = ProjectContextMenuButton.Enabled

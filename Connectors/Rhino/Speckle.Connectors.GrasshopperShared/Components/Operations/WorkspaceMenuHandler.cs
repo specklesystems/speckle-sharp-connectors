@@ -31,6 +31,8 @@ public class WorkspaceMenuHandler
     );
   }
 
+  public void Reset() => RedrawMenuButton(null);
+
   private async Task Refetch(string searchText)
   {
     Workspaces = await _fetchWorkspaces.Invoke(searchText);

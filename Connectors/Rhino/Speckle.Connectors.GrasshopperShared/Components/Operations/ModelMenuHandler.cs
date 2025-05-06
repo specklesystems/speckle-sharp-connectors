@@ -34,10 +34,7 @@ public class ModelMenuHandler
     );
   }
 
-  public void Reset()
-  {
-    RedrawMenuButton(null);
-  }
+  public void Reset() => RedrawMenuButton(null);
 
   private async Task Refetch(string searchText)
   {
