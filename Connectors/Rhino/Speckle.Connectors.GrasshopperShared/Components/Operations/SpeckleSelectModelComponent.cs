@@ -71,13 +71,13 @@ public class SpeckleSelectModelComponent : GH_Component
     var account = _accountManager.GetDefaultAccount();
     OnAccountSelected(account);
 
-    _projectMenuHandler = new ProjectMenuHandler(account!, FetchProjects); // TODO: Nullability of account need to be handled before
+    _projectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
     ProjectContextMenuButton = _projectMenuHandler.ProjectContextMenuButton;
 
-    _modelMenuHandler = new ModelMenuHandler(account!, FetchModels);
+    _modelMenuHandler = new ModelMenuHandler(FetchModels);
     ModelContextMenuButton = _modelMenuHandler.ModelContextMenuButton;
 
-    _versionMenuHandler = new VersionMenuHandler(account!, FetchMoreVersions);
+    _versionMenuHandler = new VersionMenuHandler(FetchMoreVersions);
     VersionContextMenuButton = _versionMenuHandler.VersionContextMenuButton;
 
     _projectMenuHandler.ProjectSelected += OnProjectSelected;

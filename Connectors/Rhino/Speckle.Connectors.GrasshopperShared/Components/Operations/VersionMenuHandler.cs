@@ -12,7 +12,6 @@ public class VersionSelectedEventArgs(Version? version) : EventArgs
 public class VersionMenuHandler
 {
   private int FetchedVersionCount { get; set; } = 10;
-  private readonly Account _account;
   private readonly Func<int, Task<ResourceCollection<Version>>> _fetchVersions;
   private ToolStripDropDown? _menu;
   private Version? SelectedVersion { get; set; }
@@ -23,9 +22,8 @@ public class VersionMenuHandler
 
   public GhContextMenuButton VersionContextMenuButton { get; set; }
 
-  public VersionMenuHandler(Account account, Func<int, Task<ResourceCollection<Version>>> fetchVersions)
+  public VersionMenuHandler(Func<int, Task<ResourceCollection<Version>>> fetchVersions)
   {
-    _account = account;
     _fetchVersions = fetchVersions;
     VersionContextMenuButton = new GhContextMenuButton(
       "Select Version",

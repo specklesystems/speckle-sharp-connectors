@@ -13,7 +13,6 @@ public class ProjectSelectedEventArgs(Project? project) : EventArgs
 /// </summary>
 public class ProjectMenuHandler
 {
-  private readonly Account _account;
   private readonly Func<string, Task<ResourceCollection<Project>>> _fetchProjects;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
@@ -25,9 +24,8 @@ public class ProjectMenuHandler
 
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
 
-  public ProjectMenuHandler(Account account, Func<string, Task<ResourceCollection<Project>>> fetchProjects)
+  public ProjectMenuHandler(Func<string, Task<ResourceCollection<Project>>> fetchProjects)
   {
-    _account = account;
     _fetchProjects = fetchProjects;
     ProjectContextMenuButton = new GhContextMenuButton(
       "Select Project",

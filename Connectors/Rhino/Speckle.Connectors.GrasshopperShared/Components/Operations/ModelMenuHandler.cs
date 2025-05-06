@@ -13,7 +13,6 @@ public class ModelSelectedEventArgs(Model? model) : EventArgs
 /// </summary>
 public class ModelMenuHandler
 {
-  private readonly Account _account;
   private readonly Func<string, Task<ResourceCollection<Model>>> _fetchModels;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
@@ -25,9 +24,8 @@ public class ModelMenuHandler
 
   public GhContextMenuButton ModelContextMenuButton { get; set; }
 
-  public ModelMenuHandler(Account account, Func<string, Task<ResourceCollection<Model>>> fetchModels)
+  public ModelMenuHandler(Func<string, Task<ResourceCollection<Model>>> fetchModels)
   {
-    _account = account;
     _fetchModels = fetchModels;
     ModelContextMenuButton = new GhContextMenuButton(
       "Select Model",
