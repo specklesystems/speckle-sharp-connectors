@@ -80,7 +80,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
         //ProcessObjectWrapper(so, ref collObjectIds);
         DataObject dataObject = ConvertWrappersToDataObject(
           new List<SpeckleObjectWrapper>() { so },
-          so.ApplicationId ?? Guid.NewGuid().ToString()
+          Guid.NewGuid().ToString() // note: we are always generating a new id here, do *not* use the Base appid as this will cause conflicts in viewer for color and material proxy application
         );
         currentColl.elements.Add(dataObject);
 
