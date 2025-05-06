@@ -2,7 +2,7 @@ using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
+using Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;

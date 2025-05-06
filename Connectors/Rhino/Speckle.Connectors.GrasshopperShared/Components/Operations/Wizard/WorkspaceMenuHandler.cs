@@ -1,6 +1,6 @@
 ﻿using Speckle.Sdk.Api.GraphQL.Models;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 public class WorkspaceSelectedEventArgs(Workspace? model) : EventArgs
 {

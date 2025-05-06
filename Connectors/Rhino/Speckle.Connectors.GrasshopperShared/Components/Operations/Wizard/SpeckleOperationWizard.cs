@@ -6,7 +6,7 @@ using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 /// <summary>
 /// Wizard to handle cascading selections in an order Workspace, Project, Model and Version for operations.

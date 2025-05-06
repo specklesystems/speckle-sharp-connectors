@@ -1,7 +1,7 @@
 ﻿using Speckle.Sdk.Api.GraphQL.Models;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 public class VersionSelectedEventArgs(Version? version) : EventArgs
 {

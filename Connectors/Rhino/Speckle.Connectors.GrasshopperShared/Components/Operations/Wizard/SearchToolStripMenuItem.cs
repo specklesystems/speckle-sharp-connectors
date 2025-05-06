@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 public class SearchToolStripMenuItem
 {
