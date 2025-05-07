@@ -39,7 +39,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
 
     // add proxies
     root[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
-    root[ProxyKeys.MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
+    root[ProxyKeys.RENDER_MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
 
     // TODO: Not getting any conversion results yet
     var result = new RootObjectBuilderResult(root, []);
