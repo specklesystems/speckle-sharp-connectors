@@ -136,14 +136,11 @@
   <data name="speckle_inputs_property" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_inputs_property.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="speckle_objects_create" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\speckle_objects_create.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="speckle_objects_expand" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\speckle_objects_expand.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="speckle_objects_filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_objects_filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="speckle_objects_object" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\speckle_objects_object.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="speckle_objects_query" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_objects_query.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -165,9 +162,6 @@
   </data>
   <data name="speckle_param_material" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_param_material.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="speckle_param_model" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\speckle_param_model.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="speckle_param_object" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_param_object.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
