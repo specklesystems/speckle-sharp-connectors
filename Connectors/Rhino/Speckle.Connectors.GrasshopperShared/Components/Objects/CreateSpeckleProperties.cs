@@ -12,8 +12,8 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 {
   public CreateSpeckleProperties()
     : base(
-      "Create Speckle Properties",
-      "CSP",
+      "Create Properties",
+      "CP",
       "Creates a set of properties for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
