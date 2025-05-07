@@ -17,7 +17,7 @@ public class FilterSpeckleObjects : GH_Component
 
   public FilterSpeckleObjects()
     : base(
-      "FilterSpeckleObjects",
+      "Filter Objects",
       "fO",
       "Filters a list of Speckle Objects according to inputs. Filter methods: Equals (default), StartsWith(<), EndsWith(>) , Contains(?), Regex(;)",
       ComponentCategories.PRIMARY_RIBBON,

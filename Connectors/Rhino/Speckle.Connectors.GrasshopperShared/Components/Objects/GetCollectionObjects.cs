@@ -5,7 +5,7 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
+namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 /// <summary>
 /// Given a collection, this component will output the objects in the subcollection corresponding to the input path
@@ -18,11 +18,11 @@ public class GetCollectionObjects : GH_Component
 
   public GetCollectionObjects()
     : base(
-      "GetCollectionObjects",
-      "gcO",
+      "Query Objects",
+      "qO",
       "Retrieves the objects inside a Speckle collection at the specified path",
       ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.COLLECTIONS
+      ComponentCategories.OBJECTS
     ) { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -36,7 +36,7 @@ public class GetCollectionObjects : GH_Component
     );
 
     pManager.AddTextParameter(
-      "Collection Path",
+      "Path",
       "C",
       "Get the Speckle objects in the subcollection indicated by this path",
       GH_ParamAccess.item

@@ -20,9 +20,9 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   public CreateCollection()
     : base(
-      "Create collection",
+      "Create Collection",
       "cC",
-      "Creates a new collection",
+      "Creates a new Collection",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }

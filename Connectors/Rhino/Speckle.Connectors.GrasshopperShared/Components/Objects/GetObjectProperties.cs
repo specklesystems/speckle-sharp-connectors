@@ -15,8 +15,8 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 
   public GetObjectProperties()
     : base(
-      "GetObjectPropertyValues",
-      "goP",
+      "Query Properties",
+      "qP",
       "Retrieves the values of the properties inside Speckle Objects at the specified keys",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
