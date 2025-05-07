@@ -49,9 +49,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\PointToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\ArcToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\HatchToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\MTextToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\RegionToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SurfaceToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\Solid3dToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\DBTextToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BrepToSpeckleRawConverter.cs" />
@@ -75,8 +77,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SubDMeshToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BoxToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CircularArc3dToSpeckleRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBTextToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\IntervalToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LineSegment3dToSpeckleRawConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MTextToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PlaneToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBSplineToSpeckleRawConverter.cs" />
