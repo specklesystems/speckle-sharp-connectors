@@ -64,7 +64,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       if (!success || value == null || actualValue == null)
       {
         AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
+          GH_RuntimeMessageLevel.Warning,
           $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
         );
 
