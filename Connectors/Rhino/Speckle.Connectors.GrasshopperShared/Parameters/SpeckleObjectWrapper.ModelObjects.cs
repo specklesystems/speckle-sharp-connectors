@@ -4,7 +4,6 @@ using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
 using Grasshopper.Rhinoceros.Model;
-using Grasshopper.Rhinoceros.Display;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 using Rhino.DocObjects;
@@ -140,7 +139,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
 
         // get the object color and material
-        ObjectDisplayColor.Value? color = modelObject.Display.Color;
+        Color? color = GetColorFromModelObject(modelObject);
         SpeckleMaterialWrapperGoo? materialWrapper = new();
         if (GetMaterialFromModelObject(modelObject) is Rhino.Render.RenderMaterial renderMat)
         {
@@ -154,7 +153,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             Base = modelConverted,
             Parent = collWrapper,
             Name = modelObject.Name.ToString(),
-            Color = color is null ? null : Color.FromArgb(color.Value.Color.ToArgb()),
+            Color = color,
             Material = materialWrapper.Value,
             Properties = propertyGroup,
             WrapperGuid = null // keep this null, processed on send
@@ -177,7 +176,46 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
     RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 
-  private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.RenderMaterials.Find(modelObject.Render.Material?.Material?.Id ?? Guid.Empty);
+  private Color? GetColorFromModelObject(ModelObject modelObject)
+  {
+    // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
+    int? argb = null;
+    switch (modelObject.Display.Color?.Source)
+    {
+      case ObjectColorSource.ColorFromLayer:
+        argb = modelObject.Layer.DisplayColor?.ToArgb();
+        break;
+      case ObjectColorSource.ColorFromObject:
+        argb = modelObject.Display.Color?.Color.ToArgb();
+        break;
+      case ObjectColorSource.ColorFromMaterial:
+        Rhino.Render.RenderMaterial? mat = GetMaterialFromModelObject(modelObject);
+        argb = mat?.ToMaterial(Rhino.Render.RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();
+        break;
+      default:
+        break;
+    }
+    return argb is int validArgb ? Color.FromArgb(validArgb) : null;
+  }
+
+  private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject)
+  {
+    // we need to retrieve the actual material by the material source (otherwise will return default material for anything other than by object)
+    Guid? matId = null;
+    switch (modelObject.Render.Material?.Source)
+    {
+      case ObjectMaterialSource.MaterialFromLayer:
+        matId = modelObject.Layer.Material.Id;
+        break;
+      case ObjectMaterialSource.MaterialFromObject:
+        matId = modelObject.Render.Material?.Material?.Id;
+        break;
+      case ObjectMaterialSource.MaterialFromParent: // POC: too complicated for now
+      default:
+        break;
+    }
+
+    return matId is Guid validId ? RhinoDoc.ActiveDoc.RenderMaterials.Find(validId) : null;
+  }
 }
 #endif
