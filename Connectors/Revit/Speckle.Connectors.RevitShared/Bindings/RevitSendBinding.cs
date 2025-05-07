@@ -109,7 +109,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new DetailLevelSetting(DetailLevelType.Medium),
       new ReferencePointSetting(ReferencePointType.InternalOrigin),
       new SendParameterNullOrEmptyStringsSetting(false),
-      new LinkedModelsSetting(true)
+      new LinkedModelsSetting(true),
+      new SendRebarsAsSolidSetting(false)
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
