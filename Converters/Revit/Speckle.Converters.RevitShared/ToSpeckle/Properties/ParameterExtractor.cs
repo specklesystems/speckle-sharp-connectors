@@ -219,9 +219,9 @@ public class ParameterExtractor
           return null;
         }
 
-        // NOTE: first check if this is a "Type ID" parameter, if so return the actual ID
-        // explicit (aka hacky) check here related to [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name)
-        if (parameter.Definition.Name.Equals("Type ID", StringComparison.OrdinalIgnoreCase))
+        // "SYMBOL_ID_PARAM" is internal name for "Type ID". localization impacts definition names
+        var (internalDefinitionName, _, _, _) = _parameterDefinitionHandler.HandleDefinition(parameter);
+        if (internalDefinitionName == "SYMBOL_ID_PARAM")
         {
           return elId.ToString();
         }
