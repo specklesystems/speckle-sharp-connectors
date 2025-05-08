@@ -58,7 +58,8 @@ public class SpeckleSelectModelComponent : GH_Component
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
 
     SpeckleOperationWizard = new SpeckleOperationWizard(RefreshComponent, false);
-    OnAccountSelected(SpeckleOperationWizard.SelectedAccount);
+    _account = SpeckleOperationWizard.SelectedAccount;
+    UpdateMessageWithAccount(_account);
 
     WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
     ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
@@ -80,6 +81,7 @@ public class SpeckleSelectModelComponent : GH_Component
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     SpeckleOperationWizard.SetAccount(_account);
+    ExpireSolution(true);
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -135,7 +137,9 @@ public class SpeckleSelectModelComponent : GH_Component
       try
       {
         var account = _accountManager.GetAccount(_storedUserId);
-        OnAccountSelected(account);
+        _account = account;
+        SpeckleOperationWizard.SetAccount(account);
+        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
       }
       catch (SpeckleAccountManagerException e)
       {
@@ -146,7 +150,9 @@ public class SpeckleSelectModelComponent : GH_Component
       if (_storedServer != null && _account == null)
       {
         var account = _accountService.GetAccountWithServerUrlFallback(_storedUserId ?? "", new Uri(_storedServer));
-        OnAccountSelected(account);
+        _account = account;
+        SpeckleOperationWizard.SetAccount(account);
+        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
       }
     }
 
