@@ -29,11 +29,6 @@ public class SpeckleOperationWizard
 
   private readonly Func<Task> _refreshComponent;
 
-  public ResourceCollection<Workspace>? LastFetchedWorkspaces { get; set; }
-  public ResourceCollection<Project>? LastFetchedProjects { get; set; }
-  public ResourceCollection<Model>? LastFetchedModels { get; set; }
-  public ResourceCollection<Version>? LastFetchedVersions { get; set; }
-
   /// <param name="account"> Account to get relevant menus for selection.</param>
   /// <param name="refreshComponent"> Callback function to trigger when component need to refresh itself.</param>
   /// <param name="isSender"> Whether it will be used in sender or receiver. Accordingly, the wizard will manage versions or not.</param>
@@ -61,12 +56,43 @@ public class SpeckleOperationWizard
   {
     _selectedAccount = account;
     ResetWorkspaces();
+    ResetProjects();
+    ResetModels();
+    ResetVersions();
+  }
+
+  public void SetDefaultWorkspace(Workspace workspace)
+  {
+    SelectedWorkspace = workspace;
+    WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
+  }
+
+  public void SetWorkspaces(ResourceCollection<Workspace> workspaces)
+  {
+    WorkspaceMenuHandler.Workspaces = workspaces;
+  }
+
+  public void SetProjects(ResourceCollection<Project>? projects)
+  {
+    ProjectMenuHandler.Projects = projects;
+  }
+
+  public void SetModels(ResourceCollection<Model> models)
+  {
+    ModelMenuHandler.Models = models;
+  }
+
+  public void SetVersions(ResourceCollection<Version> versions)
+  {
+    if (VersionMenuHandler != null)
+    {
+      VersionMenuHandler.Versions = versions;
+    }
   }
 
   private void ResetWorkspaces()
   {
     SelectedWorkspace = null;
-    LastFetchedWorkspaces = null;
     WorkspaceMenuHandler.Reset();
     ResetProjects();
   }
@@ -74,7 +100,6 @@ public class SpeckleOperationWizard
   private void ResetProjects()
   {
     SelectedProject = null;
-    LastFetchedProjects = null;
     ProjectMenuHandler.Reset();
     ResetModels();
   }
@@ -82,7 +107,6 @@ public class SpeckleOperationWizard
   private void ResetModels()
   {
     SelectedModel = null;
-    LastFetchedModels = null;
     ModelMenuHandler.Reset();
     ResetVersions();
   }
@@ -90,26 +114,7 @@ public class SpeckleOperationWizard
   private void ResetVersions()
   {
     SelectedVersion = null;
-    LastFetchedVersions = null;
     VersionMenuHandler?.Reset();
-  }
-
-  public void SetWorkspaces(ResourceCollection<Workspace> workspaces)
-  {
-    LastFetchedWorkspaces = workspaces;
-    WorkspaceMenuHandler.Workspaces = workspaces;
-  }
-
-  public void SetProjects(ResourceCollection<Project>? projects)
-  {
-    LastFetchedProjects = projects;
-    ProjectMenuHandler.Projects = projects;
-  }
-
-  public void SetModels(ResourceCollection<Model> models)
-  {
-    LastFetchedModels = models;
-    ModelMenuHandler.Models = models;
   }
 
   /// <summary>
@@ -124,7 +129,6 @@ public class SpeckleOperationWizard
 
     IClient client = _clientFactory.Create(_selectedAccount);
     var workspaces = await client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText));
-    LastFetchedWorkspaces = workspaces;
     return workspaces;
   }
 
@@ -144,7 +148,6 @@ public class SpeckleOperationWizard
       null,
       new UserProjectsFilter(searchText, workspaceId: SelectedWorkspace?.id ?? null, includeImplicitAccess: true)
     );
-    LastFetchedProjects = projects;
     return projects;
   }
 
@@ -162,17 +165,7 @@ public class SpeckleOperationWizard
     var projectWithModels = await client
       .Project.GetWithModels(SelectedProject.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
       .ConfigureAwait(true);
-    LastFetchedModels = projectWithModels.models;
     return projectWithModels.models;
-  }
-
-  public void SetVersions(ResourceCollection<Version> versions)
-  {
-    if (VersionMenuHandler != null)
-    {
-      LastFetchedVersions = versions;
-      VersionMenuHandler.Versions = versions;
-    }
   }
 
   /// <summary>
@@ -189,7 +182,6 @@ public class SpeckleOperationWizard
     var newVersionsResult = await client
       .Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount)
       .ConfigureAwait(true);
-    LastFetchedVersions = newVersionsResult.versions;
     return newVersionsResult.versions;
   }
 
