@@ -36,6 +36,25 @@ public class ModelMenuHandler
 
   public void Reset() => RedrawMenuButton(null);
 
+  public void RedrawMenuButton(Model? model)
+  {
+    var suffix = ModelContextMenuButton.Enabled
+      ? "Right-click to select another model."
+      : "Selection is disabled due to component input.";
+    if (model != null)
+    {
+      ModelContextMenuButton.Name = model.name;
+      ModelContextMenuButton.NickName = model.id;
+      ModelContextMenuButton.Description = $"{model.description ?? "No description"}\n\n{suffix}";
+    }
+    else
+    {
+      ModelContextMenuButton.Name = "Select Model";
+      ModelContextMenuButton.NickName = "Model";
+      ModelContextMenuButton.Description = "Right-click to select model";
+    }
+  }
+
   private async Task Refetch(string searchText)
   {
     Models = await _fetchModels.Invoke(searchText);
@@ -96,25 +115,6 @@ public class ModelMenuHandler
         SelectedModel?.id != model.id,
         SelectedModel?.id == model.id
       );
-    }
-  }
-
-  public void RedrawMenuButton(Model? model)
-  {
-    var suffix = ModelContextMenuButton.Enabled
-      ? "Right-click to select another model."
-      : "Selection is disabled due to component input.";
-    if (model != null)
-    {
-      ModelContextMenuButton.Name = model.name;
-      ModelContextMenuButton.NickName = model.id;
-      ModelContextMenuButton.Description = $"{model.description ?? "No description"}\n\n{suffix}";
-    }
-    else
-    {
-      ModelContextMenuButton.Name = "Select Model";
-      ModelContextMenuButton.NickName = "Model";
-      ModelContextMenuButton.Description = "Right-click to select model";
     }
   }
 
