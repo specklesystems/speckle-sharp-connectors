@@ -48,6 +48,8 @@ public class SearchToolStripMenuItem
 
   public void AddMenuSeparator() => ParentDropDown.Items.Add(new ToolStripSeparator());
 
+  private bool _suppressTextChanged;
+
   private void AddSearchBox()
   {
     var textBox = new TextBox
@@ -64,12 +66,18 @@ public class SearchToolStripMenuItem
     {
       if (textBox.Text == SEARCH_PLACEHOLDER_TEXT)
       {
+        _suppressTextChanged = true;
         textBox.Text = "";
+        _suppressTextChanged = false;
       }
     };
 
     textBox.TextChanged += async (s, e) =>
     {
+      if (_suppressTextChanged)
+      {
+        return;
+      }
       SearchText = textBox.Text;
       var now = DateTime.UtcNow;
       if (now - _lastTime >= _debounce)
