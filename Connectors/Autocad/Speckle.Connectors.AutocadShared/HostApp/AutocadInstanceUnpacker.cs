@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
@@ -182,9 +183,27 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
   private string GetAttributeUniqueKey(DBText attributeText, string tag, Matrix4x4 matrix)
   {
-    Vector3 originalVector = new(attributeText.Position.X, attributeText.Position.Y, attributeText.Position.Z);
-    Vector4 transformed = Vector4.Transform(new Vector4(originalVector, 1), matrix);
-    Vector3 transformedVector = new(transformed.X, transformed.Y, transformed.Z);
+    var matrixArray = new[]
+    {
+      matrix.M11,
+      matrix.M12,
+      matrix.M13,
+      matrix.M14,
+      matrix.M21,
+      matrix.M22,
+      matrix.M23,
+      matrix.M24,
+      matrix.M31,
+      matrix.M32,
+      matrix.M33,
+      matrix.M34,
+      matrix.M41,
+      matrix.M42,
+      matrix.M43,
+      matrix.M44
+    };
+    var transformedPt = attributeText.Position.TransformBy(new Matrix3d(matrixArray));
+    Vector3 transformedVector = new(transformedPt.X, transformedPt.Y, transformedPt.Z);
 
     return $"{tag},{transformedVector},{attributeText.Justify}";
   }
