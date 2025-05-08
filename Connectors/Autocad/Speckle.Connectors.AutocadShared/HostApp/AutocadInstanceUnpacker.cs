@@ -62,13 +62,25 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         ? instance.AnonymousBlockTableRecord
         : instance.BlockTableRecord;
 
+      // iterate through the attribute collection
+      // https://forums.autodesk.com/t5/net-forum/get-the-value-of-an-attribute-in-c/td-p/9060940
+      Matrix4x4 blockTransformMatrix = GetMatrix(instance.BlockTransform.ToArray());
+      Dictionary<string, AttributeReference> attributeDict = new();
+      foreach (ObjectId id in instance.AttributeCollection)
+      {
+        // add unique key and value for each AttributeReference, because AttributeReferences don't have any backwards connection to AttributeDefinition:
+        // https://forums.autodesk.com/t5/net-forum/know-which-attributedefinition-does-an-attributereference/td-p/6796502
+        var attReference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        attributeDict[GetAttributeUniqueKey(attReference, attReference.Tag, Matrix4x4.Identity)] = attReference;
+      }
+
       InstanceProxy instanceProxy =
         new()
         {
           applicationId = instanceId,
           definitionId = definitionId.ToString(),
           maxDepth = depth,
-          transform = GetMatrix(instance.BlockTransform.ToArray()),
+          transform = blockTransformMatrix,
           units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
@@ -137,6 +149,18 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           continue;
         }
 
+        // in case of AttributeDefinition, get the AttributeReference from attributeDict instead. This will ensure correct text value
+        if (
+          obj is AttributeDefinition attrDefinition
+          && attributeDict.TryGetValue(
+            GetAttributeUniqueKey(attrDefinition, attrDefinition.Tag, blockTransformMatrix),
+            out AttributeReference? reference
+          )
+        )
+        {
+          obj = reference;
+        }
+
         string appId = obj.GetSpeckleApplicationId();
         definitionProxy.objects.Add(appId);
 
@@ -154,6 +178,15 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     {
       _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
+  }
+
+  private string GetAttributeUniqueKey(DBText attributeText, string tag, Matrix4x4 matrix)
+  {
+    Vector3 originalVector = new(attributeText.Position.X, attributeText.Position.Y, attributeText.Position.Z);
+    Vector4 transformed = Vector4.Transform(new Vector4(originalVector, 1), matrix);
+    Vector3 transformedVector = new(transformed.X, transformed.Y, transformed.Z);
+
+    return $"{tag},{transformedVector},{attributeText.Justify}";
   }
 
   private Matrix4x4 GetMatrix(double[] t) =>
