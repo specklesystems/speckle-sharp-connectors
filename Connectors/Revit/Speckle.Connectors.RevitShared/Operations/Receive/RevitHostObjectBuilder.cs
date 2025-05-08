@@ -188,15 +188,21 @@ public sealed class RevitHostObjectBuilder(
           //TODO TransformTo will be deprecated as it's dangerous and requires ID transposing which is wrong!
           //ID needs to be copied to the new instance
           var id = localToGlobalMap.AtomicObject.id;
+          var originalAppId = localToGlobalMap.AtomicObject.applicationId;
+
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
             transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
-            transformable = newTransformable; // we need to keep the reference to the new object, as we're going to use it in the cache
+            transformable = newTransformable;
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.AtomicObject.id = id; // restore the id, as it's used in the cache
+          localToGlobalMap.AtomicObject.id = id;
+
+          // Make applicationId unique by appending a short GUID
+          // This prevents DirectShapeLibrary from using the same definition for multiple instances
+          localToGlobalMap.AtomicObject.applicationId = $"{originalAppId ?? id}_{Guid.NewGuid().ToString("N")[..8]}"; // hack of all of the ages. related to CNX-1707
           localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
         }
 
