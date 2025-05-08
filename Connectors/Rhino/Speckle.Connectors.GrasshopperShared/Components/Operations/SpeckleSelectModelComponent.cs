@@ -182,7 +182,7 @@ public class SpeckleSelectModelComponent : GH_Component
     }
 
     var projects = client
-      .ActiveUser.GetProjects(10, null, new UserProjectsFilter(workspaceId: _storedWorkspaceId))
+      .ActiveUser.GetProjectsWithPermissions(10, null, new UserProjectsFilter(workspaceId: _storedWorkspaceId))
       .Result;
     SpeckleOperationWizard?.SetProjects(projects);
     ProjectContextMenuButton.Enabled = true;

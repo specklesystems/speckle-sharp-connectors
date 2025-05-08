@@ -2,9 +2,9 @@ using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
-public class ProjectSelectedEventArgs(Project? project) : EventArgs
+public class ProjectSelectedEventArgs(ProjectWithPermissions? project) : EventArgs
 {
-  public Project? SelectedProject { get; } = project;
+  public ProjectWithPermissions? SelectedProject { get; } = project;
 }
 
 /// <summary>
@@ -12,18 +12,18 @@ public class ProjectSelectedEventArgs(Project? project) : EventArgs
 /// </summary>
 public class ProjectMenuHandler
 {
-  private readonly Func<string, Task<ResourceCollection<Project>>> _fetchProjects;
+  private readonly Func<string, Task<ResourceCollection<ProjectWithPermissions>>> _fetchProjects;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
-  private Project? SelectedProject { get; set; }
+  private ProjectWithPermissions? SelectedProject { get; set; }
 
-  public ResourceCollection<Project>? Projects { get; set; }
+  public ResourceCollection<ProjectWithPermissions>? Projects { get; set; }
 
   public event EventHandler<ProjectSelectedEventArgs>? ProjectSelected;
 
   public GhContextMenuButton ProjectContextMenuButton { get; }
 
-  public ProjectMenuHandler(Func<string, Task<ResourceCollection<Project>>> fetchProjects)
+  public ProjectMenuHandler(Func<string, Task<ResourceCollection<ProjectWithPermissions>>> fetchProjects)
   {
     _fetchProjects = fetchProjects;
     ProjectContextMenuButton = new GhContextMenuButton(
@@ -105,16 +105,21 @@ public class ProjectMenuHandler
     {
       var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
 
-      _searchItem?.AddMenuItem(
+      var projectItem = _searchItem.AddMenuItem(
         $"{project.name} - {desc}",
         (_, _) => OnProjectSelected(project),
         SelectedProject?.id != project.id,
         SelectedProject?.id == project.id
       );
+      if (!project.permissions.canLoad.authorized)
+      {
+        projectItem.Enabled = false;
+        projectItem.ToolTipText = @"You do not have permission to do operation on this project.";
+      }
     }
   }
 
-  private void OnProjectSelected(Project project)
+  private void OnProjectSelected(ProjectWithPermissions project)
   {
     _menu?.Close();
     SelectedProject = project;

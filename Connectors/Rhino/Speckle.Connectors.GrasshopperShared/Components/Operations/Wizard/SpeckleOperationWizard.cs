@@ -72,7 +72,7 @@ public class SpeckleOperationWizard
     WorkspaceMenuHandler.Workspaces = workspaces;
   }
 
-  public void SetProjects(ResourceCollection<Project>? projects)
+  public void SetProjects(ResourceCollection<ProjectWithPermissions>? projects)
   {
     ProjectMenuHandler.Projects = projects;
   }
@@ -135,15 +135,15 @@ public class SpeckleOperationWizard
   /// <summary>
   /// Callback function to retrieve projects with the search text
   /// </summary>
-  private async Task<ResourceCollection<Project>> FetchProjects(string searchText)
+  private async Task<ResourceCollection<ProjectWithPermissions>> FetchProjects(string searchText)
   {
     if (_selectedAccount == null)
     {
-      return new ResourceCollection<Project>();
+      return new ResourceCollection<ProjectWithPermissions>();
     }
 
     IClient client = _clientFactory.Create(_selectedAccount);
-    var projects = await client.ActiveUser.GetProjects(
+    var projects = await client.ActiveUser.GetProjectsWithPermissions(
       10,
       null,
       new UserProjectsFilter(searchText, workspaceId: SelectedWorkspace?.id ?? null, includeImplicitAccess: true)
