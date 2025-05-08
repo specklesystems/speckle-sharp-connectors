@@ -174,7 +174,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (selectedWorkspace != null)
     {
       _storedWorkspaceId = selectedWorkspace.id;
-      SpeckleOperationWizard.WorkspaceMenuHandler.RedrawMenuButton(selectedWorkspace);
+      SpeckleOperationWizard.SetDefaultWorkspace(selectedWorkspace);
     }
     else
     {

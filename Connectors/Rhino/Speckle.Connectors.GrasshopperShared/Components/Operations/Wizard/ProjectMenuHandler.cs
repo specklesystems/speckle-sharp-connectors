@@ -92,11 +92,7 @@ public class ProjectMenuHandler
       return;
     }
 
-    if (_searchItem == null)
-    {
-      _searchItem = new SearchToolStripMenuItem(menu, Refetch);
-      _searchItem.AddMenuSeparator();
-    }
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     if (Projects.items.Count == 0 && !string.IsNullOrEmpty(_searchItem.SearchText))
     {

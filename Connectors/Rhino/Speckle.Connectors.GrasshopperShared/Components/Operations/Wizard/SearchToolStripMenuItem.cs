@@ -24,6 +24,7 @@ public class SearchToolStripMenuItem
     _onSearchTextChanged = onSearchTextChanged;
 
     AddSearchBox();
+    AddMenuSeparator();
     RegisterEvents();
   }
 

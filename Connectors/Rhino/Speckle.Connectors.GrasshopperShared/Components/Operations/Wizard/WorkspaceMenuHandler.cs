@@ -81,11 +81,7 @@ public class WorkspaceMenuHandler
       return;
     }
 
-    if (_searchItem == null)
-    {
-      _searchItem = new SearchToolStripMenuItem(menu, Refetch);
-      _searchItem.AddMenuSeparator();
-    }
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     foreach (var workspace in Workspaces.items)
     {

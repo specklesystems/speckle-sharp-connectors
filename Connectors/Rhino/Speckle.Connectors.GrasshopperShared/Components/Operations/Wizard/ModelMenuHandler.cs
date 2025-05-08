@@ -84,11 +84,7 @@ public class ModelMenuHandler
       return;
     }
 
-    if (_searchItem == null)
-    {
-      _searchItem = new SearchToolStripMenuItem(menu, Refetch);
-      _searchItem.AddMenuSeparator();
-    }
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     foreach (var model in Models.items)
     {
