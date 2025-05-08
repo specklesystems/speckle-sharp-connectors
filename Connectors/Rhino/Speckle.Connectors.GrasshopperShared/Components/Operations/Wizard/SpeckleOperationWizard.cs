@@ -57,15 +57,41 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public void SetAccount(Account account)
+  public void SetAccount(Account? account)
   {
     _selectedAccount = account;
+    ResetWorkspaces();
+  }
+
+  private void ResetWorkspaces()
+  {
     SelectedWorkspace = null;
-    SelectedProject = null;
-    SelectedModel = null;
     LastFetchedWorkspaces = null;
+    WorkspaceMenuHandler.Reset();
+    ResetProjects();
+  }
+
+  private void ResetProjects()
+  {
+    SelectedProject = null;
     LastFetchedProjects = null;
+    ProjectMenuHandler.Reset();
+    ResetModels();
+  }
+
+  private void ResetModels()
+  {
+    SelectedModel = null;
     LastFetchedModels = null;
+    ModelMenuHandler.Reset();
+    ResetVersions();
+  }
+
+  private void ResetVersions()
+  {
+    SelectedVersion = null;
+    LastFetchedVersions = null;
+    VersionMenuHandler?.Reset();
   }
 
   public void SetWorkspaces(ResourceCollection<Workspace> workspaces)
@@ -113,7 +139,11 @@ public class SpeckleOperationWizard
     }
 
     IClient client = _clientFactory.Create(_selectedAccount);
-    var projects = await client.ActiveUser.GetProjects(10, null, new UserProjectsFilter(searchText));
+    var projects = await client.ActiveUser.GetProjects(
+      10,
+      null,
+      new UserProjectsFilter(searchText, workspaceId: SelectedWorkspace?.id ?? null, includeImplicitAccess: true)
+    );
     LastFetchedProjects = projects;
     return projects;
   }
@@ -167,12 +197,8 @@ public class SpeckleOperationWizard
   {
     SelectedWorkspace = e.SelectedWorkspace;
 
-    SelectedProject = null;
-    SelectedModel = null;
+    ResetProjects();
 
-    ProjectMenuHandler.Reset();
-    ModelMenuHandler.Reset();
-    VersionMenuHandler?.Reset();
     _refreshComponent.Invoke();
   }
 
@@ -180,9 +206,7 @@ public class SpeckleOperationWizard
   {
     SelectedProject = e.SelectedProject;
 
-    SelectedModel = null;
-    ModelMenuHandler.Reset();
-    VersionMenuHandler?.Reset();
+    ResetModels();
 
     _refreshComponent.Invoke();
   }
@@ -191,7 +215,7 @@ public class SpeckleOperationWizard
   {
     SelectedModel = e.SelectedModel;
 
-    VersionMenuHandler?.Reset();
+    ResetVersions();
 
     _refreshComponent.Invoke();
   }

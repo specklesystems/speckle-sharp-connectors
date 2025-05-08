@@ -92,7 +92,7 @@ public class WorkspaceMenuHandler
       var desc = string.IsNullOrEmpty(workspace.description) ? "No description" : workspace.description;
 
       _searchItem?.AddMenuItem(
-        $"{workspace.name} - {desc}",
+        $"{workspace.name}",
         (_, _) => OnWorkspaceSelected(workspace),
         SelectedWorkspace?.id != workspace.id,
         SelectedWorkspace?.id == workspace.id

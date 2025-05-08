@@ -78,7 +78,7 @@ public class SpeckleSelectModelComponent : GH_Component
   {
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
-    SpeckleOperationWizard?.SetProjects(null);
+    SpeckleOperationWizard?.SetAccount(account);
     ExpireSolution(true);
   }
 
@@ -160,12 +160,16 @@ public class SpeckleSelectModelComponent : GH_Component
     }
 
     IClient client = _clientFactory.Create(_account);
+
     var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
     SpeckleOperationWizard.SetWorkspaces(workspaces);
 
     // TODO: select default workspace
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
-    Workspace? selectedWorkspace = activeWorkspace ?? (workspaces.items.Count > 0 ? workspaces.items[0] : null);
+    Workspace? selectedWorkspace =
+      SpeckleOperationWizard.SelectedWorkspace
+      ?? activeWorkspace
+      ?? (workspaces.items.Count > 0 ? workspaces.items[0] : null);
 
     if (selectedWorkspace != null)
     {
@@ -176,8 +180,6 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       return;
     }
-
-    WorkspaceContextMenuButton.Enabled = true;
 
     var projects = client
       .ActiveUser.GetProjects(10, null, new UserProjectsFilter(workspaceId: _storedWorkspaceId))
