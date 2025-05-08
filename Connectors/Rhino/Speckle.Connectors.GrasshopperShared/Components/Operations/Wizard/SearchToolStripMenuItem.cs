@@ -32,10 +32,16 @@ public class SearchToolStripMenuItem
     string text,
     EventHandler? click = null,
     bool? visible = null,
-    bool? isChecked = null
+    bool? isChecked = null,
+    Image? image = null
   )
   {
-    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false };
+    var item = new ToolStripMenuItem(text)
+    {
+      Checked = isChecked ?? false,
+      Image = image,
+      ImageScaling = ToolStripItemImageScaling.SizeToFit
+    };
     item.Click += click;
     if (visible == false)
     {

@@ -1,4 +1,5 @@
-﻿using Speckle.Sdk.Api.GraphQL.Models;
+﻿using System.Drawing.Drawing2D;
+using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
@@ -96,7 +97,8 @@ public class WorkspaceMenuHandler
         $"{workspace.name}",
         (_, _) => OnWorkspaceSelected(workspace),
         SelectedWorkspace?.id != workspace.id,
-        SelectedWorkspace?.id == workspace.id
+        SelectedWorkspace?.id == workspace.id,
+        Base64ToImage(workspace.logo)
       );
     }
   }
@@ -116,6 +118,8 @@ public class WorkspaceMenuHandler
       : "Selection is disabled due to component input.";
     if (workspace != null)
     {
+      var bitmap = Get24X24IconFromBase64(workspace.logo);
+      WorkspaceContextMenuButton.SetIconOverride(bitmap);
       WorkspaceContextMenuButton.Name = workspace.name;
       WorkspaceContextMenuButton.NickName = workspace.id;
       WorkspaceContextMenuButton.Description = $"{workspace.description ?? "No description"}\n\n{suffix}";
@@ -126,6 +130,50 @@ public class WorkspaceMenuHandler
       WorkspaceContextMenuButton.NickName = "Workspace";
       WorkspaceContextMenuButton.Description = "Right-click to select workspace";
     }
+  }
+
+  private Image? Base64ToImage(string? base64)
+  {
+    if (base64 == null)
+    {
+      return null;
+    }
+    var base64Data = base64[(base64.IndexOf(',') + 1)..]; // remove data:image/...;base64, part
+    byte[] bytes = Convert.FromBase64String(base64Data);
+    using var ms = new MemoryStream(bytes);
+    return Image.FromStream(ms);
+  }
+
+  private Bitmap? Get24X24IconFromBase64(string? base64)
+  {
+    if (base64 == null)
+    {
+      return null;
+    }
+    // Strip metadata prefix
+    var base64Data = base64[(base64.IndexOf(',') + 1)..];
+    byte[] bytes = Convert.FromBase64String(base64Data);
+
+    using (var ms = new MemoryStream(bytes))
+    {
+      using (var originalImage = Image.FromStream(ms))
+      {
+        return ResizeImageToBitmap(originalImage, 24, 24);
+      }
+    }
+  }
+
+  private Bitmap ResizeImageToBitmap(Image image, int width, int height)
+  {
+    var bmp = new Bitmap(width, height);
+    using (var g = Graphics.FromImage(bmp))
+    {
+      g.CompositingQuality = CompositingQuality.HighQuality;
+      g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+      g.SmoothingMode = SmoothingMode.AntiAlias;
+      g.DrawImage(image, 0, 0, width, height);
+    }
+    return bmp;
   }
 
   private void CreateNewWorkspace()
