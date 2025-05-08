@@ -127,6 +127,7 @@ public class ParameterExtractor
 
         // NOTE: general assumption is that ids don't really have much meaning. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
         // NOTE: subsequent request resulting in certain IDs being brought back. See [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name) in GetValue() method
+        // "Type ID" goes through this check since internalDefinitionName is "SYMBOL_ID_PARAM"
         if (internalDefinitionName.EndsWith("_ID") || internalDefinitionName.EndsWith("_PARAM_ID"))
         {
           continue;
@@ -219,7 +220,9 @@ public class ParameterExtractor
           return null;
         }
 
-        // "SYMBOL_ID_PARAM" is internal name for "Type ID". localization impacts definition names
+        // "SYMBOL_ID_PARAM" is internal name for "Type ID". localization impacts definition names, internal more reliable
+        // probably a waste to reuse HandleDefinition method here? simple approach would be to change method signature for GetValue to also take
+        // internalDefinitionName as argument. we're discarding most returns here anyway
         var (internalDefinitionName, _, _, _) = _parameterDefinitionHandler.HandleDefinition(parameter);
         if (internalDefinitionName == "SYMBOL_ID_PARAM")
         {
