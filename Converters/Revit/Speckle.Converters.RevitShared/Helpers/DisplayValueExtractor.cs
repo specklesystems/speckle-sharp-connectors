@@ -70,8 +70,34 @@ public sealed class DisplayValueExtractor
             }
           }
         }
-
         return areaDisplay;
+
+      // TODO: AreaReinforcement, RebarInSystem
+      case DB.Structure.Rebar rebar when !_converterSettings.Current.SendRebarsAsSolid:
+      {
+        int numberOfBarPositions = rebar.NumberOfBarPositions;
+        List<DB.Curve> curves = new();
+        for (int barPositionIndex = 0; barPositionIndex < numberOfBarPositions; barPositionIndex++)
+        {
+          curves.AddRange(
+            rebar.GetTransformedCenterlineCurves(
+              false,
+              false,
+              false,
+              DB.Structure.MultiplanarOption.IncludeAllMultiplanarCurves,
+              barPositionIndex
+            )
+          );
+        }
+
+        List<Base> displayValue = new();
+        foreach (var curve in curves)
+        {
+          displayValue.Add(GetCurveDisplayValue(curve));
+        }
+
+        return displayValue;
+      }
 
       // handle specific types of objects with multiple parts or children
       // curtain and stacked walls should have their display values in their children
@@ -85,7 +111,6 @@ public sealed class DisplayValueExtractor
           var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
           railingDisplay.AddRange(GetGeometryDisplayValue(topRail));
         }
-
         return railingDisplay;
 
       // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.

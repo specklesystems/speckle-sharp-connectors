@@ -7,5 +7,6 @@ public record RevitConversionSettings(
   string SpeckleUnits,
   bool SendParameterNullOrEmptyStrings,
   bool SendLinkedModels,
+  bool SendRebarsAsSolid,
   double Tolerance = 0.0164042 // 5mm in ft
 );

@@ -138,7 +138,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
             _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
-            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard)
+            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard),
+            _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard)
           )
         );
 
