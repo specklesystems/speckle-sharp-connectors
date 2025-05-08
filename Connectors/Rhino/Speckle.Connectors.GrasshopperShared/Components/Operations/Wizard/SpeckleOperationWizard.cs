@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
@@ -14,9 +17,10 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 /// </summary>
 public class SpeckleOperationWizard
 {
-  private Account? _selectedAccount;
   private readonly IClientFactory _clientFactory;
 
+  public Account? SelectedAccount { get; private set; }
+  public List<Account> Accounts { get; private set; }
   public Workspace? SelectedWorkspace { get; private set; }
   public Project? SelectedProject { get; private set; }
   public Model? SelectedModel { get; private set; }
@@ -28,15 +32,23 @@ public class SpeckleOperationWizard
   public VersionMenuHandler? VersionMenuHandler { get; }
 
   private readonly Func<Task> _refreshComponent;
+  private readonly AccountService _accountService;
+  private readonly AccountManager _accountManager;
 
-  /// <param name="account"> Account to get relevant menus for selection.</param>
   /// <param name="refreshComponent"> Callback function to trigger when component need to refresh itself.</param>
   /// <param name="isSender"> Whether it will be used in sender or receiver. Accordingly, the wizard will manage versions or not.</param>
-  public SpeckleOperationWizard(Account account, Func<Task> refreshComponent, bool isSender)
+  public SpeckleOperationWizard(Func<Task> refreshComponent, bool isSender)
   {
     _refreshComponent = refreshComponent;
-    _selectedAccount = account;
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
+    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
+    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
+
+    var userSelectedAccountId = _accountService.GetUserSelectedAccountId();
+    SelectedAccount =
+      userSelectedAccountId != null
+        ? _accountManager.GetAccount(userSelectedAccountId)
+        : _accountManager.GetDefaultAccount();
 
     WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces);
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
@@ -52,9 +64,70 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
+  public SpeckleUrlModelResource SolveInstanceWithUrlInput(string input)
+  {
+    // When input is provided, lock interaction of buttons so only text is shown (no context menu)
+    // Should perform validation, fill in all internal data of the component (project, model, version, account)
+    // Should notify user if any of this goes wrong.
+
+    var resources = SpeckleResourceBuilder.FromUrlString(input);
+    if (resources.Length == 0)
+    {
+      throw new SpeckleException($"Input url string was empty");
+    }
+
+    if (resources.Length > 1)
+    {
+      throw new SpeckleException($"Input multi-model url is not supported");
+    }
+
+    var resource = resources.First();
+
+    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
+    SetAccount(account);
+
+    if (SelectedAccount == null)
+    {
+      throw new SpeckleException("No account found for server URL");
+    }
+
+    IClient client = _clientFactory.Create(SelectedAccount);
+
+    var project = client.Project.Get(resource.ProjectId).Result;
+    if (project != null && project.workspaceId != null)
+    {
+      var workspace = client.Workspace.Get(project.workspaceId).Result;
+      WorkspaceMenuHandler.RedrawMenuButton(workspace);
+    }
+
+    ProjectMenuHandler.RedrawMenuButton(project);
+
+    switch (resource)
+    {
+      case SpeckleUrlLatestModelVersionResource latestVersionResource:
+        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
+        ModelMenuHandler.RedrawMenuButton(model);
+        break;
+      case SpeckleUrlModelVersionResource versionResource:
+        var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
+        ModelMenuHandler.RedrawMenuButton(m);
+
+        // TODO: this wont be the case when we have separation between send and receive components
+        var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
+        VersionMenuHandler?.RedrawMenuButton(v);
+        break;
+      case SpeckleUrlModelObjectResource:
+        throw new SpeckleException("Object URLs are not supported");
+      default:
+        throw new SpeckleException("Unknown Speckle resource type");
+    }
+
+    return resource;
+  }
+
   public void SetAccount(Account? account)
   {
-    _selectedAccount = account;
+    SelectedAccount = account;
     ResetWorkspaces();
     ResetProjects();
     ResetModels();
@@ -122,12 +195,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Workspace>> FetchWorkspaces(string searchText)
   {
-    if (_selectedAccount == null)
+    if (SelectedAccount == null)
     {
       return new ResourceCollection<Workspace>();
     }
 
-    IClient client = _clientFactory.Create(_selectedAccount);
+    IClient client = _clientFactory.Create(SelectedAccount);
     var workspaces = await client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText));
     return workspaces;
   }
@@ -137,12 +210,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<ProjectWithPermissions>> FetchProjects(string searchText)
   {
-    if (_selectedAccount == null)
+    if (SelectedAccount == null)
     {
       return new ResourceCollection<ProjectWithPermissions>();
     }
 
-    IClient client = _clientFactory.Create(_selectedAccount);
+    IClient client = _clientFactory.Create(SelectedAccount);
     var projects = await client.ActiveUser.GetProjectsWithPermissions(
       10,
       null,
@@ -156,12 +229,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Model>> FetchModels(string searchText)
   {
-    if (_selectedAccount == null || SelectedProject == null)
+    if (SelectedAccount == null || SelectedProject == null)
     {
       return new ResourceCollection<Model>();
     }
 
-    IClient client = _clientFactory.Create(_selectedAccount);
+    IClient client = _clientFactory.Create(SelectedAccount);
     var projectWithModels = await client
       .Project.GetWithModels(SelectedProject.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
       .ConfigureAwait(true);
@@ -173,12 +246,12 @@ public class SpeckleOperationWizard
   /// </summary>
   private async Task<ResourceCollection<Version>> FetchMoreVersions(int versionCount)
   {
-    if (_selectedAccount == null || SelectedProject == null || SelectedModel == null)
+    if (SelectedAccount == null || SelectedProject == null || SelectedModel == null)
     {
       return new ResourceCollection<Version>();
     }
 
-    IClient client = _clientFactory.Create(_selectedAccount);
+    IClient client = _clientFactory.Create(SelectedAccount);
     var newVersionsResult = await client
       .Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount)
       .ConfigureAwait(true);

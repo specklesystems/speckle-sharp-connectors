@@ -57,10 +57,8 @@ public class SpeckleSelectModelComponent : GH_Component
     _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
 
-    // TODO: fix this default behavior, use `userSelectedAccountId`
-    var account = _accountManager.GetDefaultAccount();
-    OnAccountSelected(account);
-    SpeckleOperationWizard = new SpeckleOperationWizard(account!, RefreshComponent, false); // TODO: Nullability of account need to be handled before
+    SpeckleOperationWizard = new SpeckleOperationWizard(RefreshComponent, false);
+    OnAccountSelected(SpeckleOperationWizard.SelectedAccount);
 
     WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
     ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
@@ -74,11 +72,14 @@ public class SpeckleSelectModelComponent : GH_Component
     return Task.CompletedTask;
   }
 
+  private void UpdateMessageWithAccount(Account? account) =>
+    Message = account != null ? $"{account.serverInfo.url}\n{account.userInfo.email}" : null;
+
   private void OnAccountSelected(Account? account)
   {
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
-    SpeckleOperationWizard?.SetAccount(account);
+    SpeckleOperationWizard.SetAccount(_account);
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -113,7 +114,8 @@ public class SpeckleSelectModelComponent : GH_Component
 
       try
       {
-        var resource = SolveInstanceWithUrlInput(urlInput);
+        var resource = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput);
+        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
         da.SetData(0, resource);
       }
       catch (SpeckleException e)
@@ -160,15 +162,22 @@ public class SpeckleSelectModelComponent : GH_Component
 
     IClient client = _clientFactory.Create(_account);
 
-    var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
-    SpeckleOperationWizard.SetWorkspaces(workspaces);
+    if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
+    {
+      var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
+      SpeckleOperationWizard.SetWorkspaces(workspaces);
+    }
 
     // TODO: select default workspace
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
     Workspace? selectedWorkspace =
       SpeckleOperationWizard.SelectedWorkspace
       ?? activeWorkspace
-      ?? (workspaces.items.Count > 0 ? workspaces.items[0] : null);
+      ?? (
+        SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items.Count > 0
+          ? SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items[0]
+          : null
+      );
 
     if (selectedWorkspace != null)
     {
@@ -271,61 +280,6 @@ public class SpeckleSelectModelComponent : GH_Component
     VersionContextMenuButton.Enabled = enabled;
   }
 
-  private SpeckleUrlModelResource SolveInstanceWithUrlInput(string urlInput)
-  {
-    // When input is provided, lock interaction of buttons so only text is shown (no context menu)
-    // Should perform validation, fill in all internal data of the component (project, model, version, account)
-    // Should notify user if any of this goes wrong.
-
-    var resources = SpeckleResourceBuilder.FromUrlString(urlInput);
-    if (resources.Length == 0)
-    {
-      throw new SpeckleException($"Input url string was empty");
-    }
-
-    if (resources.Length > 1)
-    {
-      throw new SpeckleException($"Input multi-model url is not supported");
-    }
-
-    var resource = resources.First();
-
-    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
-    OnAccountSelected(account);
-
-    if (_account == null)
-    {
-      throw new SpeckleException("No account found for server URL");
-    }
-
-    IClient client = _clientFactory.Create(_account);
-
-    //var project = client.Project.Get(resource.ProjectId).Result;
-    //OnProjectSelected(project, false);
-
-    switch (resource)
-    {
-      case SpeckleUrlLatestModelVersionResource latestVersionResource:
-        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
-        SpeckleOperationWizard?.ModelMenuHandler.RedrawMenuButton(model);
-        break;
-      case SpeckleUrlModelVersionResource versionResource:
-        var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
-        SpeckleOperationWizard?.ModelMenuHandler.RedrawMenuButton(m);
-
-        // TODO: this wont be the case when we have separation between send and receive components
-        var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        SpeckleOperationWizard?.VersionMenuHandler?.RedrawMenuButton(v);
-        break;
-      case SpeckleUrlModelObjectResource:
-        throw new SpeckleException("Object URLs are not supported");
-      default:
-        throw new SpeckleException("Unknown Speckle resource type");
-    }
-
-    return resource;
-  }
-
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
     base.AppendAdditionalMenuItems(menu);
@@ -338,8 +292,8 @@ public class SpeckleSelectModelComponent : GH_Component
         account.ToString(),
         (_, _) => OnAccountSelected(account),
         null,
-        _account?.id != account.id,
-        _account?.id == account.id
+        SpeckleOperationWizard.SelectedAccount?.id != account.id,
+        SpeckleOperationWizard.SelectedAccount?.id == account.id
       );
     }
   }
