@@ -133,7 +133,10 @@ public class ParameterExtractor
           continue;
         }
 
-        var value = GetValue(parameter);
+        // "SYMBOL_ID_PARAM" is internal name for "Type ID". localization impacts definition names, internal more reliable
+        // probably a waste to reuse HandleDefinition method here? simple approach would be to change method signature for GetValue to also take
+        // internalDefinitionName as argument. we're discarding most returns here anyway
+        object? value = internalDefinitionName == "SYMBOL_ID_PARAM" ? parameter.AsElementId() : GetValue(parameter);
 
         var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
 
@@ -218,15 +221,6 @@ public class ParameterExtractor
         if (elId == DB.ElementId.InvalidElementId)
         {
           return null;
-        }
-
-        // "SYMBOL_ID_PARAM" is internal name for "Type ID". localization impacts definition names, internal more reliable
-        // probably a waste to reuse HandleDefinition method here? simple approach would be to change method signature for GetValue to also take
-        // internalDefinitionName as argument. we're discarding most returns here anyway
-        var (internalDefinitionName, _, _, _) = _parameterDefinitionHandler.HandleDefinition(parameter);
-        if (internalDefinitionName == "SYMBOL_ID_PARAM")
-        {
-          return elId.ToString();
         }
 
         if (_elementNameCache.TryGetValue(elId, out object? value))
