@@ -34,7 +34,11 @@ public class ModelMenuHandler
     );
   }
 
-  public void Reset() => RedrawMenuButton(null);
+  public void Reset()
+  {
+    _menu?.Close();
+    RedrawMenuButton(null);
+  }
 
   public void RedrawMenuButton(Model? model)
   {
@@ -68,6 +72,7 @@ public class ModelMenuHandler
     {
       _searchItem = null;
     };
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     if (Models == null)
     {

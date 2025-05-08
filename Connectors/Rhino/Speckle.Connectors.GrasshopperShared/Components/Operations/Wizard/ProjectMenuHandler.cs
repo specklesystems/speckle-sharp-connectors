@@ -34,7 +34,11 @@ public class ProjectMenuHandler
     );
   }
 
-  public void Reset() => RedrawMenuButton(null);
+  public void Reset()
+  {
+    _menu?.Close();
+    RedrawMenuButton(null);
+  }
 
   public void RedrawMenuButton(Project? project)
   {
@@ -68,6 +72,7 @@ public class ProjectMenuHandler
     {
       _searchItem = null;
     };
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     if (Projects == null)
     {

@@ -31,7 +31,11 @@ public class WorkspaceMenuHandler
     );
   }
 
-  public void Reset() => RedrawMenuButton(null);
+  public void Reset()
+  {
+    _menu?.Close();
+    RedrawMenuButton(null);
+  }
 
   private async Task Refetch(string searchText)
   {
@@ -46,6 +50,7 @@ public class WorkspaceMenuHandler
     {
       _searchItem = null;
     };
+    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
 
     if (Workspaces == null)
     {

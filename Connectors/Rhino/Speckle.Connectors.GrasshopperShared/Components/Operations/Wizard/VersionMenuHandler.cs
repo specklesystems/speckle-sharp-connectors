@@ -34,6 +34,7 @@ public class VersionMenuHandler
 
   public void Reset()
   {
+    _menu?.Close();
     FetchedVersionCount = 10;
     RedrawMenuButton(null);
   }
