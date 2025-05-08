@@ -79,7 +79,6 @@ public class SpeckleSelectModelComponent : GH_Component
     _account = account;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     SpeckleOperationWizard?.SetAccount(account);
-    ExpireSolution(true);
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
