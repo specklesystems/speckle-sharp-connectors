@@ -28,48 +28,27 @@ public class TextNoteToSpeckleConverter : ITypedConverter<DB.TextNote, SA.Text>
   public SA.Text Convert(DB.TextNote target)
   {
     SOG.Point origin = _xyzConverter.Convert(target.Coord);
-    DB.BuiltInParameter paraIndex = DB.BuiltInParameter.TEXT_SIZE;
-    DB.Parameter textSizeParameter = target.Symbol.get_Parameter(paraIndex);
-    double fontHeight = _toSpeckleScalingService.Scale(textSizeParameter.AsDouble(), textSizeParameter.GetUnitTypeId());
 
     // for now, in the absence of decision on how to best treat the text sent from 2d views (plans or sections),
     // we always place the text in the horizontal XY plane without custom rotation.
     return new()
     {
       value = target.Text,
-      height = _toSpeckleScalingService.ScaleLength(fontHeight),
-      maxWidth = null,
       origin = origin,
-      plane = new SOG.Plane
-      {
-        origin = origin,
-        normal = new SOG.Vector()
-        {
-          x = 0,
-          y = 0,
-          z = 1,
-          units = _converterSettings.Current.SpeckleUnits
-        },
-        xdir = new SOG.Vector()
-        {
-          x = 1,
-          y = 0,
-          z = 0,
-          units = _converterSettings.Current.SpeckleUnits
-        },
-        ydir = new SOG.Vector()
-        {
-          x = 0,
-          y = 1,
-          z = 0,
-          units = _converterSettings.Current.SpeckleUnits
-        },
-        units = _converterSettings.Current.SpeckleUnits
-      },
+      height = GetTextHeight(target),
+      maxWidth = null,
+      plane = null,
       alignmentH = GetHorizontalAlignment(target.HorizontalAlignment),
       alignmentV = GetVerticalAlignment(target.VerticalAlignment),
       units = _converterSettings.Current.SpeckleUnits
     };
+  }
+
+  private double GetTextHeight(DB.TextNote textNote)
+  {
+    DB.BuiltInParameter paraIndex = DB.BuiltInParameter.TEXT_SIZE;
+    DB.Parameter textSizeParameter = textNote.Symbol.get_Parameter(paraIndex);
+    return _toSpeckleScalingService.Scale(textSizeParameter.AsDouble(), textSizeParameter.GetUnitTypeId());
   }
 
   /// <summary>
