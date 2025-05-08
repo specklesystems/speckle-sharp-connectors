@@ -6,7 +6,8 @@ using Speckle.Sdk.Credentials;
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
-public class SendOperationVersionRecorder(IClientFactory clientFactory, IAccountManager accountManager) : ISendOperationVersionRecorder
+public class SendOperationVersionRecorder(IClientFactory clientFactory, IAccountManager accountManager)
+  : ISendOperationVersionRecorder
 {
   public async Task<string> RecordVersion(
     string rootId,
