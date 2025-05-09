@@ -1,5 +1,4 @@
 using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
@@ -151,7 +150,6 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           continue;
         }
         string appId = obj.GetSpeckleApplicationId();
-
         definitionProxy.objects.Add(appId);
 
         if (obj is BlockReference blockReference)
