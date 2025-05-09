@@ -163,7 +163,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       {
         converted = instanceProxy;
       }
-      else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
+      // don't read AttributeReference objects from cache: they will have the same id (the one of the AttributeDefinition)
+      else if (
+        _sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
+        && (entity is not AttributeReference)
+      )
       {
         converted = value;
       }

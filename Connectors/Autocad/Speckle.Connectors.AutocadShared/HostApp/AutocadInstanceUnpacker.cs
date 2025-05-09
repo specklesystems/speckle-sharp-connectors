@@ -63,17 +63,8 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         ? instance.AnonymousBlockTableRecord
         : instance.BlockTableRecord;
 
-      // iterate through the attribute collection
-      // https://forums.autodesk.com/t5/net-forum/get-the-value-of-an-attribute-in-c/td-p/9060940
-      Matrix4x4 blockTransformMatrix = GetMatrix(instance.BlockTransform.ToArray());
-      Dictionary<string, AttributeReference> attributeDict = new();
-      foreach (ObjectId id in instance.AttributeCollection)
-      {
-        // add unique key and value for each AttributeReference, because AttributeReferences don't have any backwards connection to AttributeDefinition:
-        // https://forums.autodesk.com/t5/net-forum/know-which-attributedefinition-does-an-attributereference/td-p/6796502
-        var attReference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
-        attributeDict[GetAttributeUniqueKey(attReference, attReference.Tag, Matrix4x4.Identity)] = attReference;
-      }
+      // store all AttributeReferences in a dictionary with unique keys, so that the can be matched with AttributeDefinition later
+      Dictionary<string, AttributeReference> attributeDict = GetAttributesDictionary(instance, transaction);
 
       InstanceProxy instanceProxy =
         new()
@@ -81,7 +72,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           applicationId = instanceId,
           definitionId = definitionId.ToString(),
           maxDepth = depth,
-          transform = blockTransformMatrix,
+          transform = GetMatrix(instance.BlockTransform.ToArray()),
           units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
@@ -149,20 +140,22 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         {
           continue;
         }
+        string appId = obj.GetSpeckleApplicationId();
 
-        // in case of AttributeDefinition, get the AttributeReference from attributeDict instead. This will ensure correct text value
+        // In case of AttributeDefinition, get the AttributeReference of the current block instead, and convert outside of the block.
+        // This will ensure the correct text string. Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
         if (
           obj is AttributeDefinition attrDefinition
           && attributeDict.TryGetValue(
-            GetAttributeUniqueKey(attrDefinition, attrDefinition.Tag, blockTransformMatrix),
+            GetAttributeUniqueKey(attrDefinition, attrDefinition.Tag, instance.BlockTransform.ToArray()),
             out AttributeReference? reference
           )
         )
         {
-          obj = reference;
+          _instanceObjectsManager.AddAtomicObject(appId, new(reference, appId));
+          continue;
         }
 
-        string appId = obj.GetSpeckleApplicationId();
         definitionProxy.objects.Add(appId);
 
         if (obj is BlockReference blockReference)
@@ -181,29 +174,33 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     }
   }
 
-  private string GetAttributeUniqueKey(DBText attributeText, string tag, Matrix4x4 matrix)
+  private Dictionary<string, AttributeReference> GetAttributesDictionary(
+    BlockReference instance,
+    Transaction transaction
+  )
   {
-    var matrixArray = new[]
+    Dictionary<string, AttributeReference> attributeDict = new();
+    foreach (ObjectId id in instance.AttributeCollection)
     {
-      matrix.M11,
-      matrix.M12,
-      matrix.M13,
-      matrix.M14,
-      matrix.M21,
-      matrix.M22,
-      matrix.M23,
-      matrix.M24,
-      matrix.M31,
-      matrix.M32,
-      matrix.M33,
-      matrix.M34,
-      matrix.M41,
-      matrix.M42,
-      matrix.M43,
-      matrix.M44
-    };
-    var transformedPt = attributeText.Position.TransformBy(new Matrix3d(matrixArray));
-    Vector3 transformedVector = new(transformedPt.X, transformedPt.Y, transformedPt.Z);
+      // Generate a unique key for each AttributeReference, because AttributeReferences don't have any backwards connection to AttributeDefinition
+      // The key is a combination of a unique Position, Justification and Tag. Just Tags can have the same names, therefore not sufficient.
+      // https://forums.autodesk.com/t5/net-forum/know-which-attributedefinition-does-an-attributereference/td-p/6796502
+      var attReference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+      attributeDict[GetAttributeUniqueKey(attReference, attReference.Tag, null)] = attReference;
+    }
+
+    return attributeDict;
+  }
+
+  private string GetAttributeUniqueKey(DBText attributeText, string tag, double[]? matrixArray)
+  {
+    var position = attributeText.Position;
+    if (matrixArray is not null)
+    {
+      position = attributeText.Position.TransformBy(new Matrix3d(matrixArray));
+    }
+
+    Vector3 transformedVector = new(position.X, position.Y, position.Z);
 
     return $"{tag},{transformedVector},{attributeText.Justify}";
   }
