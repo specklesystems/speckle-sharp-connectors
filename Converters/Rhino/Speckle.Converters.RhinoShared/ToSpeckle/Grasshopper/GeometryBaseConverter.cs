@@ -10,8 +10,10 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.ArcCurve, Base> _arcCurveConverter;
+  private readonly ITypedConverter<RG.Hatch, SOG.Region> _hatchConverter;
   private readonly ITypedConverter<RG.LineCurve, SOG.Line> _lineCurveConverter;
   private readonly ITypedConverter<RG.NurbsCurve, SOG.Curve> _nurbsCurveConverter;
+  private readonly ITypedConverter<RG.PointCloud, SOG.Pointcloud> _pointcloudConverter;
   private readonly ITypedConverter<RG.PolyCurve, SOG.Polycurve> _polycurveConverter;
   private readonly ITypedConverter<RG.Polyline, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
@@ -22,8 +24,10 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
   public GeometryBaseConverter(
     ITypedConverter<RG.Point, SOG.Point> pointConverter,
     ITypedConverter<RG.ArcCurve, Base> arcCurveConverter,
+    ITypedConverter<RG.Hatch, SOG.Region> hatchConverter,
     ITypedConverter<RG.LineCurve, SOG.Line> lineCurveConverter,
     ITypedConverter<RG.NurbsCurve, SOG.Curve> nurbsCurveConverter,
+    ITypedConverter<RG.PointCloud, SOG.Pointcloud> pointcloudConverter,
     ITypedConverter<RG.PolyCurve, SOG.Polycurve> polycurveConverter,
     ITypedConverter<RG.Polyline, SOG.Polyline> polylineConverter,
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
@@ -34,8 +38,10 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
   {
     _pointConverter = pointConverter;
     _arcCurveConverter = arcCurveConverter;
+    _hatchConverter = hatchConverter;
     _lineCurveConverter = lineCurveConverter;
     _nurbsCurveConverter = nurbsCurveConverter;
+    _pointcloudConverter = pointcloudConverter;
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
     _meshConverter = meshConverter;
@@ -46,32 +52,22 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target)
   {
-    switch (target)
+    return target switch
     {
-      case RG.Point pt:
-        return _pointConverter.Convert(pt);
-      case RG.ArcCurve ac:
-        return _arcCurveConverter.Convert(ac);
-      case RG.LineCurve ln:
-        return _lineCurveConverter.Convert(ln);
-      case RG.NurbsCurve nurbsCurve:
-        return _nurbsCurveConverter.Convert(nurbsCurve);
-      case RG.PolyCurve polyCurve:
-        return _polycurveConverter.Convert(polyCurve);
-      case RG.Polyline polyline:
-        return _polylineConverter.Convert(polyline);
-      case RG.PolylineCurve polylineCurve:
-        return _polylineConverter.Convert(polylineCurve.ToPolyline());
-      case RG.Mesh mesh:
-        return _meshConverter.Convert(mesh);
-      case RG.Brep brep:
-        return _brepConverter.Convert(brep);
-      case RG.Extrusion ext:
-        return _extrusionConverter.Convert(ext);
-      case RG.SubD subD:
-        return _subdConverter.Convert(subD);
-    }
-
-    throw new ConversionException($"Failed to find a conversion for {target.GetType()}");
+      RG.Point pt => _pointConverter.Convert(pt),
+      RG.ArcCurve ac => _arcCurveConverter.Convert(ac),
+      RG.Hatch hatch => _hatchConverter.Convert(hatch),
+      RG.LineCurve ln => _lineCurveConverter.Convert(ln),
+      RG.NurbsCurve nurbsCurve => _nurbsCurveConverter.Convert(nurbsCurve),
+      RG.PointCloud pointcloud => _pointcloudConverter.Convert(pointcloud),
+      RG.PolyCurve polyCurve => _polycurveConverter.Convert(polyCurve),
+      RG.Polyline polyline => _polylineConverter.Convert(polyline),
+      RG.PolylineCurve polylineCurve => _polylineConverter.Convert(polylineCurve.ToPolyline()),
+      RG.Mesh mesh => _meshConverter.Convert(mesh),
+      RG.Brep brep => _brepConverter.Convert(brep),
+      RG.Extrusion ext => _extrusionConverter.Convert(ext),
+      RG.SubD subD => _subdConverter.Convert(subD),
+      _ => throw new ConversionException($"Failed to find a conversion for {target.GetType()}")
+    };
   }
 }

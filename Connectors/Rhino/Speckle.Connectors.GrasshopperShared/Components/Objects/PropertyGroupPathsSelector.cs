@@ -51,6 +51,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     }
 
     var paths = GetPropertyPaths(objectPropertyGroups);
+    m_data.Clear();
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 

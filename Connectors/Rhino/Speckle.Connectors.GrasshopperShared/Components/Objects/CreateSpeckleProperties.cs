@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -13,8 +12,8 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 {
   public CreateSpeckleProperties()
     : base(
-      "Create Speckle Properties",
-      "CSP",
+      "Create Properties",
+      "CP",
       "Creates a set of properties for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
@@ -34,25 +33,19 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.tree);
+    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.item);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
     // Create a data tree to store output
-    GH_Structure<SpecklePropertyGroupGoo> outputTree = new();
-    Dictionary<string, List<SpecklePropertyGoo>> properties = new();
-    int branchCount = Params.Input.First().VolatileData.PathCount;
+
+    Dictionary<string, object?> properties = new();
 
     // Check for structure of all inputs to see matching branches
     foreach (var inputParam in Params.Input)
     {
       string inputName = inputParam.NickName;
-      if (branchCount != inputParam.VolatileData.PathCount)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Input property values had different branch structure.");
-        return;
-      }
 
       if (properties.ContainsKey(inputName))
       {
@@ -61,46 +54,28 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       }
 
       properties.Add(inputName, new());
-
-      // create property for the branch of the input
-      for (int i = 0; i < branchCount; i++)
-      {
-        var data = inputParam.VolatileData.get_Branch(i).OfType<object>().ToList();
-        if (data.Count > 1)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Cannot support list properties yet.");
-          return;
-        }
-
-        SpecklePropertyGoo propGoo = new();
-        if (!propGoo.CastFrom(data.Count == 0 ? null : data.First()))
-        {
-          AddRuntimeMessage(
-            GH_RuntimeMessageLevel.Error,
-            $"Parameter {inputParam.NickName} should not contain anything other than strings, doubles, ints, and bools."
-          );
-
-          return;
-        }
-
-        propGoo.Path = inputName;
-        properties[inputName].Add(propGoo);
-      }
     }
 
-    // now create the property groups
-    for (int i = 0; i < branchCount; i++)
+    for (int i = 0; i < Params.Input.Count; i++)
     {
-      var currentProps = new Dictionary<string, SpecklePropertyGoo>();
-      foreach (var kvp in properties)
+      object? value = null;
+      var success = da.GetData(i, ref value);
+      var actualValue = value?.GetType().GetProperty("Value").GetValue(value); // note: unsure if reflection here hurts our performance
+      if (!success || value == null || actualValue == null)
       {
-        currentProps[kvp.Key] = kvp.Value[i];
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Warning,
+          $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
+        );
+
+        return;
       }
 
-      outputTree.Append(new SpecklePropertyGroupGoo(currentProps), new GH_Path(i));
+      properties[Params.Input[i].NickName] = actualValue;
     }
 
-    da.SetDataTree(0, outputTree);
+    var groupGoo = new SpecklePropertyGroupGoo(properties);
+    da.SetData(0, groupGoo);
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
@@ -120,7 +95,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       Name = $"Property {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
-      Access = GH_ParamAccess.tree
+      Access = GH_ParamAccess.item
     };
 
     myParam.NickName = myParam.Name;

@@ -210,11 +210,11 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     return true;
   }
 
-  public SpeckleObjectWrapper Copy() =>
+  public SpeckleObjectWrapper DeepCopy() =>
     new()
     {
       Base = Base.ShallowCopy(),
-      GeometryBase = GeometryBase,
+      GeometryBase = GeometryBase?.Duplicate(),
       Color = Color,
       Material = Material,
       WrapperGuid = WrapperGuid,
@@ -228,7 +228,10 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+  public override IGH_Goo Duplicate()
+  {
+    return new SpeckleObjectWrapperGoo(Value.DeepCopy());
+  }
 
   public override string ToString() => $@"Speckle Object Goo [{m_value.Base.speckle_type}]";
 
@@ -247,10 +250,10 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     switch (source)
     {
       case SpeckleObjectWrapper wrapper:
-        Value = wrapper.Copy();
+        Value = wrapper.DeepCopy();
         return true;
       case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
-        Value = speckleGrasshopperObjectGoo.Value.Copy();
+        Value = speckleGrasshopperObjectGoo.Value.DeepCopy();
         return true;
       case IGH_GeometricGoo geometricGoo:
         var gooGB = geometricGoo.GeometricGooToGeometryBase();

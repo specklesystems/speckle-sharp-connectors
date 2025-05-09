@@ -18,7 +18,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     : base(
       "Expand Collection",
       "eC",
-      "Expands a collection into its children",
+      "Expands a Collection into its children",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }

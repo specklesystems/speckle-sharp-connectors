@@ -50,6 +50,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
         }
       }
     }
+    m_data.Clear();
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 

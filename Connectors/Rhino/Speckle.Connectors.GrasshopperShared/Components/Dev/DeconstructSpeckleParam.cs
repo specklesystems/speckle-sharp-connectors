@@ -214,7 +214,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         {
           Base = @base,
           GeometryBase = null,
-          Name = @base["name"] as string ?? "",
+          Name = @base[Constants.NAME_PROP] as string ?? "",
           Color = null,
           Material = null,
           WrapperGuid = null,

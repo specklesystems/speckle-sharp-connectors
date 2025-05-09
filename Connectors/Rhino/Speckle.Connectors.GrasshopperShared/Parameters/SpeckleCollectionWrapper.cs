@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -14,6 +12,14 @@ using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
+/// <summary>
+/// A Wrapper class representing a Speckle Collection to Rhino Layer relationship.
+/// </summary>
+/// <remarks>
+/// When constructing, the following properties need to be set in order:
+/// <see cref="SpeckleWrapper.Base"/>, then <see cref="SpeckleWrapper.Name"/> and <see cref="SpeckleWrapper.ApplicationId"/>
+/// This is because chanbging the Name or ApplicationId will update Collection.
+/// </remarks>
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
 public class SpeckleCollectionWrapper : SpeckleWrapper
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
@@ -34,8 +40,21 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
   public Collection Collection { get; set; }
 
-  // the list of layer names that build up the path to this collection, including this collection name
-  public ObservableCollection<string> Path { get; set; }
+  private List<string> StoredPath { get; set; }
+
+  /// <summary>
+  /// List of Collection names that build up the path to this collection (inclusive of <see cref="SpeckleWrapper.Name"/>;
+  /// </summary>
+  /// <remarks>Setting this property will update all element paths inside <see cref="Elements"/></remarks>
+  public required List<string> Path
+  {
+    get => StoredPath;
+    set
+    {
+      StoredPath = value;
+      OnPathChanged();
+    }
+  }
 
   public List<SpeckleWrapper> Elements { get; set; } = new();
 
@@ -60,31 +79,54 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
   public override string ToString() => $"{Name} [{Elements.Count}]";
 
-  public SpeckleCollectionWrapper(List<string> path)
-  {
-    Path = new ObservableCollection<string>(path);
+  /// <summary>
+  /// Will attempt to retrieve an existing Layer from the <see cref="Path"/>.
+  /// </summary>
+  /// <returns>Index of existing layer if found, or -1 if not.</returns>
+  public int GetLayerIndex() => RhinoDoc.ActiveDoc.Layers.FindByFullPath(string.Join("::", Path), -1);
 
-    // add listener on path changing.
-    // this can be triggered by a create collection node, that changes the path of this collection.
-    // when this happens, we want to update the paths of all elements downstream
-    Path.CollectionChanged += OnPathChanged;
-  }
-
-  private void OnPathChanged(object sender, NotifyCollectionChangedEventArgs e)
+  // updates the elements' paths inside this collection
+  private void OnPathChanged()
   {
-    var newPath = e.NewItems.Cast<string>().ToList();
+    var newPath = StoredPath.ToList();
+
+    // then update paths and parents of all children
     foreach (var element in Elements)
     {
       if (element is SpeckleObjectWrapper o)
       {
         o.Path = newPath;
+        o.Parent = this;
       }
       else if (element is SpeckleCollectionWrapper c)
       {
-        c.Path = new ObservableCollection<string>(newPath);
+        // don't forget to add the child collection name to the path
+        newPath.Add(c.Name);
+        c.Path = newPath;
       }
     }
   }
+
+  public SpeckleCollectionWrapper DeepCopy() =>
+    new()
+    {
+      Base = new Collection(Collection.name) { applicationId = Collection.applicationId, id = Collection.id },
+      Color = Color,
+      Material = Material,
+      ApplicationId = ApplicationId,
+      Name = Name,
+      Path = Path,
+      Topology = Topology,
+      Elements = Elements
+        .Select(e =>
+          e is SpeckleCollectionWrapper c
+            ? c.DeepCopy()
+            : e is SpeckleObjectWrapper o
+              ? o.DeepCopy()
+              : e
+        )
+        .ToList()
+    };
 
   /// <summary>
   /// Bakes this collection as a layer, in its path structure.
@@ -95,8 +137,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
   /// <returns>The index of the baked layer</returns>
   public int Bake(RhinoDoc doc, List<Guid> obj_ids, bool bakeObjects, int parentLayerIndex = -1)
   {
-    var path = Path.ToList();
-    if (!LayerExists(doc, path, out int currentLayerIndex))
+    if (!LayerExists(doc, Path, out int currentLayerIndex))
     {
       if (parentLayerIndex != -1)
       {
@@ -107,7 +148,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       }
       else
       {
-        currentLayerIndex = CreateLayerByPath(doc, path, Color, obj_ids);
+        currentLayerIndex = CreateLayerByPath(doc, Path, Color, obj_ids);
       }
     }
 
@@ -132,7 +173,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
   private bool LayerExists(RhinoDoc doc, List<string> path, out int layerIndex)
   {
-    var fullPath = string.Join(Constants.LAYER_PATH_DELIMITER, path);
+    var fullPath = string.Join("::", path);
     layerIndex = doc.Layers.FindByFullPath(fullPath, -1);
     return layerIndex != -1;
   }
@@ -183,7 +224,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
 
 public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
 {
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+  public override IGH_Goo Duplicate() => new SpeckleCollectionWrapperGoo(Value.DeepCopy());
 
   public override string ToString() => $@"Speckle Collection Goo [{m_value.Name} ({Value.Elements.Count})]";
 

@@ -117,6 +117,8 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
 
 #if !RHINO8_OR_GREATER
   private bool CastFromModelRenderMaterial(object _) => false;
+
+  private bool CastToModelRenderMaterial<T>(ref T _) => false;
 #endif
 
   public override bool CastTo<T>(ref T target)
@@ -129,7 +131,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
       return true;
     }
 
-    return false;
+    return CastToModelRenderMaterial(ref target);
   }
 
   public SpeckleMaterialWrapperGoo(SpeckleMaterialWrapper value)

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -21,9 +20,9 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   public CreateCollection()
     : base(
-      "Create collection",
+      "Create Collection",
       "cC",
-      "Creates a new collection",
+      "Creates a new Collection",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }
@@ -44,10 +43,11 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     string rootName = "Unnamed";
     Collection rootCollection = new();
     SpeckleCollectionWrapper rootSpeckleCollectionWrapper =
-      new(new() { rootName })
+      new()
       {
         Base = rootCollection,
         Name = rootName,
+        Path = new() { rootName },
         Color = null,
         Material = null,
         ApplicationId = InstanceGuid.ToString()
@@ -61,8 +61,12 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         continue;
       }
 
-      var inputCollections = data.OfType<SpeckleCollectionWrapperGoo>().Empty().ToList();
+      var inputCollections = data.OfType<SpeckleCollectionWrapperGoo>()
+        .Empty()
+        .Select(o => (SpeckleCollectionWrapperGoo)o.Duplicate())
+        .ToList();
       var inputNonCollections = data.Where(t => t is not SpeckleCollectionWrapperGoo).Empty().ToList();
+
       if (inputCollections.Count != 0 && inputNonCollections.Count != 0)
       {
         // TODO: error out! we want to disallow setting objects and collections in the same parent collection
@@ -76,10 +80,11 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       List<string> childPath = new() { rootName };
       childPath.Add(inputParam.NickName);
       SpeckleCollectionWrapper childSpeckleCollectionWrapper =
-        new(childPath)
+        new()
         {
           Base = new Collection(),
           Name = inputParam.NickName,
+          Path = childPath,
           Color = null,
           Material = null,
           Topology = GrasshopperHelpers.GetParamTopology(inputParam),
@@ -95,7 +100,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
         foreach (SpeckleCollectionWrapperGoo wrapperGoo in inputCollections)
         {
           // update the speckle collection path
-          wrapperGoo.Value.Path = new ObservableCollection<string>(childPath);
+          wrapperGoo.Value.Path = childPath;
 
           foreach (
             string subCollectionName in wrapperGoo.Value.Elements.OfType<SpeckleCollectionWrapper>().Select(c => c.Name)
@@ -151,7 +156,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   {
     var myParam = new Param_GenericObject
     {
-      Name = $"Collection {Params.Input.Count + 1}",
+      Name = $"Sub-Collection {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
       Access = GH_ParamAccess.tree // always tree

@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -61,6 +62,10 @@ public sealed class ReceiveOperation(
     CancellationToken cancellationToken
   )
   {
+    if (version.referencedObject is null)
+    {
+      throw new SpeckleException("Version referenced object is null and cannot do a receive operation.");
+    }
     receiveProgress.Begin();
     Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
