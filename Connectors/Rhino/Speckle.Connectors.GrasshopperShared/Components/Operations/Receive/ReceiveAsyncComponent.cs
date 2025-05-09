@@ -51,7 +51,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
-  public IAccountService AccountManager { get; private set; }
+  public AccountService AccountManager { get; private set; }
   public IClientFactory ClientFactory { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -78,7 +78,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
     ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
