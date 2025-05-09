@@ -144,7 +144,6 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
         // In the case of dynamic blocks, this prevents sending objects that are not visible in its current state.
         // In case of AttributeDefinition, we use AttributeReference of the current block instead, and convert outside of the block (already converted)
-        // This will ensure the correct text string. Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
         if (!obj.Visible || obj is AttributeDefinition)
         {
           continue;
