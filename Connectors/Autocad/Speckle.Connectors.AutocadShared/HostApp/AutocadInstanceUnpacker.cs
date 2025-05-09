@@ -147,17 +147,17 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
         // In case of AttributeDefinition, get the AttributeReference of the current block instead, and convert outside of the block.
         // This will ensure the correct text string. Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
-        if (
-          obj is AttributeDefinition attrDefinition
-          && attributeDict.TryGetValue(
-            GetAttributeUniqueKey(attrDefinition, attrDefinition.Tag, instance.BlockTransform.ToArray()),
-            out AttributeReference? reference
-          )
-        )
+
+        if (obj is AttributeDefinition attrDefinition)
         {
-          appId = reference.GetSpeckleApplicationId();
-          _instanceObjectsManager.AddAtomicObject(appId, new(reference, appId));
-          continue;
+          var key = GetAttributeUniqueKey(attrDefinition, attrDefinition.Tag, instance.BlockTransform.ToArray());
+
+          if (attributeDict.TryGetValue(key, out AttributeReference? reference))
+          {
+            appId = reference.GetSpeckleApplicationId();
+            _instanceObjectsManager.AddAtomicObject(appId, new(reference, appId));
+            continue;
+          }
         }
 
         definitionProxy.objects.Add(appId);
