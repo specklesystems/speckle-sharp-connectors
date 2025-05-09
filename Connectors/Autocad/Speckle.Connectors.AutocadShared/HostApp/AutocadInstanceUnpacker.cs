@@ -155,7 +155,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           )
         )
         {
-          appId += " " + instanceId;
+          appId = reference.GetSpeckleApplicationId();
           _instanceObjectsManager.AddAtomicObject(appId, new(reference, appId));
           continue;
         }
