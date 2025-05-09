@@ -33,7 +33,7 @@ void Build(string solution, string configuration)
   Console.WriteLine();
   Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
   Console.WriteLine();
-  Run("dotnet", $"build \".\\{solution}\" --configuration {configuration} --no-restore");
+  Run("dotnet", $"build \".\\{solution}\" -warnaserror --configuration {configuration} --no-restore");
 }
 void Restore(string solution)
 {
