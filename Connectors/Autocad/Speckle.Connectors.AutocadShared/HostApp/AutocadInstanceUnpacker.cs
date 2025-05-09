@@ -105,11 +105,14 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
       instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
+      // rely on already converted Definition, unless there are text Attributes, then convert again
+      // and pull text objects outside the block
       if (
         _instanceObjectsManager.TryGetInstanceDefinitionProxy(
           definitionId.ToString(),
           out InstanceDefinitionProxy? value
         )
+        && attributeDict.Count == 0
       )
       {
         int depthDifference = depth - value.maxDepth;
@@ -152,6 +155,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           )
         )
         {
+          appId += " " + instanceId;
           _instanceObjectsManager.AddAtomicObject(appId, new(reference, appId));
           continue;
         }
