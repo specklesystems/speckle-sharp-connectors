@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "Rhino8Core": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
+      "commandLineArgs": "/netcore /runscript=\"_Grasshopper\"",
+      "environmentVariables": {
+        "RHINO_PACKAGE_DIRS": "$(ProjectDir)$(OutputPath)\\"
+      }
+    },
+    "Rhino8NetFx": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
+      "commandLineArgs": "/netfx /runscript=\"_Grasshopper\"",
+      "environmentVariables": {
+        "RHINO_PACKAGE_DIRS": "$(ProjectDir)$(OutputPath)\\"
+      }
+    }
+  }
+}

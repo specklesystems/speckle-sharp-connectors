@@ -38,7 +38,8 @@ public sealed class SendConversionResult : ConversionResult
   }
 }
 
-public sealed class ReceiveConversionResult : ConversionResult
+// HACK: I've unsealed this for Grasshopper, non-ideal. Should be discussed and a better pattern may be implemented.
+public class ReceiveConversionResult : ConversionResult
 {
   public ReceiveConversionResult(
     Status status,

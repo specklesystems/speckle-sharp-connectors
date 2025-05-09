@@ -8,7 +8,7 @@ namespace Speckle.Connectors.Common.Operations.Receive;
 /// <summary>
 /// Utility class to unpack layer structure from path of collections or property tree.
 /// </summary>
-public abstract class TraversalContextUnpacker
+public class TraversalContextUnpacker
 {
   public IReadOnlyCollection<(Collection[] path, Base current)> GetAtomicObjectsWithPath(
     IEnumerable<TraversalContext> atomicObjects
