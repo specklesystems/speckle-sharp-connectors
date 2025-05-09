@@ -1,22 +1,25 @@
-﻿namespace Speckle.Importers.Ifc.Ara3D.StepParser;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace Speckle.Importers.Ifc.Ara3D.StepParser;
+
+[SuppressMessage("Design", "CA1028:Enum Storage should be Int32", Justification = "StepTokens are Bytes")]
 public enum StepTokenType : byte
 {
-  None,
-  Ident,
-  String,
-  Whitespace,
-  Number,
-  Symbol,
-  Id,
-  Separator,
-  Unassigned,
-  Redeclared,
-  Comment,
-  Unknown,
-  BeginGroup,
-  EndGroup,
-  LineBreak,
-  EndOfLine,
-  Definition,
+  NONE,
+  IDENT,
+  STRING,
+  WHITESPACE,
+  NUMBER,
+  SYMBOL,
+  ID,
+  SEPARATOR,
+  UNASSIGNED,
+  REDECLARED,
+  COMMENT,
+  UNKNOWN,
+  BEGIN_GROUP,
+  END_GROUP,
+  LINE_BREAK,
+  END_OF_LINE,
+  DEFINITION,
 }
