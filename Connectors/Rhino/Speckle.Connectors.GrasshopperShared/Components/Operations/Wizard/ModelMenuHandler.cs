@@ -36,7 +36,10 @@ public class ModelMenuHandler
 
   public void Reset()
   {
+    _menu?.Items.Clear();
     _menu?.Close();
+    SelectedModel = null;
+    Models = null;
     RedrawMenuButton(null);
   }
 

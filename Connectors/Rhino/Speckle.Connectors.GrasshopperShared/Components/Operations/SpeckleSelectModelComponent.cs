@@ -106,7 +106,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (da.GetData(0, ref urlInput))
     {
       //Lock button interactions before anything else, to ensure any input (even invalid ones) lock the state.
-      SetComponentButtonsState(false);
+      SpeckleOperationWizard.SetComponentButtonsState(false);
 
       if (urlInput == null || string.IsNullOrEmpty(urlInput))
       {
@@ -130,7 +130,7 @@ public class SpeckleSelectModelComponent : GH_Component
     // OPTION 2: Component is running with no wires connected to input.
 
     // Unlock button interactions when no input data is provided (no wires connected)
-    SetComponentButtonsState(true);
+    SpeckleOperationWizard.SetComponentButtonsState(true);
 
     if (_justPastedIn && _storedUserId != null && !string.IsNullOrEmpty(_storedUserId))
     {
@@ -171,6 +171,12 @@ public class SpeckleSelectModelComponent : GH_Component
     if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
     {
       var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
+      if (workspaces.items.Count == 0)
+      {
+        // Create a workspace flow
+        SpeckleOperationWizard.CreateNewWorkspaceUIState();
+        return;
+      }
       SpeckleOperationWizard.SetWorkspaces(workspaces);
     }
 
@@ -276,14 +282,6 @@ public class SpeckleSelectModelComponent : GH_Component
     // If the component runs once till the end, then it's no longer "just pasted in".
     _justPastedIn = false;
     base.AfterSolveInstance();
-  }
-
-  private void SetComponentButtonsState(bool enabled)
-  {
-    WorkspaceContextMenuButton.Enabled = enabled;
-    ProjectContextMenuButton.Enabled = enabled;
-    ModelContextMenuButton.Enabled = enabled;
-    VersionContextMenuButton.Enabled = enabled;
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)

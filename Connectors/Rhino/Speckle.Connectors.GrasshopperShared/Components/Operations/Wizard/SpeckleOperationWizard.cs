@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Registration;
@@ -50,7 +51,7 @@ public class SpeckleOperationWizard
         ? _accountManager.GetAccount(userSelectedAccountId)
         : _accountManager.GetDefaultAccount();
 
-    WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces);
+    WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces, CreateNewWorkspace);
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects); // TODO: Nullability of account need to be handled before
     ModelMenuHandler = new ModelMenuHandler(FetchModels);
     if (!isSender)
@@ -163,6 +164,29 @@ public class SpeckleOperationWizard
     }
   }
 
+  public void SetComponentButtonsState(bool enabled)
+  {
+    WorkspaceMenuHandler.WorkspaceContextMenuButton.Enabled = enabled;
+    ProjectMenuHandler.ProjectContextMenuButton.Enabled = enabled;
+    ModelMenuHandler.ModelContextMenuButton.Enabled = enabled;
+    if (VersionMenuHandler?.VersionContextMenuButton != null)
+    {
+      VersionMenuHandler.VersionContextMenuButton.Enabled = enabled;
+    }
+  }
+
+  public void CreateNewWorkspaceUIState()
+  {
+    WorkspaceMenuHandler.WorkspaceContextMenuButton.Enabled = true;
+    WorkspaceMenuHandler.WorkspaceContextMenuButton.Name = "Create New Workspace";
+    ProjectMenuHandler.ProjectContextMenuButton.Enabled = false;
+    ModelMenuHandler.ModelContextMenuButton.Enabled = false;
+    if (VersionMenuHandler?.VersionContextMenuButton != null)
+    {
+      VersionMenuHandler.VersionContextMenuButton.Enabled = false;
+    }
+  }
+
   private void ResetWorkspaces()
   {
     SelectedWorkspace = null;
@@ -188,6 +212,18 @@ public class SpeckleOperationWizard
   {
     SelectedVersion = null;
     VersionMenuHandler?.Reset();
+  }
+
+  private Task CreateNewWorkspace()
+  {
+    Process.Start(
+      new ProcessStartInfo
+      {
+        FileName = SelectedAccount?.serverInfo.url + "/workspaces/actions/create",
+        UseShellExecute = true
+      }
+    );
+    return Task.CompletedTask;
   }
 
   /// <summary>

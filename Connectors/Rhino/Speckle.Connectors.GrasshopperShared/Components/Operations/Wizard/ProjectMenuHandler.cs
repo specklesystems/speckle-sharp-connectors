@@ -36,7 +36,10 @@ public class ProjectMenuHandler
 
   public void Reset()
   {
+    _menu?.Items.Clear();
     _menu?.Close();
+    SelectedProject = null;
+    Projects = null;
     RedrawMenuButton(null);
   }
 

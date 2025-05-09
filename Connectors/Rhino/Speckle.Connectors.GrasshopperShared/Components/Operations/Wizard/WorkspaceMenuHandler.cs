@@ -13,6 +13,7 @@ public class WorkspaceMenuHandler
   private readonly Func<string, Task<ResourceCollection<Workspace>>> _fetchWorkspaces;
   private ToolStripDropDown? _menu;
   private SearchToolStripMenuItem? _searchItem;
+  private readonly Func<Task> _createWorkspace;
   private Workspace? SelectedWorkspace { get; set; }
 
   public ResourceCollection<Workspace>? Workspaces { get; set; }
@@ -21,9 +22,13 @@ public class WorkspaceMenuHandler
 
   public GhContextMenuButton WorkspaceContextMenuButton { get; }
 
-  public WorkspaceMenuHandler(Func<string, Task<ResourceCollection<Workspace>>> fetchWorkspaces)
+  public WorkspaceMenuHandler(
+    Func<string, Task<ResourceCollection<Workspace>>> fetchWorkspaces,
+    Func<Task> createWorkspace
+  )
   {
     _fetchWorkspaces = fetchWorkspaces;
+    _createWorkspace = createWorkspace;
     WorkspaceContextMenuButton = new GhContextMenuButton(
       "Select Workspace",
       "Select Workspace",
@@ -34,7 +39,10 @@ public class WorkspaceMenuHandler
 
   public void Reset()
   {
+    _menu?.Items.Clear();
     _menu?.Close();
+    Workspaces = null;
+    SelectedWorkspace = null;
     RedrawMenuButton(null);
   }
 
@@ -50,15 +58,10 @@ public class WorkspaceMenuHandler
     _menu = menu;
     _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 
-    if (Workspaces == null)
+    if (Workspaces == null || Workspaces.items.Count == 0)
     {
-      _searchItem.AddMenuItem("No workspaces were fetched");
-      return true;
-    }
-
-    if (Workspaces.items.Count == 0)
-    {
-      _searchItem.AddMenuItem("Create a new workspace", (_, _) => CreateNewWorkspace());
+      menu.Items.Clear();
+      _searchItem.AddMenuItem("Create a new workspace", (_, _) => _createWorkspace.Invoke());
       return true;
     }
 
@@ -162,10 +165,5 @@ public class WorkspaceMenuHandler
       g.DrawImage(image, 0, 0, width, height);
     }
     return bmp;
-  }
-
-  private void CreateNewWorkspace()
-  {
-    return;
   }
 }
