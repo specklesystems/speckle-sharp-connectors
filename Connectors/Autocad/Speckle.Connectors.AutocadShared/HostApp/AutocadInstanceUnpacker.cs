@@ -63,9 +63,6 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         ? instance.AnonymousBlockTableRecord
         : instance.BlockTableRecord;
 
-      // store all AttributeReferences in a dictionary with unique keys, so that the can be matched with AttributeDefinition later
-      List<AttributeReference> attributeList = GetAttributesDictionary(instance, transaction);
-
       InstanceProxy instanceProxy =
         new()
         {
@@ -105,14 +102,22 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
       instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
-      // rely on already converted Definition, unless there are text Attributes, then convert again
-      // and pull text objects outside the block
+      // Convert AttributeReferences outside of the block definition: this will ensure the correct text string.
+      // Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
+      // and neither the AttributeReferences can be properly linked to the underlying AttributeDefinition
+      foreach (ObjectId id in instance.AttributeCollection)
+      {
+        var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        string refAppId = reference.GetSpeckleApplicationId();
+        _instanceObjectsManager.AddAtomicObject(refAppId, new(reference, refAppId));
+      }
+
+      // rely on already converted Definition
       if (
         _instanceObjectsManager.TryGetInstanceDefinitionProxy(
           definitionId.ToString(),
           out InstanceDefinitionProxy? value
         )
-        && attributeList.Count == 0
       )
       {
         int depthDifference = depth - value.maxDepth;
@@ -139,7 +144,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         Entity obj = (Entity)transaction.GetObject(id, OpenMode.ForRead);
 
         // In the case of dynamic blocks, this prevents sending objects that are not visible in its current state.
-        // In case of AttributeDefinition, get the AttributeReference of the current block instead, and convert outside of the block (read from dictionary)
+        // In case of AttributeDefinition, we use AttributeReference of the current block instead, and convert outside of the block (already converted)
         // This will ensure the correct text string. Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
         if (!obj.Visible || obj is AttributeDefinition)
         {
@@ -158,29 +163,11 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       }
 
       _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
-
-      foreach (var reference in attributeList)
-      {
-        string refAppId = reference.GetSpeckleApplicationId();
-        _instanceObjectsManager.AddAtomicObject(refAppId, new(reference, refAppId));
-      }
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
-  }
-
-  private List<AttributeReference> GetAttributesDictionary(BlockReference instance, Transaction transaction)
-  {
-    List<AttributeReference> attributesList = new();
-    foreach (ObjectId id in instance.AttributeCollection)
-    {
-      var attReference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
-      attributesList.Add(attReference);
-    }
-
-    return attributesList;
   }
 
   private Matrix4x4 GetMatrix(double[] t) =>
