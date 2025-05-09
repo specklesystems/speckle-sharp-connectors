@@ -59,9 +59,11 @@ public static class Solutions
   public static async Task GenerateSolutions()
   {
     await GenerateLocalSlnx();
-    foreach (string solutionSlug in Consts.SolutionSlugs)
+    foreach (var group in Consts.ProjectGroups)
     {
-      await GenerateConnector(solutionSlug);
+      var path = group.Projects[0].ProjectPath.Split('/');
+      var folder = $"/{path[0]}/{path[1]}/";
+      await GenerateConnector(group.HostAppSlug, folder);
     }
   }
 
@@ -77,12 +79,16 @@ public static class Solutions
     await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
   }
 
-  public static async Task GenerateConnector(string slug)
+  public static async Task GenerateConnector(string slug, string folder)
   {
+    slug = string.Concat(slug[0].ToString().ToUpper(), slug.AsSpan(1));
     var connectors = await GetFullSlnx();
     var foldersToRemove = connectors
       .SolutionFolders.Where(x =>
-        !x.Path.Equals("/Connectors/") && x.Path.StartsWith("/Connectors/") && !x.Path.Contains(slug)
+        //need base folder
+        !x.Path.Equals("/Connectors/")
+        //don't grab all
+        && (x.Path.StartsWith("/Connectors/") && !x.Path.StartsWith(folder))
       )
       .ToList();
     foreach (var folderToRemove in foldersToRemove)
