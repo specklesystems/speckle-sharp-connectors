@@ -16,7 +16,7 @@ public class WorkspaceMenuHandler
   private Workspace? SelectedWorkspace { get; set; }
 
   public ResourceCollection<Workspace>? Workspaces { get; set; }
-
+  public Bitmap? Logo { get; private set; }
   public event EventHandler<WorkspaceSelectedEventArgs>? WorkspaceSelected;
 
   public GhContextMenuButton WorkspaceContextMenuButton { get; }
@@ -106,8 +106,8 @@ public class WorkspaceMenuHandler
       : "Selection is disabled due to component input.";
     if (workspace != null)
     {
-      var bitmap = Get24X24IconFromBase64(workspace.logo);
-      WorkspaceContextMenuButton.SetIconOverride(bitmap);
+      Logo = Get24X24IconFromBase64(workspace.logo);
+      WorkspaceContextMenuButton.SetIconOverride(Logo);
       WorkspaceContextMenuButton.Name = workspace.name;
       WorkspaceContextMenuButton.NickName = workspace.id;
       WorkspaceContextMenuButton.Description = $"{workspace.description ?? "No description"}\n\n{suffix}";
