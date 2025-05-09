@@ -62,36 +62,33 @@ public class ModelMenuHandler
   private async Task Refetch(string searchText)
   {
     Models = await _fetchModels.Invoke(searchText);
-    PopulateMenu(_menu!);
+    // NOTE: We shouldn't call PopulateMenu here bc it will reset the search item when search is happening, it borks the state.
+    PopulateModelMenuItems(_menu!, _searchItem!);
   }
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
     _menu = menu;
-    _menu.Closed += (_, _) =>
-    {
-      _searchItem = null;
-    };
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
+    _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 
     if (Models == null)
     {
-      _searchItem?.AddMenuItem("No models were fetched");
+      _searchItem.AddMenuItem("No models were fetched");
       return true;
     }
 
     if (Models.items.Count == 0)
     {
-      _searchItem?.AddMenuItem("Project has no models");
+      _searchItem.AddMenuItem("Project has no models");
       return true;
     }
 
-    PopulateModelMenuItems(menu);
+    PopulateModelMenuItems(_menu, _searchItem);
 
     return true;
   }
 
-  private void PopulateModelMenuItems(ToolStripDropDown menu)
+  private void PopulateModelMenuItems(ToolStripDropDown menu, SearchToolStripMenuItem searchItem)
   {
     var lastIndex = menu.Items.Count - 1;
     if (lastIndex >= 0)
@@ -108,13 +105,11 @@ public class ModelMenuHandler
       return;
     }
 
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
-
     foreach (var model in Models.items)
     {
       var desc = string.IsNullOrEmpty(model.description) ? "No description" : model.description;
 
-      _searchItem?.AddMenuItem(
+      searchItem?.AddMenuItem(
         $"{model.name} - {desc}",
         (_, _) => OnModelSelected(model),
         SelectedModel?.id != model.id,

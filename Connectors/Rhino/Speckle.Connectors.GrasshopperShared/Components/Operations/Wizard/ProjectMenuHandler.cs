@@ -62,29 +62,26 @@ public class ProjectMenuHandler
   private async Task Refetch(string searchText)
   {
     Projects = await _fetchProjects.Invoke(searchText);
-    PopulateMenuItems(_menu!);
+    // NOTE: We shouldn't call PopulateMenu here bc it will reset the search item when search is happening, it borks the state.
+    PopulateMenuItems(_menu!, _searchItem!);
   }
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
     _menu = menu;
-    menu.Closed += (_, _) =>
-    {
-      _searchItem = null;
-    };
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
+    _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 
     if (Projects == null)
     {
-      _searchItem?.AddMenuItem("No projects were fetched");
+      _searchItem.AddMenuItem("No projects were fetched");
       return true;
     }
 
-    PopulateMenuItems(menu);
+    PopulateMenuItems(_menu, _searchItem);
     return true;
   }
 
-  private void PopulateMenuItems(ToolStripDropDown menu)
+  private void PopulateMenuItems(ToolStripDropDown menu, SearchToolStripMenuItem searchItem)
   {
     // Clear previous
     for (int i = menu.Items.Count - 1; i > 1; i--)
@@ -97,11 +94,9 @@ public class ProjectMenuHandler
       return;
     }
 
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
-
-    if (Projects.items.Count == 0 && !string.IsNullOrEmpty(_searchItem.SearchText))
+    if (Projects.items.Count == 0 && !string.IsNullOrEmpty(searchItem.SearchText))
     {
-      var noProjectsFoundButton = _searchItem.AddMenuItem("No projects found.");
+      var noProjectsFoundButton = searchItem.AddMenuItem("No projects found.");
       noProjectsFoundButton.BackColor = Color.MistyRose;
       return;
     }
@@ -110,7 +105,7 @@ public class ProjectMenuHandler
     {
       var desc = string.IsNullOrEmpty(project.description) ? "No description" : project.description;
 
-      var projectItem = _searchItem.AddMenuItem(
+      var projectItem = searchItem.AddMenuItem(
         $"{project.name} - {desc}",
         (_, _) => OnProjectSelected(project),
         SelectedProject?.id != project.id,

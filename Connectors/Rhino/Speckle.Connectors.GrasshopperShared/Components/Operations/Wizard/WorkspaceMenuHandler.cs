@@ -41,45 +41,37 @@ public class WorkspaceMenuHandler
   private async Task Refetch(string searchText)
   {
     Workspaces = await _fetchWorkspaces.Invoke(searchText);
-    PopulateMenu(_menu!);
+    // NOTE: We shouldn't call PopulateMenu here bc it will reset the search item when search is happening, it borks the state.
+    PopulateModelMenuItems(_menu!, _searchItem!);
   }
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
     _menu = menu;
-    _menu.Closed += (_, _) =>
-    {
-      _searchItem = null;
-    };
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
+    _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 
     if (Workspaces == null)
     {
-      _searchItem?.AddMenuItem("No workspaces were fetched");
+      _searchItem.AddMenuItem("No workspaces were fetched");
       return true;
     }
 
     if (Workspaces.items.Count == 0)
     {
-      _searchItem?.AddMenuItem("Create a new workspace", (_, _) => CreateNewWorkspace());
+      _searchItem.AddMenuItem("Create a new workspace", (_, _) => CreateNewWorkspace());
       return true;
     }
 
-    PopulateModelMenuItems(menu);
+    PopulateModelMenuItems(_menu, _searchItem);
 
     return true;
   }
 
-  private void PopulateModelMenuItems(ToolStripDropDown menu)
+  private void PopulateModelMenuItems(ToolStripDropDown menu, SearchToolStripMenuItem searchItem)
   {
-    var lastIndex = menu.Items.Count - 1;
-    if (lastIndex >= 0)
+    for (int i = menu.Items.Count - 1; i > 1; i--)
     {
-      // clean the existing items because we re-populate when user search
-      for (int i = lastIndex; i > 1; i--)
-      {
-        menu.Items.RemoveAt(i);
-      }
+      menu.Items.RemoveAt(i);
     }
 
     if (Workspaces == null)
@@ -87,13 +79,9 @@ public class WorkspaceMenuHandler
       return;
     }
 
-    _searchItem ??= new SearchToolStripMenuItem(menu, Refetch);
-
     foreach (var workspace in Workspaces.items)
     {
-      var desc = string.IsNullOrEmpty(workspace.description) ? "No description" : workspace.description;
-
-      _searchItem?.AddMenuItem(
+      searchItem?.AddMenuItem(
         $"{workspace.name}",
         (_, _) => OnWorkspaceSelected(workspace),
         SelectedWorkspace?.id != workspace.id,

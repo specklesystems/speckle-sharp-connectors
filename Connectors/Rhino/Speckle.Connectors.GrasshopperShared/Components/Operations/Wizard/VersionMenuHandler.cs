@@ -42,7 +42,7 @@ public class VersionMenuHandler
   private async Task Refetch(int versionCount)
   {
     Versions = await _fetchVersions.Invoke(versionCount);
-    PopulateMenu(_menu!);
+    PopulateVersionMenuItems(_menu!);
   }
 
   private bool PopulateMenu(ToolStripDropDown menu)

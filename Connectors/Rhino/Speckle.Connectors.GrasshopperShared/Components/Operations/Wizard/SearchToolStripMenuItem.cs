@@ -45,7 +45,7 @@ public class SearchToolStripMenuItem
     item.Click += click;
     if (visible == false)
     {
-      item.Visible = false;
+      item.Enabled = false;
     }
 
     ParentDropDown.Items.Add(item);
