@@ -78,15 +78,15 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
   private ADB.Curve PolylineFromLoop(ADB.HatchLoop loop)
   {
-    if (loop.IsPolyline)
-    {
-      // disposable object, wrapping into "using"
-      using (AG.Point3dCollection vertices = new())
-      {
-        // collect vertices and construct a polyline simultaneously, it will be clear what to use after iterating
-        ADB.Polyline polyline = new() { Closed = true };
+    // collect vertices and construct a polyline simultaneously
+    ADB.Polyline polyline = new() { Closed = true };
+    int count = 0;
 
-        int count = 0;
+    // disposable object, wrapping into "using"
+    using (AG.Point3dCollection vertices = new())
+    {
+      if (loop.IsPolyline)
+      {
         foreach (ADB.BulgeVertex bVertex in loop.Polyline)
         {
           // don't add the end point that's the same as the start point
@@ -110,10 +110,53 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
             );
           return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, vertices[0].DistanceTo(vertices[1]) / 2);
         }
-        return polyline;
       }
-    }
+      else
+      {
+        foreach (var segment in loop.Curves)
+        {
+          switch (segment)
+          {
+            case AG.CircularArc2d arc:
+              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
+              AG.Point3d startPt = new(arc.StartPoint.X, arc.StartPoint.Y, 0);
+              AG.Point3d endPt = new(arc.EndPoint.X, arc.EndPoint.Y, 0);
 
-    throw new ConversionException("Hatch loop conversion failed.");
+              // don't add the end point that's the same as the start point
+              if (count == 0 || vertices[0].DistanceTo(startPt) > 0.00001)
+              {
+                vertices.Add(startPt);
+                polyline.AddVertexAt(count, arc.StartPoint, bulge, 0, 0);
+                count++;
+              }
+
+              vertices.Add(endPt);
+              polyline.AddVertexAt(count, arc.EndPoint, 0, 0, 0);
+              count++;
+
+              // if only 2 points, that's a circle
+              if (vertices.Count == 2 && Math.Abs(arc.EndAngle - arc.StartAngle - 2 * Math.PI) < 0.0001)
+              {
+                AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
+                return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
+              }
+
+              break;
+
+            case AG.EllipticalArc2d ellipse:
+              return new ADB.Ellipse(
+                new(ellipse.Center.X, ellipse.Center.Y, 0),
+                AG.Vector3d.ZAxis,
+                new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+                ellipse.MinorRadius / ellipse.MajorRadius,
+                ellipse.StartAngle,
+                ellipse.EndAngle
+              );
+          }
+        }
+      }
+
+      return polyline;
+    }
   }
 }
