@@ -117,20 +117,34 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
         {
           switch (segment)
           {
+            case AG.LineSegment2d line:
+              AG.Point3d startPtLine = new(line.StartPoint.X, line.StartPoint.Y, 0);
+              AG.Point3d endPtLine = new(line.EndPoint.X, line.EndPoint.Y, 0);
+              // don't add the end point that's the same as the start point
+              if (count == 0 || vertices[0].DistanceTo(startPtLine) > 0.00001)
+              {
+                vertices.Add(startPtLine);
+                polyline.AddVertexAt(count, line.StartPoint, 0, 0, 0);
+                count++;
+              }
+              vertices.Add(endPtLine);
+              polyline.AddVertexAt(count, line.EndPoint, 0, 0, 0);
+              count++;
+              break;
             case AG.CircularArc2d arc:
               double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
-              AG.Point3d startPt = new(arc.StartPoint.X, arc.StartPoint.Y, 0);
-              AG.Point3d endPt = new(arc.EndPoint.X, arc.EndPoint.Y, 0);
+              AG.Point3d startPtArc = new(arc.StartPoint.X, arc.StartPoint.Y, 0);
+              AG.Point3d endPtArc = new(arc.EndPoint.X, arc.EndPoint.Y, 0);
 
               // don't add the end point that's the same as the start point
-              if (count == 0 || vertices[0].DistanceTo(startPt) > 0.00001)
+              if (count == 0 || vertices[0].DistanceTo(startPtArc) > 0.00001)
               {
-                vertices.Add(startPt);
+                vertices.Add(startPtArc);
                 polyline.AddVertexAt(count, arc.StartPoint, bulge, 0, 0);
                 count++;
               }
 
-              vertices.Add(endPt);
+              vertices.Add(endPtArc);
               polyline.AddVertexAt(count, arc.EndPoint, 0, 0, 0);
               count++;
 
