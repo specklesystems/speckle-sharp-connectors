@@ -120,6 +120,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
             case AG.LineSegment2d line:
               AG.Point3d startPtLine = new(line.StartPoint.X, line.StartPoint.Y, 0);
               AG.Point3d endPtLine = new(line.EndPoint.X, line.EndPoint.Y, 0);
+
               // don't add the end point that's the same as the start point
               if (count == 0 || vertices[0].DistanceTo(startPtLine) > 0.00001)
               {
@@ -130,6 +131,30 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
               vertices.Add(endPtLine);
               polyline.AddVertexAt(count, line.EndPoint, 0, 0, 0);
               count++;
+              break;
+            case AG.NurbCurve2d nurb:
+
+              double paramRange = nurb.EndParameter - nurb.StartParameter;
+              int pointNumber = 4;
+              for (double i = nurb.StartParameter; i < nurb.EndParameter; i += paramRange / pointNumber)
+              {
+                AG.Point2d pointStart = nurb.EvaluatePoint(i - 1);
+                AG.Point2d pointEnd = nurb.EvaluatePoint(i);
+                AG.Point3d pointStart3d = new(pointStart.X, pointStart.Y, 0);
+
+                // don't add the end point that's the same as the start point
+                if (count == 0 || vertices[0].DistanceTo(pointStart3d) > 0.00001)
+                {
+                  double angle = new AG.Vector2d(pointStart.X, pointStart.Y).GetAngleTo(
+                    new AG.Vector2d(pointEnd.X, pointEnd.Y)
+                  );
+                  double bulgeNurb = Math.Tan(angle / 4);
+                  vertices.Add(pointStart3d);
+                  polyline.AddVertexAt(count, pointStart, 0, 0, 0);
+                  count++;
+                }
+              }
+
               break;
             case AG.CircularArc2d arc:
               double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
