@@ -79,7 +79,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
             DetailLevelType.Coarse, // TODO figure out
             null,
             false,
-            true
+            true,
+            false
           )
         );
       // Receive host objects
