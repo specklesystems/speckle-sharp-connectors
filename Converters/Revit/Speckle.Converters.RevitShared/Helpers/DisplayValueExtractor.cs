@@ -72,31 +72,84 @@ public sealed class DisplayValueExtractor
         }
         return areaDisplay;
 
-      // TODO: AreaReinforcement, RebarInSystem
-      case DB.Structure.Rebar rebar when !_converterSettings.Current.SendRebarsAsSolid:
+      // NOTE: this is only for Rebar and not AreaReinforcement, RebarInSystem
+      case DB.Structure.Rebar rebar:
       {
-        int numberOfBarPositions = rebar.NumberOfBarPositions;
-        List<DB.Curve> curves = new();
-        for (int barPositionIndex = 0; barPositionIndex < numberOfBarPositions; barPositionIndex++)
+        if (!_converterSettings.Current.SendRebarsAsSolid)
         {
-          curves.AddRange(
-            rebar.GetTransformedCenterlineCurves(
-              false,
-              false,
-              false,
-              DB.Structure.MultiplanarOption.IncludeAllMultiplanarCurves,
-              barPositionIndex
-            )
+          bool isSingleLayout = rebar.LayoutRule == DB.Structure.RebarLayoutRule.Single;
+          int numberOfBarPositions = rebar.NumberOfBarPositions;
+          List<DB.Curve> curves = new();
+          for (int barPositionIndex = 0; barPositionIndex < numberOfBarPositions; barPositionIndex++)
+          {
+            if (!isSingleLayout)
+            {
+              if (
+                !rebar.IncludeFirstBar && barPositionIndex == 0
+                || !rebar.IncludeLastBar && barPositionIndex == rebar.NumberOfBarPositions - 1
+              )
+              {
+                continue;
+              }
+            }
+            curves.AddRange(
+              rebar.GetTransformedCenterlineCurves(
+                false,
+                false,
+                false,
+                DB.Structure.MultiplanarOption.IncludeAllMultiplanarCurves,
+                barPositionIndex
+              )
+            );
+          }
+
+          List<Base> displayValue = new();
+          foreach (var curve in curves)
+          {
+            displayValue.Add(GetCurveDisplayValue(curve));
+          }
+
+          return displayValue;
+        }
+        else
+        {
+          List<DB.Solid> solids = new();
+          List<DB.Mesh> meshes = new();
+          List<DB.Curve> curves = new();
+          List<DB.PolyLine> polylines = new();
+          List<DB.Point> points = new();
+          DB.GeometryElement geometryElements = rebar.GetFullGeometryForView(
+            _converterSettings.Current.Document.ActiveView
+          ); // NOTE: get_Geometry() returns nulls for rebar. therefore, can't use default GetGeometryDisplayValue() 💁‍♂️
+          SortGeometry(element, solids, meshes, curves, polylines, points, geometryElements);
+
+          List<Base> displayValue = new();
+
+          // handle all solids and meshes by their material
+          var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
+          List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
+            (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
           );
-        }
+          displayValue.AddRange(displayMeshes);
 
-        List<Base> displayValue = new();
-        foreach (var curve in curves)
-        {
-          displayValue.Add(GetCurveDisplayValue(curve));
-        }
+          // add rest of geometry
+          foreach (var curve in curves)
+          {
+            displayValue.Add(GetCurveDisplayValue(curve));
+          }
 
-        return displayValue;
+          foreach (var polyline in polylines)
+          {
+            displayValue.Add(_polylineConverter.Convert(polyline));
+          }
+
+          foreach (var point in points)
+          {
+            displayValue.Add(_pointConverter.Convert(point));
+          }
+
+          return displayValue;
+        }
       }
 
       // handle specific types of objects with multiple parts or children
