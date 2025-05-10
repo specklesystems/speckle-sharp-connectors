@@ -13,6 +13,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
+  private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public RegionToSpeckleConverter(
@@ -20,6 +21,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
+    ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
@@ -27,6 +29,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _circleConverter = circleConverter;
+    _ellipseConverter = ellipseConverter;
     _settingsStore = settingsStore;
   }
 
@@ -94,7 +97,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
           segments.Reverse();
         }
 
-        // convert segments to Speckle Polycurve or Circle
+        // convert segments to Speckle
         var convertedLoop = ConvertSegmentsToICurve(segments);
         loops.Add(convertedLoop);
       }
@@ -113,6 +116,24 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     {
       convertedLoop = _circleConverter.Convert(
         new ADB.Circle(arc.GetPlane().PointOnPlane, arc.GetPlane().Normal, arc.Radius)
+      );
+    }
+    // Another edge case: closed Ellipse.
+    else if (
+      segments.Count == 1
+      && segments[0] is AG.EllipticalArc3d ellipse
+      && Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001
+    )
+    {
+      convertedLoop = _ellipseConverter.Convert(
+        new ADB.Ellipse(
+          new(ellipse.Center.X, ellipse.Center.Y, 0),
+          AG.Vector3d.ZAxis,
+          new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+          ellipse.MinorRadius / ellipse.MajorRadius,
+          ellipse.StartAngle,
+          ellipse.EndAngle
+        )
       );
     }
     // otherwise, just construct a Polycurve from subsequent segments

@@ -135,7 +135,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
               count++;
 
               // if only 2 points, that's a circle
-              if (vertices.Count == 2 && Math.Abs(arc.EndAngle - arc.StartAngle - 2 * Math.PI) < 0.0001)
+              if (vertices.Count == 2 && Math.Abs(arc.EndAngle - arc.StartAngle) - 2 * Math.PI < 0.0001)
               {
                 AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
                 return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
