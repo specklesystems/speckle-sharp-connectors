@@ -132,30 +132,29 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
               polyline.AddVertexAt(count, line.EndPoint, 0, 0, 0);
               count++;
               break;
+
             case AG.NurbCurve2d nurb:
 
               double paramRange = nurb.EndParameter - nurb.StartParameter;
-              int pointNumber = 4;
+              double length = nurb.GetLength(nurb.StartParameter, nurb.EndParameter);
+              int pointNumber = (int)(length / 0.1);
               for (double i = nurb.StartParameter; i < nurb.EndParameter; i += paramRange / pointNumber)
               {
-                AG.Point2d pointStart = nurb.EvaluatePoint(i - 1);
-                AG.Point2d pointEnd = nurb.EvaluatePoint(i);
+                AG.Point2d pointStart = nurb.EvaluatePoint(i);
+                AG.Point2d pointEnd = nurb.EvaluatePoint(i + paramRange / pointNumber);
                 AG.Point3d pointStart3d = new(pointStart.X, pointStart.Y, 0);
 
                 // don't add the end point that's the same as the start point
                 if (count == 0 || vertices[0].DistanceTo(pointStart3d) > 0.00001)
                 {
-                  double angle = new AG.Vector2d(pointStart.X, pointStart.Y).GetAngleTo(
-                    new AG.Vector2d(pointEnd.X, pointEnd.Y)
-                  );
-                  double bulgeNurb = Math.Tan(angle / 4);
+                  double bulgeNurb = GetVertexBulge(nurb, pointStart, pointEnd);
                   vertices.Add(pointStart3d);
-                  polyline.AddVertexAt(count, pointStart, 0, 0, 0);
+                  polyline.AddVertexAt(count, pointStart, bulgeNurb, 0, 0);
                   count++;
                 }
               }
-
               break;
+
             case AG.CircularArc2d arc:
               double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
               AG.Point3d startPtArc = new(arc.StartPoint.X, arc.StartPoint.Y, 0);
@@ -197,5 +196,22 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
       return polyline;
     }
+  }
+
+  private double GetVertexBulge(AG.NurbCurve2d nurb, AG.Point2d start, AG.Point2d end)
+  {
+    // get arc angle - assuming the arc is the curve between 2 points
+    AG.Point2d midSegmentPoint = new(start.X + (end.X - start.X) / 2, start.Y + (end.Y - start.Y) / 2);
+    AG.Point2d arcMidPoint = nurb.GetClosestPointTo(midSegmentPoint).Point;
+    var adjacentSide = arcMidPoint.GetDistanceTo(midSegmentPoint);
+    var hypotenuse = arcMidPoint.GetDistanceTo(start);
+    var angleTriangle = Math.Acos(adjacentSide / hypotenuse);
+    double arcAngle = 2 * (Math.PI - 2 * angleTriangle);
+
+    // bulge direction: (-) clockwise, (+) counterclockwise
+    int bulgeDirection =
+      (end.X - start.X) * (arcMidPoint.Y - start.Y) - (arcMidPoint.X - start.X) * (end.Y - start.Y) > 0 ? -1 : 1;
+
+    return Math.Tan(arcAngle / 4) * bulgeDirection;
   }
 }
