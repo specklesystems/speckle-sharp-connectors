@@ -40,15 +40,27 @@ internal sealed class LocalToGlobalMapHandler
     try
     {
       List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(map.AtomicObject);
-      var path = _traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
+
+      if (converted.Count == 0)
+      {
+        return; // TODO: throw?
+      }
+
+      // get the units and transform by matrices in the map
+      string units = map.AtomicObject["units"] is string u
+        ? u
+        : converted.First().Item2["units"] is string convertedU
+          ? convertedU
+          : "none";
 
       foreach (var matrix in map.Matrix)
       {
-        var mat = GrasshopperHelpers.MatrixToTransform(matrix, "meters");
+        var mat = GrasshopperHelpers.MatrixToTransform(matrix, units);
         converted.ForEach(res => res.Item1.Transform(mat));
       }
 
       // get the collection
+      var path = _traversalContextUnpacker.GetCollectionPath(map.TraversalContext).ToList();
       SpeckleCollectionWrapper objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
         path,
         _colorUnpacker,
