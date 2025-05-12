@@ -65,7 +65,10 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public (SpeckleUrlModelResource resource, string accountId) SolveInstanceWithUrlInput(string input)
+  public (SpeckleUrlModelResource resource, string accountId, bool hasPermission) SolveInstanceWithUrlInput(
+    string input,
+    bool isSender
+  )
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
@@ -95,6 +98,7 @@ public class SpeckleOperationWizard
     IClient client = _clientFactory.Create(SelectedAccount);
 
     var project = client.Project.Get(resource.ProjectId).Result;
+    var projectPermissions = client.Project.GetPermissions(resource.ProjectId).Result;
     if (project != null && project.workspaceId != null)
     {
       var workspace = client.Workspace.Get(project.workspaceId).Result;
@@ -123,7 +127,11 @@ public class SpeckleOperationWizard
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    return (resource, account.id);
+    return (
+      resource,
+      account.id,
+      isSender ? projectPermissions.canPublish.authorized : projectPermissions.canLoad.authorized
+    );
   }
 
   public void SetAccount(Account? account)

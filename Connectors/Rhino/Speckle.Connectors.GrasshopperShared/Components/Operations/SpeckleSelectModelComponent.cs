@@ -121,7 +121,12 @@ public class SpeckleSelectModelComponent : GH_Component
 
       try
       {
-        var (resource, accountId) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput);
+        // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
+        var (resource, accountId, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
+        if (!hasPermission)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
+        }
         _storedUserId = accountId;
         _storedServer = resource.Server;
         UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
