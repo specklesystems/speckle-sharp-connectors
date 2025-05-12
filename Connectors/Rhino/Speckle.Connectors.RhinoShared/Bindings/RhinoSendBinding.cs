@@ -168,18 +168,19 @@ public sealed class RhinoSendBinding : ISendBinding
 
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
-          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration) if Material was changed directly on the object
+          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration)
+          // 1. If Material was changed directly on the object:
           if (changedEventArgs.ObjectId != Guid.Empty)
           {
             ChangedObjectIdsInGroupsOrLayers[changedEventArgs.ObjectId.ToString()] = 1;
           }
-          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration) if parent Layer material has changed
+          // 2. If parent Layer material has changed:
           else if (changedEventArgs.LayerId != Guid.Empty)
           {
             var layer = RhinoDoc.ActiveDoc.Layers.FindId(changedEventArgs.LayerId);
-            foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
+            foreach (Guid objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
             {
-              ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
+              ChangedObjectIdsInGroupsOrLayers[objectId.ToString()] = 1;
             }
           }
           _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
@@ -220,9 +221,9 @@ public sealed class RhinoSendBinding : ISendBinding
 
         var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
         // Record IDs of all sub-objects affected by the LayerTable event (without triggering each objects' expiration)
-        foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
+        foreach (Guid objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
         {
-          ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
+          ChangedObjectIdsInGroupsOrLayers[objectId.ToString()] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         await Commands.RefreshSendFilters();
@@ -401,9 +402,9 @@ public sealed class RhinoSendBinding : ISendBinding
     await Commands.SetModelsExpired(senderModelCardIds);
   }
 
-  private List<string> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
+  private List<Guid> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
   {
-    List<string> allObjectIds = new();
+    List<Guid> allObjectIds = new();
 
     var allLayers = RhinoDoc.ActiveDoc.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
       l.FullPath != null && l.FullPath.Contains(layer.Name)
@@ -414,7 +415,7 @@ public sealed class RhinoSendBinding : ISendBinding
       var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
       foreach (var obj in sublayerObjs)
       {
-        allObjectIds.Add(obj.Id.ToString());
+        allObjectIds.Add(obj.Id);
       }
     }
 
