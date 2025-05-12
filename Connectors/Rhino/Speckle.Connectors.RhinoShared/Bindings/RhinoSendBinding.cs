@@ -357,7 +357,12 @@ public sealed class RhinoSendBinding : ISendBinding
       var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
       foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
       {
-        if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+        // do the check for changed material both on the object, and on its parent Layer
+        Layer parentLayer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
+        if (
+          changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex)
+          || changedMaterialIndexes.Contains(parentLayer.RenderMaterialIndex)
+        )
         {
           ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
         }
