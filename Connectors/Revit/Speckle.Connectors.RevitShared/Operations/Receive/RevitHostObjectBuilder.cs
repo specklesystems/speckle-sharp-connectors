@@ -220,26 +220,13 @@ public sealed class RevitHostObjectBuilder(
           bakedObjectIds.Add(directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
 
-          // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject
+          // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject and
           // processes just IRawEncodedObject in maps to create post base paint targets for solids specifically
-          // this smells
+          // this smells big time.
           // TODO: created material is wrong nonetheless but visually it all looks correct in Revit. Investigate what is going on
           if (localToGlobalMap.AtomicObject is Base myBase)
           {
-            if (myBase is IRawEncodedObject)
-            {
-              postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
-            }
-            else if (myBase is DataObject da) // hack
-            {
-              foreach (Base @base in da.displayValue)
-              {
-                if (@base is IRawEncodedObject)
-                {
-                  postBakePaintTargets.Add((directShapes, @base.applicationId ?? myBase.id.NotNull()));
-                }
-              }
-            }
+            SetSolidPostBakePaintTargets(myBase, directShapes, postBakePaintTargets);
           }
 
           conversionResults.Add(
@@ -304,4 +291,23 @@ public sealed class RevitHostObjectBuilder(
   }
 
   public void Dispose() => transactionManager?.Dispose();
+
+  // NOTE: temp poc HACK!
+  // TODO: clean this up / refactor
+  private void SetSolidPostBakePaintTargets(Base baseObj, DirectShape directShapes, List<(DirectShape, string)> targets)
+  {
+    switch (baseObj)
+    {
+      case IRawEncodedObject:
+        targets.Add((directShapes, baseObj.applicationId ?? baseObj.id.NotNull()));
+        break;
+
+      case DataObject dataObj:
+        foreach (var item in dataObj.displayValue)
+        {
+          SetSolidPostBakePaintTargets(item, directShapes, targets);
+        }
+        break;
+    }
+  }
 }
