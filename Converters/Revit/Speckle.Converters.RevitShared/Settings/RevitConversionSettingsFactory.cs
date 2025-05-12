@@ -16,7 +16,7 @@ public class RevitConversionSettingsFactory(
     DB.Transform? referencePointTransform,
     bool sendEmptyOrNullParams,
     bool sendLinkedModels,
-    bool sendRebarsAsSolid,
+    bool sendRebarsAsVolumetric,
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
@@ -28,7 +28,7 @@ public class RevitConversionSettingsFactory(
       unitConverter.ConvertOrThrow(document.GetUnits().GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId()),
       sendEmptyOrNullParams,
       sendLinkedModels,
-      sendRebarsAsSolid,
+      sendRebarsAsVolumetric,
       tolerance
     );
   }

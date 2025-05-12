@@ -110,7 +110,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new ReferencePointSetting(ReferencePointType.InternalOrigin),
       new SendParameterNullOrEmptyStringsSetting(false),
       new LinkedModelsSetting(true),
-      new SendRebarsAsSolidSetting(false)
+      new SendRebarsAsVolumetricSetting(false)
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -139,7 +139,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
             _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
             _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard),
-            _toSpeckleSettingsManager.GetSendRebarsAsSolid(modelCard)
+            _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(modelCard)
           )
         );
 

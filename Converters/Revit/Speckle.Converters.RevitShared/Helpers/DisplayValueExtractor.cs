@@ -77,8 +77,8 @@ public sealed class DisplayValueExtractor
       // Rebar elements need special handling as get_Geometry() doesn't work properly
       // We either represent them as centerlines or as solids based on settings
       case DB.Structure.Rebar rebar:
-        return _converterSettings.Current.SendRebarsAsSolid
-          ? GetRebarSolidDisplayValue(rebar)
+        return _converterSettings.Current.SendRebarsAsVolumetric
+          ? GetRebarVolumetricDisplayValue(rebar)
           : GetRebarCenterlineDisplayValue(rebar);
 
       // handle specific types of objects with multiple parts or children
@@ -424,7 +424,7 @@ public sealed class DisplayValueExtractor
   /// Instead, we use GetFullGeometryForView() to obtain the geometry and then process it
   /// using the standard geometry sorting and conversion.
   /// </remarks>
-  private List<Base> GetRebarSolidDisplayValue(DB.Structure.Rebar rebar)
+  private List<Base> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
   {
     var collections = new GeometryCollections();
 

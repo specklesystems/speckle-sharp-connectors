@@ -45,7 +45,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\LinkedModelsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\DetailLevelSetting.cs" />
