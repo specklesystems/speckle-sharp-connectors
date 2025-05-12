@@ -149,7 +149,7 @@ public class SpeckleSelectModelComponent : GH_Component
       // Validate backing data
       if (SpeckleOperationWizard.SelectedAccount == null)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please select an account in the right click menu");
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Please select an account in the right click menu");
         WorkspaceContextMenuButton.Enabled = false;
         ProjectContextMenuButton.Enabled = false;
         ModelContextMenuButton.Enabled = false;
@@ -297,7 +297,7 @@ public class SpeckleSelectModelComponent : GH_Component
     if (SpeckleOperationWizard.Accounts == null)
     {
       // TODO: we have to think about auth flow!
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please add an account");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Please add an account");
       return;
     }
 
