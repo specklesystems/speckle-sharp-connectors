@@ -357,14 +357,25 @@ public sealed class RhinoSendBinding : ISendBinding
       var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
       foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
       {
-        // do the check for changed material both on the object, and on its parent Layer
+        // traverse parent layer hierarchy and record all used material indices
         Layer parentLayer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
-        if (
-          changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex)
-          || changedMaterialIndexes.Contains(parentLayer.RenderMaterialIndex)
-        )
+        List<int> materialIndicesOfObjectAndParentLayers =
+          new() { rhinoObject.Attributes.MaterialIndex, parentLayer.RenderMaterialIndex };
+
+        while (parentLayer.ParentLayerId != Guid.Empty)
         {
-          ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+          parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentLayer.ParentLayerId);
+          materialIndicesOfObjectAndParentLayers.Add(parentLayer.RenderMaterialIndex);
+        }
+
+        // do the check for material change both on the object, and on its parent Layer(s)
+        foreach (int index in materialIndicesOfObjectAndParentLayers)
+        {
+          if (changedMaterialIndexes.Contains(index))
+          {
+            ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+            break;
+          }
         }
       }
     }
