@@ -12,6 +12,7 @@ public class WorkspaceMenuHandler
 {
   private readonly Func<string, Task<ResourceCollection<Workspace>>> _fetchWorkspaces;
   private ToolStripDropDown? _menu;
+  public bool IsPersonalProjects { get; set; }
   private SearchToolStripMenuItem? _searchItem;
   private readonly Func<Task> _createWorkspace;
   private Workspace? SelectedWorkspace { get; set; }
@@ -92,10 +93,18 @@ public class WorkspaceMenuHandler
         Base64ToImage(workspace.logo)
       );
     }
+
+    searchItem?.AddMenuItem(
+      "Personal Projects",
+      (_, _) => OnWorkspaceSelected(null),
+      !IsPersonalProjects,
+      IsPersonalProjects
+    );
   }
 
-  private void OnWorkspaceSelected(Workspace workspace)
+  private void OnWorkspaceSelected(Workspace? workspace)
   {
+    IsPersonalProjects = workspace == null;
     _menu?.Close();
     SelectedWorkspace = workspace;
     RedrawMenuButton(workspace);
@@ -107,13 +116,20 @@ public class WorkspaceMenuHandler
     var suffix = WorkspaceContextMenuButton.Enabled
       ? "Right-click to select another workspace."
       : "Selection is disabled due to component input.";
-    if (workspace != null)
+    if (workspace != null && !IsPersonalProjects)
     {
       Logo = Get24X24IconFromBase64(workspace.logo);
       WorkspaceContextMenuButton.SetIconOverride(Logo);
       WorkspaceContextMenuButton.Name = workspace.name;
       WorkspaceContextMenuButton.NickName = workspace.id;
       WorkspaceContextMenuButton.Description = $"{workspace.description ?? "No description"}\n\n{suffix}";
+    }
+    else if (IsPersonalProjects)
+    {
+      WorkspaceContextMenuButton.SetIconOverride(null);
+      WorkspaceContextMenuButton.Name = "Personal Projects";
+      WorkspaceContextMenuButton.NickName = "Personal Projects";
+      WorkspaceContextMenuButton.Description = "Legacy";
     }
     else
     {

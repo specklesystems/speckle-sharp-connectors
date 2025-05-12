@@ -187,6 +187,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
     IClient client = _clientFactory.Create(_account);
 
+    // NOTE FOR LATER: Need to be handled in SDK... and will come later by Jeddward Morgan...
     if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
     {
       var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
@@ -199,31 +200,45 @@ public class SpeckleSelectModelComponent : GH_Component
       SpeckleOperationWizard.SetWorkspaces(workspaces);
     }
 
-    var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
-    Workspace? selectedWorkspace =
-      SpeckleOperationWizard.SelectedWorkspace
-      ?? activeWorkspace
-      ?? (
-        SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items.Count > 0
-          ? SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items[0]
-          : null
-      );
-
-    if (selectedWorkspace != null)
+    if (
+      SpeckleOperationWizard.SelectedWorkspace == null
+      && SpeckleOperationWizard.WorkspaceMenuHandler.IsPersonalProjects
+    )
     {
-      _storedWorkspaceId = selectedWorkspace.id;
-      SpeckleOperationWizard.SetDefaultWorkspace(selectedWorkspace);
+      _storedWorkspaceId = null;
     }
     else
     {
-      return;
+      var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
+      Workspace? selectedWorkspace =
+        SpeckleOperationWizard.SelectedWorkspace
+        ?? activeWorkspace
+        ?? (
+          SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items.Count > 0
+            ? SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items[0]
+            : null
+        );
+
+      if (selectedWorkspace != null)
+      {
+        _storedWorkspaceId = selectedWorkspace.id;
+        SpeckleOperationWizard.SetDefaultWorkspace(selectedWorkspace);
+      }
+      else
+      {
+        return;
+      }
     }
 
     var projects = client
       .ActiveUser.GetProjectsWithPermissions(
         10,
         null,
-        new UserProjectsFilter(workspaceId: _storedWorkspaceId, includeImplicitAccess: true)
+        new UserProjectsFilter(
+          workspaceId: _storedWorkspaceId,
+          includeImplicitAccess: true,
+          personalOnly: SpeckleOperationWizard.WorkspaceMenuHandler?.IsPersonalProjects
+        )
       )
       .Result;
     SpeckleOperationWizard?.SetProjects(projects);
