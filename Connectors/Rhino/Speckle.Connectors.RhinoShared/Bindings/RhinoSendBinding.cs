@@ -168,22 +168,21 @@ public sealed class RhinoSendBinding : ISendBinding
 
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
-          // Update ChangedObjectIds if Material was changed directly on the object
+          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration) if Material was changed directly on the object
           if (changedEventArgs.ObjectId != Guid.Empty)
           {
-            ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-            _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+            ChangedObjectIdsInGroupsOrLayers[changedEventArgs.ObjectId.ToString()] = 1;
           }
-          // Update ChangedObjectIdsInGroupsOrLayers (without triggering Expiration) if only Layer material has changed
+          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration) if parent Layer material has changed
           else if (changedEventArgs.LayerId != Guid.Empty)
           {
             var layer = RhinoDoc.ActiveDoc.Layers.FindId(changedEventArgs.LayerId);
             foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
             {
               ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
-              _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
             }
           }
+          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
 
@@ -220,6 +219,7 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
+        // Record IDs of all sub-objects affected by the LayerTable event (without triggering each objects' expiration)
         foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
         {
           ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
