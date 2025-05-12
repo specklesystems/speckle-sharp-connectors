@@ -1,24 +1,16 @@
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
-using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
-using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Inputs;
-using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
 
 public class SpeckleSelectModelComponent : GH_Component
 {
-  private Account? _account;
-
   private bool _justPastedIn;
 
   private string? _storedUserId;
@@ -27,10 +19,6 @@ public class SpeckleSelectModelComponent : GH_Component
   private string? _storedProjectId;
   private string? _storedModelId;
   private string? _storedVersionId;
-
-  private readonly AccountService _accountService;
-  private readonly AccountManager _accountManager;
-  private readonly IClientFactory _clientFactory;
 
   public override Guid ComponentGuid => new("9638B3B5-C469-4570-B69F-686D8DA5C48D");
 
@@ -53,13 +41,7 @@ public class SpeckleSelectModelComponent : GH_Component
     )
   {
     Attributes = new SpeckleSelectModelComponentAttributes(this);
-    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
-    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
-    _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
-
-    SpeckleOperationWizard = new SpeckleOperationWizard(RefreshComponent, false);
-    _account = SpeckleOperationWizard.SelectedAccount;
-    UpdateMessageWithAccount(_account);
+    SpeckleOperationWizard = new SpeckleOperationWizard(RefreshComponent, UpdateComponentMessage, false);
 
     WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
     ProjectContextMenuButton = SpeckleOperationWizard.ProjectMenuHandler.ProjectContextMenuButton;
@@ -73,17 +55,10 @@ public class SpeckleSelectModelComponent : GH_Component
     return Task.CompletedTask;
   }
 
-  private void UpdateMessageWithAccount(Account? account) =>
-    Message = account != null ? $"{account.serverInfo.url}\n{account.userInfo.email}" : null;
-
-  private void OnAccountSelected(Account? account)
+  private Task UpdateComponentMessage(string message)
   {
-    _account = account;
-    _storedUserId = _account?.id;
-    _storedServer = _account?.serverInfo.url;
-    Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
-    SpeckleOperationWizard.SetAccount(_account);
-    ExpireSolution(true);
+    Message = message;
+    return Task.CompletedTask;
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -122,14 +97,13 @@ public class SpeckleSelectModelComponent : GH_Component
       try
       {
         // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-        var (resource, accountId, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
+        var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
         if (!hasPermission)
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
         }
-        _storedUserId = accountId;
+        _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
         _storedServer = resource.Server;
-        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
         da.SetData(0, resource);
       }
       catch (SpeckleException e)
@@ -148,22 +122,15 @@ public class SpeckleSelectModelComponent : GH_Component
     if (UrlInput != null)
     {
       UrlInput = null;
-      SpeckleOperationWizard.WorkspaceMenuHandler.Reset();
-      SpeckleOperationWizard.ProjectMenuHandler.Reset();
-      SpeckleOperationWizard.ModelMenuHandler.Reset();
-      SpeckleOperationWizard.VersionMenuHandler?.Reset();
-      _account = SpeckleOperationWizard.SelectedAccount;
-      _storedUserId = _account?.id;
+      SpeckleOperationWizard.ResetHandlers();
+      _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
     }
 
     if (_justPastedIn && _storedUserId != null && !string.IsNullOrEmpty(_storedUserId))
     {
       try
       {
-        var account = _accountManager.GetAccount(_storedUserId);
-        _account = account;
-        SpeckleOperationWizard.SetAccount(account);
-        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
+        SpeckleOperationWizard.SetAccountFromId(_storedUserId);
       }
       catch (SpeckleAccountManagerException e)
       {
@@ -171,63 +138,54 @@ public class SpeckleSelectModelComponent : GH_Component
         Console.WriteLine(e);
       }
 
-      if (_storedServer != null && _account == null)
+      if (_storedServer != null && SpeckleOperationWizard.SelectedAccount == null)
       {
-        var account = _accountService.GetAccountWithServerUrlFallback(_storedUserId ?? "", new Uri(_storedServer));
-        _account = account;
-        SpeckleOperationWizard.SetAccount(account);
-        UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
+        SpeckleOperationWizard.SetAccountFromIdAndUrl(_storedUserId, _storedServer);
       }
     }
 
     // Validate backing data
-    if (_account == null)
+    if (SpeckleOperationWizard.SelectedAccount == null)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please select an account in the right click menu");
+      WorkspaceContextMenuButton.Enabled = false;
       ProjectContextMenuButton.Enabled = false;
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    IClient client = _clientFactory.Create(_account);
+    // 1- Workspaces
+
+    if (_justPastedIn && !string.IsNullOrEmpty(_storedWorkspaceId))
+    {
+      SpeckleOperationWizard.SetWorkspaceFromSavedIdSync(_storedWorkspaceId!);
+    }
 
     // NOTE FOR LATER: Need to be handled in SDK... and will come later by Jeddward Morgan...
     if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
     {
-      var workspaces = client.ActiveUser.GetWorkspaces(10, null, null).Result;
+      var workspaces = SpeckleOperationWizard.FetchWorkspacesSync("");
       if (workspaces.items.Count == 0)
       {
         // Create a workspace flow
         SpeckleOperationWizard.CreateNewWorkspaceUIState();
         return;
       }
-      SpeckleOperationWizard.SetWorkspaces(workspaces);
     }
 
-    if (
-      SpeckleOperationWizard.SelectedWorkspace == null
-      && SpeckleOperationWizard.WorkspaceMenuHandler.IsPersonalProjects
-    )
+    // Unfortunately need to handle personal projects as workspace item for a while
+    if (SpeckleOperationWizard.WorkspaceMenuHandler.IsPersonalProjects)
     {
       _storedWorkspaceId = null;
     }
     else
     {
-      var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
-      Workspace? selectedWorkspace =
-        SpeckleOperationWizard.SelectedWorkspace
-        ?? activeWorkspace
-        ?? (
-          SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items.Count > 0
-            ? SpeckleOperationWizard.WorkspaceMenuHandler?.Workspaces?.items[0]
-            : null
-        );
+      SpeckleOperationWizard.SetDefaultWorkspaceSync();
 
-      if (selectedWorkspace != null)
+      if (SpeckleOperationWizard.SelectedWorkspace != null)
       {
-        _storedWorkspaceId = selectedWorkspace.id;
-        SpeckleOperationWizard.SetDefaultWorkspace(selectedWorkspace);
+        _storedWorkspaceId = SpeckleOperationWizard.SelectedWorkspace.id;
       }
       else
       {
@@ -235,71 +193,62 @@ public class SpeckleSelectModelComponent : GH_Component
       }
     }
 
-    var projects = client
-      .ActiveUser.GetProjectsWithPermissions(
-        10,
-        null,
-        new UserProjectsFilter(
-          workspaceId: _storedWorkspaceId,
-          includeImplicitAccess: true,
-          personalOnly: SpeckleOperationWizard.WorkspaceMenuHandler?.IsPersonalProjects
-        )
-      )
-      .Result;
-    SpeckleOperationWizard?.SetProjects(projects);
+    // 2- Projects
     ProjectContextMenuButton.Enabled = true;
 
+    // Get projects for menu
+    SpeckleOperationWizard.FetchProjectsSync("");
+
+    // Stored project id scenario
     if (_justPastedIn && !string.IsNullOrEmpty(_storedProjectId))
     {
-      var project = client.Project.Get(_storedProjectId!).Result;
-      // TODO: need to set
-      SpeckleOperationWizard?.ProjectMenuHandler.RedrawMenuButton(project);
+      SpeckleOperationWizard.SetProjectFromSavedIdSync(_storedProjectId!);
     }
 
-    if (SpeckleOperationWizard?.SelectedProject == null)
+    // No selected project scenario
+    if (SpeckleOperationWizard.SelectedProject == null)
     {
       ModelContextMenuButton.Enabled = false;
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    var models = client.Project.GetWithModels(SpeckleOperationWizard.SelectedProject.id, 10).Result.models;
-    SpeckleOperationWizard.SetModels(models);
+    // 3- Models
+
     ModelContextMenuButton.Enabled = true;
+
+    // Get models for menu
+    SpeckleOperationWizard.FetchModelsSync("");
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedModelId))
     {
-      var model = client.Model.Get(_storedModelId!, SpeckleOperationWizard.SelectedProject.id).Result;
-      // TODO: need to set
-      SpeckleOperationWizard.ModelMenuHandler.RedrawMenuButton(model);
+      SpeckleOperationWizard.SetModelFromSavedIdSync(_storedModelId!);
     }
 
+    // No selected model scenario
     if (SpeckleOperationWizard.SelectedModel == null)
     {
       VersionContextMenuButton.Enabled = false;
       return;
     }
 
-    var versions = client
-      .Model.GetWithVersions(SpeckleOperationWizard.SelectedModel.id, SpeckleOperationWizard.SelectedProject.id, 10)
-      .Result.versions;
-    SpeckleOperationWizard.SetVersions(versions);
+    // 4- Models
+
     VersionContextMenuButton.Enabled = true;
+    SpeckleOperationWizard.FetchVersionsSync(10);
 
     if (_justPastedIn && !string.IsNullOrEmpty(_storedVersionId))
     {
-      var version = client.Version.Get(_storedVersionId!, SpeckleOperationWizard.SelectedProject.id).Result;
-      // TODO: need to set
-      SpeckleOperationWizard?.VersionMenuHandler?.RedrawMenuButton(version);
+      SpeckleOperationWizard.SetVersionFromSavedIdSync(_storedVersionId!);
     }
 
-    if (SpeckleOperationWizard!.SelectedVersion == null)
+    if (SpeckleOperationWizard.SelectedVersion == null)
     {
       // If no version selected, output `latest` resource
       da.SetData(
         0,
         new SpeckleUrlLatestModelVersionResource(
-          _account.serverInfo.url,
+          SpeckleOperationWizard.SelectedAccount.serverInfo.url,
           SpeckleOperationWizard.SelectedProject.id,
           SpeckleOperationWizard.SelectedModel.id
         )
@@ -311,7 +260,7 @@ public class SpeckleSelectModelComponent : GH_Component
     da.SetData(
       0,
       new SpeckleUrlModelVersionResource(
-        _account.serverInfo.url,
+        SpeckleOperationWizard.SelectedAccount.serverInfo.url,
         SpeckleOperationWizard.SelectedProject.id,
         SpeckleOperationWizard.SelectedModel.id,
         SpeckleOperationWizard.SelectedVersion.id
@@ -331,12 +280,19 @@ public class SpeckleSelectModelComponent : GH_Component
     base.AppendAdditionalMenuItems(menu);
     var accountsMenu = Menu_AppendItem(menu, "Account");
 
-    foreach (var account in _accountManager.GetAccounts())
+    if (SpeckleOperationWizard.Accounts == null)
+    {
+      // TODO: we have to think about auth flow!
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please add an account");
+      return;
+    }
+
+    foreach (var account in SpeckleOperationWizard.Accounts)
     {
       Menu_AppendItem(
         accountsMenu.DropDown,
         account.ToString(),
-        (_, _) => OnAccountSelected(account),
+        (_, _) => SpeckleOperationWizard.SetAccount(account),
         null,
         SpeckleOperationWizard.SelectedAccount?.id != account.id,
         SpeckleOperationWizard.SelectedAccount?.id == account.id
@@ -347,11 +303,12 @@ public class SpeckleSelectModelComponent : GH_Component
   public override bool Write(GH_IWriter writer)
   {
     var baseRes = base.Write(writer);
-    writer.SetString("Server", _account?.serverInfo.url);
-    writer.SetString("User", _account?.id);
-    writer.SetString("Project", SpeckleOperationWizard?.SelectedProject?.id);
-    writer.SetString("Model", SpeckleOperationWizard?.SelectedModel?.id);
-    writer.SetString("Version", SpeckleOperationWizard?.SelectedVersion?.id);
+    writer.SetString("Server", SpeckleOperationWizard.SelectedAccount?.serverInfo.url);
+    writer.SetString("User", SpeckleOperationWizard.SelectedAccount?.id);
+    writer.SetString("Workspace", SpeckleOperationWizard.SelectedWorkspace?.id);
+    writer.SetString("Project", SpeckleOperationWizard.SelectedProject?.id);
+    writer.SetString("Model", SpeckleOperationWizard.SelectedModel?.id);
+    writer.SetString("Version", SpeckleOperationWizard.SelectedVersion?.id);
 
     return baseRes;
   }
@@ -362,6 +319,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
     reader.TryGetString("Server", ref _storedServer);
     reader.TryGetString("User", ref _storedUserId);
+    reader.TryGetString("Workspace", ref _storedWorkspaceId);
     reader.TryGetString("Project", ref _storedProjectId);
     reader.TryGetString("Model", ref _storedModelId);
     reader.TryGetString("Version", ref _storedVersionId);
@@ -372,6 +330,7 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public override void ExpirePreview(bool redraw)
   {
+    WorkspaceContextMenuButton.ExpirePreview(redraw);
     ProjectContextMenuButton.ExpirePreview(redraw);
     ModelContextMenuButton.ExpirePreview(redraw);
     VersionContextMenuButton.ExpirePreview(redraw);
