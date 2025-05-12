@@ -101,9 +101,15 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
       instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
-      // Convert AttributeReferences outside of the block definition: this will ensure the correct text string.
-      // Unlike for geometry, AutoCAD doesn't create an AnonymousBlockTableRecord for AttributeReferences
-      // and neither the AttributeReferences can be properly linked to the underlying AttributeDefinition
+      // Add text attributes from Instances as separate atomic objects:
+      // AttributeReferences found on Instances are just a text, not a part of the Instance
+      // They are not actually references and are not linked to AttributeDefinition (as one would expect),
+      // and already have the correct position (no need for transforms).
+      // We don't want to create a new BlockDefinition for every changed text for now, because AutoCAD API doesn't provide one,
+      // e.g. AnonymousBlockTableRecord is provided for each dynamic blocks with geometry changes, but not for Attribute changes.
+      // Docs on AttributeReference usage (used totally independent of AttributeDefinition): https://help.autodesk.com/view/OARX/2025/ENU/?guid=GUID-BA69D85A-2AED-43C2-B5B7-73022B5F28F8
+      // Case of trying to match AttributeDefinition with AttributeReference via Tag value (which is not unique): https://forums.autodesk.com/t5/net-forum/get-the-value-of-an-attribute-in-c/td-p/9060940
+
       foreach (ObjectId id in instance.AttributeCollection)
       {
         var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
@@ -143,7 +149,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         Entity obj = (Entity)transaction.GetObject(id, OpenMode.ForRead);
 
         // In the case of dynamic blocks, this prevents sending objects that are not visible in its current state.
-        // In case of AttributeDefinition, we use AttributeReference of the current block instead, and convert outside of the block (already converted)
+        // Also skipping AttributeDefinition because it only contains default text values. We convert AttributeReference above instead, as a separate object.
         if (!obj.Visible || obj is AttributeDefinition)
         {
           continue;
