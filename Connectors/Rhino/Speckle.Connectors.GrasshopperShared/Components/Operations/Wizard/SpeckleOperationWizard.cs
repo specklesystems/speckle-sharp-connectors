@@ -65,7 +65,7 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public SpeckleUrlModelResource SolveInstanceWithUrlInput(string input)
+  public (SpeckleUrlModelResource resource, string accountId) SolveInstanceWithUrlInput(string input)
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
@@ -123,7 +123,7 @@ public class SpeckleOperationWizard
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    return resource;
+    return (resource, account.id);
   }
 
   public void SetAccount(Account? account)
@@ -252,10 +252,11 @@ public class SpeckleOperationWizard
     }
 
     IClient client = _clientFactory.Create(SelectedAccount);
+    var workspaceId = SelectedWorkspace?.id ?? null;
     var projects = await client.ActiveUser.GetProjectsWithPermissions(
       10,
       null,
-      new UserProjectsFilter(searchText, workspaceId: SelectedWorkspace?.id ?? null, includeImplicitAccess: true)
+      new UserProjectsFilter(searchText, workspaceId: workspaceId, includeImplicitAccess: true)
     );
     return projects;
   }
@@ -297,34 +298,27 @@ public class SpeckleOperationWizard
   private void OnWorkspaceSelected(object sender, WorkspaceSelectedEventArgs e)
   {
     SelectedWorkspace = e.SelectedWorkspace;
-
     ResetProjects();
-
     _refreshComponent.Invoke();
   }
 
   private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
   {
     SelectedProject = e.SelectedProject;
-
     ResetModels();
-
     _refreshComponent.Invoke();
   }
 
   private void OnModelSelected(object sender, ModelSelectedEventArgs e)
   {
     SelectedModel = e.SelectedModel;
-
     ResetVersions();
-
     _refreshComponent.Invoke();
   }
 
   private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
   {
     SelectedVersion = e.SelectedVersion;
-
     _refreshComponent.Invoke();
   }
 }

@@ -119,10 +119,10 @@ public class SearchToolStripMenuItem
   private void RegisterEvents()
   {
     // Resets the search filter
-    ParentDropDown.Opening += async (sender, args) =>
-    {
-      await _onSearchTextChanged.Invoke("");
-    };
+    // ParentDropDown.Opening += async (sender, args) =>
+    // {
+    //   await _onSearchTextChanged.Invoke("");
+    // };
 
     ParentDropDown.ItemClicked += (sender, args) =>
     {

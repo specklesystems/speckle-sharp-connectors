@@ -79,6 +79,8 @@ public class SpeckleSelectModelComponent : GH_Component
   private void OnAccountSelected(Account? account)
   {
     _account = account;
+    _storedUserId = _account?.id;
+    _storedServer = _account?.serverInfo.url;
     Message = _account != null ? $"{_account.serverInfo.url}\n{_account.userInfo.email}" : null;
     SpeckleOperationWizard.SetAccount(_account);
     ExpireSolution(true);
@@ -95,6 +97,8 @@ public class SpeckleSelectModelComponent : GH_Component
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
   }
 
+  private string? UrlInput { get; set; }
+
 #pragma warning disable CA1502
   protected override void SolveInstance(IGH_DataAccess da)
 #pragma warning restore CA1502
@@ -105,6 +109,7 @@ public class SpeckleSelectModelComponent : GH_Component
     // OPTION 1: Component has input wire connected
     if (da.GetData(0, ref urlInput))
     {
+      UrlInput = urlInput;
       //Lock button interactions before anything else, to ensure any input (even invalid ones) lock the state.
       SpeckleOperationWizard.SetComponentButtonsState(false);
 
@@ -116,7 +121,9 @@ public class SpeckleSelectModelComponent : GH_Component
 
       try
       {
-        var resource = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput);
+        var (resource, accountId) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput);
+        _storedUserId = accountId;
+        _storedServer = resource.Server;
         UpdateMessageWithAccount(SpeckleOperationWizard.SelectedAccount);
         da.SetData(0, resource);
       }
@@ -131,6 +138,18 @@ public class SpeckleSelectModelComponent : GH_Component
 
     // Unlock button interactions when no input data is provided (no wires connected)
     SpeckleOperationWizard.SetComponentButtonsState(true);
+
+    // When user unplugs the URL input, we need to reset all first
+    if (UrlInput != null)
+    {
+      UrlInput = null;
+      SpeckleOperationWizard.WorkspaceMenuHandler.Reset();
+      SpeckleOperationWizard.ProjectMenuHandler.Reset();
+      SpeckleOperationWizard.ModelMenuHandler.Reset();
+      SpeckleOperationWizard.VersionMenuHandler?.Reset();
+      _account = SpeckleOperationWizard.SelectedAccount;
+      _storedUserId = _account?.id;
+    }
 
     if (_justPastedIn && _storedUserId != null && !string.IsNullOrEmpty(_storedUserId))
     {
@@ -180,7 +199,6 @@ public class SpeckleSelectModelComponent : GH_Component
       SpeckleOperationWizard.SetWorkspaces(workspaces);
     }
 
-    // TODO: select default workspace
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
     Workspace? selectedWorkspace =
       SpeckleOperationWizard.SelectedWorkspace
@@ -202,7 +220,11 @@ public class SpeckleSelectModelComponent : GH_Component
     }
 
     var projects = client
-      .ActiveUser.GetProjectsWithPermissions(10, null, new UserProjectsFilter(workspaceId: _storedWorkspaceId))
+      .ActiveUser.GetProjectsWithPermissions(
+        10,
+        null,
+        new UserProjectsFilter(workspaceId: _storedWorkspaceId, includeImplicitAccess: true)
+      )
       .Result;
     SpeckleOperationWizard?.SetProjects(projects);
     ProjectContextMenuButton.Enabled = true;
