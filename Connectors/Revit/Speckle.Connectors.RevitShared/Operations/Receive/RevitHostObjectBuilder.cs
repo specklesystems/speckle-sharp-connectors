@@ -14,6 +14,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -219,9 +220,13 @@ public sealed class RevitHostObjectBuilder(
           bakedObjectIds.Add(directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
 
-          if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
+          // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject and
+          // processes just IRawEncodedObject in maps to create post base paint targets for solids specifically
+          // this smells big time.
+          // TODO: created material is wrong nonetheless but visually it all looks correct in Revit. Investigate what is going on
+          if (localToGlobalMap.AtomicObject is Base myBase)
           {
-            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
+            SetSolidPostBakePaintTargets(myBase, directShapes, postBakePaintTargets);
           }
 
           conversionResults.Add(
@@ -286,4 +291,24 @@ public sealed class RevitHostObjectBuilder(
   }
 
   public void Dispose() => transactionManager?.Dispose();
+
+  // NOTE: temp poc HACK!
+  // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.
+  // TODO: clean this up / refactor
+  private void SetSolidPostBakePaintTargets(Base baseObj, DirectShape directShapes, List<(DirectShape, string)> targets)
+  {
+    switch (baseObj)
+    {
+      case IRawEncodedObject:
+        targets.Add((directShapes, baseObj.applicationId ?? baseObj.id.NotNull()));
+        break;
+
+      case DataObject dataObj:
+        foreach (var item in dataObj.displayValue)
+        {
+          SetSolidPostBakePaintTargets(item, directShapes, targets);
+        }
+        break;
+    }
+  }
 }
