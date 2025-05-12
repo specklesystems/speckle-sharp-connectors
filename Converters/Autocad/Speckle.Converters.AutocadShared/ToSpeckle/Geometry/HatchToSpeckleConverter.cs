@@ -115,81 +115,63 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
       {
         foreach (var segment in loop.Curves)
         {
+          // for each segment, skip the last point: it will be added as a start Point of the next segment. Otherwise, they will overlap and make the curve invalid
           switch (segment)
           {
             case AG.LineSegment2d line:
-              AG.Point3d startPtLine = new(line.StartPoint.X, line.StartPoint.Y, 0);
-              AG.Point3d endPtLine = new(line.EndPoint.X, line.EndPoint.Y, 0);
-
-              // don't add the end point that's the same as the start point
-              if (count == 0 || vertices[0].DistanceTo(startPtLine) > 0.00001)
-              {
-                vertices.Add(startPtLine);
-                polyline.AddVertexAt(count, line.StartPoint, 0, 0, 0);
-                count++;
-              }
-              vertices.Add(endPtLine);
-              polyline.AddVertexAt(count, line.EndPoint, 0, 0, 0);
-              count++;
+              count = TryAddPointToPolyline(vertices, polyline, line.StartPoint, 0, count);
               break;
 
             case AG.NurbCurve2d nurb:
+              // if there is only 1 loop curve, just return its Spline representation
+              if (loop.Curves.Count == 1)
+              {
+                return Nurb2dToSpline(nurb);
+              }
+              // if there are more loop curves, approximate the nurb by splitting into segments
+              // and making an arc from each for better fitting
 
+              // estimate the number of points to split the nurb into, minimum 20
               double paramRange = nurb.EndParameter - nurb.StartParameter;
-              double length = nurb.GetLength(nurb.StartParameter, nurb.EndParameter);
-              int pointNumber = (int)(length / 0.1);
+              int pointNumber = (int)(paramRange) >= 20 ? (int)(paramRange) : 20;
               for (double i = nurb.StartParameter; i < nurb.EndParameter; i += paramRange / pointNumber)
               {
                 AG.Point2d pointStart = nurb.EvaluatePoint(i);
                 AG.Point2d pointEnd = nurb.EvaluatePoint(i + paramRange / pointNumber);
-                AG.Point3d pointStart3d = new(pointStart.X, pointStart.Y, 0);
+                double bulgeNurb = GetVertexBulge(nurb, pointStart, pointEnd);
 
-                // don't add the end point that's the same as the start point
-                if (count == 0 || vertices[0].DistanceTo(pointStart3d) > 0.00001)
-                {
-                  double bulgeNurb = GetVertexBulge(nurb, pointStart, pointEnd);
-                  vertices.Add(pointStart3d);
-                  polyline.AddVertexAt(count, pointStart, bulgeNurb, 0, 0);
-                  count++;
-                }
+                count = TryAddPointToPolyline(vertices, polyline, pointStart, bulgeNurb, count);
               }
               break;
 
             case AG.CircularArc2d arc:
-              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
-              AG.Point3d startPtArc = new(arc.StartPoint.X, arc.StartPoint.Y, 0);
-              AG.Point3d endPtArc = new(arc.EndPoint.X, arc.EndPoint.Y, 0);
-
-              // don't add the end point that's the same as the start point
-              if (count == 0 || vertices[0].DistanceTo(startPtArc) > 0.00001)
-              {
-                vertices.Add(startPtArc);
-                polyline.AddVertexAt(count, arc.StartPoint, bulge, 0, 0);
-                count++;
-              }
-
-              vertices.Add(endPtArc);
-              polyline.AddVertexAt(count, arc.EndPoint, 0, 0, 0);
-              count++;
-
-              // if only 2 points, that's a circle
-              if (vertices.Count == 2 && Math.Abs(arc.EndAngle - arc.StartAngle) - 2 * Math.PI < 0.0001)
+              // check if it's a circle
+              if (loop.Curves.Count == 1 && Math.Abs(arc.EndAngle - arc.StartAngle) - 2 * Math.PI < 0.0001)
               {
                 AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
                 return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
               }
-
+              // if not a circle, add start and end points of the arc to the Polyline
+              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
+              count = TryAddPointToPolyline(vertices, polyline, arc.StartPoint, bulge, count);
               break;
 
             case AG.EllipticalArc2d ellipse:
-              return new ADB.Ellipse(
-                new(ellipse.Center.X, ellipse.Center.Y, 0),
-                AG.Vector3d.ZAxis,
-                new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
-                ellipse.MinorRadius / ellipse.MajorRadius,
-                ellipse.StartAngle,
-                ellipse.EndAngle
-              );
+              // check if it's an ellipse
+              if (loop.Curves.Count == 1 && Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001)
+              {
+                return new ADB.Ellipse(
+                  new(ellipse.Center.X, ellipse.Center.Y, 0),
+                  AG.Vector3d.ZAxis,
+                  new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+                  ellipse.MinorRadius / ellipse.MajorRadius,
+                  ellipse.StartAngle,
+                  ellipse.EndAngle
+                );
+              }
+              throw new ConversionException($"Hatch segments of type {segment.GetType()} are not supported");
+            default:
+              throw new ConversionException($"Hatch segments of type {segment.GetType()} are not supported");
           }
         }
       }
@@ -213,5 +195,60 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
       (end.X - start.X) * (arcMidPoint.Y - start.Y) - (arcMidPoint.X - start.X) * (end.Y - start.Y) > 0 ? -1 : 1;
 
     return Math.Tan(arcAngle / 4) * bulgeDirection;
+  }
+
+  private ADB.Spline Nurb2dToSpline(AG.NurbCurve2d nurb)
+  {
+    // get control points
+    AG.Point3dCollection pointCollection = new();
+    for (int i = 0; i < nurb.NumControlPoints; i++)
+    {
+      AG.Point2d pt = nurb.GetControlPointAt(i);
+      pointCollection.Add(new AG.Point3d(pt.X, pt.Y, 0));
+    }
+    // get knots
+    AG.DoubleCollection knotsCollection = new();
+    foreach (double nurbKnot in nurb.Knots)
+    {
+      knotsCollection.Add(nurbKnot);
+    }
+    // get weights
+    AG.DoubleCollection weightCollection = new();
+    for (int i = 0; i < nurb.NumWeights; i++)
+    {
+      weightCollection.Add(nurb.GetWeightAt(i));
+    }
+
+    return new ADB.Spline(
+      nurb.Degree,
+      nurb.IsRational,
+      nurb.IsClosed(),
+      nurb.IsPeriodic(out _),
+      pointCollection,
+      knotsCollection,
+      weightCollection,
+      0,
+      0
+    );
+  }
+
+  private int TryAddPointToPolyline(
+    AG.Point3dCollection vertices,
+    ADB.Polyline polyline,
+    AG.Point2d pointToAdd,
+    double bulge,
+    int count
+  )
+  {
+    AG.Point3d point3d = new(pointToAdd.X, pointToAdd.Y, 0);
+    // add point only if it doesn't overlap with the first one
+    if (vertices.Count == 0 || vertices[0].DistanceTo(point3d) > 0.001)
+    {
+      vertices.Add(point3d);
+      polyline.AddVertexAt(count, pointToAdd, bulge, 0, 0);
+      return count + 1;
+    }
+
+    return count;
   }
 }
