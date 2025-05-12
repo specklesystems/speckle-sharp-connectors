@@ -89,6 +89,17 @@ public class AutocadSelectionBinding : ISelectionBinding
 
           objectTypes.Add(dbObject.GetType().Name);
           objs.Add(dbObject.GetSpeckleApplicationId());
+
+          // do the same also for each AttributeReference inside the BlockReference (attribute change is not affecting the block otherwise)
+          if (dbObject is BlockReference blockReference)
+          {
+            foreach (ObjectId id in blockReference.AttributeCollection)
+            {
+              var attr = (AttributeReference)tr.GetObject(id, OpenMode.ForRead);
+              objectTypes.Add(attr.GetType().Name);
+              objs.Add(attr.GetSpeckleApplicationId());
+            }
+          }
         }
 
         tr.Commit();
