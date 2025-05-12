@@ -107,8 +107,8 @@ public sealed class DisplayValueExtractor
 
   private List<Base> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
-    var (solids, meshes, curves, polylines, points) = GetSortedGeometryFromElement(element, options);
-    return ProcessGeometryCollections(element, solids, meshes, curves, polylines, points);
+    var collections = GetSortedGeometryFromElement(element, options);
+    return ProcessGeometryCollections(element, collections);
   }
 
   /// <summary>
@@ -119,13 +119,7 @@ public sealed class DisplayValueExtractor
   /// Note: Some special element types (like Rebar) cannot use this method as their
   /// get_Geometry() returns null, requiring specialized extraction methods.
   /// </remarks>
-  private (
-    List<DB.Solid>,
-    List<DB.Mesh>,
-    List<DB.Curve>,
-    List<DB.PolyLine>,
-    List<DB.Point>
-  ) GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
+  private GeometryCollections GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
@@ -143,19 +137,15 @@ public sealed class DisplayValueExtractor
       geom = element.get_Geometry(options);
     }
 
-    List<DB.Solid> solids = new();
-    List<DB.Mesh> meshes = new();
-    List<DB.Curve> curves = new();
-    List<DB.PolyLine> polylines = new();
-    List<DB.Point> points = new();
+    var collections = new GeometryCollections();
 
     if (geom != null && geom.Any())
     {
       // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, solids, meshes, curves, polylines, points, geom);
+      SortGeometry(element, collections, geom);
     }
 
-    return (solids, meshes, curves, polylines, points);
+    return collections;
   }
 
   /// <summary>
@@ -165,36 +155,29 @@ public sealed class DisplayValueExtractor
   /// <remarks>
   /// Essentially all the ensuing steps after the common get_Geometry element method
   /// </remarks>
-  private List<Base> ProcessGeometryCollections(
-    DB.Element element,
-    List<DB.Solid> solids,
-    List<DB.Mesh> meshes,
-    List<DB.Curve> curves,
-    List<DB.PolyLine> polylines,
-    List<DB.Point> points
-  )
+  private List<Base> ProcessGeometryCollections(DB.Element element, GeometryCollections collections)
   {
     List<Base> displayValue = new();
 
     // handle all solids and meshes by their material
-    var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
     displayValue.AddRange(displayMeshes);
 
     // add rest of geometry
-    foreach (var curve in curves)
+    foreach (var curve in collections.Curves)
     {
       displayValue.Add(GetCurveDisplayValue(curve));
     }
 
-    foreach (var polyline in polylines)
+    foreach (var polyline in collections.Polylines)
     {
       displayValue.Add(_polylineConverter.Convert(polyline));
     }
 
-    foreach (var point in points)
+    foreach (var point in collections.Points)
     {
       displayValue.Add(_pointConverter.Convert(point));
     }
@@ -266,22 +249,7 @@ public sealed class DisplayValueExtractor
   ///
   /// Note: this is basically a geometry unpacker for all types of geometry
   /// </summary>
-  /// <param name="element"></param>
-  /// <param name="solids"></param>
-  /// <param name="meshes"></param>
-  /// <param name="curves"></param>
-  /// <param name="polylines"></param>
-  /// <param name="points"></param>
-  /// <param name="geom"></param>
-  private void SortGeometry(
-    DB.Element element,
-    List<DB.Solid> solids,
-    List<DB.Mesh> meshes,
-    List<DB.Curve> curves,
-    List<DB.PolyLine> polylines,
-    List<DB.Point> points,
-    DB.GeometryElement geom
-  )
+  private void SortGeometry(DB.Element element, GeometryCollections collections, DB.GeometryElement geom)
   {
     foreach (DB.GeometryObject geomObj in geom)
     {
@@ -299,33 +267,33 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
-          solids.Add(solid);
+          collections.Solids.Add(solid);
           break;
 
         case DB.Mesh mesh:
-          meshes.Add(mesh);
+          collections.Meshes.Add(mesh);
           break;
 
         case DB.Curve curve:
-          curves.Add(curve);
+          collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
-          polylines.Add(polyline);
+          collections.Polylines.Add(polyline);
           break;
 
         case DB.Point point:
-          points.Add(point);
+          collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          SortGeometry(element, solids, meshes, curves, polylines, points, instance.GetInstanceGeometry());
+          SortGeometry(element, collections, instance.GetInstanceGeometry());
           break;
 
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, solids, meshes, curves, polylines, points, geometryElement);
+          SortGeometry(element, collections, geometryElement);
           break;
       }
     }
@@ -458,23 +426,19 @@ public sealed class DisplayValueExtractor
   /// </remarks>
   private List<Base> GetRebarSolidDisplayValue(DB.Structure.Rebar rebar)
   {
-    List<DB.Solid> solids = new();
-    List<DB.Mesh> meshes = new();
-    List<DB.Curve> curves = new();
-    List<DB.PolyLine> polylines = new();
-    List<DB.Point> points = new();
+    var collections = new GeometryCollections();
 
     // Regular get_Geometry() returns null for rebar, so we need to use GetFullGeometryForView
     // ❗NOTE: ️view detail level needs to be fine in order for this to work
     // Same behaviour as sending structural frame though - consistent and therefore okay.
     DB.GeometryElement geometryElements = rebar.GetFullGeometryForView(_converterSettings.Current.Document.ActiveView);
 
-    SortGeometry(rebar, solids, meshes, curves, polylines, points, geometryElements);
+    SortGeometry(rebar, collections, geometryElements);
 
     if (geometryElements != null)
     {
-      SortGeometry(rebar, solids, meshes, curves, polylines, points, geometryElements);
-      return ProcessGeometryCollections(rebar, solids, meshes, curves, polylines, points);
+      SortGeometry(rebar, collections, geometryElements);
+      return ProcessGeometryCollections(rebar, collections);
     }
 
     // Return empty list if no geometry is found - imo not critical
@@ -523,5 +487,19 @@ public sealed class DisplayValueExtractor
     }
 
     return displayValue;
+  }
+
+  /// <summary>
+  /// Represents sorted collections of different geometry types extracted from an element.
+  /// Used to pass multiple geometry collections as a single parameter to improve code readability
+  /// and reduce the risk of parameter ordering errors.
+  /// </summary>
+  private sealed record GeometryCollections
+  {
+    public List<DB.Solid> Solids { get; } = new();
+    public List<DB.Mesh> Meshes { get; } = new();
+    public List<DB.Curve> Curves { get; } = new();
+    public List<DB.PolyLine> Polylines { get; } = new();
+    public List<DB.Point> Points { get; } = new();
   }
 }
