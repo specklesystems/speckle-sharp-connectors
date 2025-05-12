@@ -168,8 +168,22 @@ public sealed class RhinoSendBinding : ISendBinding
 
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
-          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
-          _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+          // Update ChangedObjectIds if Material was changed directly on the object
+          if (changedEventArgs.ObjectId != Guid.Empty)
+          {
+            ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+            _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+          }
+          // Update ChangedObjectIdsInGroupsOrLayers (without triggering Expiration) if only Layer material has changed
+          else if (changedEventArgs.LayerId != Guid.Empty)
+          {
+            var layer = RhinoDoc.ActiveDoc.Layers.FindId(changedEventArgs.LayerId);
+            foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
+            {
+              ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
+              _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+            }
+          }
         }
       });
 
@@ -206,17 +220,9 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
-
-        var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
-          l.FullPath != null && l.FullPath.Contains(layer.Name)
-        ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
-        foreach (var childLayer in allLayers)
+        foreach (string objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
         {
-          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
-          foreach (var obj in sublayerObjs)
-          {
-            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
-          }
+          ChangedObjectIdsInGroupsOrLayers[objectId] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         await Commands.RefreshSendFilters();
@@ -351,36 +357,6 @@ public sealed class RhinoSendBinding : ISendBinding
       return;
     }
 
-    // Invalidate any objects whose materials have changed
-    if (!ChangedMaterialIndexes.IsEmpty)
-    {
-      var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
-      foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
-      {
-        // record used material indices: by the object and its parent layer
-        Layer parentLayer = RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex];
-        List<int> materialIndicesOfObjectAndParentLayers =
-          new() { rhinoObject.Attributes.MaterialIndex, parentLayer.RenderMaterialIndex };
-
-        // check for any further parent layers, traverse all the way to the top
-        while (parentLayer.ParentLayerId != Guid.Empty)
-        {
-          parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentLayer.ParentLayerId);
-          materialIndicesOfObjectAndParentLayers.Add(parentLayer.RenderMaterialIndex);
-        }
-
-        // do the check for material change both on the object, and on its parent Layer(s)
-        foreach (int index in materialIndicesOfObjectAndParentLayers)
-        {
-          if (changedMaterialIndexes.Contains(index))
-          {
-            ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
-            break;
-          }
-        }
-      }
-    }
-
     if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroupsOrLayers.IsEmpty)
     {
       return;
@@ -423,5 +399,25 @@ public sealed class RhinoSendBinding : ISendBinding
     _sendConversionCache.ClearCache();
     var senderModelCardIds = _store.GetSenders().Select(s => s.ModelCardId.NotNull());
     await Commands.SetModelsExpired(senderModelCardIds);
+  }
+
+  private List<string> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
+  {
+    List<string> allObjectIds = new();
+
+    var allLayers = RhinoDoc.ActiveDoc.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
+      l.FullPath != null && l.FullPath.Contains(layer.Name)
+    ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+
+    foreach (var childLayer in allLayers)
+    {
+      var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+      foreach (var obj in sublayerObjs)
+      {
+        allObjectIds.Add(obj.Id.ToString());
+      }
+    }
+
+    return allObjectIds;
   }
 }
