@@ -131,6 +131,7 @@ public class SpeckleOperationWizard
   {
     _updateComponentMessage.Invoke("");
     SelectedAccount = account;
+
     ResetWorkspaces();
     ResetProjects();
     ResetModels();
@@ -138,6 +139,10 @@ public class SpeckleOperationWizard
     if (refreshComponent)
     {
       _refreshComponent.Invoke();
+    }
+    if (account != null)
+    {
+      _accountService.SetUserSelectedAccountId(account.id);
     }
   }
 

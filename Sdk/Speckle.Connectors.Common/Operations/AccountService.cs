@@ -61,6 +61,13 @@ public class AccountService(
       return null;
     }
   }
+
+  public void SetUserSelectedAccountId(string userSelectedAccountId)
+  {
+    var jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("DUI3Config");
+    var str = JsonConvert.SerializeObject(new AccountsConfig() { UserSelectedAccountId = userSelectedAccountId });
+    jsonCacheManager.UpdateObject("accounts", str);
+  }
 }
 
 public class AccountsConfig
