@@ -70,8 +70,16 @@ public sealed class DisplayValueExtractor
             }
           }
         }
-
         return areaDisplay;
+
+      // NOTE: this is only for Rebar and not AreaReinforcement, RebarInSystem
+      // AreaReinforcement and RebarInSystem pass through GetGeometryDisplayValue which get DisplayValues as per hostApp
+      // Rebar elements need special handling as get_Geometry() doesn't work properly
+      // We either represent them as centerlines or as solids based on settings
+      case DB.Structure.Rebar rebar:
+        return _converterSettings.Current.SendRebarsAsVolumetric
+          ? GetRebarVolumetricDisplayValue(rebar)
+          : GetRebarCenterlineDisplayValue(rebar);
 
       // handle specific types of objects with multiple parts or children
       // curtain and stacked walls should have their display values in their children
@@ -85,7 +93,6 @@ public sealed class DisplayValueExtractor
           var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
           railingDisplay.AddRange(GetGeometryDisplayValue(topRail));
         }
-
         return railingDisplay;
 
       // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.
@@ -100,28 +107,77 @@ public sealed class DisplayValueExtractor
 
   private List<Base> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
+    var collections = GetSortedGeometryFromElement(element, options);
+    return ProcessGeometryCollections(element, collections);
+  }
+
+  /// <summary>
+  /// Extracts and sorts all geometry from an element into separate collections by type.
+  /// </summary>
+  /// <remarks>
+  /// Extraction of geometry from any element using get_Geometry().
+  /// Note: Some special element types (like Rebar) cannot use this method as their
+  /// get_Geometry() returns null, requiring specialized extraction methods.
+  /// </remarks>
+  private GeometryCollections GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
+  {
+    //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
+    options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
+    options = OverrideViewOptions(element, options);
+
+    DB.GeometryElement geom;
+    try
+    {
+      geom = element.get_Geometry(options);
+    }
+    // POC: should we be trying to continue?
+    catch (Autodesk.Revit.Exceptions.ArgumentException)
+    {
+      options.ComputeReferences = false;
+      geom = element.get_Geometry(options);
+    }
+
+    var collections = new GeometryCollections();
+
+    if (geom != null && geom.Any())
+    {
+      // retrieves all meshes and solids from a geometry element
+      SortGeometry(element, collections, geom);
+    }
+
+    return collections;
+  }
+
+  /// <summary>
+  /// Processes collections of different geometry types and converts them to display values.
+  /// Extracted as a common method to reduce code duplication between regular geometry processing and special cases like rebar.
+  /// </summary>
+  /// <remarks>
+  /// Essentially all the ensuing steps after the common get_Geometry element method
+  /// </remarks>
+  private List<Base> ProcessGeometryCollections(DB.Element element, GeometryCollections collections)
+  {
     List<Base> displayValue = new();
-    var (solids, meshes, curves, polylines, points) = GetSortedGeometryFromElement(element, options);
 
     // handle all solids and meshes by their material
-    var meshesByMaterial = GetMeshesByMaterial(meshes, solids);
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
     displayValue.AddRange(displayMeshes);
 
     // add rest of geometry
-    foreach (var curve in curves)
+    foreach (var curve in collections.Curves)
     {
       displayValue.Add(GetCurveDisplayValue(curve));
     }
 
-    foreach (var polyline in polylines)
+    foreach (var polyline in collections.Polylines)
     {
       displayValue.Add(_polylineConverter.Convert(polyline));
     }
 
-    foreach (var point in points)
+    foreach (var point in collections.Points)
     {
       displayValue.Add(_pointConverter.Convert(point));
     }
@@ -180,45 +236,6 @@ public sealed class DisplayValueExtractor
       { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
     };
 
-  private (
-    List<DB.Solid>,
-    List<DB.Mesh>,
-    List<DB.Curve>,
-    List<DB.PolyLine>,
-    List<DB.Point>
-  ) GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
-  {
-    //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
-    options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
-    options = OverrideViewOptions(element, options);
-
-    DB.GeometryElement geom;
-    try
-    {
-      geom = element.get_Geometry(options);
-    }
-    // POC: should we be trying to continue?
-    catch (Autodesk.Revit.Exceptions.ArgumentException)
-    {
-      options.ComputeReferences = false;
-      geom = element.get_Geometry(options);
-    }
-
-    List<DB.Solid> solids = new();
-    List<DB.Mesh> meshes = new();
-    List<DB.Curve> curves = new();
-    List<DB.PolyLine> polylines = new();
-    List<DB.Point> points = new();
-
-    if (geom != null && geom.Any())
-    {
-      // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, solids, meshes, curves, polylines, points, geom);
-    }
-
-    return (solids, meshes, curves, polylines, points);
-  }
-
   /// <summary>
   /// According to the remarks on the GeometryInstance class in the RevitAPIDocs,
   /// https://www.revitapidocs.com/2024/fe25b14f-5866-ca0f-a660-c157484c3a56.htm,
@@ -232,22 +249,7 @@ public sealed class DisplayValueExtractor
   ///
   /// Note: this is basically a geometry unpacker for all types of geometry
   /// </summary>
-  /// <param name="element"></param>
-  /// <param name="solids"></param>
-  /// <param name="meshes"></param>
-  /// <param name="curves"></param>
-  /// <param name="polylines"></param>
-  /// <param name="points"></param>
-  /// <param name="geom"></param>
-  private void SortGeometry(
-    DB.Element element,
-    List<DB.Solid> solids,
-    List<DB.Mesh> meshes,
-    List<DB.Curve> curves,
-    List<DB.PolyLine> polylines,
-    List<DB.Point> points,
-    DB.GeometryElement geom
-  )
+  private void SortGeometry(DB.Element element, GeometryCollections collections, DB.GeometryElement geom)
   {
     foreach (DB.GeometryObject geomObj in geom)
     {
@@ -265,33 +267,33 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
-          solids.Add(solid);
+          collections.Solids.Add(solid);
           break;
 
         case DB.Mesh mesh:
-          meshes.Add(mesh);
+          collections.Meshes.Add(mesh);
           break;
 
         case DB.Curve curve:
-          curves.Add(curve);
+          collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
-          polylines.Add(polyline);
+          collections.Polylines.Add(polyline);
           break;
 
         case DB.Point point:
-          points.Add(point);
+          collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          SortGeometry(element, solids, meshes, curves, polylines, points, instance.GetInstanceGeometry());
+          SortGeometry(element, collections, instance.GetInstanceGeometry());
           break;
 
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, solids, meshes, curves, polylines, points, geometryElement);
+          SortGeometry(element, collections, geometryElement);
           break;
       }
     }
@@ -412,5 +414,92 @@ public sealed class DisplayValueExtractor
       }
     }
     return currentOptions;
+  }
+
+  /// <summary>
+  /// Gets the solid representation of rebar elements.
+  /// </summary>
+  /// <remarks>
+  /// Rebars require special handling since the standard get_Geometry() method returns null.
+  /// Instead, we use GetFullGeometryForView() to obtain the geometry and then process it
+  /// using the standard geometry sorting and conversion.
+  /// </remarks>
+  private List<Base> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
+  {
+    var collections = new GeometryCollections();
+
+    // Regular get_Geometry() returns null for rebar, so we need to use GetFullGeometryForView
+    // ❗NOTE: ️view detail level needs to be fine in order for this to work
+    // Same behaviour as sending structural frame though - consistent and therefore okay.
+    DB.GeometryElement geometryElements = rebar.GetFullGeometryForView(_converterSettings.Current.Document.ActiveView);
+
+    SortGeometry(rebar, collections, geometryElements);
+
+    if (geometryElements != null)
+    {
+      SortGeometry(rebar, collections, geometryElements);
+      return ProcessGeometryCollections(rebar, collections);
+    }
+
+    // Return empty list if no geometry is found - imo not critical
+    return new List<Base>();
+  }
+
+  /// <summary>
+  /// Gets the centerline representation of a rebar element.
+  /// </summary>
+  /// <remarks>
+  /// This method extracts the centerlines of rebar elements when a simplified representation is preferred.
+  /// </remarks>
+  private List<Base> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
+  {
+    bool isSingleLayout = rebar.LayoutRule == DB.Structure.RebarLayoutRule.Single;
+    int numberOfBarPositions = rebar.NumberOfBarPositions;
+    List<DB.Curve> curves = new();
+
+    for (int barPositionIndex = 0; barPositionIndex < numberOfBarPositions; barPositionIndex++)
+    {
+      if (!isSingleLayout)
+      {
+        if (
+          !rebar.IncludeFirstBar && barPositionIndex == 0
+          || !rebar.IncludeLastBar && barPositionIndex == rebar.NumberOfBarPositions - 1
+        )
+        {
+          continue;
+        }
+      }
+      curves.AddRange(
+        rebar.GetTransformedCenterlineCurves(
+          false,
+          false,
+          false,
+          DB.Structure.MultiplanarOption.IncludeAllMultiplanarCurves,
+          barPositionIndex
+        )
+      );
+    }
+
+    List<Base> displayValue = new();
+    foreach (var curve in curves)
+    {
+      displayValue.Add(GetCurveDisplayValue(curve));
+    }
+
+    return displayValue;
+  }
+
+  /// <summary>
+  /// Represents sorted collections of different geometry types extracted from an element.
+  /// Used to pass multiple geometry collections as a single parameter to improve code readability
+  /// and reduce the risk of parameter ordering errors.
+  /// </summary>
+  private sealed record GeometryCollections
+  {
+    public List<DB.Solid> Solids { get; } = new();
+    public List<DB.Mesh> Meshes { get; } = new();
+    public List<DB.Curve> Curves { get; } = new();
+    public List<DB.PolyLine> Polylines { get; } = new();
+    public List<DB.Point> Points { get; } = new();
   }
 }
