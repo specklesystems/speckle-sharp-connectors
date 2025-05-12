@@ -57,9 +57,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.ModelObjects.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registration\PriorityLoader.cs" />

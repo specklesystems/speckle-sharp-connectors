@@ -4,6 +4,7 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -154,7 +155,10 @@ public class CreateSpeckleObject : GH_Component
     if (inputGeometry != null)
     {
       result.Value.GeometryBase = inputGeometry.GeometricGooToGeometryBase();
-      result.Value.Base = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
+      Base converted = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
+      converted[Constants.NAME_PROP] = result.Value.Name;
+      converted.applicationId = result.Value.ApplicationId;
+      result.Value.Base = converted;
       mutated = true;
     }
 
