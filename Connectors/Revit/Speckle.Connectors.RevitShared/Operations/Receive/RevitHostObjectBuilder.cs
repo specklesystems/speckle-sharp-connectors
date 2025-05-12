@@ -293,6 +293,7 @@ public sealed class RevitHostObjectBuilder(
   public void Dispose() => transactionManager?.Dispose();
 
   // NOTE: temp poc HACK!
+  // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.
   // TODO: clean this up / refactor
   private void SetSolidPostBakePaintTargets(Base baseObj, DirectShape directShapes, List<(DirectShape, string)> targets)
   {
