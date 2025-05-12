@@ -133,7 +133,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       return new(null);
     }
 
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 

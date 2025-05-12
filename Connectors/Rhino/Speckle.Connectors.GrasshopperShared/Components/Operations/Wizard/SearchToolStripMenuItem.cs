@@ -1,4 +1,4 @@
-namespace Speckle.Connectors.GrasshopperShared.Components.Operations;
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 public class SearchToolStripMenuItem
 {
@@ -24,8 +24,37 @@ public class SearchToolStripMenuItem
     _onSearchTextChanged = onSearchTextChanged;
 
     AddSearchBox();
+    AddMenuSeparator();
     RegisterEvents();
   }
+
+  public ToolStripMenuItem AddMenuItem(
+    string text,
+    EventHandler? click = null,
+    bool? visible = null,
+    bool? isChecked = null,
+    Image? image = null
+  )
+  {
+    var item = new ToolStripMenuItem(text)
+    {
+      Checked = isChecked ?? false,
+      Image = image,
+      ImageScaling = ToolStripItemImageScaling.SizeToFit
+    };
+    item.Click += click;
+    if (visible == false)
+    {
+      item.Enabled = false;
+    }
+
+    ParentDropDown.Items.Add(item);
+    return item;
+  }
+
+  public void AddMenuSeparator() => ParentDropDown.Items.Add(new ToolStripSeparator());
+
+  private bool _suppressTextChanged;
 
   private void AddSearchBox()
   {
@@ -43,12 +72,18 @@ public class SearchToolStripMenuItem
     {
       if (textBox.Text == SEARCH_PLACEHOLDER_TEXT)
       {
+        _suppressTextChanged = true;
         textBox.Text = "";
+        _suppressTextChanged = false;
       }
     };
 
     textBox.TextChanged += async (s, e) =>
     {
+      if (_suppressTextChanged)
+      {
+        return;
+      }
       SearchText = textBox.Text;
       var now = DateTime.UtcNow;
       if (now - _lastTime >= _debounce)
@@ -84,10 +119,10 @@ public class SearchToolStripMenuItem
   private void RegisterEvents()
   {
     // Resets the search filter
-    ParentDropDown.Opening += async (sender, args) =>
-    {
-      await _onSearchTextChanged.Invoke("");
-    };
+    // ParentDropDown.Opening += async (sender, args) =>
+    // {
+    //   await _onSearchTextChanged.Invoke("");
+    // };
 
     ParentDropDown.ItemClicked += (sender, args) =>
     {

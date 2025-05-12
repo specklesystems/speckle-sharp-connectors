@@ -15,6 +15,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 
@@ -23,6 +24,15 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
 public class SendAsyncComponent : GH_AsyncComponent
 {
+  private ResourceCollection<Project>? LastFetchedProjects { get; set; }
+  private ResourceCollection<Model>? LastFetchedModels { get; set; }
+
+  public GhContextMenuButton ProjectContextMenuButton { get; set; }
+  public GhContextMenuButton ModelContextMenuButton { get; set; }
+
+  private ToolStripDropDown? ProjectDropDown { get; set; }
+  private ToolStripDropDown? ModelDropDown { get; set; }
+
   public SendAsyncComponent()
     : base(
       "Publish",
@@ -131,7 +141,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    var accountManager = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -215,7 +225,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(IGH_DataAccess da, IAccountService accountManager, IClientFactory clientFactory)
+  private void ParseInput(IGH_DataAccess da, AccountService accountManager, IClientFactory clientFactory)
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
