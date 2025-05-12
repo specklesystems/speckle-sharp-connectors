@@ -402,10 +402,8 @@ public sealed class RhinoSendBinding : ISendBinding
     await Commands.SetModelsExpired(senderModelCardIds);
   }
 
-  private List<Guid> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
+  private IEnumerable<Guid> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
   {
-    List<Guid> allObjectIds = new();
-
     var allLayers = RhinoDoc.ActiveDoc.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
       l.FullPath != null && l.FullPath.Contains(layer.Name)
     ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
@@ -415,10 +413,8 @@ public sealed class RhinoSendBinding : ISendBinding
       var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
       foreach (var obj in sublayerObjs)
       {
-        allObjectIds.Add(obj.Id);
+        yield return obj.Id;
       }
     }
-
-    return allObjectIds;
   }
 }
