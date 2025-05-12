@@ -14,6 +14,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -219,9 +220,26 @@ public sealed class RevitHostObjectBuilder(
           bakedObjectIds.Add(directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
 
-          if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
+          // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject
+          // processes just IRawEncodedObject in maps to create post base paint targets for solids specifically
+          // this smells
+          // TODO: created material is wrong nonetheless but visually it all looks correct in Revit. Investigate what is going on
+          if (localToGlobalMap.AtomicObject is Base myBase)
           {
-            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
+            if (myBase is IRawEncodedObject)
+            {
+              postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
+            }
+            else if (myBase is DataObject da) // hack
+            {
+              foreach (Base @base in da.displayValue)
+              {
+                if (@base is IRawEncodedObject)
+                {
+                  postBakePaintTargets.Add((directShapes, @base.applicationId ?? myBase.id.NotNull()));
+                }
+              }
+            }
           }
 
           conversionResults.Add(
