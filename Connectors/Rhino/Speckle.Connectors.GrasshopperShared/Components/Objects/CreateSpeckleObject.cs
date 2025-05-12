@@ -33,7 +33,12 @@ public class CreateSpeckleObject : GH_Component
     );
     Params.Input[0].Optional = true;
 
-    pManager.AddGenericParameter("Geometry", "G", "The geometry of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter(
+      "Geometry",
+      "G",
+      "Displayable elements of the Speckle Object: Geometry or Text",
+      GH_ParamAccess.item
+    );
     Params.Input[1].Optional = true;
 
     pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
@@ -73,7 +78,12 @@ public class CreateSpeckleObject : GH_Component
   {
     pManager.AddParameter(new SpeckleObjectParam(), "Object", "O", "Speckle Object", GH_ParamAccess.item);
 
-    pManager.AddGenericParameter("Geometry", "G", "The geometry of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter(
+      "Geometry",
+      "G",
+      "Displayable elements of the Speckle Object: Geometry or Text",
+      GH_ParamAccess.item
+    );
 
     pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
 
