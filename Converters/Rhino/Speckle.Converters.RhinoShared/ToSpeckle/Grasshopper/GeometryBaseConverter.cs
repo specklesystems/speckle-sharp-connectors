@@ -16,6 +16,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<RG.PointCloud, SOG.Pointcloud> _pointcloudConverter;
   private readonly ITypedConverter<RG.PolyCurve, SOG.Polycurve> _polycurveConverter;
   private readonly ITypedConverter<RG.Polyline, SOG.Polyline> _polylineConverter;
+  private readonly ITypedConverter<RG.TextEntity, SA.Text> _textConverter;
   private readonly ITypedConverter<RG.Mesh, SOG.Mesh> _meshConverter;
   private readonly ITypedConverter<RG.Extrusion, SOG.ExtrusionX> _extrusionConverter;
   private readonly ITypedConverter<RG.SubD, SOG.SubDX> _subdConverter;
@@ -30,6 +31,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     ITypedConverter<RG.PointCloud, SOG.Pointcloud> pointcloudConverter,
     ITypedConverter<RG.PolyCurve, SOG.Polycurve> polycurveConverter,
     ITypedConverter<RG.Polyline, SOG.Polyline> polylineConverter,
+    ITypedConverter<RG.TextEntity, SA.Text> textConverter,
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     ITypedConverter<RG.Brep, SOG.BrepX> brepConverter,
     ITypedConverter<RG.Extrusion, SOG.ExtrusionX> extrusionConverter,
@@ -44,6 +46,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     _pointcloudConverter = pointcloudConverter;
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
+    _textConverter = textConverter;
     _meshConverter = meshConverter;
     _brepConverter = brepConverter;
     _extrusionConverter = extrusionConverter;
@@ -63,6 +66,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
       RG.PolyCurve polyCurve => _polycurveConverter.Convert(polyCurve),
       RG.Polyline polyline => _polylineConverter.Convert(polyline),
       RG.PolylineCurve polylineCurve => _polylineConverter.Convert(polylineCurve.ToPolyline()),
+      RG.TextEntity text => _textConverter.Convert(text),
       RG.Mesh mesh => _meshConverter.Convert(mesh),
       RG.Brep brep => _brepConverter.Convert(brep),
       RG.Extrusion ext => _extrusionConverter.Convert(ext),
