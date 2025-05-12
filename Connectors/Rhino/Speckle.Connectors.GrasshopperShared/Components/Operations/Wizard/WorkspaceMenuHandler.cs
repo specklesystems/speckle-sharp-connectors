@@ -117,6 +117,7 @@ public class WorkspaceMenuHandler
     }
     else
     {
+      WorkspaceContextMenuButton.SetIconOverride(null);
       WorkspaceContextMenuButton.Name = "Select Workspace";
       WorkspaceContextMenuButton.NickName = "Workspace";
       WorkspaceContextMenuButton.Description = "Right-click to select workspace";
