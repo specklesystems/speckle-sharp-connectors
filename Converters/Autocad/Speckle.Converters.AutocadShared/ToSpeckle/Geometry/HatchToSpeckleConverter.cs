@@ -151,7 +151,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
                 AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
                 return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
               }
-              // if not a circle, add start and end points of the arc to the Polyline
+              // if not a circle, add start point of the arc to the Polyline
               double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
               count = TryAddPointToPolyline(vertices, polyline, arc.StartPoint, bulge, count);
               break;

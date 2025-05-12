@@ -22,6 +22,8 @@ public class NurbCurve3dToSpeckleConverter : ITypedConverter<AG.NurbCurve3d, SOG
 
   public SOG.Curve Convert(AG.NurbCurve3d target)
   {
+    // The logic was taken from the Spline converter with adjusting properties and methods names
+
     // POC: HACK: check for incorrectly closed periodic curves (this seems like acad bug, has resulted from receiving rhino curves)
     bool periodicClosed = false;
     double length = 0;
@@ -103,9 +105,6 @@ public class NurbCurve3dToSpeckleConverter : ITypedConverter<AG.NurbCurve3d, SOG
       units = _settingsStore.Current.SpeckleUnits,
       displayValue = GetDisplayValue(target)
     };
-
-    // POC: get display value if this is a database-resident spline
-    // POC: if this is called by another converter that has created a spline, assumes the display value is set by that converter
 
     return curve;
   }
