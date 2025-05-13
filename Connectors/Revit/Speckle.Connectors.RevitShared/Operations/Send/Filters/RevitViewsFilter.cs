@@ -25,7 +25,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public RevitViewsFilter(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
+    _doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
 
     GetViews();
   }
