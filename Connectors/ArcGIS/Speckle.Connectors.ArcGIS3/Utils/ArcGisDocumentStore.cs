@@ -3,6 +3,7 @@ using ArcGIS.Desktop.Core.Events;
 using ArcGIS.Desktop.Framework.Threading.Tasks;
 using ArcGIS.Desktop.Mapping;
 using ArcGIS.Desktop.Mapping.Events;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -12,16 +13,13 @@ namespace Speckle.Connectors.ArcGIS.Utils;
 
 public class ArcGISDocumentStore : DocumentModelStore
 {
-  private readonly IThreadContext _threadContext;
-
   public ArcGISDocumentStore(
+    ILogger<DocumentModelStore> logger,
     IJsonSerializer jsonSerializer,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
-    IThreadContext threadContext
+    ITopLevelExceptionHandler topLevelExceptionHandler
   )
-    : base(jsonSerializer)
+    : base(logger, jsonSerializer)
   {
-    _threadContext = threadContext;
     ActiveMapViewChangedEvent.Subscribe(a => topLevelExceptionHandler.CatchUnhandled(() => OnMapViewChanged(a)), true);
     ProjectSavingEvent.Subscribe(
       _ =>
