@@ -4,7 +4,6 @@ using Speckle.Connectors.ArcGIS.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Converters.ArcGIS3;
-using Speckle.Sdk.Host;
 using Module = ArcGIS.Desktop.Framework.Contracts.Module;
 
 namespace Speckle.Connectors.ArcGIS;

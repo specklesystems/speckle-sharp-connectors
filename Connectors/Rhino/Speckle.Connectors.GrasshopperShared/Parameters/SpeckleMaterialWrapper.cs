@@ -14,9 +14,23 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a render material base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleMaterialWrapper : Base
+public class SpeckleMaterialWrapper : SpeckleWrapper
 {
-  public required SpeckleRenderMaterial Base { get; set; }
+  public override required Base Base
+  {
+    get => Material;
+    set
+    {
+      if (value is not SpeckleRenderMaterial mat)
+      {
+        throw new ArgumentException("Cannot create material wrapper from a non-SpeckleRenderMaterial Base");
+      }
+
+      Material = mat;
+    }
+  }
+
+  public SpeckleRenderMaterial Material { get; set; }
 
   public required Material RhinoMaterial { get; set; }
 
@@ -51,7 +65,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $@"Speckle Material Goo [{Value.Base.name}]";
+  public override string ToString() => $@"Speckle Material Goo [{Value.Name}]";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle render material wrapper";
@@ -68,17 +82,20 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         Value = speckleGrasshopperMaterialGoo.Value;
         return true;
       case GH_Material materialGoo:
+        var gooMaterial = ToRhinoMaterial(materialGoo.Value);
         Value = new()
         {
           Base = ToSpeckleRenderMaterial(materialGoo.Value),
-          RhinoMaterial = ToRhinoMaterial(materialGoo.Value),
-          RhinoRenderMaterialId = Guid.Empty
+          Name = gooMaterial.Name,
+          RhinoMaterial = gooMaterial,
+          RhinoRenderMaterialId = Guid.Empty,
         };
         return true;
       case Material material:
         Value = new()
         {
           Base = ToSpeckleRenderMaterial(material),
+          Name = material.Name,
           RhinoMaterial = material,
           RhinoRenderMaterialId = Guid.Empty
         };
@@ -87,8 +104,10 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         Value = new()
         {
           Base = speckleMaterial,
+          Name = speckleMaterial.name,
           RhinoMaterial = ToRhinoMaterial(speckleMaterial),
-          RhinoRenderMaterialId = Guid.Empty
+          RhinoRenderMaterialId = Guid.Empty,
+          ApplicationId = speckleMaterial.applicationId,
         };
         return true;
     }
@@ -98,6 +117,8 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
 
 #if !RHINO8_OR_GREATER
   private bool CastFromModelRenderMaterial(object _) => false;
+
+  private bool CastToModelRenderMaterial<T>(ref T _) => false;
 #endif
 
   public override bool CastTo<T>(ref T target)
@@ -110,7 +131,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
       return true;
     }
 
-    return false;
+    return CastToModelRenderMaterial(ref target);
   }
 
   public SpeckleMaterialWrapperGoo(SpeckleMaterialWrapper value)
@@ -125,7 +146,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
     SpeckleRenderMaterial speckleRenderMaterial =
       new()
       {
-        name = "",
+        name = mat.GetSpeckleApplicationId(),
         opacity = 1 - mat.Transparency,
         metalness = mat.Shine,
         diffuse = mat.Diffuse.ToArgb(),
@@ -257,7 +278,7 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
         string? name =
           NickName != NICKNAME
             ? NickName
-            : string.IsNullOrEmpty(goo.Value.RhinoMaterial.Name)
+            : string.IsNullOrEmpty(goo.Value.Name)
               ? NickName
               : null;
 
@@ -284,7 +305,7 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
         string? name =
           NickName != NICKNAME
             ? NickName
-            : string.IsNullOrEmpty(goo.Value.RhinoMaterial.Name)
+            : string.IsNullOrEmpty(goo.Value.Name)
               ? NickName
               : null;
 

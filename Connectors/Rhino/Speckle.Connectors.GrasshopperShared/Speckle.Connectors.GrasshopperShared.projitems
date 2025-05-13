@@ -16,7 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\GetCollectionObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetCollectionObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
@@ -24,6 +24,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\ModelMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\ProjectMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SearchToolStripMenuItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\VersionMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\WorkspaceMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SpeckleOperationWizard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetObjectProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />
@@ -44,6 +50,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleMaterialWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleMaterialWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Properties\Resources.Designer.cs" />
@@ -53,11 +60,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleGrasshopperObject.ModelObjects.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleGrasshopperObject.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.ModelObjects.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registration\PriorityLoader.cs" />
@@ -78,5 +85,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="$(MSBuildThisFileDirectory)Components\Dev\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_object.png" />
   </ItemGroup>
 </Project>

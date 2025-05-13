@@ -8,6 +8,11 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Moq" />
     <PackageReference Include="NUnit" />
-    <PackageReference Include="Speckle.Sdk" />
   </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
+    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
+  </ItemGroup> 
+  <ItemGroup Condition="'$(Configuration)' != 'Local'">
+    <PackageReference Include="Speckle.Sdk" />
+  </ItemGroup> 
 </Project>

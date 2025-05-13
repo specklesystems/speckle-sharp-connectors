@@ -12,8 +12,8 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 {
   public CreateSpeckleProperties()
     : base(
-      "Create Speckle Properties",
-      "CSP",
+      "Create Properties",
+      "CP",
       "Creates a set of properties for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
@@ -33,45 +33,49 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.tree);
+    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.item);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    Dictionary<string, SpecklePropertyGoo> properties = new();
+    // Create a data tree to store output
+
+    Dictionary<string, object?> properties = new();
+
+    // Check for structure of all inputs to see matching branches
     foreach (var inputParam in Params.Input)
     {
-      if (properties.ContainsKey(inputParam.NickName))
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Duplicate property name found: {inputParam.NickName}.");
+      string inputName = inputParam.NickName;
 
+      if (properties.ContainsKey(inputName))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Duplicate property name found: {inputName}.");
         return;
       }
 
-      var data = inputParam.VolatileData.AllData(true).OfType<object>().ToList();
+      properties.Add(inputName, new());
+    }
 
-      if (data.Count > 1)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Cannot support list properties yet.");
-        return;
-      }
-
-      SpecklePropertyGoo propGoo = new();
-      if (!propGoo.CastFrom(data.Count == 0 ? "" : data.First()))
+    for (int i = 0; i < Params.Input.Count; i++)
+    {
+      object? value = null;
+      var success = da.GetData(i, ref value);
+      var actualValue = value?.GetType().GetProperty("Value").GetValue(value); // note: unsure if reflection here hurts our performance
+      if (!success || value == null || actualValue == null)
       {
         AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Parameter {inputParam.NickName} should not contain anything other than strings, doubles, ints, and bools."
+          GH_RuntimeMessageLevel.Warning,
+          $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
         );
 
         return;
       }
 
-      propGoo.Path = inputParam.Name;
-      properties.Add(inputParam.Name, propGoo);
+      properties[Params.Input[i].NickName] = actualValue;
     }
 
-    da.SetData(0, new SpecklePropertyGroupGoo(properties));
+    var groupGoo = new SpecklePropertyGroupGoo(properties);
+    da.SetData(0, groupGoo);
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)

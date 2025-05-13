@@ -39,7 +39,6 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   public string InputType { get; set; }
   public bool AutoReceive { get; set; }
-  public bool ReceiveOnOpen { get; set; }
   public string ReceivedVersionId { get; set; }
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool JustPastedIn { get; set; }
@@ -48,11 +47,11 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
 
   // DI props
-  public Client ApiClient { get; private set; }
+  public IClient ApiClient { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
-  public IAccountService AccountManager { get; private set; }
+  public AccountService AccountManager { get; private set; }
   public IClientFactory ClientFactory { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -79,7 +78,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
     ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -146,26 +145,6 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
       var autoReceiveMi = Menu_AppendItem(menu, "Automatic loading is disabled because you have specified a version.");
       autoReceiveMi.ToolTipText = "To enable automatic loading, select a model without selecting a specific version.";
     }
-
-    var receivOnOpenMi = Menu_AppendItem(
-      menu,
-      "Load when Document opened",
-      (sender, args) =>
-      {
-        ReceiveOnOpen = !ReceiveOnOpen;
-        RhinoApp.InvokeOnUiThread(
-          (Action)
-            delegate
-            {
-              OnDisplayExpired(true);
-            }
-        );
-      },
-      !AutoReceive,
-      AutoReceive || ReceiveOnOpen
-    );
-    receivOnOpenMi.ToolTipText =
-      "The node will automatically perform a load operation as soon as the document is open, or the node is copy/pasted into a new document.";
 
     Menu_AppendSeparator(menu);
 
@@ -366,7 +345,6 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
-#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
@@ -378,24 +356,21 @@ public class ReceiveComponentWorker : WorkerInstance
         throw new InvalidOperationException("Model Resource was null");
       }
 
-      // Means it's a copy paste of an empty non-init component; set the record and exit fast unless ReceiveOnOpen is true.
+      // Means it's a copy paste of an empty non-init component; set the record and exit fast.
       if (receiveComponent.JustPastedIn && !receiveComponent.AutoReceive)
       {
         receiveComponent.JustPastedIn = false;
-        if (!receiveComponent.ReceiveOnOpen)
-        {
-          return;
-        }
-
-        receiveComponent.CurrentComponentState = ComponentState.Receiving;
-        RhinoApp.InvokeOnUiThread(
-          (Action)
-            delegate
-            {
-              receiveComponent.OnDisplayExpired(true);
-            }
-        );
+        return;
       }
+
+      receiveComponent.CurrentComponentState = ComponentState.Receiving;
+      RhinoApp.InvokeOnUiThread(
+        (Action)
+          delegate
+          {
+            receiveComponent.OnDisplayExpired(true);
+          }
+      );
 
       var t = Task.Run(async () =>
       {
@@ -474,7 +449,6 @@ public class ReceiveComponentWorker : WorkerInstance
       done();
     }
   }
-#pragma warning restore CA1506
 }
 
 public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes

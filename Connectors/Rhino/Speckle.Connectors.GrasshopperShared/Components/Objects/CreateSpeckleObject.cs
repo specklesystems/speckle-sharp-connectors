@@ -4,6 +4,7 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -12,15 +13,15 @@ public class CreateSpeckleObject : GH_Component
 {
   public CreateSpeckleObject()
     : base(
-      "Create Speckle Object",
-      "CSO",
-      "Create or mutate a Speckle Object",
+      "Speckle Object",
+      "SO",
+      "Create or modify a Speckle Object",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_create;
+  protected override Bitmap Icon => Resources.speckle_objects_object;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -56,6 +57,16 @@ public class CreateSpeckleObject : GH_Component
       GH_ParamAccess.item
     );
     Params.Input[5].Optional = true;
+
+    /* POC: disable for now as we are doing anything with this
+    pManager.AddTextParameter(
+      "Path",
+      "p",
+      "The Collection Path of the Speckle Object. Should be delimited with `:`",
+      GH_ParamAccess.item
+    );
+    Params.Input[6].Optional = true;
+    */
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -76,10 +87,18 @@ public class CreateSpeckleObject : GH_Component
 
     pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
 
-    pManager.AddGenericParameter(
+    pManager.AddParameter(
+      new SpeckleMaterialParam(),
       "Material",
-      "m",
-      "The material of the Speckle Object. Display Materials, Model Materials, and Speckle Materials are accepted.",
+      "M",
+      "The material of the Speckle Object.",
+      GH_ParamAccess.item
+    );
+
+    pManager.AddTextParameter(
+      "Path",
+      "p",
+      $"The Collection Path of the Speckle Object, delimited with `{Constants.LAYER_PATH_DELIMITER}`",
       GH_ParamAccess.item
     );
   }
@@ -104,6 +123,9 @@ public class CreateSpeckleObject : GH_Component
     IGH_Goo? inputMaterial = null;
     da.GetData(5, ref inputMaterial);
 
+    //string? inputPath = null;
+    //da.GetData(6, ref inputPath);
+
     // keep track of mutation
     // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
     bool mutated = false;
@@ -116,7 +138,7 @@ public class CreateSpeckleObject : GH_Component
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Warning,
-          $"Object input is not valid. Only Speckle Objects, Model Object, and Geometry are accepted."
+          $"Object input is not valid. Only Speckle Objects, Baked Model Objects, and Geometry are accepted."
         );
         return;
       }
@@ -133,7 +155,10 @@ public class CreateSpeckleObject : GH_Component
     if (inputGeometry != null)
     {
       result.Value.GeometryBase = inputGeometry.GeometricGooToGeometryBase();
-      result.Value.Base = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
+      Base converted = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
+      converted[Constants.NAME_PROP] = result.Value.Name;
+      converted.applicationId = result.Value.ApplicationId;
+      result.Value.Base = converted;
       mutated = true;
     }
 
@@ -158,8 +183,6 @@ public class CreateSpeckleObject : GH_Component
       }
 
       result.Value.Properties = propGoo;
-      Dictionary<string, object?> props = new();
-      propGoo.CastTo(ref props);
       mutated = true;
     }
 
@@ -177,7 +200,7 @@ public class CreateSpeckleObject : GH_Component
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Warning,
-          $"Material input is not valid. Only Display Materials, Model Materials, and Speckle Materials are accepted."
+          $"Material input is not valid. Only Display Materials, Baked Model Materials, and Speckle Materials are accepted."
         );
         return;
       }
@@ -186,12 +209,15 @@ public class CreateSpeckleObject : GH_Component
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
-    string applicationId = mutated
+    result.Value.ApplicationId = mutated
       ? Guid.NewGuid().ToString()
-      : result.Value.applicationId != null
-        ? result.Value.applicationId
-        : Guid.NewGuid().ToString();
-    result.Value.Base.applicationId = applicationId;
+      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
+
+    // get the path
+    string path =
+      result.Value.Path.Count > 1
+        ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Value.Path)
+        : result.Value.Path.FirstOrDefault();
 
     // set all the data
     da.SetData(0, result.Value);
@@ -200,5 +226,6 @@ public class CreateSpeckleObject : GH_Component
     da.SetData(3, result.Value.Properties);
     da.SetData(4, result.Value.Color);
     da.SetData(5, result.Value.Material);
+    da.SetData(6, path);
   }
 }

@@ -4,9 +4,8 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
-namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
+namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 /// <summary>
 /// Given a collection, this component will output the objects in the subcollection corresponding to the input path
@@ -19,11 +18,11 @@ public class GetCollectionObjects : GH_Component
 
   public GetCollectionObjects()
     : base(
-      "GetCollectionObjects",
-      "gcO",
+      "Query Objects",
+      "qO",
       "Retrieves the objects inside a Speckle collection at the specified path",
       ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.COLLECTIONS
+      ComponentCategories.OBJECTS
     ) { }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -37,7 +36,7 @@ public class GetCollectionObjects : GH_Component
     );
 
     pManager.AddTextParameter(
-      "Collection Path",
+      "Path",
       "C",
       "Get the Speckle objects in the subcollection indicated by this path",
       GH_ParamAccess.item
@@ -80,7 +79,7 @@ public class GetCollectionObjects : GH_Component
       targetCollectionWrapper =
         path == "_objects" ? collectionWrapperGoo.Value : FindCollection(collectionWrapperGoo.Value, path);
       filteredObjects = targetCollectionWrapper
-        .Collection.elements.Where(e => e is SpeckleObjectWrapper)
+        .Elements.Where(e => e is SpeckleObjectWrapper)
         .Select(e => (SpeckleObjectWrapper)e)
         .ToList();
     }
@@ -103,7 +102,7 @@ public class GetCollectionObjects : GH_Component
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (Base element in collectionWrapper.Collection.elements)
+    foreach (SpeckleWrapper element in collectionWrapper.Elements)
     {
       switch (element)
       {
@@ -128,8 +127,8 @@ public class GetCollectionObjects : GH_Component
     while (paths.Count != 0)
     {
       currentCollectionWrapper = currentCollectionWrapper
-        .Collection.elements.OfType<SpeckleCollectionWrapper>()
-        .First(col => col.Collection.name == paths.First());
+        .Elements.OfType<SpeckleCollectionWrapper>()
+        .First(wrapper => wrapper.Name == paths.First());
       paths.RemoveAt(0);
       if (paths.Count == 0)
       {

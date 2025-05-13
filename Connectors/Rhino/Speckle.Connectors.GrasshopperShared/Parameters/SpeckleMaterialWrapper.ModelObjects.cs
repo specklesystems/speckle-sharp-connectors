@@ -32,6 +32,8 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         Value = new()
         {
           Base = ToSpeckleRenderMaterial(renderMaterial),
+          Name = renderMaterial.Name,
+          ApplicationId = renderMaterial.Id.ToString(),
           RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow),
           RhinoRenderMaterialId = renderMaterial.Id
         };
@@ -54,6 +56,36 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
         }
 
         return false;
+    }
+
+    return false;
+  }
+
+  private bool CastToModelRenderMaterial<T>(ref T target)
+  {
+    var type = typeof(T);
+
+    if (type == typeof(ModelRenderMaterial))
+    {
+      if (
+        Value.RhinoRenderMaterialId is Guid matGuid
+        && RhinoDoc.ActiveDoc.RenderMaterials.Find(matGuid) is RenderMaterial existingMat
+      )
+      {
+        target = (T)(object)(new ModelRenderMaterial(existingMat));
+        return true;
+      }
+      else
+      {
+        var atts = new ModelRenderMaterial.Attributes()
+        {
+          Name = Value.Name,
+          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, RhinoDoc.ActiveDoc)
+        };
+
+        target = (T)(object)(new ModelRenderMaterial(atts));
+        return true;
+      }
     }
 
     return false;

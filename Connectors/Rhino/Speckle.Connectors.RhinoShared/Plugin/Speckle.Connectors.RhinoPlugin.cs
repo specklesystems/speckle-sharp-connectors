@@ -5,7 +5,6 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
-using Speckle.Sdk.Host;
 using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Rhino.Plugin;

@@ -28,24 +28,23 @@ internal sealed class GrasshopperMaterialPacker
 
   private void AddObjectIdToMaterialProxy(string objectId, SpeckleMaterialWrapper matWrapper)
   {
-    string matId = matWrapper.applicationId ?? matWrapper.GetSpeckleApplicationId();
-    if (RenderMaterialProxies.TryGetValue(matId, out RenderMaterialProxy? proxy))
+    // set applicationid here if none
+    matWrapper.ApplicationId ??= matWrapper.GetSpeckleApplicationId();
+    if (RenderMaterialProxies.TryGetValue(matWrapper.ApplicationId, out RenderMaterialProxy? proxy))
     {
       proxy.objects.Add(objectId);
     }
     else
     {
-      matWrapper.Base.applicationId = matId;
       RenderMaterialProxy newMaterialProxy =
         new()
         {
-          value = matWrapper.Base,
-          applicationId = matId,
-          objects = new()
+          value = matWrapper.Material,
+          applicationId = matWrapper.ApplicationId,
+          objects = new() { objectId }
         };
 
-      newMaterialProxy.objects.Add(objectId);
-      RenderMaterialProxies[matId] = newMaterialProxy;
+      RenderMaterialProxies[matWrapper.ApplicationId] = newMaterialProxy;
     }
   }
 }

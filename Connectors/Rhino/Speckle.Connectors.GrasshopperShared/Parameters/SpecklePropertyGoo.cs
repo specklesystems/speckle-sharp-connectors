@@ -26,11 +26,11 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
     }
     else
     {
-      //TODO: throw
+      // todo: throw
     }
   }
 
-  public override bool CastFrom(object source)
+  public override bool CastFrom(object? source)
   {
     switch (source)
     {

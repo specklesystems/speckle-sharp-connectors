@@ -32,7 +32,7 @@ public sealed class IfcTester(IClientFactory clientFactory, Importer importer, I
     }
   }
 
-  private async Task ImportFile(Client speckleClient, FilePath filePath, CancellationToken cancellationToken)
+  private async Task ImportFile(IClient speckleClient, FilePath filePath, CancellationToken cancellationToken)
   {
     string modelName = filePath.GetFileName();
     var existing = await speckleClient.Project.GetWithModels(

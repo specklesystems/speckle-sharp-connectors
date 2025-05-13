@@ -18,7 +18,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     : base(
       "Expand Collection",
       "eC",
-      "Expands a collection into its children",
+      "Expands a Collection into its children",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }
@@ -43,21 +43,21 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   {
     SpeckleCollectionWrapperGoo res = new();
     da.GetData(0, ref res);
-    var c = res.Value;
-    if (c is null)
+    SpeckleCollectionWrapper wrapper = res.Value;
+    if (wrapper is null)
     {
       return;
     }
-    Name = c.Collection.name;
-    NickName = c.Collection.name;
+    Name = wrapper.Name;
+    NickName = wrapper.Name;
 
-    var objects = c
-      .Collection.elements.Where(el => el is not SpeckleCollectionWrapper)
+    var objects = wrapper
+      .Elements.Where(el => el is not SpeckleCollectionWrapper)
       .OfType<SpeckleObjectWrapper>()
       .Select(o => new SpeckleObjectWrapperGoo(o))
       .ToList();
-    var collections = c
-      .Collection.elements.Where(el => el is SpeckleCollectionWrapper)
+    var collections = wrapper
+      .Elements.Where(el => el is SpeckleCollectionWrapper)
       .OfType<SpeckleCollectionWrapper>()
       .ToList();
 
@@ -76,26 +76,26 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       outputParams.Add(new OutputParamWrapper(param, objects, null));
     }
 
-    foreach (SpeckleCollectionWrapper collection in collections)
+    foreach (SpeckleCollectionWrapper childWrapper in collections)
     {
       // skip empty
-      if (collection.Collection.elements.Count == 0)
+      if (childWrapper.Elements.Count == 0)
       {
         continue;
       }
 
-      var hasInnerCollections = collection.Collection.elements.Any(el => el is SpeckleCollectionWrapper);
-      var topology = collection.Topology; // Note: this is a reminder for the future
-      var nickName = collection.Collection.name;
-      if (collection.Collection.name.Length > 16)
+      var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
+      var topology = childWrapper.Topology; // Note: this is a reminder for the future
+      var nickName = childWrapper.Name;
+      if (nickName.Length > 16)
       {
-        nickName = collection.Collection.name[..3];
-        nickName += "..." + collection.Collection.name[^3..];
+        nickName = childWrapper.Name[..6];
+        nickName += "..." + childWrapper.Name[^6..];
       }
 
       var param = new Param_GenericObject()
       {
-        Name = collection.Collection.name,
+        Name = childWrapper.Name,
         NickName = nickName,
         Access = hasInnerCollections
           ? GH_ParamAccess.item
@@ -108,11 +108,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         new OutputParamWrapper(
           param,
           hasInnerCollections
-            ? new SpeckleCollectionWrapperGoo(collection)
-            : collection
-              .Collection.elements.OfType<SpeckleObjectWrapper>()
-              .Select(o => new SpeckleObjectWrapperGoo(o))
-              .ToList(),
+            ? new SpeckleCollectionWrapperGoo(childWrapper)
+            : childWrapper.Elements.OfType<SpeckleObjectWrapper>().Select(o => new SpeckleObjectWrapperGoo(o)).ToList(),
           topology
         )
       );

@@ -44,12 +44,17 @@ public class GrasshopperReceiveOperation
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using Client apiClient = _clientFactory.Create(account);
+    using IClient apiClient = _clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
-    var version = await apiClient
+    Speckle.Sdk.Api.GraphQL.Models.Version? version = await apiClient
       .Version.Get(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, cancellationToken)
       .ConfigureAwait(false);
+
+    if (version?.referencedObject is not string receivedVersion)
+    {
+      throw new InvalidOperationException($"Could not retrieve version from server.");
+    }
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
@@ -59,7 +64,7 @@ public class GrasshopperReceiveOperation
       .Receive2(
         new Uri(account.serverInfo.url),
         receiveInfo.ProjectId,
-        version.referencedObject,
+        receivedVersion,
         account.token,
         onProgressAction: new PassthroughProgress(args =>
         {

@@ -94,7 +94,7 @@ Target(
   DEEP_CLEAN_LOCAL,
   () =>
   {
-    CleanSolution("Local.sln", "local");
+    CleanSolution("Local.sln", "Local");
   }
 );
 
