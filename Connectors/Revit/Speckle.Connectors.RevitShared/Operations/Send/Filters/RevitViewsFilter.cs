@@ -25,7 +25,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public RevitViewsFilter(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
+    _doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
 
     GetViews();
   }
@@ -60,7 +60,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     }
 
     // Paşa Bilal wants it like this... (three dots = important meaning for ogu)
-    string[] result = SelectedView.Split(new string[] { " - " }, 2, StringSplitOptions.None);
+    string[] result = SelectedView.Split([" - "], 2, StringSplitOptions.None);
     var viewFamilyString = result[0];
     var viewString = result[1];
 
@@ -72,7 +72,8 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
     if (view is null)
     {
-      throw new SpeckleSendFilterException("View not found, please update your model send filter.");
+      //this used to throw an exception but we don't want to fail loudly if the view is not found
+      return [];
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     var elementsInView = viewCollector.ToElements();

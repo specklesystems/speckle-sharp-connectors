@@ -14,7 +14,7 @@ public abstract class ThreadContext : IThreadContext
     {
       if (IsMainThread)
       {
-        RunMain(action);
+        await RunMain(action);
       }
       else
       {
@@ -37,7 +37,7 @@ public abstract class ThreadContext : IThreadContext
       }
       else
       {
-        RunWorker(action);
+        await RunWorker(action);
       }
     }
   }
@@ -127,9 +127,17 @@ public abstract class ThreadContext : IThreadContext
 
   protected abstract Task<T> MainToWorker<T>(Func<T> action);
 
-  protected virtual void RunMain(Action action) => action();
+  protected virtual Task RunMain(Action action)
+  {
+    action();
+    return Task.CompletedTask;
+  }
 
-  protected virtual void RunWorker(Action action) => action();
+  protected virtual Task RunWorker(Action action)
+  {
+    action();
+    return Task.CompletedTask;
+  }
 
   protected virtual Task<T> RunMainAsync<T>(Func<T> action) => Task.FromResult(action());
 
