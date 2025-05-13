@@ -5,18 +5,18 @@
     <BuildType Name="Release" />
   </Configurations>
   <Folder Name="/Build/">
+    <Project Path="Build/Build.csproj" />
     <File Path=".github/workflows/pr.yml" />
     <File Path=".github/workflows/release.yml" />
-    <Project Path="Build/Build.csproj" />
   </Folder>
   <Folder Name="/Config/">
-    <File Path=".config/dotnet-tools.json" />
     <File Path=".csharpierrc.yaml" />
     <File Path=".editorconfig" />
     <File Path="codecov.yml" />
     <File Path="CodeMetricsConfig.txt" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
+    <File Path=".config/dotnet-tools.json" />
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
@@ -25,14 +25,17 @@
     <File Path="Connectors/Rhino/Directory.Build.targets" />
   </Folder>
   <Folder Name="/Connectors/Rhino/7/">
+    <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper7/Speckle.Connectors.Grasshopper7.csproj" />
     <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino7/Speckle.Connectors.Rhino7.csproj" />
     <Project Path="Converters/Rhino/Speckle.Converters.Rhino7/Speckle.Converters.Rhino7.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/8/">
+    <Project Path="Connectors/Rhino/Speckle.Connectors.Grasshopper8/Speckle.Connectors.Grasshopper8.csproj" />
     <Project Path="Connectors/Rhino/Speckle.Connectors.Rhino8/Speckle.Connectors.Rhino8.csproj" />
     <Project Path="Converters/Rhino/Speckle.Converters.Rhino8/Speckle.Converters.Rhino8.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/Shared/">
+    <Project Path="Connectors/Rhino/Speckle.Connectors.GrasshopperShared/Speckle.Connectors.GrasshopperShared.shproj" />
     <Project Path="Connectors/Rhino/Speckle.Connectors.RhinoShared/Speckle.Connectors.RhinoShared.shproj" />
     <Project Path="Converters/Rhino/Speckle.Converters.RhinoShared/Speckle.Converters.RhinoShared.shproj" />
   </Folder>
