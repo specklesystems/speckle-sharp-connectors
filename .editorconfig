@@ -314,6 +314,9 @@ dotnet_diagnostic.NUnit2037.severity = warning # Consider using Assert.That(coll
 dotnet_diagnostic.NUnit2038.severity = warning # Consider using Assert.That(actual, Is.InstanceOf(expected)) instead of Assert.IsInstanceOf(expected, actual)
 dotnet_diagnostic.NUnit2039.severity = warning # Consider using Assert.That(actual, Is.Not.InstanceOf(expected)) instead of Assert.IsNotInstanceOf(expected, actual)
 
+# note: added to allow the copy paste from rhino inside of the ValueSet component
+dotnet_diagnostic.CA1033.severity = none
+
 [*.{appxmanifest,asax,ascx,aspx,axaml,build,c,c++,cc,cginc,compute,cp,cpp,cs,cshtml,cu,cuh,cxx,dtd,fs,fsi,fsscript,fsx,fx,fxh,h,hh,hlsl,hlsli,hlslinc,hpp,hxx,inc,inl,ino,ipp,ixx,master,ml,mli,mpp,mq4,mq5,mqh,nuspec,paml,razor,resw,resx,shader,skin,tpp,usf,ush,vb,xaml,xamlx,xoml,xsd}]
 indent_style = space
 indent_size = 2
