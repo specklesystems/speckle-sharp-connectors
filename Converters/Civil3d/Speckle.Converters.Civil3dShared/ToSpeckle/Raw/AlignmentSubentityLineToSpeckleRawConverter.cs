@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -34,28 +35,20 @@ public class AlignmentSubentityLineToSpeckleRawConverter : ITypedConverter<CDB.A
         units = _settingsStore.Current.SpeckleUnits
       };
 
-    return new()
-    {
-      start = start,
-      end = end,
-      units = _settingsStore.Current.SpeckleUnits,
+    SOG.Line line =
+      new()
+      {
+        start = start,
+        end = end,
+        units = _settingsStore.Current.SpeckleUnits
+      };
 
-      // additional alignment props
-      ["direction"] = TryGetValue(() => target.Direction),
-      ["startStation"] = target.StartStation,
-      ["endStation"] = target.EndStation
-    };
-  }
-
-  private T? TryGetValue<T>(Func<T> getValue)
-  {
-    try
-    {
-      return getValue();
-    }
-    catch (InvalidOperationException)
-    {
-      return default;
-    }
+    // create a properties dictionary for additional props
+    PropertyHandler propHandler = new();
+    Dictionary<string, object?> props =
+      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation };
+    propHandler.TryAddToDictionary(props, "direction", () => target.Direction); // may throw
+    line["properties"] = props;
+    return line;
   }
 }
