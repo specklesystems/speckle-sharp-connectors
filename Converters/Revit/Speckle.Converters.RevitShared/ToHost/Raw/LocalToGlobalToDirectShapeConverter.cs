@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
@@ -75,7 +75,7 @@ public class LocalToGlobalToDirectShapeConverter
     // existence of units is must, to be able to scale the transform correctly
     if (target.atomicObject["units"] is string units)
     {
-      foreach (Matrix4x4 matrix in target.matrix)
+      foreach (Matrix4x4 matrix in target.matrix.Reverse())
       {
         DB.Transform revitTransform = _transformConverter.Convert((matrix, units));
         combinedTransform = combinedTransform.Multiply(revitTransform);

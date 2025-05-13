@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -74,29 +75,19 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
           units = units
         },
         plane = _planeConverter.Convert(plane),
-        units = units,
-
-        // additional alignment subentity props
-        ["startStation"] = target.StartStation,
-        ["endStation"] = target.EndStation,
-        ["startDirection"] = TryGetValue(() => target.StartDirection),
-        ["endDirection"] = TryGetValue(() => target.EndDirection),
-        ["deflectedAngle"] = TryGetValue(() => target.DeflectedAngle),
-        ["minumumRadius"] = TryGetValue(() => target.MinimumRadius)
+        units = units
       };
 
-    return arc;
-  }
+    // create a properties dictionary for additional props
+    Dictionary<string, object?> props =
+      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation };
+    PropertyHandler propHandler = new();
+    propHandler.TryAddToDictionary(props, "startDirection", () => target.StartDirection); // might throw
+    propHandler.TryAddToDictionary(props, "endDirection", () => target.EndDirection); // might throw
+    propHandler.TryAddToDictionary(props, "deflectedAngle", () => target.DeflectedAngle); // might throw
+    propHandler.TryAddToDictionary(props, "minumumRadius", () => target.MinimumRadius); // might throw
+    arc["properties"] = props;
 
-  private T? TryGetValue<T>(Func<T> getValue)
-  {
-    try
-    {
-      return getValue();
-    }
-    catch (InvalidOperationException)
-    {
-      return default;
-    }
+    return arc;
   }
 }
