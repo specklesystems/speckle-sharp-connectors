@@ -1,3 +1,4 @@
+using Rhino;
 using Rhino.DocObjects;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -49,7 +50,14 @@ public static class DisplayMeshExtractor
     RG.Mesh[] renderMeshes;
     var joinedMesh = new RG.Mesh();
 
-    switch (geometry)
+    // if far from origin and risking faulty meshes due to precision errors: duplicate geometry and move to origin first
+    (RG.GeometryBase geometryToMesh, RG.Vector3d? translationVector) = GetGeometryToMesh(geometry);
+    if (translationVector is RG.Vector3d geometryCenterVector)
+    {
+      geometryToMesh.Transform(RG.Transform.Translation(-geometryCenterVector));
+    }
+
+    switch (geometryToMesh)
     {
       case RG.Brep brep:
         renderMeshes = RG.Mesh.CreateFromBrep(brep, new(0.05, 0.05));
@@ -74,6 +82,38 @@ public static class DisplayMeshExtractor
     }
 
     joinedMesh.Append(renderMeshes);
+    // move geometry back, if it was relocated to origin (to prevent precision errors)
+    if (translationVector is RG.Vector3d geomCenter)
+    {
+      joinedMesh.Transform(RG.Transform.Translation(geomCenter));
+    }
     return joinedMesh;
+  }
+
+  /// <summary>
+  /// Quick check whether any of the objects in the scene might be located too far from origin, to cause precision issues during meshing.
+  /// </summary>
+  private static bool ObjectsTooFarFromOrigin()
+  {
+    RG.BoundingBox bbox = RhinoDoc.ActiveDoc.Objects.BoundingBox;
+    if (bbox.Min.DistanceTo(RG.Point3d.Origin) > 1e6 || bbox.Max.DistanceTo(RG.Point3d.Origin) > 1e6)
+    {
+      return true;
+    }
+    return false;
+  }
+
+  /// <summary>
+  /// Returns the duplicate of geometry and its Bbox center, if the precision errors are expected, and we will need to move the geometry to origin first.
+  /// </summary>
+  private static (RG.GeometryBase, RG.Vector3d?) GetGeometryToMesh(RG.GeometryBase geometry)
+  {
+    if (ObjectsTooFarFromOrigin())
+    {
+      var geometryBbox = geometry.GetBoundingBox(false); // 'false' for 'accurate' parameter to accelerate bbox calculation
+      return (geometry.Duplicate(), new RG.Vector3d(geometryBbox.Center)); // make all manipulations on the duplicate object
+    }
+
+    return (geometry, null);
   }
 }
