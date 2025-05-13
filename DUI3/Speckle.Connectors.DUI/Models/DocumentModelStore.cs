@@ -40,7 +40,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
 
   // TODO: not sure about this, throwing an exception, needs some thought...
   // Further note (dim): If we reach to the stage of throwing an exception here because a model is not found, there's a huge misalignment between the UI's list of model cards and the host app's.
-  // In theory this should never really happen, but if it does
+  // In theory this should never really happen, (Adam) but it does because of threading so don't throw (as said above)
   public ModelCard? GetModelById(string id)
   {
     lock (_models)
