@@ -70,7 +70,7 @@ public sealed class ReceiveOperation(
     Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
       receiveInfo.ProjectId,
-      version.referencedObject,
+      version.referencedObject!,
       account.token,
       onProgressAction: new PassthroughProgress(args => receiveProgress.Report(onOperationProgressed, args)),
       cancellationToken: cancellationToken
