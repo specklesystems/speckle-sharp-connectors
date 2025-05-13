@@ -26,6 +26,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
   private string ModelPathHash { get; set; }
 
   public CsiDocumentModelStore(
+    ILogger<DocumentModelStore> baseLogger,
     IJsonSerializer jsonSerializer,
     ISpeckleApplication speckleApplication,
     ILogger<CsiDocumentModelStore> logger,
@@ -33,7 +34,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
-    : base(jsonSerializer)
+    : base(baseLogger, jsonSerializer)
   {
     _threadContext = threadContext;
     _speckleApplication = speckleApplication;
