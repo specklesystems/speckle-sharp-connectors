@@ -1,3 +1,4 @@
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
@@ -17,7 +18,8 @@ public sealed class ReceiveOperation(
   ISdkActivityFactory activityFactory,
   IOperations operations,
   IReceiveVersionRetriever receiveVersionRetriever,
-  IThreadContext threadContext
+  IThreadContext threadContext,
+  IMixPanelManager mixPanelManager
 )
 {
   public async Task<HostObjectBuilderResult> Execute(
@@ -50,7 +52,7 @@ public sealed class ReceiveOperation(
 
     cancellationToken.ThrowIfCancellationRequested();
     await receiveVersionRetriever.VersionReceived(account, version, receiveInfo, cancellationToken);
-
+    await mixPanelManager.TrackEvent(account, MixPanelEvents.Receive);
     return res;
   }
 

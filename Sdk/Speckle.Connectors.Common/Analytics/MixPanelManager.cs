@@ -1,4 +1,3 @@
-
 using System.Net.Http.Headers;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
@@ -21,10 +20,15 @@ namespace Speckle.Connectors.Common.Analytics;
 ///  This really helps us to deliver a better open source project and product!
 /// </summary>
 [GenerateAutoInterface]
-public class MixPanelManager(IAccountManager accountManager, ISpeckleApplication application, ISpeckleHttp speckleHttp, ILogger<MixPanelManager> logger) : IMixPanelManager
+public class MixPanelManager(
+  IAccountManager accountManager,
+  ISpeckleApplication application,
+  ISpeckleHttp speckleHttp,
+  ILogger<MixPanelManager> logger
+) : IMixPanelManager
 {
   private const string MIXPANEL_TOKEN = "acd87c5a50b56df91a795e999812a3a4";
-  private static readonly Uri s_mixpanelServer = new ("https://analytics.speckle.systems");
+  private static readonly Uri s_mixpanelServer = new("https://analytics.speckle.systems");
 
   /// <summary>
   /// Cached email
@@ -34,7 +38,7 @@ public class MixPanelManager(IAccountManager accountManager, ISpeckleApplication
   /// <summary>
   /// Cached server URL
   /// </summary>
-  private  string? LastServer { get; set; }
+  private string? LastServer { get; set; }
 
   /// <summary>
   /// <see langword="false"/> when the DEBUG pre-processor directive is <see langword="true"/>, <see langword="false"/> otherwise
@@ -146,94 +150,97 @@ public class MixPanelManager(IAccountManager accountManager, ISpeckleApplication
       return;
     }
 
-      try
+    try
+    {
+      var properties = new Dictionary<string, object>
       {
-        var properties = new Dictionary<string, object>
-        {
-          { "distinct_id", hashedEmail ?? string.Empty },
-          { "server_id", hashedServer },
-          { "token", MIXPANEL_TOKEN },
-          { "hostApp", application.HostApplication},
-          { "hostAppVersion", application.HostApplicationVersion },
-          {
-            "core_version",application.SpeckleVersion
-          },
-          { "$os", GetOs() }
-        };
+        { "distinct_id", hashedEmail ?? string.Empty },
+        { "server_id", hashedServer },
+        { "token", MIXPANEL_TOKEN },
+        { "hostApp", application.HostApplication },
+        { "hostAppVersion", application.HostApplicationVersion },
+        { "core_version", application.SpeckleVersion },
+        { "sourceHostApp", application.Slug },
+        { "$os", GetOs() }
+      };
 
-        if (isAction)
-        {
-          properties.Add("type", "action");
-        }
-
-        if (customProperties != null)
-        {
-          foreach (KeyValuePair<string, object> customProp in customProperties)
-          {
-            properties[customProp.Key] = customProp.Value;
-          }
-        }
-
-        string json = JsonConvert.SerializeObject(new { @event = eventName.ToString(), properties });
-        await SendAnalytics("/track?ip=1", json).ConfigureAwait(false);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      if (isAction)
       {
-        logger.LogWarning(ex, "Analytics event {event} {isAction} failed {exceptionMessage}", eventName.ToString(),
-          isAction, ex.Message);
+        properties.Add("type", "action");
       }
+
+      if (customProperties != null)
+      {
+        foreach (KeyValuePair<string, object> customProp in customProperties)
+        {
+          properties[customProp.Key] = customProp.Value;
+        }
+      }
+
+      string json = JsonConvert.SerializeObject(new { @event = eventName.ToString(), properties });
+      await SendAnalytics("/track?ip=1", json).ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(
+        ex,
+        "Analytics event {event} {isAction} failed {exceptionMessage}",
+        eventName.ToString(),
+        isAction,
+        ex.Message
+      );
+    }
   }
 
   public async Task AddConnectorToProfile(string hashedEmail, string connector)
   {
-      try
+    try
+    {
+      var data = new Dictionary<string, object>
       {
-        var data = new Dictionary<string, object>
+        { "$token", MIXPANEL_TOKEN },
+        { "$distinct_id", hashedEmail },
         {
-          { "$token", MIXPANEL_TOKEN },
-          { "$distinct_id", hashedEmail },
+          "$union",
+          new Dictionary<string, object>
           {
-            "$union",
-            new Dictionary<string, object>
             {
-              {
-                "Connectors",
-                new List<string> { connector }
-              }
+              "Connectors",
+              new List<string> { connector }
             }
           }
-        };
-        string json = JsonConvert.SerializeObject(data);
-        await SendAnalytics("/engage#profile-union", json).ConfigureAwait(false);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        logger.LogWarning(ex, "Failed add connector {connector} to profile", connector);
-      }
+        }
+      };
+      string json = JsonConvert.SerializeObject(data);
+      await SendAnalytics("/engage#profile-union", json).ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(ex, "Failed add connector {connector} to profile", connector);
+    }
   }
 
   public async Task IdentifyProfile(string hashedEmail, string connector)
   {
-    
-      try
+    try
+    {
+      var data = new Dictionary<string, object>
       {
-        var data = new Dictionary<string, object>
+        { "$token", MIXPANEL_TOKEN },
+        { "$distinct_id", hashedEmail },
         {
-          { "$token", MIXPANEL_TOKEN },
-          { "$distinct_id", hashedEmail },
-          {
-            "$set",
-            new Dictionary<string, object> { { "Identified", true } }
-          }
-        };
-        string json = JsonConvert.SerializeObject(data);
+          "$set",
+          new Dictionary<string, object> { { "Identified", true } }
+        }
+      };
+      string json = JsonConvert.SerializeObject(data);
 
-        await SendAnalytics("/engage#profile-set", json).ConfigureAwait(false);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        logger.LogWarning(ex, "Failed identify profile: connector {connector}", connector);
-      }
+      await SendAnalytics("/engage#profile-set", json).ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(ex, "Failed identify profile: connector {connector}", connector);
+    }
   }
 
   private async Task SendAnalytics(string relativeUri, string json)
