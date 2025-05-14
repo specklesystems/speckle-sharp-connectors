@@ -1,7 +1,6 @@
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.Helpers;
@@ -204,15 +203,12 @@ public sealed class CorridorHandler
 
           Dictionary<string, object?> appliedAssemblyDict =
             new() { ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(), ["station"] = station };
-
-          try
-          {
-            appliedAssemblyDict["adjustedElevation"] = appliedAssembly.AdjustedElevation;
-          }
-          catch (ArgumentException e) when (!e.IsFatal())
-          {
-            // Do nothing. Leave the value as null. Not sure why accessing adjusted elevation sometimes throws.
-          }
+          PropertyHandler propHandler = new();
+          propHandler.TryAddToDictionary(
+            appliedAssemblyDict,
+            "adjustedElevation",
+            () => appliedAssembly.AdjustedElevation
+          ); // can throw
 
           // get the applied assembly's applied subassemblies
           Dictionary<string, object?> appliedSubassemblies = new();

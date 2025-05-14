@@ -17,14 +17,17 @@ public sealed class RevitIdleManager : AppIdleManager
   public RevitIdleManager(
     RevitContext revitContext,
     IIdleCallManager idleCallManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IRevitTask revitTask
   )
     : base(idleCallManager)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _uiApplication = revitContext.UIApplication.NotNull();
     _idleCallManager = idleCallManager;
-    _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e); // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
+    revitTask.Run(
+      () => _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e) // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
+    );
   }
 
   protected override void AddEvent()

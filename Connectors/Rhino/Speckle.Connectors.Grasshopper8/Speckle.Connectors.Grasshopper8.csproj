@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Select the framework(s) you wish to target.
+        Rhino 6: net45
+        Rhino 7: net48
+        Rhino 8 Windows: net48, net7.0, net7.0-windows, net7.0-windows10.0.22000.0, etc
+        Rhino 8 Mac: net7.0, net7.0-macos, net7.0-macos12.0, etc
+    -->
+    <TargetFramework>net48</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <TargetExt>.gha</TargetExt>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
+    <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
+    <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Title>Speckle.Connectors.Grasshopper8</Title>
+    <Description>Description of Speckle.Connectors.Grasshopper8</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GrasshopperAsyncComponent" />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="System.Resources.Extensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+    *.gh files are copied by the rhino.iss file into %appdata%\Grasshopper\Libraries
+    Since that folder is not specific to any Rhino version, only one Speckle.Connectors.Grasshopper
+    project need copy it to the output dir (tho this needs to be aligned in the iss file)
+    -->
+    <Content Include="..\Sample Files\*.gh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  
+  <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
+  
+</Project>

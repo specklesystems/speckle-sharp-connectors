@@ -1,4 +1,5 @@
-﻿using Speckle.Sdk;
+﻿using System.Text.RegularExpressions;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Common;
 
@@ -39,4 +40,65 @@ public static class HostApplications
     Navisworks = new("Navisworks", "navisworks"),
     AdvanceSteel = new("Advance Steel", "advancesteel"),
     Other = new("Other", "other");
+
+  /// <summary>
+  /// Gets a slug from a host application name and version.
+  /// </summary>
+  /// <param name="appName">Application name with its version, e.g., "Rhino 7", "Revit 2024".</param>
+  /// <returns>Slug string.</returns>
+  public static string GetSlugFromHostAppNameAndVersion(string appName)
+  {
+    if (string.IsNullOrWhiteSpace(appName))
+    {
+      return "other";
+    }
+
+    // Remove whitespace and convert to lowercase
+    appName = Regex.Replace(appName.ToLowerInvariant(), @"\s+", "");
+
+    var keywords = new List<string>
+    {
+      "dynamo",
+      "revit",
+      "autocad",
+      "civil",
+      "rhino",
+      "grasshopper",
+      "unity",
+      "gsa",
+      "microstation",
+      "openroads",
+      "openrail",
+      "openbuildings",
+      "etabs",
+      "sap",
+      "csibridge",
+      "safe",
+      "teklastructures",
+      "dxf",
+      "excel",
+      "unreal",
+      "powerbi",
+      "blender",
+      "qgis",
+      "arcgis",
+      "sketchup",
+      "archicad",
+      "topsolid",
+      "python",
+      "net",
+      "navisworks",
+      "advancesteel"
+    };
+
+    foreach (var keyword in keywords)
+    {
+      if (appName.Contains(keyword))
+      {
+        return keyword;
+      }
+    }
+
+    return appName;
+  }
 }

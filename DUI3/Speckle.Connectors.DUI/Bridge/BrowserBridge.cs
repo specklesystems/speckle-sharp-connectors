@@ -295,7 +295,7 @@ public sealed class BrowserBridge : IBrowserBridge
     return Task.CompletedTask;
   }
 
-  public void Send2<T>(string eventName, T data)
+  public void SendProgress<T>(string eventName, T data)
     where T : class
   {
     if (_binding is null)
@@ -307,6 +307,6 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.ExecuteScript(script);
+    _browserScriptExecutor.SendProgress(script);
   }
 }
