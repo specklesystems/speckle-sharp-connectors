@@ -16,7 +16,7 @@ public class RhinoConversionSettingsFactory(
     new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem), ModelFarFromOrigin());
 
   /// <summary>
-  /// Quick check whether any of the objects in the scene might be located too far from origin, to cause precision issues during meshing.
+  /// Quick check whether any of the objects in the scene might be located too far from origin and cause precision issues during meshing.
   /// </summary>
   private bool ModelFarFromOrigin()
   {

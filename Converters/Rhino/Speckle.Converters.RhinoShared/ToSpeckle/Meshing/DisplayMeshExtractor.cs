@@ -43,6 +43,9 @@ public static class DisplayMeshExtractor
     return joinedMesh;
   }
 
+  /// <summary>
+  /// Extracting Rhino Mesh from Rhino GeometryBase using specified MeshingParameters settings, e.g. minimumEdgeLength.
+  /// </summary>
   public static RG.Mesh GetGeometryDisplayMesh(RG.GeometryBase geometry, double minEdgeLength = 0.05)
   {
     // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
@@ -78,7 +81,7 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Returns the mesh of the geometry, possibly moved to the origin for better accuracy.
+  /// Returns the mesh of the geometry, possibly moved to the origin for better accuracy (if returned Vector is not null).
   /// </summary>
   public static (RG.Mesh, RG.Vector3d?) GetGeometryDisplayMeshAccurate(
     RG.GeometryBase geometry,
@@ -101,13 +104,11 @@ public static class DisplayMeshExtractor
     // if the object is far from origin and risking faulty meshes due to precision errors: then duplicate geometry and move to origin first
     RG.GeometryBase geometryToMesh = geometry.Duplicate();
     geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
-    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometryToMesh, minEdgeLength);
-
-    return (displayMesh, vectorToGeometry);
+    return (GetGeometryDisplayMesh(geometryToMesh, minEdgeLength), vectorToGeometry);
   }
 
   /// <summary>
-  /// Returns the duplicate of geometry and its Bbox center, if the precision errors are expected, and we will need to move the geometry to origin first.
+  /// Returns true and the vector from origin to Geometry bbox center (if geometry is far from origin). Otherwise, returns false and zero-length vector.
   /// </summary>
   private static bool TryGetTranslationVector(RG.GeometryBase geom, out RG.Vector3d vector)
   {
