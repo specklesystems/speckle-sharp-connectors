@@ -149,6 +149,10 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     {
       customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
     }
+    if (receiveInfo.SelectedVersionUserId != null)
+    {
+      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.id);
+    }
     await _mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
 
     // We need to rethink these lovely unpackers, there's a bit too many of 'em

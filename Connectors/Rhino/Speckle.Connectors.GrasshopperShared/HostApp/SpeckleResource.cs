@@ -47,7 +47,8 @@ public record SpeckleUrlLatestModelVersionResource(
       ModelId,
       model.name,
       version.id,
-      version.sourceApplication.NotNull()
+      version.sourceApplication.NotNull(),
+      version.authorUser?.id
     );
 
     return info;
@@ -100,7 +101,8 @@ public record SpeckleUrlModelVersionResource(
       ModelId,
       model.name,
       VersionId,
-      version.sourceApplication.NotNull()
+      version.sourceApplication.NotNull(),
+      version.authorUser?.id
     );
 
     return info;

@@ -460,6 +460,14 @@ public class ReceiveComponentWorker : WorkerInstance
         {
           customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
         }
+
+        if (receiveInfo.SelectedVersionUserId != null)
+        {
+          customProperties.Add(
+            "isMultiplayer",
+            receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.id
+          );
+        }
         await receiveComponent.MixPanelManager.TrackEvent(
           MixPanelEvents.Receive,
           receiveComponent.ApiClient.Account,
