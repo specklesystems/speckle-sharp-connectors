@@ -404,7 +404,11 @@ public class SendComponentWorker : WorkerInstance
           .ConfigureAwait(false);
 
         // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-        var customProperties = new Dictionary<string, object>() { { "isAsync", true } };
+        var customProperties = new Dictionary<string, object>()
+        {
+          { "isAsync", true },
+          { "auto", sendComponent.AutoSend }
+        };
         if (sendInfo.WorkspaceId != null)
         {
           customProperties.Add("workspace_id", sendInfo.WorkspaceId);
