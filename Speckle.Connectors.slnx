@@ -133,6 +133,10 @@
     <Project Path="Connectors/Revit/Speckle.Connectors.Revit2025/Speckle.Connectors.Revit2025.csproj" />
     <Project Path="Converters/Revit/Speckle.Converters.Revit2025/Speckle.Converters.Revit2025.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Revit/2026/">
+    <Project Path="Connectors/Revit/Speckle.Connectors.Revit2026/Speckle.Connectors.Revit2026.csproj" />
+    <Project Path="Converters/Revit/Speckle.Converters.Revit2026/Speckle.Converters.Revit2026.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Revit/Shared/">
     <Project Path="Connectors/Revit/Speckle.Connectors.RevitShared.Cef/Speckle.Connectors.RevitShared.Cef.shproj" />
     <Project Path="Connectors/Revit/Speckle.Connectors.RevitShared/Speckle.Connectors.RevitShared.shproj" />
