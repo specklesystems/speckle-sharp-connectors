@@ -10,9 +10,10 @@
     <TargetFramework>net48</TargetFramework>
     <Configurations>Debug;Release;Local</Configurations>
     <TargetExt>.gha</TargetExt>
-    <NoWarn>$(NoWarn);NU1701;NETSDK1086</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWindowsForms>true</UseWindowsForms>
+    <!--Root Namespace needs to be aligned across all grasshopper csproj to ensure the .resx file in the shared project has the correct resource namespace-->
+    <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
     <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
@@ -39,18 +40,5 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
-
-  <ItemGroup>
-    <Compile Update="C:\Users\Claire\GitHub\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="C:\Users\Claire\GitHub\speckle-sharp-connectors\Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Properties\Resources.resx">
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+  
 </Project>
