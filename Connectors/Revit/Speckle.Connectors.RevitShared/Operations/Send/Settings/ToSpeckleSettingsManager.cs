@@ -22,6 +22,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
+  private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -118,6 +119,21 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       }
     }
     _sendLinkedModelsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "sendRebarsAsVolumetric").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+    if (_sendRebarsAsVolumetricCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+    _sendRebarsAsVolumetricCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 

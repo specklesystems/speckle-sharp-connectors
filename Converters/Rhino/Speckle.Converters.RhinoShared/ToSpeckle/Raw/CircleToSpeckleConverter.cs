@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
@@ -17,8 +16,6 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
     _planeConverter = planeConverter;
     _settingsStore = settingsStore;
   }
-
-  public Base Convert(object target) => Convert((RG.Circle)target);
 
   /// <summary>
   /// Converts a RG.Circle object to a SOG.Circle object.
