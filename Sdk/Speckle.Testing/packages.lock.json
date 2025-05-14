@@ -59,9 +59,9 @@
       },
       "Speckle.Sdk": {
         "type": "Direct",
-        "requested": "[3.3.0, )",
-        "resolved": "3.3.0",
-        "contentHash": "tko6U4V3pZDFvhGLaaRauWITvcFEyWHHbffO+JPYUmFdASPJA1GamPNip34IUZ+voWIHY0p+NUbTI4PpLTSeAA==",
+        "requested": "[3.3.4, )",
+        "resolved": "3.3.4",
+        "contentHash": "I7HzhT3PaE+Gd+T2LgqL5kqvc+SPJYnRofJhCv8smsUjADEonxUf+dAEV3AHM31CWGZT6SNe876+drXm60fUDg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -70,7 +70,7 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.3.0"
+          "Speckle.Sdk.Dependencies": "3.3.4"
         }
       },
       "Castle.Core": {
@@ -283,9 +283,9 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.3.0, )",
-        "resolved": "3.3.0",
-        "contentHash": "C7kuh32KpBNMo3oasEQ2kUuM8JIITIE4wb7Y8df3jdawLRsT4qqXMPPZEyhsjPuZd2hcAu3TNXifG6QBpRPq0w=="
+        "requested": "[3.3.4, )",
+        "resolved": "3.3.4",
+        "contentHash": "0iGDakpkQIApAD3RCS8D0e5oM6yvvklDQFAEU30IvcQ+wpiEMqKJ2vidWG2vOrHMVPyiN7O457TXB41AhEWNlg=="
       }
     }
   }
