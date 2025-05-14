@@ -449,7 +449,6 @@ public class ReceiveComponentWorker : WorkerInstance
 
         var customProperties = new Dictionary<string, object>()
         {
-          { "ui", "dui3" }, // this is the convention we use with next gen
           { "isAsync", true },
           { "sourceHostApp", receiveInfo.SourceApplication }
         };

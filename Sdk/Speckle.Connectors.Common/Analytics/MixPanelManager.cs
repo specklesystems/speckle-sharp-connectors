@@ -132,6 +132,7 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
         { "server_id", hashedServer },
         { "token", MIXPANEL_TOKEN },
         { "hostApp", application.Slug },
+        { "ui", "dui3" }, // this is the convention we use with next gen
         { "hostAppVersion", application.HostApplicationVersion },
         { "core_version", application.SpeckleVersion },
         { "$os", GetOs() }

@@ -141,7 +141,6 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
 
     var customProperties = new Dictionary<string, object>()
     {
-      { "ui", "dui3" }, // this is the convention we use with next gen
       { "isAsync", false },
       { "sourceHostApp", receiveInfo.SourceApplication }
     };

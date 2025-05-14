@@ -403,11 +403,7 @@ public class SendComponentWorker : WorkerInstance
           )
           .ConfigureAwait(false);
 
-        var customProperties = new Dictionary<string, object>()
-        {
-          { "ui", "dui3" }, // this is the convention we use with next gen
-          { "isAsync", true }
-        };
+        var customProperties = new Dictionary<string, object>() { { "isAsync", true } };
         await sendComponent.MixPanelManager.TrackEvent(
           MixPanelEvents.Send,
           sendComponent.ApiClient.Account,

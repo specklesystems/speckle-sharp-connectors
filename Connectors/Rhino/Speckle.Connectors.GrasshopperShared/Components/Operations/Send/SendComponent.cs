@@ -167,11 +167,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       .Execute(new List<SpeckleCollectionWrapperGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
-    var customProperties = new Dictionary<string, object>()
-    {
-      { "ui", "dui3" }, // this is the convention we use with next gen
-      { "isAsync", false }
-    };
+    var customProperties = new Dictionary<string, object>() { { "isAsync", false } };
     await _mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
     SpeckleUrlLatestModelVersionResource createdVersionResource =
