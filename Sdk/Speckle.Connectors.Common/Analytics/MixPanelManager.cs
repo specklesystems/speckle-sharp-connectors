@@ -63,7 +63,7 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
     bool isAction = true
   )
   {
-    string? email = null;
+    string? email = account?.userInfo.email;
     string? hashedEmail;
     string? server;
 
@@ -90,7 +90,6 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
       }
       else
       {
-        email = account.userInfo.email;
         hashedEmail = account.GetHashedEmail();
         server = account.GetHashedServer();
       }
@@ -132,10 +131,9 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
         { "distinct_id", hashedEmail ?? string.Empty },
         { "server_id", hashedServer },
         { "token", MIXPANEL_TOKEN },
-        { "hostApp", application.HostApplication },
+        { "hostApp", application.Slug },
         { "hostAppVersion", application.HostApplicationVersion },
         { "core_version", application.SpeckleVersion },
-        { "sourceHostApp", application.Slug },
         { "$os", GetOs() }
       };
 

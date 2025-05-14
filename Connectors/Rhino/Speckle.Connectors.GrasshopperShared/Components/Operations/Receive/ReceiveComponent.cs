@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
@@ -8,6 +9,7 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
@@ -34,6 +36,8 @@ public class ReceiveComponentOutput
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
+  private readonly MixPanelManager _mixpanel;
+
   public ReceiveComponent()
     : base(
       "(Sync) Load",
@@ -41,7 +45,10 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       "Load a model from Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
-    ) { }
+    )
+  {
+    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+  }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
   protected override Bitmap Icon => Resources.speckle_operations_syncload;
@@ -102,15 +109,17 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       return new();
     }
 
-    // TODO: Resolving dependencies here may be overkill in most cases. Must re-evaluate.
-    var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
+    var accountService = scope.ServiceProvider.GetRequiredService<AccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<AccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
     // Do the thing 👇🏼
 
-    // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-    var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server));
+    Account? account =
+      input.Resource.AccountId != null
+        ? accountManager.GetAccount(input.Resource.AccountId)
+        : accountService.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server)); // fallback the account that matches with URL if any
 
     if (account is null)
     {
@@ -129,6 +138,14 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     var root = await receiveOperation
       .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
       .ConfigureAwait(false);
+
+    var customProperties = new Dictionary<string, object>()
+    {
+      { "ui", "dui3" }, // this is the convention we use with next gen
+      { "isAsync", false },
+      { "sourceHostApp", receiveInfo.SourceApplication }
+    };
+    await _mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
 
     // We need to rethink these lovely unpackers, there's a bit too many of 'em
     var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();

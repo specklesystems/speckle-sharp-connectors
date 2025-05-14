@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
@@ -34,6 +36,8 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
 
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
+  private readonly MixPanelManager _mixpanel;
+
   public SendComponent()
     : base(
       "(Sync) Publish",
@@ -41,7 +45,10 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       "Publish a collection to Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
-    ) { }
+    )
+  {
+    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+  }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
 
@@ -133,12 +140,15 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       return new(null);
     }
 
-    var accountManager = scope.ServiceProvider.GetRequiredService<AccountService>();
+    var accountService = scope.ServiceProvider.GetRequiredService<AccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<AccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-    var account = accountManager.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server));
+    Account? account =
+      input.Resource.AccountId != null
+        ? accountManager.GetAccount(input.Resource.AccountId)
+        : accountService.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server)); // fallback the account that matches with URL if any
 
     if (account is null)
     {
@@ -157,8 +167,15 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       .Execute(new List<SpeckleCollectionWrapperGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
+    var customProperties = new Dictionary<string, object>()
+    {
+      { "ui", "dui3" }, // this is the convention we use with next gen
+      { "isAsync", false }
+    };
+    await _mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+
     SpeckleUrlLatestModelVersionResource createdVersionResource =
-      new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId);
+      new(sendInfo.AccountId, sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId);
     Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
 
     return new SendComponentOutput(createdVersionResource);

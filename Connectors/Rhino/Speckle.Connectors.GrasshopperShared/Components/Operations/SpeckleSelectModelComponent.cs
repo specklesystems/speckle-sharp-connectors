@@ -250,6 +250,7 @@ public class SpeckleSelectModelComponent : GH_Component
         da.SetData(
           0,
           new SpeckleUrlLatestModelVersionResource(
+            SpeckleOperationWizard.SelectedAccount.id,
             SpeckleOperationWizard.SelectedAccount.serverInfo.url,
             SpeckleOperationWizard.SelectedProject.id,
             SpeckleOperationWizard.SelectedModel.id
@@ -262,6 +263,7 @@ public class SpeckleSelectModelComponent : GH_Component
       da.SetData(
         0,
         new SpeckleUrlModelVersionResource(
+          SpeckleOperationWizard.SelectedAccount.id,
           SpeckleOperationWizard.SelectedAccount.serverInfo.url,
           SpeckleOperationWizard.SelectedProject.id,
           SpeckleOperationWizard.SelectedModel.id,

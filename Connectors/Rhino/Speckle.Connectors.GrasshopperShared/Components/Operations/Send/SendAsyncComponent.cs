@@ -8,6 +8,7 @@ using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -56,6 +57,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
+  public MixPanelManager MixPanelManager { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
@@ -141,11 +143,13 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
+    var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
-    ParseInput(da, accountManager, clientFactory);
+    ParseInput(da, accountService, accountManager, clientFactory);
 
     if (
       (AutoSend || CurrentComponentState == ComponentState.Ready || CurrentComponentState == ComponentState.Sending)
@@ -225,7 +229,12 @@ public class SendAsyncComponent : GH_AsyncComponent
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(IGH_DataAccess da, AccountService accountManager, IClientFactory clientFactory)
+  private void ParseInput(
+    IGH_DataAccess da,
+    AccountService accountService,
+    AccountManager accountManager,
+    IClientFactory clientFactory
+  )
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
@@ -239,8 +248,10 @@ public class SendAsyncComponent : GH_AsyncComponent
     UrlModelResource = dataInput;
     try
     {
-      // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-      Account account = accountManager.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server));
+      Account? account =
+        dataInput.AccountId != null
+          ? accountManager.GetAccount(dataInput.AccountId)
+          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server)); // fallback the account that matches with URL if any
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
@@ -392,8 +403,25 @@ public class SendComponentWorker : WorkerInstance
           )
           .ConfigureAwait(false);
 
+        var customProperties = new Dictionary<string, object>()
+        {
+          { "ui", "dui3" }, // this is the convention we use with next gen
+          { "isAsync", true }
+        };
+        await sendComponent.MixPanelManager.TrackEvent(
+          MixPanelEvents.Send,
+          sendComponent.ApiClient.Account,
+          customProperties
+        );
+
         SpeckleUrlModelVersionResource? createdVersion =
-          new(sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId, result.VersionId);
+          new(
+            sendInfo.AccountId,
+            sendInfo.ServerUrl.ToString(),
+            sendInfo.ProjectId,
+            sendInfo.ModelId,
+            result.VersionId
+          );
         OutputParam = createdVersion;
         sendComponent.Url =
           $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}@{result.VersionId}";

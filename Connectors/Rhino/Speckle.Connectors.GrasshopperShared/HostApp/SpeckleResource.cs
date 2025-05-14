@@ -6,15 +6,15 @@ using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
-public abstract record SpeckleUrlModelResource(string Server, string ProjectId)
+public abstract record SpeckleUrlModelResource(string? AccountId, string Server, string ProjectId)
 {
   public abstract Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default);
 
   public abstract Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default);
 }
 
-public record SpeckleUrlLatestModelVersionResource(string Server, string ProjectId, string ModelId)
-  : SpeckleUrlModelResource(Server, ProjectId)
+public record SpeckleUrlLatestModelVersionResource(string? AccountId, string Server, string ProjectId, string ModelId)
+  : SpeckleUrlModelResource(AccountId, Server, ProjectId)
 {
   public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
   {
@@ -54,8 +54,13 @@ public record SpeckleUrlLatestModelVersionResource(string Server, string Project
   }
 }
 
-public record SpeckleUrlModelVersionResource(string Server, string ProjectId, string ModelId, string VersionId)
-  : SpeckleUrlModelResource(Server, ProjectId)
+public record SpeckleUrlModelVersionResource(
+  string? AccountId,
+  string Server,
+  string ProjectId,
+  string ModelId,
+  string VersionId
+) : SpeckleUrlModelResource(AccountId, Server, ProjectId)
 {
   public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
   {
@@ -93,8 +98,8 @@ public record SpeckleUrlModelVersionResource(string Server, string ProjectId, st
   }
 }
 
-public record SpeckleUrlModelObjectResource(string Server, string ProjectId, string ObjectId)
-  : SpeckleUrlModelResource(Server, ProjectId)
+public record SpeckleUrlModelObjectResource(string? AccountId, string Server, string ProjectId, string ObjectId)
+  : SpeckleUrlModelResource(AccountId, Server, ProjectId)
 {
   public override Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default) =>
     throw new NotImplementedException("Object Resources are not supported yet");
