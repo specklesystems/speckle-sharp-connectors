@@ -6,6 +6,8 @@ using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
+// noting that if the user inputs a model url string, this will not contain account info
+// (and that's why the accountID is nullable in the record resource)
 public abstract record SpeckleUrlModelResource(string? AccountId, string Server, string ProjectId)
 {
   public abstract Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default);
