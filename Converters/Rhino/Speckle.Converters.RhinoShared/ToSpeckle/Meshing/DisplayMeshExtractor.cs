@@ -81,20 +81,19 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Extracting Rhino Mesh from Rhino GeometryBase with high accuracy: taking into account distance from origin and document tolerance vs. geometry topology.
+  /// Extracting Rhino Mesh from Rhino GeometryBase with high accuracy: taking into account distance from origin and meshing parameters vs. geometry topology.
   /// </summary>
   /// <returns>
   /// Returns the mesh of the input geometry, possibly moved to the origin for better accuracy (if returned Vector is not null).
   /// </returns>
   public static (RG.Mesh, RG.Vector3d?) GetGeometryDisplayMeshAccurate(
     RG.GeometryBase geometry,
-    bool modelFarFromOrigin,
-    double documentTolerance
+    bool modelFarFromOrigin
   )
   {
     // adjust meshing parameters if Brep edges are too close to the document tolerance
     double minEdgeLength = 0.05;
-    if (geometry is RG.Brep brep && brep.Edges.Any(x => x.GetLength() < 100 * documentTolerance))
+    if (geometry is RG.Brep brep && brep.Edges.Any(x => x.GetLength() < minEdgeLength))
     {
       minEdgeLength = 0;
     }

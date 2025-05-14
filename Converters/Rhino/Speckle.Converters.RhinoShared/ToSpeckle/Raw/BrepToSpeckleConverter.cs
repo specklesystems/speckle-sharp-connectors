@@ -46,8 +46,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     // get valid Rhino meshes (possibly moved to origin for accurate calculations)
     (RG.Mesh displayMesh, RG.Vector3d? translation) = DisplayMeshExtractor.GetGeometryDisplayMeshAccurate(
       geometry,
-      modelFarFromOrigin,
-      _settingsStore.Current.Document.ModelAbsoluteTolerance
+      modelFarFromOrigin
     );
 
     List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(displayMesh) };
