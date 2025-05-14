@@ -131,8 +131,7 @@ public class ReceiveOperationTests : MoqTest
       activityFactory.Object,
       operations.Object,
       receiveVersionRetriever.Object,
-      threadContext.Object,
-      mixPanelManager.Object
+      threadContext.Object
     );
     var result = await receiveOperation.ReceiveData(account, version, receiveInfo, progress.Object, ct);
     result.Should().Be(@base);

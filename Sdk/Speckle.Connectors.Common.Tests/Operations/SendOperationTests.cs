@@ -71,8 +71,7 @@ public class SendOperationTests : MoqTest
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
-      threadContext.Object,
-      mixPanelManager.Object
+      threadContext.Object
     );
     var result = await sendOperation.Execute(objects, sendInfo, progress.Object, ct);
     result.Should().NotBeNull();
