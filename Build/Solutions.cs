@@ -97,8 +97,6 @@ public static class Solutions
     }
     var sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
-    sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.sln");
-    await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
   }
 
   public static async Task<SolutionModel> GetFullSlnx()
