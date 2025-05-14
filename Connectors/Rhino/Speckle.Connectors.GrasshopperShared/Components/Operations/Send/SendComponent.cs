@@ -167,6 +167,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       .Execute(new List<SpeckleCollectionWrapperGoo>() { input.Input }, sendInfo, progress, cancellationToken)
       .ConfigureAwait(false);
 
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", false } };
     await _mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 

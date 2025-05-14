@@ -403,6 +403,7 @@ public class SendComponentWorker : WorkerInstance
           )
           .ConfigureAwait(false);
 
+        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
         var customProperties = new Dictionary<string, object>() { { "isAsync", true } };
         await sendComponent.MixPanelManager.TrackEvent(
           MixPanelEvents.Send,

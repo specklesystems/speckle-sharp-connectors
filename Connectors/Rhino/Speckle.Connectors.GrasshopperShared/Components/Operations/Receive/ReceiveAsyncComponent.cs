@@ -447,6 +447,7 @@ public class ReceiveComponentWorker : WorkerInstance
 
         Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
 
+        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
         var customProperties = new Dictionary<string, object>()
         {
           { "isAsync", true },
