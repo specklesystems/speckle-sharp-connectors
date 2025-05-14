@@ -2,6 +2,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
@@ -26,6 +27,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly IThreadContext _threadContext;
 
   public RevitDocumentStore(
+    ILogger<DocumentModelStore> logger,
     IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
@@ -35,7 +37,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IThreadContext threadContext,
     IRevitTask revitTask
   )
-    : base(jsonSerializer)
+    : base(logger, jsonSerializer)
   {
     _idleManager = idleManager;
     _revitContext = revitContext;
@@ -92,9 +94,9 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
   protected override void HostAppSaveState(string modelCardState)
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
-    if (doc == null)
+    if (document == null)
     {
       return;
     }
@@ -102,9 +104,14 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _threadContext
       .RunOnMain(() =>
       {
-        using Transaction t = new(doc, "Speckle Write State");
+        //if not the same active document then don't save the current cards to a bad document!
+        if (!EnsureActiveDocumentIsSame(document))
+        {
+          return;
+        }
+        using Transaction t = new(document, "Speckle Write State");
         t.Start();
-        using DataStorage ds = GetSettingsDataStorage(doc) ?? DataStorage.Create(doc);
+        using DataStorage ds = GetSettingsDataStorage(document) ?? DataStorage.Create(document);
 
         using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
         string serializedModels = Serialize();
@@ -118,6 +125,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
         t.Commit();
       })
       .FireAndForget();
+  }
+
+  private bool EnsureActiveDocumentIsSame(Document document)
+  {
+    var localDoc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (localDoc == null)
+    {
+      return false;
+    }
+
+    return localDoc.Equals(document);
   }
 
   protected override void LoadState()

@@ -16,11 +16,12 @@ public class TeklaDocumentModelStore : DocumentModelStore
   private readonly TSM.Events _events;
 
   public TeklaDocumentModelStore(
+    ILogger<DocumentModelStore> baseLogger,
     IJsonSerializer jsonSerializer,
     ILogger<TeklaDocumentModelStore> logger,
     ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory
   )
-    : base(jsonSerializer)
+    : base(baseLogger, jsonSerializer)
   {
     _logger = logger;
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
