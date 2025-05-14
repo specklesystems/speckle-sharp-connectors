@@ -81,7 +81,6 @@ public sealed class SendOperation<T>(
 
     // 8 - Create the version (commit)
     var versionId = await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
-
     return (sendResult, versionId);
   }
 }

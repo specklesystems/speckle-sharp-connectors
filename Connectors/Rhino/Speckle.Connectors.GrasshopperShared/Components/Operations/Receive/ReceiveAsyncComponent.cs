@@ -6,6 +6,8 @@ using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
@@ -48,10 +50,12 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   // DI props
   public IClient ApiClient { get; private set; }
+  public MixPanelManager MixPanelManager { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
-  public AccountService AccountManager { get; private set; }
+  public AccountService AccountService { get; private set; }
+  public AccountManager AccountManager { get; private set; }
   public IClientFactory ClientFactory { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -77,8 +81,11 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     // Dependency Injection
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
+
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    AccountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
+    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
     ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -280,8 +287,11 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   {
     try
     {
-      // TODO: Get any account for this server, as we don't have a mechanism yet to pass accountIds through
-      Account account = AccountManager.GetAccountWithServerUrlFallback("", new Uri(urlResource.Server));
+      Account? account =
+        urlResource.AccountId != null
+          ? AccountManager.GetAccount(urlResource.AccountId)
+          : AccountService.GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
+
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
@@ -345,7 +355,9 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
+#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
+#pragma warning restore CA1506
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
 
@@ -437,6 +449,31 @@ public class ReceiveComponentWorker : WorkerInstance
         }
 
         Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+
+        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+        var customProperties = new Dictionary<string, object>()
+        {
+          { "isAsync", true },
+          { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+          { "auto", receiveComponent.AutoReceive }
+        };
+        if (receiveInfo.WorkspaceId != null)
+        {
+          customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+        }
+
+        if (receiveInfo.SelectedVersionUserId != null)
+        {
+          customProperties.Add(
+            "isMultiplayer",
+            receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
+          );
+        }
+        await receiveComponent.MixPanelManager.TrackEvent(
+          MixPanelEvents.Receive,
+          receiveComponent.ApiClient.Account,
+          customProperties
+        );
 
         // DONE
         done();
