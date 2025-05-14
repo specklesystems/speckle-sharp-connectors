@@ -20,12 +20,8 @@ namespace Speckle.Connectors.Common.Analytics;
 ///  This really helps us to deliver a better open source project and product!
 /// </summary>
 [GenerateAutoInterface]
-public class MixPanelManager(
-  IAccountManager accountManager,
-  ISpeckleApplication application,
-  ISpeckleHttp speckleHttp,
-  ILogger<MixPanelManager> logger
-) : IMixPanelManager
+public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speckleHttp, ILogger<MixPanelManager> logger)
+  : IMixPanelManager
 {
   private const string MIXPANEL_TOKEN = "acd87c5a50b56df91a795e999812a3a4";
   private static readonly Uri s_mixpanelServer = new("https://analytics.speckle.systems");
@@ -62,6 +58,7 @@ public class MixPanelManager(
   /// <param name="isAction">True if it's an action performed by a logged user</param>
   public async Task TrackEvent(
     MixPanelEvents eventName,
+    Account? account,
     Dictionary<string, object>? customProperties = null,
     bool isAction = true
   )
@@ -76,8 +73,7 @@ public class MixPanelManager(
     }
     else
     {
-      var acc = accountManager.GetDefaultAccount();
-      if (acc == null)
+      if (account == null)
       {
         var macAddr = NetworkInterface
           .GetAllNetworkInterfaces()
@@ -93,36 +89,12 @@ public class MixPanelManager(
       }
       else
       {
-        email = acc.GetHashedEmail();
-        server = acc.GetHashedServer();
+        email = account.GetHashedEmail();
+        server = account.GetHashedServer();
       }
     }
 
     await TrackEvent(email, server, eventName, customProperties, isAction);
-  }
-
-  /// <summary>
-  /// Tracks an event from a specified account, anonymizes personal information
-  /// </summary>
-  /// <param name="account">Account to use, it will be anonymized</param>
-  /// <param name="eventName">Name of the event</param>
-  /// <param name="customProperties">Additional parameters to pass to the event</param>
-  /// <param name="isAction">True if it's an action performed by a logged user</param>
-  public async Task TrackEvent(
-    Account? account,
-    MixPanelEvents eventName,
-    Dictionary<string, object>? customProperties = null,
-    bool isAction = true
-  )
-  {
-    if (account == null)
-    {
-      await TrackEvent(eventName, customProperties, isAction);
-    }
-    else
-    {
-      await TrackEvent(account.GetHashedEmail(), account.GetHashedServer(), eventName, customProperties, isAction);
-    }
   }
 
   /// <summary>
