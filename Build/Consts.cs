@@ -11,7 +11,7 @@ public static class Consts
       "rhino",
       [
         new("Connectors/Rhino/Speckle.Connectors.Rhino7", "net48"),
-        new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48")
+        new("Connectors/Rhino/Speckle.Connectors.Rhino8", "net48"),
       ]
     ),
     new(
