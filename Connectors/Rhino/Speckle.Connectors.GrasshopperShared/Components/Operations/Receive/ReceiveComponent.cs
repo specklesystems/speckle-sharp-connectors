@@ -151,7 +151,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     }
     if (receiveInfo.SelectedVersionUserId != null)
     {
-      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.id);
+      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
     }
     await _mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
 

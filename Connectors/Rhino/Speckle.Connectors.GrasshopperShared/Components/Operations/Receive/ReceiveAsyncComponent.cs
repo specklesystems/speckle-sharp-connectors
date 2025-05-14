@@ -465,7 +465,7 @@ public class ReceiveComponentWorker : WorkerInstance
         {
           customProperties.Add(
             "isMultiplayer",
-            receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.id
+            receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
           );
         }
         await receiveComponent.MixPanelManager.TrackEvent(
