@@ -6,6 +6,7 @@ using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -453,7 +454,7 @@ public class ReceiveComponentWorker : WorkerInstance
         var customProperties = new Dictionary<string, object>()
         {
           { "isAsync", true },
-          { "sourceHostApp", receiveInfo.SourceApplication },
+          { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
           { "auto", receiveComponent.AutoReceive }
         };
         if (receiveInfo.WorkspaceId != null)
