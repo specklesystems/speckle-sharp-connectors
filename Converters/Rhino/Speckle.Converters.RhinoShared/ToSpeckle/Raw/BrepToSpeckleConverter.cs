@@ -29,7 +29,11 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
   {
     var brepEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    List<SOG.Mesh> displayValue = GetSpeckleMeshes(target, _settingsStore.Current.ModelFarFromOrigin);
+    List<SOG.Mesh> displayValue = GetSpeckleMeshes(
+      target,
+      _settingsStore.Current.ModelFarFromOrigin,
+      _settingsStore.Current.SpeckleUnits
+    );
 
     var bx = new SOG.BrepX()
     {
@@ -41,7 +45,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     return bx;
   }
 
-  private List<SOG.Mesh> GetSpeckleMeshes(RG.GeometryBase geometry, bool modelFarFromOrigin)
+  private List<SOG.Mesh> GetSpeckleMeshes(RG.GeometryBase geometry, bool modelFarFromOrigin, string units)
   {
     // get valid Rhino meshes (possibly moved to origin for accurate calculations)
     (RG.Mesh displayMesh, RG.Vector3d? translation) = DisplayMeshExtractor.GetGeometryDisplayMeshAccurate(
@@ -56,7 +60,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     if (translation is RG.Vector3d vector)
     {
       Matrix4x4 matrix = new(1, 0, 0, vector.X, 0, 1, 0, vector.Y, 0, 0, 1, vector.Z, 0, 0, 0, 1);
-      SO.Transform transform = new() { matrix = matrix, units = _settingsStore.Current.SpeckleUnits };
+      SO.Transform transform = new() { matrix = matrix, units = units };
       displayValue.ForEach(x => x.Transform(transform));
     }
 
