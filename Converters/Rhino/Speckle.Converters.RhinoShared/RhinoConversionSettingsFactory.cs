@@ -13,5 +13,18 @@ public class RhinoConversionSettingsFactory(
   public RhinoConversionSettings Current => settingsStore.Current;
 
   public RhinoConversionSettings Create(RhinoDoc document) =>
-    new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem));
+    new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem), ModelFarFromOrigin());
+
+  /// <summary>
+  /// Quick check whether any of the objects in the scene might be located too far from origin, to cause precision issues during meshing.
+  /// </summary>
+  private bool ModelFarFromOrigin()
+  {
+    RG.BoundingBox bbox = RhinoDoc.ActiveDoc.Objects.BoundingBox;
+    if (bbox.Min.DistanceTo(RG.Point3d.Origin) > 1e6 || bbox.Max.DistanceTo(RG.Point3d.Origin) > 1e6)
+    {
+      return true;
+    }
+    return false;
+  }
 }

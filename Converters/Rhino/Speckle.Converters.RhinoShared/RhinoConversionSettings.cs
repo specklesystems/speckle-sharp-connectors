@@ -2,4 +2,4 @@
 
 namespace Speckle.Converters.Rhino;
 
-public record RhinoConversionSettings(RhinoDoc Document, string SpeckleUnits);
+public record RhinoConversionSettings(RhinoDoc Document, string SpeckleUnits, bool ModelFarFromOrigin);
