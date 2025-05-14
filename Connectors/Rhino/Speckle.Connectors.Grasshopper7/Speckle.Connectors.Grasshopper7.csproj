@@ -38,6 +38,12 @@
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino7\Speckle.Converters.Rhino7.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="..\Sample Files\*.gh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
   
