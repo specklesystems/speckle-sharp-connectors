@@ -92,7 +92,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    await RevitTask.RunAsync(() =>
+    await global::Revit.Async.RevitTask.RunAsync(() =>
     {
       try
       {
