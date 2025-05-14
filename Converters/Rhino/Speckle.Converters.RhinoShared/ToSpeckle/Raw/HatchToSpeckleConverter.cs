@@ -41,7 +41,7 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     var brep = RG.Brep.TryConvertBrep(target);
 
     List<SOG.Mesh> displayValue = GetSpeckleMeshes(
-      target,
+      brep,
       _settingsStore.Current.ModelFarFromOrigin,
       _settingsStore.Current.SpeckleUnits
     );
