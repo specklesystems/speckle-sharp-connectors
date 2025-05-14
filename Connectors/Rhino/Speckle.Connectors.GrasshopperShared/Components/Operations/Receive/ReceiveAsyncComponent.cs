@@ -354,7 +354,9 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
+#pragma warning disable CA1506
   public override void DoWork(Action<string, double> reportProgress, Action done)
+#pragma warning restore CA1506
   {
     var receiveComponent = (ReceiveAsyncComponent)Parent;
 
@@ -453,6 +455,10 @@ public class ReceiveComponentWorker : WorkerInstance
           { "isAsync", true },
           { "sourceHostApp", receiveInfo.SourceApplication }
         };
+        if (receiveInfo.WorkspaceId != null)
+        {
+          customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+        }
         await receiveComponent.MixPanelManager.TrackEvent(
           MixPanelEvents.Receive,
           receiveComponent.ApiClient.Account,

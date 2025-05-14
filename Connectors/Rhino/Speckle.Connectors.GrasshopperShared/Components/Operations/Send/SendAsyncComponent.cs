@@ -405,6 +405,10 @@ public class SendComponentWorker : WorkerInstance
 
         // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
         var customProperties = new Dictionary<string, object>() { { "isAsync", true } };
+        if (sendInfo.WorkspaceId != null)
+        {
+          customProperties.Add("workspace_id", sendInfo.WorkspaceId);
+        }
         await sendComponent.MixPanelManager.TrackEvent(
           MixPanelEvents.Send,
           sendComponent.ApiClient.Account,
@@ -415,6 +419,7 @@ public class SendComponentWorker : WorkerInstance
           new(
             sendInfo.AccountId,
             sendInfo.ServerUrl.ToString(),
+            sendInfo.WorkspaceId,
             sendInfo.ProjectId,
             sendInfo.ModelId,
             result.VersionId

@@ -145,6 +145,10 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       { "isAsync", false },
       { "sourceHostApp", receiveInfo.SourceApplication }
     };
+    if (receiveInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+    }
     await _mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
 
     // We need to rethink these lovely unpackers, there's a bit too many of 'em

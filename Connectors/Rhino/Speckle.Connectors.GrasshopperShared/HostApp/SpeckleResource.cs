@@ -1,4 +1,5 @@
-using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
+using Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
@@ -8,17 +9,28 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
 // noting that if the user inputs a model url string, this will not contain account info
 // (and that's why the accountID is nullable in the record resource)
-public abstract record SpeckleUrlModelResource(string? AccountId, string Server, string ProjectId)
+public abstract record SpeckleUrlModelResource(string? AccountId, string Server, string? WorkspaceId, string ProjectId)
 {
-  public abstract Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default);
+  public abstract Task<GrasshopperReceiveInfo> GetReceiveInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  );
 
-  public abstract Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default);
+  public abstract Task<GrasshopperSendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default);
 }
 
-public record SpeckleUrlLatestModelVersionResource(string? AccountId, string Server, string ProjectId, string ModelId)
-  : SpeckleUrlModelResource(AccountId, Server, ProjectId)
+public record SpeckleUrlLatestModelVersionResource(
+  string? AccountId,
+  string Server,
+  string? WorkspaceId,
+  string ProjectId,
+  string ModelId
+) : SpeckleUrlModelResource(AccountId, Server, WorkspaceId, ProjectId)
 {
-  public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
+  public override async Task<GrasshopperReceiveInfo> GetReceiveInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  )
   {
     Project project = await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     ModelWithVersions model = await client
@@ -26,9 +38,10 @@ public record SpeckleUrlLatestModelVersionResource(string? AccountId, string Ser
       .ConfigureAwait(false);
     Version version = model.versions.items[0];
 
-    var info = new ReceiveInfo(
+    var info = new GrasshopperReceiveInfo(
       client.Account.id,
       new Uri(Server),
+      project.workspaceId,
       ProjectId,
       project.name,
       ModelId,
@@ -40,15 +53,19 @@ public record SpeckleUrlLatestModelVersionResource(string? AccountId, string Ser
     return info;
   }
 
-  public override async Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default)
+  public override async Task<GrasshopperSendInfo> GetSendInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  )
   {
     // We don't care about the return info, we just want to be sure we have access and everything exists.
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new SendInfo(
+    return new GrasshopperSendInfo(
       client.Account.id,
       new Uri(Server),
+      WorkspaceId,
       ProjectId,
       ModelId,
       "Grasshopper8" // TODO: Grab from the right place!
@@ -59,20 +76,25 @@ public record SpeckleUrlLatestModelVersionResource(string? AccountId, string Ser
 public record SpeckleUrlModelVersionResource(
   string? AccountId,
   string Server,
+  string? WorkspaceId,
   string ProjectId,
   string ModelId,
   string VersionId
-) : SpeckleUrlModelResource(AccountId, Server, ProjectId)
+) : SpeckleUrlModelResource(AccountId, Server, WorkspaceId, ProjectId)
 {
-  public override async Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default)
+  public override async Task<GrasshopperReceiveInfo> GetReceiveInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  )
   {
     Project project = await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     Model model = await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
     Version version = await client.Version.Get(VersionId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    var info = new ReceiveInfo(
+    var info = new GrasshopperReceiveInfo(
       client.Account.id,
       new Uri(Server),
+      project.workspaceId,
       ProjectId,
       project.name,
       ModelId,
@@ -84,15 +106,19 @@ public record SpeckleUrlModelVersionResource(
     return info;
   }
 
-  public override async Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default)
+  public override async Task<GrasshopperSendInfo> GetSendInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  )
   {
     // We don't care about the return info, we just want to be sure we have access and everything exists.
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new SendInfo(
+    return new GrasshopperSendInfo(
       client.Account.id,
       new Uri(Server),
+      WorkspaceId,
       ProjectId,
       ModelId,
       "Grasshopper8" // TODO: Grab from the right place!
@@ -100,12 +126,21 @@ public record SpeckleUrlModelVersionResource(
   }
 }
 
-public record SpeckleUrlModelObjectResource(string? AccountId, string Server, string ProjectId, string ObjectId)
-  : SpeckleUrlModelResource(AccountId, Server, ProjectId)
+public record SpeckleUrlModelObjectResource(
+  string? AccountId,
+  string Server,
+  string? WorkspaceId,
+  string ProjectId,
+  string ObjectId
+) : SpeckleUrlModelResource(AccountId, Server, WorkspaceId, ProjectId)
 {
-  public override Task<ReceiveInfo> GetReceiveInfo(IClient client, CancellationToken cancellationToken = default) =>
-    throw new NotImplementedException("Object Resources are not supported yet");
+  public override Task<GrasshopperReceiveInfo> GetReceiveInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  ) => throw new NotImplementedException("Object Resources are not supported yet");
 
-  public override Task<SendInfo> GetSendInfo(IClient client, CancellationToken cancellationToken = default) =>
-    throw new NotImplementedException("Object Resources are not supported yet");
+  public override Task<GrasshopperSendInfo> GetSendInfo(
+    IClient client,
+    CancellationToken cancellationToken = default
+  ) => throw new NotImplementedException("Object Resources are not supported yet");
 }

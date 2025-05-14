@@ -169,10 +169,20 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", false } };
+    if (sendInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
+    }
     await _mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
     SpeckleUrlLatestModelVersionResource createdVersionResource =
-      new(sendInfo.AccountId, sendInfo.ServerUrl.ToString(), sendInfo.ProjectId, sendInfo.ModelId);
+      new(
+        sendInfo.AccountId,
+        sendInfo.ServerUrl.ToString(),
+        sendInfo.WorkspaceId,
+        sendInfo.ProjectId,
+        sendInfo.ModelId
+      );
     Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
 
     return new SendComponentOutput(createdVersionResource);
