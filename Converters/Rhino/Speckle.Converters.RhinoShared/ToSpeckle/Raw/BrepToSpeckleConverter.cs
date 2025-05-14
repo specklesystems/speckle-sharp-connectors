@@ -28,12 +28,8 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
   public SOG.BrepX Convert(RG.Brep target)
   {
     var brepEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
-    double minEdgeLength = 0.05;
-    if (target.Edges.Any(x => x.GetLength() < 100 * _settingsStore.Current.Document.ModelAbsoluteTolerance))
-    {
-      minEdgeLength = 0;
-    }
-    List<SOG.Mesh> displayValue = GetSpeckleMeshes(target, _settingsStore.Current.ModelFarFromOrigin, minEdgeLength);
+
+    List<SOG.Mesh> displayValue = GetSpeckleMeshes(target, _settingsStore.Current.ModelFarFromOrigin);
 
     var bx = new SOG.BrepX()
     {
@@ -45,13 +41,13 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     return bx;
   }
 
-  private List<SOG.Mesh> GetSpeckleMeshes(RG.GeometryBase geometry, bool modelFarFromOrigin, double minEdgeLength)
+  private List<SOG.Mesh> GetSpeckleMeshes(RG.GeometryBase geometry, bool modelFarFromOrigin)
   {
     // get valid Rhino meshes (possibly moved to origin for accurate calculations)
     (RG.Mesh displayMesh, RG.Vector3d? translation) = DisplayMeshExtractor.GetGeometryDisplayMeshAccurate(
       geometry,
       modelFarFromOrigin,
-      minEdgeLength
+      _settingsStore.Current.Document.ModelAbsoluteTolerance
     );
 
     List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(displayMesh) };

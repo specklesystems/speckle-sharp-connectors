@@ -81,14 +81,24 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Returns the mesh of the geometry, possibly moved to the origin for better accuracy (if returned Vector is not null).
+  /// Extracting Rhino Mesh from Rhino GeometryBase with high accuracy: taking into account distance from origin and document tolerance vs. geometry topology.
   /// </summary>
+  /// <returns>
+  /// Returns the mesh of the input geometry, possibly moved to the origin for better accuracy (if returned Vector is not null).
+  /// </returns>
   public static (RG.Mesh, RG.Vector3d?) GetGeometryDisplayMeshAccurate(
     RG.GeometryBase geometry,
     bool modelFarFromOrigin,
-    double minEdgeLength
+    double documentTolerance
   )
   {
+    // adjust meshing parameters if Brep edges are too close to the document tolerance
+    double minEdgeLength = 0.05;
+    if (geometry is RG.Brep brep && brep.Edges.Any(x => x.GetLength() < 100 * documentTolerance))
+    {
+      minEdgeLength = 0;
+    }
+
     // preserve original behavior, if Model is not far from origin: will be the case for 99% of Rhino models
     if (!modelFarFromOrigin)
     {
@@ -108,8 +118,11 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Returns true and the vector from origin to Geometry bbox center (if geometry is far from origin). Otherwise, returns false and zero-length vector.
+  /// Getting translation vector from origin to the Geometry bbox Center (if geometry is far from origin and translation needed)
   /// </summary>
+  /// <returns>
+  /// True and the vector from origin to Geometry bbox center (if translation needed), otherwise false and zero-length vector.
+  /// </returns>
   private static bool TryGetTranslationVector(RG.GeometryBase geom, out RG.Vector3d vector)
   {
     vector = new RG.Vector3d();
