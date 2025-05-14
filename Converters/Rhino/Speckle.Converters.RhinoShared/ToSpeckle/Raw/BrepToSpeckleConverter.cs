@@ -55,7 +55,7 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     // because 'far from origin' precision errors also affect ToSpeckle converters.
     if (translation is RG.Vector3d vector)
     {
-      var matrix = Matrix4x4.CreateTranslation(new Vector3(vector.X, vector.Y, vector.Z));
+      Matrix4x4 matrix = new(1, 0, 0, vector.X, 0, 1, 0, vector.Y, 0, 0, 1, vector.Z, 0, 0, 0, 1);
       SO.Transform transform = new() { matrix = matrix, units = _settingsStore.Current.SpeckleUnits };
       displayValue.ForEach(x => x.Transform(transform));
     }
