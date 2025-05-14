@@ -99,7 +99,6 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var commitObject = new TestBase();
     var projectId = "projectId";
@@ -127,7 +126,6 @@ public class SendOperationTests : MoqTest
     sendProgress.Setup(x => x.Begin());
 
     sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
-    mixPanelManager.Setup(x => x.TrackEvent(account, MixPanelEvents.Send, null, true)).Returns(Task.CompletedTask);
 
     var sp = services.BuildServiceProvider();
 
@@ -140,8 +138,7 @@ public class SendOperationTests : MoqTest
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
-      threadContext.Object,
-      mixPanelManager.Object
+      threadContext.Object
     );
     var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
     result.Should().Be(serializeProcessResults);

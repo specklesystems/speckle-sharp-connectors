@@ -32,7 +32,6 @@ public class ReceiveOperationTests : MoqTest
     var receiveVersionRetriever = Create<IReceiveVersionRetriever>();
     var activityFactory = Create<ISdkActivityFactory>(MockBehavior.Loose);
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var @base = new TestBase();
     var account = new Account();
@@ -65,7 +64,6 @@ public class ReceiveOperationTests : MoqTest
     hostObjectBuilder.Setup(x => x.Build(@base, projectName, modelName, progress.Object, ct)).ReturnsAsync(hostResult);
 
     threadContext.Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<Base>>>(), false)).ReturnsAsync(@base);
-    mixPanelManager.Setup(x => x.TrackEvent(account, MixPanelEvents.Receive, null, true)).Returns(Task.CompletedTask);
 
     var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();
     var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(
@@ -76,8 +74,7 @@ public class ReceiveOperationTests : MoqTest
       activityFactory.Object,
       operations.Object,
       receiveVersionRetriever.Object,
-      threadContext.Object,
-      mixPanelManager.Object
+      threadContext.Object
     );
     var result = await receiveOperation.Execute(receiveInfo, progress.Object, ct);
     result.Should().Be(hostResult);

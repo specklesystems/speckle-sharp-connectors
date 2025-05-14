@@ -1,4 +1,3 @@
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -21,8 +20,7 @@ public sealed class SendOperation<T>(
   IOperations operations,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
-  IThreadContext threadContext,
-  IMixPanelManager mixPanelManager
+  IThreadContext threadContext
 )
 {
   public async Task<SendOperationResult> Execute(
@@ -83,9 +81,6 @@ public sealed class SendOperation<T>(
 
     // 8 - Create the version (commit)
     var versionId = await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
-
-    await mixPanelManager.TrackEvent(account, MixPanelEvents.Send);
-
     return (sendResult, versionId);
   }
 }
