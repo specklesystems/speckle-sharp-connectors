@@ -63,12 +63,13 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
     bool isAction = true
   )
   {
-    string? email;
+    string? email = null;
+    string? hashedEmail;
     string? server;
 
     if (LastEmail != null && LastServer != null && LastServer != "no-account-server")
     {
-      email = LastEmail;
+      hashedEmail = LastEmail;
       server = LastServer;
     }
     else
@@ -83,18 +84,19 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
           .Select(nic => nic.GetPhysicalAddress().ToString())
           .FirstOrDefault();
 
-        email = macAddr;
+        hashedEmail = macAddr;
         server = "no-account-server";
         isAction = false;
       }
       else
       {
-        email = account.GetHashedEmail();
+        email = account.userInfo.email;
+        hashedEmail = account.GetHashedEmail();
         server = account.GetHashedServer();
       }
     }
 
-    await TrackEvent(email, server, eventName, customProperties, isAction);
+    await TrackEvent(hashedEmail, server, eventName, email, customProperties, isAction);
   }
 
   /// <summary>
@@ -109,6 +111,7 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
     string? hashedEmail,
     string hashedServer,
     MixPanelEvents eventName,
+    string? email,
     Dictionary<string, object>? customProperties = null,
     bool isAction = true
   )
@@ -135,6 +138,11 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
         { "sourceHostApp", application.Slug },
         { "$os", GetOs() }
       };
+
+      if (email != null)
+      {
+        properties.Add("email", email);
+      }
 
       if (isAction)
       {
