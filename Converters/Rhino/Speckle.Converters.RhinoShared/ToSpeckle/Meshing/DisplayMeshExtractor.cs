@@ -82,25 +82,26 @@ public static class DisplayMeshExtractor
   /// </summary>
   public static (RG.Mesh, RG.Vector3d?) GetGeometryDisplayMeshAccurate(
     RG.GeometryBase geometry,
-    bool modelFarFromOrigin
+    bool modelFarFromOrigin,
+    double minEdgeLength
   )
   {
     // preserve original behavior, if Model is not far from origin: will be the case for 99% of Rhino models
     if (!modelFarFromOrigin)
     {
-      return (GetGeometryDisplayMesh(geometry), null);
+      return (GetGeometryDisplayMesh(geometry, minEdgeLength), null);
     }
 
     // preserve original behavior if the object is not far from origin
     if (!TryGetTranslationVector(geometry, out RG.Vector3d vectorToGeometry))
     {
-      return (GetGeometryDisplayMesh(geometry), null);
+      return (GetGeometryDisplayMesh(geometry, minEdgeLength), null);
     }
 
     // if the object is far from origin and risking faulty meshes due to precision errors: then duplicate geometry and move to origin first
     RG.GeometryBase geometryToMesh = geometry.Duplicate();
     geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
-    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometryToMesh);
+    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometryToMesh, minEdgeLength);
 
     return (displayMesh, vectorToGeometry);
   }
