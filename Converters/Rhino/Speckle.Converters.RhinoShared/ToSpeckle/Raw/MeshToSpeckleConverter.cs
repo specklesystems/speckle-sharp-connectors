@@ -33,7 +33,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
 
-    // 1. If needed, move geometry to origin before all operations; extract Rhino Mesh
+    // 1. If needed, move geometry to origin before conversion
     RG.Mesh movedMesh = DisplayMeshExtractor.MoveToOriginAndGetDisplayMesh(
       target,
       _settingsStore.Current.ModelFarFromOrigin,
