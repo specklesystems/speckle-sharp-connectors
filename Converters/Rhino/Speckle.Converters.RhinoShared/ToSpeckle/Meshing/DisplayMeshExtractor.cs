@@ -1,4 +1,5 @@
 using Rhino.DocObjects;
+using Speckle.Converters.Rhino.Extensions;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -115,7 +116,7 @@ public static class DisplayMeshExtractor
       return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
     }
     // 2. Geometry check: if the model extent is far from origin, but object itself is NOT far from origin: extract meshes as usual
-    if (!TryGetTranslationVector(geometry, out RG.Vector3d vectorToGeometry))
+    if (!geometry.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
     {
       return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
     }
@@ -125,25 +126,6 @@ public static class DisplayMeshExtractor
 
     vectorToOriginalGeometry = vectorToGeometry;
     return geometryToMesh is RG.Mesh movedMesh ? movedMesh : GetGeometryDisplayMesh(geometryToMesh, true);
-  }
-
-  /// <summary>
-  /// Getting translation vector from origin to the Geometry bbox Center (if geometry is far from origin and translation needed)
-  /// </summary>
-  /// <returns>
-  /// True and the vector from origin to Geometry bbox center (if translation needed), otherwise false and zero-length vector.
-  /// </returns>
-  private static bool TryGetTranslationVector(RG.GeometryBase geom, out RG.Vector3d vector)
-  {
-    vector = new RG.Vector3d();
-    var geometryBbox = geom.GetBoundingBox(false); // 'false' for 'accurate' parameter to accelerate bbox calculation
-    if (geometryBbox.Min.DistanceTo(RG.Point3d.Origin) > 1e6 || geometryBbox.Max.DistanceTo(RG.Point3d.Origin) > 1e6)
-    {
-      vector = new RG.Vector3d(geometryBbox.Center);
-      return true;
-    }
-
-    return false;
   }
 
   public static void MoveSpeckleMeshes(List<SOG.Mesh> displayValue, RG.Vector3d? vectorToGeometry, string units)
