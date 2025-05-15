@@ -58,6 +58,14 @@ Issues or questions? We encourage everyone interested to debug / hack / contribu
 
 For good development experience and environment setup, run the commands below as needed.
 
+### Switching to SLNX
+
+SLNX was introduced with .NET 9 (in May 2024), Visual Studio 17.13 and Rider 2024.3.  The older SLNs being used remain for now but will be removed when .NET 10 is introduced to the repo.  SLNXs specific to certain host apps are being generated from the main SLN to allow for faster developmenet.
+
+[https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/)
+
+[https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/](https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/)
+
 ### Formatting
 We're using [CSharpier](https://github.com/belav/csharpier) to format our code.  You can install Csharpier in a few ways:
 - Install CSharpier as a local tool and reformat from CLI
