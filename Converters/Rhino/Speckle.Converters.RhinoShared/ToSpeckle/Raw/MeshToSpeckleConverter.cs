@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -31,6 +32,25 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
+
+    // 1. If needed, move geometry to origin before all operations; extract Rhino Mesh
+    RG.Mesh movedMesh = DisplayMeshExtractor.MoveToOriginAndGetDisplayMesh(
+      target,
+      _settingsStore.Current.ModelFarFromOrigin,
+      out RG.Vector3d? vectorToGeometry
+    );
+
+    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
+    SOG.Mesh convertedMesh = ConvertMesh(movedMesh);
+    movedMesh.Dispose();
+
+    // 3. Move Speckle geometry back from origin, if translation was applied
+    DisplayMeshExtractor.MoveSpeckleMeshes([convertedMesh], vectorToGeometry, _settingsStore.Current.SpeckleUnits);
+    return convertedMesh;
+  }
+
+  private SOG.Mesh ConvertMesh(RG.Mesh target)
+  {
     var vertexCoordinates = new double[target.Vertices.Count * 3];
     var x = 0;
     for (int i = 0; i < target.Vertices.Count; i++)
@@ -81,7 +101,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     double volume = target.IsClosed ? target.Volume() : 0;
     SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
-    return new SOG.Mesh
+    return new()
     {
       vertices = new(vertexCoordinates),
       faces = faces,
