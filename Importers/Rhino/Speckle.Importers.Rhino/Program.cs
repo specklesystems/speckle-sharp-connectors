@@ -22,7 +22,7 @@ public static class Program
     {
       using (new RhinoCore([], WindowStyle.NoWindow))
       {
-        using var doc = RhinoDoc.Open("C:\\Users\\adam\\Downloads\\objects.dwg", out var _);
+        using var doc = RhinoDoc.Open("C:\\Users\\adam\\Downloads\\objects.dwg", out _);
         var services = new ServiceCollection();
        // var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
         services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);

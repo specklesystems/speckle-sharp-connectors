@@ -6,5 +6,11 @@
 
   <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <Message Text="Rhino Version $(RhinoVersion)" Importance="high"/>
+    <ItemGroup>
+      <OriginalOutput Include="$(OutputPath)\$(AssemblyName)$(TargetExt)" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(OriginalOutput)"
+      DestinationFiles="$(OutputPath)\$(AssemblyName).dll" />
   </Target>
 </Project>
