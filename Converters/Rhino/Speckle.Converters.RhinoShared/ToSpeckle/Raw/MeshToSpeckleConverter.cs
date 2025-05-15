@@ -101,7 +101,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     double volume = target.IsClosed ? target.Volume() : 0;
     SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
-    return new()
+    return new SOG.Mesh
     {
       vertices = new(vertexCoordinates),
       faces = faces,

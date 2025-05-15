@@ -35,8 +35,10 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
       _settingsStore.Current.ModelFarFromOrigin,
       out RG.Vector3d? vectorToGeometry
     );
+
     // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
     List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(movedDisplayMesh) };
+
     // 3. Move Speckle geometry back from origin, if translation was applied
     DisplayMeshExtractor.MoveSpeckleMeshes(displayValue, vectorToGeometry, _settingsStore.Current.SpeckleUnits);
 
