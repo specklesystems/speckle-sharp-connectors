@@ -50,7 +50,6 @@ public sealed class ReceiveOperation(
 
     cancellationToken.ThrowIfCancellationRequested();
     await receiveVersionRetriever.VersionReceived(account, version, receiveInfo, cancellationToken);
-
     return res;
   }
 
