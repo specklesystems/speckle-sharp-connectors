@@ -126,10 +126,13 @@ public class RevitMaterialBaker
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
         string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
-        var newMaterialId = Autodesk.Revit.DB.Material.Create(_converterSettings.Current.Document, matName);
-        var revitMaterial = (Autodesk.Revit.DB.Material)_converterSettings.Current.Document.GetElement(newMaterialId);
+        var newMaterialId = Material.Create(_converterSettings.Current.Document, matName);
+        var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
 
+        // NOTE: UseRenderAppearanceForShading path of least resistance [CNX-1062](https://linear.app/speckle/issue/CNX-1062/set-material-appearance-in-addition-to-shading)
+        // appearance is based on assets and tricky
+        revitMaterial.UseRenderAppearanceForShading = true;
         revitMaterial.Transparency = (int)(transparency * 100);
         revitMaterial.Shininess = (int)(speckleRenderMaterial.metalness * 128);
         revitMaterial.Smoothness = (int)(smoothness * 128);
@@ -156,7 +159,7 @@ public class RevitMaterialBaker
     using (var collector = new FilteredElementCollector(document))
     {
       var materialIds = collector
-        .OfClass(typeof(Autodesk.Revit.DB.Material))
+        .OfClass(typeof(Material))
         .Where(m => m.Name.Contains(validBaseGroupName))
         .Select(m => m.Id)
         .ToList();
