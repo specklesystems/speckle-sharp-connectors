@@ -40,10 +40,11 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
     // create display mesh from region by converting to brep first
     var brep = RG.Brep.TryConvertBrep(target);
 
-    List<SOG.Mesh> displayValue = GetSpeckleMeshes(
+    List<SOG.Mesh> displayValue = ToSpeckleMeshUtility.GetSpeckleMeshes(
       brep,
       _settingsStore.Current.ModelFarFromOrigin,
-      _settingsStore.Current.SpeckleUnits
+      _settingsStore.Current.SpeckleUnits,
+      _meshConverter
     );
     return new SOG.Region
     {
@@ -53,27 +54,5 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       units = _settingsStore.Current.SpeckleUnits,
       displayValue = displayValue
     };
-  }
-
-  private List<SOG.Mesh> GetSpeckleMeshes(RG.GeometryBase geometry, bool modelFarFromOrigin, string units)
-  {
-    // get valid Rhino meshes (possibly moved to origin for accurate calculations)
-    (RG.Mesh displayMesh, RG.Vector3d? translation) = DisplayMeshExtractor.GetGeometryDisplayMeshAccurate(
-      geometry,
-      modelFarFromOrigin
-    );
-
-    List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(displayMesh) };
-
-    // move Speckle geometry back from origin, if translation was applied. This needs to be done after Speckle conversion,
-    // because 'far from origin' precision errors also affect ToSpeckle converters.
-    if (translation is RG.Vector3d vector)
-    {
-      Matrix4x4 matrix = new(1, 0, 0, vector.X, 0, 1, 0, vector.Y, 0, 0, 1, vector.Z, 0, 0, 0, 1);
-      SO.Transform transform = new() { matrix = matrix, units = units };
-      displayValue.ForEach(x => x.Transform(transform));
-    }
-
-    return displayValue;
   }
 }
