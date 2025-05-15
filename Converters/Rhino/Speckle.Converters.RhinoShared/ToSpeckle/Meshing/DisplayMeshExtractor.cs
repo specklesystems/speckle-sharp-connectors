@@ -49,7 +49,7 @@ public static class DisplayMeshExtractor
   /// </summary>
   public static RG.Mesh GetGeometryDisplayMesh(RG.GeometryBase geometry, bool highPrecision = false)
   {
-    double minEdgeLength = highPrecision ? 0 : 0.05;
+    double minEdgeLength = highPrecision ? GetAccurateMinEdgeLegth(geometry) : 0.05;
 
     // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
     RG.Mesh[] renderMeshes;
