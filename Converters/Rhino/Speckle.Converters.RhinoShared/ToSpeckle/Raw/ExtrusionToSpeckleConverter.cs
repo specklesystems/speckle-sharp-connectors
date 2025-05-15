@@ -2,7 +2,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.Converters.Rhino.ToSpeckle.Meshing;
-using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 

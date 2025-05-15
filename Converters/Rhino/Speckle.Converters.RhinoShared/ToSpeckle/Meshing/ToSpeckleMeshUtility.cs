@@ -18,7 +18,7 @@ public static class ToSpeckleMeshUtility
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter // not pretty
   )
   {
-    // 1. If needed, move geometry to origin before all operations and extract Rhino Mesh
+    // 1. If needed, move geometry to origin before all operations; extract Rhino Mesh
     RG.Mesh displayMesh = GetDisplayMeshWithOriginalPositionVector(
       geometry,
       modelFarFromOrigin,
@@ -39,6 +39,9 @@ public static class ToSpeckleMeshUtility
     return displayValue;
   }
 
+  /// <summary>
+  /// Extracting Rhino Mesh from Rhino GeometryBase after moving it to origin (if needed).
+  /// </summary>
   private static RG.Mesh GetDisplayMeshWithOriginalPositionVector(
     RG.GeometryBase geometry,
     bool modelFarFromOrigin,
@@ -47,17 +50,17 @@ public static class ToSpeckleMeshUtility
   {
     vectorToOriginalGeometry = null;
 
-    // 1.1. General check: if Model is NOT far from origin (99% of Rhino models): extract meshes as usual
+    // 1. General check: if Model is NOT far from origin (99% of Rhino models): extract meshes as usual
     if (!modelFarFromOrigin)
     {
       return DisplayMeshExtractor.GetGeometryDisplayMesh(geometry, true);
     }
-    // 1.2. Geometry check: if the model extent is far from origin, but object itself is NOT far from origin: extract meshes as usual
+    // 2. Geometry check: if the model extent is far from origin, but object itself is NOT far from origin: extract meshes as usual
     if (!TryGetTranslationVector(geometry, out RG.Vector3d vectorToGeometry))
     {
       return DisplayMeshExtractor.GetGeometryDisplayMesh(geometry, true);
     }
-    // 1.3. If the object is far from origin and risking faulty meshes due to precision errors: duplicate geometry and move it to origin
+    // 3. If the object is far from origin and risking faulty meshes due to precision errors: duplicate geometry and move it to origin
     RG.GeometryBase geometryToMesh = geometry.Duplicate();
     geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
 
