@@ -1,3 +1,4 @@
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -74,16 +75,18 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
           units = units
         },
         plane = _planeConverter.Convert(plane),
-        units = units,
-
-        // additional alignment subentity props
-        ["startStation"] = target.StartStation,
-        ["endStation"] = target.EndStation,
-        ["startDirection"] = target.StartDirection,
-        ["endDirection"] = target.EndDirection,
-        ["deflectedAngle"] = target.DeflectedAngle,
-        ["minumumRadius"] = target.MinimumRadius
+        units = units
       };
+
+    // create a properties dictionary for additional props
+    Dictionary<string, object?> props =
+      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation };
+    PropertyHandler propHandler = new();
+    propHandler.TryAddToDictionary(props, "startDirection", () => target.StartDirection); // might throw
+    propHandler.TryAddToDictionary(props, "endDirection", () => target.EndDirection); // might throw
+    propHandler.TryAddToDictionary(props, "deflectedAngle", () => target.DeflectedAngle); // might throw
+    propHandler.TryAddToDictionary(props, "minumumRadius", () => target.MinimumRadius); // might throw
+    arc["properties"] = props;
 
     return arc;
   }

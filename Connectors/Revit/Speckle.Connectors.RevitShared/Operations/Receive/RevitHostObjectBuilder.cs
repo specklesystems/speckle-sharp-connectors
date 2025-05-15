@@ -14,6 +14,7 @@ using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
+using Speckle.Objects.Data;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -61,6 +62,17 @@ public sealed class RevitHostObjectBuilder(
     CancellationToken cancellationToken
   )
   {
+    // TODO: formalise getting transform info from rootObject. this dict access is gross.
+    Autodesk.Revit.DB.Transform? referencePointTransform = null;
+    if (
+      rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
+      && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is Dictionary<string, object> transformDict
+      && transformDict.TryGetValue("transform", out var transformValue)
+    )
+    {
+      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformValue);
+    }
+
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));
@@ -110,7 +122,17 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings with
+          {
+            ReferencePointTransform = referencePointTransform
+          }
+        )
+      )
+      {
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      }
       transactionManager.CommitTransaction();
     }
 
@@ -167,15 +189,21 @@ public sealed class RevitHostObjectBuilder(
           //TODO TransformTo will be deprecated as it's dangerous and requires ID transposing which is wrong!
           //ID needs to be copied to the new instance
           var id = localToGlobalMap.AtomicObject.id;
+          var originalAppId = localToGlobalMap.AtomicObject.applicationId;
+
           ITransformable? newTransformable = null;
           foreach (var mat in localToGlobalMap.Matrix)
           {
             transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
-            transformable = newTransformable; // we need to keep the reference to the new object, as we're going to use it in the cache
+            transformable = newTransformable;
           }
 
           localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.AtomicObject.id = id; // restore the id, as it's used in the cache
+          localToGlobalMap.AtomicObject.id = id;
+
+          // Make applicationId unique by appending a short GUID
+          // This prevents DirectShapeLibrary from using the same definition for multiple instances
+          localToGlobalMap.AtomicObject.applicationId = $"{originalAppId ?? id}_{Guid.NewGuid().ToString("N")[..8]}"; // hack of all of the ages. related to CNX-1707
           localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
         }
 
@@ -192,9 +220,13 @@ public sealed class RevitHostObjectBuilder(
           bakedObjectIds.Add(directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
 
-          if (localToGlobalMap.AtomicObject is IRawEncodedObject and Base myBase)
+          // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject and
+          // processes just IRawEncodedObject in maps to create post base paint targets for solids specifically
+          // this smells big time.
+          // TODO: created material is wrong nonetheless but visually it all looks correct in Revit. Investigate what is going on
+          if (localToGlobalMap.AtomicObject is Base myBase)
           {
-            postBakePaintTargets.Add((directShapes, myBase.applicationId ?? myBase.id.NotNull()));
+            SetSolidPostBakePaintTargets(myBase, directShapes, postBakePaintTargets);
           }
 
           conversionResults.Add(
@@ -259,4 +291,24 @@ public sealed class RevitHostObjectBuilder(
   }
 
   public void Dispose() => transactionManager?.Dispose();
+
+  // NOTE: temp poc HACK!
+  // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.
+  // TODO: clean this up / refactor
+  private void SetSolidPostBakePaintTargets(Base baseObj, DirectShape directShapes, List<(DirectShape, string)> targets)
+  {
+    switch (baseObj)
+    {
+      case IRawEncodedObject:
+        targets.Add((directShapes, baseObj.applicationId ?? baseObj.id.NotNull()));
+        break;
+
+      case DataObject dataObj:
+        foreach (var item in dataObj.displayValue)
+        {
+          SetSolidPostBakePaintTargets(item, directShapes, targets);
+        }
+        break;
+    }
+  }
 }

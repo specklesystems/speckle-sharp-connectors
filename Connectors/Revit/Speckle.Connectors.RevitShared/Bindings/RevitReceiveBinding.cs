@@ -10,6 +10,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
@@ -27,6 +28,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ISpeckleApplication _speckleApplication;
+  private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private ReceiveBindingUICommands Commands { get; }
 
   public RevitReceiveBinding(
@@ -37,7 +39,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<RevitReceiveBinding> logger,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication
+    ISpeckleApplication speckleApplication,
+    RevitToHostCacheSingleton revitToHostCacheSingleton
   )
   {
     Parent = parent;
@@ -48,6 +51,7 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _speckleApplication = speckleApplication;
     _cancellationManager = cancellationManager;
+    _revitToHostCacheSingleton = revitToHostCacheSingleton;
 
     Commands = new ReceiveBindingUICommands(parent);
   }
@@ -75,7 +79,8 @@ internal sealed class RevitReceiveBinding : IReceiveBinding
             DetailLevelType.Coarse, // TODO figure out
             null,
             false,
-            true
+            true,
+            false
           )
         );
       // Receive host objects

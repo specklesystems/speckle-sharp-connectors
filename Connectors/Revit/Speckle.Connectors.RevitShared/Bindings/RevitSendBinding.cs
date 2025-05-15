@@ -68,7 +68,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IRevitTask revitTask
   )
     : base("sendBinding", bridge)
   {
@@ -92,9 +93,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    revitTask.Run(() =>
+    {
+      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    });
   }
 
   public List<ISendFilter> GetSendFilters() =>
@@ -109,7 +113,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new DetailLevelSetting(DetailLevelType.Medium),
       new ReferencePointSetting(ReferencePointType.InternalOrigin),
       new SendParameterNullOrEmptyStringsSetting(false),
-      new LinkedModelsSetting(true)
+      new LinkedModelsSetting(true),
+      new SendRebarsAsVolumetricSetting(false)
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -137,7 +142,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
             _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
             _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
-            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard)
+            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard),
+            _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(modelCard)
           )
         );
 
@@ -206,8 +212,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
     var linkedModels = allElements.OfType<RevitLinkInstance>().ToList();
 
-    // create context for main document elements
-    List<DocumentToConvert> documentElementContexts = [new(null, activeUIDoc.Document, elementsOnMainModel)];
+    // should ideally reuse the initialized value from the scoped IConverterSettingsStore<RevitConversionSettings>.
+    // but, it's scoped and to avoid bigger scarier changes I'm re-fetching the setting here (inexpensive operation?)
+    Transform? mainModelTransform = _toSpeckleSettingsManager.GetReferencePointSetting(modelCard);
+    List<DocumentToConvert> documentElementContexts =
+    [
+      new(mainModelTransform, activeUIDoc.Document, elementsOnMainModel)
+    ];
 
     // get the linked models setting - this decision belongs at this level
     bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
@@ -226,7 +237,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           continue;
         }
 
-        var transform = linkedModel.GetTotalTransform().Inverse;
+        // transform maps linked model elements into the main model's reference point coordinate system
+        // first apply the user's reference point transform (setting) then adjust for the linked model's placement relative to host.
+        Transform transform = (mainModelTransform ?? Transform.Identity).Multiply(
+          linkedModel.GetTotalTransform().Inverse
+        );
 
         // decision about whether to process elements is made here, not in the handler
         // only collects elements from linked models when the setting is enabled

@@ -12,14 +12,17 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 {
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ScalingServiceToHost _scalingServiceToHost;
+  private readonly IReferencePointConverter _referencePointConverter;
 
   public MeshConverterToHost(
     RevitToHostCacheSingleton revitToHostCacheSingleton,
-    ScalingServiceToHost scalingServiceToHost
+    ScalingServiceToHost scalingServiceToHost,
+    IReferencePointConverter referencePointConverter
   )
   {
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
     _scalingServiceToHost = scalingServiceToHost;
+    _referencePointConverter = referencePointConverter;
   }
 
   public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
@@ -129,11 +132,16 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
 
     for (int i = 2, k = 0; i < arr.Count; i += 3)
     {
-      points[k++] = new XYZ(
-        _scalingServiceToHost.ScaleToNative(arr[i - 2], fTypeId),
-        _scalingServiceToHost.ScaleToNative(arr[i - 1], fTypeId),
-        _scalingServiceToHost.ScaleToNative(arr[i], fTypeId)
-      );
+      // Scale the coordinates first
+      var x = _scalingServiceToHost.ScaleToNative(arr[i - 2], fTypeId);
+      var y = _scalingServiceToHost.ScaleToNative(arr[i - 1], fTypeId);
+      var z = _scalingServiceToHost.ScaleToNative(arr[i], fTypeId);
+
+      // Create the XYZ point
+      var point = new XYZ(x, y, z);
+
+      // Apply reference point transformation (this is the crucial part)
+      points[k++] = _referencePointConverter.ConvertToInternalCoordinates(point, true);
     }
 
     return points;

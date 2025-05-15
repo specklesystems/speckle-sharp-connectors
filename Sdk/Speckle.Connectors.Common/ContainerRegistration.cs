@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
@@ -31,6 +32,7 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddScoped<ReceiveOperation>();
     serviceCollection.AddSingleton<IAccountService, AccountService>();
+    serviceCollection.AddSingleton<IMixPanelManager, MixPanelManager>();
     serviceCollection.AddScoped<IHostObjectBuilder, THostObjectBuilder>();
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
 
