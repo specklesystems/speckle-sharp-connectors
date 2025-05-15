@@ -28,12 +28,17 @@ public class ExtrusionToSpeckleConverter : ITypedConverter<RG.Extrusion, SOG.Ext
   {
     var extrusionEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    List<SOG.Mesh> displayValue = ToSpeckleMeshUtility.GetSpeckleMeshes(
+    // Extracting and converting meshes
+    // 1. If needed, move geometry to origin before all operations; extract Rhino Mesh
+    RG.Mesh movedDisplayMesh = DisplayMeshExtractor.MoveToOriginAndGetDisplayMesh(
       target,
       _settingsStore.Current.ModelFarFromOrigin,
-      _settingsStore.Current.SpeckleUnits,
-      _meshConverter
+      out RG.Vector3d? vectorToGeometry
     );
+    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
+    List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(movedDisplayMesh) };
+    // 3. Move Speckle geometry back from origin, if translation was applied
+    DisplayMeshExtractor.MoveSpeckleMeshes(displayValue, vectorToGeometry, _settingsStore.Current.SpeckleUnits);
 
     var bx = new SOG.ExtrusionX()
     {
