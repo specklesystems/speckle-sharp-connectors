@@ -17,6 +17,7 @@ public class RhinoConversionSettingsFactory(
 
   /// <summary>
   /// Quick check whether any of the objects in the scene might be located too far from origin and cause precision issues during meshing.
+  /// It prevents 'normal' Rhino models (not too far from origin) from unnecessary Bbox calculations on every object on Send.
   /// </summary>
   private bool ModelFarFromOrigin()
   {
