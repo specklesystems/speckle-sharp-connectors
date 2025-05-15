@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
@@ -9,7 +10,7 @@ namespace Speckle.Connectors.DUI.Models;
 /// <summary>
 /// Encapsulates the state Speckle needs to persist in the host app's document.
 /// </summary>
-public abstract class DocumentModelStore(IJsonSerializer serializer)
+public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJsonSerializer serializer)
 {
   private readonly List<ModelCard> _models = new();
 
@@ -39,12 +40,17 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
 
   // TODO: not sure about this, throwing an exception, needs some thought...
   // Further note (dim): If we reach to the stage of throwing an exception here because a model is not found, there's a huge misalignment between the UI's list of model cards and the host app's.
-  // In theory this should never really happen, but if it does
-  public ModelCard GetModelById(string id)
+  // In theory this should never really happen, (Adam) but it does because of threading so don't throw (as said above)
+  public ModelCard? GetModelById(string id)
   {
     lock (_models)
     {
-      var model = _models.FirstOrDefault(model => model.ModelCardId == id) ?? throw new ModelNotFoundException();
+      var model = _models.FirstOrDefault(model => model.ModelCardId == id);
+      if (model is null)
+      {
+        logger.LogWarning($"Model with id {id} not found.");
+        return null;
+      }
       return model;
     }
   }
@@ -74,7 +80,8 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
       var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
       if (index == -1)
       {
-        throw new ModelNotFoundException("Model card not found to update.");
+        logger.LogWarning($"Model card not found to update. Model card ID: {model.ModelCardId}");
+        return;
       }
       _models[index] = model;
       SaveState();
@@ -88,7 +95,8 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
       var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
       if (index == -1)
       {
-        throw new ModelNotFoundException("Model card not found to update.");
+        logger.LogWarning($"Model card not found to update. Model card ID: {model.ModelCardId}");
+        return;
       }
       _models.RemoveAt(index);
       SaveState();
@@ -112,7 +120,7 @@ public abstract class DocumentModelStore(IJsonSerializer serializer)
       SaveState();
       if (listForMissingModelCards.Count > 0)
       {
-        throw new ModelNotFoundException($"Model cards with IDs {listForMissingModelCards} not found to remove.");
+        logger.LogWarning($"Model cards with IDs {listForMissingModelCards} not found to remove.");
       }
     }
   }

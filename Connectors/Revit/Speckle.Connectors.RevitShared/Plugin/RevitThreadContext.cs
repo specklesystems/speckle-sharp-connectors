@@ -1,4 +1,3 @@
-using Revit.Async;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
 
@@ -20,11 +19,13 @@ public class RevitThreadContext : ThreadContext
 
   protected override Task<T> RunMainAsync<T>(Func<Task<T>> action) => CatchExceptions(action);
 
+  protected override Task RunMain(Action action) => CatchExceptions(action);
+
   private static async Task<T> CatchExceptions<T>(Func<T> action)
   {
     Exception? ex = null;
     //force the usage of the application overload
-    var ret = await RevitTask.RunAsync(_ =>
+    var ret = await global::Revit.Async.RevitTask.RunAsync(_ =>
     {
       try
       {
@@ -47,7 +48,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    var ret = await RevitTask.RunAsync(async _ =>
+    var ret = await global::Revit.Async.RevitTask.RunAsync(async _ =>
     {
       try
       {
@@ -70,11 +71,32 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    await RevitTask.RunAsync(async _ =>
+    await global::Revit.Async.RevitTask.RunAsync(async _ =>
     {
       try
       {
         await action();
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        ex = e;
+      }
+    });
+    if (ex is not null)
+    {
+      throw new SpeckleRevitTaskException(ex);
+    }
+  }
+
+  private static async Task CatchExceptions(Action action)
+  {
+    Exception? ex = null;
+    //force the usage of the application overload
+    await global::Revit.Async.RevitTask.RunAsync(() =>
+    {
+      try
+      {
+        action();
       }
       catch (Exception e) when (!e.IsFatal())
       {
