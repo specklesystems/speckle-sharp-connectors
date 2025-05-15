@@ -112,19 +112,19 @@ public static class DisplayMeshExtractor
     // 1. General check: if Model is NOT far from origin (99% of Rhino models): extract meshes as usual
     if (!modelFarFromOrigin)
     {
-      return GetGeometryDisplayMesh(geometry, true);
+      return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
     }
     // 2. Geometry check: if the model extent is far from origin, but object itself is NOT far from origin: extract meshes as usual
     if (!TryGetTranslationVector(geometry, out RG.Vector3d vectorToGeometry))
     {
-      return GetGeometryDisplayMesh(geometry, true);
+      return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
     }
     // 3. If the object is far from origin and risking faulty meshes due to precision errors: duplicate geometry and move it to origin
     RG.GeometryBase geometryToMesh = geometry.Duplicate();
     geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
 
     vectorToOriginalGeometry = vectorToGeometry;
-    return GetGeometryDisplayMesh(geometryToMesh, true);
+    return geometryToMesh is RG.Mesh movedMesh ? movedMesh : GetGeometryDisplayMesh(geometryToMesh, true);
   }
 
   /// <summary>
