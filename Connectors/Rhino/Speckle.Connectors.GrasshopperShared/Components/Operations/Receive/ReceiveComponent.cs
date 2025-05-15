@@ -1,6 +1,5 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -37,7 +36,8 @@ public class ReceiveComponentOutput
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
-  private readonly MixPanelManager _mixpanel;
+  private readonly IMixPanelManager _mixpanel;
+  private readonly ISpeckleApplication _application;
 
   public ReceiveComponent()
     : base(
@@ -48,7 +48,8 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       ComponentCategories.DEVELOPER
     )
   {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+    _mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
+    _application = PriorityLoader.Container.GetRequiredService<ISpeckleApplication>();
   }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
@@ -144,7 +145,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     var customProperties = new Dictionary<string, object>()
     {
       { "isAsync", false },
-      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }
+      { "sourceHostApp", _application.Slug }
     };
     if (receiveInfo.WorkspaceId != null)
     {

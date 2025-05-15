@@ -36,7 +36,7 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
 
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
-  private readonly MixPanelManager _mixpanel;
+  private readonly IMixPanelManager _mixpanel;
 
   public SendComponent()
     : base(
@@ -47,7 +47,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       ComponentCategories.DEVELOPER
     )
   {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+    _mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
   }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");

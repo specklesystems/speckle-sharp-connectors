@@ -6,7 +6,6 @@ using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -50,13 +49,14 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   // DI props
   public IClient ApiClient { get; private set; }
-  public MixPanelManager MixPanelManager { get; private set; }
+  public IMixPanelManager MixPanelManager { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
   public AccountService AccountService { get; private set; }
   public AccountManager AccountManager { get; private set; }
   public IClientFactory ClientFactory { get; private set; }
+  public ISpeckleApplication SpeckleApplication { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -82,11 +82,12 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
     AccountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
     AccountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
     ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
+    SpeckleApplication = Scope.ServiceProvider.GetRequiredService<ISpeckleApplication>();
 
     // We need to call this always in here to be able to react and set events :/
     ParseInput(da);
@@ -454,7 +455,7 @@ public class ReceiveComponentWorker : WorkerInstance
         var customProperties = new Dictionary<string, object>()
         {
           { "isAsync", true },
-          { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+          { "sourceHostApp", receiveComponent.SpeckleApplication.Slug },
           { "auto", receiveComponent.AutoReceive }
         };
         if (receiveInfo.WorkspaceId != null)
