@@ -4,6 +4,7 @@ public static class GeometryBaseExtensions
 {
   /// <summary>
   /// Getting translation vector from origin to the Geometry bbox Center (if geometry is far from origin and translation needed)
+  /// This is needed for some objects, because of Rhino using single precision numbers for Mesh vertices: https://wiki.mcneel.com/rhino/farfromorigin
   /// </summary>
   /// <returns>
   /// Vector from origin to Geometry bbox center (if translation needed), otherwise zero-length vector.
