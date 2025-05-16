@@ -77,6 +77,11 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     var elementsInView = viewCollector.ToElements();
+
+    // NOTE: FilteredElementCollector() grabs OST_Cornices, which are part of Wall definitions as ADDITIONAL elements
+    // on this return. displayValue for Wall already includes this, therefore we end up with duplicate elements on wall sweeps
+    // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
+    // therefore, LINQ expression excludes elements which are subcategory. this problem is localised to sending via views
     var objectIds = elementsInView.Where(e => e.Category?.Parent == null).Select(e => e.UniqueId).ToList();
     SelectedObjectIds = objectIds;
     return objectIds;
