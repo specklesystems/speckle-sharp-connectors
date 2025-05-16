@@ -22,7 +22,7 @@ public class RhinoConversionSettingsFactory(
   private bool ModelFarFromOrigin()
   {
     RG.BoundingBox bbox = RhinoDoc.ActiveDoc.Objects.BoundingBox;
-    if (bbox.Min.DistanceTo(RG.Point3d.Origin) > 1e6 || bbox.Max.DistanceTo(RG.Point3d.Origin) > 1e6)
+    if (bbox.Min.DistanceTo(RG.Point3d.Origin) > 1e5 || bbox.Max.DistanceTo(RG.Point3d.Origin) > 1e5)
     {
       return true;
     }

@@ -11,7 +11,7 @@ public static class GeometryBaseExtensions
   public static bool IsFarFromOrigin(this RG.GeometryBase geometry, out RG.Vector3d vectorToGeometry)
   {
     var geometryBbox = geometry.GetBoundingBox(false); // 'false' for 'accurate' parameter to accelerate bbox calculation
-    if (geometryBbox.Min.DistanceTo(RG.Point3d.Origin) > 1e6 || geometryBbox.Max.DistanceTo(RG.Point3d.Origin) > 1e6)
+    if (geometryBbox.Min.DistanceTo(RG.Point3d.Origin) > 1e5 || geometryBbox.Max.DistanceTo(RG.Point3d.Origin) > 1e5)
     {
       vectorToGeometry = new RG.Vector3d(geometryBbox.Center);
       return true;
