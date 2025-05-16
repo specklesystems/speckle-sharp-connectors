@@ -22,7 +22,6 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
   /// <summary>
   /// Converts a Rhino Mesh to a Speckle Mesh.
   /// </summary>
-  ///
   /// <param name="target">The Rhino Mesh to be converted.</param>
   /// <returns>The converted Speckle Mesh.</returns>
   /// <exception cref="Speckle.Sdk.Common.Exceptions.ValidationException">Thrown when the Rhino Mesh has 0 vertices or faces.</exception>
