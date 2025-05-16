@@ -44,9 +44,14 @@ public sealed class BaseCurveExtractor
     switch (entity)
     {
       // rant: if this is a pipe, the BaseCurve prop is fake news && will return a DB.line with start and endpoints set to [0,0,0] & [0,0,1]
+      // pressurepipes also tend to have null basecurves
       // do not use basecurve for pipes 😡
       case CDB.Pipe pipe:
         return GetPipeBaseCurves(pipe);
+#if CIVIL3D2024_OR_GREATER
+      case CDB.PressurePipe pressurePipe:
+        return GetPipeBaseCurves(pressurePipe);
+#endif
 
       case CDB.Alignment alignment:
         return GetAlignmentBaseCurves(alignment);
@@ -76,6 +81,15 @@ public sealed class BaseCurveExtractor
         return new() { _lineConverter.Convert(new AG.LineSegment3d(pipe.StartPoint, pipe.EndPoint)) };
     }
   }
+
+#if CIVIL3D2024_OR_GREATER
+  private List<Speckle.Objects.ICurve> GetPipeBaseCurves(CDB.PressurePipe pipe)
+  {
+    return pipe.IsCurve
+      ? new() { _arcConverter.Convert(pipe.CurveGeometry.GetArc2d()) }
+      : new() { _lineConverter.Convert(new AG.LineSegment3d(pipe.StartPoint, pipe.EndPoint)) };
+  }
+#endif
 
   private List<Speckle.Objects.ICurve> GetAlignmentBaseCurves(CDB.Alignment alignment)
   {
