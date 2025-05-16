@@ -77,7 +77,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     var elementsInView = viewCollector.ToElements();
-    var objectIds = elementsInView.Select(e => e.UniqueId).ToList();
+    var objectIds = elementsInView.Where(e => e.Category?.Parent == null).Select(e => e.UniqueId).ToList();
     SelectedObjectIds = objectIds;
     return objectIds;
   }
