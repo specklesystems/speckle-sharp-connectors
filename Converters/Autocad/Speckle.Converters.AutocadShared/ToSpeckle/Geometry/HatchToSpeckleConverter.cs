@@ -123,24 +123,32 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
               break;
 
             case AG.NurbCurve2d nurb:
-              // if there is only 1 loop curve, just return its Spline representation
-              if (loop.Curves.Count == 1)
+              if (loop.Curves.Count == 1) // if there is only 1 loop curve, just return its Spline representation
               {
-                return Nurb2dToSpline(nurb);
+                AG.Point3dCollection pts = new();
+                nurb.DefinitionData.ControlPoints.Cast<AG.Point2d>()
+                  .ToList()
+                  .ForEach(x => pts.Add(new AG.Point3d(x.X, x.Y, 0.0)));
+
+                AG.DoubleCollection knotsCollection = new();
+                nurb.Knots.Cast<double>().ToList().ForEach(x => knotsCollection.Add(x));
+
+                return new ADB.Spline(
+                  nurb.Degree,
+                  nurb.IsRational,
+                  nurb.IsClosed(),
+                  nurb.IsPeriodic(out _),
+                  pts,
+                  knotsCollection,
+                  nurb.DefinitionData.Weights,
+                  0,
+                  0
+                );
               }
-              // if there are more loop curves, approximate the nurb by splitting into segments
-              // and making an arc from each for better fitting
-
-              // estimate the number of points to split the nurb into, minimum 20
-              double paramRange = nurb.EndParameter - nurb.StartParameter;
-              int pointNumber = (int)(paramRange) >= 20 ? (int)(paramRange) : 20;
-              for (double i = nurb.StartParameter; i < nurb.EndParameter; i += paramRange / pointNumber)
+              // if there are more loop curves, approximate the nurb
+              foreach (AG.PointOnCurve2d pt in nurb.GetSamplePoints(nurb.StartParameter, nurb.EndParameter, 0.1))
               {
-                AG.Point2d pointStart = nurb.EvaluatePoint(i);
-                AG.Point2d pointEnd = nurb.EvaluatePoint(i + paramRange / pointNumber);
-                double bulgeNurb = GetVertexBulge(nurb, pointStart, pointEnd);
-
-                count = TryAddPointToPolyline(vertices, polyline, pointStart, bulgeNurb, count);
+                count = TryAddPointToPolyline(vertices, polyline, pt.Point, 0, count);
               }
               break;
 
@@ -152,7 +160,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
                 return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
               }
               // if not a circle, add start point of the arc to the Polyline
-              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4);
+              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4); // already preserving bulgeDirection
               count = TryAddPointToPolyline(vertices, polyline, arc.StartPoint, bulge, count);
               break;
 
@@ -178,58 +186,6 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
       return polyline;
     }
-  }
-
-  private double GetVertexBulge(AG.NurbCurve2d nurb, AG.Point2d start, AG.Point2d end)
-  {
-    // get arc angle - assuming the arc is the curve between 2 points
-    AG.Point2d midSegmentPoint = new(start.X + (end.X - start.X) / 2, start.Y + (end.Y - start.Y) / 2);
-    AG.Point2d arcMidPoint = nurb.GetClosestPointTo(midSegmentPoint).Point;
-    var adjacentSide = arcMidPoint.GetDistanceTo(midSegmentPoint);
-    var hypotenuse = arcMidPoint.GetDistanceTo(start);
-    var angleTriangle = Math.Acos(adjacentSide / hypotenuse);
-    double arcAngle = 2 * (Math.PI - 2 * angleTriangle);
-
-    // bulge direction: (-) clockwise, (+) counterclockwise
-    int bulgeDirection =
-      (end.X - start.X) * (arcMidPoint.Y - start.Y) - (arcMidPoint.X - start.X) * (end.Y - start.Y) > 0 ? -1 : 1;
-
-    return Math.Tan(arcAngle / 4) * bulgeDirection;
-  }
-
-  private ADB.Spline Nurb2dToSpline(AG.NurbCurve2d nurb)
-  {
-    // get control points
-    AG.Point3dCollection pointCollection = new();
-    for (int i = 0; i < nurb.NumControlPoints; i++)
-    {
-      AG.Point2d pt = nurb.GetControlPointAt(i);
-      pointCollection.Add(new AG.Point3d(pt.X, pt.Y, 0));
-    }
-    // get knots
-    AG.DoubleCollection knotsCollection = new();
-    foreach (double nurbKnot in nurb.Knots)
-    {
-      knotsCollection.Add(nurbKnot);
-    }
-    // get weights
-    AG.DoubleCollection weightCollection = new();
-    for (int i = 0; i < nurb.NumWeights; i++)
-    {
-      weightCollection.Add(nurb.GetWeightAt(i));
-    }
-
-    return new ADB.Spline(
-      nurb.Degree,
-      nurb.IsRational,
-      nurb.IsClosed(),
-      nurb.IsPeriodic(out _),
-      pointCollection,
-      knotsCollection,
-      weightCollection,
-      0,
-      0
-    );
   }
 
   private int TryAddPointToPolyline(
