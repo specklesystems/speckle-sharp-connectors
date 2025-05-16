@@ -46,6 +46,7 @@ public class CurveConverterToHost : ITypedConverter<SOG.Curve, DB.Curve>
       }
       // An exception was thrown by NurbSpline.CreateCurve
       // because Revit is stricter than Rhino regarding the input parameters for NURBS curves.
+      // this case is encountered for semicircles that are converted as NURBS
       // Exception message:
       // "The multiplicities of other interior knots must be at most degree - 2."
       // The solution below falls back to using displayValue.
