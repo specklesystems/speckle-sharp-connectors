@@ -1,4 +1,5 @@
 using Rhino.DocObjects;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino.Extensions;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk.Common.Exceptions;
@@ -100,32 +101,37 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Extracting Rhino Mesh from Rhino GeometryBase after moving it to origin (if needed).
+  /// Extracting Rhino Mesh and converting to Speckle with the most suitable settings (e.g. moving to origin first, if needed)
+  /// This is needed because of Rhino using single precision numbers for Mesh vertices: https://wiki.mcneel.com/rhino/farfromorigin
   /// </summary>
-  public static RG.Mesh MoveToOriginAndGetDisplayMesh(
+  /// <returns>List of converted Speckle meshes</returns>
+  public static List<SOG.Mesh> GetSpeckleMeshes(
     RG.GeometryBase geometry,
     bool modelFarFromOrigin,
-    out RG.Vector3d? vectorToOriginalGeometry
+    string units,
+    ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter
   )
   {
-    vectorToOriginalGeometry = null;
+    RG.GeometryBase geometryToMesh = geometry;
+    RG.Vector3d? vector = null;
 
-    // 1. General check: if Model is NOT far from origin (99% of Rhino models): extract meshes as usual
-    if (!modelFarFromOrigin)
+    // 1.1. If needed, move geometry to origin
+    if (modelFarFromOrigin && geometry.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
     {
-      return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
+      geometryToMesh = geometry.Duplicate();
+      geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
+      vector = vectorToGeometry;
     }
-    // 2. Geometry check: if the model extent is far from origin, but object itself is NOT far from origin: extract meshes as usual
-    if (!geometry.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
-    {
-      return geometry is RG.Mesh mesh ? mesh : GetGeometryDisplayMesh(geometry, true);
-    }
-    // 3. If the object is far from origin and risking faulty meshes due to precision errors: duplicate geometry and move it to origin
-    RG.GeometryBase geometryToMesh = geometry.Duplicate();
-    geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
+    // 1.2. Extract Rhino Mesh
+    RG.Mesh movedDisplayMesh = GetGeometryDisplayMesh(geometryToMesh, true);
 
-    vectorToOriginalGeometry = vectorToGeometry;
-    return geometryToMesh is RG.Mesh movedMesh ? movedMesh : GetGeometryDisplayMesh(geometryToMesh, true);
+    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
+    List<SOG.Mesh> displayValue = new() { meshConverter.Convert(movedDisplayMesh) };
+
+    // 3. Move Speckle geometry back from origin, if translation was applied
+    MoveSpeckleMeshes(displayValue, vector, units);
+
+    return displayValue;
   }
 
   public static void MoveSpeckleMeshes(List<SOG.Mesh> displayValue, RG.Vector3d? vectorToGeometry, string units)

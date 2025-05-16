@@ -28,19 +28,12 @@ public class SubDToSpeckleConverter : ITypedConverter<RG.SubD, SOG.SubDX>
   {
     var subdEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    // Extracting and converting meshes
-    // 1. If needed, move geometry to origin before all operations; extract Rhino Mesh
-    RG.Mesh movedDisplayMesh = DisplayMeshExtractor.MoveToOriginAndGetDisplayMesh(
+    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
       target,
       _settingsStore.Current.ModelFarFromOrigin,
-      out RG.Vector3d? vectorToGeometry
+      _settingsStore.Current.SpeckleUnits,
+      _meshConverter
     );
-
-    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
-    List<SOG.Mesh> displayValue = new() { _meshConverter.Convert(movedDisplayMesh) };
-
-    // 3. Move Speckle geometry back from origin, if translation was applied
-    DisplayMeshExtractor.MoveSpeckleMeshes(displayValue, vectorToGeometry, _settingsStore.Current.SpeckleUnits);
 
     var bx = new SOG.SubDX()
     {
