@@ -14,11 +14,11 @@ public class NurbCurve3dToSpeckleConverter : ITypedConverter<AG.NurbCurve3d, SOG
   public SOG.Curve Convert(AG.NurbCurve3d target)
   {
     // ADB.Spline is the closest representation of the AG.NurbCurve2d or 3d. We can construct a Spline and use Speckle splineConverter
-    AG.Point3dCollection pts = new();
-    target.DefinitionData.ControlPoints.Cast<AG.Point3d>().ToList().ForEach(x => pts.Add(x));
-
     AG.DoubleCollection knotsCollection = new();
+    AG.Point3dCollection pts = new();
+
     target.Knots.Cast<double>().ToList().ForEach(x => knotsCollection.Add(x));
+    target.DefinitionData.ControlPoints.Cast<AG.Point3d>().ToList().ForEach(x => pts.Add(x));
 
     return _splineConverter.Convert(
       new ADB.Spline(
