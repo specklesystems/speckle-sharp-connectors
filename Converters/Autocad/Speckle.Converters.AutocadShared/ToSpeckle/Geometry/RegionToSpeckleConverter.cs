@@ -12,21 +12,27 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
+  private readonly ITypedConverter<AG.NurbCurve3d, SOG.Curve> _nurbConverter;
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
+  private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public RegionToSpeckleConverter(
     ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
+    ITypedConverter<AG.NurbCurve3d, SOG.Curve> nurbConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
+    ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _brepConverter = brepConverter;
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
+    _nurbConverter = nurbConverter;
     _circleConverter = circleConverter;
+    _ellipseConverter = ellipseConverter;
     _settingsStore = settingsStore;
   }
 
@@ -94,7 +100,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
           segments.Reverse();
         }
 
-        // convert segments to Speckle Polycurve or Circle
+        // convert segments to Speckle
         var convertedLoop = ConvertSegmentsToICurve(segments);
         loops.Add(convertedLoop);
       }
@@ -113,6 +119,24 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     {
       convertedLoop = _circleConverter.Convert(
         new ADB.Circle(arc.GetPlane().PointOnPlane, arc.GetPlane().Normal, arc.Radius)
+      );
+    }
+    // Another edge case: closed Ellipse.
+    else if (
+      segments.Count == 1
+      && segments[0] is AG.EllipticalArc3d ellipse
+      && Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001
+    )
+    {
+      convertedLoop = _ellipseConverter.Convert(
+        new ADB.Ellipse(
+          new(ellipse.Center.X, ellipse.Center.Y, 0),
+          AG.Vector3d.ZAxis,
+          new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+          ellipse.MinorRadius / ellipse.MajorRadius,
+          ellipse.StartAngle,
+          ellipse.EndAngle
+        )
       );
     }
     // otherwise, just construct a Polycurve from subsequent segments
@@ -138,6 +162,8 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
         return _lineConverter.Convert(line);
       case AG.CircularArc3d arc:
         return _arcConverter.Convert(arc);
+      case AG.NurbCurve3d nurb:
+        return _nurbConverter.Convert(nurb);
     }
 
     throw new ConversionException($"Unsupported curve type for Region conversion: {curve}");
