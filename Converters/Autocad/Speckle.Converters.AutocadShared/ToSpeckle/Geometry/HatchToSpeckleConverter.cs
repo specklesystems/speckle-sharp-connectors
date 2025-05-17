@@ -89,14 +89,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
       {
         foreach (ADB.BulgeVertex bVertex in loop.Polyline)
         {
-          // don't add the end point that's the same as the start point
-          AG.Point3d newPt = new(bVertex.Vertex.X, bVertex.Vertex.Y, 0);
-          if (count == 0 || vertices[0].DistanceTo(newPt) > 0.00001)
-          {
-            vertices.Add(newPt);
-            polyline.AddVertexAt(count, bVertex.Vertex, bVertex.Bulge, 0, 0);
-            count++;
-          }
+          count = TryAddPointToPolyline(vertices, polyline, bVertex.Vertex, bVertex.Bulge, count);
         }
 
         // if only 2 points, that's a circle
@@ -110,77 +103,73 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
             );
           return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, vertices[0].DistanceTo(vertices[1]) / 2);
         }
+        return polyline;
       }
-      else
+
+      // if .Polyline is null, read from .Curves
+      if (loop.Curves.Count > 1) // handle the multi-segment case only with Line segments (not able to produce a Hatch Loop with multiple segments of other types)
       {
         foreach (var segment in loop.Curves)
         {
           // for each segment, skip the last point: it will be added as a start Point of the next segment. Otherwise, they will overlap and make the curve invalid
-          switch (segment)
-          {
-            case AG.LineSegment2d line:
-              count = TryAddPointToPolyline(vertices, polyline, line.StartPoint, 0, count);
-              break;
+          count = segment is AG.LineSegment2d line
+            ? TryAddPointToPolyline(vertices, polyline, line.StartPoint, 0, count)
+            : throw new ConversionException($"Hatch segments of type {segment.GetType()} are not supported");
+        }
+        return polyline;
+      }
 
-            case AG.NurbCurve2d nurb:
-              if (loop.Curves.Count == 1) // if there is only 1 loop curve, just return its Spline representation
-              {
-                AG.Point3dCollection pts = new();
-                nurb.DefinitionData.ControlPoints.Cast<AG.Point2d>()
-                  .ToList()
-                  .ForEach(x => pts.Add(new AG.Point3d(x.X, x.Y, 0.0)));
+      // if .Curve has only 1 segments, it can be a closed Circle, Ellipse or Nurb
+      foreach (var segment in loop.Curves)
+      {
+        switch (segment)
+        {
+          case AG.CircularArc2d arc:
+            if (Math.Abs(arc.EndAngle - arc.StartAngle) - 2 * Math.PI < 0.0001) // check if it's a circle
+            {
+              AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
+              return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
+            }
 
-                AG.DoubleCollection knotsCollection = new();
-                nurb.Knots.Cast<double>().ToList().ForEach(x => knotsCollection.Add(x));
+            throw new ConversionException($"Multiple hatch segments of type {segment.GetType()} are not supported");
 
-                return new ADB.Spline(
-                  nurb.Degree,
-                  nurb.IsRational,
-                  nurb.IsClosed(),
-                  nurb.IsPeriodic(out _),
-                  pts,
-                  knotsCollection,
-                  nurb.DefinitionData.Weights,
-                  0,
-                  0
-                );
-              }
-              // if there are more loop curves, approximate the nurb
-              foreach (AG.PointOnCurve2d pt in nurb.GetSamplePoints(nurb.StartParameter, nurb.EndParameter, 0.1))
-              {
-                count = TryAddPointToPolyline(vertices, polyline, pt.Point, 0, count);
-              }
-              break;
+          case AG.EllipticalArc2d ellipse:
+            if (Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001) // check if it's an ellipse
+            {
+              return new ADB.Ellipse(
+                new(ellipse.Center.X, ellipse.Center.Y, 0),
+                AG.Vector3d.ZAxis,
+                new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+                ellipse.MinorRadius / ellipse.MajorRadius,
+                ellipse.StartAngle,
+                ellipse.EndAngle
+              );
+            }
 
-            case AG.CircularArc2d arc:
-              // check if it's a circle
-              if (loop.Curves.Count == 1 && Math.Abs(arc.EndAngle - arc.StartAngle) - 2 * Math.PI < 0.0001)
-              {
-                AG.Point3d centerPt = new(arc.Center.X, arc.Center.Y, 0);
-                return new ADB.Circle(centerPt, AG.Vector3d.ZAxis, arc.Radius);
-              }
-              // if not a circle, add start point of the arc to the Polyline
-              double bulge = Math.Tan((arc.EndAngle - arc.StartAngle) / 4); // already preserving bulgeDirection
-              count = TryAddPointToPolyline(vertices, polyline, arc.StartPoint, bulge, count);
-              break;
+            throw new ConversionException($"Multiple hatch segments of type {segment.GetType()} are not supported");
 
-            case AG.EllipticalArc2d ellipse:
-              // check if it's an ellipse
-              if (loop.Curves.Count == 1 && Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001)
-              {
-                return new ADB.Ellipse(
-                  new(ellipse.Center.X, ellipse.Center.Y, 0),
-                  AG.Vector3d.ZAxis,
-                  new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
-                  ellipse.MinorRadius / ellipse.MajorRadius,
-                  ellipse.StartAngle,
-                  ellipse.EndAngle
-                );
-              }
-              throw new ConversionException($"Hatch segments of type {segment.GetType()} are not supported");
-            default:
-              throw new ConversionException($"Hatch segments of type {segment.GetType()} are not supported");
-          }
+          case AG.NurbCurve2d nurb:
+            AG.Point3dCollection pts = new();
+            nurb.DefinitionData.ControlPoints.Cast<AG.Point2d>()
+              .ToList()
+              .ForEach(x => pts.Add(new AG.Point3d(x.X, x.Y, 0.0)));
+
+            AG.DoubleCollection knotsCollection = new();
+            nurb.Knots.Cast<double>().ToList().ForEach(x => knotsCollection.Add(x));
+
+            return new ADB.Spline(
+              nurb.Degree,
+              nurb.IsRational,
+              nurb.IsClosed(),
+              nurb.IsPeriodic(out _),
+              pts,
+              knotsCollection,
+              nurb.DefinitionData.Weights,
+              0,
+              0
+            );
+          default:
+            throw new ConversionException($"Multiple hatch segments of type {segment.GetType()} are not supported");
         }
       }
 
