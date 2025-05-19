@@ -80,6 +80,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
   {
     // collect vertices and construct a polyline simultaneously
     ADB.Polyline polyline = new() { Closed = true };
+    // keep track of the vertices added to 'polyline', because to add new points we need to insert them via specific index (in method TryAddPointToPolyline)
     int count = 0;
 
     // disposable object, wrapping into "using"
