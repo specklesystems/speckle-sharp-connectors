@@ -132,7 +132,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
         new ADB.Ellipse(
           new(ellipse.Center.X, ellipse.Center.Y, 0),
           AG.Vector3d.ZAxis,
-          new AG.Vector3d(ellipse.MajorAxis.X, ellipse.MajorAxis.Y, 0),
+          ellipse.MajorRadius * ellipse.MajorAxis,
           ellipse.MinorRadius / ellipse.MajorRadius,
           ellipse.StartAngle,
           ellipse.EndAngle
