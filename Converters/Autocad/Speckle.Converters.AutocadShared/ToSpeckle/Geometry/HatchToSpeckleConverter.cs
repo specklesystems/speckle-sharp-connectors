@@ -85,6 +85,7 @@ public class HatchToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConver
 
   /// <summary>
   /// Converting AutoCAD HatchLoop into a list of AutoCAD Curves, so they can be used to construct an AutoCAD Region.
+  /// The major task is to convert all the 2d component parts (vertices or curves) into 3d Database Entities.
   /// </summary>
   private List<ADB.Curve> ConvertHatchLoopToCurveEntityList(ADB.HatchLoop loop)
   {
