@@ -150,22 +150,25 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private async Task SendInternal(string modelCardId)
   {
+    if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+    {
+      // Handle as GLOBAL ERROR at BrowserBridge
+      throw new InvalidOperationException("No publish model card was found.");
+    }
+
+    using var scope = _serviceProvider.CreateScope();
+    InitializeSettings(scope.ServiceProvider);
+
+    using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+
+    // Disable document activation (document creation and document switch)
+    // Not disabling results in DUI model card being out of sync with the active document
+    // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
+
+    // don't try before here as we're not sure if the document is open yet and the finally block
+    // will always be called to try to reenable document activation
     try
     {
-      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
-      {
-        // Handle as GLOBAL ERROR at BrowserBridge
-        throw new InvalidOperationException("No publish model card was found.");
-      }
-
-      using var scope = _serviceProvider.CreateScope();
-      InitializeSettings(scope.ServiceProvider);
-
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
-
-      // Disable document activation (document creation and document switch)
-      // Not disabling results in DUI model card being out of sync with the active document
-      // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
       Application.DocumentManager.DocumentActivationEnabled = false;
 
       // Get elements to convert
