@@ -12,7 +12,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
-  private readonly ITypedConverter<AG.NurbCurve3d, SOG.Curve> _nurbConverter;
+  private readonly ITypedConverter<AG.NurbCurve3d, ICurve> _nurbConverter;
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
   private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -21,7 +21,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
-    ITypedConverter<AG.NurbCurve3d, SOG.Curve> nurbConverter,
+    ITypedConverter<AG.NurbCurve3d, ICurve> nurbConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
     ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore

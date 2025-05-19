@@ -1,37 +1,16 @@
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class NurbCurve3dToSpeckleConverter : ITypedConverter<AG.NurbCurve3d, SOG.Curve>
+public class NurbCurve3dToSpeckleConverter : ITypedConverter<AG.NurbCurve3d, ICurve>
 {
-  private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
+  private readonly ITypedConverter<ADB.Curve, ICurve> _curveConverter;
 
-  public NurbCurve3dToSpeckleConverter(ITypedConverter<ADB.Spline, SOG.Curve> splineConverter)
+  public NurbCurve3dToSpeckleConverter(ITypedConverter<ADB.Curve, ICurve> curveConverter)
   {
-    _splineConverter = splineConverter;
+    _curveConverter = curveConverter;
   }
 
-  public SOG.Curve Convert(AG.NurbCurve3d target)
-  {
-    // ADB.Spline is the closest representation of the AG.NurbCurve2d or 3d. We can construct a Spline and use Speckle splineConverter
-    AG.DoubleCollection knotsCollection = new();
-    AG.Point3dCollection pts = new();
-
-    target.Knots.Cast<double>().ToList().ForEach(x => knotsCollection.Add(x));
-    target.DefinitionData.ControlPoints.Cast<AG.Point3d>().ToList().ForEach(x => pts.Add(x));
-
-    return _splineConverter.Convert(
-      new ADB.Spline(
-        target.Degree,
-        target.IsRational,
-        target.IsClosed(),
-        target.IsPeriodic(out _),
-        pts,
-        knotsCollection,
-        target.DefinitionData.Weights,
-        0,
-        0
-      )
-    );
-  }
+  public ICurve Convert(AG.NurbCurve3d target) => _curveConverter.Convert(ADB.Curve.CreateFromGeCurve(target));
 }
