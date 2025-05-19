@@ -10,7 +10,7 @@ public static class HierarchyHelper
   /// <summary>
   /// Extracts the meaningful name and path from a ModelItem in a single traversal.
   /// </summary>
-  public static (string Name, string Path) ExtractContext(NAV.ModelItem modelItem)
+  public static (string name, string path) ExtractContext(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
@@ -24,7 +24,7 @@ public static class HierarchyHelper
     // Start with the root document name if available
     if (modelItem.HasModel && !string.IsNullOrEmpty(modelItem.Model.FileName))
     {
-      ancestors.Add(Path.GetFileNameWithoutExtension(modelItem.Model.FileName));
+      ancestors.Add(System.IO.Path.GetFileNameWithoutExtension(modelItem.Model.FileName));
     }
 
     // Traverse up the tree once, collecting both name and path information

@@ -224,7 +224,7 @@ public class NavisworksRootObjectBuilder(
   {
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
-    return (context.Name, context.Path);
+    return (context.name, context.path);
   }
 
   /// <summary>

@@ -1,4 +1,5 @@
 ﻿using Speckle.Converter.Navisworks.Geometry;
+using Speckle.Converter.Navisworks.Helpers;
 
 namespace Speckle.Converter.Navisworks.Settings;
 
@@ -13,7 +14,8 @@ public record Derived(
   SafeBoundingBox ModelBoundingBox, // The bounding box of the model.
   SafeVector TransformVector, // Transformation vector applied to the model.
   bool IsUpright, // Indicates if the model's orientation is upright relative to canonical up.
-  string SpeckleUnits // Units used in Speckle for standardised measurements.
+  string SpeckleUnits, // Units used in Speckle for standardised measurements.
+  VisualModes VisualModes
 );
 
 // Optional settings for conversion to be offered in UI

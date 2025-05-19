@@ -13,7 +13,13 @@
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
-  
+
+
+  <ItemGroup>
+    <Reference Include="UIAutomationClient" />
+    <Reference Include="UIAutomationTypes" />
+  </ItemGroup>
+
   <!-- Includes -->
   <Import Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems" Label="Shared"/>
 

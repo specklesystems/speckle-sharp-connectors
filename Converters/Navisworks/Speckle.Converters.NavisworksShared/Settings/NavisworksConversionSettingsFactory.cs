@@ -16,6 +16,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private NAV.Document? _document;
   private SafeBoundingBox _modelBoundingBox;
   private bool _convertHiddenElements;
+  private VisualModes _visualModes;
 
   public NavisworksConversionSettingsFactory(
     IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
@@ -60,6 +61,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     }
 
     var units = _unitsConverter.ConvertOrThrow(_document.Units);
+
     if (string.IsNullOrEmpty(units))
     {
       throw new InvalidOperationException("Document units could not be converted.");
@@ -76,7 +78,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
         ModelBoundingBox: _modelBoundingBox,
         TransformVector: transformVector,
         IsUpright: isUpright,
-        SpeckleUnits: units
+        SpeckleUnits: units,
+        VisualModes: _visualModes
       ),
       // Optional settings for conversion to be offered in UI
       new User(
@@ -96,6 +99,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
     _logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
     _modelBoundingBox = new SafeBoundingBox(_document.GetBoundingBox(_convertHiddenElements));
+    _visualModes = VisualModeCheck.Current;
   }
 
   private SafeVector CalculateTransformVector() =>
