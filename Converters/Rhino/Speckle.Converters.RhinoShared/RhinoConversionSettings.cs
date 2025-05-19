@@ -2,4 +2,7 @@
 
 namespace Speckle.Converters.Rhino;
 
-public record RhinoConversionSettings(RhinoDoc Document, string SpeckleUnits);
+/// <summary>
+/// Represents the settings used for Rhino and Grasshopper conversions.
+/// </summary>
+public record RhinoConversionSettings(RhinoDoc Document, string SpeckleUnits, bool ModelFarFromOrigin);
