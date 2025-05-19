@@ -24,7 +24,8 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
     ILogger<AutocadReceiveBinding> logger,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IAutocadDocumentActivationSuspension documentActivationSuspension
   )
     : base(
       store,
@@ -34,7 +35,8 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
       operationProgressManager,
       logger,
       speckleApplication,
-      threadContext
+      threadContext,
+      documentActivationSuspension
     )
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;

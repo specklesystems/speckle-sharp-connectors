@@ -24,6 +24,7 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
   private readonly ILogger<AutocadReceiveBinding> _logger;
   private readonly ISpeckleApplication _speckleApplication;
   private readonly IThreadContext _threadContext;
+  private readonly IAutocadDocumentActivationSuspension _documentActivationSuspension;
 
   private ReceiveBindingUICommands Commands { get; }
 
@@ -35,7 +36,8 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
     IOperationProgressManager operationProgressManager,
     ILogger<AutocadReceiveBinding> logger,
     ISpeckleApplication speckleApplication,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IAutocadDocumentActivationSuspension documentActivationSuspension
   )
   {
     _store = store;
@@ -47,6 +49,7 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
     _threadContext = threadContext;
     Parent = parent;
     Commands = new ReceiveBindingUICommands(parent);
+    _documentActivationSuspension = documentActivationSuspension;
   }
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider);
@@ -75,7 +78,7 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
       // Disable document activation (document creation and document switch)
       // Not disabling results in DUI model card being out of sync with the active document
       // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
-      Application.DocumentManager.DocumentActivationEnabled = false;
+      using var _ = _documentActivationSuspension.Suspend();
 
       // Receive host objects
       var operationResults = await scope
@@ -106,9 +109,6 @@ public abstract class AutocadReceiveBaseBinding : IReceiveBinding
     }
     finally
     {
-      // reenable document activation
-      Application.DocumentManager.DocumentActivationEnabled = true;
-
       // regenerate doc to flush graphics, sometimes some objects (ellipses, nurbs curves) do not appear fully visible after receive.
       // Adding a regen (must be run on main thread) here, but it doesn't seem to work:
       // it's run on main thread, tried sending the "regen" string to execute, also tried regen after every object bake, but still can't fix.

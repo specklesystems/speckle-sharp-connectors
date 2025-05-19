@@ -41,6 +41,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly IThreadContext _threadContext;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
+  private readonly IAutocadDocumentActivationSuspension _documentActivationSuspension;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -62,7 +63,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ISpeckleApplication speckleApplication,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager idleManager
+    IAppIdleManager idleManager,
+    IAutocadDocumentActivationSuspension documentActivationSuspension
   )
   {
     _store = store;
@@ -76,6 +78,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _threadContext = threadContext;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _idleManager = idleManager;
+    _documentActivationSuspension = documentActivationSuspension;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
@@ -150,26 +153,23 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private async Task SendInternal(string modelCardId)
   {
-    if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
-    {
-      // Handle as GLOBAL ERROR at BrowserBridge
-      throw new InvalidOperationException("No publish model card was found.");
-    }
-
-    using var scope = _serviceProvider.CreateScope();
-    InitializeSettings(scope.ServiceProvider);
-
-    using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
-
-    // Disable document activation (document creation and document switch)
-    // Not disabling results in DUI model card being out of sync with the active document
-    // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
-
-    // don't try before here as we're not sure if the document is open yet and the finally block
-    // will always be called to try to reenable document activation
     try
     {
-      Application.DocumentManager.DocumentActivationEnabled = false;
+      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+      {
+        // Handle as GLOBAL ERROR at BrowserBridge
+        throw new InvalidOperationException("No publish model card was found.");
+      }
+      using var _ = _documentActivationSuspension.Suspend();
+
+      using var scope = _serviceProvider.CreateScope();
+      InitializeSettings(scope.ServiceProvider);
+
+      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
+
+      // Disable document activation (document creation and document switch)
+      // Not disabling results in DUI model card being out of sync with the active document
+      // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
 
       // Get elements to convert
       List<AutocadRootObject> autocadObjects = Application.DocumentManager.CurrentDocument.GetObjects(
@@ -204,11 +204,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     {
       _logger.LogModelCardHandledError(ex);
       await Commands.SetModelError(modelCardId, ex);
-    }
-    finally
-    {
-      // renable document activation
-      Application.DocumentManager.DocumentActivationEnabled = true;
     }
   }
 
