@@ -23,12 +23,23 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
 
   public List<string> RefreshObjectIds()
   {
-    SelectedObjectIds.Clear();
+    // TODO get this from UI
+    bool includeSublayers = true;
     RhinoDoc doc = RhinoDoc.ActiveDoc;
     if (doc == null)
     {
-      return SelectedObjectIds;
+      return new List<string>();
     }
+
+    var uniqueIds = includeSublayers ? GetObjectIdsWithSublayers(doc) : GetObjectIdsWithoutSublayers(doc);
+
+    SelectedObjectIds = uniqueIds.ToList();
+    return SelectedObjectIds;
+  }
+
+  private HashSet<string> GetObjectIdsWithoutSublayers(RhinoDoc doc)
+  {
+    var result = new HashSet<string>();
 
     foreach (var item in SelectedItems)
     {
@@ -37,33 +48,68 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
         Layer layer = doc.Layers.FindId(layerId);
         if (layer != null)
         {
-          var objectIds = doc.Objects.FindByLayer(layer).Select(obj => obj.Id.ToString());
-          SelectedObjectIds.AddRange(objectIds);
+          foreach (var obj in doc.Objects.FindByLayer(layer))
+          {
+            result.Add(obj.Id.ToString());
+          }
         }
       }
     }
 
-    return SelectedObjectIds;
+    return result;
+  }
+
+  private HashSet<string> GetObjectIdsWithSublayers(RhinoDoc doc)
+  {
+    var result = new HashSet<string>();
+
+    foreach (var item in SelectedItems)
+    {
+      if (Guid.TryParse(item.Id, out Guid layerId))
+      {
+        Layer parentLayer = doc.Layers.FindId(layerId);
+        if (parentLayer != null)
+        {
+          string parentPath = parentLayer.FullPath;
+
+          var layersToSearch = doc.Layers.Where(l =>
+            l.FullPath == parentPath || l.FullPath.StartsWith(parentPath + "::", StringComparison.OrdinalIgnoreCase)
+          );
+
+          foreach (var layer in layersToSearch)
+          {
+            foreach (var obj in doc.Objects.FindByLayer(layer))
+            {
+              result.Add(obj.Id.ToString());
+            }
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   private List<SendFilterSelectItem> GetFilterItems()
   {
-    List<SendFilterSelectItem> filterItems = new List<SendFilterSelectItem>();
+    var filterItems = new HashSet<SendFilterSelectItem>();
     RhinoDoc doc = RhinoDoc.ActiveDoc;
+
     if (doc == null)
     {
-      return filterItems;
+      return filterItems.ToList();
     }
 
     foreach (Layer layer in doc.Layers)
     {
       if (!layer.IsDeleted)
       {
-        filterItems.Add(new SendFilterSelectItem(layer.Id.ToString(), GetFullLayerPath(layer)));
+        var item = new SendFilterSelectItem(layer.Id.ToString(), GetFullLayerPath(layer));
+        filterItems.Add(item);
       }
     }
 
-    return filterItems;
+    return filterItems.ToList();
   }
 
   private string GetFullLayerPath(Layer layer)
