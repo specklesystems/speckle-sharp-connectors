@@ -17,6 +17,5 @@ public class RevitTask(ITopLevelExceptionHandler topLevelExceptionHandler) : IRe
   public Task RunAsync(Func<Task> handler) =>
     RevitAsync.RunAsync(() => topLevelExceptionHandler.CatchUnhandledAsync(handler));
 
-  public Task RunAsync(Action handler) =>
-    RevitAsync.RunAsync(() => topLevelExceptionHandler.CatchUnhandled(handler));
+  public Task RunAsync(Action handler) => RevitAsync.RunAsync(() => topLevelExceptionHandler.CatchUnhandled(handler));
 }
