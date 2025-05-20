@@ -27,11 +27,9 @@ public class GhContextMenuButtonAttributes(GhContextMenuButton owner) : GH_Attri
 
   public override GH_ObjectResponse RespondToMouseDown(GH_Canvas sender, GH_CanvasMouseEvent e)
   {
-    if (Owner.Enabled && e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation))
+    if (Bounds.Contains(e.CanvasLocation) && e.Button == MouseButtons.Left)
     {
-      ToolStripDropDown menu = new();
-      Owner.AppendMenuItems(menu);
-      menu.Show(sender, sender.PointToClient(Cursor.Position));
+      // handle the mouse down to prevent component selection
       return GH_ObjectResponse.Handled;
     }
 
@@ -40,13 +38,22 @@ public class GhContextMenuButtonAttributes(GhContextMenuButton owner) : GH_Attri
 
   public override GH_ObjectResponse RespondToMouseUp(GH_Canvas sender, GH_CanvasMouseEvent e)
   {
-    if (!Owner.Enabled && e.Button == MouseButtons.Right)
+    // detect left-clicks on enabled buttons
+    if (Owner.Enabled && e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation))
     {
-      // Prevents canvas from triggering the right-click behaviour, and showing the context menu.
+      // show menu
+      ToolStripDropDown menu = new();
+      Owner.AppendMenuItems(menu);
+      menu.Show(sender, sender.PointToClient(Cursor.Position));
       return GH_ObjectResponse.Handled;
     }
 
-    // Allowing event to bubble up to canvas will handle the event and show the context menu.
+    // block right-clicks to prevent the default context menu
+    if (e.Button == MouseButtons.Right && Bounds.Contains(e.CanvasLocation))
+    {
+      return GH_ObjectResponse.Handled;
+    }
+
     return base.RespondToMouseUp(sender, e);
   }
 }
