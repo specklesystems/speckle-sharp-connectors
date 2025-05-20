@@ -25,6 +25,19 @@ public class GhContextMenuButtonAttributes(GhContextMenuButton owner) : GH_Attri
     button1.Render(graphics, Parent.Selected, false, false);
   }
 
+  public override GH_ObjectResponse RespondToMouseDown(GH_Canvas sender, GH_CanvasMouseEvent e)
+  {
+    if (Owner.Enabled && e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation))
+    {
+      ToolStripDropDown menu = new();
+      Owner.AppendMenuItems(menu);
+      menu.Show(sender, sender.PointToClient(Cursor.Position));
+      return GH_ObjectResponse.Handled;
+    }
+
+    return base.RespondToMouseDown(sender, e);
+  }
+
   public override GH_ObjectResponse RespondToMouseUp(GH_Canvas sender, GH_CanvasMouseEvent e)
   {
     if (!Owner.Enabled && e.Button == MouseButtons.Right)
