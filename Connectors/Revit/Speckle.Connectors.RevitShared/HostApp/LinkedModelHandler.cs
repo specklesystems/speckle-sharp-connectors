@@ -63,7 +63,9 @@ public class LinkedModelHandler
         viewFilter.GetView().NotNull().Id,
         linkInstance.Id
       );
-      return viewCollector.WhereElementIsNotElementType().ToElements().ToList();
+
+      // NOTE: related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated). See RevitViewsFilter.cs
+      return viewCollector.WhereElementIsNotElementType().Where(e => !string.IsNullOrEmpty(e.Name)).ToList();
 #else
       // 🚨 LIMITATION: in Revit 2023 and below, we can only check if the entire linked model is visible,
       // not individual elements within it. If the linked model is visible, all its elements will be included.
