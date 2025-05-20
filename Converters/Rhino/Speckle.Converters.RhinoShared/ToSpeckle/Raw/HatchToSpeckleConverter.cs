@@ -38,8 +38,13 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
 
     // create display mesh from region by converting to brep first
     var brep = RG.Brep.TryConvertBrep(target);
-    var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(brep);
-    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
+
+    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
+      brep,
+      _settingsStore.Current.ModelFarFromOrigin,
+      _settingsStore.Current.SpeckleUnits,
+      _meshConverter
+    );
 
     return new SOG.Region
     {
