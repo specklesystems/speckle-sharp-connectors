@@ -28,8 +28,12 @@ public class ExtrusionToSpeckleConverter : ITypedConverter<RG.Extrusion, SOG.Ext
   {
     var extrusionEncoding = RawEncodingCreator.Encode(target, _settingsStore.Current.Document);
 
-    var displayMesh = DisplayMeshExtractor.GetGeometryDisplayMesh(target);
-    List<SOG.Mesh> displayValue = displayMesh is null ? new() : new() { _meshConverter.Convert(displayMesh) };
+    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
+      target,
+      _settingsStore.Current.ModelFarFromOrigin,
+      _settingsStore.Current.SpeckleUnits,
+      _meshConverter
+    );
 
     var bx = new SOG.ExtrusionX()
     {
