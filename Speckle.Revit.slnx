@@ -22,6 +22,7 @@
   </Folder>
   <Folder Name="/Connectors/" />
   <Folder Name="/Connectors/Revit/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" Type="Classic C#" />
     <File Path="Connectors/Revit/Directory.Build.targets" />
   </Folder>
   <Folder Name="/Connectors/Revit/2022/">

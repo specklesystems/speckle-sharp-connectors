@@ -27,12 +27,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1" />
-    <PackageReference Include="Revit.Async" />
   </ItemGroup>
 
   <ItemGroup>
