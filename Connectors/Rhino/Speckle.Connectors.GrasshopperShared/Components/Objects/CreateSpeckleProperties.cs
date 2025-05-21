@@ -27,7 +27,11 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager) { }
+  protected override void RegisterInputParams(GH_InputParamManager pManager)
+  {
+    var p = CreateParameter(GH_ParameterSide.Input, 0);
+    pManager.AddParameter(p);
+  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
