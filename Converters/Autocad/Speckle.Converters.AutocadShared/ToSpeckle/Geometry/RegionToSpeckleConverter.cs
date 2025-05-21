@@ -57,12 +57,15 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
       .SelectMany(face => face.Loops);
 
     // Get and convert boundary and inner loops
-    var boundary = GetConvertedLoops(brepLoops, true)[0];
-    var innerLoops = GetConvertedLoops(brepLoops, false);
+    List<ICurve> innerLoops = ParseAndConvertBrepLoops(brepLoops, out ICurve? outerLoop);
+    if (outerLoop is null)
+    {
+      throw new ConversionException("Could not convert outer region loop from brep.");
+    }
 
     return new SOG.Region()
     {
-      boundary = boundary,
+      boundary = outerLoop,
       innerLoops = innerLoops,
       hasHatchPattern = false,
       displayValue = [mesh],
@@ -70,102 +73,87 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     };
   }
 
-  private List<ICurve> GetConvertedLoops(IEnumerable<ABR.BoundaryLoop> brepLoops, bool getOuterLoop)
+  // Iterates through a list of brep boundary loops, converting them to Speckle and parsing between inner and outer loops
+  private List<ICurve> ParseAndConvertBrepLoops(IEnumerable<ABR.BoundaryLoop> brepLoops, out ICurve? outerLoop)
   {
-    var loops = new List<ICurve>();
+    List<ICurve> innerLoops = new();
+    outerLoop = null;
     foreach (var loop in brepLoops)
     {
-      bool outer = loop.LoopType == ABR.LoopType.LoopExterior;
-
-      // continue only if the loop type is as requester (outer or inner)
-      if ((outer && getOuterLoop) || (!outer && !getOuterLoop))
+      List<AG.Curve3d> segments = new();
+      foreach (ABR.Edge edge in loop.Edges)
       {
-        // create segment collection for the current loop
-        var segments = new List<AG.Curve3d>();
-        foreach (var edge in loop.Edges)
+        if (edge.Curve is AG.ExternalCurve3d xCurve && xCurve.IsNativeCurve)
         {
-          var curve = edge.Curve;
-          if (curve is AG.ExternalCurve3d xCurve && xCurve.IsNativeCurve)
-          {
-            segments.Add(xCurve.NativeCurve);
-          }
-          else
-          {
-            throw new ConversionException("Unsupported curve type for Region conversion");
-          }
+          segments.Add(xCurve.NativeCurve);
         }
-        // reverse segment collection with arcs in case end-start points of subsequent segments don't match
-        if (segments.Count > 1 && Math.Abs(segments[0].EndPoint.DistanceTo(segments[1].StartPoint)) > 0.00001)
+        else
         {
-          segments.Reverse();
+          throw new ConversionException("Unsupported curve type for Region conversion");
         }
+      }
 
-        // convert segments to Speckle
-        var convertedLoop = ConvertSegmentsToICurve(segments);
-        loops.Add(convertedLoop);
+      ICurve convertedLoop =
+        segments.Count == 1 ? ConvertSegmentToICurve(segments.First()) : ConvertSegmentsToICurve(segments);
+
+      // sort inner or outer loop
+      if (loop.LoopType == ABR.LoopType.LoopExterior)
+      {
+        outerLoop = convertedLoop;
+      }
+      else
+      {
+        innerLoops.Add(convertedLoop);
       }
     }
 
-    return loops;
+    return innerLoops;
+  }
+
+  private ICurve ConvertSegmentToICurve(AG.Curve3d segment)
+  {
+    switch (segment)
+    {
+      case AG.CircularArc3d arc: // expected to be closed
+        return arc.StartPoint == arc.EndPoint
+          ? _circleConverter.Convert(new ADB.Circle(arc.Center, arc.Normal, arc.Radius))
+          : _arcConverter.Convert(arc);
+      case AG.EllipticalArc3d ellipse:
+        return _ellipseConverter.Convert(
+          new ADB.Ellipse(
+            ellipse.Center,
+            ellipse.Normal,
+            ellipse.MajorRadius * ellipse.MajorAxis,
+            ellipse.MinorRadius / ellipse.MajorRadius,
+            ellipse.StartAngle,
+            ellipse.EndAngle
+          )
+        );
+      case AG.NurbCurve3d nurbs:
+        return _nurbConverter.Convert(nurbs);
+      default:
+        throw new ConversionException($"Unsupported curve type for Region conversion: {segment}");
+    }
   }
 
   private ICurve ConvertSegmentsToICurve(List<AG.Curve3d> segments)
   {
-    ICurve convertedLoop;
-
-    // Handle edge case: if the segment is a closed Arc, then use Circle conversion to create a valid shape.
-    // Also, closed arcs cause errors when receiving in other host apps, like Rhino.
-    if (segments.Count == 1 && segments[0] is AG.CircularArc3d arc && arc.StartAngle + arc.EndAngle == 0)
+    return new SOG.Polycurve()
     {
-      convertedLoop = _circleConverter.Convert(
-        new ADB.Circle(arc.GetPlane().PointOnPlane, arc.GetPlane().Normal, arc.Radius)
-      );
-    }
-    // Another edge case: closed Ellipse.
-    else if (
-      segments.Count == 1
-      && segments[0] is AG.EllipticalArc3d ellipse
-      && Math.Abs(ellipse.EndAngle - ellipse.StartAngle) - 2 * Math.PI < 0.0001
-    )
-    {
-      convertedLoop = _ellipseConverter.Convert(
-        new ADB.Ellipse(
-          new(ellipse.Center.X, ellipse.Center.Y, 0),
-          AG.Vector3d.ZAxis,
-          ellipse.MajorRadius * ellipse.MajorAxis,
-          ellipse.MinorRadius / ellipse.MajorRadius,
-          ellipse.StartAngle,
-          ellipse.EndAngle
-        )
-      );
-    }
-    // otherwise, just construct a Polycurve from subsequent segments
-    else
-    {
-      // Maybe we need to convert to AutoCAD Polycurve
-      convertedLoop = new SOG.Polycurve()
-      {
-        segments = segments.Select(x => ConvertSegment(x)).ToList(),
-        closed = true,
-        units = _settingsStore.Current.SpeckleUnits
-      };
-    }
-
-    return convertedLoop;
+      segments = segments.Select(x => ConvertSegment(x)).ToList(),
+      closed = true,
+      units = _settingsStore.Current.SpeckleUnits
+    };
   }
 
   private ICurve ConvertSegment(AG.Curve3d curve)
   {
-    switch (curve)
+    return curve switch
     {
-      case AG.LineSegment3d line:
-        return _lineConverter.Convert(line);
-      case AG.CircularArc3d arc:
-        return _arcConverter.Convert(arc);
-      case AG.NurbCurve3d nurb:
-        return _nurbConverter.Convert(nurb);
-    }
-
-    throw new ConversionException($"Unsupported curve type for Region conversion: {curve}");
+      AG.LineSegment3d line => _lineConverter.Convert(line),
+      AG.CircularArc3d arc => _arcConverter.Convert(arc),
+      AG.NurbCurve3d nurb => _nurbConverter.Convert(nurb),
+      _ => throw new ConversionException($"Unsupported curve type for Region conversion: {curve}")
+    };
   }
 }
