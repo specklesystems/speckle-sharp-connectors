@@ -16,7 +16,7 @@ public class Sender(
   ILogger<Sender> logger
 )
 {
-  public async Task Send(string projectId, string modelId, Uri serverUrl)
+  public async Task<string?> Send(string projectId, string modelId, Uri serverUrl)
   {
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
@@ -32,13 +32,13 @@ public class Sender(
 
       if (rhinoObjects.Count == 0)
       {
-        return;
+        return null;
       }
       var sendInfo = new SendInfo("fake-account-id", serverUrl, projectId, modelId, string.Empty);
 
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
       var buildResults = await operation.Build(rhinoObjects, sendInfo, new Progress(), CancellationToken.None);
-      var (results, _) = await operation.Send(
+      var (results, versionId) = await operation.Send(
         buildResults.RootObject,
         sendInfo,
         new Progress(),
@@ -46,6 +46,8 @@ public class Sender(
       );
 
       Console.WriteLine($"Root: {results.RootId}");
+
+      return versionId;
     }
 #pragma warning disable CA1031
     catch (Exception ex)
@@ -53,5 +55,7 @@ public class Sender(
     {
       logger.LogError(ex, "Error while sending");
     }
+
+    return null;
   }
 }
