@@ -25,12 +25,10 @@
   </Target>
 
   <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
     <StartArguments>/product C3D</StartArguments>
