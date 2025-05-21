@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
-    <Prefer32bit>false</Prefer32bit>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
@@ -11,6 +10,10 @@
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
   </PropertyGroup>
+  <!--
+  It doesn't matter that these API references are perfectly aligned, because these are specifiying min versions
+  The revit projects will resolve their correct ones
+  -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <PackageReference Include="Speckle.Revit.API" VersionOverride="2022.0.2.1" ExcludeAssets="runtime"/>
   </ItemGroup>
