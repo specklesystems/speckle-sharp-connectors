@@ -33,7 +33,7 @@ public class WorkspaceMenuHandler
     WorkspaceContextMenuButton = new GhContextMenuButton(
       "Select Workspace",
       "Select Workspace",
-      "Right-click to select a workspace",
+      "Left-click to select a workspace",
       PopulateMenu
     );
   }
@@ -114,7 +114,7 @@ public class WorkspaceMenuHandler
   public void RedrawMenuButton(Workspace? workspace)
   {
     var suffix = WorkspaceContextMenuButton.Enabled
-      ? "Right-click to select another workspace."
+      ? "Left-click to select another workspace."
       : "Selection is disabled due to component input.";
     if (workspace != null && !IsPersonalProjects)
     {
@@ -136,7 +136,7 @@ public class WorkspaceMenuHandler
       WorkspaceContextMenuButton.SetIconOverride(null);
       WorkspaceContextMenuButton.Name = "Select Workspace";
       WorkspaceContextMenuButton.NickName = "Workspace";
-      WorkspaceContextMenuButton.Description = "Right-click to select workspace";
+      WorkspaceContextMenuButton.Description = "Left-click to select workspace";
     }
   }
 
