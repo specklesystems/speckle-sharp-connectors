@@ -12,7 +12,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
   private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
-  private readonly ITypedConverter<AG.NurbCurve3d, ICurve> _nurbConverter;
+  private readonly ITypedConverter<ADB.Curve, ICurve> _nurbConverter;
   private readonly ITypedConverter<ADB.Circle, SOG.Circle> _circleConverter;
   private readonly ITypedConverter<ADB.Ellipse, SOG.Ellipse> _ellipseConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -21,7 +21,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
-    ITypedConverter<AG.NurbCurve3d, ICurve> nurbConverter,
+    ITypedConverter<ADB.Curve, ICurve> nurbConverter,
     ITypedConverter<ADB.Circle, SOG.Circle> circleConverter,
     ITypedConverter<ADB.Ellipse, SOG.Ellipse> ellipseConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
@@ -130,7 +130,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
           )
         );
       case AG.NurbCurve3d nurbs:
-        return _nurbConverter.Convert(nurbs);
+        return _nurbConverter.Convert(ADB.Curve.CreateFromGeCurve(nurbs));
       default:
         throw new ConversionException($"Unsupported curve type for Region conversion: {segment}");
     }
@@ -152,7 +152,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     {
       AG.LineSegment3d line => _lineConverter.Convert(line),
       AG.CircularArc3d arc => _arcConverter.Convert(arc),
-      AG.NurbCurve3d nurb => _nurbConverter.Convert(nurb),
+      AG.NurbCurve3d nurb => _nurbConverter.Convert(ADB.Curve.CreateFromGeCurve(nurb)),
       _ => throw new ConversionException($"Unsupported curve type for Region conversion: {curve}")
     };
   }
