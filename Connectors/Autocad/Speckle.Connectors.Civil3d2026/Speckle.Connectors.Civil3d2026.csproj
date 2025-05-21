@@ -4,7 +4,13 @@
     <Civil3DVersion>2026</Civil3DVersion>
     <DefineConstants>$(DefineConstants);CIVIL3D2026;CIVIL3D;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER;CIVIL3D2026_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!--This is needed for managed dependencies-->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies> <!--This is needed for the rest-->
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath> <!--This is needed just to keep folder paths the same as the netframework versions of autocad/civil-->
   </PropertyGroup>
   
   <ItemGroup>

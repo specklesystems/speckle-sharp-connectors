@@ -25,15 +25,35 @@ public class GhContextMenuButtonAttributes(GhContextMenuButton owner) : GH_Attri
     button1.Render(graphics, Parent.Selected, false, false);
   }
 
-  public override GH_ObjectResponse RespondToMouseUp(GH_Canvas sender, GH_CanvasMouseEvent e)
+  public override GH_ObjectResponse RespondToMouseDown(GH_Canvas sender, GH_CanvasMouseEvent e)
   {
-    if (!Owner.Enabled && e.Button == MouseButtons.Right)
+    if (Bounds.Contains(e.CanvasLocation) && e.Button == MouseButtons.Left)
     {
-      // Prevents canvas from triggering the right-click behaviour, and showing the context menu.
+      // handle the mouse down to prevent component selection
       return GH_ObjectResponse.Handled;
     }
 
-    // Allowing event to bubble up to canvas will handle the event and show the context menu.
+    return base.RespondToMouseDown(sender, e);
+  }
+
+  public override GH_ObjectResponse RespondToMouseUp(GH_Canvas sender, GH_CanvasMouseEvent e)
+  {
+    // detect left-clicks on enabled buttons
+    if (Owner.Enabled && e.Button == MouseButtons.Left && Bounds.Contains(e.CanvasLocation))
+    {
+      // show menu
+      ToolStripDropDown menu = new();
+      Owner.AppendMenuItems(menu);
+      menu.Show(sender, sender.PointToClient(Cursor.Position));
+      return GH_ObjectResponse.Handled;
+    }
+
+    // block right-clicks to prevent the default context menu
+    if (e.Button == MouseButtons.Right && Bounds.Contains(e.CanvasLocation))
+    {
+      return GH_ObjectResponse.Handled;
+    }
+
     return base.RespondToMouseUp(sender, e);
   }
 }
