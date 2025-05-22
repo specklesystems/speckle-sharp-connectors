@@ -129,10 +129,6 @@ public class RevitMaterialBaker
         var newMaterialId = Material.Create(_converterSettings.Current.Document, matName);
         var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
-
-        // NOTE: UseRenderAppearanceForShading path of least resistance [CNX-1062](https://linear.app/speckle/issue/CNX-1062/set-material-appearance-in-addition-to-shading)
-        // appearance is based on assets and tricky
-        revitMaterial.UseRenderAppearanceForShading = true;
         revitMaterial.Transparency = (int)(transparency * 100);
         revitMaterial.Shininess = (int)(speckleRenderMaterial.metalness * 128);
         revitMaterial.Smoothness = (int)(smoothness * 128);
