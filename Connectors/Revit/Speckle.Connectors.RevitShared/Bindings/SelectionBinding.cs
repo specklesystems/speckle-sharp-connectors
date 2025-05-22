@@ -1,5 +1,6 @@
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
@@ -12,30 +13,30 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
   private readonly System.Timers.Timer _selectionTimer;
 #endif
   private readonly RevitContext _revitContext;
-  private readonly IAppIdleManager _idleManager;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
 
   public SelectionBinding(
     RevitContext revitContext,
     IBrowserBridge parent,
     IAppIdleManager idleManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IRevitTask revitTask
   )
     : base("selectionBinding", parent)
   {
     _revitContext = revitContext;
-    _idleManager = idleManager;
-    _topLevelExceptionHandler = topLevelExceptionHandler;
 
 #if REVIT2022
     // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
     _selectionTimer = new System.Timers.Timer(1000);
-    _selectionTimer.Elapsed += (_, _) => _topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
+    _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
     _selectionTimer.Start();
 #else
 
-    _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-      _idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged);
+    revitTask.Run(
+      () =>
+        _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
+          idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)
+    );
 #endif
   }
 
