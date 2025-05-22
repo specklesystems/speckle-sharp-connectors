@@ -101,7 +101,68 @@ public sealed class RevitHostObjectBuilder(
       unpackedRoot.ObjectsToConvert.ToList()
     );
 
-    // 2 - Bake materials
+    // NOTE: below is 💩... https://github.com/specklesystems/speckle-sharp-connectors/pull/813 broke sketchup to revit workflow
+    // ids were modified to fix receiving instances [CNX-1707](https://linear.app/speckle/issue/CNX-1707/revit-curves-and-meshes-in-blocks-come-as-duplicated)
+    // but we then broke sketchup to revit because applicationIds in proxies didn't match modified application ids which cam from #813 hack
+    // given urgency to get sketchup to revit workflow back up and running, temp fix involves setting modified ids before material baking, mapping original app ids to modified ids and using those
+    // this way, CNX-1707 fix stays in tact and we fix sketchup to revit
+    // TODO: TransformTo and material baking needs to be fixed in Revit!!
+
+    // create a mapping from original to modified IDs <- so that we can actually map ids in the proxies to the objects
+    Dictionary<string, string> originalToModifiedIds = new();
+
+    // modify application IDs BEFORE material baking
+    foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
+    {
+      if (
+        localToGlobalMap.AtomicObject is ITransformable transformable
+        && localToGlobalMap.Matrix.Count > 0
+        && localToGlobalMap.AtomicObject["units"] is string units
+      )
+      {
+        var id = localToGlobalMap.AtomicObject.id;
+        var originalAppId = localToGlobalMap.AtomicObject.applicationId ?? id;
+
+        // Apply transformations...
+        ITransformable? newTransformable = null;
+        foreach (var mat in localToGlobalMap.Matrix)
+        {
+          transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
+          transformable = newTransformable;
+        }
+
+        localToGlobalMap.AtomicObject = (newTransformable as Base)!;
+        localToGlobalMap.AtomicObject.id = id;
+
+        // create modified ID and store mapping <- fixes CNX-1707 but causes us material mapping headache!!!
+        string modifiedAppId = $"{originalAppId}_{Guid.NewGuid().ToString("N")[..8]}";
+        if (originalAppId != null)
+        {
+          originalToModifiedIds[originalAppId] = modifiedAppId;
+        }
+
+        localToGlobalMap.AtomicObject.applicationId = modifiedAppId;
+        localToGlobalMap.Matrix = new HashSet<Matrix4x4>();
+      }
+    }
+
+    // Update the RenderMaterialProxies with the "new" (aka hacked) application IDs
+    if (unpackedRoot.RenderMaterialProxies != null)
+    {
+      foreach (var proxy in unpackedRoot.RenderMaterialProxies)
+      {
+        var updatedObjects = new List<string>();
+        foreach (var objectId in proxy.objects)
+        {
+          // Use the modified ID if it exists, otherwise keep the original <- this SUCKS and we need to change
+          string idToUse = originalToModifiedIds.TryGetValue(objectId, out var modifiedId) ? modifiedId : objectId;
+          updatedObjects.Add(idToUse);
+        }
+        proxy.objects = updatedObjects;
+      }
+    }
+
+    // 2 - Bake materials (now with the updated IDs)
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       transactionManager.StartTransaction(true, "Baking materials");
@@ -177,35 +238,6 @@ public sealed class RevitHostObjectBuilder(
       try
       {
         using var activity = activityFactory.Start("BakeObject");
-
-        // POC hack of the ages: try to pre transform curves, points and meshes before baking
-        // we need to bypass the local to global converter as there we don't have access to what we want. that service will/should stop existing.
-        if (
-          localToGlobalMap.AtomicObject is ITransformable transformable // and ICurve
-          && localToGlobalMap.Matrix.Count > 0
-          && localToGlobalMap.AtomicObject["units"] is string units
-        )
-        {
-          //TODO TransformTo will be deprecated as it's dangerous and requires ID transposing which is wrong!
-          //ID needs to be copied to the new instance
-          var id = localToGlobalMap.AtomicObject.id;
-          var originalAppId = localToGlobalMap.AtomicObject.applicationId;
-
-          ITransformable? newTransformable = null;
-          foreach (var mat in localToGlobalMap.Matrix)
-          {
-            transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
-            transformable = newTransformable;
-          }
-
-          localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-          localToGlobalMap.AtomicObject.id = id;
-
-          // Make applicationId unique by appending a short GUID
-          // This prevents DirectShapeLibrary from using the same definition for multiple instances
-          localToGlobalMap.AtomicObject.applicationId = $"{originalAppId ?? id}_{Guid.NewGuid().ToString("N")[..8]}"; // hack of all of the ages. related to CNX-1707
-          localToGlobalMap.Matrix = new HashSet<Matrix4x4>(); // flush out the list, as we've applied the transforms already
-        }
 
         // actual conversion happens here!
         var result = converter.Convert(localToGlobalMap.AtomicObject);

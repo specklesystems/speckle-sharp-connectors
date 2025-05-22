@@ -29,7 +29,7 @@ public class ProjectMenuHandler
     ProjectContextMenuButton = new GhContextMenuButton(
       "Select Project",
       "Select Project",
-      "Right-click to select project",
+      "Left-click to select project",
       PopulateMenu
     );
   }
@@ -46,7 +46,7 @@ public class ProjectMenuHandler
   public void RedrawMenuButton(Project? project)
   {
     var suffix = ProjectContextMenuButton.Enabled
-      ? "Right-click to select another project."
+      ? "Left-click to select another project."
       : "Selection is disabled due to component input.";
     if (project != null)
     {
@@ -58,7 +58,7 @@ public class ProjectMenuHandler
     {
       ProjectContextMenuButton.Name = "Select Project";
       ProjectContextMenuButton.NickName = "Project";
-      ProjectContextMenuButton.Description = "Right-click to select project";
+      ProjectContextMenuButton.Description = "Left-click to select project";
     }
   }
 

@@ -1,4 +1,4 @@
-﻿using Rhino.DocObjects;
+using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -30,7 +30,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
     new()
     {
       value = target.PlainText,
-      height = target.TextHeight,
+      height = target.TextHeight * target.DimensionScale,
       maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
       origin = _pointConverter.Convert(target.Plane.Origin),
       plane = GetTextPlane(target),

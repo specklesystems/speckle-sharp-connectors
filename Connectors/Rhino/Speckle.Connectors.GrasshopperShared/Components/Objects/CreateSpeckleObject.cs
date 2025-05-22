@@ -28,12 +28,17 @@ public class CreateSpeckleObject : GH_Component
     pManager.AddGenericParameter(
       "Object",
       "O",
-      "Input Object. Speckle objects, Model Objects, and geometry are accepted.",
+      "Input Object. Speckle Objects, Model Objects, and geometry are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[0].Optional = true;
 
-    pManager.AddGenericParameter("Geometry", "G", "The geometry of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter(
+      "Geometry",
+      "G",
+      "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
+      GH_ParamAccess.item
+    );
     Params.Input[1].Optional = true;
 
     pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
@@ -73,7 +78,12 @@ public class CreateSpeckleObject : GH_Component
   {
     pManager.AddParameter(new SpeckleObjectParam(), "Object", "O", "Speckle Object", GH_ParamAccess.item);
 
-    pManager.AddGenericParameter("Geometry", "G", "The geometry of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter(
+      "Geometry",
+      "G",
+      "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
+      GH_ParamAccess.item
+    );
 
     pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
 

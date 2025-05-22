@@ -16,12 +16,31 @@ public class PartDataExtractor
   /// <returns></returns>
   public Dictionary<string, object?>? GetPartData(CDB.Entity entity)
   {
-    if (entity is CDB.Part part)
+    return entity switch
     {
-      return ParsePartData(part.PartData);
+      CDB.Part part => ParsePartData(part.PartData),
+      CDB.PressurePart pressurePart => ParsePartData(pressurePart.PartData),
+      _ => null
+    };
+  }
+
+  private Dictionary<string, object?> ParsePartData(CDB.PressureNetworkPartData partData)
+  {
+    var result = new Dictionary<string, object?>();
+    foreach (CDB.PressurePartProperty prop in partData)
+    {
+      if (!prop.HasValue)
+      {
+        continue; // don't send null props
+      }
+
+      if (!result.ContainsKey(prop.DisplayName))
+      {
+        result.Add(prop.DisplayName, prop.Value);
+      }
     }
 
-    return null;
+    return result;
   }
 
   private Dictionary<string, object?> ParsePartData(CDB.PartDataRecord partData)

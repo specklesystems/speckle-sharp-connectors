@@ -5,7 +5,7 @@
     <DefineConstants>$(DefineConstants);AUTOCAD2026;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2026.0.0" />
   </ItemGroup>

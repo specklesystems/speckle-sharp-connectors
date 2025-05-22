@@ -29,7 +29,7 @@ public class ModelMenuHandler
     ModelContextMenuButton = new GhContextMenuButton(
       "Select Model",
       "Select Model",
-      "Right-click to select a model",
+      "Left-click to select a model",
       PopulateMenu
     );
   }
@@ -46,7 +46,7 @@ public class ModelMenuHandler
   public void RedrawMenuButton(Model? model)
   {
     var suffix = ModelContextMenuButton.Enabled
-      ? "Right-click to select another model."
+      ? "Left-click to select another model."
       : "Selection is disabled due to component input.";
     if (model != null)
     {
@@ -58,7 +58,7 @@ public class ModelMenuHandler
     {
       ModelContextMenuButton.Name = "Select Model";
       ModelContextMenuButton.NickName = "Model";
-      ModelContextMenuButton.Description = "Right-click to select model";
+      ModelContextMenuButton.Description = "Left-click to select model";
     }
   }
 
