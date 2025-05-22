@@ -27,7 +27,7 @@ public class VersionMenuHandler
     VersionContextMenuButton = new GhContextMenuButton(
       "Select Version",
       "Select Project",
-      "Right-click to select a version",
+      "Left-click to select a version",
       PopulateMenu
     );
   }
@@ -125,7 +125,7 @@ public class VersionMenuHandler
   public void RedrawMenuButton(Version? version)
   {
     var suffix = VersionContextMenuButton.Enabled
-      ? "Right-click to select another version."
+      ? "Left-click to select another version."
       : "Selection is disabled due to component input.";
     if (version != null)
     {
@@ -143,7 +143,7 @@ public class VersionMenuHandler
     {
       VersionContextMenuButton.Name = "Select Version";
       VersionContextMenuButton.NickName = "Version";
-      VersionContextMenuButton.Description = "Right-click to select version";
+      VersionContextMenuButton.Description = "Left-click to select version";
     }
   }
 
