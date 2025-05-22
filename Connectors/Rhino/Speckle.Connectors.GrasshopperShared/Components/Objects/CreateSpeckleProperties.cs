@@ -23,6 +23,8 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override Bitmap Icon => Resources.speckle_properties_create;
 
+  public bool CreateEmptyProperties { get; set; }
+
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -39,7 +41,6 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   protected override void SolveInstance(IGH_DataAccess da)
   {
     // Create a data tree to store output
-
     Dictionary<string, object?> properties = new();
 
     // Check for structure of all inputs to see matching branches
@@ -60,8 +61,18 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
     {
       object? value = null;
       var success = da.GetData(i, ref value);
+      if (!success)
+      {
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Warning,
+          $"Parameter {Params.Input[i].NickName} does not have any values."
+        );
+
+        return;
+      }
+
       var actualValue = value?.GetType().GetProperty("Value").GetValue(value); // note: unsure if reflection here hurts our performance
-      if (!success || value == null || actualValue == null)
+      if (value == null || actualValue == null)
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Warning,
@@ -80,7 +91,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
   {
-    return side == GH_ParameterSide.Input;
+    return side == GH_ParameterSide.Input && !CreateEmptyProperties;
   }
 
   public bool CanRemoveParameter(GH_ParameterSide side, int index)
@@ -136,5 +147,35 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
           break;
       }
     };
+  }
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+    ToolStripMenuItem emptyPropsMenuItem = Menu_AppendItem(
+      menu,
+      "Create empty Properties",
+      (s, e) =>
+      {
+        CreateEmptyProperties = !CreateEmptyProperties;
+        if (CreateEmptyProperties)
+        {
+          Params.Input.Clear();
+          ClearData();
+        }
+        else if (Params.Input.Count == 0)
+        {
+          var p = CreateParameter(GH_ParameterSide.Input, 0);
+          Params.RegisterInputParam(p);
+        }
+        ExpireSolution(true);
+      },
+      true,
+      CreateEmptyProperties
+    );
+    emptyPropsMenuItem.ToolTipText =
+      "Toggle creating empty Properties. If set, the output Properties will be empty. Use for removing properties from objects.";
   }
 }
