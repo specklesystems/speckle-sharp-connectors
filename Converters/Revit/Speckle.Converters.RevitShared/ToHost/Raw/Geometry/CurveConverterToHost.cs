@@ -6,10 +6,15 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class CurveConverterToHost : ITypedConverter<SOG.Curve, DB.Curve>
 {
   private readonly ITypedConverter<SOG.Point, DB.XYZ> _pointConverter;
+  private readonly ITypedConverter<SOG.Polyline, DB.CurveArray> _polylineConverter;
 
-  public CurveConverterToHost(ITypedConverter<SOG.Point, DB.XYZ> pointConverter)
+  public CurveConverterToHost(
+    ITypedConverter<SOG.Point, DB.XYZ> pointConverter,
+    ITypedConverter<SOG.Polyline, DB.CurveArray> polylineConverter
+  )
   {
     _pointConverter = pointConverter;
+    _polylineConverter = polylineConverter;
   }
 
   public DB.Curve Convert(SOG.Curve target)
@@ -33,9 +38,35 @@ public class CurveConverterToHost : ITypedConverter<SOG.Curve, DB.Curve>
         speckleKnots.Add(speckleKnots[^1]);
       }
 
-      //var knots = speckleKnots.GetRange(0, pts.Count + speckleCurve.degree + 1);
-      var curve = DB.NurbSpline.CreateCurve(target.degree, speckleKnots, pts, weights);
-      return curve;
+      try
+      {
+        //var knots = speckleKnots.GetRange(0, pts.Count + speckleCurve.degree + 1);
+        var curve = DB.NurbSpline.CreateCurve(target.degree, speckleKnots, pts, weights);
+        return curve;
+      }
+      // An exception was thrown by NurbSpline.CreateCurve
+      // because Revit is stricter than Rhino regarding the input parameters for NURBS curves.
+      // this case is encountered for semicircles that are converted as NURBS
+      // Exception message:
+      // "The multiplicities of other interior knots must be at most degree - 2."
+      // The solution below falls back to using displayValue.
+      catch (Autodesk.Revit.Exceptions.ArgumentException)
+      {
+        var curveArray = _polylineConverter.Convert(target.displayValue);
+
+        List<DB.XYZ> points = new List<DB.XYZ>();
+        if (curveArray.Size > 0)
+        {
+          points.Add(curveArray.get_Item(0).GetEndPoint(0));
+
+          foreach (DB.Curve curve in curveArray)
+          {
+            points.Add(curve.GetEndPoint(1));
+          }
+        }
+
+        return DB.HermiteSpline.Create(points, false);
+      }
     }
     else
     {
