@@ -285,12 +285,28 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     var type = typeof(T);
 
-    if (type == typeof(IGH_GeometricGoo))
+    if (Value.GeometryBase == null)
     {
-      target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-      return true;
+      return CastToModelObject(ref target);
     }
 
+    switch (type)
+    {
+      case Type t when t == typeof(GH_Brep):
+        Brep? brep = null;
+        if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
+        {
+          target = (T)(object)new GH_Brep(brep);
+          return true;
+        }
+        break;
+
+      case Type t when t == typeof(IGH_GeometricGoo):
+        target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
+        return true;
+    }
+
+    // fallback to existing model object casting
     return CastToModelObject(ref target);
   }
 
