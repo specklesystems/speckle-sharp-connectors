@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Plugin;
@@ -25,7 +26,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    var ret = await global::Revit.Async.RevitTask.RunAsync(_ =>
+    var ret = await RevitAsync.RunAsync(() =>
     {
       try
       {
@@ -48,7 +49,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    var ret = await global::Revit.Async.RevitTask.RunAsync(async _ =>
+    var ret = await RevitAsync.RunAsync(async () =>
     {
       try
       {
@@ -71,7 +72,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    await global::Revit.Async.RevitTask.RunAsync(async _ =>
+    await RevitAsync.RunAsync(async () =>
     {
       try
       {
@@ -92,7 +93,7 @@ public class RevitThreadContext : ThreadContext
   {
     Exception? ex = null;
     //force the usage of the application overload
-    await global::Revit.Async.RevitTask.RunAsync(() =>
+    await RevitAsync.RunAsync(() =>
     {
       try
       {
