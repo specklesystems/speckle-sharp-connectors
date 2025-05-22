@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
@@ -83,6 +83,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
     // i (björn) noticed that all these elements have an empty string as Name parameter, hence below exclusion. tested as much as possible, seems like legit fix
     var objectIds = elementsInView.Where(e => !string.IsNullOrEmpty(e.Name)).Select(e => e.UniqueId).ToList();
+    objectIds.Add(view.UniqueId.ToString());
     SelectedObjectIds = objectIds;
     return objectIds;
   }
