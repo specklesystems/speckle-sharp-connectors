@@ -83,7 +83,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
     // i (björn) noticed that all these elements have an empty string as Name parameter, hence below exclusion. tested as much as possible, seems like legit fix
     var objectIds = elementsInView.Where(e => !string.IsNullOrEmpty(e.Name)).Select(e => e.UniqueId).ToList();
-    // we need the view uniqueId between the objectIds
+    // we need the view uniqueId among the objectIds
     // to expire the modelcars with viewFilters when the user chages category visibility
     // a change in category visibility will trigger DocChangeHandler in RevitSendBinding
     // [CNX-914] https://linear.app/speckle/issue/CNX-914/hidingunhiding-a-category-dont-trigger-object-tracking
