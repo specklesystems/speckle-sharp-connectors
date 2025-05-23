@@ -33,10 +33,7 @@ public class SendOperationManagerFactory(IServiceProvider serviceProvider,
     );
 }
 
-public partial interface ISendOperationManager : IDisposable
-{
-  T GetScoped<T>();
-}
+public partial interface ISendOperationManager : IDisposable;
 
 [GenerateAutoInterface]
 public sealed class SendOperationManager(IServiceScope serviceScope, 
@@ -65,16 +62,13 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
     await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
   }
   
-  [AutoInterfaceIgnore]
-  public T GetScoped<T>()
-   =>
-    serviceScope.ServiceProvider.GetRequiredService<T>();
 
   public async Task Process<T>(
     
     SendBindingUICommands   commands, 
     string modelCardId,
-    Func<SenderModelCard, IReadOnlyList<T>> gatherObjects)
+    Action<IServiceProvider, SenderModelCard> initializeScope, 
+    Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects)
   {
     try
     {
@@ -85,8 +79,10 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
       }
 
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
+      
+      initializeScope( serviceScope.ServiceProvider, modelCard);
 
-      var objects = gatherObjects(modelCard);
+      var objects = await gatherObjects(modelCard);
 
       if (objects.Count == 0)
       {
@@ -110,6 +106,11 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
     {
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
+    }   
+    finally
+    {
+      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
+      cancellationManager.CancelOperation(modelCardId);
     }
   }
 
