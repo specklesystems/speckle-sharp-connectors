@@ -57,7 +57,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
-  public MixPanelManager MixPanelManager { get; set; }
+  public IMixPanelManager MixPanelManager { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
@@ -143,7 +143,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
     var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
     var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
