@@ -48,23 +48,7 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
   ILogger<SendOperationManager> logger)
   : ISendOperationManager
 {
-  public async Task Send<T>(IReadOnlyList<T> objects,
-    SendBindingUICommands   commands, 
-    SendInfo sendInfo,
-    string modelCardId,
-    CancellationToken cancellationToken)
-  {
-    var sendResult = await serviceScope
-      .ServiceProvider.GetRequiredService<SendOperation<T>>()
-      .Execute(
-        objects,
-        sendInfo,
-        operationProgressManager.CreateOperationProgressEventHandler(commands.Bridge, modelCardId, cancellationToken),
-        cancellationToken
-      );
 
-    await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
-  }
 
   public async Task Process<T>(
 
@@ -73,7 +57,17 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, IReadOnlyList<T>> gatherObjects)
   {
-    await Process(commands, modelCardId, initializeScope, card => Task.FromResult(gatherObjects(card)));
+    await Process(commands, modelCardId,  initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
+  }
+  
+  public async Task Process<T>(
+
+    SendBindingUICommands commands,
+    string modelCardId,
+    Action<IServiceProvider, SenderModelCard> initializeScope,
+    Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects)
+  {
+    await Process(commands, modelCardId,  initializeScope, async (card, _) => await gatherObjects(card));
   }
 
   public async Task Process<T>(
@@ -81,7 +75,7 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
     SendBindingUICommands   commands, 
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope, 
-    Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects)
+    Func<SenderModelCard, IProgress<CardProgress>, Task<IReadOnlyList<T>>> gatherObjects)
   {
     using var activity = activityFactory.Start();
     try
@@ -95,8 +89,12 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
       
       initializeScope( serviceScope.ServiceProvider, modelCard);
+      
+      var progress =
+        operationProgressManager.CreateOperationProgressEventHandler(commands.Bridge, modelCardId,
+          cancellationItem.Token);
 
-      var objects = await gatherObjects(modelCard);
+      var objects = await gatherObjects(modelCard, progress);
 
       if (objects.Count == 0)
       {
@@ -104,10 +102,20 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = modelCard.GetSendInfo(speckleApplication.ApplicationAndVersion); 
-      await Send(objects, commands, sendInfo, modelCardId, 
-        cancellationItem.Token
-      );
+      var sendInfo = modelCard.GetSendInfo(speckleApplication.ApplicationAndVersion);
+
+      
+      var sendResult = await serviceScope
+        .ServiceProvider.GetRequiredService<SendOperation<T>>()
+        .Execute(
+          objects,
+          sendInfo,
+          progress
+        ,
+          cancellationItem.Token
+        );
+
+      await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {
