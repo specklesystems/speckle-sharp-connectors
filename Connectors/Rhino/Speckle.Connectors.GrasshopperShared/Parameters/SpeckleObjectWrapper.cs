@@ -283,31 +283,134 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   public override bool CastTo<T>(ref T target)
   {
-    var type = typeof(T);
-
     if (Value.GeometryBase == null)
     {
       return CastToModelObject(ref target);
     }
 
-    switch (type)
-    {
-      case Type t when t == typeof(GH_Brep):
-        Brep? brep = null;
-        if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
-        {
-          target = (T)(object)new GH_Brep(brep);
-          return true;
-        }
-        break;
+    var targetType = typeof(T);
 
-      case Type t when t == typeof(IGH_GeometricGoo):
+    switch (targetType)
+    {
+      case var _ when targetType == typeof(GH_Point):
+        return TryCastToPoint(ref target);
+
+      case var _ when targetType == typeof(GH_Curve):
+        return TryCastToCurve(ref target);
+
+      case var _ when targetType == typeof(GH_Line):
+        return TryCastToLine(ref target);
+
+      case var _ when targetType == typeof(GH_Brep):
+        return TryCastToBrep(ref target);
+
+      case var _ when targetType == typeof(GH_Mesh):
+        return TryCastToMesh(ref target);
+
+      case var _ when targetType == typeof(GH_SubD):
+        return TryCastToSubD(ref target);
+
+      case var _ when targetType == typeof(GH_Surface):
+        return TryCastToSurface(ref target);
+
+      case var _ when targetType == typeof(GH_PointCloud):
+        return TryCastToPointcloud(ref target);
+
+      case var _ when targetType == typeof(IGH_GeometricGoo):
         target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
         return true;
-    }
 
-    // fallback to existing model object casting
-    return CastToModelObject(ref target);
+      default:
+        return CastToModelObject(ref target);
+    }
+  }
+
+  private bool TryCastToPointcloud<T>(ref T target)
+  {
+    PointCloud? pointCloud = null;
+    if (GH_Convert.ToPointCloud(Value.GeometryBase, ref pointCloud, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_PointCloud(pointCloud);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToSurface<T>(ref T target)
+  {
+    Surface? surface = null;
+    if (GH_Convert.ToSurface(Value.GeometryBase, ref surface, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Surface(surface);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToSubD<T>(ref T target)
+  {
+    SubD? subd = null;
+    if (GH_Convert.ToSubD(Value.GeometryBase, ref subd, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_SubD(subd);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToMesh<T>(ref T target)
+  {
+    Mesh? mesh = null;
+    if (GH_Convert.ToMesh(Value.GeometryBase, ref mesh, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Mesh(mesh);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToBrep<T>(ref T target)
+  {
+    Brep? brep = null;
+    if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Brep(brep);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToLine<T>(ref T target)
+  {
+    Line line = new();
+    if (GH_Convert.ToLine(Value.GeometryBase, ref line, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Line(line);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToCurve<T>(ref T target)
+  {
+    Curve? curve = null;
+    if (GH_Convert.ToCurve(Value.GeometryBase, ref curve, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Curve(curve);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToPoint<T>(ref T target)
+  {
+    Point3d point = new();
+    if (GH_Convert.ToPoint3d(Value.GeometryBase, ref point, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Point(point);
+      return true;
+    }
+    return false;
   }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
