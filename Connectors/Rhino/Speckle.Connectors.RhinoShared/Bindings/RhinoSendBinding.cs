@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Commands;
@@ -16,7 +17,6 @@ using Speckle.Connectors.Rhino.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -31,7 +31,6 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
-  private readonly ISdkActivityFactory _activityFactory;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
@@ -62,7 +61,6 @@ public sealed class RhinoSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    ISdkActivityFactory activityFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler, ISendOperationManagerFactory sendOperationManagerFactory)
   {
     _store = store;
@@ -75,7 +73,6 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
-    _activityFactory = activityFactory;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
   }
@@ -271,17 +268,19 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    using var activity = _activityFactory.Start();
     using var manager = _sendOperationManagerFactory.Create();
-    manager.GetScoped<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      
 
-    await manager.Process(Commands, modelCardId, x => x
-      .SendFilter.NotNull()
-      .RefreshObjectIds()
-      .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
-      .Where(obj => obj != null)
-      .ToList());
+    await manager.Process(Commands, modelCardId, (sp, _) => 
+      sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>().Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc)) , card =>
+    {
+      return Task.FromResult<IReadOnlyList<RhinoObject>>(card
+        .SendFilter.NotNull()
+        .RefreshObjectIds()
+        .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
+        .Where(obj => obj != null)
+        .ToList());
+    });
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);

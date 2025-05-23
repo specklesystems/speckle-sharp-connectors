@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
@@ -11,7 +10,6 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.Civil3dShared.Bindings;
 
@@ -25,30 +23,22 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     IBrowserBridge parent,
     IEnumerable<ISendFilter> sendFilters,
     ICancellationManager cancellationManager,
-    IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
-    ILogger<AutocadSendBinding> logger,
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager appIdleManager
+    IAppIdleManager appIdleManager, ISendOperationManagerFactory sendOperationManagerFactory
   )
     : base(
       store,
       parent,
       sendFilters,
       cancellationManager,
-      serviceProvider,
       sendConversionCache,
-      operationProgressManager,
-      logger,
-      speckleApplication,
       threadContext,
       topLevelExceptionHandler,
-      appIdleManager
+      appIdleManager,sendOperationManagerFactory
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;

@@ -8,6 +8,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -18,6 +19,7 @@ public class SendOperationManagerFactory(IServiceProvider serviceProvider,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
+  ISdkActivityFactory activityFactory,
   ILoggerFactory loggerFactory)
   : ISendOperationManagerFactory
 {
@@ -28,7 +30,7 @@ public class SendOperationManagerFactory(IServiceProvider serviceProvider,
 #pragma warning restore CA2000
       operationProgressManager,
       store,
-      cancellationManager, speckleApplication,
+      cancellationManager, speckleApplication,activityFactory,
       loggerFactory.CreateLogger<SendOperationManager>()
     );
 }
@@ -41,6 +43,8 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
    DocumentModelStore store,
    ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
+  
+ ISdkActivityFactory activityFactory,
   ILogger<SendOperationManager> logger)
   : ISendOperationManager
 {
@@ -61,7 +65,16 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
 
     await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
   }
-  
+
+  public async Task Process<T>(
+
+    SendBindingUICommands commands,
+    string modelCardId,
+    Action<IServiceProvider, SenderModelCard> initializeScope,
+    Func<SenderModelCard, IReadOnlyList<T>> gatherObjects)
+  {
+    await Process(commands, modelCardId, initializeScope, card => Task.FromResult(gatherObjects(card)));
+  }
 
   public async Task Process<T>(
     
@@ -70,6 +83,7 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
     Action<IServiceProvider, SenderModelCard> initializeScope, 
     Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects)
   {
+    using var activity = activityFactory.Start();
     try
     {
       if (store.GetModelById(modelCardId) is not SenderModelCard modelCard)
