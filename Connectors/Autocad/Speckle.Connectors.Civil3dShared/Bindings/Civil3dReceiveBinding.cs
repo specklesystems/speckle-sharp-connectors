@@ -28,7 +28,8 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     ISpeckleApplication speckleApplication,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IAutocadDocumentActivationSuspension documentActivationSuspension
   )
     : base(
       store,
@@ -38,7 +39,8 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
       operationProgressManager,
       logger,
       speckleApplication,
-      threadContext
+      threadContext,
+      documentActivationSuspension
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;
