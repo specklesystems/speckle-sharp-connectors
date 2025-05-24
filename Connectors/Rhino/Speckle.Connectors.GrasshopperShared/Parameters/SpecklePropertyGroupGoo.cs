@@ -73,13 +73,17 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       {
         dictionary.Add(entry.Key, entry.Value.Value);
       }
-
       target = (T)(object)dictionary;
       return true;
     }
 
-    return false;
+    // call CastToModelObject for Rhino8+ model objects
+    return CastToModelObject(ref target);
   }
+
+#if !RHINO8_OR_GREATER
+  private bool CastToModelObject<T>(ref T _) => false;
+#endif
 
   // Flattens a dictionary that may contain more dictionaries of the same type
   private void FlattenDictionary(
