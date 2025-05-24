@@ -73,12 +73,11 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       {
         dictionary.Add(entry.Key, entry.Value.Value);
       }
-
       target = (T)(object)dictionary;
       return true;
     }
 
-    return false;
+    return CastToModelObject(ref target);
   }
 
   // Flattens a dictionary that may contain more dictionaries of the same type
