@@ -5,7 +5,7 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// An implementation of Param_GenericObject specific for variable input components that supports name inheritance
+/// An implementation of Param_GenericObject specific for variable input components that support name inheritance
 /// </summary>
 public class SpeckleVariableParam : Param_GenericObject
 {
@@ -23,9 +23,9 @@ public class SpeckleVariableParam : Param_GenericObject
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
-    base.AppendAdditionalMenuItems(menu);
+    base.AppendAdditionalMenuItems(menu); // adds normal menu stuff first
 
-    if (CanInheritNames && MutableNickName && Sources.Count > 0)
+    if (CanInheritNames && MutableNickName && Sources.Count > 0) // inherit names only shows up if something is connected
     {
       Menu_AppendSeparator(menu);
       Menu_AppendItem(menu, "Inherit names", (sender, args) => InheritNickname(), true);
@@ -67,9 +67,9 @@ public class SpeckleVariableParam : Param_GenericObject
 
   public override void AddSource(IGH_Param source, int index)
   {
-    base.AddSource(source, index);
+    base.AddSource(source, index); // do normal connection stuff
 
-    // auto-inherit if Tab key pressed during connecting
+    // if Tab was pressed, automatically inherit name
     if (MutableNickName && CanInheritNames && KeyWatcher.TabPressed)
     {
       InheritNickname();

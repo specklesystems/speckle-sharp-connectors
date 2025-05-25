@@ -25,10 +25,10 @@ public static class KeyWatcher
       return;
     }
 
-    // Hook into canvas creation event
+    // hook into canvas creation event
     Instances.CanvasCreated += OnCanvasCreated;
 
-    // If canvas already exists, hook into it immediately
+    // if canvas already exists, hook into it immediately
     if (Instances.ActiveCanvas != null)
     {
       HookIntoCanvas(Instances.ActiveCanvas);
