@@ -1,5 +1,4 @@
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Parameters;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -142,35 +141,26 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootSpeckleCollectionWrapper));
   }
 
-  public bool CanInsertParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Input;
-  }
+  public bool CanInsertParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input;
 
-  public bool CanRemoveParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Input;
-  }
+  public bool CanRemoveParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input;
 
   public IGH_Param CreateParameter(GH_ParameterSide side, int index)
   {
-    var myParam = new Param_GenericObject
+    var myParam = new SpeckleVariableParam
     {
       Name = $"Sub-Collection {Params.Input.Count + 1}",
+      NickName = $"Sub-Collection {Params.Input.Count + 1}",
       MutableNickName = true,
       Optional = true,
-      Access = GH_ParamAccess.tree // always tree
+      Access = GH_ParamAccess.tree,
+      CanInheritNames = true
     };
 
-    myParam.NickName = myParam.Name;
-    myParam.Optional = true;
     return myParam;
   }
 
-  public bool DestroyParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Input;
-  }
+  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input;
 
   public void VariableParameterMaintenance()
   {
