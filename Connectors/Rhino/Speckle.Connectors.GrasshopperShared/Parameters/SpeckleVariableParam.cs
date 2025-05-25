@@ -1,15 +1,22 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// A specialized parameter for variable input components that supports name inheritance
+/// An implementation of Param_GenericObject specific for variable input components that supports name inheritance
 /// </summary>
 public class SpeckleVariableParam : Param_GenericObject
 {
   public bool CanInheritNames { get; set; } = true;
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
+
+  static SpeckleVariableParam()
+  {
+    // initialize KeyWatcher once for all instances
+    KeyWatcher.Initialize();
+  }
 
   public SpeckleVariableParam()
     : base() { }
@@ -62,7 +69,10 @@ public class SpeckleVariableParam : Param_GenericObject
   {
     base.AddSource(source, index);
 
-    // For now, only support manual inheritance via right-click
-    // TODO: Tab key auto-inheritance like in v2
+    // auto-inherit if Tab key pressed during connecting
+    if (MutableNickName && CanInheritNames && KeyWatcher.TabPressed)
+    {
+      InheritNickname();
+    }
   }
 }
