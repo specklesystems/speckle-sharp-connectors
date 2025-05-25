@@ -63,13 +63,9 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       da.GetData(i, ref value);
 
       // POC: for now, allow empty properties
-      if (value == null)
+      SpecklePropertyGoo actualValue = new();
+      if (value != null)
       {
-        properties[Params.Input[i].NickName] = new SpecklePropertyGoo();
-      }
-      else
-      {
-        SpecklePropertyGoo actualValue = new();
         if (!actualValue.CastFrom(value))
         {
           AddRuntimeMessage(
@@ -79,9 +75,9 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
           return;
         }
-
-        properties[Params.Input[i].NickName] = actualValue;
       }
+
+      properties[Params.Input[i].NickName] = actualValue;
     }
 
     var groupGoo = new SpecklePropertyGroupGoo(properties);
