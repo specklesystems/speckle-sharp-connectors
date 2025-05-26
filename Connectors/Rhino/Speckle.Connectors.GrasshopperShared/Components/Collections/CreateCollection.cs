@@ -69,7 +69,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
       if (inputCollections.Count != 0 && inputNonCollections.Count != 0)
       {
-        // TODO: error out! we want to disallow setting objects and collections in the same parent collection
+        // error out! we want to disallow setting objects and collections in the same parent collection
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
           $"Parameter {inputParam.NickName} should not contain both objects and collections."
@@ -154,13 +154,14 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   public IGH_Param CreateParameter(GH_ParameterSide side, int index)
   {
-    var myParam = new Param_GenericObject
-    {
-      Name = $"Sub-Collection {Params.Input.Count + 1}",
-      MutableNickName = true,
-      Optional = true,
-      Access = GH_ParamAccess.tree // always tree
-    };
+    Param_GenericObject myParam =
+      new()
+      {
+        Name = $"Sub-Collection {Params.Input.Count + 1}",
+        MutableNickName = true,
+        Optional = true,
+        Access = GH_ParamAccess.tree // always tree
+      };
 
     myParam.NickName = myParam.Name;
     myParam.Optional = true;
@@ -170,11 +171,6 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   public bool DestroyParameter(GH_ParameterSide side, int index)
   {
     return side == GH_ParameterSide.Input;
-  }
-
-  public void VariableParameterMaintenance()
-  {
-    // TODO?
   }
 
   public override void AddedToDocument(GH_Document document)
@@ -198,7 +194,21 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           args.Parameter.Name = args.Parameter.NickName;
           ExpireSolution(true);
           break;
+        case GH_ObjectEventType.Sources:
+          // if this event is a source change, and param is the last input, then add a new param automatically
+          if (args.Parameter.SourceCount > 0 && args.ParameterIndex == Params.Input.Count - 1)
+          {
+            IGH_Param param = CreateParameter(GH_ParameterSide.Input, Params.Input.Count);
+            Params.RegisterInputParam(param);
+            Params.OnParametersChanged();
+          }
+          break;
       }
     };
+  }
+
+  public void VariableParameterMaintenance()
+  {
+    //todo
   }
 }
