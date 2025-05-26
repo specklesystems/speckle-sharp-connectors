@@ -1,3 +1,4 @@
+using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
@@ -6,9 +7,11 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Operations.Send;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
@@ -23,6 +26,9 @@ public class PriorityLoader : GH_AssemblyPriority
 
   public override GH_LoadingInstruction PriorityLoad()
   {
+    Instances.ComponentServer.AddCategoryIcon(ComponentCategories.PRIMARY_RIBBON, Resources.speckle_logo);
+    Instances.ComponentServer.AddCategorySymbolName(ComponentCategories.PRIMARY_RIBBON, 'S');
+
     try
     {
       var services = new ServiceCollection();

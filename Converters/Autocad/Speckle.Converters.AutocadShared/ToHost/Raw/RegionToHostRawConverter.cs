@@ -21,21 +21,21 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
 
     // Converted boundary
     List<(ADB.Entity, Base)> convertedBoundary = _curveConverter.Convert(target.boundary);
-    ADB.Curve nativeBoundary = ValidateCurve(convertedBoundary);
+    List<ADB.Entity> nativeBoundary = convertedBoundary.Select(x => x.Item1).ToList();
 
     // Converted loops
-    var nativeLoops = new List<ADB.Curve>();
+    List<List<ADB.Entity>> nativeLoops = new();
     foreach (var loop in target.innerLoops)
     {
       List<(ADB.Entity, Base)> convertedLoop = _curveConverter.Convert(loop);
-      nativeLoops.Add(ValidateCurve(convertedLoop));
+      nativeLoops.Add(convertedLoop.Select(x => x.Item1).ToList());
     }
 
     // Add boundary to the ADB.DBObjectCollection
     // Calculate the outer region, method should return an array with 1 region
     // https://help.autodesk.com/view/OARX/2025/ENU/?guid=GUID-684E602E-3555-4370-BCDC-1CE594676C43
     ADB.DBObjectCollection boundaryDBObjColl = new();
-    boundaryDBObjColl.Add(nativeBoundary);
+    nativeBoundary.ForEach(x => boundaryDBObjColl.Add(x));
     using (ADB.DBObjectCollection outerRegionColl = ADB.Region.CreateFromCurves(boundaryDBObjColl))
     {
       if (outerRegionColl.Count != 1)
@@ -52,7 +52,7 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
           // Same as above: Add loop segments to the ADB.DBObjectCollection
           // Calculate the inner region, method should return an array with 1 region
           ADB.DBObjectCollection loopDBObjColl = new();
-          loopDBObjColl.Add(nativeLoop);
+          nativeLoop.ForEach(x => loopDBObjColl.Add(x));
           using (ADB.DBObjectCollection innerRegionColl = ADB.Region.CreateFromCurves(loopDBObjColl))
           {
             if (innerRegionColl.Count != 1)
@@ -75,15 +75,5 @@ public class RegionToHostRawConverter : ITypedConverter<SOG.Region, ADB.Region>
     }
 
     throw new ConversionException($"Region conversion failed: {target}");
-  }
-
-  private ADB.Curve ValidateCurve(List<(ADB.Entity, Base)> convertedResult)
-  {
-    if (convertedResult.Count != 1)
-    {
-      // this will only be the case if it was a non-planar Polycurve: throw error
-      throw new ConversionException($"Non-planar Polycurve cannot be used as a Region loop: {convertedResult}");
-    }
-    return (ADB.Curve)convertedResult[0].Item1;
   }
 }
