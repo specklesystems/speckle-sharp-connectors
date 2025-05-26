@@ -17,6 +17,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
+  public bool AlwaysInheritNames { get; set; } = true;
+
   public CreateCollection()
     : base(
       "Create Collection",
@@ -154,7 +156,8 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       MutableNickName = true,
       Optional = true,
       Access = GH_ParamAccess.tree,
-      CanInheritNames = true
+      CanInheritNames = true,
+      AlwaysInheritNames = AlwaysInheritNames
     };
 
     return myParam;
@@ -199,5 +202,30 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   public void VariableParameterMaintenance()
   {
     //todo
+  }
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+    ToolStripMenuItem alwaysInheritMenuItem = Menu_AppendItem(
+      menu,
+      "Always inherit names",
+      (s, e) =>
+      {
+        AlwaysInheritNames = !AlwaysInheritNames;
+        // Update existing parameters
+        foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
+        {
+          param.AlwaysInheritNames = AlwaysInheritNames;
+        }
+        OnDisplayExpired(true);
+      },
+      true,
+      AlwaysInheritNames
+    );
+    alwaysInheritMenuItem.ToolTipText =
+      "Toggle automatic name inheritance. If set, parameters will automatically inherit names from connected sources.";
   }
 }

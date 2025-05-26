@@ -10,6 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public class SpeckleVariableParam : Param_GenericObject
 {
   public bool CanInheritNames { get; set; } = true;
+  public bool AlwaysInheritNames { get; set; } = true;
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
 
   static SpeckleVariableParam()
@@ -70,7 +71,8 @@ public class SpeckleVariableParam : Param_GenericObject
     base.AddSource(source, index); // do normal connection stuff
 
     // if Tab was pressed, automatically inherit name
-    if (MutableNickName && CanInheritNames && KeyWatcher.TabPressed)
+    // or if set to always inherit
+    if (MutableNickName && CanInheritNames && (AlwaysInheritNames || KeyWatcher.TabPressed))
     {
       InheritNickname();
     }

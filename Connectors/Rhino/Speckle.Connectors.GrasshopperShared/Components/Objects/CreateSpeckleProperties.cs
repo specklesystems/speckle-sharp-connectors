@@ -23,6 +23,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   protected override Bitmap Icon => Resources.speckle_properties_create;
 
   public bool CreateEmptyProperties { get; set; }
+  public bool AlwaysInheritNames { get; set; } = true;
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
@@ -148,6 +149,26 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
     base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+    ToolStripMenuItem alwaysInheritMenuItem = Menu_AppendItem(
+      menu,
+      "Always inherit names",
+      (s, e) =>
+      {
+        AlwaysInheritNames = !AlwaysInheritNames;
+        // Update existing parameters
+        foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
+        {
+          param.AlwaysInheritNames = AlwaysInheritNames;
+        }
+        OnDisplayExpired(true);
+      },
+      true,
+      AlwaysInheritNames
+    );
+    alwaysInheritMenuItem.ToolTipText =
+      "Toggle automatic name inheritance. If set, parameters will automatically inherit names from connected sources.";
 
     Menu_AppendSeparator(menu);
     ToolStripMenuItem emptyPropsMenuItem = Menu_AppendItem(
