@@ -57,23 +57,6 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       return true;
     }
 
-    // raw rhino types (for direct casting scenarios) <- could we remove?? 🧐
-    // for model content we would only ever hit IGH_ModelContentData
-    // added ModelUserText as this is the pattern oberved in the rest of codebase.
-    if (type == typeof(ModelUserText))
-    {
-      var keyValuePairs = new List<KeyValuePair<string, string>>();
-      foreach (var entry in Value)
-      {
-        string stringValue = entry.Value.Value?.ToString() ?? "";
-        keyValuePairs.Add(new KeyValuePair<string, string>(entry.Key, stringValue));
-      }
-
-      var modelUserText = new ModelUserText(keyValuePairs);
-      target = (T)(object)modelUserText;
-      return true;
-    }
-
     return false;
   }
 }
