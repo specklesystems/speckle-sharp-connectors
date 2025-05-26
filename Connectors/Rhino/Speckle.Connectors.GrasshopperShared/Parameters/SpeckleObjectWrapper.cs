@@ -312,7 +312,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     result = default!; // initialize with null-forgiving operator - result is only used when method returns true
     object? convertedValue = null;
-    bool success = false;
 
     var targetType = typeof(T);
 
@@ -322,7 +321,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToPoint3d(geometry, ref point, GH_Conversion.Both))
       {
         convertedValue = new GH_Point(point);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_Curve))
@@ -331,7 +329,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToCurve(geometry, ref curve, GH_Conversion.Both))
       {
         convertedValue = new GH_Curve(curve);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_Line))
@@ -340,7 +337,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToLine(geometry, ref line, GH_Conversion.Both))
       {
         convertedValue = new GH_Line(line);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_Brep))
@@ -349,7 +345,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToBrep(geometry, ref brep, GH_Conversion.Both))
       {
         convertedValue = new GH_Brep(brep);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_Mesh))
@@ -358,7 +353,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToMesh(geometry, ref mesh, GH_Conversion.Both))
       {
         convertedValue = new GH_Mesh(mesh);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_Surface))
@@ -367,7 +361,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToSurface(geometry, ref surface, GH_Conversion.Both))
       {
         convertedValue = new GH_Surface(surface);
-        success = true;
       }
     }
 #if RHINO8_OR_GREATER
@@ -377,7 +370,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToSubD(geometry, ref subd, GH_Conversion.Both))
       {
         convertedValue = new GH_SubD(subd);
-        success = true;
       }
     }
     else if (targetType == typeof(GH_PointCloud))
@@ -386,12 +378,11 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       if (GH_Convert.ToPointCloud(geometry, ref pointCloud, GH_Conversion.Both))
       {
         convertedValue = new GH_PointCloud(pointCloud);
-        success = true;
       }
     }
 #endif
 
-    if (success && convertedValue != null)
+    if (convertedValue != null)
     {
       result = (T)convertedValue;
       return true;
