@@ -290,6 +290,13 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
     var targetType = typeof(T);
 
+    // handle IGH_GeometricGoo special case
+    if (targetType == typeof(IGH_GeometricGoo))
+    {
+      target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
+      return true;
+    }
+
     // try our "unified" conversion
     if (TryUnifiedCast<T>(Value.GeometryBase, out var result))
     {
@@ -297,12 +304,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return true;
     }
 
-    // handle IGH_GeometricGoo special case
-    if (targetType == typeof(IGH_GeometricGoo))
-    {
-      target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-      return true;
-    }
     return CastToModelObject(ref target);
   }
 
