@@ -174,7 +174,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
     foreach (var kvp in Properties.Value)
     {
-      att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
+      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
     }
 
     // add to doc
@@ -471,6 +471,16 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     }
   }
 
+  /// <summary>
+  /// Bakes the object
+  /// </summary>
+  /// <param name="doc"></param>
+  /// <param name="att"></param>
+  /// <param name="obj_ids"></param>
+  /// <remarks>
+  /// The attributes come from the user dialog after calling bake.
+  /// The selected layer from the dialog will only be user if no path is already present on the object.
+  /// </remarks>
   public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
   {
     // Iterate over all data stored in the parameter
@@ -478,7 +488,9 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     {
       if (item is SpeckleObjectWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
+        bool layerCreated = goo.Value.Path.Count == 0;
+        goo.Value.Bake(doc, obj_ids, layerIndex, layerCreated);
       }
     }
   }

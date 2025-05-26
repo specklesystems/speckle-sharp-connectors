@@ -91,4 +91,7 @@
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_object.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />
+  </ItemGroup>
 </Project>

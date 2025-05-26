@@ -42,12 +42,6 @@
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
-      "Revit.Async": {
-        "type": "Direct",
-        "requested": "[2.1.1, )",
-        "resolved": "2.1.1",
-        "contentHash": "aK6R/fxrn3jpiKc8LYqfWZ+OfEKNnwgkiln1uyuvaPnTWBOvfiisnOfe7+Sgogr4iEuMmuMDsmBRMCycMlUpnw=="
-      },
       "Speckle.InterfaceGenerator": {
         "type": "Direct",
         "requested": "[0.9.6, )",
@@ -244,6 +238,12 @@
       },
       "speckle.connectors.logging": {
         "type": "Project"
+      },
+      "speckle.connectors.revit.common": {
+        "type": "Project",
+        "dependencies": {
+          "Speckle.Revit.API": "[2025.0.0, )"
+        }
       },
       "speckle.converters.common": {
         "type": "Project",
