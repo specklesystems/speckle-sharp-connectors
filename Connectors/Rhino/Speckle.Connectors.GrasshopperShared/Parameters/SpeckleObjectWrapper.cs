@@ -360,21 +360,22 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         success = true;
       }
     }
-    else if (targetType == typeof(GH_SubD))
-    {
-      SubD? subd = null;
-      if (GH_Convert.ToSubD(geometry, ref subd, GH_Conversion.Both))
-      {
-        convertedValue = new GH_SubD(subd);
-        success = true;
-      }
-    }
     else if (targetType == typeof(GH_Surface))
     {
       Surface? surface = null;
       if (GH_Convert.ToSurface(geometry, ref surface, GH_Conversion.Both))
       {
         convertedValue = new GH_Surface(surface);
+        success = true;
+      }
+    }
+#if RHINO8_OR_GREATER
+    else if (targetType == typeof(GH_SubD))
+    {
+      SubD? subd = null;
+      if (GH_Convert.ToSubD(geometry, ref subd, GH_Conversion.Both))
+      {
+        convertedValue = new GH_SubD(subd);
         success = true;
       }
     }
@@ -387,6 +388,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         success = true;
       }
     }
+#endif
 
     if (success && convertedValue != null)
     {
