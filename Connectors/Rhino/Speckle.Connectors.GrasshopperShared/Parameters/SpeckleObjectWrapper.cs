@@ -290,126 +290,110 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
     var targetType = typeof(T);
 
-    switch (targetType)
+    // try our "unified" conversion
+    if (TryUnifiedCast<T>(Value.GeometryBase, out var result))
     {
-      case var _ when targetType == typeof(GH_Point):
-        return TryCastToPoint(ref target);
-
-      case var _ when targetType == typeof(GH_Curve):
-        return TryCastToCurve(ref target);
-
-      case var _ when targetType == typeof(GH_Line):
-        return TryCastToLine(ref target);
-
-      case var _ when targetType == typeof(GH_Brep):
-        return TryCastToBrep(ref target);
-
-      case var _ when targetType == typeof(GH_Mesh):
-        return TryCastToMesh(ref target);
-
-      case var _ when targetType == typeof(GH_SubD):
-        return TryCastToSubD(ref target);
-
-      case var _ when targetType == typeof(GH_Surface):
-        return TryCastToSurface(ref target);
-
-      case var _ when targetType == typeof(GH_PointCloud):
-        return TryCastToPointcloud(ref target);
-
-      case var _ when targetType == typeof(IGH_GeometricGoo):
-        target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-        return true;
-
-      default:
-        return CastToModelObject(ref target);
-    }
-  }
-
-  private bool TryCastToPointcloud<T>(ref T target)
-  {
-    PointCloud? pointCloud = null;
-    if (GH_Convert.ToPointCloud(Value.GeometryBase, ref pointCloud, GH_Conversion.Both))
-    {
-      target = (T)(object)new GH_PointCloud(pointCloud);
+      target = result;
       return true;
     }
-    return false;
-  }
 
-  private bool TryCastToSurface<T>(ref T target)
-  {
-    Surface? surface = null;
-    if (GH_Convert.ToSurface(Value.GeometryBase, ref surface, GH_Conversion.Both))
+    // handle IGH_GeometricGoo special case
+    if (targetType == typeof(IGH_GeometricGoo))
     {
-      target = (T)(object)new GH_Surface(surface);
+      target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
       return true;
     }
-    return false;
+    return CastToModelObject(ref target);
   }
 
-  private bool TryCastToSubD<T>(ref T target)
+  // NOTE: attempt to shorten the code, but these gh conversions are very verbose
+  private bool TryUnifiedCast<T>(GeometryBase geometry, out T result)
   {
-    SubD? subd = null;
-    if (GH_Convert.ToSubD(Value.GeometryBase, ref subd, GH_Conversion.Both))
-    {
-      target = (T)(object)new GH_SubD(subd);
-      return true;
-    }
-    return false;
-  }
+    result = default!; // initialize with null-forgiving operator - result is only used when method returns true
+    object? convertedValue = null;
+    bool success = false;
 
-  private bool TryCastToMesh<T>(ref T target)
-  {
-    Mesh? mesh = null;
-    if (GH_Convert.ToMesh(Value.GeometryBase, ref mesh, GH_Conversion.Both))
-    {
-      target = (T)(object)new GH_Mesh(mesh);
-      return true;
-    }
-    return false;
-  }
+    var targetType = typeof(T);
 
-  private bool TryCastToBrep<T>(ref T target)
-  {
-    Brep? brep = null;
-    if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
+    if (targetType == typeof(GH_Point))
     {
-      target = (T)(object)new GH_Brep(brep);
-      return true;
+      var point = new Point3d();
+      if (GH_Convert.ToPoint3d(geometry, ref point, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Point(point);
+        success = true;
+      }
     }
-    return false;
-  }
+    else if (targetType == typeof(GH_Curve))
+    {
+      Curve? curve = null;
+      if (GH_Convert.ToCurve(geometry, ref curve, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Curve(curve);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_Line))
+    {
+      var line = new Line();
+      if (GH_Convert.ToLine(geometry, ref line, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Line(line);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_Brep))
+    {
+      Brep? brep = null;
+      if (GH_Convert.ToBrep(geometry, ref brep, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Brep(brep);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_Mesh))
+    {
+      Mesh? mesh = null;
+      if (GH_Convert.ToMesh(geometry, ref mesh, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Mesh(mesh);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_SubD))
+    {
+      SubD? subd = null;
+      if (GH_Convert.ToSubD(geometry, ref subd, GH_Conversion.Both))
+      {
+        convertedValue = new GH_SubD(subd);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_Surface))
+    {
+      Surface? surface = null;
+      if (GH_Convert.ToSurface(geometry, ref surface, GH_Conversion.Both))
+      {
+        convertedValue = new GH_Surface(surface);
+        success = true;
+      }
+    }
+    else if (targetType == typeof(GH_PointCloud))
+    {
+      PointCloud? pointCloud = null;
+      if (GH_Convert.ToPointCloud(geometry, ref pointCloud, GH_Conversion.Both))
+      {
+        convertedValue = new GH_PointCloud(pointCloud);
+        success = true;
+      }
+    }
 
-  private bool TryCastToLine<T>(ref T target)
-  {
-    Line line = new();
-    if (GH_Convert.ToLine(Value.GeometryBase, ref line, GH_Conversion.Both))
+    if (success && convertedValue != null)
     {
-      target = (T)(object)new GH_Line(line);
+      result = (T)convertedValue;
       return true;
     }
-    return false;
-  }
 
-  private bool TryCastToCurve<T>(ref T target)
-  {
-    Curve? curve = null;
-    if (GH_Convert.ToCurve(Value.GeometryBase, ref curve, GH_Conversion.Both))
-    {
-      target = (T)(object)new GH_Curve(curve);
-      return true;
-    }
-    return false;
-  }
-
-  private bool TryCastToPoint<T>(ref T target)
-  {
-    Point3d point = new();
-    if (GH_Convert.ToPoint3d(Value.GeometryBase, ref point, GH_Conversion.Both))
-    {
-      target = (T)(object)new GH_Point(point);
-      return true;
-    }
     return false;
   }
 
