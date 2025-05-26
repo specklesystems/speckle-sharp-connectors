@@ -5,7 +5,7 @@
   <tool_bar_groups>
     <tool_bar_group guid="5f6ad164-78bd-4114-b29f-e9066a676b02" dock_bar_guid32="00000000-0000-0000-0000-000000000000" dock_bar_guid64="13f3b878-ee25-45a7-8e82-4204663c5120" active_tool_bar_group="00813814-f9b4-4271-8b13-886976b6d3b2" single_file="False" hide_single_tab="False" point_floating="684,402">
       <text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </text>
       <tool_bar_group_item guid="00813814-f9b4-4271-8b13-886976b6d3b2" major_version="1" minor_version="1">
         <text>
@@ -19,7 +19,7 @@
   <tool_bars>
     <tool_bar guid="a0d74d7e-bd20-499e-9984-fca521394029" bitmap_id="51e103c3-0e8e-4cf4-a32d-69d7fa5baa8e" item_display_style="control_and_text">
       <text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </text>
       <tool_bar_item guid="9c871acc-1ed0-4b29-9c90-c576cf0c9874" button_display_mode="control_and_text" display_style_from_parent="False">
         <text>
@@ -39,18 +39,18 @@
         <locale_1033>Macro</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>The Next Gen Speckle Connector (Beta) for Rhino</locale_1033>
+        <locale_1033>The Next Gen Speckle Connector for Rhino</locale_1033>
       </tooltip>
       <help_text>
         <locale_1033 />
       </help_text>
       <button_text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </button_text>
       <menu_text>
         <locale_1033 />
       </menu_text>
-      <script>SpeckleBeta</script>
+      <script>Speckle</script>
     </macro_item>
     <macro_item guid="7c8cd3c6-87fb-4047-9c5a-cb38defaa5c1" bitmap_id="998b7353-c03c-4284-aa62-5b46327731e0">
       <text>
