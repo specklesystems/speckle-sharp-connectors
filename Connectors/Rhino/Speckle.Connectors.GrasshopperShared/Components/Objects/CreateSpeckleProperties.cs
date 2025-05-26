@@ -40,7 +40,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   protected override void SolveInstance(IGH_DataAccess da)
   {
     // Create a data tree to store output
-    Dictionary<string, object?> properties = new();
+    Dictionary<string, SpecklePropertyGoo> properties = new();
 
     // Check for structure of all inputs to see matching branches
     foreach (var inputParam in Params.Input)
@@ -59,26 +59,21 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
     for (int i = 0; i < Params.Input.Count; i++)
     {
       object? value = null;
-      var success = da.GetData(i, ref value);
-      if (!success)
+      da.GetData(i, ref value);
+
+      // POC: for now, allow empty properties
+      SpecklePropertyGoo actualValue = new();
+      if (value != null)
       {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          $"Parameter {Params.Input[i].NickName} does not have any values."
-        );
+        if (!actualValue.CastFrom(value))
+        {
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Error,
+            $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
+          );
 
-        return;
-      }
-
-      var actualValue = value?.GetType().GetProperty("Value").GetValue(value); // note: unsure if reflection here hurts our performance
-      if (value == null || actualValue == null)
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
-        );
-
-        return;
+          return;
+        }
       }
 
       properties[Params.Input[i].NickName] = actualValue;
@@ -112,7 +107,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   public void VariableParameterMaintenance()
   {
-    // TODO?
+    // todo
   }
 
   public override void AddedToDocument(GH_Document document)
@@ -124,6 +119,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       {
         return;
       }
+
       switch (args.OriginalArguments.Type)
       {
         case GH_ObjectEventType.NickName:
@@ -135,6 +131,15 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
         case GH_ObjectEventType.NickNameAccepted:
           args.Parameter.Name = args.Parameter.NickName;
           ExpireSolution(true);
+          break;
+        case GH_ObjectEventType.Sources:
+          // if this event is a source change, and param is the last input, then add a new param automatically
+          if (args.Parameter.SourceCount > 0 && args.ParameterIndex == Params.Input.Count - 1)
+          {
+            IGH_Param param = CreateParameter(GH_ParameterSide.Input, Params.Input.Count);
+            Params.RegisterInputParam(param);
+            Params.OnParametersChanged();
+          }
           break;
       }
     };
