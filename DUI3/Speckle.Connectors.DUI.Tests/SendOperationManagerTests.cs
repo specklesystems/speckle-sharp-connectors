@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -38,9 +39,10 @@ public class SendOperationManagerTests : MoqTest
       ProjectId = "proj",
       ModelId = "mod"
     };
+    var bridge = Create<IBrowserBridge>();
 
     operationProgressManager
-      .Setup(x => x.CreateOperationProgressEventHandler(modelCard.ModelCardId, It.IsAny<CancellationToken>()))
+      .Setup(x => x.CreateOperationProgressEventHandler(bridge.Object, modelCard.ModelCardId, It.IsAny<CancellationToken>()))
       .Returns(progressHandler.Object);
 
     var store = new TestDocumentModelStore(
@@ -52,7 +54,6 @@ public class SendOperationManagerTests : MoqTest
 
     var cancellationManager = Create<ICancellationManager>();
     var cancellationItem = Create<ICancellationItem>();
-    cancellationManager.Setup(x => x.CancelOperation(modelCard.ModelCardId));
     cancellationItem.Setup(x => x.Token).Returns(CancellationToken.None);
     cancellationItem.Setup(x => x.Dispose());
     cancellationManager.Setup(x => x.GetCancellationItem(modelCard.ModelCardId)).Returns(cancellationItem.Object);
@@ -81,6 +82,7 @@ public class SendOperationManagerTests : MoqTest
     serviceProviderMock.Setup(x => x.GetService(typeof(ISendOperation<string>))).Returns(sendOperationMock.Object);
 
     var commandsMock = Create<ISendBindingUICommands>();
+    commandsMock.Setup(x => x.Bridge).Returns(bridge.Object);
     commandsMock
       .Setup(x => x.SetModelSendResult(modelCard.ModelCardId, versionId, sendResults))
       .Returns(Task.CompletedTask);
@@ -92,12 +94,11 @@ public class SendOperationManagerTests : MoqTest
       cancellationManager.Object,
       speckleApplication.Object,
       activityFactory.Object,
-      commandsMock.Object,
       logger.Object
     );
 
     // Act
-    await manager.Process("model1", (sp, card) => { }, card => objects);
+    await manager.Process(commandsMock.Object, "model1", (sp, card) => { }, card => objects);
   }
 
   // Helper for in-memory DocumentModelStore

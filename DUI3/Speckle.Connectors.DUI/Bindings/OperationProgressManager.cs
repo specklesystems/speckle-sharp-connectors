@@ -11,7 +11,7 @@ namespace Speckle.Connectors.DUI.Bindings;
 /// This class requires a specific bridge in its binding, so registering it will create random bridge which we don't want to.
 /// </summary>
 [GenerateAutoInterface]
-public class OperationProgressManager(IBrowserBridge bridge) : IOperationProgressManager
+public class OperationProgressManager : IOperationProgressManager
 {
   private class NonUIThreadProgress<T>(Action<T> handler) : IProgress<T>
   {
@@ -24,18 +24,29 @@ public class OperationProgressManager(IBrowserBridge bridge) : IOperationProgres
   private const int THROTTLE_INTERVAL_MS = 200;
 
   public IProgress<CardProgress> CreateOperationProgressEventHandler(
+    IBrowserBridge bridge,
     string modelCardId,
     CancellationToken cancellationToken
   )
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
     {
-      SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, args.Status, args.Progress), cancellationToken);
+      SetModelProgress(
+        bridge,
+        modelCardId,
+        new ModelCardProgress(modelCardId, args.Status, args.Progress),
+        cancellationToken
+      );
     });
     return progress;
   }
 
-  public void SetModelProgress(string modelCardId, ModelCardProgress progress, CancellationToken cancellationToken)
+  public void SetModelProgress(
+    IBrowserBridge bridge,
+    string modelCardId,
+    ModelCardProgress progress,
+    CancellationToken cancellationToken
+  )
   {
     if (cancellationToken.IsCancellationRequested)
     {

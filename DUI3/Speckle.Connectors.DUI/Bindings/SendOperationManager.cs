@@ -20,7 +20,6 @@ public class SendOperationManagerFactory(
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
-  ISendBindingUICommands commands,
   ILoggerFactory loggerFactory
 ) : ISendOperationManagerFactory
 {
@@ -34,7 +33,6 @@ public class SendOperationManagerFactory(
       cancellationManager,
       speckleApplication,
       activityFactory,
-      commands,
       loggerFactory.CreateLogger<SendOperationManager>()
     );
 }
@@ -49,29 +47,31 @@ public sealed class SendOperationManager(
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
-  ISendBindingUICommands commands,
   ILogger<SendOperationManager> logger
 ) : ISendOperationManager
 {
   public async Task Process<T>(
+    ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, IReadOnlyList<T>> gatherObjects
   )
   {
-    await Process(modelCardId, initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
+    await Process(commands, modelCardId, initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
   }
 
   public async Task Process<T>(
+    ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects
   )
   {
-    await Process(modelCardId, initializeScope, async (card, _) => await gatherObjects(card));
+    await Process(commands, modelCardId, initializeScope, async (card, _) => await gatherObjects(card));
   }
 
   public async Task Process<T>(
+    ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, IProgress<CardProgress>, Task<IReadOnlyList<T>>> gatherObjects
@@ -90,7 +90,7 @@ public sealed class SendOperationManager(
 
       initializeScope(serviceScope.ServiceProvider, modelCard);
 
-      var progress = operationProgressManager.CreateOperationProgressEventHandler(modelCardId, cancellationItem.Token);
+      var progress = operationProgressManager.CreateOperationProgressEventHandler(commands.Bridge, modelCardId, cancellationItem.Token);
 
       var objects = await gatherObjects(modelCard, progress);
 
@@ -119,11 +119,6 @@ public sealed class SendOperationManager(
     {
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
-    }
-    finally
-    {
-      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
-      cancellationManager.CancelOperation(modelCardId);
     }
   }
 

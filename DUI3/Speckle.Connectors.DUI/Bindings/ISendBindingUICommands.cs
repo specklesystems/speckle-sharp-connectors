@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -14,4 +15,6 @@ public interface ISendBindingUICommands
     string versionId,
     IEnumerable<SendConversionResult> sendConversionResults
   );
+  
+  IBrowserBridge Bridge { get; }
 }
