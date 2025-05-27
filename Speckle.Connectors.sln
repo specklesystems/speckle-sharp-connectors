@@ -309,6 +309,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connector.Tekla2025", "Connectors\Tekla\Speckle.Connector.Tekla2025\Speckle.Connector.Tekla2025.csproj", "{0454EABF-8252-4421-9E94-EEC6143DC012}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2025", "Converters\Tekla\Speckle.Converter.Tekla2025\Speckle.Converter.Tekla2025.csproj", "{B42013EB-6180-4FBD-A6F9-ECB7822FDA84}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Revit.Common", "Connectors\Revit\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj", "{60445031-CCEE-4421-83C0-BB10BEF7B7F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -779,6 +780,12 @@ Global
 		{B42013EB-6180-4FBD-A6F9-ECB7822FDA84}.Local|Any CPU.Build.0 = Debug|Any CPU
 		{B42013EB-6180-4FBD-A6F9-ECB7822FDA84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B42013EB-6180-4FBD-A6F9-ECB7822FDA84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Local|Any CPU.Build.0 = Local|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -918,6 +925,7 @@ Global
 		{C79CF5CF-110C-4B8B-B348-27105ACAC2DA} = {696086E4-D8CC-4FE0-A9B3-5F10B9089B55}
 		{0454EABF-8252-4421-9E94-EEC6143DC012} = {C79CF5CF-110C-4B8B-B348-27105ACAC2DA}
 		{B42013EB-6180-4FBD-A6F9-ECB7822FDA84} = {C79CF5CF-110C-4B8B-B348-27105ACAC2DA}
+		{60445031-CCEE-4421-83C0-BB10BEF7B7F2} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}

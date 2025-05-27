@@ -72,7 +72,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
       foreach (var kvp in Value.Properties.Value)
       {
-        atts.SetUserString(kvp.Key, kvp.Value.Value.ToString());
+        atts.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
       }
 
       target = (T)(object)atts;
