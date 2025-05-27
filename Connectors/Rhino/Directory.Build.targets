@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target AfterTargets="Clean" Name="CleanAddinRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <RemoveDir Directories="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (8dd5f30b-a13d-4a24-abdc-3e05c8c87144)" />
+  <ItemGroup>
+    <PublicReleasePath Include="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (2153799A-0CEC-40DE-BC3A-01E5055222FF)" />
+  </ItemGroup>
+  <Target AfterTargets="Build" Name="WarnIfPublicReleaseVersionInstalled" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+    <Warning
+      Text="Conflicting Rhino plugin detected - Do you have a public release installed?"
+      Condition="Exists(@(PublicReleasePath))" />
   </Target>
 
   <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">

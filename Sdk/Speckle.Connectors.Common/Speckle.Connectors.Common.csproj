@@ -8,6 +8,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <ProjectReference Include="..\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web" />
+  </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />

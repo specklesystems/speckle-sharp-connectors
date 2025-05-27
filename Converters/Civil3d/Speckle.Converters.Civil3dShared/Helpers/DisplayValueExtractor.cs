@@ -53,6 +53,11 @@ public sealed class DisplayValueExtractor
         SOG.Mesh partMesh = _solidConverter.Convert(part.Solid3dBody);
         yield return partMesh;
         break;
+      // pressure pipe networks: https://help.autodesk.com/view/CIV3D/2025/ENU/?guid=f1361ca3-4195-3b06-8a66-ecd31f5208b0
+      case CDB.PressurePart pressurePart:
+        SOG.Mesh pressurePartMesh = _solidConverter.Convert(pressurePart.Get3dBody());
+        yield return pressurePartMesh;
+        break;
 
       // surfaces: https://help.autodesk.com/view/CIV3D/2025/ENU/?guid=d741aa49-e7da-9513-6b0b-226ebe3fa43f
       // POC: volume surfaces not supported
