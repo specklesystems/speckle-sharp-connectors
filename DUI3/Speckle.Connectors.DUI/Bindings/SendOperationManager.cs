@@ -90,7 +90,11 @@ public sealed class SendOperationManager(
 
       initializeScope(serviceScope.ServiceProvider, modelCard);
 
-      var progress = operationProgressManager.CreateOperationProgressEventHandler(commands.Bridge, modelCardId, cancellationItem.Token);
+      var progress = operationProgressManager.CreateOperationProgressEventHandler(
+        commands.Bridge,
+        modelCardId,
+        cancellationItem.Token
+      );
 
       var objects = await gatherObjects(modelCard, progress);
 

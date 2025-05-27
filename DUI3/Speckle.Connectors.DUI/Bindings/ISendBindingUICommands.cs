@@ -15,6 +15,6 @@ public interface ISendBindingUICommands
     string versionId,
     IEnumerable<SendConversionResult> sendConversionResults
   );
-  
+
   IBrowserBridge Bridge { get; }
 }

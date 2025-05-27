@@ -42,7 +42,9 @@ public class SendOperationManagerTests : MoqTest
     var bridge = Create<IBrowserBridge>();
 
     operationProgressManager
-      .Setup(x => x.CreateOperationProgressEventHandler(bridge.Object, modelCard.ModelCardId, It.IsAny<CancellationToken>()))
+      .Setup(x =>
+        x.CreateOperationProgressEventHandler(bridge.Object, modelCard.ModelCardId, It.IsAny<CancellationToken>())
+      )
       .Returns(progressHandler.Object);
 
     var store = new TestDocumentModelStore(
