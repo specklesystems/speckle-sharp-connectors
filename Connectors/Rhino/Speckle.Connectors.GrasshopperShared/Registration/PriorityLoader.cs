@@ -2,7 +2,6 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
@@ -38,7 +37,6 @@ public class PriorityLoader : GH_AssemblyPriority
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
       services.AddTransient<AccountService>();
-      services.AddSingleton<MixPanelManager>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
 

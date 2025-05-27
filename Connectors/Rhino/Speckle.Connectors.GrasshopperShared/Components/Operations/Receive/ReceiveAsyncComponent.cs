@@ -50,7 +50,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   // DI props
   public IClient ApiClient { get; private set; }
-  public MixPanelManager MixPanelManager { get; private set; }
+  public IMixPanelManager MixPanelManager { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
@@ -82,7 +82,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
     AccountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
     AccountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
