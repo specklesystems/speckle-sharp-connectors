@@ -19,8 +19,6 @@ namespace Speckle.Connectors.Rhino.Plugin;
 ///</summary>
 public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
-  private IDisposable? _disposableLogger;
-
   protected override string LocalPlugInName => "Speckle (Beta)";
   public ServiceProvider? Container { get; private set; }
 
@@ -44,8 +42,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
     {
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
       var services = new ServiceCollection();
-      _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
-      services.AddRhino();
+      services.AddRhino(HostApplications.Rhino, GetVersion());
       services.AddRhinoConverters();
 
       // but the Rhino connector has `.rhp` as it is extension.
@@ -74,7 +71,6 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
   protected override void OnShutdown()
   {
-    _disposableLogger?.Dispose();
     Container?.Dispose();
     base.OnShutdown();
   }

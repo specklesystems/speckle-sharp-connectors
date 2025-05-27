@@ -78,7 +78,6 @@ public static class SharedRegistration
 
   public static void LoadReceive(this IServiceCollection serviceCollection)
   {
-
     // Object Builders
     serviceCollection.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
 

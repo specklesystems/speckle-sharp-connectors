@@ -13,13 +13,11 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.GrasshopperShared.Registration;
 
 public class PriorityLoader : GH_AssemblyPriority
 {
-  private IDisposable? _disposableLogger;
   public static ServiceProvider? Container { get; set; }
 
   public override GH_LoadingInstruction PriorityLoad()
@@ -30,19 +28,17 @@ public class PriorityLoader : GH_AssemblyPriority
     try
     {
       var services = new ServiceCollection();
-      _disposableLogger = services.Initialize(HostApplications.Grasshopper, GetVersion());
+      services.AddSpeckleLogging(HostApplications.Grasshopper, GetVersion());
       services.AddRhinoConverters();
-      services.AddConnectors();
+      services.AddConnectors<DefaultThreadContext>(HostApplications.Grasshopper, GetVersion());
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
-      services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
 
       // send
       services.AddTransient<IRootObjectBuilder<SpeckleCollectionWrapperGoo>, GrasshopperRootObjectBuilder>();
       services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
-      services.AddSingleton<IThreadContext>(new DefaultThreadContext());
 
       Container = services.BuildServiceProvider();
       return GH_LoadingInstruction.Proceed;

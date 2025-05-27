@@ -38,7 +38,6 @@ public static class ArcGISConnectorModule
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBinding>();
 
-
     // register send operation and dependencies
     serviceCollection.AddSingleton<IBinding, ArcGISSendBinding>();
     serviceCollection.AddScoped<SendOperation<MapMember>>();

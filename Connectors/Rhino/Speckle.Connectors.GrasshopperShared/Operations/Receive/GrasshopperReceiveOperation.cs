@@ -53,7 +53,7 @@ public class GrasshopperReceiveOperation
 
     if (version?.referencedObject is not string receivedVersion)
     {
-      throw new InvalidOperationException($"Could not retrieve version from server.");
+      throw new InvalidOperationException("Could not retrieve version from server.");
     }
 
     using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);

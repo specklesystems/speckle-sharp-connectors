@@ -14,16 +14,35 @@ namespace Speckle.Connectors.Common;
 
 public static class ContainerRegistration
 {
-  public static void AddConnectors<THostObjectBuilder, TThreadContext>(this IServiceCollection serviceCollection,
-    
+  public static void AddConnectors<THostObjectBuilder, TThreadContext>(
+    this IServiceCollection serviceCollection,
     Application application,
-    string applicationVersion,
+    HostAppVersion applicationVersion,
     string? speckleVersion = null,
-    IEnumerable<Assembly>? assemblies = null)
-  where THostObjectBuilder : class, IHostObjectBuilder
-  where TThreadContext : IThreadContext, new()
+    IEnumerable<Assembly>? assemblies = null
+  )
+    where THostObjectBuilder : class, IHostObjectBuilder
+    where TThreadContext : IThreadContext, new()
   {
-    serviceCollection.AddSpeckleSdk(application, applicationVersion, speckleVersion, assemblies);
+    serviceCollection.AddScoped<IHostObjectBuilder, THostObjectBuilder>();
+    serviceCollection.AddConnectors<TThreadContext>(application, applicationVersion, speckleVersion, assemblies);
+  }
+
+  public static void AddConnectors<TThreadContext>(
+    this IServiceCollection serviceCollection,
+    Application application,
+    HostAppVersion applicationVersion,
+    string? speckleVersion = null,
+    IEnumerable<Assembly>? assemblies = null
+  )
+    where TThreadContext : IThreadContext, new()
+  {
+    serviceCollection.AddSpeckleSdk(
+      application,
+      HostApplications.GetVersion(applicationVersion),
+      speckleVersion,
+      assemblies
+    );
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     // send operation and dependencies
@@ -33,7 +52,6 @@ public static class ContainerRegistration
     serviceCollection.AddScoped<ReceiveOperation>();
     serviceCollection.AddSingleton<IAccountService, AccountService>();
     serviceCollection.AddSingleton<IMixPanelManager, MixPanelManager>();
-    serviceCollection.AddScoped<IHostObjectBuilder, THostObjectBuilder>();
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
 
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));
