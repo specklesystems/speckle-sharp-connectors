@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -80,7 +81,7 @@ internal sealed class RevitWebViewPlugin(
     revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    global::Revit.Async.RevitTask.Initialize(uiApplication);
+    RevitAsync.Initialize(uiApplication);
   }
 
   private void RegisterDockablePane()

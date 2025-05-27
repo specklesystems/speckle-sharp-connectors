@@ -1,0 +1,199 @@
+﻿<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Local" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/Build/">
+    <Project Path="Build\Build.csproj" />
+    <File Path=".github\workflows\pr.yml" />
+    <File Path=".github\workflows\release.yml" />
+  </Folder>
+  <Folder Name="/Config/">
+    <File Path=".csharpierrc.yaml" />
+    <File Path=".editorconfig" />
+    <File Path="codecov.yml" />
+    <File Path="CodeMetricsConfig.txt" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path=".config\dotnet-tools.json" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Connectors/" />
+  <Folder Name="/Connectors/ArcGIS/">
+    <Project Path="Connectors\ArcGIS\Speckle.Connectors.ArcGIS3\Speckle.Connectors.ArcGIS3.csproj" />
+    <Project Path="Converters\ArcGIS\Speckle.Converters.ArcGIS3\Speckle.Converters.ArcGIS3.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/">
+    <File Path="Connectors\Autocad\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/2022/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2022\Speckle.Connectors.Autocad2022.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2022\Speckle.Connectors.Civil3d2022.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2022\Speckle.Converters.Autocad2022.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2022\Speckle.Converters.Civil3d2022.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/2023/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2023\Speckle.Connectors.Autocad2023.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2023\Speckle.Connectors.Civil3d2023.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2023\Speckle.Converters.Autocad2023.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2023\Speckle.Converters.Civil3d2023.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/2024/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2024\Speckle.Connectors.Autocad2024.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2024\Speckle.Connectors.Civil3d2024.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2024\Speckle.Converters.Autocad2024.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2024\Speckle.Converters.Civil3d2024.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/2025/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2025\Speckle.Connectors.Autocad2025.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2025\Speckle.Connectors.Civil3d2025.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2025\Speckle.Converters.Autocad2025.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2025\Speckle.Converters.Civil3d2025.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/2026/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2026\Speckle.Connectors.Autocad2026.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2026\Speckle.Connectors.Civil3d2026.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2026\Speckle.Converters.Autocad2026.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2026\Speckle.Converters.Civil3d2026.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Autocad/Shared/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.shproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.shproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.shproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3dShared\Speckle.Converters.Civil3dShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/CSi/" />
+  <Folder Name="/Connectors/CSi/ETABS21/">
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS21\Speckle.Connectors.ETABS21.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS21\Speckle.Converters.ETABS21.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/CSi/ETABS22/">
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS22\Speckle.Connectors.ETABS22.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS22\Speckle.Converters.ETABS22.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/CSi/Shared/">
+    <Project Path="Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.shproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.shproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/">
+    <File Path="Connectors\Navisworks\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2020/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2020\Speckle.Connectors.Navisworks2020.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2021/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2021\Speckle.Connectors.Navisworks2021.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2021\Speckle.Converters.Navisworks2021.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2022/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2022\Speckle.Converters.Navisworks2022.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2023/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2023\Speckle.Converters.Navisworks2023.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2024/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2024\Speckle.Connectors.Navisworks2024.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2025/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/2026/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2026\Speckle.Connectors.Navisworks2026.csproj" Type="Classic C#" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2026\Speckle.Converters.Navisworks2026.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/Connectors/Navisworks/Shared/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/">
+    <File Path="Connectors\Revit\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/2022/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2022\Speckle.Connectors.Revit2022.csproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/2023/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2023\Speckle.Connectors.Revit2023.csproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/2024/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2024\Speckle.Connectors.Revit2024.csproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.Revit2024\Speckle.Converters.Revit2024.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/2025/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2025\Speckle.Connectors.Revit2025.csproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.Revit2025\Speckle.Converters.Revit2025.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/2026/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2026\Speckle.Connectors.Revit2026.csproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.Revit2026\Speckle.Converters.Revit2026.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Revit/Shared/">
+    <Project Path="Connectors\Revit\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
+    <Project Path="Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.shproj" />
+    <Project Path="Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.shproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.shproj" />
+    <Project Path="Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/">
+    <File Path="Connectors\Rhino\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/7/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper7\Speckle.Connectors.Grasshopper7.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino7\Speckle.Connectors.Rhino7.csproj" />
+    <Project Path="Converters\Rhino\Speckle.Converters.Rhino7\Speckle.Converters.Rhino7.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/8/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
+    <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/Shared/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
+    <Project Path="Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Tekla/">
+    <File Path="Connectors\Tekla\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Tekla/2023/">
+    <Project Path="Connectors\Tekla\Speckle.Connector.Tekla2023\Speckle.Connector.Tekla2023.csproj" />
+    <Project Path="Converters\Tekla\Speckle.Converter.Tekla2023\Speckle.Converter.Tekla2023.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Tekla/2024/">
+    <Project Path="Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj" />
+    <Project Path="Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Tekla/Shared/">
+    <Project Path="Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.shproj" />
+    <Project Path="Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj" />
+  </Folder>
+  <Folder Name="/Importers/" />
+  <Folder Name="/Importers/Ifc/">
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj" />
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
+  </Folder>
+  <Folder Name="/Sdk/">
+    <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <Project Path="Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
+    <Project Path="Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj" />
+    <Project Path="Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <Project Path="Sdk\Speckle.Performance\Speckle.Performance.csproj" />
+    <Project Path="Sdk\Speckle.Testing\Speckle.Testing.csproj" />
+  </Folder>
+</Solution>

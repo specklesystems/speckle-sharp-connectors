@@ -37,7 +37,7 @@ public class ReceiveComponentOutput
 
 public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
-  private readonly MixPanelManager _mixpanel;
+  private readonly IMixPanelManager _mixpanel;
 
   public ReceiveComponent()
     : base(
@@ -48,7 +48,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       ComponentCategories.DEVELOPER
     )
   {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+    _mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
   }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
@@ -110,8 +110,8 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       return new();
     }
 
-    var accountService = scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<AccountManager>();
+    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
