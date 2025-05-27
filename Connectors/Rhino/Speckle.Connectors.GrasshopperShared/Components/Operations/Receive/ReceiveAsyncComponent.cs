@@ -258,7 +258,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
         AutoReceive = false;
         LastInfoMessage = "";
         ResetApiClient(dataInput);
-        return;
+        break;
       case SpeckleUrlModelResource:
         InputType = "Model";
         // handled in do work
