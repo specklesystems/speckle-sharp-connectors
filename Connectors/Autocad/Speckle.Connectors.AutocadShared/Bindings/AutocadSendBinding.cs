@@ -24,7 +24,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager appIdleManager, ISendOperationManagerFactory sendOperationManagerFactory
+    IAppIdleManager appIdleManager,
+    ISendOperationManagerFactory sendOperationManagerFactory
   )
     : base(
       store,

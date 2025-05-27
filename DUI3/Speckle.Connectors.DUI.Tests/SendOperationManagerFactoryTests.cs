@@ -1,37 +1,35 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NUnit.Framework;
+using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Testing;
-using Moq;
-using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Serialisation;
+using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests;
 
-public class SendOperationManagerTests: MoqTest
+public class SendOperationManagerTests : MoqTest
 {
   [Test]
   public async Task TestHappyProcess()
   {
     // Arrange
     var serviceScopeMock = Create<IServiceScope>();
-    var serviceProviderMock =Create<IServiceProvider>();
+    var serviceProviderMock = Create<IServiceProvider>();
     serviceScopeMock.Setup(x => x.ServiceProvider).Returns(serviceProviderMock.Object);
+    serviceScopeMock.Setup(x => x.Dispose());
 
     var operationProgressManager = Create<IOperationProgressManager>();
     var progressHandler = Create<IProgress<CardProgress>>();
-    
-    operationProgressManager.Setup(x => x.CreateOperationProgressEventHandler(It.IsAny<IBrowserBridge>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-      .Returns(progressHandler.Object);
-
-    var store = new TestDocumentModelStore(Create<ILogger<DocumentModelStore>>(MockBehavior.Loose).Object, Create<IJsonSerializer>().Object);
     var modelCard = new SenderModelCard
     {
       ModelCardId = "model1",
@@ -40,71 +38,75 @@ public class SendOperationManagerTests: MoqTest
       ProjectId = "proj",
       ModelId = "mod"
     };
+
+    operationProgressManager
+      .Setup(x => x.CreateOperationProgressEventHandler(modelCard.ModelCardId, It.IsAny<CancellationToken>()))
+      .Returns(progressHandler.Object);
+
+    var store = new TestDocumentModelStore(
+      Create<ILogger<DocumentModelStore>>(MockBehavior.Loose).Object,
+      Create<IJsonSerializer>(MockBehavior.Loose).Object
+    );
+
     store.AddModel(modelCard);
 
     var cancellationManager = Create<ICancellationManager>();
     var cancellationItem = Create<ICancellationItem>();
-    cancellationItem.SetupGet(x => x.Token).Returns(CancellationToken.None);
-    cancellationManager.Setup(x => x.GetCancellationItem(It.IsAny<string>())).Returns(cancellationItem.Object);
+    cancellationManager.Setup(x => x.CancelOperation(modelCard.ModelCardId));
+    cancellationItem.Setup(x => x.Token).Returns(CancellationToken.None);
+    cancellationItem.Setup(x => x.Dispose());
+    cancellationManager.Setup(x => x.GetCancellationItem(modelCard.ModelCardId)).Returns(cancellationItem.Object);
 
     var speckleApplication = Create<ISpeckleApplication>();
     speckleApplication.SetupGet(x => x.ApplicationAndVersion).Returns("TestApp 1.0");
 
     var activityFactory = Create<ISdkActivityFactory>();
-    var activity = Create<IDisposable>();
-    activityFactory.Setup(x => x.Start()).Returns(activity.Object);
+    var activity = Create<ISdkActivity>();
+    activityFactory.Setup(x => x.Start(null, It.IsAny<string>())).Returns(activity.Object);
+    activity.Setup(x => x.Dispose());
 
-    var logger = Create<ILogger<SendOperationManager>>();
+    var logger = Create<ILogger<SendOperationManager>>(MockBehavior.Loose);
 
-    var sendOperationMock = Create<SendOperation<string>>();
-    sendOperationMock.Setup(x => x.Execute(
-      It.IsAny<IReadOnlyList<string>>(),
-      It.IsAny<SendInfo>(),
-      It.IsAny<IProgress<CardProgress>>(),
-      It.IsAny<CancellationToken>()))
-      .ReturnsAsync(new SendResult { VersionId = "v1", ConversionResults = new List<string> { "ok" } });
+    var sendResults = new List<SendConversionResult>();
+    var versionId = "v1";
+    var objects = new List<string> { "obj1", "obj2" };
 
-    serviceProviderMock.Setup(x => x.GetService(typeof(SendOperation<string>)))
-      .Returns(sendOperationMock.Object);
-    serviceProviderMock.Setup(x => x.GetRequiredService<SendOperation<string>>())
-      .Returns(sendOperationMock.Object);
+    var sendOperationMock = Create<ISendOperation<string>>();
+    sendOperationMock
+      .Setup(x => x.Execute(objects, It.IsAny<SendInfo>(), progressHandler.Object, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(
+        new SendOperationResult("rootObjId", versionId, new Dictionary<Id, ObjectReference>(), sendResults)
+      );
 
-    var commandsMock = Create<SendBindingUICommands>();
-    commandsMock.Setup(x => x.SetModelSendResult("model1", "v1", It.IsAny<IReadOnlyList<string>>()))
-      .Returns(Task.CompletedTask)
-      .Verifiable();
+    serviceProviderMock.Setup(x => x.GetService(typeof(ISendOperation<string>))).Returns(sendOperationMock.Object);
 
-    var manager = new SendOperationManager(
+    var commandsMock = Create<ISendBindingUICommands>();
+    commandsMock
+      .Setup(x => x.SetModelSendResult(modelCard.ModelCardId, versionId, sendResults))
+      .Returns(Task.CompletedTask);
+
+    using var manager = new SendOperationManager(
       serviceScopeMock.Object,
       operationProgressManager.Object,
       store,
       cancellationManager.Object,
       speckleApplication.Object,
       activityFactory.Object,
+      commandsMock.Object,
       logger.Object
     );
 
     // Act
-    await manager.Process(
-      commandsMock.Object,
-      "model1",
-      (sp, card) => { },
-      card => new List<string> { "obj1" }
-    );
-
-    // Assert
-    commandsMock.Verify();
+    await manager.Process("model1", (sp, card) => { }, card => objects);
   }
 
   // Helper for in-memory DocumentModelStore
-  private class TestDocumentModelStore : DocumentModelStore
+  private sealed class TestDocumentModelStore : DocumentModelStore
   {
-    public TestDocumentModelStore(ILogger<DocumentModelStore> logger, IJsonSerializer serializer) : base(
-    logger, serializer)
-    {
-    }
+    public TestDocumentModelStore(ILogger<DocumentModelStore> logger, IJsonSerializer serializer)
+      : base(logger, serializer) { }
 
-    protected override void HostAppSaveState(string modelCardState) => throw new NotImplementedException();
+    protected override void HostAppSaveState(string modelCardState) { }
 
     protected override void LoadState() => throw new NotImplementedException();
   }

@@ -43,7 +43,9 @@ public class NavisworksSendBinding : ISendBinding
     INavisworksConversionSettingsFactory conversionSettingsFactory,
     ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
     IElementSelectionService selectionService,
-    IThreadContext threadContext, ISendOperationManagerFactory sendOperationManagerFactory)
+    IThreadContext threadContext,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
   {
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
@@ -82,14 +84,12 @@ public class NavisworksSendBinding : ISendBinding
   private async Task SendInternal(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-    await manager.Process(Commands, modelCardId, InitializeConverterSettings,
-      GetNavisworksModelItems);
-  
+    await manager.Process(Commands, modelCardId, InitializeConverterSettings, GetNavisworksModelItems);
   }
 
-
   private void InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) =>
-    serviceProvider.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
+    serviceProvider
+      .GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>()
       .Initialize(
         _conversionSettingsFactory.Create(
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),

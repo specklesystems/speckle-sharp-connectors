@@ -58,7 +58,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
-    IRevitTask revitTask, ISendOperationManagerFactory sendOperationManagerFactory)
+    IRevitTask revitTask,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
     : base("sendBinding", bridge)
   {
     _idleManager = idleManager;
@@ -109,9 +111,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public async Task Send(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-    
 
-    await manager.Process<DocumentToConvert>(Commands, modelCardId,
+    await manager.Process<DocumentToConvert>(
+      Commands,
+      modelCardId,
       (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
@@ -122,13 +125,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(card),
               _toSpeckleSettingsManager.GetLinkedModelsSetting(card),
               _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(card)
-            ));
-      },async x =>
-        
-          await RefreshElementsIdsOnSender(x.NotNull())
-        
-      );
-   
+            )
+          );
+      },
+      async x => await RefreshElementsIdsOnSender(x.NotNull())
+    );
   }
 
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)

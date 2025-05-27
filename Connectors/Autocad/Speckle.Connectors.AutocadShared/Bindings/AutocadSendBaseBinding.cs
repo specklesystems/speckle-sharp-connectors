@@ -48,7 +48,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager idleManager, ISendOperationManagerFactory sendOperationManagerFactory)
+    IAppIdleManager idleManager,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
   {
     _store = store;
     _cancellationManager = cancellationManager;
@@ -139,10 +141,12 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       // Not disabling results in DUI model card being out of sync with the active document
       // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
       Application.DocumentManager.DocumentActivationEnabled = false;
-      await manager.Process(Commands, modelCardId, (sp, card) => InitializeSettings(sp),
-        card => Application.DocumentManager.CurrentDocument.GetObjects(
-          card.SendFilter.NotNull().RefreshObjectIds()
-        ));
+      await manager.Process(
+        Commands,
+        modelCardId,
+        (sp, card) => InitializeSettings(sp),
+        card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds())
+      );
     }
     finally
     {

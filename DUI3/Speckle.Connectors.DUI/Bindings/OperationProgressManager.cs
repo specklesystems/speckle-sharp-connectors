@@ -30,20 +30,12 @@ public class OperationProgressManager(IBrowserBridge bridge) : IOperationProgres
   {
     var progress = new NonUIThreadProgress<CardProgress>(args =>
     {
-      SetModelProgress(
-        modelCardId,
-        new ModelCardProgress(modelCardId, args.Status, args.Progress),
-        cancellationToken
-      );
+      SetModelProgress(modelCardId, new ModelCardProgress(modelCardId, args.Status, args.Progress), cancellationToken);
     });
     return progress;
   }
 
-  public void SetModelProgress(
-    string modelCardId,
-    ModelCardProgress progress,
-    CancellationToken cancellationToken
-  )
+  public void SetModelProgress(string modelCardId, ModelCardProgress progress, CancellationToken cancellationToken)
   {
     if (cancellationToken.IsCancellationRequested)
     {

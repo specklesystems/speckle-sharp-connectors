@@ -1,10 +1,17 @@
+using Speckle.Connectors.Common.Conversion;
+
 namespace Speckle.Connectors.DUI.Bindings;
 
 public interface ISendBindingUICommands
 {
-  public void RefreshSendFilters(string frontEndName);
+  Task RefreshSendFilters();
 
-  public void SetModelsExpired(string frontEndName, IEnumerable<string> expiredModelIds);
+  Task SetModelsExpired(IEnumerable<string> expiredModelIds);
+  Task SetModelError(string modelCardId, Exception exception);
 
-  public void SetModelCreatedVersionId(string frontEndName, string modelCardId, string versionId);
+  Task SetModelSendResult(
+    string modelCardId,
+    string versionId,
+    IEnumerable<SendConversionResult> sendConversionResults
+  );
 }

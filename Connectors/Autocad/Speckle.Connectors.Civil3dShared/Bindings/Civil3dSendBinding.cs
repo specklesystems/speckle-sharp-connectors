@@ -28,7 +28,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager appIdleManager, ISendOperationManagerFactory sendOperationManagerFactory
+    IAppIdleManager appIdleManager,
+    ISendOperationManagerFactory sendOperationManagerFactory
   )
     : base(
       store,
@@ -38,7 +39,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       sendConversionCache,
       threadContext,
       topLevelExceptionHandler,
-      appIdleManager,sendOperationManagerFactory
+      appIdleManager,
+      sendOperationManagerFactory
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;

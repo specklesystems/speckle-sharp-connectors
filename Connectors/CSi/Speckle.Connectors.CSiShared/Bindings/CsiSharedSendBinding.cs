@@ -29,7 +29,9 @@ public sealed class CsiSharedSendBinding : ISendBinding
     IEnumerable<ISendFilter> sendFilters,
     ICancellationManager cancellationManager,
     ICsiConversionSettingsFactory csiConversionSettingsFactory,
-    ICsiApplicationService csiApplicationService, ISendOperationManagerFactory sendOperationManagerFactory)
+    ICsiApplicationService csiApplicationService,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
   {
     _sendFilters = sendFilters.ToList();
     _cancellationManager = cancellationManager;
@@ -47,15 +49,14 @@ public sealed class CsiSharedSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-    await manager.Process(Commands, modelCardId, (sp, _) =>
-      sp.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
-        .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel)),
-          card => card
-            .SendFilter.NotNull()
-            .RefreshObjectIds()
-            .Select(DecodeObjectIdentifier)
-            .ToList());
-    
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp, _) =>
+        sp.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
+          .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel)),
+      card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList()
+    );
   }
 
   private ICsiWrapper DecodeObjectIdentifier(string encodedId)

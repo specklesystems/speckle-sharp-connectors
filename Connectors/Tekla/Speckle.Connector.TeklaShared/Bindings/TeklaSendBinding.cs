@@ -46,7 +46,9 @@ public sealed class TeklaSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     ILogger<TeklaSendBinding> logger,
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
-    ToSpeckleSettingsManager toSpeckleSettingsManager, ISendOperationManagerFactory sendOperationManagerFactory)
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
   {
     _store = store;
     _sendFilters = sendFilters.ToList();
@@ -96,17 +98,21 @@ public sealed class TeklaSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-    await manager.Process(Commands, modelCardId, (sp, card) => sp
-        .GetRequiredService<IConverterSettingsStore<TeklaConversionSettings>>()
-        .Initialize(
-          _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(card))
-        ),
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp, card) =>
+        sp.GetRequiredService<IConverterSettingsStore<TeklaConversionSettings>>()
+          .Initialize(
+            _teklaConversionSettingsFactory.Create(_model, _toSpeckleSettingsManager.GetSendRebarsAsSolid(card))
+          ),
       card =>
         card.SendFilter.NotNull()
           .RefreshObjectIds()
           .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
           .Where(obj => obj != null)
-          .ToList());
+          .ToList()
+    );
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);

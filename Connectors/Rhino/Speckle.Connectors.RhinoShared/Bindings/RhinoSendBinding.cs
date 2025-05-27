@@ -61,7 +61,9 @@ public sealed class RhinoSendBinding : ISendBinding
     ISendConversionCache sendConversionCache,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    ITopLevelExceptionHandler topLevelExceptionHandler, ISendOperationManagerFactory sendOperationManagerFactory)
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    ISendOperationManagerFactory sendOperationManagerFactory
+  )
   {
     _store = store;
     _idleManager = idleManager;
@@ -269,18 +271,24 @@ public sealed class RhinoSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-      
 
-    await manager.Process(Commands, modelCardId, (sp, _) => 
-      sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>().Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc)) , card =>
-    {
-      return Task.FromResult<IReadOnlyList<RhinoObject>>(card
-        .SendFilter.NotNull()
-        .RefreshObjectIds()
-        .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
-        .Where(obj => obj != null)
-        .ToList());
-    });
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp, _) =>
+        sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+          .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc)),
+      card =>
+      {
+        return Task.FromResult<IReadOnlyList<RhinoObject>>(
+          card.SendFilter.NotNull()
+            .RefreshObjectIds()
+            .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
+            .Where(obj => obj != null)
+            .ToList()
+        );
+      }
+    );
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
