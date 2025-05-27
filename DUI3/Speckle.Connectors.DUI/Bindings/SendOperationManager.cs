@@ -45,34 +45,29 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
   ISpeckleApplication speckleApplication,
   
  ISdkActivityFactory activityFactory,
+  ISendBindingUICommands commands,
   ILogger<SendOperationManager> logger)
   : ISendOperationManager
 {
 
 
   public async Task Process<T>(
-
-    SendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, IReadOnlyList<T>> gatherObjects)
   {
-    await Process(commands, modelCardId,  initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
+    await Process(modelCardId,  initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
   }
   
   public async Task Process<T>(
-
-    SendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
     Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects)
   {
-    await Process(commands, modelCardId,  initializeScope, async (card, _) => await gatherObjects(card));
+    await Process(modelCardId,  initializeScope, async (card, _) => await gatherObjects(card));
   }
 
   public async Task Process<T>(
-    
-    SendBindingUICommands   commands, 
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope, 
     Func<SenderModelCard, IProgress<CardProgress>, Task<IReadOnlyList<T>>> gatherObjects)
@@ -91,7 +86,7 @@ public sealed class SendOperationManager(IServiceScope serviceScope,
       initializeScope( serviceScope.ServiceProvider, modelCard);
       
       var progress =
-        operationProgressManager.CreateOperationProgressEventHandler(commands.Bridge, modelCardId,
+        operationProgressManager.CreateOperationProgressEventHandler( modelCardId,
           cancellationItem.Token);
 
       var objects = await gatherObjects(modelCard, progress);
