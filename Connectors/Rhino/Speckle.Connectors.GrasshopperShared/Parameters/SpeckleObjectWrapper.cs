@@ -288,108 +288,171 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return CastToModelObject(ref target);
     }
 
-    var targetType = typeof(T);
-
-    // handle IGH_GeometricGoo special case
-    if (targetType == typeof(IGH_GeometricGoo))
+    return target switch
     {
-      target = (T)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-      return true;
-    }
-
-    // try our "unified" conversion
-    if (TryUnifiedCast<T>(Value.GeometryBase, out var result))
-    {
-      target = result;
-      return true;
-    }
-
-    return CastToModelObject(ref target);
+      GH_Surface => TryCastToSurface(ref target),
+      GH_Mesh => TryCastToMesh(ref target),
+      GH_Brep => TryCastToBrep(ref target),
+      GH_Line => TryCastToLine(ref target),
+      GH_Curve => TryCastToCurve(ref target),
+      GH_Point => TryCastToPoint(ref target),
+      GH_Circle => TryCastToCircle(ref target),
+      GH_Arc => TryCastToArc(ref target),
+#if RHINO8_OR_GREATER
+      GH_Extrusion => TryCastToExtrusion(ref target),
+      GH_PointCloud => TryCastToPointcloud(ref target),
+      GH_SubD => TryCastToSubD(ref target),
+      GH_Hatch => TryCastToHatch(ref target),
+#endif
+      IGH_GeometricGoo => TryCastToGeometricGoo(ref target),
+      _ => CastToModelObject(ref target)
+    };
   }
 
-  // NOTE: attempt to shorten the code, but these gh conversions are very verbose
-  private bool TryUnifiedCast<T>(GeometryBase geometry, out T result)
+  private bool TryCastToSurface<T>(ref T target)
   {
-    result = default!; // initialize with null-forgiving operator - result is only used when method returns true
-    object? convertedValue = null;
-
-    var targetType = typeof(T);
-
-    if (targetType == typeof(GH_Point))
+    Surface? surface = null;
+    if (GH_Convert.ToSurface(Value.GeometryBase, ref surface, GH_Conversion.Both))
     {
-      var point = new Point3d();
-      if (GH_Convert.ToPoint3d(geometry, ref point, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Point(point);
-      }
-    }
-    else if (targetType == typeof(GH_Curve))
-    {
-      Curve? curve = null;
-      if (GH_Convert.ToCurve(geometry, ref curve, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Curve(curve);
-      }
-    }
-    else if (targetType == typeof(GH_Line))
-    {
-      var line = new Line();
-      if (GH_Convert.ToLine(geometry, ref line, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Line(line);
-      }
-    }
-    else if (targetType == typeof(GH_Brep))
-    {
-      Brep? brep = null;
-      if (GH_Convert.ToBrep(geometry, ref brep, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Brep(brep);
-      }
-    }
-    else if (targetType == typeof(GH_Mesh))
-    {
-      Mesh? mesh = null;
-      if (GH_Convert.ToMesh(geometry, ref mesh, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Mesh(mesh);
-      }
-    }
-    else if (targetType == typeof(GH_Surface))
-    {
-      Surface? surface = null;
-      if (GH_Convert.ToSurface(geometry, ref surface, GH_Conversion.Both))
-      {
-        convertedValue = new GH_Surface(surface);
-      }
-    }
-#if RHINO8_OR_GREATER
-    else if (targetType == typeof(GH_SubD))
-    {
-      SubD? subd = null;
-      if (GH_Convert.ToSubD(geometry, ref subd, GH_Conversion.Both))
-      {
-        convertedValue = new GH_SubD(subd);
-      }
-    }
-    else if (targetType == typeof(GH_PointCloud))
-    {
-      PointCloud? pointCloud = null;
-      if (GH_Convert.ToPointCloud(geometry, ref pointCloud, GH_Conversion.Both))
-      {
-        convertedValue = new GH_PointCloud(pointCloud);
-      }
-    }
-#endif
-
-    if (convertedValue != null)
-    {
-      result = (T)convertedValue;
+      target = (T)(object)new GH_Surface(surface);
       return true;
     }
-
     return false;
   }
+
+  private bool TryCastToMesh<T>(ref T target)
+  {
+    Mesh? mesh = null;
+    if (GH_Convert.ToMesh(Value.GeometryBase, ref mesh, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Mesh(mesh);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToBrep<T>(ref T target)
+  {
+    Brep? brep = null;
+    if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Brep(brep);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToLine<T>(ref T target)
+  {
+    Line line = new();
+    if (GH_Convert.ToLine(Value.GeometryBase, ref line, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Line(line);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToCurve<T>(ref T target)
+  {
+    Curve? curve = null;
+    if (GH_Convert.ToCurve(Value.GeometryBase, ref curve, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Curve(curve);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToPoint<T>(ref T target)
+  {
+    Point3d point = new();
+    if (GH_Convert.ToPoint3d(Value.GeometryBase, ref point, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Point(point);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToGeometricGoo<T>(ref T target)
+  {
+    var geometricGoo = GH_Convert.ToGeometricGoo(Value.GeometryBase);
+    if (geometricGoo != null && geometricGoo is T convertedGoo)
+    {
+      target = convertedGoo;
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToCircle<T>(ref T target)
+  {
+    var circle = new Rhino.Geometry.Circle();
+    if (GH_Convert.ToCircle(Value.GeometryBase, ref circle, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Circle(circle);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToArc<T>(ref T target)
+  {
+    var arc = new Arc();
+    if (GH_Convert.ToArc(Value.GeometryBase, ref arc, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Arc(arc);
+      return true;
+    }
+    return false;
+  }
+
+#if RHINO8_OR_GREATER
+  private bool TryCastToExtrusion<T>(ref T target)
+  {
+    Extrusion? extrusion = null;
+    if (GH_Convert.ToExtrusion(Value.GeometryBase, ref extrusion, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Extrusion(extrusion);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToPointcloud<T>(ref T target)
+  {
+    PointCloud? pointCloud = null;
+    if (GH_Convert.ToPointCloud(Value.GeometryBase, ref pointCloud, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_PointCloud(pointCloud);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToHatch<T>(ref T target)
+  {
+    Hatch? hatch = null;
+    if (GH_Convert.ToHatch(Value.GeometryBase, ref hatch, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Hatch(hatch);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToSubD<T>(ref T target)
+  {
+    SubD? subd = null;
+    if (GH_Convert.ToSubD(Value.GeometryBase, ref subd, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_SubD(subd);
+      return true;
+    }
+    return false;
+  }
+#endif
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
   {
