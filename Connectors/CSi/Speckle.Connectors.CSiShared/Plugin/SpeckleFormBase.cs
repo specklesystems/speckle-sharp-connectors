@@ -30,8 +30,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 
   protected virtual void ConfigureServices(IServiceCollection services)
   {
-    services.Initialize(GetHostApplication(), GetVersion());
-    services.AddCsi();
+    services.AddCsi(GetHostApplication(), GetVersion());
     services.AddCsiConverters();
   }
 

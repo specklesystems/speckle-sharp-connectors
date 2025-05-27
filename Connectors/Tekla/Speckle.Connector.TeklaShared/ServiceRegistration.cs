@@ -24,14 +24,13 @@ namespace Speckle.Connectors.TeklaShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddTekla(this IServiceCollection services)
+  public static IServiceCollection AddTekla(this IServiceCollection services, HostAppVersion version)
   {
     var converterAssembly = System.Reflection.Assembly.GetExecutingAssembly();
 
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
-    services.AddConnectors();
-    services.AddDUI<DefaultThreadContext, TeklaDocumentModelStore>();
+    services.AddDUISendOnly<TeklaDocumentModelStore, DefaultThreadContext>(HostApplications.TeklaStructures, version);
     services.AddDUIView();
 
     services.AddSingleton<IAppIdleManager, TeklaIdleManager>();

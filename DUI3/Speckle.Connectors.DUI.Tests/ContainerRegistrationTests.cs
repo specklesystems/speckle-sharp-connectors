@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -62,9 +63,9 @@ public class ServiceRegistrationTests
   public void RegisterDependencies_Validation()
   {
     var serviceCollection = new ServiceCollection();
-    serviceCollection.AddDUI<TestDocumentModelStore, TestHostObjectBuilder, TestThreadContext>(
+    serviceCollection.AddDUISendReceive<TestDocumentModelStore, TestHostObjectBuilder, TestThreadContext>(
       new("Tests", "test"),
-      "v3"
+      HostAppVersion.v3
     );
     serviceCollection.AddSingleton<IBrowserScriptExecutor, TestBrowserScriptExecutor>();
     var serviceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
@@ -75,9 +76,9 @@ public class ServiceRegistrationTests
   public void RegisterDependencies_Scopes()
   {
     var serviceCollection = new ServiceCollection();
-    serviceCollection.AddDUI<TestDocumentModelStore, TestHostObjectBuilder, TestThreadContext>(
+    serviceCollection.AddDUISendReceive<TestDocumentModelStore, TestHostObjectBuilder, TestThreadContext>(
       new("Tests", "test"),
-      "v3"
+      HostAppVersion.v3
     );
     serviceCollection.AddSingleton<IBrowserScriptExecutor, TestBrowserScriptExecutor>();
     var serviceProvider = serviceCollection.BuildServiceProvider(

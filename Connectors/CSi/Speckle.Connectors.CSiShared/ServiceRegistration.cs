@@ -20,12 +20,15 @@ namespace Speckle.Connectors.CSiShared;
 
 public static class ServiceRegistration
 {
-  public static IServiceCollection AddCsi(this IServiceCollection services)
+  public static IServiceCollection AddCsi(
+    this IServiceCollection services,
+    Speckle.Sdk.Application application,
+    HostAppVersion version
+  )
   {
     services.AddSingleton<IBrowserBridge, BrowserBridge>();
 
-    services.AddConnectors();
-    services.AddDUI<DefaultThreadContext, CsiDocumentModelStore>();
+    services.AddDUISendOnly<CsiDocumentModelStore, DefaultThreadContext>(application, version);
     services.AddDUIView();
 
     services.AddSingleton<IBinding, TestBinding>();

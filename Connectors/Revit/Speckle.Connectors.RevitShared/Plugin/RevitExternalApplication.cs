@@ -15,7 +15,6 @@ internal sealed class RevitExternalApplication : IExternalApplication
   private IRevitPlugin? _revitPlugin;
 
   private ServiceProvider? _container;
-  private IDisposable? _disposableLogger;
 
   // POC: move to somewhere central?
   public static readonly DockablePaneId DockablePanelId = new(new Guid("{f7b5da7c-366c-4b13-8455-b56f433f461e}"));
@@ -45,8 +44,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<RevitExternalApplication>;
       var services = new ServiceCollection();
       // init DI
-      _disposableLogger = services.Initialize(HostApplications.Revit, GetVersion());
-      services.AddRevit();
+      services.AddRevit(GetVersion());
       services.AddRevitConverters();
       services.AddSingleton(application);
       _container = services.BuildServiceProvider();
@@ -78,7 +76,6 @@ internal sealed class RevitExternalApplication : IExternalApplication
       // possibly with injected pieces or with some abstract methods?
       // need to look for commonality
       _revitPlugin?.Shutdown();
-      _disposableLogger?.Dispose();
       _container?.Dispose();
     }
     catch (Exception e) when (!e.IsFatal())

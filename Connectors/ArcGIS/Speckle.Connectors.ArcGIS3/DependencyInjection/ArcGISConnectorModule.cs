@@ -16,7 +16,6 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converters.Common;
-using Speckle.Sdk.Models.GraphTraversal;
 
 // POC: This is a temp reference to root object senders to tweak CI failing after having generic interfaces into common project.
 // This should go whenever it is aligned.
@@ -25,10 +24,9 @@ namespace Speckle.Connectors.ArcGIS.DependencyInjection;
 
 public static class ArcGISConnectorModule
 {
-  public static void AddArcGIS(this IServiceCollection serviceCollection)
+  public static void AddArcGIS(this IServiceCollection serviceCollection, HostAppVersion version)
   {
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, ArcGISDocumentStore>();
+    serviceCollection.AddDUISendOnly<ArcGISDocumentStore, DefaultThreadContext>(HostApplications.ArcGIS, version);
     serviceCollection.AddDUIView();
 
     // Register bindings

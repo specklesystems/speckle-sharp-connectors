@@ -13,7 +13,7 @@ namespace Speckle.Connectors.DUI;
 
 public static class ContainerRegistration
 {
-  public static void AddDUI<TDocumentStore, THostObjectBuilder, TThreadContext>(
+  public static void AddDUISendReceive<TDocumentStore, THostObjectBuilder, TThreadContext>(
     this IServiceCollection serviceCollection,
     Application application,
     HostAppVersion applicationVersion,
@@ -24,13 +24,37 @@ public static class ContainerRegistration
     where THostObjectBuilder : class, IHostObjectBuilder
     where TThreadContext : IThreadContext, new()
   {
-    serviceCollection.AddSpeckleLogging(application, applicationVersion);
-    serviceCollection.AddConnectors<THostObjectBuilder, TThreadContext>(
+    serviceCollection.AddConnectorSendReceive<THostObjectBuilder, TThreadContext>(
       application,
       applicationVersion,
       speckleVersion,
       assemblies
     );
+    serviceCollection.AddDUICommon<TDocumentStore>(application, applicationVersion);
+  }
+
+  public static void AddDUISendOnly<TDocumentStore, TThreadContext>(
+    this IServiceCollection serviceCollection,
+    Application application,
+    HostAppVersion applicationVersion,
+    string? speckleVersion = null,
+    IEnumerable<Assembly>? assemblies = null
+  )
+    where TDocumentStore : DocumentModelStore
+    where TThreadContext : IThreadContext, new()
+  {
+    serviceCollection.AddConnectorSendOnly<TThreadContext>(application, applicationVersion, speckleVersion, assemblies);
+    serviceCollection.AddDUICommon<TDocumentStore>(application, applicationVersion);
+  }
+
+  private static void AddDUICommon<TDocumentStore>(
+    this IServiceCollection serviceCollection,
+    Application application,
+    HostAppVersion applicationVersion
+  )
+    where TDocumentStore : DocumentModelStore
+  {
+    serviceCollection.AddSpeckleLogging(application, applicationVersion);
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
     serviceCollection.AddSingleton<IBinding, TopLevelExceptionHandlerBinding>(sp =>

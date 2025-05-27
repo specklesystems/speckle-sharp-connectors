@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino.Commands;
 using Rhino.DocObjects;
@@ -26,23 +25,15 @@ namespace Speckle.Connectors.Rhino.DependencyInjection;
 
 public static class ServiceRegistration
 {
-  public static void AddRhino(
-    this IServiceCollection serviceCollection,
-    Speckle.Sdk.Application application,
-    HostAppVersion applicationVersion,
-    string? speckleVersion = null,
-    IEnumerable<Assembly>? assemblies = null
-  )
+  public static void AddRhino(this IServiceCollection serviceCollection, HostAppVersion applicationVersion)
   {
     // Register instances initialised by Rhino
     serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
-    serviceCollection.AddDUI<RhinoDocumentStore, RhinoHostObjectBuilder, DefaultThreadContext>(
-      application,
-      applicationVersion,
-      speckleVersion,
-      assemblies
+    serviceCollection.AddDUISendReceive<RhinoDocumentStore, RhinoHostObjectBuilder, DefaultThreadContext>(
+      HostApplications.Rhino,
+      applicationVersion
     );
     serviceCollection.AddDUIView();
 

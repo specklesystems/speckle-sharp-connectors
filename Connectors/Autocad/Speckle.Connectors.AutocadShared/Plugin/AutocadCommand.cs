@@ -2,7 +2,6 @@ using System.Drawing;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.WebView;
 #if AUTOCAD
@@ -19,7 +18,6 @@ public class AutocadCommand
   private static PaletteSet? PaletteSet { get; set; }
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
   public ServiceProvider? Container { get; private set; }
-  private IDisposable? _disposableLogger;
   public const string COMMAND_STRING = "SpeckleBeta";
 
   [CommandMethod(COMMAND_STRING)]
@@ -39,12 +37,11 @@ public class AutocadCommand
 
     // init DI
     var services = new ServiceCollection();
-    _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
 #if AUTOCAD
-    services.AddAutocad();
+    services.AddAutocad(AppUtils.Version);
     services.AddAutocadConverters();
 #elif CIVIL3D
-    services.AddCivil3d();
+    services.AddCivil3d(AppUtils.Version);
     services.AddCivil3dConverters();
 #endif
     Container = services.BuildServiceProvider();

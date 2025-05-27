@@ -84,8 +84,7 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     }
 
     var services = new ServiceCollection();
-    services.Initialize(HostApplications.TeklaStructures, GetVersion());
-    services.AddTekla();
+    services.AddTekla(GetVersion());
     services.AddTeklaConverters();
 
     Container = services.BuildServiceProvider();

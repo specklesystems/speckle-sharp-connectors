@@ -14,7 +14,7 @@ namespace Speckle.Connectors.Common;
 
 public static class ContainerRegistration
 {
-  public static void AddConnectors<THostObjectBuilder, TThreadContext>(
+  public static void AddConnectorSendReceive<THostObjectBuilder, TThreadContext>(
     this IServiceCollection serviceCollection,
     Application application,
     HostAppVersion applicationVersion,
@@ -25,10 +25,10 @@ public static class ContainerRegistration
     where TThreadContext : IThreadContext, new()
   {
     serviceCollection.AddScoped<IHostObjectBuilder, THostObjectBuilder>();
-    serviceCollection.AddConnectors<TThreadContext>(application, applicationVersion, speckleVersion, assemblies);
+    serviceCollection.AddConnectorSendOnly<TThreadContext>(application, applicationVersion, speckleVersion, assemblies);
   }
 
-  public static void AddConnectors<TThreadContext>(
+  public static void AddConnectorSendOnly<TThreadContext>(
     this IServiceCollection serviceCollection,
     Application application,
     HostAppVersion applicationVersion,

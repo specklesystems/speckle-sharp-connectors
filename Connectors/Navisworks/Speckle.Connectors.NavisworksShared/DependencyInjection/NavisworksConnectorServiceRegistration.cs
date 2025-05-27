@@ -17,17 +17,18 @@ using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connector.Navisworks.DependencyInjection;
 
 public static class NavisworksConnectorServiceRegistration
 {
-  public static void AddNavisworks(this IServiceCollection serviceCollection)
+  public static void AddNavisworks(this IServiceCollection serviceCollection, HostAppVersion version)
   {
     // Register Core functionality
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, NavisworksDocumentModelStore>();
+    serviceCollection.AddDUISendOnly<NavisworksDocumentModelStore, DefaultThreadContext>(
+      HostApplications.Navisworks,
+      version
+    );
     serviceCollection.AddDUIView();
 
     // Register bindings

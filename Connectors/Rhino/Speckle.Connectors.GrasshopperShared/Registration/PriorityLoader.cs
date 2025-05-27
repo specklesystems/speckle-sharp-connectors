@@ -30,7 +30,7 @@ public class PriorityLoader : GH_AssemblyPriority
       var services = new ServiceCollection();
       services.AddSpeckleLogging(HostApplications.Grasshopper, GetVersion());
       services.AddRhinoConverters();
-      services.AddConnectors<DefaultThreadContext>(HostApplications.Grasshopper, GetVersion());
+      services.AddConnectorSendOnly<DefaultThreadContext>(HostApplications.Grasshopper, GetVersion());
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
