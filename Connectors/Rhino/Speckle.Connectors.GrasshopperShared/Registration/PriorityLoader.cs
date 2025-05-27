@@ -36,7 +36,6 @@ public class PriorityLoader : GH_AssemblyPriority
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
-      services.AddTransient<AccountService>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
 

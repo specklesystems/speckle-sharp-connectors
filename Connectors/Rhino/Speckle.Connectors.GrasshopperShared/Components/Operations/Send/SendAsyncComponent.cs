@@ -144,8 +144,8 @@ public class SendAsyncComponent : GH_AsyncComponent
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
     MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-    var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
+    var accountService = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -231,8 +231,8 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   private void ParseInput(
     IGH_DataAccess da,
-    AccountService accountService,
-    AccountManager accountManager,
+    IAccountService accountService,
+    IAccountManager accountManager,
     IClientFactory clientFactory
   )
   {
