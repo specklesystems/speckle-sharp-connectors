@@ -68,7 +68,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: dogukan/tekla-2025
+          ref: main
           wait-for-completion: true
           wait-for-completion-interval: 10s
           wait-for-completion-timeout: 10m
