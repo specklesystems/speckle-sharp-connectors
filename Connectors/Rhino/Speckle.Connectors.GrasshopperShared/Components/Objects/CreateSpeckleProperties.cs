@@ -16,16 +16,32 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       "Creates a set of properties for Speckle objects",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
-    ) { }
+    )
+  {
+    UpdateMessage();
+  }
 
   public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => Resources.speckle_properties_create;
 
   public bool CreateEmptyProperties { get; set; }
-  public bool AlwaysInheritNames { get; set; }
 
+  private bool _alwaysInheritNames;
+
+  public bool AlwaysInheritNames
+  {
+    get => _alwaysInheritNames;
+    set
+    {
+      _alwaysInheritNames = value;
+
+      UpdateMessage();
+    }
+  }
   private readonly DebounceDispatcher _debounceDispatcher = new();
+
+  private void UpdateMessage() => Message = AlwaysInheritNames ? "Inheriting nicknames" : "";
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -98,7 +114,8 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       MutableNickName = true,
       Optional = true,
       Access = GH_ParamAccess.item,
-      CanInheritNames = true
+      CanInheritNames = true,
+      AlwaysInheritNames = AlwaysInheritNames
     };
 
     return myParam;

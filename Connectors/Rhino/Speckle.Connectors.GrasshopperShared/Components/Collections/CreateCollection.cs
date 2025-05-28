@@ -17,7 +17,18 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
-  public bool AlwaysInheritNames { get; set; }
+  private bool _alwaysInheritNames;
+
+  public bool AlwaysInheritNames
+  {
+    get => _alwaysInheritNames;
+    set
+    {
+      _alwaysInheritNames = value;
+
+      UpdateMessage();
+    }
+  }
 
   public CreateCollection()
     : base(
@@ -26,7 +37,15 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       "Creates a new Collection",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
-    ) { }
+    )
+  {
+    UpdateMessage();
+  }
+
+  private void UpdateMessage()
+  {
+    Message = AlwaysInheritNames ? "Inheriting nicknames" : "";
+  }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
