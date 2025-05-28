@@ -41,7 +41,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   }
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
-  private void UpdateMessage() => Message = AlwaysInheritNames ? "Inheriting nicknames" : "";
+  private void UpdateMessage() => Message = AlwaysInheritNames ? "Inheriting names" : "";
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

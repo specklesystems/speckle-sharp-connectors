@@ -44,7 +44,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   private void UpdateMessage()
   {
-    Message = AlwaysInheritNames ? "Inheriting nicknames" : "";
+    Message = AlwaysInheritNames ? "Inheriting names" : "";
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
