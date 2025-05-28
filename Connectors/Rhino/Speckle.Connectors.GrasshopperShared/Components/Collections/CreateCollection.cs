@@ -17,7 +17,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 
-  public bool AlwaysInheritNames { get; set; } = true;
+  public bool AlwaysInheritNames { get; set; }
 
   public CreateCollection()
     : base(

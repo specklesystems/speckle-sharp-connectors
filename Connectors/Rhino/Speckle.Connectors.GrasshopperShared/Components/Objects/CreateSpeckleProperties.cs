@@ -23,7 +23,7 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   protected override Bitmap Icon => Resources.speckle_properties_create;
 
   public bool CreateEmptyProperties { get; set; }
-  public bool AlwaysInheritNames { get; set; } = true;
+  public bool AlwaysInheritNames { get; set; }
 
   private readonly DebounceDispatcher _debounceDispatcher = new();
 

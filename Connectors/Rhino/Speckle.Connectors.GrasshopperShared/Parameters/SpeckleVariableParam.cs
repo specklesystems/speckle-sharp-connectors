@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public class SpeckleVariableParam : Param_GenericObject
 {
   public bool CanInheritNames { get; set; } = true;
-  public bool AlwaysInheritNames { get; set; } = true;
+  public bool AlwaysInheritNames { get; set; }
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
 
   static SpeckleVariableParam()
