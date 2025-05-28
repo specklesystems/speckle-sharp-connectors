@@ -50,12 +50,12 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   // DI props
   public IClient ApiClient { get; private set; }
-  public MixPanelManager MixPanelManager { get; private set; }
+  public IMixPanelManager MixPanelManager { get; private set; }
   public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
   public RootObjectUnpacker RootObjectUnpacker { get; private set; }
   public static IServiceScope? Scope { get; private set; }
-  public AccountService AccountService { get; private set; }
-  public AccountManager AccountManager { get; private set; }
+  public IAccountService AccountService { get; private set; }
+  public IAccountManager AccountManager { get; private set; }
   public IClientFactory ClientFactory { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -82,10 +82,10 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
     RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    AccountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
+    AccountService = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    AccountManager = Scope.ServiceProvider.GetRequiredService<IAccountManager>();
     ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -258,7 +258,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
         AutoReceive = false;
         LastInfoMessage = "";
         ResetApiClient(dataInput);
-        return;
+        break;
       case SpeckleUrlModelResource:
         InputType = "Model";
         // handled in do work

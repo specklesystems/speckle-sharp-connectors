@@ -57,7 +57,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
-  public MixPanelManager MixPanelManager { get; set; }
+  public IMixPanelManager MixPanelManager { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
@@ -143,9 +143,9 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
-    var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
+    var accountService = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -231,8 +231,8 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   private void ParseInput(
     IGH_DataAccess da,
-    AccountService accountService,
-    AccountManager accountManager,
+    IAccountService accountService,
+    IAccountManager accountManager,
     IClientFactory clientFactory
   )
   {

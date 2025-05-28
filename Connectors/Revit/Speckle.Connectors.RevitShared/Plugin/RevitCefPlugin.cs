@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -104,7 +105,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    global::Revit.Async.RevitTask.Initialize(uiApplication);
+    RevitAsync.Initialize(uiApplication);
 
     PostApplicationInit(); // for double-click file open
   }
