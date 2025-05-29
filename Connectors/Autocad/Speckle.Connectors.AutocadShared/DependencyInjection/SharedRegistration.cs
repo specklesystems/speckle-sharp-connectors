@@ -6,7 +6,6 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common;
-using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -16,16 +15,21 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
 
 public static class SharedRegistration
 {
-  public static void AddAutocadBase(this IServiceCollection serviceCollection)
+  public static void AddAutocadBase(
+    this IServiceCollection serviceCollection,
+    Speckle.Sdk.Application application,
+    HostAppVersion version
+  )
   {
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, AutocadDocumentStore>();
+    serviceCollection.AddDUISendReceive<AutocadDocumentStore, AutocadHostObjectBuilder, DefaultThreadContext>(
+      application,
+      version
+    );
     serviceCollection.AddDUIView();
 
     // Register other connector specific types
@@ -50,9 +54,6 @@ public static class SharedRegistration
     serviceCollection.AddScoped<IAutocadMaterialBaker, AutocadMaterialBaker>();
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
@@ -81,12 +82,6 @@ public static class SharedRegistration
 
   public static void LoadReceive(this IServiceCollection serviceCollection)
   {
-    // traversal
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
-
-    // Object Builders
-    serviceCollection.AddScoped<IHostObjectBuilder, AutocadHostObjectBuilder>();
-
     // Register bindings
     serviceCollection.AddSingleton<IBinding, AutocadReceiveBinding>();
   }

@@ -38,9 +38,7 @@ internal sealed class Connector : NAV.Plugins.DockPanePlugin
 
     var services = new ServiceCollection();
 
-    services.Initialize(HostApplications.Navisworks, SpeckleV3Tool.Version);
-
-    services.AddNavisworks();
+    services.AddNavisworks(SpeckleV3Tool.Version);
     services.AddNavisworksConverter();
 
     Container = services.BuildServiceProvider();

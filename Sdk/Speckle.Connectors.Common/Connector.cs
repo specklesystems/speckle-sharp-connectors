@@ -22,7 +22,7 @@ public static class Connector
   public static readonly string TabName = "Speckle";
   public static readonly string TabTitle = "Speckle (Beta)";
 
-  public static IDisposable Initialize(
+  public static void AddSpeckleLogging(
     this IServiceCollection serviceCollection,
     Application application,
     HostAppVersion version
@@ -74,6 +74,6 @@ public static class Connector
       typeof(Point).Assembly
     );
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    return new LoggingDisposable(tracing, metrics);
+    serviceCollection.AddSingleton(new LoggingDisposable(tracing, metrics));
   }
 }

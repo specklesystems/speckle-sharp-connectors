@@ -20,20 +20,21 @@ using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
 using Speckle.Connectors.Rhino.Plugin;
-using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Rhino.DependencyInjection;
 
 public static class ServiceRegistration
 {
-  public static void AddRhino(this IServiceCollection serviceCollection)
+  public static void AddRhino(this IServiceCollection serviceCollection, HostAppVersion applicationVersion)
   {
     // Register instances initialised by Rhino
     serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
     serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
 
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
+    serviceCollection.AddDUISendReceive<RhinoDocumentStore, RhinoHostObjectBuilder, DefaultThreadContext>(
+      HostApplications.Rhino,
+      applicationVersion
+    );
     serviceCollection.AddDUIView();
 
     // Register bindings
@@ -58,7 +59,6 @@ public static class ServiceRegistration
 
     // register send operation and dependencies
     serviceCollection.AddScoped<SendOperation<RhinoObject>>();
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     serviceCollection.AddScoped<IRootObjectBuilder<RhinoObject>, RhinoRootObjectBuilder>();
     serviceCollection.AddScoped<
@@ -83,8 +83,5 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 
     serviceCollection.AddScoped<PropertiesExtractor>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 }

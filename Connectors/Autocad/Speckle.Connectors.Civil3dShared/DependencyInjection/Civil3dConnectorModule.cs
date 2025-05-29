@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.Bindings;
 using Speckle.Connectors.Civil3dShared.Operations.Send;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -13,9 +14,9 @@ namespace Speckle.Connectors.Civil3dShared.DependencyInjection;
 
 public static class Civil3dConnectorModule
 {
-  public static void AddCivil3d(this IServiceCollection serviceCollection)
+  public static void AddCivil3d(this IServiceCollection serviceCollection, HostAppVersion version)
   {
-    serviceCollection.AddAutocadBase();
+    serviceCollection.AddAutocadBase(HostApplications.Civil3D, version);
 
     // add send
     serviceCollection.LoadSend();

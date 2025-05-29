@@ -16,7 +16,6 @@ using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
-using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2026_OR_GREATER
 using Speckle.Connectors.Revit2026.Plugin;
 #else
@@ -28,10 +27,12 @@ namespace Speckle.Connectors.Revit.DependencyInjection;
 // POC: should interface out things that are not
 public static class ServiceRegistration
 {
-  public static void AddRevit(this IServiceCollection serviceCollection)
+  public static void AddRevit(this IServiceCollection serviceCollection, HostAppVersion version)
   {
-    serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
+    serviceCollection.AddDUISendReceive<RevitDocumentStore, RevitHostObjectBuilder, RevitThreadContext>(
+      HostApplications.Revit,
+      version
+    );
     RegisterUiDependencies(serviceCollection);
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
@@ -64,19 +65,14 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies
-    serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
-    serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
-
-    // operation progress manager
-    serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)

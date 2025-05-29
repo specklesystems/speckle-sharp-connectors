@@ -14,7 +14,6 @@ namespace Speckle.Connectors.ArcGIS;
 internal sealed class SpeckleModule : Module
 {
   private static SpeckleModule? s_this;
-  private readonly IDisposable? _disposableLogger;
 
   /// <summary>
   /// Retrieve the singleton instance to this module here
@@ -30,8 +29,7 @@ internal sealed class SpeckleModule : Module
 
     var services = new ServiceCollection();
     // init DI
-    _disposableLogger = services.Initialize(HostApplications.ArcGIS, GetVersion());
-    services.AddArcGIS();
+    services.AddArcGIS(GetVersion());
     services.AddArcGISConverters();
     Container = services.BuildServiceProvider();
     Container.UseDUI();
@@ -54,7 +52,6 @@ internal sealed class SpeckleModule : Module
   {
     //TODO - add your business logic
     //return false to ~cancel~ Application close
-    _disposableLogger?.Dispose();
     Container.Dispose();
     return true;
   }
