@@ -13,6 +13,7 @@ public class SpeckleVariableParam : Param_GenericObject
 {
   private bool _alwaysInheritNames;
   private readonly HashSet<IGH_Param> _sourceSubscriptions = [];
+  private bool _isUpdatingName; // Prevent recursive updates
 
   static SpeckleVariableParam()
   {
@@ -79,24 +80,36 @@ public class SpeckleVariableParam : Param_GenericObject
 
   private void TryInheritName()
   {
-    if (!MutableNickName || !CanInheritNames || Sources.Count == 0)
+    if (!MutableNickName || !CanInheritNames || Sources.Count == 0 || _isUpdatingName)
     {
       return;
     }
 
     var names = Sources.Select(s => s.NickName).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
-
     if (names.Count == 0)
     {
       return;
     }
 
     var inheritedName = string.Join("|", names);
-    Name = inheritedName;
-    NickName = inheritedName;
 
-    // Trigger update
-    (Attributes?.Parent?.DocObject as GH_Component)?.ExpireSolution(true);
+    // Only update if the name actually changed to avoid unnecessary events
+    if (NickName != inheritedName)
+    {
+      _isUpdatingName = true;
+      try
+      {
+        Name = inheritedName;
+        NickName = inheritedName;
+
+        // Tell the parent component its layout needs to be recalculated
+        Attributes.Parent?.ExpireLayout();
+      }
+      finally
+      {
+        _isUpdatingName = false;
+      }
+    }
   }
 
   private void SubscribeToSources()
@@ -133,17 +146,17 @@ public class SpeckleVariableParam : Param_GenericObject
 
   private void OnSourceChanged(IGH_DocumentObject sender, GH_ObjectChangedEventArgs e)
   {
-    if (!AlwaysInheritNames || !MutableNickName)
+    if (!AlwaysInheritNames || !MutableNickName || _isUpdatingName)
     {
       return;
     }
 
     if (e.Type == GH_ObjectEventType.NickName || e.Type == GH_ObjectEventType.NickNameAccepted)
     {
-      // Use UI thread to ensure proper timing
+      // Use immediate UI thread invocation for responsive name inheritance
       Rhino.RhinoApp.InvokeOnUiThread(() =>
       {
-        if (AlwaysInheritNames) // Double-check in case it changed
+        if (AlwaysInheritNames && !_isUpdatingName) // Double-check in case it changed
         {
           TryInheritName();
         }

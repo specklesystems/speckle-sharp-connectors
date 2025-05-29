@@ -51,9 +51,9 @@ public abstract class VariableParameterComponentBase : GH_Component, IGH_Variabl
     OnDisplayExpired(true);
   }
 
-  protected virtual SpeckleVariableParam CreateVariableParameter(string baseName, GH_ParamAccess access)
+  protected SpeckleVariableParam CreateVariableParameter(string baseName, GH_ParamAccess access)
   {
-    return new SpeckleVariableParam
+    var param = new SpeckleVariableParam
     {
       Name = baseName,
       NickName = baseName,
@@ -63,15 +63,39 @@ public abstract class VariableParameterComponentBase : GH_Component, IGH_Variabl
       CanInheritNames = true,
       AlwaysInheritNames = AlwaysInheritNames
     };
+
+    // Subscribe to the parameter's name changes for auto-resizing
+    param.ObjectChanged += OnParameterObjectChanged;
+
+    return param;
   }
 
-  public virtual void OnParameterNameChanged(IGH_Param parameter)
+  /// <summary>
+  /// Handles parameter object changes, including name changes that require resizing
+  /// </summary>
+  private void OnParameterObjectChanged(IGH_DocumentObject sender, GH_ObjectChangedEventArgs e)
+  {
+    // Only respond to name changes that affect layout
+    if (e.Type == GH_ObjectEventType.NickName || e.Type == GH_ObjectEventType.NickNameAccepted)
+    {
+      // Force immediate component resize for name inheritance
+      TriggerComponentResize();
+    }
+  }
+
+  private void TriggerComponentResize()
+  {
+    // Simple: just expire the layout - Grasshopper handles the rest
+    Attributes?.ExpireLayout();
+  }
+
+  private void OnParameterNameChanged(IGH_Param parameter)
   {
     parameter.Name = parameter.NickName;
     _debounceDispatcher.Debounce(500, _ => ExpireSolution(true));
   }
 
-  public virtual void OnParameterSourceChanged(IGH_Param parameter, int parameterIndex)
+  private void OnParameterSourceChanged(IGH_Param parameter, int parameterIndex)
   {
     // Auto-add parameter if connecting to the last input
     if (parameter.SourceCount > 0 && parameterIndex == Params.Input.Count - 1)
@@ -86,11 +110,25 @@ public abstract class VariableParameterComponentBase : GH_Component, IGH_Variabl
   {
     base.AddedToDocument(document);
     Params.ParameterChanged += OnParameterChanged;
+
+    // Ensure all existing parameters are properly subscribed
+    foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
+    {
+      param.ObjectChanged -= OnParameterObjectChanged; // Remove any existing subscription
+      param.ObjectChanged += OnParameterObjectChanged; // Add fresh subscription
+    }
   }
 
   public override void RemovedFromDocument(GH_Document document)
   {
     Params.ParameterChanged -= OnParameterChanged;
+
+    // Clean up parameter event subscriptions
+    foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
+    {
+      param.ObjectChanged -= OnParameterObjectChanged;
+    }
+
     base.RemovedFromDocument(document);
   }
 
@@ -165,6 +203,8 @@ public abstract class VariableParameterComponentBase : GH_Component, IGH_Variabl
     foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
     {
       param.AlwaysInheritNames = AlwaysInheritNames;
+      param.ObjectChanged -= OnParameterObjectChanged;
+      param.ObjectChanged += OnParameterObjectChanged;
     }
     UpdateDisplayMessage();
   }
