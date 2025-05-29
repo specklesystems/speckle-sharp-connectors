@@ -114,12 +114,15 @@ public class SpeckleTeklaPanelHost : PluginFormBase
     Focus();
   }
 
-  private HostAppVersion GetVersion()
+  private static HostAppVersion GetVersion()
   {
 #if TEKLA2024
     return HostAppVersion.v2024;
 #elif TEKLA2023
     return HostAppVersion.v2023;
+#elif TEKLA2025
+    return HostAppVersion.v2025;
+
 #else
     throw new NotImplementedException();
 #endif
