@@ -195,6 +195,7 @@ public class SpeckleVariableParam : Param_GenericObject
   {
     // Clean up all event subscriptions when removed from document
     CleanupSourceSubscriptions();
+    document.ObjectsAdded -= OnDocumentObjectsAdded;
     base.RemovedFromDocument(document);
   }
 
@@ -220,8 +221,8 @@ public class SpeckleVariableParam : Param_GenericObject
     bool alwaysInherit = false;
     if (reader.TryGetBoolean("AlwaysInheritNames", ref alwaysInherit))
     {
-      // Use the property to trigger the setup logic
-      AlwaysInheritNames = alwaysInherit;
+      // set backing field directly to avoid triggering logic during document loading
+      _alwaysInheritNames = alwaysInherit;
     }
 
     string lastInheritedName = string.Empty;
@@ -241,6 +242,35 @@ public class SpeckleVariableParam : Param_GenericObject
     if (CanInheritNames && AlwaysInheritNames)
     {
       SetupSourceSubscriptions();
+    }
+  }
+
+  public override void AddedToDocument(GH_Document document)
+  {
+    base.AddedToDocument(document);
+    document.ObjectsAdded += OnDocumentObjectsAdded;
+  }
+
+  private void OnDocumentObjectsAdded(object sender, GH_DocObjectEventArgs e)
+  {
+    // This event fires after all objects are added to the document during loading
+    // Check if we need to inherit names now that everything is properly connected
+    if (CanInheritNames && AlwaysInheritNames && Sources.Count > 0)
+    {
+      // use Rhino's UI thread invocation with a small delay to ensure all connections are established
+      Rhino.RhinoApp.InvokeOnUiThread(() =>
+      {
+        if (AlwaysInheritNames) // double-check in case it changed
+        {
+          UpdateInheritedName();
+        }
+      });
+    }
+
+    // unsubscribe after first use - we only need this during initial document loading
+    if (sender is GH_Document doc)
+    {
+      doc.ObjectsAdded -= OnDocumentObjectsAdded;
     }
   }
 }
