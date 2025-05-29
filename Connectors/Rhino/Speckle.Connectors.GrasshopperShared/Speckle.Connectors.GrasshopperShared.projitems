@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\SpeckleTaskCapableComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\Operator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\ValueSet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\VariableParameterComponentBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />

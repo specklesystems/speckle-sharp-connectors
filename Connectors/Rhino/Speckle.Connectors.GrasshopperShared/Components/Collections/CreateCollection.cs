@@ -188,7 +188,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
   public override void AddedToDocument(GH_Document document)
   {
     base.AddedToDocument(document);
-    Params.ParameterChanged += (sender, args) =>
+    Params.ParameterChanged += (_, args) =>
     {
       if (args.ParameterSide == GH_ParameterSide.Output)
       {
@@ -200,7 +200,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
           // This means the user is typing characters, debounce until it stops for 400ms before expiring the solution.
           // Prevents UI from locking too soon while writing new names for inputs.
           args.Parameter.Name = args.Parameter.NickName;
-          _debounceDispatcher.Debounce(500, e => ExpireSolution(true));
+          _debounceDispatcher.Debounce(500, _ => ExpireSolution(true));
           break;
         case GH_ObjectEventType.NickNameAccepted:
           args.Parameter.Name = args.Parameter.NickName;
@@ -232,7 +232,7 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     ToolStripMenuItem alwaysInheritMenuItem = Menu_AppendItem(
       menu,
       "Always inherit names",
-      (s, e) =>
+      (_, _) =>
       {
         AlwaysInheritNames = !AlwaysInheritNames;
         // update existing parameters - this will now trigger the property setter
