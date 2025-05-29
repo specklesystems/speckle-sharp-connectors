@@ -34,6 +34,9 @@ public class SpeckleVariableParam : Param_GenericObject
 
       _alwaysInheritNames = value;
 
+      // Update mutability based on inheritance mode
+      MutableNickName = !value;
+
       if (value)
       {
         SubscribeToSources();
@@ -80,7 +83,7 @@ public class SpeckleVariableParam : Param_GenericObject
 
   private void TryInheritName()
   {
-    if (!MutableNickName || !CanInheritNames || Sources.Count == 0 || _isUpdatingName)
+    if (!CanInheritNames || Sources.Count == 0 || _isUpdatingName)
     {
       return;
     }
