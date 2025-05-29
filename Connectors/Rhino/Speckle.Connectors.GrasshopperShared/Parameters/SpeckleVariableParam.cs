@@ -34,6 +34,9 @@ public class SpeckleVariableParam : Param_GenericObject
 
       _alwaysInheritNames = value;
 
+      // disable manual renaming when AlwaysInheritNames is enabled
+      MutableNickName = !value;
+
       if (value)
       {
         SubscribeToSources();
@@ -75,12 +78,11 @@ public class SpeckleVariableParam : Param_GenericObject
     }
   }
 
-  private bool ShouldInheritName() =>
-    MutableNickName && CanInheritNames && (AlwaysInheritNames || KeyWatcher.TabPressed);
+  private bool ShouldInheritName() => CanInheritNames && (AlwaysInheritNames || KeyWatcher.TabPressed);
 
   private void TryInheritName()
   {
-    if (!MutableNickName || !CanInheritNames || Sources.Count == 0 || _isUpdatingName)
+    if (!CanInheritNames || Sources.Count == 0 || _isUpdatingName)
     {
       return;
     }
@@ -99,8 +101,14 @@ public class SpeckleVariableParam : Param_GenericObject
       _isUpdatingName = true;
       try
       {
+        // Temporarily allow renaming for programmatic update
+        MutableNickName = true;
+
         Name = inheritedName;
         NickName = inheritedName;
+
+        // Restore the correct state
+        MutableNickName = !AlwaysInheritNames;
 
         // Tell the parent component its layout needs to be recalculated
         Attributes.Parent?.ExpireLayout();
@@ -146,7 +154,7 @@ public class SpeckleVariableParam : Param_GenericObject
 
   private void OnSourceChanged(IGH_DocumentObject sender, GH_ObjectChangedEventArgs e)
   {
-    if (!AlwaysInheritNames || !MutableNickName || _isUpdatingName)
+    if (!AlwaysInheritNames || _isUpdatingName)
     {
       return;
     }
@@ -181,16 +189,17 @@ public class SpeckleVariableParam : Param_GenericObject
   public override bool Read(GH_IReader reader)
   {
     var result = base.Read(reader);
-    bool canInherit = default;
+    bool canInherit = true;
     if (reader.TryGetBoolean("CanInheritNames", ref canInherit))
     {
       CanInheritNames = canInherit;
     }
 
-    bool alwaysInherit = default;
+    bool alwaysInherit = false;
     if (reader.TryGetBoolean("AlwaysInheritNames", ref alwaysInherit))
     {
-      _alwaysInheritNames = alwaysInherit; // Set backing field to avoid triggering logic during load
+      _alwaysInheritNames = alwaysInherit; // Set backing field directly during deserialization to avoid triggering logic
+      MutableNickName = !alwaysInherit; // Set MutableNickName based on the loaded value
     }
 
     return result;
@@ -201,9 +210,11 @@ public class SpeckleVariableParam : Param_GenericObject
     base.OnVolatileDataCollected();
 
     // Ensure subscriptions are properly set up after data collection
+    // and after the object is fully deserialized
     if (AlwaysInheritNames)
     {
       SubscribeToSources();
+      TryInheritName();
     }
   }
 }
