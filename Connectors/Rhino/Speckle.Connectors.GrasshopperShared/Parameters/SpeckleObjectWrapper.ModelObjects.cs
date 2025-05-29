@@ -165,7 +165,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         propertyGroup.CastFrom(modelObject.UserText);
 
         // get the object layer
-
         SpeckleCollectionWrapperGoo collWrapperGoo = new();
         SpeckleCollectionWrapper? collWrapper = collWrapperGoo.CastFrom(modelObject.Layer)
           ? collWrapperGoo.Value
@@ -215,8 +214,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     return false;
   }
 
-  // NOTE: ❌ No blocks support at GetGeometryFromModelObject
-  // Currently GetGeometryFromModelObject explodes the block and returns individual geometries instead of preserving the block instance relationship.
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
     RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 

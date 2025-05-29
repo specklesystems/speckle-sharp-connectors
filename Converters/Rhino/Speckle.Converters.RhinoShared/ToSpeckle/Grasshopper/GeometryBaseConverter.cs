@@ -2,6 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Grasshopper;
 
@@ -21,6 +22,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<RG.Extrusion, SOG.ExtrusionX> _extrusionConverter;
   private readonly ITypedConverter<RG.SubD, SOG.SubDX> _subdConverter;
   private readonly ITypedConverter<RG.Brep, SOG.BrepX> _brepConverter;
+  private readonly ITypedConverter<RG.InstanceReferenceGeometry, InstanceProxy> _instanceReferenceConverter; // NOTE: block supports to InstanceProxy just as per rhino conversion
 
   public GeometryBaseConverter(
     ITypedConverter<RG.Point, SOG.Point> pointConverter,
@@ -35,7 +37,8 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     ITypedConverter<RG.Brep, SOG.BrepX> brepConverter,
     ITypedConverter<RG.Extrusion, SOG.ExtrusionX> extrusionConverter,
-    ITypedConverter<RG.SubD, SOG.SubDX> subdConverter
+    ITypedConverter<RG.SubD, SOG.SubDX> subdConverter,
+    ITypedConverter<RG.InstanceReferenceGeometry, InstanceProxy> instanceReferenceConverter
   )
   {
     _pointConverter = pointConverter;
@@ -51,6 +54,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     _brepConverter = brepConverter;
     _extrusionConverter = extrusionConverter;
     _subdConverter = subdConverter;
+    _instanceReferenceConverter = instanceReferenceConverter;
   }
 
   public Base Convert(object target)
@@ -71,6 +75,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
       RG.Brep brep => _brepConverter.Convert(brep),
       RG.Extrusion ext => _extrusionConverter.Convert(ext),
       RG.SubD subD => _subdConverter.Convert(subD),
+      RG.InstanceReferenceGeometry instanceReference => _instanceReferenceConverter.Convert(instanceReference),
       _ => throw new ConversionException($"Failed to find a conversion for {target.GetType()}")
     };
   }
