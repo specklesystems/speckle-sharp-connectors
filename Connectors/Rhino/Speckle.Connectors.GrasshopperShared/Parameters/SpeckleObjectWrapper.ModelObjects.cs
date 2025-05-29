@@ -206,17 +206,17 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         Value = so;
         return true;
       }
-      else
-      {
-        throw new InvalidOperationException(
-          $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
-        );
-      }
+
+      throw new InvalidOperationException(
+        $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
+      );
     }
 
     return false;
   }
 
+  // NOTE: ❌ No blocks support at GetGeometryFromModelObject
+  // Currently GetGeometryFromModelObject explodes the block and returns individual geometries instead of preserving the block instance relationship.
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
     RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 

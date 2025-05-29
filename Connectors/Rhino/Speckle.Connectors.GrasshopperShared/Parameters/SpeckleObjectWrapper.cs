@@ -249,13 +249,13 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     switch (source)
     {
-      case SpeckleObjectWrapper wrapper:
+      case SpeckleObjectWrapper wrapper: // e.g. output from another Speckle component (like "Create Speckle Object")
         Value = wrapper.DeepCopy();
         return true;
-      case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
+      case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo: // e.g. same as above but wrapped in Grasshopper's Goo container
         Value = speckleGrasshopperObjectGoo.Value.DeepCopy();
         return true;
-      case IGH_GeometricGoo geometricGoo:
+      case IGH_GeometricGoo geometricGoo: // e.g. gh geometry like curves, surfaces, meshes from native GH components
         var gooGB = geometricGoo.GeometricGooToGeometryBase();
         var gooConverted = SpeckleConversionContext.ConvertToSpeckle(gooGB);
         Value = new SpeckleObjectWrapper()
