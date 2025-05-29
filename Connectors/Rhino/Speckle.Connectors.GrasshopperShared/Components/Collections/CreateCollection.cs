@@ -1,3 +1,4 @@
+using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
@@ -246,5 +247,31 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
     );
     alwaysInheritMenuItem.ToolTipText =
       "Toggle automatic name inheritance. If set, parameters will automatically inherit names from connected sources.";
+  }
+
+  public override bool Write(GH_IWriter writer) // NOTE: save state when closing and re-opening sessions
+  {
+    var result = base.Write(writer);
+    writer.SetBoolean("AlwaysInheritNames", AlwaysInheritNames);
+    return result;
+  }
+
+  public override bool Read(GH_IReader reader) // NOTE: save state when closing and re-opening sessions
+  {
+    var result = base.Read(reader);
+
+    bool alwaysInherit = false;
+    if (reader.TryGetBoolean("AlwaysInheritNames", ref alwaysInherit))
+    {
+      AlwaysInheritNames = alwaysInherit;
+
+      // update existing parameters after reading
+      foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
+      {
+        param.AlwaysInheritNames = AlwaysInheritNames;
+      }
+      UpdateMessage();
+    }
+    return result;
   }
 }
