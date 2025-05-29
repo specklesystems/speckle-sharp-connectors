@@ -235,10 +235,10 @@ public class CreateCollection : GH_Component, IGH_VariableParameterComponent
       (s, e) =>
       {
         AlwaysInheritNames = !AlwaysInheritNames;
-        // Update existing parameters
+        // update existing parameters - this will now trigger the property setter
         foreach (var param in Params.Input.OfType<SpeckleVariableParam>())
         {
-          param.AlwaysInheritNames = AlwaysInheritNames;
+          param.AlwaysInheritNames = AlwaysInheritNames; // will trigger OnAlwaysInheritNamesChanged
         }
         OnDisplayExpired(true);
       },

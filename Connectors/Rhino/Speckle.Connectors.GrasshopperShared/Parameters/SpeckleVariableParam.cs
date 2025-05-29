@@ -11,7 +11,21 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public class SpeckleVariableParam : Param_GenericObject
 {
   public bool CanInheritNames { get; set; } = true;
-  public bool AlwaysInheritNames { get; set; }
+
+  private bool _alwaysInheritNames;
+  public bool AlwaysInheritNames // why so complicated?? -> if connected then user enables setting, we want auto update. also, setting only worked if enabled before connected.
+  {
+    get => _alwaysInheritNames;
+    set
+    {
+      if (_alwaysInheritNames != value)
+      {
+        _alwaysInheritNames = value;
+        OnAlwaysInheritNamesChanged();
+      }
+    }
+  }
+
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
 
   private string _lastInheritedName = string.Empty; // cache last inherited name to avoid unnecessary updates
@@ -19,8 +33,46 @@ public class SpeckleVariableParam : Param_GenericObject
 
   static SpeckleVariableParam()
   {
-    // initialize KeyWatcher once for all instances
-    KeyWatcher.Initialize();
+    KeyWatcher.Initialize(); // initialize KeyWatcher once for all instances
+  }
+
+  private void OnAlwaysInheritNamesChanged()
+  {
+    if (_alwaysInheritNames)
+    {
+      // when enabling AlwaysInheritNames, subscribe to all existing sources AND inherit names immediately (#AutomaticRefresh)
+      SetupSourceSubscriptions();
+      if (MutableNickName && CanInheritNames && Sources.Count > 0)
+      {
+        InheritNickname();
+      }
+    }
+    else
+    {
+      // when disabling AlwaysInheritNames, unsubscribe from all sources otherwise people be confused
+      CleanupSourceSubscriptions();
+    }
+  }
+
+  private void SetupSourceSubscriptions()
+  {
+    foreach (var source in Sources)
+    {
+      if (!_subscribedSources.Contains(source))
+      {
+        source.ObjectChanged += OnSourceObjectChanged;
+        _subscribedSources.Add(source);
+      }
+    }
+  }
+
+  private void CleanupSourceSubscriptions()
+  {
+    foreach (var source in _subscribedSources.ToList())
+    {
+      source.ObjectChanged -= OnSourceObjectChanged;
+    }
+    _subscribedSources.Clear();
   }
 
   private void UpdateInheritedName()
@@ -86,7 +138,7 @@ public class SpeckleVariableParam : Param_GenericObject
   {
     base.AddSource(source, index); // do normal connection stuff
 
-    // subscribe to source's ObjectChanged event for automatic updates
+    // subscribe to source's ObjectChanged event for automatic updates if AlwaysInheritNames is enabled
     if (CanInheritNames && AlwaysInheritNames && !_subscribedSources.Contains(source))
     {
       source.ObjectChanged += OnSourceObjectChanged;
@@ -141,12 +193,8 @@ public class SpeckleVariableParam : Param_GenericObject
 
   public override void RemovedFromDocument(GH_Document document)
   {
-    // clean up event subscriptions when removed from document
-    foreach (var source in _subscribedSources.ToList())
-    {
-      source.ObjectChanged -= OnSourceObjectChanged;
-    }
-    _subscribedSources.Clear();
+    // Clean up all event subscriptions when removed from document
+    CleanupSourceSubscriptions();
     base.RemovedFromDocument(document);
   }
 
@@ -172,6 +220,7 @@ public class SpeckleVariableParam : Param_GenericObject
     bool alwaysInherit = false;
     if (reader.TryGetBoolean("AlwaysInheritNames", ref alwaysInherit))
     {
+      // Use the property to trigger the setup logic
       AlwaysInheritNames = alwaysInherit;
     }
 
@@ -187,17 +236,11 @@ public class SpeckleVariableParam : Param_GenericObject
   protected override void OnVolatileDataCollected()
   {
     base.OnVolatileDataCollected();
-    if (CanInheritNames && AlwaysInheritNames) // after collecting data, set up subscriptions if needed
-    {
-      foreach (var source in Sources)
-      {
-        if (!_subscribedSources.Contains(source))
-        {
-          source.ObjectChanged += OnSourceObjectChanged;
 
-          _subscribedSources.Add(source);
-        }
-      }
+    // after collecting data, ensure subscriptions are set up if needed
+    if (CanInheritNames && AlwaysInheritNames)
+    {
+      SetupSourceSubscriptions();
     }
   }
 }
