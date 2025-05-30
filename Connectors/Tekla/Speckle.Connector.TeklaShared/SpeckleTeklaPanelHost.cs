@@ -67,8 +67,8 @@ public class SpeckleTeklaPanelHost : PluginFormBase
   {
     s_instance = this; // Assign the current instance to the static field
 
-    Text = "Speckle (Beta)";
-    Name = "Speckle (Beta)";
+    Text = "Speckle";
+    Name = "Speckle";
 
     string assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
     string resourcePath = $"{assemblyName}.Resources.et_element_Speckle.bmp";
