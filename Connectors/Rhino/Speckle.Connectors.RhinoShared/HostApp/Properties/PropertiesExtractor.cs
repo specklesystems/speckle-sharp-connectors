@@ -17,6 +17,11 @@ public class PropertiesExtractor
     {
       try
       {
+        if (key == "$block-instance-original-object-id$") // skip: this seems to be an invisible user string that shows up on block instances
+        {
+          continue;
+        }
+
         if (userStrings[key].StartsWith("%<"))
         {
           var value = RhinoApp.ParseTextField(userStrings[key], rhObject, null);
