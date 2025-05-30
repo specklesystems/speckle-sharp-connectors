@@ -4,7 +4,9 @@ using Speckle.Connectors.DUI.Bridge;
 namespace Speckle.Connectors.DUI.Bindings;
 
 // POC: Send Commands share all commands from BasicBindings + some, this pattern should be revised
-public class SendBindingUICommands(IBrowserBridge bridge) : BasicConnectorBindingCommands(bridge)
+public class SendBindingUICommands(IBrowserBridge bridge)
+  : BasicConnectorBindingCommands(bridge),
+    ISendBindingUICommands
 {
   private const string REFRESH_SEND_FILTERS_UI_COMMAND_NAME = "refreshSendFilters";
   private const string SET_MODELS_EXPIRED_UI_COMMAND_NAME = "setModelsExpired";
