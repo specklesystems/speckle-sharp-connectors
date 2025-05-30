@@ -32,8 +32,8 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
       value = target.PlainText,
       height = target.TextHeight * target.DimensionScale,
       maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
-      origin = _pointConverter.Convert(target.Plane.Origin),
       plane = GetTextPlane(target),
+      screenAligned = false,
       alignmentH = GetHorizontalAlignment(target.TextHorizontalAlignment),
       alignmentV = GetVerticalAlignment(target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
