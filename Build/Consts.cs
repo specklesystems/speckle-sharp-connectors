@@ -6,7 +6,6 @@ public static class Consts
 
   public static readonly ProjectGroup[] ProjectGroups =
   {
-    new("arcgis", [new("Connectors/ArcGIS/Speckle.Connectors.ArcGIS3", "net6.0-windows")]),
     new(
       "rhino",
       [
