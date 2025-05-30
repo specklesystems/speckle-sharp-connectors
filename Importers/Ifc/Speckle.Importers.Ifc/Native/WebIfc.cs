@@ -8,100 +8,100 @@ namespace Speckle.Importers.Ifc.Native;
 internal static class WebIfc
 {
 #if WINDOWS
-  private const string DllName = "Native/web-ifc.dll";
-  private const CharSet Set = CharSet.Ansi;
+  private const string DLL_NAME = "Native/web-ifc.dll";
+  private const CharSet SET = CharSet.Ansi;
 #else
-  private const string DllName = "libweb-ifc.so";
-  private const CharSet Set = CharSet.Auto;
+  private const string DLL_NAME = "libweb-ifc.so";
+  private const CharSet SET = CharSet.Auto;
 #endif
 
-  private const DllImportSearchPath ImportSearchPath = DllImportSearchPath.AssemblyDirectory;
+  private const DllImportSearchPath IMPORT_SEARCH_PATH = DllImportSearchPath.AssemblyDirectory;
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr InitializeApi();
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern void FinalizeApi(IntPtr api);
 
-  [DllImport(DllName, CharSet = Set)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME, CharSet = SET)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr LoadModel(IntPtr api, string fileName);
 
-  [DllImport(DllName, CharSet = Set)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME, CharSet = SET)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern string GetVersion();
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetMesh(IntPtr geometry, int index);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern int GetNumMeshes(IntPtr geometry);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern uint GetGeometryType(IntPtr geometry);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern uint GetGeometryId(IntPtr geometry);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern uint GetLineId(IntPtr line);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern uint GetLineType(IntPtr line);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern string GetLineArguments(IntPtr line);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern int GetNumVertices(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetVertices(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetTransform(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern int GetNumIndices(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetIndices(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetColor(IntPtr mesh);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetGeometryFromId(IntPtr model, uint id);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern int GetNumGeometries(IntPtr model);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetGeometryFromIndex(IntPtr model, int index);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern uint GetMaxId(IntPtr model);
 
-  [DllImport(DllName)]
-  [DefaultDllImportSearchPaths(ImportSearchPath)]
+  [DllImport(DLL_NAME)]
+  [DefaultDllImportSearchPaths(IMPORT_SEARCH_PATH)]
   public static extern IntPtr GetLineFromModel(IntPtr model, uint id);
 }
