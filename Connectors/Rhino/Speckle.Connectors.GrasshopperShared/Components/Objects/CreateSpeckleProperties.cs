@@ -1,15 +1,23 @@
 using System.Runtime.InteropServices;
+using GH_IO.Serialization;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Parameters;
-using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
+using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
+/// <summary>
+/// Simplified CreateSpeckleProperties component using the base class pattern
+/// </summary>
 [Guid("A3FD5CBF-DFB0-44DF-9988-04466EB8E5E6")]
-public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterComponent
+public class CreateSpeckleProperties : VariableParameterComponentBase
 {
+  private bool CreateEmptyProperties { get; set; }
+
+  public override Guid ComponentGuid => GetType().GUID;
+  protected override Bitmap Icon => Resources.speckle_properties_create;
+
   public CreateSpeckleProperties()
     : base(
       "Create Properties",
@@ -19,18 +27,10 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       ComponentCategories.OBJECTS
     ) { }
 
-  public override Guid ComponentGuid => GetType().GUID;
-
-  protected override Bitmap Icon => Resources.speckle_properties_create;
-
-  public bool CreateEmptyProperties { get; set; }
-
-  private readonly DebounceDispatcher _debounceDispatcher = new();
-
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    var p = CreateParameter(GH_ParameterSide.Input, 0);
-    pManager.AddParameter(p);
+    var param = CreateParameter(GH_ParameterSide.Input, 0);
+    pManager.AddParameter(param);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -40,147 +40,117 @@ public class CreateSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    // Create a data tree to store output
-    Dictionary<string, SpecklePropertyGoo> properties = new();
+    var properties = new Dictionary<string, SpecklePropertyGoo>();
 
-    // Check for structure of all inputs to see matching branches
-    foreach (var inputParam in Params.Input)
+    // Validate for duplicate names
+    var paramNames = Params.Input.Select(p => p.NickName).ToList();
+    var duplicates = paramNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key);
+
+    if (duplicates.Any())
     {
-      string inputName = inputParam.NickName;
-
-      if (properties.ContainsKey(inputName))
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Duplicate property name found: {inputName}.");
-        return;
-      }
-
-      properties.Add(inputName, new());
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        $"Duplicate property names found: {string.Join(", ", duplicates)}"
+      );
+      return;
     }
 
+    // Process each input parameter
     for (int i = 0; i < Params.Input.Count; i++)
     {
-      object? value = null;
-      da.GetData(i, ref value);
+      var paramName = Params.Input[i].NickName;
+      var propertyValue = ExtractPropertyValue(da, i, paramName);
 
-      // POC: for now, allow empty properties
-      SpecklePropertyGoo actualValue = new();
-      if (value != null)
+      if (propertyValue != null)
       {
-        if (!actualValue.CastFrom(value))
-        {
-          AddRuntimeMessage(
-            GH_RuntimeMessageLevel.Error,
-            $"Parameter {Params.Input[i].NickName} should not contain anything other than strings, doubles, ints, and bools."
-          );
-
-          return;
-        }
+        properties[paramName] = propertyValue;
       }
-
-      properties[Params.Input[i].NickName] = actualValue;
     }
 
     var groupGoo = new SpecklePropertyGroupGoo(properties);
     da.SetData(0, groupGoo);
   }
 
-  public bool CanInsertParameter(GH_ParameterSide side, int index)
+  private SpecklePropertyGoo? ExtractPropertyValue(IGH_DataAccess da, int index, string paramName)
   {
-    return side == GH_ParameterSide.Input && !CreateEmptyProperties;
-  }
+    object? value = null;
+    da.GetData(index, ref value);
 
-  public bool CanRemoveParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Input;
-  }
+    var propertyGoo = new SpecklePropertyGoo();
 
-  public IGH_Param CreateParameter(GH_ParameterSide side, int index)
-  {
-    var myParam = new Param_GenericObject
+    if (value == null)
     {
-      Name = $"Property {Params.Input.Count + 1}",
-      MutableNickName = true,
-      Optional = true,
-      Access = GH_ParamAccess.item
-    };
+      return propertyGoo; // Return empty property
+    }
 
-    myParam.NickName = myParam.Name;
-    myParam.Optional = true;
-    return myParam;
-  }
-
-  public bool DestroyParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Input;
-  }
-
-  public void VariableParameterMaintenance()
-  {
-    // todo
-  }
-
-  public override void AddedToDocument(GH_Document document)
-  {
-    base.AddedToDocument(document);
-    Params.ParameterChanged += (sender, args) =>
+    if (!propertyGoo.CastFrom(value))
     {
-      if (args.ParameterSide == GH_ParameterSide.Output)
-      {
-        return;
-      }
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        $"Parameter '{paramName}' contains invalid data type. Only strings, numbers, and booleans are supported."
+      );
+      return null;
+    }
 
-      switch (args.OriginalArguments.Type)
-      {
-        case GH_ObjectEventType.NickName:
-          // This means the user is typing characters, debounce until it stops for 400ms before expiring the solution.
-          // Prevents UI from locking too soon while writing new names for inputs.
-          args.Parameter.Name = args.Parameter.NickName;
-          _debounceDispatcher.Debounce(500, e => ExpireSolution(true));
-          break;
-        case GH_ObjectEventType.NickNameAccepted:
-          args.Parameter.Name = args.Parameter.NickName;
-          ExpireSolution(true);
-          break;
-        case GH_ObjectEventType.Sources:
-          // if this event is a source change, and param is the last input, then add a new param automatically
-          if (args.Parameter.SourceCount > 0 && args.ParameterIndex == Params.Input.Count - 1)
-          {
-            IGH_Param param = CreateParameter(GH_ParameterSide.Input, Params.Input.Count);
-            Params.RegisterInputParam(param);
-            Params.OnParametersChanged();
-          }
-          break;
-      }
-    };
+    return propertyGoo;
   }
 
-  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  protected override void AppendComponentSpecificMenuItems(ToolStripDropDown menu)
   {
-    base.AppendAdditionalMenuItems(menu);
-
     Menu_AppendSeparator(menu);
-    ToolStripMenuItem emptyPropsMenuItem = Menu_AppendItem(
+    var emptyPropsMenuItem = Menu_AppendItem(
       menu,
       "Create empty Properties",
-      (s, e) =>
-      {
-        CreateEmptyProperties = !CreateEmptyProperties;
-        if (CreateEmptyProperties)
-        {
-          Params.Input.Clear();
-          ClearData();
-        }
-        else if (Params.Input.Count == 0)
-        {
-          var p = CreateParameter(GH_ParameterSide.Input, 0);
-          Params.RegisterInputParam(p);
-        }
-        ExpireSolution(true);
-      },
+      (_, _) => ToggleCreateEmptyProperties(),
       true,
       CreateEmptyProperties
     );
-    emptyPropsMenuItem.ToolTipText =
-      "Toggle creating empty Properties. If set, the output Properties will be empty. Use for removing properties from objects.";
+    emptyPropsMenuItem.ToolTipText = "Creates empty properties. Use for removing properties from objects.";
+  }
+
+  private void ToggleCreateEmptyProperties()
+  {
+    CreateEmptyProperties = !CreateEmptyProperties;
+
+    if (CreateEmptyProperties)
+    {
+      Params.Input.Clear();
+      ClearData();
+    }
+    else if (Params.Input.Count == 0)
+    {
+      var param = CreateParameter(GH_ParameterSide.Input, 0);
+      Params.RegisterInputParam(param);
+    }
+
+    ExpireSolution(true);
+  }
+
+  protected override void WriteComponentSpecificData(GH_IWriter writer)
+  {
+    writer.SetBoolean("CreateEmptyProperties", CreateEmptyProperties);
+  }
+
+  protected override void ReadComponentSpecificData(GH_IReader reader)
+  {
+    bool createEmpty = default;
+    if (reader.TryGetBoolean("CreateEmptyProperties", ref createEmpty))
+    {
+      CreateEmptyProperties = createEmpty;
+    }
+  }
+
+  // IGH_VariableParameterComponent implementation
+  public override bool CanInsertParameter(GH_ParameterSide side, int index) =>
+    side == GH_ParameterSide.Input && !CreateEmptyProperties;
+
+  public override bool CanRemoveParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input;
+
+  public override bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input;
+
+  public override IGH_Param CreateParameter(GH_ParameterSide side, int index)
+  {
+    var param = CreateVariableParameter($"Property {Params.Input.Count + 1}", GH_ParamAccess.item);
+    return param;
   }
 }
