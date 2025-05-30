@@ -183,7 +183,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
     return new SendComponentOutput(createdVersionResource);
   }

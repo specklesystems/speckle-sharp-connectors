@@ -429,8 +429,7 @@ public class SendComponentWorker : WorkerInstance
             result.VersionId
           );
         OutputParam = createdVersion;
-        sendComponent.Url =
-          $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}@{result.VersionId}";
+        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
         // DONE
         done();
