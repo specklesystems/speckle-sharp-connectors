@@ -118,7 +118,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     Menu_AppendSeparator(menu);
@@ -336,7 +336,7 @@ public class SendComponentWorker : WorkerInstance
       */
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully published to Speckle. Right-click to view online."
+        $"Successfully published to Speckle. Right-click on the component to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
