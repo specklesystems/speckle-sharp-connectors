@@ -34,7 +34,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
     ISpeckleApplication speckleApplication,
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IAppIdleManager appIdleManager
+    IAppIdleManager appIdleManager,
+    IAutocadDocumentActivationSuspension documentActivationSuspension
   )
     : base(
       store,
@@ -48,7 +49,8 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
       speckleApplication,
       threadContext,
       topLevelExceptionHandler,
-      appIdleManager
+      appIdleManager,
+      documentActivationSuspension
     )
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;
