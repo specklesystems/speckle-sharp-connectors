@@ -94,7 +94,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
-    dui3Button.ToolTip = "Speckle (Beta) for Revit";
+    dui3Button.ToolTip = "Speckle for Revit";
     //dui3Button.AvailabilityClassName = typeof(CmdAvailabilityViews).FullName;
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
@@ -159,7 +159,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      "Speckle (Beta) for Revit",
+      "Speckle for Revit",
       _cefSharpPanel
     );
   }
