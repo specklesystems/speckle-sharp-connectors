@@ -5,15 +5,33 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// Wrapper around a block instance.
+/// A Wrapper class representing a block instance.
 /// </summary>
+/// <remarks>
+/// Some cool remarks ... ⌛️
+/// </remarks>
 public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 {
-  public override required Base Base { get; set; }
+  public override required Base Base // NOTE: `InstanceProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
+  {
+    get => InstanceProxy;
+    set
+    {
+      if (value is not InstanceProxy proxy)
+      {
+        throw new ArgumentException("Cannot create block instance wrapper from a non-InstanceProxy Base");
+      }
+
+      InstanceProxy = proxy;
+    }
+  }
+
+  private InstanceProxy InstanceProxy { get; set; }
 }
 
 public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
