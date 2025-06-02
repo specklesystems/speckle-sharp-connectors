@@ -107,21 +107,24 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
   public BoundingBox ClippingBox { get; }
 }
 
-public class SpeckleBlockInstanceParameters
+public class SpeckleBlockInstanceParam
   : GH_Param<SpeckleBlockInstanceWrapperGoo>,
     IGH_BakeAwareObject,
     IGH_PreviewObject
 {
-  public SpeckleBlockInstanceParameters(IGH_InstanceDescription tag)
+  public SpeckleBlockInstanceParam()
+    : this(GH_ParamAccess.item) { }
+
+  public SpeckleBlockInstanceParam(IGH_InstanceDescription tag)
     : base(tag) { }
 
-  public SpeckleBlockInstanceParameters(IGH_InstanceDescription tag, GH_ParamAccess access)
+  public SpeckleBlockInstanceParam(IGH_InstanceDescription tag, GH_ParamAccess access)
     : base(tag, access) { }
 
-  public SpeckleBlockInstanceParameters(GH_ParamAccess access)
+  public SpeckleBlockInstanceParam(GH_ParamAccess access)
     : base(
       "Speckle Block Instance", // TODO: claire & bjorn to discuss this wording
-      "SI", // TODO: claire & bjorn to discuss this wording
+      "SBI", // TODO: claire & bjorn to discuss this wording
       "Represents a Speckle block instance",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
