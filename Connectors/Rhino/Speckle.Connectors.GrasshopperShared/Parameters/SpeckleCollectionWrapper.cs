@@ -18,7 +18,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <remarks>
 /// When constructing, the following properties need to be set in order:
 /// <see cref="SpeckleWrapper.Base"/>, then <see cref="SpeckleWrapper.Name"/> and <see cref="SpeckleWrapper.ApplicationId"/>
-/// This is because chanbging the Name or ApplicationId will update Collection.
+/// This is because changing the Name or ApplicationId will update Collection.
 /// </remarks>
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
 public class SpeckleCollectionWrapper : SpeckleWrapper
