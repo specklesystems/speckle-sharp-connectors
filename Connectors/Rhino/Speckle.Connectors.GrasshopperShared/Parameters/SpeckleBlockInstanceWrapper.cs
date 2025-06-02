@@ -17,6 +17,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </remarks>
 public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 {
+  private InstanceProxy InstanceProxy { get; set; } // NOTE: stores the actual typed object from `Base`
   public override required Base Base // NOTE: `InstanceProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
   {
     get => InstanceProxy;
@@ -31,7 +32,21 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     }
   }
 
-  private InstanceProxy InstanceProxy { get; set; }
+  // TODO: blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param)
+  //public SpeckleBlockDefinitionGoo? Definition { get; set; }
+
+  public Transform Transform { get; set; } = Transform.Identity;
+
+  public SpecklePropertyGoo Properties { get; set; } = new();
+
+  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
+  /*public Color? Color { get; set; }
+  public SpeckleMaterialWrapper? Material { get; set; }*/
+
+  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) => throw new NotImplementedException();
+
+  public void Bake(RhinoDoc doc, List<Guid> blockIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false) =>
+    throw new NotImplementedException();
 }
 
 public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
@@ -43,6 +58,47 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
   public override bool IsValid => true;
   public override string TypeName => "Speckle block instance wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper block instances.";
+
+  public override bool CastFrom(object source)
+  {
+    switch (source)
+    {
+      case SpeckleBlockInstanceWrapper wrapper:
+        Value = wrapper;
+        return true;
+      case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
+        Value = wrapperGoo.Value;
+        return true;
+      case Transform transform:
+        Value = new SpeckleBlockInstanceWrapper()
+        {
+          // TODO: blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param)
+          // Base = new InstanceProxy() { ... }
+          Base = new Base(),
+          Transform = transform,
+          ApplicationId = Guid.NewGuid().ToString()
+        };
+        return true;
+    }
+    return false;
+  }
+
+  public override bool CastTo<T>(ref T target)
+  {
+    if (Value == null)
+    {
+      return false;
+    }
+
+    var type = typeof(T);
+
+    if (type == typeof(Transform))
+    {
+      target = (T)(object)Value.Transform;
+      return true;
+    }
+    return false;
+  }
 
   public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
 
