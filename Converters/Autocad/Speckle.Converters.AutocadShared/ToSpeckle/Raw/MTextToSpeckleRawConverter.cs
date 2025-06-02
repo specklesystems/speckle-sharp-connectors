@@ -1,10 +1,9 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects.Annotation;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
+public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
@@ -26,20 +25,20 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, Text>
   /// </summary>
   /// <param name="target">The AutoCAD MText to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
-  public Text Convert(ADB.MText target) =>
+  public SA.Text Convert(ADB.MText target) =>
     new()
     {
       value = target.Text,
       height = target.TextHeight,
       maxWidth = target.Width,
-      origin = _pointConverter.Convert(target.Location),
       plane = GetTextPlane(target),
+      screenOriented = false,
       alignmentH = GetHorizontalAlignment(target.Attachment),
       alignmentV = GetVerticalAlignment(target.Attachment),
       units = _settingsStore.Current.SpeckleUnits
     };
 
-  private SOG.Plane? GetTextPlane(ADB.MText target)
+  private SOG.Plane GetTextPlane(ADB.MText target)
   {
     AG.Plane plane = new(target.Location, target.Normal);
 

@@ -119,7 +119,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     static void Open(string url)
@@ -183,7 +183,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
     return new SendComponentOutput(createdVersionResource);
   }

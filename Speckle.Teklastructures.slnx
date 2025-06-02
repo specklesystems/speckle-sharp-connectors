@@ -32,6 +32,10 @@
     <Project Path="Connectors\Tekla\Speckle.Connector.Tekla2024\Speckle.Connector.Tekla2024.csproj" />
     <Project Path="Converters\Tekla\Speckle.Converter.Tekla2024\Speckle.Converter.Tekla2024.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Tekla/2025/">
+    <Project Path="Connectors\Tekla\Speckle.Connector.Tekla2025\Speckle.Connector.Tekla2025.csproj" />
+    <Project Path="Converters\Tekla\Speckle.Converter.Tekla2025\Speckle.Converter.Tekla2025.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Tekla/Shared/">
     <Project Path="Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.shproj" />
     <Project Path="Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj" />
