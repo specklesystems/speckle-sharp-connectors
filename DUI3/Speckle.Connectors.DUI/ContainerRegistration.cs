@@ -40,10 +40,22 @@ public static class ContainerRegistration
     {
       try
       {
-        serviceProvider
-          .GetRequiredService<ILoggerFactory>()
-          .CreateLogger("UnobservedTaskException")
-          .LogError(args.Exception, "Unobserved task exception");
+        var stackTrace = args.Exception.StackTrace;
+        if (stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+        {
+          serviceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("UnobservedTaskException")
+            .LogInformation(args.Exception, "Non-Speckle unobserved task exception");
+        }
+        else
+        {
+          serviceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("UnobservedTaskException")
+            .LogError(args.Exception, "Unobserved task exception");
+          args.SetObserved();
+        }
       }
 #pragma warning disable CA1031
       catch (Exception e)
@@ -52,10 +64,6 @@ public static class ContainerRegistration
         Console.WriteLine("Error logging unobserved task exception");
         Console.WriteLine(args.Exception);
         Console.WriteLine(e);
-      }
-      finally
-      {
-        args.SetObserved();
       }
     };
   }
