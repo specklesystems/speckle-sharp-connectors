@@ -7,6 +7,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -70,20 +71,12 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       "Block definitions can't use a single material for all objects. Rather use DrawPreview() which respects individual material definitions."
     );
 
-  public int Bake(RhinoDoc doc, List<Guid> obj_ids, string? name = null)
+  public (int index, bool existingDefinitionUpdated) Bake(RhinoDoc doc, List<Guid> obj_ids, string? name = null)
   {
     string blockDefinitionName = name ?? Name;
 
-    if (doc.InstanceDefinitions.Find(blockDefinitionName) is not null)
-    {
-      throw new SpeckleException(
-        $"Cannot create block definition '{blockDefinitionName}' since a definition with this name already exists in the doc."
-      ); // alternatively, we append something to the blockDefinitionName to make it unique? I'd hate to manipulate existing block
-    }
-
     // NOTE: below is pretty much a copy of `SpeckleObjectWrapper`s `Bake` method
     // TODO: reduce code duplicity between this `Bake` method and others
-
     var geometries = new List<GeometryBase>();
     var attributes = new List<ObjectAttributes>();
 
@@ -122,23 +115,53 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
     if (geometries.Count == 0)
     {
-      return -1; // no geometry to create a block definition. this is essentially a fail
+      return (-1, false); // no geometry to create a block definition. this is essentially a fail
     }
 
-    int blockDefinitionIndex = doc.InstanceDefinitions.Add(
-      blockDefinitionName,
-      string.Empty, // NOTE: currently no description
-      Point3d.Origin, // NOTE: will be baked with ref point at origin
-      geometries,
-      attributes
-    );
+    // Check if definition already exists
+    var existingDef = doc.InstanceDefinitions.Find(blockDefinitionName);
 
-    if (blockDefinitionIndex != -1) // returns -1 on failure and a valid index (≥ 0) on success
+    int blockDefinitionIndex;
+    Guid blockDefinitionId;
+
+    if (existingDef != null)
     {
-      obj_ids.Add(doc.InstanceDefinitions[blockDefinitionIndex].Id);
+      // update existing definition
+      bool success = doc.InstanceDefinitions.ModifyGeometry(
+        existingDef.Index,
+        geometries.ToArray(),
+        attributes.ToArray()
+      );
+
+      if (!success)
+      {
+        return (-1, true); // tried to update but failed
+      }
+
+      blockDefinitionIndex = existingDef.Index;
+      blockDefinitionId = existingDef.Id;
+    }
+    else
+    {
+      // Create new definition
+      blockDefinitionIndex = doc.InstanceDefinitions.Add(
+        blockDefinitionName,
+        string.Empty, // NOTE: currently no description
+        Point3d.Origin, // NOTE: will be baked with ref point at origin
+        geometries,
+        attributes
+      );
+
+      if (blockDefinitionIndex == -1) // returns -1 on failure and a valid index (≥ 0) on success
+      {
+        return (-1, false); // creation failed
+      }
+
+      blockDefinitionId = doc.InstanceDefinitions[blockDefinitionIndex].Id;
     }
 
-    return blockDefinitionIndex;
+    obj_ids.Add(blockDefinitionId);
+    return (blockDefinitionIndex, existingDef != null);
   }
 
   public SpeckleBlockDefinitionWrapper DeepCopy() =>
@@ -189,11 +212,17 @@ public partial class SpeckleBlockDefinitionWrapperGoo
 
       case InstanceDefinition rhinoInstanceDef:
         return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
-
-      default:
-        return false;
     }
+
+    // Handle Rhino 8 Model Objects
+    return CastFromModelObject(source);
   }
+
+#if !RHINO8_OR_GREATER
+  private bool CastFromModelObject(object _) => false;
+
+  private bool CastToModelObject<T>(ref T _) => false;
+#endif
 
   public override bool CastTo<T>(ref T target)
   {
@@ -210,7 +239,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       return CastToRhinoInstanceDefinition(ref target);
     }
 
-    return false;
+    return CastToModelObject(ref target);
   }
 
   /// <summary>
@@ -229,7 +258,31 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       {
         if (rhinoObj?.Geometry != null)
         {
-          var converted = SpeckleConversionContext.ConvertToSpeckle(rhinoObj.Geometry);
+          Base converted; // SpeckleConversionContext.ConvertToSpeckle() is for basic geometry, we may have nested instances
+
+          if (rhinoObj.Geometry is InstanceReferenceGeometry instanceRef) // nested!
+          {
+            // get nested instance definition for name lookup
+            var nestedInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(instanceRef.ParentIdefId);
+            string definitionName = nestedInstanceDef?.Name ?? instanceRef.ParentIdefId.ToString();
+
+            // create an InstanceProxy for nested blocks using correct properties
+            var instanceProxy = new InstanceProxy
+            {
+              definitionId = instanceRef.ParentIdefId.ToString(),
+              transform = ConvertRhinoTransformToMatrix4x4(instanceRef.Xform),
+              units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none",
+              maxDepth = 1,
+              applicationId = rhinoObj.Id.ToString()
+            };
+            instanceProxy["definitionName"] = definitionName;
+            converted = instanceProxy;
+          }
+          else // regular geometry
+          {
+            converted = SpeckleConversionContext.ConvertToSpeckle(rhinoObj.Geometry);
+          }
+
           converted[Constants.NAME_PROP] = rhinoObj.Name ?? "";
           converted.applicationId = rhinoObj.Id.ToString();
 
@@ -237,12 +290,25 @@ public partial class SpeckleBlockDefinitionWrapperGoo
           {
             Base = converted,
             GeometryBase = rhinoObj.Geometry,
+            Properties = new SpecklePropertyGroupGoo(),
             Name = rhinoObj.Name ?? "",
             /*Color = GetObjectColor(rhinoObj),
             Material = GetObjectMaterial(rhinoObj),*/
             WrapperGuid = rhinoObj.Id.ToString(),
-            ApplicationId = rhinoObj.Id.ToString()
+            ApplicationId = rhinoObj.Id.ToString(),
+            Path = new List<string>(),
+            Parent = null
           };
+
+          if (rhinoObj.Attributes?.UserStringCount > 0)
+          {
+            var userStrings = new Dictionary<string, object?>();
+            foreach (string key in rhinoObj.Attributes.GetUserStrings())
+            {
+              userStrings[key] = rhinoObj.Attributes.GetUserString(key);
+            }
+            objWrapper.Properties.CastFrom(userStrings);
+          }
 
           objects.Add(objWrapper);
           objectIds.Add(converted.applicationId);
@@ -381,6 +447,29 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       },
     };
   }
+
+  /// <summary>
+  /// Converts a Rhino Transform to a Speckle Matrix4x4
+  /// </summary>
+  private Matrix4x4 ConvertRhinoTransformToMatrix4x4(Transform rhinoTransform) =>
+    new(
+      rhinoTransform.M00,
+      rhinoTransform.M01,
+      rhinoTransform.M02,
+      rhinoTransform.M03,
+      rhinoTransform.M10,
+      rhinoTransform.M11,
+      rhinoTransform.M12,
+      rhinoTransform.M13,
+      rhinoTransform.M20,
+      rhinoTransform.M21,
+      rhinoTransform.M22,
+      rhinoTransform.M23,
+      rhinoTransform.M30,
+      rhinoTransform.M31,
+      rhinoTransform.M32,
+      rhinoTransform.M33
+    );
 }
 
 public class SpeckleBlockDefinitionWrapperParam
@@ -414,24 +503,32 @@ public class SpeckleBlockDefinitionWrapperParam
   public bool IsBakeCapable => !VolatileData.IsEmpty;
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
-  {
-    foreach (var item in VolatileData.AllData(true))
-    {
-      if (item is SpeckleBlockDefinitionWrapperGoo goo)
-      {
-        goo.Value.Bake(doc, obj_ids);
-      }
-    }
-  }
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => BakeAllItems(doc, obj_ids);
 
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids) =>
+    // we "ignore" the ObjectAttributes parameter because definitions manage their own internal object attributes
+    // atts aren't on a definition level, but either on an instance level and/or objects within a definition (right?)
+    BakeAllItems(doc, obj_ids);
+
+  private void BakeAllItems(RhinoDoc doc, List<Guid> obj_ids)
   {
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleBlockDefinitionWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        var (index, wasUpdated) = goo.Value.Bake(doc, obj_ids);
+
+        if (index != -1)
+        {
+          string message = wasUpdated // little UX sparkle. baking and updating existing definitions is dangerous. this way, we let them know.
+            ? $"Updated existing block definition: '{goo.Value.Name}'"
+            : $"Created new block definition: '{goo.Value.Name}'";
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, message);
+        }
+        else
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to bake block definition: '{goo.Value.Name}'");
+        }
       }
     }
   }
