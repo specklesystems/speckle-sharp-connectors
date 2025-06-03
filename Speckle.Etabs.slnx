@@ -5,9 +5,9 @@
     <BuildType Name="Release" />
   </Configurations>
   <Folder Name="/Build/">
-    <Project Path="Build/Build.csproj" />
-    <File Path=".github/workflows/pr.yml" />
-    <File Path=".github/workflows/release.yml" />
+    <Project Path="Build\Build.csproj" />
+    <File Path=".github\workflows\pr.yml" />
+    <File Path=".github\workflows\release.yml" />
   </Folder>
   <Folder Name="/Config/">
     <File Path=".csharpierrc.yaml" />
@@ -16,43 +16,43 @@
     <File Path="CodeMetricsConfig.txt" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
-    <File Path=".config/dotnet-tools.json" />
+    <File Path=".config\dotnet-tools.json" />
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Connectors/" />
   <Folder Name="/Connectors/CSi/" />
   <Folder Name="/Connectors/CSi/ETABS21/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS21/Speckle.Connectors.ETABS21.csproj" />
-    <Project Path="Converters/CSi/Speckle.Converters.ETABS21/Speckle.Converters.ETABS21.csproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS21\Speckle.Connectors.ETABS21.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS21\Speckle.Converters.ETABS21.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/ETABS22/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABS22/Speckle.Connectors.ETABS22.csproj" />
-    <Project Path="Converters/CSi/Speckle.Converters.ETABS22/Speckle.Converters.ETABS22.csproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABS22\Speckle.Connectors.ETABS22.csproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABS22\Speckle.Converters.ETABS22.csproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/Shared/">
-    <Project Path="Connectors/CSi/Speckle.Connectors.CSiShared/Speckle.Connectors.CSiShared.shproj" />
-    <Project Path="Connectors/CSi/Speckle.Connectors.ETABSShared/Speckle.Connectors.ETABSShared.shproj" />
-    <Project Path="Converters/CSi/Speckle.Converters.CSiShared/Speckle.Converters.CSiShared.shproj" />
-    <Project Path="Converters/CSi/Speckle.Converters.ETABSShared/Speckle.Converters.ETABSShared.shproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.shproj" />
+    <Project Path="Connectors\CSi\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.shproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.shproj" />
+    <Project Path="Converters\CSi\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.shproj" />
   </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Ifc/">
-    <Project Path="Importers/Ifc/Speckle.Importers.Ifc.Tester/Speckle.Importers.Ifc.Tester.csproj" />
-    <Project Path="Importers/Ifc/Speckle.Importers.Ifc.Tester2/Speckle.Importers.Ifc.Tester2.csproj" />
-    <Project Path="Importers/Ifc/Speckle.Importers.Ifc/Speckle.Importers.Ifc.csproj" />
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj" />
+    <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
-    <Project Path="DUI3/Speckle.Connectors.DUI.Tests/Speckle.Connectors.DUI.Tests.csproj" />
-    <Project Path="DUI3/Speckle.Connectors.DUI.WebView/Speckle.Connectors.DUI.WebView.csproj" />
-    <Project Path="DUI3/Speckle.Connectors.DUI/Speckle.Connectors.DUI.csproj" />
-    <Project Path="Sdk/Speckle.Common.MeshTriangulation/Speckle.Common.MeshTriangulation.csproj" />
-    <Project Path="Sdk/Speckle.Connectors.Common.Tests/Speckle.Connectors.Common.Tests.csproj" />
-    <Project Path="Sdk/Speckle.Connectors.Common/Speckle.Connectors.Common.csproj" />
-    <Project Path="Sdk/Speckle.Connectors.Logging/Speckle.Connectors.Logging.csproj" />
-    <Project Path="Sdk/Speckle.Converters.Common.Tests/Speckle.Converters.Common.Tests.csproj" />
-    <Project Path="Sdk/Speckle.Converters.Common/Speckle.Converters.Common.csproj" />
-    <Project Path="Sdk/Speckle.Performance/Speckle.Performance.csproj" />
-    <Project Path="Sdk/Speckle.Testing/Speckle.Testing.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <Project Path="Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
+    <Project Path="Sdk\Speckle.Converters.Common.Tests\Speckle.Converters.Common.Tests.csproj" />
+    <Project Path="Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <Project Path="Sdk\Speckle.Performance\Speckle.Performance.csproj" />
+    <Project Path="Sdk\Speckle.Testing\Speckle.Testing.csproj" />
   </Folder>
 </Solution>

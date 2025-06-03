@@ -23,7 +23,7 @@ public class SpeckleConnectorsRhinoCommand : Command
     Panels.RegisterPanel(
       SpeckleConnectorsRhinoPlugin.Instance,
       typeof(SpeckleRhinoPanelHost),
-      "Speckle (Beta)",
+      "Speckle",
       new Icon(iconPath),
       PanelType.System
     );
@@ -59,7 +59,7 @@ public class SpeckleConnectorsRhinoCommand : Command
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
   ///<returns>The command name as it appears on the Rhino command line.</returns>
-  public override string EnglishName => "SpeckleBeta";
+  public override string EnglishName => "Speckle";
 
   protected override Result RunCommand(RhinoDoc doc, RunMode mode)
   {

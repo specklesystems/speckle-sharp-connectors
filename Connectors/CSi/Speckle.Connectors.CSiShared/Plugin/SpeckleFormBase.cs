@@ -22,7 +22,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 
   protected SpeckleFormBase()
   {
-    Text = "Speckle (Beta)";
+    Text = "Speckle";
     Size = new System.Drawing.Size(400, 600);
   }
 

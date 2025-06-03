@@ -8,7 +8,7 @@ public static class SpeckleV3Tool
   public const string COMMAND = "Speckle_Launch";
   public const string PLUGIN = "SpeckleUI3";
   public const string PLUGIN_ID = "SpeckleNavisworksNextGen";
-  public const string DISPLAY_NAME = "Speckle (Beta)";
+  public const string DISPLAY_NAME = "Speckle";
   public const string RIBBON_TAB_ID = "Speckle";
   public const string RIBBON_TAB_DISPLAY_NAME = "Speckle";
   public const string RIBBON_STRINGS = "NavisworksRibbon.name";

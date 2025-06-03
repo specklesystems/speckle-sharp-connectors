@@ -78,11 +78,12 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
     foreach (SpeckleCollectionWrapper childWrapper in collections)
     {
-      // skip empty
+      /* POC: we shouldn't skip empty, people would probably expect to see what they see in browser.
       if (childWrapper.Elements.Count == 0)
       {
         continue;
       }
+      */
 
       var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
       var topology = childWrapper.Topology; // Note: this is a reminder for the future

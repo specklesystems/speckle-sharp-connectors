@@ -62,9 +62,15 @@ public class CurveToHostRawConverter : ITypedConverter<SOG.Curve, AG.NurbCurve3d
         : new AG.DoubleCollection(weightsList.ToArray());
 
     AG.NurbCurve3d curve = new(target.degree, knots, pointCollection, weights, target.periodic);
-    if (target.closed)
+    if (target.closed && pointCollection[0].DistanceTo(pointCollection[^1]) > 0.001)
     {
-      curve.MakeClosed();
+      // method curve.MakeClosed() is unreliable: after TopLevelConverter uses ADB.Curve.CreateFromGeCurve to convert it to Spline, sometimes the spline.Closed=false
+      pointCollection.Add(pointCollection[0]);
+      if (weights.Count > 0)
+      {
+        weights.Add(weights[0]);
+      }
+      curve = new(target.degree, knots, pointCollection, weights, target.periodic);
     }
 
     curve.SetInterval(_intervalConverter.Convert(target.domain));

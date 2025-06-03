@@ -3,13 +3,13 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d, SOG.Arc>
+public class CircularArc3dToSpeckleRawConverter : ITypedConverter<AG.CircularArc3d, SOG.Arc>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public CircularArc3dToSpeckleConverter(
+  public CircularArc3dToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore

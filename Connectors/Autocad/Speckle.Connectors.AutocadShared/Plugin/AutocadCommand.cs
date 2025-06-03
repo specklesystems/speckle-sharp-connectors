@@ -20,7 +20,7 @@ public class AutocadCommand
   private static readonly Guid s_id = new("3223E594-1B09-4E54-B3DD-8EA0BECE7BA5");
   public ServiceProvider? Container { get; private set; }
   private IDisposable? _disposableLogger;
-  public const string COMMAND_STRING = "SpeckleBeta";
+  public const string COMMAND_STRING = "Speckle";
 
   [CommandMethod(COMMAND_STRING)]
   public void Command()
@@ -31,7 +31,7 @@ public class AutocadCommand
       return;
     }
 
-    PaletteSet = new PaletteSet($"Speckle (Beta)", s_id)
+    PaletteSet = new PaletteSet($"Speckle", s_id)
     {
       Size = new Size(400, 500),
       DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
@@ -52,7 +52,7 @@ public class AutocadCommand
 
     var panelWebView = Container.GetRequiredService<DUI3ControlWebView>();
 
-    PaletteSet.AddVisual("Speckle (Beta)", panelWebView);
+    PaletteSet.AddVisual("Speckle", panelWebView);
 
     FocusPalette();
   }

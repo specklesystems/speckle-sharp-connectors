@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RevitAddIns>
   <AddIn Type="Application">
-    <Name>Speckle (Beta) for Revit</Name>
-    <Description>Speckle (Beta) for Revit</Description>
+    <Name>Speckle for Revit</Name>
+    <Description>Speckle for Revit</Description>
     <Assembly>Speckle.Connectors.Revit2025\Speckle.Connectors.Revit2025.dll</Assembly>
     <FullClassName>Speckle.Connectors.Revit.Plugin.RevitExternalApplication</FullClassName>
     <ClientId>27ccff2c-011c-4374-bb79-b93990d0c86a</ClientId>

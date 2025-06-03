@@ -2,6 +2,9 @@
 using Grasshopper.Rhinoceros;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
+using Grasshopper.Rhinoceros.Params;
+using Rhino;
+using Rhino.DocObjects;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -33,6 +36,28 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       default:
         return false;
     }
+  }
+
+  private bool CastToModelObject<T>(ref T target)
+  {
+    var type = typeof(T);
+
+    // grasshopper interface types
+    if (type == typeof(IGH_ModelContentData))
+    {
+      var attributes = new ObjectAttributes();
+      foreach (var entry in Value)
+      {
+        string stringValue = entry.Value.Value?.ToString() ?? "";
+        attributes.SetUserString(entry.Key, stringValue);
+      }
+
+      var modelObject = new ModelObject(RhinoDoc.ActiveDoc, attributes);
+      target = (T)(object)modelObject;
+      return true;
+    }
+
+    return false;
   }
 }
 #endif

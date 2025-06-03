@@ -122,7 +122,7 @@ public class NavisworksSendBinding : ISendBinding
         cancellationItem.Token
       );
 
-      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
+      await Commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
     }
     catch (OperationCanceledException)
     {

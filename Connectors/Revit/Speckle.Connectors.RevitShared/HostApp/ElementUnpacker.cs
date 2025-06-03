@@ -134,7 +134,11 @@ public class ElementUnpacker
     }
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
-      || (element is Panel { Host: not null } p && ids.Contains(p.Host.Id))
+      || (
+        element is Panel { Host: not null } p
+        && ids.Contains(p.Host.Id)
+        && doc.GetElement(p.Host.Id) is not CurtainSystem // don't remove panels when host is CurtainSystem [CNX-1884](https://linear.app/speckle/issue/CNX-1884/revit-curtain-system-not-sending-properly)
+      )
       || (
         element is FamilyInstance { Host: not null } f
         && doc.GetElement(f.Host.Id) is Wall { CurtainGrid: not null }

@@ -31,7 +31,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     pManager.AddGenericParameter(
       "Speckle Param",
       "SP",
-      "Speckle param to deconstruct. Expects Collections, Objects, or Materials",
+      "Speckle param to deconstruct. Expects Collections, Objects, Materials, or Properties",
       GH_ParamAccess.item
     );
   }
@@ -60,6 +60,14 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       case SpeckleMaterialWrapperGoo matGoo:
         Name = string.IsNullOrEmpty(matGoo.Value.Name) ? matGoo.Value.Material.speckle_type : matGoo.Value.Name;
         outputParams = CreateOutputParamsFromBase(matGoo.Value.Base);
+        break;
+      case SpecklePropertyGroupGoo propGoo:
+        Name = $"properties ({propGoo.Value.Count})";
+        outputParams = new();
+        foreach (var key in propGoo.Value.Keys)
+        {
+          outputParams.Add(CreateOutputParamByKeyValue(key, propGoo.Value[key].Value, GH_ParamAccess.item));
+        }
         break;
       default:
         return;
