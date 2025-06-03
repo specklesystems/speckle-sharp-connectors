@@ -41,7 +41,7 @@ public static class ContainerRegistration
       try
       {
         var stackTrace = args.Exception.StackTrace;
-        if (stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+        if (stackTrace?.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
         {
           serviceProvider
             .GetRequiredService<ILoggerFactory>()
