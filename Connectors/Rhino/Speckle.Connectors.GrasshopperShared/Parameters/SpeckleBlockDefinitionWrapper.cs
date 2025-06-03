@@ -7,7 +7,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -44,7 +43,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
   /// <remarks>
   /// Objects can contain geometry, Speckle objects, Speckle instances
   /// </remarks>
-  public List<SpeckleObjectWrapper> Objects { get; set; } = new(); // TODO: This isn't handling instances!
+  public List<SpeckleObjectWrapper> Objects { get; set; } = new(); // TODO: This isn't handling instances! Maybe List<SpeckleWrapper> but this wouldn't exclude Material etc. which isn't wanted.
 
   // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
   /*public Color? Color { get; set; }
@@ -255,6 +254,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
     {
       var objects = new List<SpeckleObjectWrapper>();
       var objectIds = new List<string>();
+      var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
 
       var rhinoObjects = instanceDef.GetObjects(); // Get the objects that DEFINE the block, not all instances of it
       foreach (var rhinoObj in rhinoObjects)
@@ -273,8 +273,8 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
             var instanceProxy = new InstanceProxy
             {
               definitionId = instanceRef.ParentIdefId.ToString(),
-              transform = ConvertRhinoTransformToMatrix4x4(instanceRef.Xform),
-              units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none",
+              transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
+              units = units,
               maxDepth = 1,
               applicationId = rhinoObj.Id.ToString()
             };
@@ -406,29 +406,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       },
     };
   }
-
-  /// <summary>
-  /// Converts a Rhino Transform to a Speckle Matrix4x4
-  /// </summary>
-  private Matrix4x4 ConvertRhinoTransformToMatrix4x4(Transform rhinoTransform) =>
-    new(
-      rhinoTransform.M00,
-      rhinoTransform.M01,
-      rhinoTransform.M02,
-      rhinoTransform.M03,
-      rhinoTransform.M10,
-      rhinoTransform.M11,
-      rhinoTransform.M12,
-      rhinoTransform.M13,
-      rhinoTransform.M20,
-      rhinoTransform.M21,
-      rhinoTransform.M22,
-      rhinoTransform.M23,
-      rhinoTransform.M30,
-      rhinoTransform.M31,
-      rhinoTransform.M32,
-      rhinoTransform.M33
-    );
 }
 
 public class SpeckleBlockDefinitionWrapperParam

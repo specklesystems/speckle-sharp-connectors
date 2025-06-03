@@ -96,6 +96,37 @@ public static class GrasshopperHelpers
     return t;
   }
 
+  public static Matrix4x4 TransformToMatrix(Transform rhinoTransform, string units)
+  {
+    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+    var conversionFactor = Units.GetConversionFactor(currentDoc.ModelUnitSystem.ToSpeckleString(), units);
+
+    var m = new Matrix4x4
+    {
+      M11 = rhinoTransform.M00,
+      M12 = rhinoTransform.M01,
+      M13 = rhinoTransform.M02,
+      M14 = rhinoTransform.M03 * conversionFactor,
+
+      M21 = rhinoTransform.M10,
+      M22 = rhinoTransform.M11,
+      M23 = rhinoTransform.M12,
+      M24 = rhinoTransform.M13 * conversionFactor,
+
+      M31 = rhinoTransform.M20,
+      M32 = rhinoTransform.M21,
+      M33 = rhinoTransform.M22,
+      M34 = rhinoTransform.M23 * conversionFactor,
+
+      M41 = rhinoTransform.M30,
+      M42 = rhinoTransform.M31,
+      M43 = rhinoTransform.M32,
+      M44 = rhinoTransform.M33
+    };
+
+    return m;
+  }
+
   /// <summary>
   /// Attempts to cast the goo to a geometry base object.
   /// </summary>
