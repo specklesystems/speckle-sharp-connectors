@@ -66,10 +66,16 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) =>
-    throw new NotImplementedException(
-      "Block definitions can't use a single material for all objects. Rather use DrawPreview() which respects individual material definitions."
-    );
+  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) // TODO: what materials are here??
+  {
+    foreach (var obj in Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        obj.DrawPreviewRaw(display, material);
+      }
+    }
+  }
 
   public (int index, bool existingDefinitionUpdated) Bake(RhinoDoc doc, List<Guid> obj_ids, string? name = null)
   {
@@ -176,10 +182,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleBlockDefinitionWrapperGoo
-  : GH_Goo<SpeckleBlockDefinitionWrapper>,
-    IGH_PreviewData,
-    ISpeckleGoo
+public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefinitionWrapper>, ISpeckleGoo
 {
   public override IGH_Goo Duplicate() => new SpeckleBlockDefinitionWrapperGoo(Value.DeepCopy());
 
@@ -372,50 +375,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     }
   }
 
-  public void DrawViewportWires(GH_PreviewWireArgs args)
-  {
-    // TODO: Do block definitions even have separate wire preview?
-  }
-
-  /// <summary>
-  /// Draws viewport meshes by iterating through all objects in the block definition.
-  /// Each object renders using its OWN material properties.
-  /// </summary>
-  public void DrawViewportMeshes(GH_PreviewMeshArgs args)
-  {
-    if (Value?.Objects == null)
-    {
-      return;
-    }
-
-    foreach (var obj in Value.Objects)
-    {
-      if (obj.GeometryBase != null)
-      {
-        obj.DrawPreviewRaw(args.Pipeline, args.Material);
-      }
-    }
-  }
-
-  public BoundingBox ClippingBox
-  {
-    get
-    {
-      BoundingBox clippingBox = new();
-      if (Value?.Objects != null)
-      {
-        foreach (var obj in Value.Objects)
-        {
-          if (obj.GeometryBase != null)
-          {
-            clippingBox.Union(obj.GeometryBase.GetBoundingBox(false));
-          }
-        }
-      }
-      return clippingBox;
-    }
-  }
-
   /// <summary>
   /// Creates a deep copy of this block definition wrapper for proper data handling.
   /// Follows the same pattern as other Goo implementations in the codebase.
@@ -551,6 +510,7 @@ public class SpeckleBlockDefinitionWrapperParam
   }
 
   public bool Hidden { get; set; }
+
   public BoundingBox ClippingBox
   {
     get

@@ -20,7 +20,6 @@ public class CreateSpeckleBlockDefinition : GH_Component
   public override Guid ComponentGuid => GetType().GUID;
 
   //protected override Bitmap Icon => Resources.speckle_objects_object; // TODO: specific icon for block definitions
-
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(
