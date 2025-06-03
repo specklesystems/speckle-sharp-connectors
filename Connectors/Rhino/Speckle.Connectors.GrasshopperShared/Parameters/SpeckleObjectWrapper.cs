@@ -228,7 +228,10 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
 {
-  public override IGH_Goo Duplicate() => new SpeckleObjectWrapperGoo(Value.DeepCopy());
+  public override IGH_Goo Duplicate()
+  {
+    return new SpeckleObjectWrapperGoo(Value.DeepCopy());
+  }
 
   public override string ToString() => $@"Speckle Object Goo [{m_value.Base.speckle_type}]";
 
