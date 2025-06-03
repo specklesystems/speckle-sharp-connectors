@@ -75,7 +75,7 @@ public static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
     var sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
-    sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.sln");
+    sln = Path.Combine(Environment.CurrentDirectory, "Local.sln");
     await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
   }
 
@@ -95,13 +95,13 @@ public static class Solutions
     {
       connectors.RemoveFolder(folderToRemove);
     }
-    var sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", $"Speckle.{slug}.slnx");
+    var sln = Path.Combine(Environment.CurrentDirectory, $"Speckle.{slug}.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
   }
 
   public static async Task<SolutionModel> GetFullSlnx()
   {
-    var connectorsSln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Speckle.Connectors.slnx");
+    var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.slnx");
     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
   }
 }

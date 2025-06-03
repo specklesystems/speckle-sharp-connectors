@@ -20,7 +20,7 @@ namespace Speckle.Connector.Navisworks.Plugin;
     DisplayName = SpeckleV3Tool.DISPLAY_NAME,
     Options = NAV.Plugins.PluginOptions.None,
     ToolTip = "Speckle Connector for Navisworks",
-    ExtendedToolTip = "Next Gen Speckle Connector (Beta) for Navisworks"
+    ExtendedToolTip = "Next Gen Speckle Connector for Navisworks"
   )
 ]
 [SuppressMessage(

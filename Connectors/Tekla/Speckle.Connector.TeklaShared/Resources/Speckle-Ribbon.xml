@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
   <Tab Header="Speckle" IsCollapsed="false" IsUserDefined="true">
-    <SimpleButton X="0" Y="0" Width="4" Height="4" Command="Plugin.CatalogPluginComponentItem?Speckle" Text="Speckle (Beta)" Icon="speckle.svg" ShowText="true" ShowIcon="true" Tooltip="Speckle Next-Gen Tekla Structures Connector"/>
+    <SimpleButton X="0" Y="0" Width="4" Height="4" Command="Plugin.CatalogPluginComponentItem?Speckle" Text="Speckle" Icon="speckle.svg" ShowText="true" ShowIcon="true" Tooltip="Speckle Next-Gen Tekla Structures Connector"/>
   </Tab>
 
 
