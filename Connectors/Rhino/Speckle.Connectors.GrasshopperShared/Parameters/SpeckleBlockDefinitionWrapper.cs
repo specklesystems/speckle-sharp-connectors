@@ -6,6 +6,7 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -408,21 +409,70 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public override Guid ComponentGuid => new("C71BE6AD-E27B-4E7F-87DA-569D4DEE77BE");
 
-  // TODO: claire Icon for speckle param block instance
-  //protected override Bitmap Icon => Resources.speckle_param_block_definition;
+  protected override Bitmap Icon => Resources.speckle_param_object; // TODO: claire Icon for speckle param block instance
 
   public bool IsBakeCapable => !VolatileData.IsEmpty;
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockDefinitionWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
 
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids) =>
-    throw new NotImplementedException();
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockDefinitionWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
 
-  public void DrawViewportWires(IGH_PreviewArgs args) => throw new NotImplementedException();
+  public void DrawViewportWires(IGH_PreviewArgs args)
+  {
+    // TODO: Do block definitions even have separate wire preview?
+  }
 
-  public void DrawViewportMeshes(IGH_PreviewArgs args) => throw new NotImplementedException();
+  public void DrawViewportMeshes(IGH_PreviewArgs args)
+  {
+    var isSelected = args.Document.SelectedObjects().Contains(this);
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockDefinitionWrapperGoo goo)
+      {
+        goo.Value.DrawPreview(args, isSelected);
+      }
+    }
+  }
 
   public bool Hidden { get; set; }
-  public BoundingBox ClippingBox { get; }
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      BoundingBox clippingBox = new();
+      foreach (var item in VolatileData.AllData(true))
+      {
+        if (item is SpeckleBlockDefinitionWrapperGoo goo && goo.Value?.Objects != null)
+        {
+          foreach (var obj in goo.Value.Objects)
+          {
+            if (obj.GeometryBase != null)
+            {
+              clippingBox.Union(obj.GeometryBase.GetBoundingBox(false));
+            }
+          }
+        }
+      }
+      return clippingBox;
+    }
+  }
 }
