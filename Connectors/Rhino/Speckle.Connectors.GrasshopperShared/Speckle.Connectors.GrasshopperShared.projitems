@@ -54,6 +54,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleBlockDefinitionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleBlockInstanceWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleWrapper.cs" />
