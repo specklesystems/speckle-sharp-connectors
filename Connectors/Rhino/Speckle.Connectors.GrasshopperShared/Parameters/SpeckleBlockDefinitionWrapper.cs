@@ -253,7 +253,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       var objects = new List<SpeckleObjectWrapper>();
       var objectIds = new List<string>();
 
-      var rhinoObjects = instanceDef.GetReferences(0); // get all objects in the instance definition
+      var rhinoObjects = instanceDef.GetObjects(); // Get the objects that DEFINE the block, not all instances of it
       foreach (var rhinoObj in rhinoObjects)
       {
         if (rhinoObj?.Geometry != null)
