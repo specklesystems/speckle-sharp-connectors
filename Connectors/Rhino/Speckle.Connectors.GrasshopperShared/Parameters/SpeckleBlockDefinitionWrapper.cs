@@ -1,14 +1,19 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
+using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
+/// <summary>
+/// Wrapper around a block definition and its converted Speckle equivalent.
+/// </summary>
 public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 {
   private InstanceDefinitionProxy InstanceDefinitionProxy { get; set; }
@@ -21,13 +26,117 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     get => InstanceDefinitionProxy;
     set
     {
-      if (value is not InstanceDefinitionProxy instanceDefinition)
+      if (value is not InstanceDefinitionProxy instanceDefinitionProxy)
       {
-        throw new ArgumentException("InstanceDefinitionProxy is not a valid instance definition.");
+        throw new ArgumentException("Cannot create block definition wrapper from a non-InstanceDefinitionProxy Base");
       }
 
-      InstanceDefinitionProxy = instanceDefinition;
+      InstanceDefinitionProxy = instanceDefinitionProxy;
     }
+  }
+
+  /// <summary>
+  /// Represents the objects contained within the block definition
+  /// </summary>
+  /// <remarks>
+  /// Objects can contain geometry, Speckle objects, Speckle instances
+  /// </remarks>
+  public List<SpeckleObjectWrapper> Objects { get; set; } = new(); // TODO: This isn't handling instances!
+
+  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
+  /*public Color? Color { get; set; }
+  public SpeckleMaterialWrapper? Material { get; set; }*/
+
+  public override string ToString() => $"Speckle Block Definition [{Name}]";
+
+  /// <summary>
+  /// Creates a preview of the block definition by displaying all contained objects
+  /// </summary>
+  /// <remarks>
+  /// Leveraging already defined preview logic for the objects which make up this block. Refer to <see cref="SpeckleObjectWrapper.DrawPreview"/>.
+  /// </remarks>
+  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  {
+    foreach (var obj in Objects)
+    {
+      obj.DrawPreview(args, isSelected);
+    }
+  }
+
+  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) =>
+    throw new NotImplementedException(
+      "Block definitions can't use a single material for all objects. Rather use DrawPreview() which respects individual material definitions."
+    );
+
+  public int Bake(RhinoDoc doc, List<Guid> obj_ids, string? name = null)
+  {
+    string blockDefinitionName = name ?? Name;
+
+    if (doc.InstanceDefinitions.Find(blockDefinitionName) is not null)
+    {
+      throw new SpeckleException(
+        $"Cannot create block definition '{blockDefinitionName}' since a definition with this name already exists in the doc."
+      ); // alternatively, we append something to the blockDefinitionName to make it unique? I'd hate to manipulate existing block
+    }
+
+    // NOTE: below is pretty much a copy of `SpeckleObjectWrapper`s `Bake` method
+    // TODO: reduce code duplicity between this `Bake` method and others
+
+    var geometries = new List<GeometryBase>();
+    var attributes = new List<ObjectAttributes>();
+
+    foreach (var obj in Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        geometries.Add(obj.GeometryBase);
+
+        var att = new ObjectAttributes { Name = obj.Name };
+
+        if (obj.Color is Color c)
+        {
+          att.ObjectColor = c;
+          att.ColorSource = ObjectColorSource.ColorFromObject;
+        }
+
+        if (obj.Material is SpeckleMaterialWrapper m)
+        {
+          int matIndex = m.Bake(doc, m.Name); // bake material to get index
+          if (matIndex != -1)
+          {
+            att.MaterialIndex = matIndex;
+            att.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+          }
+        }
+
+        foreach (var kvp in obj.Properties.Value)
+        {
+          att.SetUserString(kvp.Key, kvp.Value?.ToString() ?? string.Empty);
+        }
+
+        attributes.Add(att);
+      }
+    }
+
+    if (geometries.Count == 0)
+    {
+      return -1; // no geometry to create a block definition. this is essentially a fail
+    }
+
+    int blockDefinitionIndex = doc.InstanceDefinitions.Add(
+      blockDefinitionName,
+      string.Empty, // NOTE: currently no description
+      Point3d.Origin, // NOTE: will be baked with ref point at origin
+      geometries,
+      attributes
+    );
+
+    if (blockDefinitionIndex != -1) // returns -1 on failure and a valid index (≥ 0) on success
+    {
+      obj_ids.Add(doc.InstanceDefinitions[blockDefinitionIndex].Id);
+    }
+
+    return blockDefinitionIndex;
   }
 }
 
