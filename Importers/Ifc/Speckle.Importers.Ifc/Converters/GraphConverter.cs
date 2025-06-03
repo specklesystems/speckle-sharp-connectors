@@ -12,11 +12,17 @@ public sealed class GraphConverter(INodeConverter nodeConverter, IRenderMaterial
 {
   public Base Convert(IfcModel model, IfcGraph graph)
   {
-    Base rootCollection = nodeConverter.Convert(model, graph.GetIfcProject());
+    try
+    {
+      Base rootCollection = nodeConverter.Convert(model, graph.GetIfcProject());
 
-    //Grabing materials from ProxyManager
-    rootCollection["renderMaterialProxies"] = proxyManager.RenderMaterialProxies.Values.ToList();
-
-    return rootCollection;
+      //Grabing materials from ProxyManager
+      rootCollection["renderMaterialProxies"] = proxyManager.RenderMaterialProxies.Values.ToList();
+      return rootCollection;
+    }
+    finally
+    {
+      proxyManager.Clear();
+    }
   }
 }
