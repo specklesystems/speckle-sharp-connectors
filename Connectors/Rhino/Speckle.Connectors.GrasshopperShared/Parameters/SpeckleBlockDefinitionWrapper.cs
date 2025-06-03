@@ -5,6 +5,7 @@ using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -16,7 +17,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 {
-  private InstanceDefinitionProxy InstanceDefinitionProxy { get; set; }
+  public InstanceDefinitionProxy InstanceDefinitionProxy { get; set; }
 
   ///<remarks>
   /// `InstanceDefinitionProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
@@ -138,23 +139,247 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
     return blockDefinitionIndex;
   }
+
+  public SpeckleBlockDefinitionWrapper DeepCopy() =>
+    new()
+    {
+      Base = InstanceDefinitionProxy.ShallowCopy(),
+      /*Color = Color,
+      Material = Material,*/
+      ApplicationId = ApplicationId,
+      Name = Name,
+      Objects = Objects.Select(o => o.DeepCopy()).ToList()
+    };
 }
 
-public class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefinitionWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleBlockDefinitionWrapperGoo
+  : GH_Goo<SpeckleBlockDefinitionWrapper>,
+    IGH_PreviewData,
+    ISpeckleGoo
 {
-  public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
-
-  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => throw new NotImplementedException();
-
-  public BoundingBox ClippingBox { get; }
-
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+  public override IGH_Goo Duplicate() => new SpeckleBlockDefinitionWrapperGoo(Value.DeepCopy());
 
   public override string ToString() => $@"Speckle Block Definition Goo [{m_value.Base.speckle_type}]";
 
-  public override bool IsValid => true;
-  public override string TypeName => "Speckle block definition";
-  public override string TypeDescription => "A wrapper around speckle grasshopper block definitions.";
+  public override bool IsValid => Value?.InstanceDefinitionProxy is not null;
+  public override string TypeName => "Speckle block definition wrapper";
+  public override string TypeDescription => "A wrapper around speckle instance definition proxies.";
+
+  public override bool CastFrom(object source)
+  {
+    switch (source)
+    {
+      case SpeckleBlockDefinitionWrapper wrapper:
+        Value = wrapper.DeepCopy();
+        return true;
+
+      case GH_Goo<SpeckleBlockDefinitionWrapper> blockDefinitionGoo:
+        Value = blockDefinitionGoo.Value.DeepCopy();
+        return true;
+
+      case InstanceDefinitionProxy speckleInstanceDefProxy:
+        Value = new SpeckleBlockDefinitionWrapper()
+        {
+          Base = speckleInstanceDefProxy,
+          Name = speckleInstanceDefProxy.name,
+          ApplicationId = speckleInstanceDefProxy.applicationId ?? Guid.NewGuid().ToString()
+        };
+        return true;
+
+      case InstanceDefinition rhinoInstanceDef:
+        return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
+
+      default:
+        return false;
+    }
+  }
+
+  public override bool CastTo<T>(ref T target)
+  {
+    var type = typeof(T);
+
+    if (type == typeof(InstanceDefinitionProxy))
+    {
+      target = (T)(object)Value.InstanceDefinitionProxy;
+      return true;
+    }
+
+    if (type == typeof(InstanceDefinition))
+    {
+      return CastToRhinoInstanceDefinition(ref target);
+    }
+
+    return false;
+  }
+
+  /// <summary>
+  /// Converts a Rhino <see cref="InstanceDefinition"/> to a <see cref="SpeckleBlockDefinitionWrapper"/>.
+  /// Takes all objects from the instance definition and converts them to <see cref="SpeckleObjectWrapper"/>s.
+  /// </summary>
+  private bool CastFromRhinoInstanceDefinition(InstanceDefinition instanceDef)
+  {
+    try
+    {
+      var objects = new List<SpeckleObjectWrapper>();
+      var objectIds = new List<string>();
+
+      var rhinoObjects = instanceDef.GetReferences(0); // get all objects in the instance definition
+      foreach (var rhinoObj in rhinoObjects)
+      {
+        if (rhinoObj?.Geometry != null)
+        {
+          var converted = SpeckleConversionContext.ConvertToSpeckle(rhinoObj.Geometry);
+          converted[Constants.NAME_PROP] = rhinoObj.Name ?? "";
+          converted.applicationId = rhinoObj.Id.ToString();
+
+          var objWrapper = new SpeckleObjectWrapper()
+          {
+            Base = converted,
+            GeometryBase = rhinoObj.Geometry,
+            Name = rhinoObj.Name ?? "",
+            /*Color = GetObjectColor(rhinoObj),
+            Material = GetObjectMaterial(rhinoObj),*/
+            WrapperGuid = rhinoObj.Id.ToString(),
+            ApplicationId = rhinoObj.Id.ToString()
+          };
+
+          objects.Add(objWrapper);
+          objectIds.Add(converted.applicationId);
+        }
+      }
+
+      var speckleInstanceDefProxy = new InstanceDefinitionProxy
+      {
+        name = instanceDef.Name,
+        applicationId = instanceDef.Id.ToString(),
+        objects = objectIds,
+        maxDepth = 1 // default depth for single-level block definition (I think?)
+      };
+
+      Value = new SpeckleBlockDefinitionWrapper()
+      {
+        Base = speckleInstanceDefProxy,
+        Name = instanceDef.Name,
+        Objects = objects,
+        ApplicationId = instanceDef.Id.ToString()
+      };
+
+      return true;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return false;
+    }
+  }
+
+  /// <summary>
+  /// Attempts to cast to a Rhino <see cref="InstanceDefinition"/> by finding it in the active document.
+  /// </summary>
+  /// <remarks>
+  /// Cannot create new instance definitions through casting - use <see cref="SpeckleBlockDefinitionWrapper.Bake"/> instead.
+  /// </remarks>
+  private bool CastToRhinoInstanceDefinition<T>(ref T target)
+  {
+    var type = typeof(T);
+    if (type != typeof(InstanceDefinition))
+    {
+      return false;
+    }
+
+    try
+    {
+      var doc = RhinoDoc.ActiveDoc; // TODO: is this the right way to access doc?
+      var instanceDefinition = doc?.InstanceDefinitions.Find(Value.Name);
+      if (instanceDefinition != null)
+      {
+        target = (T)(object)instanceDefinition;
+        return true;
+      }
+
+      // if not found in doc, we cannot create an InstanceDefinition through casting - user should call Bake() method instead
+      return false;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return false;
+    }
+  }
+
+  public void DrawViewportWires(GH_PreviewWireArgs args)
+  {
+    // TODO: Do block definitions even have separate wire preview?
+  }
+
+  /// <summary>
+  /// Draws viewport meshes by iterating through all objects in the block definition.
+  /// Each object renders using its OWN material properties.
+  /// </summary>
+  public void DrawViewportMeshes(GH_PreviewMeshArgs args)
+  {
+    if (Value?.Objects == null)
+    {
+      return;
+    }
+
+    foreach (var obj in Value.Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        obj.DrawPreviewRaw(args.Pipeline, args.Material);
+      }
+    }
+  }
+
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      BoundingBox clippingBox = new();
+      if (Value?.Objects != null)
+      {
+        foreach (var obj in Value.Objects)
+        {
+          if (obj.GeometryBase != null)
+          {
+            clippingBox.Union(obj.GeometryBase.GetBoundingBox(false));
+          }
+        }
+      }
+      return clippingBox;
+    }
+  }
+
+  /// <summary>
+  /// Creates a deep copy of this block definition wrapper for proper data handling.
+  /// Follows the same pattern as other Goo implementations in the codebase.
+  /// </summary>
+  /// <returns>A new instance with copied data</returns>
+  public SpeckleBlockDefinitionWrapper DeepCopy() =>
+    new()
+    {
+      Base = Value.InstanceDefinitionProxy.ShallowCopy(),
+      Name = Value.Name,
+      Objects = Value.Objects.Select(o => o.DeepCopy()).ToList(),
+      ApplicationId = Value.ApplicationId
+    };
+
+  public SpeckleBlockDefinitionWrapperGoo(SpeckleBlockDefinitionWrapper value)
+  {
+    Value = value;
+  }
+
+  public SpeckleBlockDefinitionWrapperGoo()
+  {
+    Value = new()
+    {
+      Base = new InstanceDefinitionProxy
+      {
+        name = "Unnamed Block",
+        objects = new List<string>(),
+        maxDepth = 1
+      },
+    };
+  }
 }
 
 public class SpeckleBlockDefinitionWrapperParam
