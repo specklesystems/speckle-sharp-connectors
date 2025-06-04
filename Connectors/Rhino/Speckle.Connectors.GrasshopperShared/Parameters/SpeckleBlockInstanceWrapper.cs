@@ -5,6 +5,7 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -292,21 +293,55 @@ public class SpeckleBlockInstanceParam
 
   public override Guid ComponentGuid => new("938CCD6E-B202-4A0C-9D68-ABD7683B0EDE");
 
-  // TODO: claire Icon for speckle param block instance
-  //protected override Bitmap Icon => Resources.speckle_param_block_instance;
-
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids) => throw new NotImplementedException();
-
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids) =>
-    throw new NotImplementedException();
-
+  protected override Bitmap Icon => Resources.speckle_param_object; // TODO: Create specific icon
   public bool IsBakeCapable => !VolatileData.IsEmpty;
+  public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  public void DrawViewportWires(IGH_PreviewArgs args) => throw new NotImplementedException();
+  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockInstanceWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, obj_ids);
+      }
+    }
+  }
 
-  public void DrawViewportMeshes(IGH_PreviewArgs args) => throw new NotImplementedException();
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids) => BakeGeometry(doc, obj_ids); // Instances manage their own attributes
+
+  public void DrawViewportWires(IGH_PreviewArgs args)
+  {
+    // TODO ?
+  }
+
+  public void DrawViewportMeshes(IGH_PreviewArgs args)
+  {
+    var isSelected = args.Document.SelectedObjects().Contains(this);
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockInstanceWrapperGoo goo)
+      {
+        goo.Value.DrawPreview(args, isSelected);
+      }
+    }
+  }
 
   public bool Hidden { get; set; }
-  public bool IsPreviewCapable => !VolatileData.IsEmpty;
-  public BoundingBox ClippingBox { get; }
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      BoundingBox clippingBox = new();
+      /*foreach (var item in VolatileData.AllData(true))
+      {
+        if (item is SpeckleBlockInstanceWrapperGoo goo)
+        {
+          // calculate transformed bounding box from definition + transform
+          // TODO: Add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+        }
+      }*/
+      return clippingBox;
+    }
+  }
 }
