@@ -148,11 +148,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         onOperationProgressed.Report(
           new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
         );
-        cancellationToken.ThrowIfCancellationRequested();
         var ex = _conversionHandler.TryConvert(() =>
         {
           // 0: get pre-created layer from cache in layer baker
           int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
+          cancellationToken.ThrowIfCancellationRequested();
 
           // 1: create object attributes for baking
           ObjectAttributes atts = obj.GetAttributes();

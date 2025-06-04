@@ -91,9 +91,9 @@ public class AutocadHostObjectBuilder(
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
-      cancellationToken.ThrowIfCancellationRequested();
       var ex = conversionHandler.TryConvert(() =>
       {
+        cancellationToken.ThrowIfCancellationRequested();
         string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
         IReadOnlyCollection<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 

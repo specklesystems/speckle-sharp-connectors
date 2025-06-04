@@ -235,10 +235,9 @@ public sealed class RevitHostObjectBuilder(
 
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
-      cancellationToken.ThrowIfCancellationRequested();
-
       var ex = conversionHandler.TryConvert(() =>
       {
+        cancellationToken.ThrowIfCancellationRequested();
         // actual conversion happens here!
         var result = converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
