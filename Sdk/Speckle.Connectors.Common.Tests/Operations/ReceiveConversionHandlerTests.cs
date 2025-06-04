@@ -17,7 +17,10 @@ public class ReceiveConversionHandlerTests
     activityFactory.Setup(f => f.Start(It.IsAny<string>(), It.IsAny<string>())).Returns(activity.Object);
     var handler = new ReceiveConversionHandler(activityFactory.Object);
 
-    Exception? result = handler.TryConvert(() => { /* success */ });
+    Exception? result = handler.TryConvert(
+      () => { /* success */
+      }
+    );
 
     result.Should().BeNull();
     activity.Verify(a => a.SetStatus(SdkActivityStatusCode.Ok), Times.Once);
@@ -57,9 +60,9 @@ public class ReceiveConversionHandlerTests
     var activity = new Mock<ISdkActivity>();
     activityFactory.Setup(f => f.Start(It.IsAny<string>(), It.IsAny<string>())).Returns(activity.Object);
     var handler = new ReceiveConversionHandler(activityFactory.Object);
-    #pragma warning disable CA2201
+#pragma warning disable CA2201
     var ex = new Exception("non-fatal");
-    #pragma warning restore CA2201
+#pragma warning restore CA2201
 
     Exception? result = handler.TryConvert(() => throw ex);
 

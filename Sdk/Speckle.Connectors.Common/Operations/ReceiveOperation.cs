@@ -101,7 +101,7 @@ public sealed class ReceiveOperation(
         .ConfigureAwait(false);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
-    }  
+    }
     catch (OperationCanceledException)
     {
       //handle conversions but don't log to seq and also throw
