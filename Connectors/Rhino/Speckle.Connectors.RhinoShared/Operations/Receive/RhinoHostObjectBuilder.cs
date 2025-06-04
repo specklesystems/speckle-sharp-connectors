@@ -13,7 +13,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -36,6 +35,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
+  private readonly IReceiveConversionHandler _conversionHandler;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -47,7 +47,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
     ISdkActivityFactory activityFactory,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IReceiveConversionHandler conversionHandler
   )
   {
     _converter = converter;
@@ -60,6 +61,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
     _threadContext = threadContext;
+    _conversionHandler = conversionHandler;
   }
 
 #pragma warning disable CA1506
@@ -143,13 +145,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       foreach (var (path, obj) in atomicObjectsWithoutInstanceComponentsWithPath)
       {
-        using (var convertActivity = _activityFactory.Start("Converting object"))
-        {
+       
           onOperationProgressed.Report(
             new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
           );
           cancellationToken.ThrowIfCancellationRequested();
-          try
+          var ex = _conversionHandler.TryConvert(() =>
           {
             // 0: get pre-created layer from cache in layer baker
             int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
@@ -208,27 +209,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
             // 5: populate app id map
             applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
-            convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
-          }
-          catch (ConversionException ce)
-          {
-            //handle conversions but don't log to seq
-            conversionResults.Add(new(Status.ERROR, obj, null, null, ce));
-            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
-          }
-          catch (OperationCanceledException ce)
-          {
-            //handle conversions but don't log to seq
-            conversionResults.Add(new(Status.ERROR, obj, null, null, ce));
-            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
-          }
-          catch (Exception ex) when (!ex.IsFatal())
+
+          });
+          if (ex is not null)
           {
             conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
-            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
-            convertActivity?.RecordException(ex);
           }
-        }
       }
     }
 
