@@ -10,6 +10,8 @@ public sealed class RenderMaterialProxyManager : IRenderMaterialProxyManager
 {
   public Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; } = new();
 
+  public void Clear() => RenderMaterialProxies.Clear();
+
   public void AddMeshMapping(RenderMaterial renderMaterial, Mesh mesh)
   {
     string materialId = renderMaterial.applicationId.NotNull();
