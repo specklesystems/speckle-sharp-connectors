@@ -160,26 +160,31 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     switch (source)
     {
+      // Direct wrapper-to-wrapper assignment (internal Speckle operations)
       case SpeckleBlockInstanceWrapper wrapper:
         Value = wrapper;
         return true;
 
+      // Grasshopper parameter containing our Speckle block instance (parameter connections)
       case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
         Value = wrapperGoo.Value;
         return true;
 
+      // User connects Transform component output to our input
       case Transform transform:
         return CreateFromTransform(transform);
 
+      // User connects Plane component output to our input (position + orientation)
       case Plane plane:
         var planeTransform = Transform.PlaneToPlane(Plane.WorldXY, plane);
         return CreateFromTransform(planeTransform);
 
+      // Direct Rhino block instance geometry (is this even possible?)
       case InstanceReferenceGeometry instanceRef:
         return CreateFromInstanceReference(instanceRef);
     }
 
-    // Handle Rhino 8+ Model Objects
+    // User connects Model Objects from Rhino 8's new modeling workflow (ModelInstanceReference, ModelInstanceDefinition)
     return CastFromModelObject(source);
   }
 
@@ -192,24 +197,27 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
 
     var type = typeof(T);
 
+    // User connects our output to Transform parameter (extract just the positioning)
     if (type == typeof(Transform))
     {
       target = (T)(object)Value.Transform;
       return true;
     }
 
+    // Internal Speckle operations need the raw Speckle data (send/receive)
     if (type == typeof(InstanceProxy))
     {
       target = (T)(object)Value.InstanceProxy;
       return true;
     }
 
+    // User wants to convert back to Rhino block instance geometry (baking/preview)
     if (type == typeof(InstanceReferenceGeometry))
     {
       return CreateInstanceReferenceGeometry(ref target);
     }
 
-    // Handle Rhino 8+ Model Objects
+    // User connects to Rhino 8 Model Object parameters (ModelInstanceReference)
     return CastToModelObject(ref target);
   }
 

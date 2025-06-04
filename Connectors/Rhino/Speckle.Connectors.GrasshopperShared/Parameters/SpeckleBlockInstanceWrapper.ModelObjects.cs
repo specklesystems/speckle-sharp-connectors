@@ -1,4 +1,5 @@
 #if RHINO8_OR_GREATER
+using Grasshopper.Kernel.Types;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -8,6 +9,13 @@ public partial class SpeckleBlockInstanceWrapperGoo
   {
     switch (source)
     {
+      case GH_InstanceReference ghInstanceRef:
+        if (ghInstanceRef.Value != null)
+        {
+          return CreateFromInstanceReference(ghInstanceRef.Value);
+        }
+        return false;
+
       // TODO: Uncomment when block definitions are available
       // case ModelInstanceReference modelInstanceRef:
       //   return CastFromModelInstanceReference(modelInstanceRef);
@@ -23,7 +31,14 @@ public partial class SpeckleBlockInstanceWrapperGoo
   //private bool CastToModelObject<T>(ref T target)
   private bool CastToModelObject<T>(ref T _)
   {
-    //var type = typeof(T);
+    var type = typeof(T);
+
+    // User connects our output to Grasshopper's native block instance parameter
+    if (type == typeof(GH_InstanceReference))
+    {
+      // TODO: Create GH_InstanceReference from our data (needs definition lookup)
+      return false; // For now, until definitions are available
+    }
 
     // TODO: Uncomment when block definitions are available
     // if (type == typeof(ModelInstanceReference))
