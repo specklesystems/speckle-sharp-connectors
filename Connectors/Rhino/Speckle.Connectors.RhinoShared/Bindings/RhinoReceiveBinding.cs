@@ -12,8 +12,8 @@ public class RhinoReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory)
-  : IReceiveBinding
+  IReceiveOperationManagerFactory receiveOperationManagerFactory
+) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
@@ -25,23 +25,28 @@ public class RhinoReceiveBinding(
   public async Task Receive(string modelCardId)
   {
     using var manager = receiveOperationManagerFactory.Create();
-    await manager.Process(Commands, modelCardId, (sp) =>
-    {
-      sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-        .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
-    }, async (modelName, processor) =>
-    {
-      uint undoRecord = 0;
-      try
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp) =>
       {
-        undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelName}");
-        return await processor();
-      }  
-      finally
+        sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      },
+      async (modelName, processor) =>
       {
-        RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
+        uint undoRecord = 0;
+        try
+        {
+          undoRecord = RhinoDoc.ActiveDoc.BeginUndoRecord($"Receive Speckle model {modelName}");
+          return await processor();
+        }
+        finally
+        {
+          RhinoDoc.ActiveDoc.EndUndoRecord(undoRecord);
+        }
       }
-    });
+    );
   }
 
   public void CancelSend(string modelCardId) => cancellationManager.CancelOperation(modelCardId);

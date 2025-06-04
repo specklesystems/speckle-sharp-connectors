@@ -19,11 +19,7 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
     IThreadContext threadContext,
     IReceiveOperationManagerFactory receiveOperationManagerFactory
   )
-    : base(
-      parent,
-      cancellationManager,
-      threadContext,receiveOperationManagerFactory
-    )
+    : base(parent, cancellationManager, threadContext, receiveOperationManagerFactory)
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }

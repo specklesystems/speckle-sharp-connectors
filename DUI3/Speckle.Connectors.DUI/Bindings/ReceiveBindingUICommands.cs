@@ -2,6 +2,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Bindings;
+
 public interface IReceiveBindingUICommands
 {
   Task SetModelError(string modelCardId, Exception exception);
@@ -14,6 +15,7 @@ public interface IReceiveBindingUICommands
 
   IBrowserBridge Bridge { get; }
 }
+
 public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands, IReceiveBindingUICommands
 {
   // POC: put here events once we needed for receive specific

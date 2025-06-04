@@ -14,8 +14,8 @@ internal sealed class RevitReceiveBinding(
   IBrowserBridge parent,
   ILogger<RevitReceiveBinding> logger,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory)
-  : IReceiveBinding
+  IReceiveOperationManagerFactory receiveOperationManagerFactory
+) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
@@ -26,29 +26,34 @@ internal sealed class RevitReceiveBinding(
   public async Task Receive(string modelCardId)
   {
     using var manager = receiveOperationManagerFactory.Create();
-   await  manager.Process(Commands, modelCardId, (sp) =>
-    {
-      sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
-        .Initialize(
-          revitConversionSettingsFactory.Create(
-            DetailLevelType.Coarse, // TODO figure out
-            null,
-            false,
-            true,
-            false
-          )
-        );
-    }, async (_, processor) =>
-   {
-     try
-     {
-       return await processor();
-     }  
-     catch (SpeckleRevitTaskException ex)
-     {
-       await SpeckleRevitTaskException.ProcessException(modelCardId, ex, logger, Commands);
-       return null;
-     } 
-   });
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp) =>
+      {
+        sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
+          .Initialize(
+            revitConversionSettingsFactory.Create(
+              DetailLevelType.Coarse, // TODO figure out
+              null,
+              false,
+              true,
+              false
+            )
+          );
+      },
+      async (_, processor) =>
+      {
+        try
+        {
+          return await processor();
+        }
+        catch (SpeckleRevitTaskException ex)
+        {
+          await SpeckleRevitTaskException.ProcessException(modelCardId, ex, logger, Commands);
+          return null;
+        }
+      }
+    );
   }
 }

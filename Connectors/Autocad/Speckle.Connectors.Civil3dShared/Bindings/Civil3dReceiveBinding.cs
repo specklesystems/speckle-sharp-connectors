@@ -23,11 +23,7 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
     IThreadContext threadContext,
     IReceiveOperationManagerFactory receiveOperationManagerFactory
   )
-    : base(
-      parent,
-      cancellationManager,
-      threadContext,receiveOperationManagerFactory
-    )
+    : base(parent, cancellationManager, threadContext, receiveOperationManagerFactory)
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;

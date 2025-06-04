@@ -20,7 +20,8 @@ public sealed class ReceiveOperationManager(
   DocumentModelStore store,
   ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
-  ILogger<ReceiveOperationManager> logger) : IReceiveOperationManager
+  ILogger<ReceiveOperationManager> logger
+) : IReceiveOperationManager
 {
   public async Task Process(
     IReceiveBindingUICommands commands,
@@ -45,13 +46,11 @@ public sealed class ReceiveOperationManager(
         modelCardId,
         cancellationItem.Token
       );
-      var ro = serviceScope
-        .ServiceProvider.GetRequiredService<ReceiveOperation>();
-      var conversionResults= await processor(modelCard.ModelName, () => ro.Execute(
-          modelCard.GetReceiveInfo(speckleApplication.Slug),
-          progress,
-          cancellationItem.Token
-        ));
+      var ro = serviceScope.ServiceProvider.GetRequiredService<ReceiveOperation>();
+      var conversionResults = await processor(
+        modelCard.ModelName,
+        () => ro.Execute(modelCard.GetReceiveInfo(speckleApplication.Slug), progress, cancellationItem.Token)
+      );
 
       if (conversionResults is null)
       {
