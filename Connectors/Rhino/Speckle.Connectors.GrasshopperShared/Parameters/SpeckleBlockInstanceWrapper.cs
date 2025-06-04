@@ -95,6 +95,22 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     // TODO: preview by transforming definitions geo
     // need access to block definitions geometry
     // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+
+    // 1. Get the definition's geometry objects
+    // 2. Transform each object by our Transform
+    // 3. Draw using the transformed geometry
+
+    // Pseudocode for when definitions are available:
+    // foreach (var obj in Definition.Objects)
+    // {
+    //   if (obj.GeometryBase != null)
+    //   {
+    //     var transformedGeometry = obj.GeometryBase.Duplicate();
+    //     transformedGeometry.Transform(Transform);
+    //     // Draw the transformed geometry using obj.DrawPreviewRaw()
+    //   }
+    // }
+
     throw new NotImplementedException();
   }
 
@@ -103,6 +119,21 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     // TODO: create InstanceReference in Rhino doc
     // Will need the definition index and transform
     // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+    // TODO: This will be complete once block definitions are available
+
+    // Find the definition by ID (placeholder logic)
+    //var definitionId = InstanceProxy.definitionId;
+    // var instanceDef = doc.InstanceDefinitions.Find(definitionName);
+    // if (instanceDef == null) return;
+
+    // Create the instance reference
+    // var instanceRef = doc.Objects.AddInstanceObject(instanceDef.Index, Transform);
+    // if (instanceRef != Guid.Empty)
+    // {
+    //   obj_ids.Add(instanceRef);
+    // }
+
+    // For now, just a placeholder
     throw new NotImplementedException();
   }
 
