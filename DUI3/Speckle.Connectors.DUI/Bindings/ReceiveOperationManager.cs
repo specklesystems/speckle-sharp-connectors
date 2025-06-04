@@ -26,7 +26,7 @@ public sealed class ReceiveOperationManager(
     IReceiveBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider> initializeScope,
-    Func<Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>? processor
+    Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>> processor
   )
   {
     try
@@ -47,25 +47,11 @@ public sealed class ReceiveOperationManager(
       );
       var ro = serviceScope
         .ServiceProvider.GetRequiredService<ReceiveOperation>();
-      HostObjectBuilderResult? conversionResults;
-      if (processor is null)
-      {
-        // Receive host objects
-        conversionResults = await
-          ro.Execute(
-            modelCard.GetReceiveInfo(speckleApplication.Slug),
-            progress,
-            cancellationItem.Token
-          );
-      }
-      else
-      {
-        conversionResults = await processor(() => ro.Execute(
+      var conversionResults= await processor(modelCard.ModelName, () => ro.Execute(
           modelCard.GetReceiveInfo(speckleApplication.Slug),
           progress,
           cancellationItem.Token
         ));
-      }
 
       if (conversionResults is null)
       {

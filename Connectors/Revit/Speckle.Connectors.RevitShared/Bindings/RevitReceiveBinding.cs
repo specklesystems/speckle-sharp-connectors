@@ -38,7 +38,7 @@ internal sealed class RevitReceiveBinding(
             false
           )
         );
-    }, async processor =>
+    }, async (_, processor) =>
    {
      try
      {
