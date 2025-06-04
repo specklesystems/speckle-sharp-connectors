@@ -148,7 +148,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     };
 }
 
-public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override string ToString() => $@"Speckle Block Instance Goo [{m_value.Base.speckle_type}]";
 
@@ -178,7 +178,9 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
       case InstanceReferenceGeometry instanceRef:
         return CreateFromInstanceReference(instanceRef);
     }
-    return false;
+
+    // Handle Rhino 8+ Model Objects
+    return CastFromModelObject(source);
   }
 
   public override bool CastTo<T>(ref T target)
@@ -207,7 +209,8 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
       return CreateInstanceReferenceGeometry(ref target);
     }
 
-    return false;
+    // Handle Rhino 8+ Model Objects
+    return CastToModelObject(ref target);
   }
 
   private bool CreateFromTransform(Transform transform)
