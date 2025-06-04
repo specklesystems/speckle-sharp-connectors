@@ -59,18 +59,17 @@
       },
       "Speckle.Sdk": {
         "type": "Direct",
-        "requested": "[3.3.6, )",
-        "resolved": "3.3.6",
-        "contentHash": "VHSah5DYRv6OIHPr7ztArgiZNKEs/SRCz0JfLnK+otVZb1awWj4xW2DA2Bb6I466IdUd24fOEJdFRaTHA/X+mw==",
+        "requested": "[3.4.0-alpha.15, )",
+        "resolved": "3.4.0-alpha.15",
+        "contentHash": "t09utxHBGx4OC6dSGefBdbEgKHZP+Ix5ehPioula/rvxuwU258daGQCIUScWQCUkloG9Dv94LKLBGAwmNGzsSQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
-          "Microsoft.CSharp": "4.7.0",
           "Microsoft.Data.Sqlite": "7.0.5",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0",
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.3.6"
+          "Speckle.Sdk.Dependencies": "3.4.0-alpha.15"
         }
       },
       "Castle.Core": {
@@ -116,11 +115,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
-      },
-      "Microsoft.CSharp": {
-        "type": "Transitive",
-        "resolved": "4.7.0",
-        "contentHash": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA=="
       },
       "Microsoft.Data.Sqlite": {
         "type": "Transitive",
@@ -283,9 +277,9 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.3.6, )",
-        "resolved": "3.3.6",
-        "contentHash": "qwbk9BAR1QZIAwphhwMXz5ftCUYXy2oOm9/Jg57MNeaxLZ8MFooygVwX/ETG4avR8bO+VLqoteBJjWl/yYlRLQ=="
+        "requested": "[3.4.0-alpha.15, )",
+        "resolved": "3.4.0-alpha.15",
+        "contentHash": "Z4r390ZwKw7+2blOpaky27Q6A47yXrgOdIC8ArlXqKGJg3IGp9jluQ2T5jZNls3BfNemt3jNyFKx+1+3KWHJQg=="
       }
     }
   }
