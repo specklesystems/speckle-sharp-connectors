@@ -12,7 +12,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     {
       case ModelInstanceDefinition modelInstanceDef:
         var rhinoInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.Find(modelInstanceDef.Name);
-        if (rhinoInstanceDef != null)
+        if (rhinoInstanceDef != null) // NOTE: api limitation here. name and objects of an instance def are get only
         {
           return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
         }
