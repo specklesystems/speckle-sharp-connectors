@@ -13,6 +13,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -208,6 +209,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             // 5: populate app id map
             applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
             convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
+          }
+          catch (ConversionException ce)
+          {
+            //handle conversions but don't log to seq
+            conversionResults.Add(new(Status.ERROR, obj, null, null, ce));
+            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
