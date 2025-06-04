@@ -14,8 +14,8 @@ public class SendProgressState : ISendProgressState
 public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendProgressState sendProgressState)
   : ISendProgress
 {
-  private string? _previousSpeed;
-  private double? _previousUploaded;
+  private string _previousSpeed = "unknown";
+  private double _previousUploaded;
 
   public void Begin() => progressDisplayManager.Begin();
 
