@@ -5,20 +5,19 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using Plane = Rhino.Geometry.Plane;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
 /// A Wrapper class representing a block instance.
 /// </summary>
-/// <remarks>
-/// Some cool remarks ... ⌛️
-/// </remarks>
 public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 {
-  private InstanceProxy InstanceProxy { get; set; } // NOTE: stores the actual typed object from `Base`
+  public InstanceProxy InstanceProxy { get; set; } // NOTE: stores the actual typed object from `Base`
   public override required Base Base // NOTE: `InstanceProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
   {
     get => InstanceProxy;
@@ -119,8 +118,6 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 
 public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
 {
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
-
   public override string ToString() => $@"Speckle Block Instance Goo [{m_value.Base.speckle_type}]";
 
   public override bool IsValid => true;
@@ -134,19 +131,20 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
       case SpeckleBlockInstanceWrapper wrapper:
         Value = wrapper;
         return true;
+
       case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
         Value = wrapperGoo.Value;
         return true;
+
       case Transform transform:
-        Value = new SpeckleBlockInstanceWrapper()
-        {
-          // TODO: blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param)
-          // Base = new InstanceProxy() { ... }
-          Base = new Base(),
-          Transform = transform,
-          ApplicationId = Guid.NewGuid().ToString()
-        };
-        return true;
+        return CreateFromTransform(transform);
+
+      case Plane plane:
+        var planeTransform = Transform.PlaneToPlane(Plane.WorldXY, plane);
+        return CreateFromTransform(planeTransform);
+
+      case InstanceReferenceGeometry instanceRef:
+        return CreateFromInstanceReference(instanceRef);
     }
     return false;
   }
@@ -165,14 +163,107 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
       target = (T)(object)Value.Transform;
       return true;
     }
+
+    if (type == typeof(InstanceProxy))
+    {
+      target = (T)(object)Value.InstanceProxy;
+      return true;
+    }
+
+    if (type == typeof(InstanceReferenceGeometry))
+    {
+      return CreateInstanceReferenceGeometry(ref target);
+    }
+
     return false;
   }
+
+  private bool CreateFromTransform(Transform transform)
+  {
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    Value = new SpeckleBlockInstanceWrapper()
+    {
+      Base = new InstanceProxy()
+      {
+        definitionId = "placeholder-definition-id", // TODO: Set from actual block definition
+        // definitionId = blockDefinition.ApplicationId TODO: Set from actual block definition
+        maxDepth = 1, // Standard depth for single instance
+        transform = TransformToMatrix(transform), // TODO: Remove when GrasshopperHelpers.TransformToMatrix is available from merged PR
+        //transform = GrasshopperHelpers.TransformToMatrix(transform, units),
+        units = units,
+        applicationId = Guid.NewGuid().ToString()
+      },
+      Transform = transform,
+      ApplicationId = Guid.NewGuid().ToString()
+    };
+    return true;
+  }
+
+  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef)
+  {
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    var definitionId = instanceRef.ParentIdefId.ToString();
+
+    Value = new SpeckleBlockInstanceWrapper()
+    {
+      Base = new InstanceProxy()
+      {
+        definitionId = definitionId,
+        maxDepth = 1,
+        transform = TransformToMatrix(instanceRef.Xform), // TODO: Use helper when available
+        //transform = TransformToMatrix(instanceRef.Xform, units), // TODO: Use helper when available
+        units = units,
+        applicationId = Guid.NewGuid().ToString()
+      },
+      Transform = instanceRef.Xform,
+      ApplicationId = Guid.NewGuid().ToString()
+    };
+    return true;
+  }
+
+  //private bool CreateInstanceReferenceGeometry<T>(ref T target)
+  private bool CreateInstanceReferenceGeometry<T>(ref T _) =>
+    // TODO: Create InstanceReferenceGeometry from our data
+    // need the actual InstanceDefinition object to create InstanceReferenceGeometry
+    // this requires definition lookup that depends on the block definition PR
+    // For now, return false until we have definition support
+    false;
+
+  // TODO: Remove when GrasshopperHelpers.TransformToMatrix is available from merged PR
+  private static Matrix4x4 TransformToMatrix(Transform rhinoTransform) =>
+    // Simplified version - will be replaced by helper method
+    new()
+    {
+      M11 = rhinoTransform.M00,
+      M12 = rhinoTransform.M01,
+      M13 = rhinoTransform.M02,
+      M14 = rhinoTransform.M03,
+      M21 = rhinoTransform.M10,
+      M22 = rhinoTransform.M11,
+      M23 = rhinoTransform.M12,
+      M24 = rhinoTransform.M13,
+      M31 = rhinoTransform.M20,
+      M32 = rhinoTransform.M21,
+      M33 = rhinoTransform.M22,
+      M34 = rhinoTransform.M23,
+      M41 = rhinoTransform.M30,
+      M42 = rhinoTransform.M31,
+      M43 = rhinoTransform.M32,
+      M44 = rhinoTransform.M33
+    };
 
   public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
 
   public void DrawViewportMeshes(GH_PreviewMeshArgs args) => throw new NotImplementedException();
 
   public BoundingBox ClippingBox { get; }
+
+  public override IGH_Goo Duplicate() => new SpeckleBlockInstanceWrapperGoo(Value.DeepCopy());
+
+  public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)
+  {
+    Value = value;
+  }
 }
 
 public class SpeckleBlockInstanceParam
