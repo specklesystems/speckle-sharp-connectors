@@ -6,7 +6,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.DoubleNumerics;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Plane = Rhino.Geometry.Plane;
@@ -18,8 +17,23 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 {
-  public InstanceProxy InstanceProxy { get; set; } // NOTE: stores the actual typed object from `Base`
-  public override required Base Base // NOTE: `InstanceProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
+  private InstanceProxy _instanceProxy;
+  private Transform _transform = Transform.Identity;
+
+  public override string ToString() => $"Speckle Block Instance [{Name}]";
+
+  public SpecklePropertyGroupGoo Properties { get; set; } = new();
+
+  public InstanceProxy InstanceProxy
+  {
+    get => _instanceProxy;
+    set
+    {
+      _instanceProxy = value ?? throw new ArgumentNullException(nameof(value));
+      UpdateTransformFromProxy();
+    }
+  }
+  public override Base Base // NOTE: `InstanceProxy` wraps `Base` just like `SpeckleCollectionWrapper` and `SpeckleMaterialWrapper`
   {
     get => InstanceProxy;
     set
@@ -28,24 +42,12 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
       {
         throw new ArgumentException("Cannot create block instance wrapper from a non-InstanceProxy Base");
       }
-
       InstanceProxy = proxy;
-      UpdateTransformFromProxy();
     }
   }
 
-  // TODO: Add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
-  // public SpeckleBlockDefinitionWrapper? Definition { get; set; }
+  public SpeckleBlockDefinitionWrapper? Definition { get; set; }
 
-  public override string ToString() => $"Speckle Block Instance [{Name}]";
-
-  public SpecklePropertyGroupGoo Properties { get; set; } = new();
-
-  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
-  /*public Color? Color { get; set; }
-  public SpeckleMaterialWrapper? Material { get; set; }*/
-
-  private Transform _transform = Transform.Identity;
   public Transform Transform
   {
     get => _transform;
@@ -56,103 +58,126 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     }
   }
 
-  /// <summary>
-  /// Updates Rhino Transform property when the InstanceProxy.transform changes.
-  /// </summary>
-  /// <remarks>
-  /// This happens when we receive data from Speckle - we need to convert the Speckle Matrix4x4
-  /// back to a Rhino Transform so Grasshopper users can work with familiar Rhino geometry.
-  /// </remarks>
+  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
+  /*public Color? Color { get; set; }
+  public SpeckleMaterialWrapper? Material { get; set; }*/
+
+
   private void UpdateTransformFromProxy()
   {
-    if (InstanceProxy?.transform != null)
-    {
-      var units = InstanceProxy.units;
-      _transform = GrasshopperHelpers.MatrixToTransform(InstanceProxy.transform, units);
-    }
+    var units = _instanceProxy.units;
+    _transform = GrasshopperHelpers.MatrixToTransform(_instanceProxy.transform, units);
   }
 
-  /// <summary>
-  /// Updates the InstanceProxy.transform when the Rhino Transform property changes.
-  /// </summary>
-  /// <remarks>
-  /// This happens when users input a transform in Grasshopper - we need to convert it
-  /// to Speckle's Matrix4x4 format so it can be sent to Speckle properly.
-  /// Uses the document's unit system to ensure proper scaling between different units.
-  /// </remarks>
   private void UpdateProxyFromTransform()
   {
-    if (InstanceProxy != null)
-    {
-      // TODO: TransformToMatrix method in [feat(grasshopper): add Speckle Block Definition support #891](https://github.com/specklesystems/speckle-sharp-connectors/pull/891/files)
-      // var units = InstanceProxy.units;
-      // InstanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
-    }
+    var units = _instanceProxy.units;
+    _instanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
+    _instanceProxy.units = units;
   }
 
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
-    // TODO: preview by transforming definitions geo
-    // need access to block definitions geometry
-    // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
-
-    // 1. Get the definition's geometry objects
-    // 2. Transform each object by our Transform
-    // 3. Draw using the transformed geometry
-
-    // Pseudocode for when definitions are available:
-    // foreach (var obj in Definition.Objects)
-    // {
-    //   if (obj.GeometryBase != null)
-    //   {
-    //     var transformedGeometry = obj.GeometryBase.Duplicate();
-    //     transformedGeometry.Transform(Transform);
-    //     // Draw the transformed geometry using obj.DrawPreviewRaw()
-    //   }
-    // }
-
-    throw new NotImplementedException();
-  }
-
-  public void Bake(RhinoDoc doc, List<Guid> blockIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
-  {
-    // TODO: create InstanceReference in Rhino doc
-    // Will need the definition index and transform
-    // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
-    // TODO: This will be complete once block definitions are available
-
-    // Find the definition by ID (placeholder logic)
-    //var definitionId = InstanceProxy.definitionId;
-    // var instanceDef = doc.InstanceDefinitions.Find(definitionName);
-    // if (instanceDef == null) return;
-
-    // Create the instance reference
-    // var instanceRef = doc.Objects.AddInstanceObject(instanceDef.Index, Transform);
-    // if (instanceRef != Guid.Empty)
-    // {
-    //   obj_ids.Add(instanceRef);
-    // }
-
-    // For now, just a placeholder
-    throw new NotImplementedException();
-  }
-
-  public SpeckleBlockInstanceWrapper DeepCopy() =>
-    new()
+    if (Definition?.Objects == null)
     {
-      Base = InstanceProxy.ShallowCopy(),
-      Transform = _transform,
-      Properties = Properties,
-      ApplicationId = ApplicationId,
-      Name = Name
+      return;
+    }
+
+    foreach (var obj in Definition.Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        var transformedGeometry = obj.GeometryBase.Duplicate();
+        transformedGeometry.Transform(Transform);
+
+        var tempWrapper = new SpeckleObjectWrapper
+        {
+          Base = obj.Base,
+          GeometryBase = transformedGeometry,
+          Color = obj.Color,
+          Material = obj.Material,
+          Properties = obj.Properties,
+          Name = obj.Name,
+          WrapperGuid = obj.WrapperGuid,
+          ApplicationId = obj.ApplicationId
+        };
+
+        tempWrapper.DrawPreview(args, isSelected);
+      }
+    }
+  }
+
+  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1)
+  {
+    if (Definition?.Objects == null)
+    {
+      return;
+    }
+
+    (int defIndex, _) = Definition.Bake(doc, objIds);
+    if (defIndex == -1)
+    {
+      return;
+    }
+
+    // Create instance reference
+    var attributes = new ObjectAttributes { Name = Name };
+
+    if (bakeLayerIndex >= 0)
+    {
+      attributes.LayerIndex = bakeLayerIndex;
+    }
+
+    // Set properties as user strings
+    foreach (var kvp in Properties.Value)
+    {
+      attributes.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
+    }
+
+    var instanceRef = doc.Objects.AddInstanceObject(defIndex, Transform, attributes);
+    if (instanceRef != Guid.Empty)
+    {
+      objIds.Add(instanceRef);
+    }
+  }
+
+  public SpeckleBlockInstanceWrapper DeepCopy()
+  {
+    System.Diagnostics.Debug.WriteLine($"DeepCopy: Original Definition is null: {Definition == null}");
+    SpeckleBlockInstanceWrapper copy =
+      new()
+      {
+        Base = InstanceProxy.ShallowCopy(),
+        Definition = Definition?.DeepCopy(), // null-safe copy
+        Transform = _transform,
+        Properties = Properties,
+        ApplicationId = ApplicationId,
+        Name = Name
+      };
+    System.Diagnostics.Debug.WriteLine($"DeepCopy: Copy Definition is null: {copy.Definition == null}");
+    return copy;
+  }
+
+  // Constructor ensures _instanceProxy is never null
+  public SpeckleBlockInstanceWrapper()
+  {
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    _instanceProxy = new InstanceProxy
+    {
+      definitionId = "placeholder",
+      maxDepth = 1,
+      transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+      units = units,
+      applicationId = Guid.NewGuid().ToString()
     };
+  }
 }
 
 public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
 {
   public override string ToString() => $@"Speckle Block Instance Goo [{m_value.Base.speckle_type}]";
 
-  public override bool IsValid => true;
+  public override bool IsValid => Value?.InstanceProxy != null;
   public override string TypeName => "Speckle block instance wrapper";
   public override string TypeDescription => "A wrapper around speckle grasshopper block instances.";
 
@@ -162,13 +187,17 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
     {
       // Direct wrapper-to-wrapper assignment (internal Speckle operations)
       case SpeckleBlockInstanceWrapper wrapper:
-        Value = wrapper;
+        Value = wrapper.DeepCopy();
         return true;
 
       // Grasshopper parameter containing our Speckle block instance (parameter connections)
       case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
-        Value = wrapperGoo.Value;
-        return true;
+        if (wrapperGoo.Value != null)
+        {
+          Value = wrapperGoo.Value.DeepCopy();
+          return true;
+        }
+        return false;
 
       // User connects Transform component output to our input
       case Transform transform:
@@ -182,6 +211,14 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       // Direct Rhino block instance geometry (is this even possible?)
       case InstanceReferenceGeometry instanceRef:
         return CreateFromInstanceReference(instanceRef);
+
+      case InstanceProxy instanceProxy:
+        Value = new SpeckleBlockInstanceWrapper
+        {
+          InstanceProxy = instanceProxy,
+          ApplicationId = instanceProxy.applicationId ?? Guid.NewGuid().ToString()
+        };
+        return true;
     }
 
     // User connects Model Objects from Rhino 8's new modeling workflow (ModelInstanceReference, ModelInstanceDefinition)
@@ -229,106 +266,125 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
 
   private bool CreateFromTransform(Transform transform)
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-    Value = new SpeckleBlockInstanceWrapper()
-    {
-      Base = new InstanceProxy()
-      {
-        definitionId = "placeholder-definition-id", // TODO: Set from actual block definition
-        // definitionId = blockDefinition.ApplicationId TODO: Set from actual block definition
-        maxDepth = 1, // Standard depth for single instance
-        transform = TransformToMatrix(transform), // TODO: Remove when GrasshopperHelpers.TransformToMatrix is available from merged PR
-        //transform = GrasshopperHelpers.TransformToMatrix(transform, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
-      },
-      Transform = transform,
-      ApplicationId = Guid.NewGuid().ToString()
-    };
+    Value ??= new SpeckleBlockInstanceWrapper();
+
+    Value.Transform = transform;
     return true;
   }
 
   private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef)
   {
     var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-    var definitionId = instanceRef.ParentIdefId.ToString();
+    var definitionId = instanceRef.ParentIdefId;
+    SpeckleBlockDefinitionWrapper? definition = null;
+    var doc = RhinoDoc.ActiveDoc;
+
+    // Try to find existing Block Definition in document (Rhino → Grasshopper scenario)
+    // If Block Definition doesn't exist in document (Pure Grasshopper scenario, that's ok)
+    var instanceDef = doc?.InstanceDefinitions.FindId(definitionId);
+    if (instanceDef != null)
+    {
+      // Definition exists in document - convert it
+      var defGoo = new SpeckleBlockDefinitionWrapperGoo();
+      if (defGoo.CastFrom(instanceDef))
+      {
+        definition = defGoo.Value;
+      }
+    }
 
     Value = new SpeckleBlockInstanceWrapper()
     {
-      Base = new InstanceProxy()
+      InstanceProxy = new InstanceProxy()
       {
-        definitionId = definitionId,
+        definitionId = definitionId.ToString(),
         maxDepth = 1,
-        transform = TransformToMatrix(instanceRef.Xform), // TODO: Use helper when available
-        //transform = TransformToMatrix(instanceRef.Xform, units), // TODO: Use helper when available
+        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
         units = units,
         applicationId = Guid.NewGuid().ToString()
       },
       Transform = instanceRef.Xform,
-      ApplicationId = Guid.NewGuid().ToString()
+      ApplicationId = Guid.NewGuid().ToString(),
+      Definition = definition // This might be null, that's ok!
     };
     return true;
   }
 
-  //private bool CreateInstanceReferenceGeometry<T>(ref T target)
-  private bool CreateInstanceReferenceGeometry<T>(ref T _) =>
-    // TODO: Create InstanceReferenceGeometry from our data
-    // need the actual InstanceDefinition object to create InstanceReferenceGeometry
-    // this requires definition lookup that depends on the block definition PR
-    // For now, return false until we have definition support
-    false;
-
-  // TODO: Remove when GrasshopperHelpers.TransformToMatrix is available from merged PR
-  private static Matrix4x4 TransformToMatrix(Transform rhinoTransform) =>
-    // Simplified version - will be replaced by helper method
-    new()
+  private bool CreateInstanceReferenceGeometry<T>(ref T target)
+  {
+    if (Value?.Definition == null)
     {
-      M11 = rhinoTransform.M00,
-      M12 = rhinoTransform.M01,
-      M13 = rhinoTransform.M02,
-      M14 = rhinoTransform.M03,
-      M21 = rhinoTransform.M10,
-      M22 = rhinoTransform.M11,
-      M23 = rhinoTransform.M12,
-      M24 = rhinoTransform.M13,
-      M31 = rhinoTransform.M20,
-      M32 = rhinoTransform.M21,
-      M33 = rhinoTransform.M22,
-      M34 = rhinoTransform.M23,
-      M41 = rhinoTransform.M30,
-      M42 = rhinoTransform.M31,
-      M43 = rhinoTransform.M32,
-      M44 = rhinoTransform.M33
-    };
+      return false;
+    }
 
-  public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
+    var doc = RhinoDoc.ActiveDoc;
+    var instanceDef = doc?.InstanceDefinitions.Find(Value.Definition.Name);
 
-  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => throw new NotImplementedException();
+    if (instanceDef != null)
+    {
+      var instanceRefGeo = new InstanceReferenceGeometry(instanceDef.Id, Value.Transform);
+      target = (T)(object)instanceRefGeo;
+      return true;
+    }
 
-  public BoundingBox ClippingBox { get; }
+    return false;
+  }
+
+  public void DrawViewportWires(GH_PreviewWireArgs args)
+  {
+    // TODO?
+  }
+
+  public void DrawViewportMeshes(GH_PreviewMeshArgs args)
+  {
+    if (Value?.Definition?.Objects == null)
+    {
+      return;
+    }
+
+    foreach (var obj in Value.Definition.Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        var transformedGeometry = obj.GeometryBase.Duplicate();
+        transformedGeometry.Transform(Value.Transform);
+        obj.DrawPreviewRaw(args.Pipeline, args.Material);
+      }
+    }
+  }
+
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      if (Value?.Definition?.Objects == null)
+      {
+        return new BoundingBox();
+      }
+
+      var clippingBox = new BoundingBox();
+      foreach (var obj in Value.Definition.Objects)
+      {
+        if (obj.GeometryBase != null)
+        {
+          var transformedGeometry = obj.GeometryBase.Duplicate();
+          transformedGeometry.Transform(Value.Transform);
+          clippingBox.Union(transformedGeometry.GetBoundingBox(false));
+        }
+      }
+      return clippingBox;
+    }
+  }
 
   public override IGH_Goo Duplicate() => new SpeckleBlockInstanceWrapperGoo(Value.DeepCopy());
 
-  public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)
-  {
-    Value = value;
-  }
-
   public SpeckleBlockInstanceWrapperGoo()
   {
-    Value = new SpeckleBlockInstanceWrapper()
-    {
-      Base = new InstanceProxy()
-      {
-        definitionId = "placeholder-definition-id", // TODO: Set from actual definition
-        maxDepth = 1,
-        transform = new Matrix4x4(), // Identity matrix
-        units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none",
-        applicationId = Guid.NewGuid().ToString()
-      },
-      Transform = Transform.Identity,
-      ApplicationId = Guid.NewGuid().ToString()
-    };
+    Value = new SpeckleBlockInstanceWrapper { Name = "Block Instance", ApplicationId = Guid.NewGuid().ToString() };
+  }
+
+  public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)
+  {
+    Value = value ?? throw new ArgumentNullException(nameof(value));
   }
 }
 
@@ -348,8 +404,8 @@ public class SpeckleBlockInstanceParam
 
   public SpeckleBlockInstanceParam(GH_ParamAccess access)
     : base(
-      "Speckle Block Instance", // TODO: claire & bjorn to discuss this wording
-      "SBI", // TODO: claire & bjorn to discuss this wording
+      "Speckle Block Instance",
+      "SBI",
       "Represents a Speckle block instance",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
@@ -362,18 +418,18 @@ public class SpeckleBlockInstanceParam
   public bool IsBakeCapable => !VolatileData.IsEmpty;
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, List<Guid> objIds)
   {
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleBlockInstanceWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        goo.Value.Bake(doc, objIds);
       }
     }
   }
 
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids) => BakeGeometry(doc, obj_ids); // Instances manage their own attributes
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds) => BakeGeometry(doc, objIds); // Instances manage their own attributes
 
   public void DrawViewportWires(IGH_PreviewArgs args)
   {
@@ -397,15 +453,14 @@ public class SpeckleBlockInstanceParam
   {
     get
     {
-      BoundingBox clippingBox = new();
-      /*foreach (var item in VolatileData.AllData(true))
+      var clippingBox = new BoundingBox();
+      foreach (var item in VolatileData.AllData(true))
       {
         if (item is SpeckleBlockInstanceWrapperGoo goo)
         {
-          // calculate transformed bounding box from definition + transform
-          // TODO: Add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+          clippingBox.Union(goo.ClippingBox);
         }
-      }*/
+      }
       return clippingBox;
     }
   }

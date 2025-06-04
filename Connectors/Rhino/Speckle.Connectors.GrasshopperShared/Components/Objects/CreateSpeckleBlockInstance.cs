@@ -33,15 +33,14 @@ public class CreateSpeckleBlockInstance : GH_Component
     );
     Params.Input[0].Optional = true;
 
-    // TODO: Uncomment when block definitions are available
-    // pManager.AddParameter(
-    //   new SpeckleBlockDefinitionWrapperParam(),
-    //   "Definition",
-    //   "D",
-    //   "Block Definition to instance",
-    //   GH_ParamAccess.item
-    // );
-    // Params.Input[1].Optional = true;
+    pManager.AddParameter(
+      new SpeckleBlockDefinitionWrapperParam(),
+      "Definition",
+      "D",
+      "Block Definition to instance",
+      GH_ParamAccess.item
+    );
+    Params.Input[1].Optional = true;
 
     pManager.AddGenericParameter(
       "Transform",
@@ -49,10 +48,10 @@ public class CreateSpeckleBlockInstance : GH_Component
       "Transform for the block instance. Transforms and Planes are accepted.",
       GH_ParamAccess.item
     );
-    Params.Input[1].Optional = true; // TODO: Change to [2] when definition input is added
+    Params.Input[2].Optional = true;
 
     pManager.AddTextParameter("Name", "N", "Name of the Block Instance", GH_ParamAccess.item);
-    Params.Input[2].Optional = true; // TODO: Change to [3] when definition input is added
+    Params.Input[3].Optional = true;
 
     pManager.AddGenericParameter(
       "Properties",
@@ -60,7 +59,7 @@ public class CreateSpeckleBlockInstance : GH_Component
       "The properties of the Block Instance. Speckle Properties are accepted.",
       GH_ParamAccess.item
     );
-    Params.Input[3].Optional = true; // TODO: Change to [4] when definition input is added
+    Params.Input[4].Optional = true;
 
     // TODO: Add Color and Material inputs when supported
   }
@@ -75,14 +74,13 @@ public class CreateSpeckleBlockInstance : GH_Component
       GH_ParamAccess.item
     );
 
-    // TODO: Uncomment when block definitions are available
-    // pManager.AddParameter(
-    //   new SpeckleBlockDefinitionWrapperParam(),
-    //   "Definition",
-    //   "D",
-    //   "Block Definition of the instance",
-    //   GH_ParamAccess.item
-    // );
+    pManager.AddParameter(
+      new SpeckleBlockDefinitionWrapperParam(),
+      "Definition",
+      "D",
+      "Block Definition of the instance",
+      GH_ParamAccess.item
+    );
 
     pManager.AddGenericParameter("Transform", "T", "Transform of the Block Instance", GH_ParamAccess.item);
 
@@ -106,47 +104,52 @@ public class CreateSpeckleBlockInstance : GH_Component
     SpeckleBlockInstanceWrapperGoo? inputInstance = null;
     da.GetData(0, ref inputInstance);
 
+    SpeckleBlockDefinitionWrapperGoo? inputDefinition = null;
+    da.GetData(1, ref inputDefinition);
+
     IGH_Goo? inputTransform = null;
-    da.GetData(1, ref inputTransform);
+    da.GetData(2, ref inputTransform);
 
     string? inputName = null;
-    da.GetData(2, ref inputName);
+    da.GetData(3, ref inputName);
 
     IGH_Goo? inputProperties = null;
-    da.GetData(3, ref inputProperties);
+    da.GetData(4, ref inputProperties);
 
-    // Track mutation
+    // Create or copy result
+    SpeckleBlockInstanceWrapper result;
     bool mutated = false;
 
-    // Process the instance
-    SpeckleBlockInstanceWrapperGoo result = new();
-    if (inputInstance != null)
+    if (inputInstance?.Value != null)
     {
-      if (!result.CastFrom(inputInstance))
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Block Instance input is not valid.");
-        return;
-      }
+      result = inputInstance.Value.DeepCopy();
+      System.Diagnostics.Debug.WriteLine(
+        $"Component: Copied instance, Definition is null: {result.Definition == null}"
+      );
+    }
+    else
+    {
+      result = new SpeckleBlockInstanceWrapper { Name = "Block Instance", ApplicationId = Guid.NewGuid().ToString() };
+      System.Diagnostics.Debug.WriteLine($"Component: Created new instance");
+      mutated = true;
+    }
+
+    // Process definition
+    if (inputDefinition?.Value != null)
+    {
+      result.Definition = inputDefinition.Value;
+      result.InstanceProxy.definitionId = inputDefinition.Value.ApplicationId ?? inputDefinition.Value.Name;
+      mutated = true;
+      System.Diagnostics.Debug.WriteLine($"Component: Set definition to: {result.Definition.Name}");
     }
 
     // Process transform
     if (inputTransform != null)
     {
-      Transform extractedTransform = Transform.Unset;
-
-      // Try to extract transform directly
-      if (inputTransform is GH_Transform ghTransform)
+      Transform? extractedTransform = ExtractTransform(inputTransform);
+      if (extractedTransform.HasValue)
       {
-        extractedTransform = ghTransform.Value;
-      }
-      else if (inputTransform is GH_Plane ghPlane)
-      {
-        extractedTransform = Transform.PlaneToPlane(Plane.WorldXY, ghPlane.Value);
-      }
-
-      if (extractedTransform.IsValid)
-      {
-        result.Value.Transform = extractedTransform;
+        result.Transform = extractedTransform.Value;
         mutated = true;
       }
       else
@@ -160,9 +163,9 @@ public class CreateSpeckleBlockInstance : GH_Component
     }
 
     // Process name
-    if (inputName != null)
+    if (inputName is { Length: > 0 }) // with !string.IsNullOrEmpty(inputName) compiler still complains at assignment
     {
-      result.Value.Name = inputName;
+      result.Name = inputName;
       mutated = true;
     }
 
@@ -170,25 +173,48 @@ public class CreateSpeckleBlockInstance : GH_Component
     if (inputProperties != null)
     {
       SpecklePropertyGroupGoo propGoo = new();
-      if (!propGoo.CastFrom(inputProperties))
+      if (propGoo.CastFrom(inputProperties))
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Properties input is not valid.");
+        result.Properties = propGoo;
+        mutated = true;
+      }
+      else
+      {
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Warning,
+          "Properties input is not valid. Only Speckle Properties are accepted."
+        );
         return;
       }
-      result.Value.Properties = propGoo;
-      mutated = true;
     }
 
     // Generate new ApplicationId if mutated
     if (mutated)
     {
-      result.Value.ApplicationId = Guid.NewGuid().ToString();
+      result.ApplicationId = Guid.NewGuid().ToString();
+      result.InstanceProxy.applicationId = result.ApplicationId;
     }
 
+    // Ensure we have a valid name
+    if (string.IsNullOrEmpty(result.Name))
+    {
+      result.Name = "Block Instance";
+    }
+
+    System.Diagnostics.Debug.WriteLine($"Component: Final definition is null: {result.Definition == null}");
     // Set outputs
-    da.SetData(0, result);
-    da.SetData(1, result.Value.Transform);
-    da.SetData(2, result.Value.Name);
-    da.SetData(3, result.Value.Properties);
+    da.SetData(0, new SpeckleBlockInstanceWrapperGoo(result));
+    da.SetData(1, result.Definition != null ? new SpeckleBlockDefinitionWrapperGoo(result.Definition) : null);
+    da.SetData(2, new GH_Transform(result.Transform));
+    da.SetData(3, result.Name);
+    da.SetData(4, result.Properties);
   }
+
+  private Transform? ExtractTransform(IGH_Goo input) =>
+    input switch
+    {
+      GH_Transform ghTransform => ghTransform.Value,
+      GH_Plane ghPlane => Transform.PlaneToPlane(Plane.WorldXY, ghPlane.Value),
+      _ => null
+    };
 }
