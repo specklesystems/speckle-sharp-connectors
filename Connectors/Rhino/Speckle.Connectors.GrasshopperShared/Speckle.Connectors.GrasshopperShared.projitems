@@ -99,5 +99,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_block_inst.png" />
   </ItemGroup>
 </Project>

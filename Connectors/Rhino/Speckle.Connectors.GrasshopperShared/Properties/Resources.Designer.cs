@@ -133,6 +133,16 @@ namespace Speckle.Connectors.GrasshopperShared.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap speckle_objects_block_inst {
+            get {
+                object obj = ResourceManager.GetObject("speckle_objects_block_inst", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap speckle_objects_filter {
             get {
                 object obj = ResourceManager.GetObject("speckle_objects_filter", resourceCulture);
