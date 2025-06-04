@@ -296,6 +296,23 @@ public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper
   {
     Value = value;
   }
+
+  public SpeckleBlockInstanceWrapperGoo()
+  {
+    Value = new SpeckleBlockInstanceWrapper()
+    {
+      Base = new InstanceProxy()
+      {
+        definitionId = "placeholder-definition-id", // TODO: Set from actual definition
+        maxDepth = 1,
+        transform = new Matrix4x4(), // Identity matrix
+        units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none",
+        applicationId = Guid.NewGuid().ToString()
+      },
+      Transform = Transform.Identity,
+      ApplicationId = Guid.NewGuid().ToString()
+    };
+  }
 }
 
 public class SpeckleBlockInstanceParam

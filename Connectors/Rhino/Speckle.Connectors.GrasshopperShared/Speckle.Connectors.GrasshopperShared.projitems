@@ -17,6 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleBlockInstance.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetCollectionObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
