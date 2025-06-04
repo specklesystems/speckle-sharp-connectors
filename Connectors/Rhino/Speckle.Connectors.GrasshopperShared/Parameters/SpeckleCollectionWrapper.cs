@@ -59,7 +59,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
   public List<SpeckleWrapper> Elements { get; set; } = new();
 
   /// <summary>
-  /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamicall on <see cref="Collection"/>
+  /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamically on <see cref="Collection"/>
   /// </summary>
   public string? Topology
   {
