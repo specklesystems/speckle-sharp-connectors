@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
@@ -131,10 +132,21 @@ public class CreateSpeckleBlockInstance : GH_Component
     // Process transform
     if (inputTransform != null)
     {
-      var transformGoo = new SpeckleBlockInstanceWrapperGoo();
-      if (transformGoo.CastFrom(inputTransform)) // This will handle Transform and Plane
+      Transform extractedTransform = Transform.Unset;
+
+      // Try to extract transform directly
+      if (inputTransform is GH_Transform ghTransform)
       {
-        result.Value.Transform = transformGoo.Value.Transform;
+        extractedTransform = ghTransform.Value;
+      }
+      else if (inputTransform is GH_Plane ghPlane)
+      {
+        extractedTransform = Transform.PlaneToPlane(Plane.WorldXY, ghPlane.Value);
+      }
+
+      if (extractedTransform.IsValid)
+      {
+        result.Value.Transform = extractedTransform;
         mutated = true;
       }
       else
