@@ -4,6 +4,7 @@ using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
@@ -29,24 +30,91 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
       }
 
       InstanceProxy = proxy;
+      UpdateTransformFromProxy();
     }
   }
 
-  // TODO: blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param)
-  //public SpeckleBlockDefinitionGoo? Definition { get; set; }
+  // TODO: Add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+  // public SpeckleBlockDefinitionWrapper? Definition { get; set; }
 
-  public Transform Transform { get; set; } = Transform.Identity;
+  public override string ToString() => $"Speckle Block Instance [{Name}]";
 
-  public SpecklePropertyGoo Properties { get; set; } = new();
+  public SpecklePropertyGroupGoo Properties { get; set; } = new();
 
   // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
   /*public Color? Color { get; set; }
   public SpeckleMaterialWrapper? Material { get; set; }*/
 
-  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) => throw new NotImplementedException();
+  private Transform _transform = Transform.Identity;
+  public Transform Transform
+  {
+    get => _transform;
+    set
+    {
+      _transform = value;
+      UpdateProxyFromTransform();
+    }
+  }
 
-  public void Bake(RhinoDoc doc, List<Guid> blockIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false) =>
+  /// <summary>
+  /// Updates Rhino Transform property when the InstanceProxy.transform changes.
+  /// </summary>
+  /// <remarks>
+  /// This happens when we receive data from Speckle - we need to convert the Speckle Matrix4x4
+  /// back to a Rhino Transform so Grasshopper users can work with familiar Rhino geometry.
+  /// </remarks>
+  private void UpdateTransformFromProxy()
+  {
+    if (InstanceProxy?.transform != null)
+    {
+      var units = InstanceProxy.units;
+      _transform = GrasshopperHelpers.MatrixToTransform(InstanceProxy.transform, units);
+    }
+  }
+
+  /// <summary>
+  /// Updates the InstanceProxy.transform when the Rhino Transform property changes.
+  /// </summary>
+  /// <remarks>
+  /// This happens when users input a transform in Grasshopper - we need to convert it
+  /// to Speckle's Matrix4x4 format so it can be sent to Speckle properly.
+  /// Uses the document's unit system to ensure proper scaling between different units.
+  /// </remarks>
+  private void UpdateProxyFromTransform()
+  {
+    if (InstanceProxy != null)
+    {
+      // TODO: TransformToMatrix method in [feat(grasshopper): add Speckle Block Definition support #891](https://github.com/specklesystems/speckle-sharp-connectors/pull/891/files)
+      // var units = InstanceProxy.units;
+      // InstanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
+    }
+  }
+
+  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  {
+    // TODO: preview by transforming definitions geo
+    // need access to block definitions geometry
+    // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
     throw new NotImplementedException();
+  }
+
+  public void Bake(RhinoDoc doc, List<Guid> blockIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  {
+    // TODO: create InstanceReference in Rhino doc
+    // Will need the definition index and transform
+    // add when SpeckleBlockDefinitionWrapper is available (blocked by [CNX-1941](https://linear.app/speckle/issue/CNX-1941/add-speckle-blockdefinition-param))
+    throw new NotImplementedException();
+  }
+
+  public SpeckleBlockInstanceWrapper DeepCopy() =>
+    new()
+    {
+      Base = InstanceProxy.ShallowCopy(),
+      Transform = _transform,
+      Properties = Properties,
+      ApplicationId = ApplicationId,
+      Name = Name
+    };
 }
 
 public class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
