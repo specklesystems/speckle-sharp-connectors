@@ -216,6 +216,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
             conversionResults.Add(new(Status.ERROR, obj, null, null, ce));
             convertActivity?.SetStatus(SdkActivityStatusCode.Error);
           }
+          catch (OperationCanceledException ce)
+          {
+            //handle conversions but don't log to seq
+            conversionResults.Add(new(Status.ERROR, obj, null, null, ce));
+            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
+          }
           catch (Exception ex) when (!ex.IsFatal())
           {
             conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
