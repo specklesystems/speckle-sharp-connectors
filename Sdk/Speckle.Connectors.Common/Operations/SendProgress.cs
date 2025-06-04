@@ -15,6 +15,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
   : ISendProgress
 {
   private string? _previousSpeed;
+  private double? _previousUploaded;
 
   public void Begin() => progressDisplayManager.Begin();
 
@@ -48,12 +49,13 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
           new($"Caching... ({args.Count} objects)", progressDisplayManager.CalculatePercentage(args))
         );
         break;
+      case ProgressEvent.UploadedObjects
       case ProgressEvent.UploadBytes:
         if (!sendProgressState.PreviouslyFromCacheOrSerialized)
         {
           return;
         }
-        onOperationProgressed.Report(new($"Uploading... ({_previousSpeed})", null));
+        onOperationProgressed.Report(new($"Uploading... {_previousUploaded} ({_previousSpeed})", null));
         break;
       case ProgressEvent.FromCacheOrSerialized:
         var message = $"Serializing... ({args.Count} / {sendProgressState.Total} found objects)";
