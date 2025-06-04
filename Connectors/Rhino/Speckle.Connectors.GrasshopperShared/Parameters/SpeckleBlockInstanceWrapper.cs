@@ -213,6 +213,12 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
     return CastToModelObject(ref target);
   }
 
+#if !RHINO8_OR_GREATER
+  private bool CastFromModelObject(object _) => false;
+
+  private bool CastToModelObject<T>(ref T _) => false;
+#endif
+
   private bool CreateFromTransform(Transform transform)
   {
     var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
