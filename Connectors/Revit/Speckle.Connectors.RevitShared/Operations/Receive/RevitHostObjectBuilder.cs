@@ -40,7 +40,8 @@ public sealed class RevitHostObjectBuilder(
   ITypedConverter<
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
     DirectShape
-  > localToGlobalDirectShapeConverter
+  > localToGlobalDirectShapeConverter,
+  IReceiveConversionHandler conversionHandler
 ) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
@@ -235,10 +236,9 @@ public sealed class RevitHostObjectBuilder(
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      try
-      {
-        using var activity = activityFactory.Start("BakeObject");
 
+      var ex = conversionHandler.TryConvert(() =>
+      {
         // actual conversion happens here!
         var result = converter.Convert(localToGlobalMap.AtomicObject);
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
@@ -269,11 +269,10 @@ public sealed class RevitHostObjectBuilder(
         {
           throw new ConversionException($"Failed to cast {result.GetType()} to direct shape definition wrapper.");
         }
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      });
+      if (ex is not null)
       {
         conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
-        logger.LogError(ex, $"Failed to convert object of type {localToGlobalMap.AtomicObject.speckle_type}");
       }
     }
     return (new(bakedObjectIds, conversionResults), postBakePaintTargets);

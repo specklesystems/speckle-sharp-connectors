@@ -7,7 +7,6 @@ using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
@@ -28,7 +27,8 @@ public class AutocadHostObjectBuilder(
   IAutocadMaterialBaker materialBaker,
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
-  RootObjectUnpacker rootObjectUnpacker
+  RootObjectUnpacker rootObjectUnpacker,
+  IReceiveConversionHandler conversionHandler
 ) : IHostObjectBuilder
 {
   public Task<HostObjectBuilderResult> Build(
@@ -90,11 +90,11 @@ public class AutocadHostObjectBuilder(
     var count = 0;
     foreach (var (layerPath, atomicObject) in atomicObjectsWithPath)
     {
-      string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
       onOperationProgressed.Report(new("Converting objects", (double)++count / atomicObjects.Count));
       cancellationToken.ThrowIfCancellationRequested();
-      try
+      var ex = conversionHandler.TryConvert(() =>
       {
+        string objectId = atomicObject.applicationId ?? atomicObject.id.NotNull();
         IReadOnlyCollection<Entity> convertedObjects = ConvertObject(atomicObject, layerPath, baseLayerPrefix);
 
         applicationIdMap[objectId] = convertedObjects;
@@ -109,8 +109,8 @@ public class AutocadHostObjectBuilder(
         );
 
         bakedObjectIds.UnionWith(convertedObjects.Select(e => e.GetSpeckleApplicationId()));
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      });
+      if (ex != null)
       {
         results.Add(new(Status.ERROR, atomicObject, null, null, ex));
       }
