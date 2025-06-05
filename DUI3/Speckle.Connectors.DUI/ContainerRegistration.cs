@@ -20,6 +20,7 @@ public static class ContainerRegistration
     // context always newed up on host app's main/ui thread
     serviceCollection.AddSingleton<IThreadContext>(new TThreadContext());
     serviceCollection.AddSingleton<DocumentModelStore, TDocumentStore>();
+    serviceCollection.AddSingleton<IDocumentModelStore>(sp => sp.GetService<DocumentModelStore>());
 
     serviceCollection.AddTransient<IBrowserBridge, BrowserBridge>(); // POC: Each binding should have it's own bridge instance
 

@@ -17,7 +17,7 @@ public partial interface IReceiveOperationManager : IDisposable;
 public sealed class ReceiveOperationManager(
   IServiceScope serviceScope,
   ICancellationManager cancellationManager,
-  DocumentModelStore store,
+  IDocumentModelStore store,
   ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
   ILogger<ReceiveOperationManager> logger
@@ -30,14 +30,14 @@ public sealed class ReceiveOperationManager(
     Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>> processor
   )
   {
+    // Get receiver card
+    if (store.GetModelById(modelCardId) is not ReceiverModelCard modelCard)
+    {
+      // Handle as GLOBAL ERROR at BrowserBridge
+      throw new InvalidOperationException("No download model card was found.");
+    }
     try
     {
-      // Get receiver card
-      if (store.GetModelById(modelCardId) is not ReceiverModelCard modelCard)
-      {
-        // Handle as GLOBAL ERROR at BrowserBridge
-        throw new InvalidOperationException("No download model card was found.");
-      }
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
       initializeScope(serviceScope.ServiceProvider);
@@ -46,7 +46,7 @@ public sealed class ReceiveOperationManager(
         modelCardId,
         cancellationItem.Token
       );
-      var ro = serviceScope.ServiceProvider.GetRequiredService<ReceiveOperation>();
+      var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
         () => ro.Execute(modelCard.GetReceiveInfo(speckleApplication.Slug), progress, cancellationItem.Token)
