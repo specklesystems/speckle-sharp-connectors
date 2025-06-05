@@ -8,6 +8,7 @@ using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -269,6 +270,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
+      case RhinoObject rhinoObj:
+        return CastFromRhinoObject(rhinoObj);
     }
 
     // Handle case of model objects in rhino 8
@@ -407,6 +410,100 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     }
     return false;
   }
+
+  private bool CastFromRhinoObject(RhinoObject rhinoObj)
+  {
+    if (rhinoObj?.Geometry == null)
+    {
+      return false;
+    }
+
+    // convert geometry
+    Base converted;
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+
+    if (rhinoObj.Geometry is InstanceReferenceGeometry instanceRef)
+    {
+      // special case for nested instances in block definitions
+      var nestedInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(instanceRef.ParentIdefId);
+      converted = new InstanceProxy
+      {
+        definitionId = instanceRef.ParentIdefId.ToString(),
+        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
+        units = units,
+        maxDepth = 1,
+        applicationId = rhinoObj.Id.ToString()
+      };
+      converted["definitionName"] = nestedInstanceDef?.Name ?? instanceRef.ParentIdefId.ToString();
+    }
+    else // not nested - simple
+    {
+      converted = SpeckleConversionContext.ConvertToSpeckle(rhinoObj.Geometry);
+    }
+
+    converted[Constants.NAME_PROP] = rhinoObj.Name ?? "";
+    converted.applicationId = rhinoObj.Id.ToString();
+
+    // reuse property casting
+    var propertyGroup = new SpecklePropertyGroupGoo();
+    var userStrings = new Dictionary<string, object?>();
+    foreach (var key in rhinoObj.Attributes.GetUserStrings())
+    {
+      if (key is string keyString)
+      {
+        userStrings[keyString] = rhinoObj.Attributes.GetUserString(keyString);
+      }
+    }
+    propertyGroup.CastFrom(userStrings);
+
+    // reuse material casting
+    SpeckleMaterialWrapper? material = null;
+    if (rhinoObj.Attributes.MaterialSource != ObjectMaterialSource.MaterialFromParent)
+    {
+      var renderMaterial = GetRenderMaterialFromRhinoObject(rhinoObj);
+      if (renderMaterial != null)
+      {
+        var matGoo = new SpeckleMaterialWrapperGoo();
+        if (matGoo.CastFrom(renderMaterial)) // REUSE!
+        {
+          material = matGoo.Value;
+        }
+      }
+    }
+
+    Value = new SpeckleObjectWrapper()
+    {
+      GeometryBase = rhinoObj.Geometry,
+      Base = converted,
+      Name = rhinoObj.Name ?? "",
+      WrapperGuid = rhinoObj.Id.ToString(),
+      ApplicationId = rhinoObj.Id.ToString(),
+      Path = new List<string>(),
+      Parent = null,
+      Properties = propertyGroup,
+      Color = GetSimpleColorFromRhinoObject(rhinoObj),
+      Material = material
+    };
+
+    return true;
+  }
+
+  private Rhino.Render.RenderMaterial? GetRenderMaterialFromRhinoObject(RhinoObject rhinoObj)
+  {
+    // Minimal material resolution - just the basics
+    if (rhinoObj.Attributes.MaterialIndex >= 0)
+    {
+      var material = RhinoDoc.ActiveDoc?.Materials[rhinoObj.Attributes.MaterialIndex];
+      return material?.RenderMaterial;
+    }
+    return null;
+  }
+
+  private Color? GetSimpleColorFromRhinoObject(RhinoObject rhinoObj) =>
+    // Simple color extraction - just object color for now
+    rhinoObj.Attributes.ColorSource == ObjectColorSource.ColorFromObject
+      ? rhinoObj.Attributes.ObjectColor
+      : null;
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
   {

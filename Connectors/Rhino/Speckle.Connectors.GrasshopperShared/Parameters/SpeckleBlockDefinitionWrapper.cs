@@ -311,16 +311,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
           var objWrapperGoo = new SpeckleObjectWrapperGoo();
           if (objWrapperGoo.CastFrom(rhinoObj))
           {
-            var objWrapper = objWrapperGoo.Value;
-
-            // Override specific properties that the casting might not handle correctly
-            objWrapper.Base = converted; // Use our converted geometry (handles nested instances)
-            objWrapper.WrapperGuid = rhinoObj.Id.ToString();
-            objWrapper.ApplicationId = rhinoObj.Id.ToString();
-            objWrapper.Path = new List<string>();
-            objWrapper.Parent = null;
-
-            objects.Add(objWrapper);
+            objects.Add(objWrapperGoo.Value);
             objectIds.Add(converted.applicationId);
           }
         }
