@@ -204,7 +204,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
 {
   public override IGH_Goo Duplicate() => new SpeckleBlockDefinitionWrapperGoo(Value.DeepCopy());
 
-  public override string ToString() => $@"Speckle Block Definition Goo [{m_value.Base.speckle_type}]";
+  public override string ToString() => $@"Speckle Block Definition Goo : {Value.Name}";
 
   public override bool IsValid => Value?.InstanceDefinitionProxy is not null;
   public override string TypeName => "Speckle block definition wrapper";
