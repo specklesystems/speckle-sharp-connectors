@@ -69,6 +69,15 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           outputParams.Add(CreateOutputParamByKeyValue(key, propGoo.Value[key].Value, GH_ParamAccess.item));
         }
         break;
+      case SpeckleBlockDefinitionWrapperGoo blockDef:
+        Name = string.IsNullOrEmpty(blockDef.Value.Name) ? blockDef.Value.Base.speckle_type : blockDef.Value.Name;
+        outputParams = CreateOutputParamsFromBase(blockDef.Value.Base);
+        break;
+
+      case SpeckleBlockInstanceWrapperGoo blockInst:
+        Name = string.IsNullOrEmpty(blockInst.Value.Name) ? blockInst.Value.Base.speckle_type : blockInst.Value.Name;
+        outputParams = CreateOutputParamsFromBase(blockInst.Value.Base);
+        break;
       default:
         return;
     }
