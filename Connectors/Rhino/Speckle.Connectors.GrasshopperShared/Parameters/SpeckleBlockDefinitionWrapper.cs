@@ -444,6 +444,23 @@ public class SpeckleBlockDefinitionWrapperParam
 
   protected override Bitmap Icon => Resources.speckle_param_object; // TODO: claire Icon for speckle param block instance
 
+  public override void RegisterRemoteIDs(GH_GuidTable idList)
+  {
+    // Register Rhino InstanceDefinition GUIDs so Grasshopper can track when
+    // block definitions change in the Rhino document and auto-expire this parameter
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (
+        item is SpeckleBlockDefinitionWrapperGoo goo
+        && goo.Value?.ApplicationId != null
+        && Guid.TryParse(goo.Value.ApplicationId, out Guid id)
+      )
+      {
+        idList.Add(id, this);
+      }
+    }
+  }
+
   public bool IsBakeCapable => !VolatileData.IsEmpty;
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 

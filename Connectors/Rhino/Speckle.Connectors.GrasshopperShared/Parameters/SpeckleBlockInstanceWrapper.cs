@@ -423,6 +423,33 @@ public class SpeckleBlockInstanceParam
   public override Guid ComponentGuid => new("938CCD6E-B202-4A0C-9D68-ABD7683B0EDE");
 
   protected override Bitmap Icon => Resources.speckle_param_object; // TODO: Create specific icon
+
+  public override void RegisterRemoteIDs(GH_GuidTable idList)
+  {
+    // Register both the block definition and instance GUIDs so Grasshopper
+    // auto-expires when either the definition or instance changes in Rhino
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleBlockInstanceWrapperGoo goo)
+      {
+        // Track the referenced block definition
+        if (
+          goo.Value?.Definition?.ApplicationId != null
+          && Guid.TryParse(goo.Value.Definition.ApplicationId, out Guid defId)
+        )
+        {
+          idList.Add(defId, this);
+        }
+
+        // Track the instance itself if it references a Rhino object
+        if (goo.Value?.ApplicationId != null && Guid.TryParse(goo.Value.ApplicationId, out Guid instId))
+        {
+          idList.Add(instId, this);
+        }
+      }
+    }
+  }
+
   public bool IsBakeCapable => !VolatileData.IsEmpty;
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
