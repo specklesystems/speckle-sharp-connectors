@@ -123,14 +123,10 @@ public class CreateSpeckleBlockInstance : GH_Component
     if (inputInstance?.Value != null)
     {
       result = inputInstance.Value.DeepCopy();
-      System.Diagnostics.Debug.WriteLine(
-        $"Component: Copied instance, Definition is null: {result.Definition == null}"
-      );
     }
     else
     {
       result = new SpeckleBlockInstanceWrapper { Name = "Block Instance", ApplicationId = Guid.NewGuid().ToString() };
-      System.Diagnostics.Debug.WriteLine($"Component: Created new instance");
       mutated = true;
     }
 
@@ -140,7 +136,6 @@ public class CreateSpeckleBlockInstance : GH_Component
       result.Definition = inputDefinition.Value;
       result.InstanceProxy.definitionId = inputDefinition.Value.ApplicationId ?? inputDefinition.Value.Name;
       mutated = true;
-      System.Diagnostics.Debug.WriteLine($"Component: Set definition to: {result.Definition.Name}");
     }
 
     // Process transform
@@ -201,7 +196,6 @@ public class CreateSpeckleBlockInstance : GH_Component
       result.Name = "Block Instance";
     }
 
-    System.Diagnostics.Debug.WriteLine($"Component: Final definition is null: {result.Definition == null}");
     // Set outputs
     da.SetData(0, new SpeckleBlockInstanceWrapperGoo(result));
     da.SetData(1, result.Definition != null ? new SpeckleBlockDefinitionWrapperGoo(result.Definition) : null);

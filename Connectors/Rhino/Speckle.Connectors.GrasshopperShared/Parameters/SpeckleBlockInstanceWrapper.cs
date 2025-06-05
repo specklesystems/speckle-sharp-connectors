@@ -14,6 +14,15 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
 /// A Wrapper class representing a block instance.
+///
+/// Works reliably for:
+/// - Pure Speckle workflows (definition ↔ instance)
+/// - Rhino → Grasshopper (document-based definitions)
+/// - Preview and baking (when definition is available)
+///
+/// Limitations:
+/// - Round-trip through Grasshopper's native block system may lose geometry
+/// - Casting to GH_InstanceReference works but results in points on bake
 /// </summary>
 public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 {
@@ -141,22 +150,16 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     }
   }
 
-  public SpeckleBlockInstanceWrapper DeepCopy()
-  {
-    System.Diagnostics.Debug.WriteLine($"DeepCopy: Original Definition is null: {Definition == null}");
-    SpeckleBlockInstanceWrapper copy =
-      new()
-      {
-        Base = InstanceProxy.ShallowCopy(),
-        Definition = Definition?.DeepCopy(), // null-safe copy
-        Transform = _transform,
-        Properties = Properties,
-        ApplicationId = ApplicationId,
-        Name = Name
-      };
-    System.Diagnostics.Debug.WriteLine($"DeepCopy: Copy Definition is null: {copy.Definition == null}");
-    return copy;
-  }
+  public SpeckleBlockInstanceWrapper DeepCopy() =>
+    new()
+    {
+      Base = InstanceProxy.ShallowCopy(),
+      Definition = Definition?.DeepCopy(),
+      Transform = _transform,
+      Properties = Properties,
+      ApplicationId = ApplicationId,
+      Name = Name
+    };
 
   // Constructor ensures _instanceProxy is never null
   public SpeckleBlockInstanceWrapper()
@@ -208,7 +211,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         var planeTransform = Transform.PlaneToPlane(Plane.WorldXY, plane);
         return CreateFromTransform(planeTransform);
 
-      // Direct Rhino block instance geometry (is this even possible?)
+      // Direct Rhino block instance geometry (from doc)
       case InstanceReferenceGeometry instanceRef:
         return CreateFromInstanceReference(instanceRef);
 
@@ -276,19 +279,22 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
     var definitionId = instanceRef.ParentIdefId;
-    SpeckleBlockDefinitionWrapper? definition = null;
-    var doc = RhinoDoc.ActiveDoc;
 
-    // Try to find existing Block Definition in document (Rhino → Grasshopper scenario)
-    // If Block Definition doesn't exist in document (Pure Grasshopper scenario, that's ok)
-    var instanceDef = doc?.InstanceDefinitions.FindId(definitionId);
-    if (instanceDef != null)
+    // Try to preserve existing definition first (for round-trip scenarios)
+    SpeckleBlockDefinitionWrapper? definition = Value?.Definition;
+
+    // Look in document if we don't have an existing definition
+    if (definition == null)
     {
-      // Definition exists in document - convert it
-      var defGoo = new SpeckleBlockDefinitionWrapperGoo();
-      if (defGoo.CastFrom(instanceDef))
+      var doc = RhinoDoc.ActiveDoc;
+      var instanceDef = doc?.InstanceDefinitions.FindId(definitionId);
+      if (instanceDef != null)
       {
-        definition = defGoo.Value;
+        var defGoo = new SpeckleBlockDefinitionWrapperGoo();
+        if (defGoo.CastFrom(instanceDef))
+        {
+          definition = defGoo.Value;
+        }
       }
     }
 
@@ -304,13 +310,15 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       },
       Transform = instanceRef.Xform,
       ApplicationId = Guid.NewGuid().ToString(),
-      Definition = definition // This might be null, that's ok!
+      Definition = definition // May be null in pure Grasshopper workflows
     };
     return true;
   }
 
   private bool CreateInstanceReferenceGeometry<T>(ref T target)
   {
+    // Only works if the block definition exists in the Rhino document
+    // Will fail for pure Grasshopper workflows
     if (Value?.Definition == null)
     {
       return false;

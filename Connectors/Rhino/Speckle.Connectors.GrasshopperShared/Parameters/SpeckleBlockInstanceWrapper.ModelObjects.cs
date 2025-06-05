@@ -15,6 +15,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
   {
     switch (source)
     {
+      case InstanceReferenceGeometry instanceRef:
+        return CreateFromInstanceReference(instanceRef);
+
       case GH_InstanceReference ghInstanceRef:
         return ghInstanceRef.Value != null && CreateFromInstanceReference(ghInstanceRef.Value);
 
@@ -38,9 +41,12 @@ public partial class SpeckleBlockInstanceWrapperGoo
         return false;
       }
 
+      // API Limitation: pure gh workflows, the ModelInstanceDefinition
+      // will be empty (no geometry objects) because gh requires definitions to exist in the Rhino document
+      // Transform still works.
       if (Value.Definition == null)
       {
-        // For pure Grasshopper workflows, we don't have a Model Definition in doc which we can reference
+        // No definition - create minimal instance reference (just transform, no geometry)
         var minimalInstanceRef = new InstanceReferenceGeometry(Guid.Empty, Value.Transform);
         target = (T)(object)new GH_InstanceReference(minimalInstanceRef);
         return true;
@@ -84,85 +90,74 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
   private ModelInstanceDefinition? CreateModelInstanceDefinition(SpeckleBlockDefinitionWrapper definition)
   {
-    try
+    var modelInstanceDefGoo = new SpeckleBlockDefinitionWrapperGoo(definition);
+    ModelInstanceDefinition existingModelDef = new();
+    if (modelInstanceDefGoo.CastTo(ref existingModelDef))
     {
-      var modelInstanceDefGoo = new SpeckleBlockDefinitionWrapperGoo(definition);
-      ModelInstanceDefinition existingModelDef = new();
-      if (modelInstanceDefGoo.CastTo(ref existingModelDef))
-      {
-        return existingModelDef;
-      }
-
-      var doc = RhinoDoc.ActiveDoc;
-
-      if (doc == null)
-      {
-        return null;
-      }
-
-      var rhinoInstanceDef = doc.InstanceDefinitions.Find(definition.Name);
-
-      if (rhinoInstanceDef != null)
-      {
-        return new ModelInstanceDefinition(rhinoInstanceDef);
-      }
-
-      var geometries = new List<GeometryBase>();
-      var attributes = new List<ObjectAttributes>();
-
-      foreach (var obj in definition.Objects)
-      {
-        if (obj.GeometryBase != null)
-        {
-          geometries.Add(obj.GeometryBase.Duplicate());
-
-          var att = new ObjectAttributes { Name = obj.Name };
-          if (obj.Color is Color color)
-          {
-            att.ObjectColor = color;
-            att.ColorSource = ObjectColorSource.ColorFromObject;
-          }
-
-          foreach (var kvp in obj.Properties.Value)
-          {
-            att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-          }
-
-          attributes.Add(att);
-        }
-      }
-
-      if (geometries.Count == 0)
-      {
-        Console.WriteLine("geometries are empty, just like my stomach. fuck.");
-        return null;
-      }
-
-      var defIndex = doc.InstanceDefinitions.Add(
-        definition.Name,
-        "Temporary for Grasshopper workflow",
-        Point3d.Origin,
-        geometries,
-        attributes
-      );
-
-      if (defIndex == -1)
-      {
-        return null;
-      }
-
-      var tempRhinoDef = doc.InstanceDefinitions[defIndex];
-      var modelDef = new ModelInstanceDefinition(tempRhinoDef);
-
-      return modelDef;
+      return existingModelDef;
     }
-#pragma warning disable CA1031
-    catch (Exception ex)
-#pragma warning restore CA1031
+
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
     {
-      System.Diagnostics.Debug.WriteLine($"Error creating ModelInstanceDefinition: {ex.Message}");
       return null;
     }
+
+    var rhinoInstanceDef = doc.InstanceDefinitions.Find(definition.Name);
+
+    if (rhinoInstanceDef != null)
+    {
+      return new ModelInstanceDefinition(rhinoInstanceDef);
+    }
+
+    var geometries = new List<GeometryBase>();
+    var attributes = new List<ObjectAttributes>();
+
+    foreach (var obj in definition.Objects)
+    {
+      if (obj.GeometryBase != null)
+      {
+        geometries.Add(obj.GeometryBase.Duplicate());
+
+        var att = new ObjectAttributes { Name = obj.Name };
+        if (obj.Color is Color color)
+        {
+          att.ObjectColor = color;
+          att.ColorSource = ObjectColorSource.ColorFromObject;
+        }
+
+        foreach (var kvp in obj.Properties.Value)
+        {
+          att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
+        }
+
+        attributes.Add(att);
+      }
+    }
+
+    if (geometries.Count == 0)
+    {
+      return null;
+    }
+
+    var defIndex = doc.InstanceDefinitions.Add(
+      definition.Name,
+      "Temporary for Grasshopper workflow - objects will appear as point on bake",
+      Point3d.Origin,
+      geometries,
+      attributes
+    );
+
+    if (defIndex == -1)
+    {
+      return null;
+    }
+
+    var tempRhinoDef = doc.InstanceDefinitions[defIndex];
+    var modelDef = new ModelInstanceDefinition(tempRhinoDef);
+
+    return modelDef;
   }
 }
 #endif
