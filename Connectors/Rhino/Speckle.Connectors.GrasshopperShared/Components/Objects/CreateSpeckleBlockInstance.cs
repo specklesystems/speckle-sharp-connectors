@@ -158,7 +158,7 @@ public class CreateSpeckleBlockInstance : GH_Component
     }
 
     // Process name
-    if (inputName is { Length: > 0 }) // with !string.IsNullOrEmpty(inputName) compiler still complains at assignment
+    if (inputName is string validName && !string.IsNullOrWhiteSpace(validName))
     {
       result.Name = inputName;
       mutated = true;
