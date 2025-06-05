@@ -37,13 +37,32 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  /// <summary>
-  /// Represents the objects contained within the block definition
-  /// </summary>
-  /// <remarks>
-  /// Objects can contain geometry, Speckle objects, Speckle instances
-  /// </remarks>
-  public List<SpeckleObjectWrapper> Objects { get; set; } = new(); // TODO: This isn't handling instances! Maybe List<SpeckleWrapper> but this wouldn't exclude Material etc. which isn't wanted.
+  private List<SpeckleObjectWrapper> _objects = new();
+
+  public List<SpeckleObjectWrapper> Objects
+  {
+    get => _objects;
+    set
+    {
+      ValidateObjects(value);
+      _objects = value;
+    }
+  }
+
+  private static void ValidateObjects(List<SpeckleObjectWrapper> objects)
+  {
+    var invalidObjects = objects
+      .Where(o => o.GetType() != typeof(SpeckleObjectWrapper) && o.GetType() != typeof(SpeckleBlockInstanceWrapper))
+      .ToList(); // Materialize the enumerable once
+
+    if (invalidObjects.Count > 0)
+    {
+      var invalidTypes = string.Join(", ", invalidObjects.Select(o => o.GetType().Name));
+      throw new ArgumentException(
+        $"Block definitions can only contain objects and instances. Found invalid types: {invalidTypes}"
+      );
+    }
+  }
 
   // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
   /*public Color? Color { get; set; }
@@ -289,32 +308,21 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
           converted[Constants.NAME_PROP] = rhinoObj.Name ?? "";
           converted.applicationId = rhinoObj.Id.ToString();
 
-          var objWrapper = new SpeckleObjectWrapper()
+          var objWrapperGoo = new SpeckleObjectWrapperGoo();
+          if (objWrapperGoo.CastFrom(rhinoObj))
           {
-            Base = converted,
-            GeometryBase = rhinoObj.Geometry,
-            Properties = new SpecklePropertyGroupGoo(),
-            Name = rhinoObj.Name ?? "",
-            /*Color = GetObjectColor(rhinoObj),
-            Material = GetObjectMaterial(rhinoObj),*/
-            WrapperGuid = rhinoObj.Id.ToString(),
-            ApplicationId = rhinoObj.Id.ToString(),
-            Path = new List<string>(),
-            Parent = null
-          };
+            var objWrapper = objWrapperGoo.Value;
 
-          if (rhinoObj.Attributes?.UserStringCount > 0)
-          {
-            var userStrings = new Dictionary<string, object?>();
-            foreach (string key in rhinoObj.Attributes.GetUserStrings())
-            {
-              userStrings[key] = rhinoObj.Attributes.GetUserString(key);
-            }
-            objWrapper.Properties.CastFrom(userStrings);
+            // Override specific properties that the casting might not handle correctly
+            objWrapper.Base = converted; // Use our converted geometry (handles nested instances)
+            objWrapper.WrapperGuid = rhinoObj.Id.ToString();
+            objWrapper.ApplicationId = rhinoObj.Id.ToString();
+            objWrapper.Path = new List<string>();
+            objWrapper.Parent = null;
+
+            objects.Add(objWrapper);
+            objectIds.Add(converted.applicationId);
           }
-
-          objects.Add(objWrapper);
-          objectIds.Add(converted.applicationId);
         }
       }
 
