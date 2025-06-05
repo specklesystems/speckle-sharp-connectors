@@ -98,9 +98,6 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
   public (int index, bool existingDefinitionUpdated) Bake(RhinoDoc doc, List<Guid> obj_ids, string? name = null)
   {
     string blockDefinitionName = name ?? Name;
-
-    // NOTE: below is pretty much a copy of `SpeckleObjectWrapper`s `Bake` method
-    // TODO: reduce code duplicity between this `Bake` method and others
     var geometries = new List<GeometryBase>();
     var attributes = new List<ObjectAttributes>();
 
@@ -109,37 +106,13 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase);
-
-        var att = new ObjectAttributes { Name = obj.Name };
-
-        if (obj.Color is Color c)
-        {
-          att.ObjectColor = c;
-          att.ColorSource = ObjectColorSource.ColorFromObject;
-        }
-
-        if (obj.Material is SpeckleMaterialWrapper m)
-        {
-          int matIndex = m.Bake(doc, m.Name); // bake material to get index
-          if (matIndex != -1)
-          {
-            att.MaterialIndex = matIndex;
-            att.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-          }
-        }
-
-        foreach (var kvp in obj.Properties.Value)
-        {
-          att.SetUserString(kvp.Key, kvp.Value?.ToString() ?? string.Empty);
-        }
-
-        attributes.Add(att);
+        attributes.Add(BakingHelpers.CreateObjectAttributes(obj.Name, obj.Color, obj.Material, obj.Properties));
       }
     }
 
     if (geometries.Count == 0)
     {
-      return (-1, false); // no geometry to create a block definition. this is essentially a fail
+      return (-1, false);
     }
 
     // Check if definition already exists

@@ -140,46 +140,17 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
   public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
-    // get or make layers
-    if (!layersAlreadyCreated && bakeLayerIndex < 0)
+    if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
-      if (Path.Count > 0 && Parent != null)
-      {
-        bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
-      }
-
+      bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
       if (bakeLayerIndex < 0)
       {
         return;
       }
     }
 
-    // create attributes
-    using ObjectAttributes att = new() { Name = Name, LayerIndex = bakeLayerIndex };
-
-    if (Color is Color color)
-    {
-      att.ObjectColor = color;
-      att.ColorSource = ObjectColorSource.ColorFromObject;
-    }
-
-    if (Material is SpeckleMaterialWrapper materialWrapper)
-    {
-      int matIndex = materialWrapper.Bake(doc, materialWrapper.Name);
-      if (matIndex >= 0)
-      {
-        att.MaterialIndex = matIndex;
-        att.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-      }
-    }
-
-    foreach (var kvp in Properties.Value)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
-
-    // add to doc
-    Guid guid = doc.Objects.Add(GeometryBase, att);
+    using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
+    Guid guid = doc.Objects.Add(GeometryBase, attributes);
     obj_ids.Add(guid);
   }
 
