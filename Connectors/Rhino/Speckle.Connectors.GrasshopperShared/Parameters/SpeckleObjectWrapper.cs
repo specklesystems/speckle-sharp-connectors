@@ -4,6 +4,7 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Render;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -137,11 +138,11 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
     if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
-      bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
+      bakeLayerIndex = Parent.Bake(doc, objIds, false);
       if (bakeLayerIndex < 0)
       {
         return;
@@ -150,7 +151,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
 
     using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
     Guid guid = doc.Objects.Add(GeometryBase, attributes);
-    obj_ids.Add(guid);
+    objIds.Add(guid);
   }
 
   /// <summary>
@@ -239,6 +240,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
+      case RhinoObject rhinoObject:
+        return CastFromRhinoObject(rhinoObject);
       case IGH_GeometricGoo geometricGoo:
         GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
         return CastFrom(gooGB);
@@ -279,6 +282,130 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 #endif
       IGH_GeometricGoo => TryCastToGeometricGoo(ref target),
       _ => CastToModelObject(ref target)
+    };
+  }
+
+  private bool CastFromRhinoObject(RhinoObject rhinoObject)
+  {
+    var geometry = rhinoObject.Geometry;
+    if (geometry == null)
+    {
+      throw new InvalidOperationException($"Could not retrieve geometry from Rhino Object {rhinoObject.ObjectType}.");
+    }
+
+    var userStrings = rhinoObject.Attributes.GetUserStrings();
+    var layerIndex = rhinoObject.Attributes.LayerIndex;
+    var layer = layerIndex >= 0 ? RhinoDoc.ActiveDoc?.Layers[layerIndex] : null;
+
+    return CreateSpeckleObjectWrapper(
+      geometry,
+      rhinoObject.Id.ToString(),
+      rhinoObject.Attributes.Name ?? "",
+      userStrings,
+      GetColorFromRhinoObject(rhinoObject),
+      GetMaterialFromRhinoObject(rhinoObject),
+      layer
+    );
+  }
+
+  private bool CreateSpeckleObjectWrapper(
+    GeometryBase geometry,
+    string? id,
+    string name,
+    object userData,
+    Color? color,
+    RenderMaterial? material,
+    object? layer
+  )
+  {
+    Base modelConverted = SpeckleConversionContext.ConvertToSpeckle(geometry);
+
+    SpecklePropertyGroupGoo propertyGroup = new();
+    propertyGroup.CastFrom(userData);
+
+    SpeckleCollectionWrapper? collWrapper = null;
+    if (layer != null)
+    {
+      SpeckleCollectionWrapperGoo collWrapperGoo = new();
+      collWrapper = collWrapperGoo.CastFrom(layer) ? collWrapperGoo.Value : null;
+    }
+
+    modelConverted.applicationId = id;
+    modelConverted[Constants.NAME_PROP] = name;
+
+    Dictionary<string, object?> propertyDict = new();
+    if (propertyGroup.Value != null)
+    {
+      foreach (var entry in propertyGroup.Value)
+      {
+        propertyDict.Add(entry.Key, entry.Value.Value);
+      }
+    }
+    modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
+
+    SpeckleMaterialWrapperGoo? materialWrapper = new();
+    if (material != null)
+    {
+      materialWrapper.CastFrom(material);
+    }
+
+    Value = new SpeckleObjectWrapper
+    {
+      GeometryBase = geometry,
+      Base = modelConverted,
+      Parent = collWrapper,
+      Name = name,
+      Color = color,
+      Material = materialWrapper.Value,
+      Properties = propertyGroup,
+      WrapperGuid = null
+    };
+
+    return true;
+  }
+
+  private Color? GetColorFromRhinoObject(RhinoObject rhinoObject)
+  {
+    // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
+    int? argb = null;
+    switch (rhinoObject.Attributes.ColorSource)
+    {
+      case ObjectColorSource.ColorFromLayer:
+        argb =
+          rhinoObject.Attributes.LayerIndex >= 0
+            ? RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex]?.Color.ToArgb()
+            : null;
+        break;
+      case ObjectColorSource.ColorFromObject:
+        argb = rhinoObject.Attributes.ObjectColor.ToArgb();
+        break;
+      case ObjectColorSource.ColorFromMaterial:
+        /*RenderMaterial? mat = GetMaterialFromRhinoObject(rhinoObject);
+        argb = mat?.ToMaterial(RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();*/
+        argb = null;
+        break;
+    }
+    return argb is int validArgb ? Color.FromArgb(validArgb) : null;
+  }
+
+  private RenderMaterial? GetMaterialFromRhinoObject(RhinoObject rhinoObject)
+  {
+    if (RhinoDoc.ActiveDoc == null)
+    {
+      return null;
+    }
+
+    return rhinoObject.Attributes.MaterialSource switch
+    {
+      ObjectMaterialSource.MaterialFromLayer
+        => rhinoObject.Attributes.LayerIndex >= 0
+          ? RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex]?.RenderMaterial
+          : null,
+      ObjectMaterialSource.MaterialFromObject
+        => rhinoObject.Attributes.MaterialIndex >= 0
+          ? RhinoDoc.ActiveDoc.Materials[rhinoObject.Attributes.MaterialIndex]?.RenderMaterial
+          : null,
+      _ => null
     };
   }
 
@@ -361,7 +488,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private bool TryCastToCircle<T>(ref T target)
   {
-    var circle = new Rhino.Geometry.Circle();
+    var circle = new Circle();
     if (GH_Convert.ToCircle(Value.GeometryBase, ref circle, GH_Conversion.Both))
     {
       target = (T)(object)new GH_Circle(circle);
@@ -441,14 +568,14 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // False if no data
     !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleObjectWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        goo.Value.Bake(doc, objIds);
       }
     }
   }
@@ -458,12 +585,12 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
   /// </summary>
   /// <param name="doc"></param>
   /// <param name="att"></param>
-  /// <param name="obj_ids"></param>
+  /// <param name="objIds"></param>
   /// <remarks>
   /// The attributes come from the user dialog after calling bake.
   /// The selected layer from the dialog will only be user if no path is already present on the object.
   /// </remarks>
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
@@ -472,7 +599,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       {
         int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
         bool layerCreated = goo.Value.Path.Count == 0;
-        goo.Value.Bake(doc, obj_ids, layerIndex, layerCreated);
+        goo.Value.Bake(doc, objIds, layerIndex, layerCreated);
       }
     }
   }

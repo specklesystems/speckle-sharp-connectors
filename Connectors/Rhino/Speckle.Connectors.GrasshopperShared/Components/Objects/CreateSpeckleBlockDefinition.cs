@@ -122,7 +122,7 @@ public class CreateSpeckleBlockDefinition : GH_Component
       }
 
       result.Objects = processedObjects; // update objects
-      result.InstanceDefinitionProxy.objects = objectIds;
+      result.Definition.objects = objectIds;
       mutated = true;
     }
 
@@ -133,21 +133,21 @@ public class CreateSpeckleBlockDefinition : GH_Component
     if (inputName != null)
     {
       result.Name = inputName;
-      result.InstanceDefinitionProxy.name = inputName;
+      result.Definition.name = inputName;
       mutated = true;
     }
 
     if (mutated)
     {
       result.ApplicationId = Guid.NewGuid().ToString();
-      result.InstanceDefinitionProxy.applicationId = result.ApplicationId;
+      result.Definition.applicationId = result.ApplicationId;
     }
 
     // we need a valid name
     if (string.IsNullOrEmpty(result.Name))
     {
       result.Name = "Unnamed Block";
-      result.InstanceDefinitionProxy.name = result.Name;
+      result.Definition.name = result.Name;
     }
 
     if (result.Objects.Count == 0 && inputBlockDef == null)
