@@ -56,13 +56,13 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       foreach (var path in paths)
       {
         var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
-        var key = string.Join(",", names!);
+        var key = string.Join(",", names);
         uniquePaths[key] = path;
       }
 
       foreach (var uniquePath in uniquePaths)
       {
-        var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
+        CreateLayerFromPath(uniquePath.Value, baseLayerName);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
