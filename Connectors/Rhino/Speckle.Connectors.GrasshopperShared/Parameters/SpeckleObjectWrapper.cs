@@ -240,7 +240,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
-      case RhinoObject rhinoObject:
+      case RhinoObject rhinoObject: // the .GetObjects method on Rhino block definitions return RhinoObject which are Rhino7 and 8 compatible
         return CastFromRhinoObject(rhinoObject);
       case IGH_GeometricGoo geometricGoo:
         GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
@@ -287,6 +287,10 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private bool CastFromRhinoObject(RhinoObject rhinoObject)
   {
+    // SpeckleBlockDefinitionWrapper will give us RhinoObject from .GetObjects. Special case for blocks (lucky us)
+    // RhinoObjects both Rhino7 and Rhino7 so we can't cast to ModelObject to use the predefined CastFromModelObject
+    // Accessing attributes is also different in RhinoObject than ModelObject - the casting to ModelObject was failing
+
     var geometry = rhinoObject.Geometry;
     if (geometry == null)
     {
@@ -318,6 +322,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     object? layer
   )
   {
+    // In an attempt to reduce duplicate code between CastFromRhinoObject and CastFromModelObject
+    // this method serves both cases
     Base modelConverted = SpeckleConversionContext.ConvertToSpeckle(geometry);
 
     SpecklePropertyGroupGoo propertyGroup = new();
@@ -366,7 +372,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private Color? GetColorFromRhinoObject(RhinoObject rhinoObject)
   {
-    // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
+    // some nuances when compared to GetColorFromModelObject
+    // TODO: refactor the two methods to be more general
+
     int? argb = null;
     switch (rhinoObject.Attributes.ColorSource)
     {
@@ -390,6 +398,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private RenderMaterial? GetMaterialFromRhinoObject(RhinoObject rhinoObject)
   {
+    // some nuances when compared to GetMaterialFromModelObject
+    // TODO: refactor the two methods to be more general
+
     if (RhinoDoc.ActiveDoc == null)
     {
       return null;
