@@ -2,8 +2,8 @@ namespace Speckle.Importers.Ifc.Ara3D.StepParser;
 
 public class StepInstance
 {
-  public readonly StepEntity Entity;
-  public readonly uint Id;
+  public StepEntity Entity { get; }
+  public uint Id { get; }
 
   public List<StepValue> AttributeValues => Entity.Attributes.Values;
 

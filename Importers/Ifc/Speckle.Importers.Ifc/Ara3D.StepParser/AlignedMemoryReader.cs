@@ -10,7 +10,9 @@ public static class AlignedMemoryReader
     using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, false);
     var fileLength = fs.Length;
     if (fileLength > int.MaxValue)
+    {
       throw new IOException("File too big: > 2GB");
+    }
 
     var count = (int)fileLength;
     var r = new AlignedMemory(count);
@@ -20,7 +22,10 @@ public static class AlignedMemoryReader
       var span = new Span<byte>(pBytes, count);
       var n = fs.Read(span);
       if (n == 0)
+      {
         break;
+      }
+
       pBytes += n;
       count -= n;
     }
