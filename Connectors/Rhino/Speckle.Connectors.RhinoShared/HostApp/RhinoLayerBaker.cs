@@ -48,21 +48,21 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   /// <param name="baseLayerName">Name of the base layer</param>
   /// <remarks>Make sure this is executing on the main thread, using e.g RhinoApp.InvokeAndWait.</remarks>
   public void CreateAllLayersForReceive(IEnumerable<Collection[]> paths, string baseLayerName)
+  {
+    CreateBaseLayer(baseLayerName);
+    var uniquePaths = new Dictionary<string, Collection[]>();
+    foreach (var path in paths)
     {
-      CreateBaseLayer(baseLayerName);
-      var uniquePaths = new Dictionary<string, Collection[]>();
-      foreach (var path in paths)
-      {
-        var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
-        var key = string.Join(",", names);
-        uniquePaths[key] = path;
-      }
-
-      foreach (var uniquePath in uniquePaths)
-      {
-        var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
-      }
+      var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+      var key = string.Join(",", names);
+      uniquePaths[key] = path;
     }
+
+    foreach (var uniquePath in uniquePaths)
+    {
+      var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
+    }
+  }
 
   /// <summary>
   /// Retrieves the index of a layer based on the given collection path and base layer name.
