@@ -83,7 +83,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
       .Prepend(baseLayerName);
 
-    var layerFullName = string.Join(s_pathSeparator, layerPath);
+    var layerFullName = CleanLayerName(string.Join(s_pathSeparator, layerPath));
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
