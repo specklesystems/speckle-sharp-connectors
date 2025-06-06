@@ -35,6 +35,8 @@ public class SendProgressTests : MoqTest
       case ProgressEvent.FindingChildren:
         sendProgressState.SetupSet(x => x.Total = args.Count);
         break;
+      case ProgressEvent.UploadingObjects:
+        break;
     }
     displayManager.Setup(x => x.ShouldUpdate()).Returns(shouldUpdate);
 
@@ -44,6 +46,7 @@ public class SendProgressTests : MoqTest
     {
       switch (e)
       {
+        case ProgressEvent.UploadingObjects:
         case ProgressEvent.UploadBytes:
           sendProgressState.Setup(x => x.PreviouslyFromCacheOrSerialized).Returns(previousFromCacheOrSerialized);
           if (previousFromCacheOrSerialized)

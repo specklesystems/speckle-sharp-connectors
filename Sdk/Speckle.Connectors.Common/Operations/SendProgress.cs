@@ -14,23 +14,27 @@ public class SendProgressState : ISendProgressState
 public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendProgressState sendProgressState)
   : ISendProgress
 {
-  private string? _previousSpeed;
+  private string _previousSpeed = "unknown";
+  private double _previousUploaded;
 
   public void Begin() => progressDisplayManager.Begin();
 
   public void Report(IProgress<CardProgress> onOperationProgressed, ProgressArgs args)
   {
-    if (args.ProgressEvent == ProgressEvent.FromCacheOrSerialized)
+    switch (args.ProgressEvent)
     {
-      sendProgressState.PreviouslyFromCacheOrSerialized = args.Count >= args.Total;
-    }
-    else if (args.ProgressEvent == ProgressEvent.FindingChildren)
-    {
-      sendProgressState.Total = args.Count;
-    }
-    else if (args.ProgressEvent == ProgressEvent.UploadBytes)
-    {
-      _previousSpeed = progressDisplayManager.CalculateSpeed(args);
+      case ProgressEvent.FromCacheOrSerialized:
+        sendProgressState.PreviouslyFromCacheOrSerialized = args.Count >= args.Total;
+        break;
+      case ProgressEvent.FindingChildren:
+        sendProgressState.Total = args.Count;
+        break;
+      case ProgressEvent.UploadBytes:
+        _previousSpeed = progressDisplayManager.CalculateSpeed(args);
+        break;
+      case ProgressEvent.UploadingObjects:
+        _previousUploaded = args.Count;
+        break;
     }
     if (!progressDisplayManager.ShouldUpdate())
     {
@@ -48,12 +52,13 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
           new($"Caching... ({args.Count} objects)", progressDisplayManager.CalculatePercentage(args))
         );
         break;
+      case ProgressEvent.UploadingObjects:
       case ProgressEvent.UploadBytes:
         if (!sendProgressState.PreviouslyFromCacheOrSerialized)
         {
           return;
         }
-        onOperationProgressed.Report(new($"Uploading... ({_previousSpeed})", null));
+        onOperationProgressed.Report(new($"Uploading... {_previousUploaded} ({_previousSpeed})", null));
         break;
       case ProgressEvent.FromCacheOrSerialized:
         var message = $"Serializing... ({args.Count} / {sendProgressState.Total} found objects)";
