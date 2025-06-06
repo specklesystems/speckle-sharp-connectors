@@ -11,8 +11,10 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case ModelInstanceDefinition modelInstanceDef:
+        // ModelInstanceDefinition (Rhino 8) wraps InstanceDefinition (Rhino 7 and 8), so we're "downgrading" here
+        // But this way, both can use common CastFromRhinoInstanceDefinition method
         var rhinoInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.Find(modelInstanceDef.Name);
-        if (rhinoInstanceDef != null) // NOTE: api limitation here. name and objects of an instance def are get only
+        if (rhinoInstanceDef != null)
         {
           return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
         }
