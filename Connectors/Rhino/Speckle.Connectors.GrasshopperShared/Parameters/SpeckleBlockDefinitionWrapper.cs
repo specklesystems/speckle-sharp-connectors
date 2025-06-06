@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
@@ -204,6 +205,8 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
         };
         return true;
 
+      // TODO: this probably will only be called in rhino 8 - check and move to .ModelObject file if so
+
       case InstanceDefinition rhinoInstanceDef:
         return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
     }
@@ -248,45 +251,19 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       var objectIds = new List<string>();
       var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
 
-      var rhinoObjects = instanceDef.GetObjects(); // Get the objects that DEFINE the block, not all instances of it
+      var rhinoObjects = instanceDef.GetObjects(); // Get the objects that DEFINE the block, not all instances of it. These can be geoemtry or other instances
       foreach (var rhinoObj in rhinoObjects)
       {
-        if (rhinoObj?.Geometry != null)
+        //ModelObject mo = new(rhinoObj);
+        if (rhinoObj is InstanceObject io)
         {
-          Base converted; // SpeckleConversionContext.ConvertToSpeckle() is for basic geometry, we may have nested instances
-
-          if (rhinoObj.Geometry is InstanceReferenceGeometry instanceRef) // nested!
-          {
-            // get nested instance definition for name lookup
-            var nestedInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(instanceRef.ParentIdefId);
-            string definitionName = nestedInstanceDef?.Name ?? instanceRef.ParentIdefId.ToString();
-
-            // create an InstanceProxy for nested blocks using correct properties
-            var instanceProxy = new InstanceProxy
-            {
-              definitionId = instanceRef.ParentIdefId.ToString(),
-              transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
-              units = units,
-              maxDepth = 1,
-              applicationId = rhinoObj.Id.ToString()
-            };
-            instanceProxy["definitionName"] = definitionName;
-            converted = instanceProxy;
-          }
-          else // regular geometry
-          {
-            converted = SpeckleConversionContext.ConvertToSpeckle(rhinoObj.Geometry);
-          }
-
-          converted[Constants.NAME_PROP] = rhinoObj.Name ?? "";
-          converted.applicationId = rhinoObj.Id.ToString();
-
-          var objWrapperGoo = new SpeckleObjectWrapperGoo();
-          if (objWrapperGoo.CastFrom(rhinoObj))
-          {
-            objects.Add(objWrapperGoo.Value);
-            objectIds.Add(converted.applicationId);
-          }
+          SpeckleBlockInstanceWrapperGoo instanceWrapper = new();
+          return instanceWrapper.CastFrom(io);
+        }
+        else
+        {
+          SpeckleObjectWrapperGoo objectWrapper = new();
+          return objectWrapper.CastFrom(new ModelObject(rhinoObj));
         }
       }
 

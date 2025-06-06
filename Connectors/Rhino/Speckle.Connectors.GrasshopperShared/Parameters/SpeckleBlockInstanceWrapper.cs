@@ -212,6 +212,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         return CreateFromTransform(planeTransform);
 
       // Direct Rhino block instance geometry (from doc)
+      // TODO: this probably will only be called in rhino 8 - check and move to .ModelObject file if so
       case InstanceReferenceGeometry instanceRef:
         return CreateFromInstanceReference(instanceRef);
 
