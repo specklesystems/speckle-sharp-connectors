@@ -40,10 +40,13 @@ public static class ContainerRegistration
     {
       try
       {
-        serviceProvider
-          .GetRequiredService<ILoggerFactory>()
-          .CreateLogger("UnobservedTaskException")
-          .LogError(args.Exception, "Unobserved task exception");
+        foreach (var exception in args.Exception.InnerExceptions)
+        {
+          if (TestAndLogStacktrace(serviceProvider, exception))
+          {
+            args.SetObserved();
+          }
+        }
       }
 #pragma warning disable CA1031
       catch (Exception e)
@@ -53,10 +56,25 @@ public static class ContainerRegistration
         Console.WriteLine(args.Exception);
         Console.WriteLine(e);
       }
-      finally
-      {
-        args.SetObserved();
-      }
     };
+  }
+
+  private static bool TestAndLogStacktrace(IServiceProvider serviceProvider, Exception exception)
+  {
+    var stackTrace = exception.StackTrace;
+    if (stackTrace is null || stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+    {
+      serviceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("UnobservedTaskException")
+        .LogInformation(exception, "Non-Speckle unobserved task exception");
+      return false;
+    }
+
+    serviceProvider
+      .GetRequiredService<ILoggerFactory>()
+      .CreateLogger("UnobservedTaskException")
+      .LogError(exception, "Unobserved task exception");
+    return true;
   }
 }
