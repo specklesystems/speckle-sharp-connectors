@@ -14,7 +14,7 @@ public class SpeckleRevitTaskException(Exception exception) : SpeckleException("
     string modelCardId,
     SpeckleRevitTaskException ex,
     ILogger<T> logger,
-    BasicConnectorBindingCommands commands
+    IReceiveBindingUICommands commands
   )
     where T : IBinding
   {
