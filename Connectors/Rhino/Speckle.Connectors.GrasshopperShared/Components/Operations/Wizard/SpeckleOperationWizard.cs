@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -49,7 +49,7 @@ public class SpeckleOperationWizard
 
     var userSelectedAccountId = _accountService.GetUserSelectedAccountId();
     Accounts = _accountManager.GetAccounts().ToList();
-    SelectedAccount = userSelectedAccountId == null ? null : _accountManager.GetAccount(userSelectedAccountId);
+    SelectedAccount = Accounts.FirstOrDefault(a => a.id == userSelectedAccountId);
 
     WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces, CreateNewWorkspace);
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects);
