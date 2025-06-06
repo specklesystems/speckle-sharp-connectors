@@ -59,15 +59,15 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
           var result = objectConverter.Convert(target);
 
           // NOTE: we can not test acad objects props, so commented out.
-          // // we need to capture properties on autocad entities
-          // if (target is ADB.Entity autocadEntity)
-          // {
-          //   var properties = _propertiesExtractor.GetProperties(autocadEntity);
-          //   if (properties.Count > 0)
-          //   {
-          //     result["properties"] = properties;
-          //   }
-          // }
+          // we need to capture properties on autocad entities
+          if (target is ADB.Entity autocadEntity)
+          {
+            var properties = _propertiesExtractor.GetProperties(autocadEntity);
+            if (properties.Count > 0)
+            {
+              result["properties"] = properties;
+            }
+          }
 
           tr.Commit();
           return result;

@@ -14,7 +14,7 @@ public class PartDataExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public Dictionary<string, object?>? GetPartData(CDB.Entity entity)
+  public Dictionary<string, object?>? GetPartData(ADB.Entity entity)
   {
     return entity switch
     {

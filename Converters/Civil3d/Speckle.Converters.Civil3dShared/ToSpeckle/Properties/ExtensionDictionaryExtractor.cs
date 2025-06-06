@@ -19,7 +19,7 @@ public class ExtensionDictionaryExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public Dictionary<string, object?>? GetExtensionDictionary(CDB.Entity entity)
+  public Dictionary<string, object?>? GetExtensionDictionary(ADB.Entity entity)
   {
     if (entity is null || entity.ExtensionDictionary == ADB.ObjectId.Null)
     {
