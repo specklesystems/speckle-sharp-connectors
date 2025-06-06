@@ -62,7 +62,7 @@ public static class ContainerRegistration
   private static bool TestAndLogStacktrace(IServiceProvider serviceProvider, Exception exception)
   {
     var stackTrace = exception.StackTrace;
-    if (stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+    if (stackTrace is null || stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
     {
       serviceProvider
         .GetRequiredService<ILoggerFactory>()
