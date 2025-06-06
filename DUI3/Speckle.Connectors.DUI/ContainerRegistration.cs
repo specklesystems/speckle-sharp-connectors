@@ -40,21 +40,12 @@ public static class ContainerRegistration
     {
       try
       {
-        var stackTrace = args.Exception.StackTrace;
-        if (stackTrace?.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+        foreach (var exception in args.Exception.InnerExceptions)
         {
-          serviceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("UnobservedTaskException")
-            .LogInformation(args.Exception, "Non-Speckle unobserved task exception");
-        }
-        else
-        {
-          serviceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("UnobservedTaskException")
-            .LogError(args.Exception, "Unobserved task exception");
-          args.SetObserved();
+          if (TestAndLogStacktrace(serviceProvider, exception))
+          {
+            args.SetObserved();
+          }
         }
       }
 #pragma warning disable CA1031
@@ -66,5 +57,24 @@ public static class ContainerRegistration
         Console.WriteLine(e);
       }
     };
+  }
+
+  private static bool TestAndLogStacktrace(IServiceProvider serviceProvider, Exception exception)
+  {
+    var stackTrace = exception.StackTrace;
+    if (stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+    {
+      serviceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("UnobservedTaskException")
+        .LogInformation(exception, "Non-Speckle unobserved task exception");
+      return false;
+    }
+
+    serviceProvider
+      .GetRequiredService<ILoggerFactory>()
+      .CreateLogger("UnobservedTaskException")
+      .LogError(exception, "Unobserved task exception");
+    return true;
   }
 }
