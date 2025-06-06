@@ -3,6 +3,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -53,7 +54,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     foreach (var path in paths)
     {
       var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
-      var key = string.Join(",", names!);
+      var key = string.Join(",", names);
       uniquePaths[key] = path;
     }
 
@@ -83,7 +84,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       return existingLayerIndex;
     }
 
-    throw new SpeckleException($"Did not find a layer in the cache with the name {layerFullName}");
+    throw new ConversionException($"Did not find a layer in the cache with the name '{layerFullName}'");
   }
 
   /// <summary>
@@ -136,7 +137,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       int index = currentDocument.Layers.Add(newLayer);
       if (index == -1)
       {
-        throw new SpeckleException($"Could not create layer {currentLayerName}.");
+        throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
       }
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
