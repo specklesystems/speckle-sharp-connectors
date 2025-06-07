@@ -202,10 +202,12 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       return false;
     }
 
+    /*
     if (!Properties.Equals(objWrapper.Properties))
     {
       return false;
     }
+    */
 
     return true;
   }

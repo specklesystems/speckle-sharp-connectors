@@ -12,7 +12,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
 /// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
 /// </summary>
-public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
+public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
   private bool CastFromModelObject(object source)
   {
@@ -22,7 +22,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
         return CastFromModelObject(modelObject.UserText);
 
       case ModelUserText userText:
-        Dictionary<string, SpecklePropertyGoo> dictionary = new();
+        Dictionary<string, ISpecklePropertyGoo> dictionary = new();
         foreach (KeyValuePair<string, string> entry in userText)
         {
           string key = entry.Key;
@@ -46,7 +46,11 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
     if (type == typeof(IGH_ModelContentData))
     {
       var attributes = new ObjectAttributes();
-      foreach (var entry in Value)
+
+      // flatten the props
+      Dictionary<string, SpecklePropertyGoo> flattenedProps = new();
+      Flatten(Value, flattenedProps);
+      foreach (var entry in flattenedProps)
       {
         string stringValue = entry.Value.Value?.ToString() ?? "";
         attributes.SetUserString(entry.Key, stringValue);

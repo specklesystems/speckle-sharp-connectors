@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
 /// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
 /// </summary>
-public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
+public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -25,7 +25,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
     Value = new();
   }
 
-  public SpecklePropertyGroupGoo(Dictionary<string, SpecklePropertyGoo> value)
+  public SpecklePropertyGroupGoo(Dictionary<string, ISpecklePropertyGoo> value)
   {
     Value = value;
   }
@@ -44,14 +44,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
         return true;
 
       case Dictionary<string, object?> properties:
-        Dictionary<string, object> flattenedProperties = new();
-        FlattenDictionary(properties, flattenedProperties, "");
-        Dictionary<string, SpecklePropertyGoo> speckleProperties = new();
-        foreach (var kvp in flattenedProperties)
-        {
-          speckleProperties.Add(kvp.Key, new() { Value = kvp.Value });
-        }
-        Value = speckleProperties;
+        Value = WrapDictionary(properties);
         return true;
     }
 
@@ -68,11 +61,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
     var type = typeof(T);
     if (type == typeof(Dictionary<string, object?>))
     {
-      Dictionary<string, object?> dictionary = new();
-      foreach (var entry in Value)
-      {
-        dictionary.Add(entry.Key, entry.Value.Value);
-      }
+      Dictionary<string, object?> dictionary = UnwrapDictionary(Value);
       target = (T)(object)dictionary;
       return true;
     }
@@ -85,53 +74,72 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
 
-  // Flattens a dictionary that may contain more dictionaries of the same type
-  private void FlattenDictionary(
-    Dictionary<string, object?> dict,
-    Dictionary<string, object> flattenedDict,
-    string keyPrefix = ""
-  )
+  // Flattens the value into a dictionary with concatenated keys
+  private void Flatten(Dictionary<string, ISpecklePropertyGoo> props,
+    Dictionary<string, SpecklePropertyGoo> flattenedProps,
+    string keyPrefix = "")
   {
-    foreach (var kvp in dict)
+    foreach (var kvp in props)
     {
       string newKey = string.IsNullOrEmpty(keyPrefix)
         ? kvp.Key
         : $"{keyPrefix}{Constants.PROPERTY_PATH_DELIMITER}{kvp.Key}";
 
-      if (kvp.Value is Dictionary<string, object?> childDict)
+      switch (kvp.Value)
       {
-        FlattenDictionary(childDict, flattenedDict, newKey);
-      }
-      else
-      {
-        flattenedDict.Add(newKey, kvp.Value ?? "");
+        case SpecklePropertyGroupGoo childProps:
+          Flatten(childProps.Value, flattenedProps, newKey);
+          break;
+        case SpecklePropertyGoo prop:
+          flattenedProps.Add(newKey, prop);
+          break;
       }
     }
   }
 
-  public override bool Equals(object obj)
+  private Dictionary<string, ISpecklePropertyGoo> WrapDictionary(
+    Dictionary<string, object?> dict
+    )
   {
-    if (obj is not SpecklePropertyGroupGoo propertyGroupGoo || Value.Count != propertyGroupGoo.Value.Count)
-    {
-      return false;
-    }
+    Dictionary<string, ISpecklePropertyGoo> wrappedDict = new();
 
-    foreach (var entry in Value)
+    foreach (var kvp in dict)
     {
-      if (propertyGroupGoo.Value.TryGetValue(entry.Key, out SpecklePropertyGoo compareProp))
+      ISpecklePropertyGoo? val;
+      if (kvp.Value is Dictionary<string, object?> childDict)
       {
-        if (entry.Value.Value != compareProp.Value)
-        {
-          return false;
-        }
+        SpecklePropertyGroupGoo childPropertyGroup = new();
+        childPropertyGroup.CastFrom(childDict);
+        val = childPropertyGroup;
       }
       else
       {
-        return false;
+        SpecklePropertyGoo entry = new();
+        entry.CastFrom(kvp.Value);
+        val = entry;
       }
+
+      wrappedDict.Add(kvp.Key, val);
     }
 
-    return true;
+    return wrappedDict;
+  }
+
+  private Dictionary<string, object?> UnwrapDictionary(
+    Dictionary<string, ISpecklePropertyGoo> properties
+    )
+  {
+    Dictionary<string, object?> dict = new();
+    foreach (var kvp in properties)
+    {
+      object? val = kvp.Value is SpecklePropertyGroupGoo propertyGroup ? 
+        UnwrapDictionary(propertyGroup.Value) : 
+        kvp.Value is SpecklePropertyGoo property ? 
+        property.Value : null;
+      dict.Add(kvp.Key, val);
+    }
+
+    return dict;
   }
 
   public override int GetHashCode() => base.GetHashCode();
