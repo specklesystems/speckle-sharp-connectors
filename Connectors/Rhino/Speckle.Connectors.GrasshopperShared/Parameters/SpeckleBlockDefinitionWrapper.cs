@@ -17,18 +17,18 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 {
-  public InstanceDefinitionProxy Definition { get; set; }
+  public InstanceDefinitionProxy InstanceDefinitionProxy { get; set; }
 
   public override required Base Base
   {
-    get => Definition;
+    get => InstanceDefinitionProxy;
     set
     {
       if (value is not InstanceDefinitionProxy def)
       {
         throw new ArgumentException("Cannot create block definition wrapper from a non-InstanceDefinitionProxy Base");
       }
-      Definition = def;
+      InstanceDefinitionProxy = def;
     }
   }
 
@@ -159,7 +159,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
   public SpeckleBlockDefinitionWrapper DeepCopy() =>
     new()
     {
-      Base = Definition.ShallowCopy(),
+      Base = InstanceDefinitionProxy.ShallowCopy(),
       /*Color = Color,
       Material = Material,*/
       ApplicationId = ApplicationId,
@@ -174,7 +174,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
 
   public override string ToString() => $@"Speckle Block Definition Goo : {Value.Name}";
 
-  public override bool IsValid => Value?.Definition is not null;
+  public override bool IsValid => Value?.InstanceDefinitionProxy is not null;
   public override string TypeName => "Speckle block definition wrapper";
   public override string TypeDescription => "A wrapper around speckle instance definition proxies.";
 
@@ -216,7 +216,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
 
     if (type == typeof(InstanceDefinitionProxy))
     {
-      target = (T)(object)Value.Definition;
+      target = (T)(object)Value.InstanceDefinitionProxy;
       return true;
     }
 
@@ -231,7 +231,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
   public SpeckleBlockDefinitionWrapper DeepCopy() =>
     new()
     {
-      Base = Value.Definition.ShallowCopy(),
+      Base = Value.InstanceDefinitionProxy.ShallowCopy(),
       Name = Value.Name,
       Objects = Value.Objects.Select(o => o.DeepCopy()).ToList(),
       ApplicationId = Value.ApplicationId

@@ -223,12 +223,15 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       case SpeckleObjectWrapper wrapper:
         Value = wrapper.DeepCopy();
         return true;
+
       case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value.DeepCopy();
         return true;
+
       case IGH_GeometricGoo geometricGoo:
         GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
         return CastFrom(gooGB);
+
       case GeometryBase geometryBase:
         var gooConverted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
         Value = new SpeckleObjectWrapper()
@@ -244,7 +247,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         return true;
     }
 
-    // Handle case of model objects in rhino 8
     return CastFromModelObject(source);
   }
 

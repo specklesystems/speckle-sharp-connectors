@@ -188,12 +188,10 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     switch (source)
     {
-      // Direct wrapper-to-wrapper assignment (internal Speckle operations)
       case SpeckleBlockInstanceWrapper wrapper:
         Value = wrapper.DeepCopy();
         return true;
 
-      // Grasshopper parameter containing our Speckle block instance (parameter connections)
       case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
         if (wrapperGoo.Value != null)
         {
@@ -202,19 +200,11 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         }
         return false;
 
-      // User connects Transform component output to our input
       case Transform transform:
         return CreateFromTransform(transform);
-
-      // User connects Plane component output to our input (position + orientation)
       case Plane plane:
         var planeTransform = Transform.PlaneToPlane(Plane.WorldXY, plane);
         return CreateFromTransform(planeTransform);
-
-      // Direct Rhino block instance geometry (from doc)
-      // TODO: this probably will only be called in rhino 8 - check and move to .ModelObject file if so
-      case InstanceReferenceGeometry instanceRef:
-        return CreateFromInstanceReference(instanceRef);
 
       case InstanceProxy instanceProxy:
         Value = new SpeckleBlockInstanceWrapper
@@ -224,8 +214,6 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         };
         return true;
     }
-
-    // User connects Model Objects from Rhino 8's new modeling workflow (ModelInstanceReference, ModelInstanceDefinition)
     return CastFromModelObject(source);
   }
 
@@ -236,30 +224,19 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       return false;
     }
 
-    var type = typeof(T);
-
-    // User connects our output to Transform parameter (extract just the positioning)
-    if (type == typeof(Transform))
+    switch (target)
     {
-      target = (T)(object)Value.Transform;
-      return true;
-    }
+      case Transform:
+        target = (T)(object)Value.Transform;
+        return true;
 
-    // Internal Speckle operations need the raw Speckle data (send/receive)
-    if (type == typeof(InstanceProxy))
-    {
-      target = (T)(object)Value.InstanceProxy;
-      return true;
-    }
+      case InstanceProxy:
+        target = (T)(object)Value.InstanceProxy;
+        return true;
 
-    // User wants to convert back to Rhino block instance geometry (baking/preview)
-    if (type == typeof(InstanceReferenceGeometry))
-    {
-      return CreateInstanceReferenceGeometry(ref target);
+      default:
+        return CastToModelObject(ref target);
     }
-
-    // User connects to Rhino 8 Model Object parameters (ModelInstanceReference)
-    return CastToModelObject(ref target);
   }
 
 #if !RHINO8_OR_GREATER
@@ -274,68 +251,6 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
 
     Value.Transform = transform;
     return true;
-  }
-
-  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef)
-  {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-    var definitionId = instanceRef.ParentIdefId;
-
-    // Try to preserve existing definition first (for round-trip scenarios)
-    SpeckleBlockDefinitionWrapper? definition = Value?.Definition;
-
-    // Look in document if we don't have an existing definition
-    if (definition == null)
-    {
-      var doc = RhinoDoc.ActiveDoc;
-      var instanceDef = doc?.InstanceDefinitions.FindId(definitionId);
-      if (instanceDef != null)
-      {
-        var defGoo = new SpeckleBlockDefinitionWrapperGoo();
-        if (defGoo.CastFrom(instanceDef))
-        {
-          definition = defGoo.Value;
-        }
-      }
-    }
-
-    Value = new SpeckleBlockInstanceWrapper()
-    {
-      InstanceProxy = new InstanceProxy()
-      {
-        definitionId = definitionId.ToString(),
-        maxDepth = 1,
-        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
-      },
-      Transform = instanceRef.Xform,
-      ApplicationId = Guid.NewGuid().ToString(),
-      Definition = definition // May be null in pure Grasshopper workflows
-    };
-    return true;
-  }
-
-  private bool CreateInstanceReferenceGeometry<T>(ref T target)
-  {
-    // Only works if the block definition exists in the Rhino document
-    // Will fail for pure Grasshopper workflows
-    if (Value?.Definition == null)
-    {
-      return false;
-    }
-
-    var doc = RhinoDoc.ActiveDoc;
-    var instanceDef = doc?.InstanceDefinitions.Find(Value.Definition.Name);
-
-    if (instanceDef != null)
-    {
-      var instanceRefGeo = new InstanceReferenceGeometry(instanceDef.Id, Value.Transform);
-      target = (T)(object)instanceRefGeo;
-      return true;
-    }
-
-    return false;
   }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
