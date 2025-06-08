@@ -4,7 +4,6 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Rhino.Render;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -227,6 +226,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value.DeepCopy();
         return true;
+      case IGH_GeometricGoo geometricGoo:
+        GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
+        return CastFrom(gooGB);
       case GeometryBase geometryBase:
         var gooConverted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
         Value = new SpeckleObjectWrapper()
@@ -240,11 +242,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
-      case RhinoObject rhinoObject: // the .GetObjects method on Rhino block definitions return RhinoObject which are Rhino7 and 8 compatible
-        return CastFromRhinoObject(rhinoObject);
-      case IGH_GeometricGoo geometricGoo:
-        GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
-        return CastFrom(gooGB);
     }
 
     // Handle case of model objects in rhino 8
@@ -282,141 +279,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 #endif
       IGH_GeometricGoo => TryCastToGeometricGoo(ref target),
       _ => CastToModelObject(ref target)
-    };
-  }
-
-  private bool CastFromRhinoObject(RhinoObject rhinoObject)
-  {
-    // SpeckleBlockDefinitionWrapper will give us RhinoObject from .GetObjects. Special case for blocks (lucky us)
-    // RhinoObjects both Rhino7 and Rhino7 so we can't cast to ModelObject to use the predefined CastFromModelObject
-    // Accessing attributes is also different in RhinoObject than ModelObject - the casting to ModelObject was failing
-
-    var geometry = rhinoObject.Geometry;
-    if (geometry == null)
-    {
-      throw new InvalidOperationException($"Could not retrieve geometry from Rhino Object {rhinoObject.ObjectType}.");
-    }
-
-    var userStrings = rhinoObject.Attributes.GetUserStrings();
-    var layerIndex = rhinoObject.Attributes.LayerIndex;
-    var layer = layerIndex >= 0 ? RhinoDoc.ActiveDoc?.Layers[layerIndex] : null;
-
-    return CreateSpeckleObjectWrapper(
-      geometry,
-      rhinoObject.Id.ToString(),
-      rhinoObject.Attributes.Name ?? "",
-      userStrings,
-      GetColorFromRhinoObject(rhinoObject),
-      GetMaterialFromRhinoObject(rhinoObject),
-      layer
-    );
-  }
-
-  private bool CreateSpeckleObjectWrapper(
-    GeometryBase geometry,
-    string? id,
-    string name,
-    object userData,
-    Color? color,
-    RenderMaterial? material,
-    object? layer
-  )
-  {
-    // In an attempt to reduce duplicate code between CastFromRhinoObject and CastFromModelObject
-    // this method serves both cases
-    Base modelConverted = SpeckleConversionContext.ConvertToSpeckle(geometry);
-
-    SpecklePropertyGroupGoo propertyGroup = new();
-    propertyGroup.CastFrom(userData);
-
-    SpeckleCollectionWrapper? collWrapper = null;
-    if (layer != null)
-    {
-      SpeckleCollectionWrapperGoo collWrapperGoo = new();
-      collWrapper = collWrapperGoo.CastFrom(layer) ? collWrapperGoo.Value : null;
-    }
-
-    modelConverted.applicationId = id;
-    modelConverted[Constants.NAME_PROP] = name;
-
-    Dictionary<string, object?> propertyDict = new();
-    if (propertyGroup.Value != null)
-    {
-      foreach (var entry in propertyGroup.Value)
-      {
-        propertyDict.Add(entry.Key, entry.Value.Value);
-      }
-    }
-    modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
-
-    SpeckleMaterialWrapperGoo? materialWrapper = new();
-    if (material != null)
-    {
-      materialWrapper.CastFrom(material);
-    }
-
-    Value = new SpeckleObjectWrapper
-    {
-      GeometryBase = geometry,
-      Base = modelConverted,
-      Parent = collWrapper,
-      Name = name,
-      Color = color,
-      Material = materialWrapper.Value,
-      Properties = propertyGroup,
-      WrapperGuid = null
-    };
-
-    return true;
-  }
-
-  private Color? GetColorFromRhinoObject(RhinoObject rhinoObject)
-  {
-    // some nuances when compared to GetColorFromModelObject
-    // TODO: refactor the two methods to be more general
-
-    int? argb = null;
-    switch (rhinoObject.Attributes.ColorSource)
-    {
-      case ObjectColorSource.ColorFromLayer:
-        argb =
-          rhinoObject.Attributes.LayerIndex >= 0
-            ? RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex]?.Color.ToArgb()
-            : null;
-        break;
-      case ObjectColorSource.ColorFromObject:
-        argb = rhinoObject.Attributes.ObjectColor.ToArgb();
-        break;
-      case ObjectColorSource.ColorFromMaterial:
-        /*RenderMaterial? mat = GetMaterialFromRhinoObject(rhinoObject);
-        argb = mat?.ToMaterial(RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();*/
-        argb = null;
-        break;
-    }
-    return argb is int validArgb ? Color.FromArgb(validArgb) : null;
-  }
-
-  private RenderMaterial? GetMaterialFromRhinoObject(RhinoObject rhinoObject)
-  {
-    // some nuances when compared to GetMaterialFromModelObject
-    // TODO: refactor the two methods to be more general
-
-    if (RhinoDoc.ActiveDoc == null)
-    {
-      return null;
-    }
-
-    return rhinoObject.Attributes.MaterialSource switch
-    {
-      ObjectMaterialSource.MaterialFromLayer
-        => rhinoObject.Attributes.LayerIndex >= 0
-          ? RhinoDoc.ActiveDoc.Layers[rhinoObject.Attributes.LayerIndex]?.RenderMaterial
-          : null,
-      ObjectMaterialSource.MaterialFromObject
-        => rhinoObject.Attributes.MaterialIndex >= 0
-          ? RhinoDoc.ActiveDoc.Materials[rhinoObject.Attributes.MaterialIndex]?.RenderMaterial
-          : null,
-      _ => null
     };
   }
 

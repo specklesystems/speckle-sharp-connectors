@@ -1,6 +1,7 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -11,15 +12,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case ModelInstanceDefinition modelInstanceDef:
-        // ModelInstanceDefinition (Rhino 8) wraps InstanceDefinition (Rhino 7 and 8), so we're "downgrading" here
-        // But this way, both can use common CastFromRhinoInstanceDefinition method
-        var rhinoInstanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.Find(modelInstanceDef.Name);
-        if (rhinoInstanceDef != null)
-        {
-          return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
-        }
-        return false;
-
+        return CastFromModelInstanceDefinition(modelInstanceDef);
       default:
         return false;
     }
@@ -45,6 +38,38 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     }
 
     return false;
+  }
+
+  private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
+  {
+    var objects = new List<SpeckleObjectWrapper>();
+
+    var modelObjects = modelInstanceDef.Objects ?? Array.Empty<ModelObject>();
+
+    foreach (var modelObj in modelObjects)
+    {
+      var objWrapperGoo = new SpeckleObjectWrapperGoo();
+      if (objWrapperGoo.CastFrom(modelObj)) // Let SpeckleObjectWrapper handle ModelObject casting
+      {
+        objects.Add(objWrapperGoo.Value);
+      }
+    }
+
+    Value = new SpeckleBlockDefinitionWrapper()
+    {
+      Base = new InstanceDefinitionProxy
+      {
+        name = modelInstanceDef.Name,
+        applicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
+        objects = objects.Select(o => o.ApplicationId ?? Guid.NewGuid().ToString()).ToList(),
+        maxDepth = 1
+      },
+      Name = modelInstanceDef.Name,
+      ApplicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
+      Objects = objects
+    };
+
+    return objects.Count > 0;
   }
 }
 #endif

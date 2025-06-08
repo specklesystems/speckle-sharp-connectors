@@ -7,7 +7,6 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
@@ -199,13 +198,9 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
           ApplicationId = speckleInstanceDefProxy.applicationId ?? Guid.NewGuid().ToString()
         };
         return true;
-
-      // Core Rhino document objects (works in both Rhino 7 & 8)
-      case InstanceDefinition rhinoInstanceDef:
-        return CastFromRhinoInstanceDefinition(rhinoInstanceDef);
     }
 
-    // Handle Rhino 8 Model Objects
+    // Rhino 8 Model Objects
     return CastFromModelObject(source);
   }
 
@@ -225,89 +220,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       return true;
     }
 
-    if (type == typeof(InstanceDefinition))
-    {
-      return CastToRhinoInstanceDefinition(ref target);
-    }
-
     return CastToModelObject(ref target);
-  }
-
-  /// <summary>
-  /// Converts a Rhino <see cref="InstanceDefinition"/> to a <see cref="SpeckleBlockDefinitionWrapper"/>.
-  /// Takes all objects from the instance definition and converts them to <see cref="SpeckleObjectWrapper"/>s.
-  /// </summary>
-  private bool CastFromRhinoInstanceDefinition(InstanceDefinition instanceDef)
-  {
-    var objects = new List<SpeckleObjectWrapper>();
-    var rhinoObjects = instanceDef.GetObjects(); // this returns RhinoObject and not ModelObject
-    foreach (var rhinoObj in rhinoObjects)
-    {
-      if (rhinoObj.Geometry == null)
-      {
-        continue;
-      }
-
-      var objWrapperGoo = new SpeckleObjectWrapperGoo();
-      if (objWrapperGoo.CastFrom(rhinoObj))
-      {
-        objects.Add(objWrapperGoo.Value);
-      }
-    }
-
-    Value = new SpeckleBlockDefinitionWrapper()
-    {
-      Base = new InstanceDefinitionProxy
-      {
-        name = instanceDef.Name,
-        applicationId = instanceDef.Id.ToString(),
-        objects = objects.Select(o => o.ApplicationId ?? Guid.NewGuid().ToString()).ToList(),
-        maxDepth = 1
-      },
-      Name = instanceDef.Name,
-      ApplicationId = instanceDef.Id.ToString(),
-      Objects = objects
-    };
-
-    if (objects.Count > 0)
-    {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// <summary>
-  /// Attempts to cast to a Rhino <see cref="InstanceDefinition"/> by finding it in the active document.
-  /// </summary>
-  /// <remarks>
-  /// Cannot create new instance definitions through casting - use <see cref="SpeckleBlockDefinitionWrapper.Bake"/> instead.
-  /// </remarks>
-  private bool CastToRhinoInstanceDefinition<T>(ref T target)
-  {
-    var type = typeof(T);
-    if (type != typeof(InstanceDefinition))
-    {
-      return false;
-    }
-
-    try
-    {
-      var doc = RhinoDoc.ActiveDoc;
-      var instanceDefinition = doc?.InstanceDefinitions.Find(Value.Name);
-      if (instanceDefinition != null)
-      {
-        target = (T)(object)instanceDefinition;
-        return true;
-      }
-
-      // if not found in doc, we cannot create an InstanceDefinition through casting - user should call Bake() method instead
-      return false;
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return false;
-    }
   }
 
   /// <summary>

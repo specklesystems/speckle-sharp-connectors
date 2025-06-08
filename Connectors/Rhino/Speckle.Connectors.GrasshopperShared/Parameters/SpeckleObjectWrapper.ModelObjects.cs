@@ -6,6 +6,8 @@ using Rhino.Geometry;
 using Grasshopper.Rhinoceros.Model;
 using Rhino.DocObjects;
 using Grasshopper.Rhinoceros.Render;
+using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -159,21 +161,57 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       return false;
     }
 
-    var geometry = GetGeometryFromModelObject(modelObject);
-    if (geometry == null)
+    if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
     {
-      throw new InvalidOperationException($"Could not retrieve geometry from Model Object {modelObject.ObjectType}.");
-    }
+      Base modelConverted = SpeckleConversionContext.ConvertToSpeckle(modelGB);
+      SpecklePropertyGroupGoo propertyGroup = new();
+      propertyGroup.CastFrom(modelObject.UserText);
 
-    return CreateSpeckleObjectWrapper(
-      geometry,
-      modelObject.Id?.ToString(),
-      modelObject.Name.ToString(),
-      modelObject.UserText,
-      GetColorFromModelObject(modelObject),
-      GetMaterialFromModelObject(modelObject),
-      modelObject.Layer
-    );
+      // get the object layer
+      SpeckleCollectionWrapperGoo collWrapperGoo = new();
+      SpeckleCollectionWrapper? collWrapper = collWrapperGoo.CastFrom(modelObject.Layer) ? collWrapperGoo.Value : null;
+
+      // update the converted Base with props as well
+      modelConverted.applicationId = modelObject.Id?.ToString();
+      modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
+      Dictionary<string, object?> propertyDict = new();
+      foreach (var entry in propertyGroup.Value)
+      {
+        propertyDict.Add(entry.Key, entry.Value.Value);
+      }
+
+      modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
+
+      // get the object color and material
+      Color? color = GetColorFromModelObject(modelObject);
+      SpeckleMaterialWrapperGoo? materialWrapper = new();
+      if (GetMaterialFromModelObject(modelObject) is Rhino.Render.RenderMaterial renderMat)
+      {
+        materialWrapper.CastFrom(renderMat);
+      }
+
+      SpeckleObjectWrapper so =
+        new()
+        {
+          GeometryBase = modelGB,
+          Base = modelConverted,
+          Parent = collWrapper,
+          Name = modelObject.Name.ToString(),
+          Color = color,
+          Material = materialWrapper.Value,
+          Properties = propertyGroup,
+          WrapperGuid = null // keep this null, processed on send
+        };
+
+      Value = so;
+      return true;
+    }
+    else
+    {
+      throw new InvalidOperationException(
+        $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
+      );
+    }
   }
 
   private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
