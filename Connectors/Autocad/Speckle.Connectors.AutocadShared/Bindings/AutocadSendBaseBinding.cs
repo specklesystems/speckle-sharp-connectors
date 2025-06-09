@@ -31,6 +31,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly IAutocadDocumentActivationSuspension _autocadDocumentActivationSuspension;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -49,7 +50,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager idleManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IAutocadDocumentActivationSuspension autocadDocumentActivationSuspension
   )
   {
     _store = store;
@@ -60,6 +62,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _idleManager = idleManager;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _autocadDocumentActivationSuspension = autocadDocumentActivationSuspension;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
@@ -134,20 +137,17 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private async Task SendInternal(string modelCardId)
   {
-    try
-    {
-      using var manager = _sendOperationManagerFactory.Create();
-      // Disable document activation (document creation and document switch)
-      // Not disabling results in DUI model card being out of sync with the active document
-      // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
-      Application.DocumentManager.DocumentActivationEnabled = false;
-      await manager.Process(
-        Commands,
-        modelCardId,
-        (sp, card) => InitializeSettings(sp),
-        card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds())
-      );
-    }
+    using var manager = _sendOperationManagerFactory.Create();
+    // Disable document activation (document creation and document switch)
+    // Not disabling results in DUI model card being out of sync with the active document
+    // The DocumentActivated event isn't usable probably because it is pushed to back of main thread queue
+    using var _ = _autocadDocumentActivationSuspension.Suspend();
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp, card) => InitializeSettings(sp),
+      card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds())
+    );
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
