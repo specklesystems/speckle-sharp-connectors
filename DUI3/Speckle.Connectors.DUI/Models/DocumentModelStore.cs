@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -10,7 +11,9 @@ namespace Speckle.Connectors.DUI.Models;
 /// <summary>
 /// Encapsulates the state Speckle needs to persist in the host app's document.
 /// </summary>
+[GenerateAutoInterface]
 public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJsonSerializer serializer)
+  : IDocumentModelStore
 {
   private readonly List<ModelCard> _models = new();
 

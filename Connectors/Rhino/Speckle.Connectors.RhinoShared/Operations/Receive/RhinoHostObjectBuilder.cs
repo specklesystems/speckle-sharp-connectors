@@ -11,8 +11,8 @@ using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -189,7 +189,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           if (conversionIds.Count == 0)
           {
             // TODO: add this condition to report object - same as in autocad
-            throw new SpeckleException("Object did not convert to any native geometry");
+            throw new ConversionException("Object did not convert to any native geometry");
           }
 
           // 4: log
