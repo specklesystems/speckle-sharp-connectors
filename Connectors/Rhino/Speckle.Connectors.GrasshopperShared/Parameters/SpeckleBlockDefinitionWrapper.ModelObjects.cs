@@ -28,6 +28,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       var instanceDef = doc?.InstanceDefinitions.Find(Value.Name);
       if (instanceDef != null)
       {
+        // ⚠️ ModelInstanceDefinition(InstanceDefinition) constructor strips .Id and we can't set it afterward
         var modelInstanceDef = new ModelInstanceDefinition(instanceDef);
         target = (T)(object)modelInstanceDef;
         return true;
@@ -50,7 +51,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       // ModelObject.Geometry is internal and cannot be accessed directly.
       // Only way to get geometry from a ModelObject is through RhinoDoc.Objects.FindId(), which only works for baked objects.
       // Unbaked Grasshopper geometry cannot be processed through the ModelObject workflow until we get a public geometry accessor 😓
-      // So if user defines a Model Block Definition in Grasshopper with Grasshopper (unbaked) geometry, we're stuck.
+      // ⚠️ So if user defines a Model Block Definition in Grasshopper with Grasshopper (unbaked) geometry, we're stuck.
       // That's why we're intercepting this case early → if the instanceDef == null don't go further
       throw new InvalidOperationException(
         $"Block definition '{modelInstanceDef.Name}' not found in Rhino document. Please bake the definition first or use Speckle Block Definition components instead."
