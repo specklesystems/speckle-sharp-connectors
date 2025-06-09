@@ -12,14 +12,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case ModelInstanceDefinition modelInstanceDef:
-        if (modelInstanceDef.Id == null)
-        {
-          // this is a definition with Grasshopper-only objects that we can't process
-          // .Objects returns ModelObjects which rely on Rhino Doc for casting, so we're pretty stuck at this point 😓
-          throw new InvalidOperationException(
-            $"Cannot convert native Grasshopper block definitions. Please bake to Rhino document first or use Speckle Block Definition components."
-          );
-        }
         return CastFromModelInstanceDefinition(modelInstanceDef);
       default:
         return false;
@@ -34,7 +26,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     {
       var doc = RhinoDoc.ActiveDoc;
       var instanceDef = doc?.InstanceDefinitions.Find(Value.Name);
-
       if (instanceDef != null)
       {
         var modelInstanceDef = new ModelInstanceDefinition(instanceDef);
@@ -50,6 +41,22 @@ public partial class SpeckleBlockDefinitionWrapperGoo
 
   private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
   {
+    var doc = RhinoDoc.ActiveDoc;
+    var instanceDef = doc?.InstanceDefinitions.Find(modelInstanceDef.Name);
+    if (instanceDef == null)
+    {
+      // Rhino → Model → Model Block Definition passthrough component returns type ModelInstanceDefinition
+      // .Objects of a ModelInstanceDefinition returns ModelObjects
+      // ModelObject.Geometry is internal and cannot be accessed directly.
+      // Only way to get geometry from a ModelObject is through RhinoDoc.Objects.FindId(), which only works for baked objects.
+      // Unbaked Grasshopper geometry cannot be processed through the ModelObject workflow until we get a public geometry accessor 😓
+      // So if user defines a Model Block Definition in Grasshopper with Grasshopper (unbaked) geometry, we're stuck.
+      // That's why we're intercepting this case early → if the instanceDef == null don't go further
+      throw new InvalidOperationException(
+        $"Block definition '{modelInstanceDef.Name}' not found in Rhino document. Please bake the definition first or use Speckle Block Definition components instead."
+      );
+    }
+
     var objects = new List<SpeckleObjectWrapper>();
 
     var modelObjects = modelInstanceDef.Objects ?? Array.Empty<ModelObject>();
