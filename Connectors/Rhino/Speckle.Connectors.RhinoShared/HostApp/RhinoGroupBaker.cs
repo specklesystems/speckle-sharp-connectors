@@ -58,7 +58,7 @@ public class RhinoGroupBaker
       return value;
     }
 
-    return [];
+    throw new SpeckleException("Group {group} references an application Id {appId} that cannot be mapped");
   }
 
   public void PurgeGroups(string baseLayerName)
