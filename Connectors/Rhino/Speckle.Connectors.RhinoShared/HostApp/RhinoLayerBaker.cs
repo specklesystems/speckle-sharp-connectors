@@ -49,18 +49,25 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   /// <remarks>Make sure this is executing on the main thread, using e.g RhinoApp.InvokeAndWait.</remarks>
   public void CreateAllLayersForReceive(IEnumerable<Collection[]> paths, string baseLayerName)
   {
-    CreateBaseLayer(baseLayerName);
-    var uniquePaths = new Dictionary<string, Collection[]>();
-    foreach (var path in paths)
+    try
     {
-      var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
-      var key = string.Join(",", names);
-      uniquePaths[key] = path;
-    }
+      CreateBaseLayer(baseLayerName);
+      var uniquePaths = new Dictionary<string, Collection[]>();
+      foreach (var path in paths)
+      {
+        var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+        var key = string.Join(",", names);
+        uniquePaths[key] = path;
+      }
 
-    foreach (var uniquePath in uniquePaths)
+      foreach (var uniquePath in uniquePaths)
+      {
+        CreateLayerFromPath(uniquePath.Value, baseLayerName);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
+      throw new SpeckleException("Could not create all layers for receive.", ex);
     }
   }
 
@@ -77,7 +84,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
       .Prepend(baseLayerName);
 
-    var layerFullName = string.Join(s_pathSeparator, layerPath);
+    var layerFullName = CleanLayerName(string.Join(s_pathSeparator, layerPath));
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
@@ -86,6 +93,22 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 
     throw new ConversionException($"Did not find a layer in the cache with the name '{layerFullName}'");
   }
+
+  /// <summary>
+  /// Cleans up layer names to be "rhino" proof. Note this can be improved, as "()[] and {}" are illegal only at the start.
+  /// https://docs.mcneel.com/rhino/6/help/en-us/index.htm#information/namingconventions.htm?Highlight=naming
+  /// </summary>
+  /// <param name="layerName"></param>
+  /// <returns></returns>
+  private string CleanLayerName(string layerName) =>
+    layerName
+      .Replace("{", "")
+      .Replace("}", "")
+      .Replace("(", "")
+      .Replace(")", "")
+      .Replace("[", "")
+      .Replace("]", "")
+      .Replace(":", "");
 
   /// <summary>
   /// Creates a layer based on the given collection path and adds it to the Rhino document.
@@ -102,14 +125,14 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     {
       currentLayerName += s_pathSeparator + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : collection.name);
 
-      currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
+      currentLayerName = CleanLayerName(currentLayerName); //.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
         previousLayer = currentDocument.Layers.FindIndex(value);
         continue;
       }
 
-      var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
+      var cleanNewLayerName = CleanLayerName(collection.name); //.Replace("{", "").Replace("}", "").Replace("(", "").Replace(")", "");
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
 
       // set material

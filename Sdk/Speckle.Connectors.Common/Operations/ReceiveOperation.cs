@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
@@ -10,6 +11,7 @@ using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Common.Operations;
 
+[GenerateAutoInterface]
 public sealed class ReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
   IAccountService accountService,
@@ -18,7 +20,7 @@ public sealed class ReceiveOperation(
   IOperations operations,
   IReceiveVersionRetriever receiveVersionRetriever,
   IThreadContext threadContext
-)
+) : IReceiveOperation
 {
   public async Task<HostObjectBuilderResult> Execute(
     ReceiveInfo receiveInfo,
@@ -101,6 +103,12 @@ public sealed class ReceiveOperation(
         .ConfigureAwait(false);
       conversionActivity?.SetStatus(SdkActivityStatusCode.Ok);
       return res;
+    }
+    catch (OperationCanceledException)
+    {
+      //handle conversions but don't log to seq and also throw
+      conversionActivity?.SetStatus(SdkActivityStatusCode.Error);
+      throw;
     }
     catch (Exception ex)
     {
