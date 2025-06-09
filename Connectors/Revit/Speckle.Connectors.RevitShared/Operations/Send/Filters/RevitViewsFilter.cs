@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
@@ -72,12 +72,22 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
     if (view is null)
     {
-      //this used to throw an exception but we don't want to fail loudly if the view is not found
+      //this used to throw an exception, but we don't want to fail loudly if the view is not found
       return [];
     }
     using var viewCollector = new FilteredElementCollector(_doc, view.Id);
     var elementsInView = viewCollector.ToElements();
-    var objectIds = elementsInView.Select(e => e.UniqueId).ToList();
+
+    // NOTE: FilteredElementCollector() includes sweeps and reveals from a wall family's definition and includes them as additional objects
+    // on this return. displayValue for Wall already includes these, therefore we end up with duplicate elements on wall sweeps
+    // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
+    // i (björn) noticed that all these elements have an empty string as Name parameter, hence below exclusion. tested as much as possible, seems like legit fix
+    var objectIds = elementsInView.Where(e => !string.IsNullOrEmpty(e.Name)).Select(e => e.UniqueId).ToList();
+    // we need the view uniqueId among the objectIds
+    // to expire the modelCards with viewFilters when the user changes category visibility
+    // a change in category visibility will trigger DocChangeHandler in RevitSendBinding
+    // [CNX-914] https://linear.app/speckle/issue/CNX-914/hidingunhiding-a-category-dont-trigger-object-tracking
+    objectIds.Add(view.UniqueId);
     SelectedObjectIds = objectIds;
     return objectIds;
   }

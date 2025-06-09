@@ -104,7 +104,8 @@ public static class GrasshopperHelpers
   /// <exception cref="SpeckleException">If it fails to cast</exception>
   public static GeometryBase GeometricGooToGeometryBase(this IGH_GeometricGoo geoGeo)
   {
-    var value = geoGeo.GetType().GetProperty("Value")?.GetValue(geoGeo);
+    // note: some objects (like text entities) can have multiple properties of name "Value"
+    var value = geoGeo.GetType().GetProperties().FirstOrDefault(x => x.Name == "Value")?.GetValue(geoGeo);
     switch (value)
     {
       case GeometryBase gb:

@@ -1,15 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.Bindings;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Models;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Common;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.Civil3dShared.Bindings;
 
@@ -19,29 +16,14 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
   private readonly IAutocadConversionSettingsFactory _autocadConversionSettingsFactory;
 
   public Civil3dReceiveBinding(
-    DocumentModelStore store,
     IBrowserBridge parent,
     ICancellationManager cancellationManager,
-    IServiceProvider serviceProvider,
-    IOperationProgressManager operationProgressManager,
-    ILogger<AutocadReceiveBinding> logger,
     ICivil3dConversionSettingsFactory civil3dConversionSettingsFactory,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,
     IThreadContext threadContext,
-    IAutocadDocumentActivationSuspension documentActivationSuspension
+    IReceiveOperationManagerFactory receiveOperationManagerFactory
   )
-    : base(
-      store,
-      parent,
-      cancellationManager,
-      serviceProvider,
-      operationProgressManager,
-      logger,
-      speckleApplication,
-      threadContext,
-      documentActivationSuspension
-    )
+    : base(parent, cancellationManager, threadContext, receiveOperationManagerFactory)
   {
     _civil3dConversionSettingsFactory = civil3dConversionSettingsFactory;
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;

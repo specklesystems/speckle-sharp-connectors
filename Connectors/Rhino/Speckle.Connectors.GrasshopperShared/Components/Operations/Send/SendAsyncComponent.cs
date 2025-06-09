@@ -57,7 +57,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
-  public MixPanelManager MixPanelManager { get; set; }
+  public IMixPanelManager MixPanelManager { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
@@ -118,7 +118,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     Menu_AppendSeparator(menu);
@@ -143,9 +143,9 @@ public class SendAsyncComponent : GH_AsyncComponent
     Scope = PriorityLoader.Container.CreateScope();
     SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
-    var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
+    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
+    var accountService = Scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = Scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
@@ -231,8 +231,8 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   private void ParseInput(
     IGH_DataAccess da,
-    AccountService accountService,
-    AccountManager accountManager,
+    IAccountService accountService,
+    IAccountManager accountManager,
     IClientFactory clientFactory
   )
   {
@@ -336,7 +336,7 @@ public class SendComponentWorker : WorkerInstance
       */
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully published to Speckle. Right-click to view online."
+        $"Successfully published to Speckle. Right-click on the component to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
@@ -429,8 +429,7 @@ public class SendComponentWorker : WorkerInstance
             result.VersionId
           );
         OutputParam = createdVersion;
-        sendComponent.Url =
-          $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}@{result.VersionId}";
+        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
         // DONE
         done();

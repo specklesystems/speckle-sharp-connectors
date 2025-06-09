@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
@@ -49,7 +50,7 @@ internal sealed class RevitWebViewPlugin(
     var dui3Button = (PushButton)
       specklePanel.AddItem(
         new PushButtonData(
-          "Speckle (Beta) for Revit",
+          "Speckle for Revit",
           Connector.TabTitle,
           typeof(RevitExternalApplication).Assembly.Location,
           typeof(SpeckleRevitCommand).FullName
@@ -69,7 +70,7 @@ internal sealed class RevitWebViewPlugin(
       $"Speckle.Connectors.Revit{speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
-    dui3Button.ToolTip = "Speckle (Beta) for Revit";
+    dui3Button.ToolTip = "Speckle for Revit";
     //dui3Button.AvailabilityClassName = typeof(CmdAvailabilityViews).FullName;
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
@@ -80,7 +81,7 @@ internal sealed class RevitWebViewPlugin(
     revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    global::Revit.Async.RevitTask.Initialize(uiApplication);
+    RevitAsync.Initialize(uiApplication);
   }
 
   private void RegisterDockablePane()

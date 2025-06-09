@@ -1,4 +1,4 @@
-﻿using Rhino.DocObjects;
+using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -26,26 +26,26 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
   /// </summary>
   /// <param name="target">The Rhino TextEntity to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
-  public SA.Text Convert(RG.TextEntity target) =>
-    new()
+  public SA.Text Convert(RG.TextEntity target)
+  {
+    var plane = GetTextPlane(target, out bool screenOriented);
+
+    return new SA.Text
     {
       value = target.PlainText,
-      height = target.TextHeight,
+      height = target.TextHeight * target.DimensionScale,
       maxWidth = target.FormatWidth == 0 ? null : target.FormatWidth,
-      origin = _pointConverter.Convert(target.Plane.Origin),
-      plane = GetTextPlane(target),
+      plane = plane,
+      screenOriented = screenOriented,
       alignmentH = GetHorizontalAlignment(target.TextHorizontalAlignment),
       alignmentV = GetVerticalAlignment(target.TextVerticalAlignment),
       units = _settingsStore.Current.SpeckleUnits
     };
+  }
 
-  private SOG.Plane? GetTextPlane(RG.TextEntity target)
+  private SOG.Plane GetTextPlane(RG.TextEntity target, out bool screenOriented)
   {
-    // set plane to null if text orientation follows camera view
-    if (target.TextOrientation != TextOrientation.InPlane)
-    {
-      return null;
-    }
+    screenOriented = target.TextOrientation != TextOrientation.InPlane;
 
     if (target.TextRotationRadians == 0)
     {

@@ -36,7 +36,7 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
 
 public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
-  private readonly MixPanelManager _mixpanel;
+  private readonly IMixPanelManager _mixpanel;
 
   public SendComponent()
     : base(
@@ -47,7 +47,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       ComponentCategories.DEVELOPER
     )
   {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
+    _mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
   }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
@@ -119,7 +119,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     static void Open(string url)
@@ -140,8 +140,8 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       return new(null);
     }
 
-    var accountService = scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<AccountManager>();
+    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
@@ -183,7 +183,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
     return new SendComponentOutput(createdVersionResource);
   }
