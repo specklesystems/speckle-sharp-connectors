@@ -7,6 +7,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.DUI;
@@ -62,8 +63,8 @@ public static class ContainerRegistration
 
   private static bool TestAndLogStacktrace(IServiceProvider serviceProvider, Exception exception)
   {
-    var stackTrace = exception.StackTrace;
-    if (stackTrace is null || stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
+    var stackTrace = exception.ToFormattedString();
+    if (stackTrace.IndexOf("Speckle", StringComparison.InvariantCultureIgnoreCase) <= 0)
     {
       serviceProvider
         .GetRequiredService<ILoggerFactory>()
