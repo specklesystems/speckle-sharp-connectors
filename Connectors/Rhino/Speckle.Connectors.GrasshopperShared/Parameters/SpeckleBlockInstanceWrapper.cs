@@ -120,16 +120,26 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
   {
     if (Definition?.Objects == null)
     {
-      return;
+      return; // can't bake an instance without a definition
     }
 
-    (int defIndex, _) = Definition.Bake(doc, objIds);
-    if (defIndex == -1)
+    // check if the definition already exists in the document
+    // this prevents multiple instances from overwriting the same definition
+    var existingDef = doc.InstanceDefinitions.Find(Definition.Name);
+
+    if (existingDef == null)
     {
-      return;
+      // definition doesn't exist yet, create it
+      // this should only happen for the first instance with this definition name
+      var (index, _) = Definition.Bake(doc, objIds);
+      if (index == -1)
+      {
+        return; // definition creation failed
+      }
+      existingDef = doc.InstanceDefinitions[index];
     }
 
-    // Create instance reference
+    // now create the actual instance using the definition
     var attributes = new ObjectAttributes { Name = Name };
 
     if (bakeLayerIndex >= 0)
@@ -137,13 +147,14 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
       attributes.LayerIndex = bakeLayerIndex;
     }
 
-    // Set properties as user strings
+    // copy properties as user strings onto the instance
     foreach (var kvp in Properties.Value)
     {
       attributes.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
     }
 
-    var instanceRef = doc.Objects.AddInstanceObject(defIndex, Transform, attributes);
+    // create the instance with our specific transform
+    var instanceRef = doc.Objects.AddInstanceObject(existingDef.Index, Transform, attributes);
     if (instanceRef != Guid.Empty)
     {
       objIds.Add(instanceRef);
