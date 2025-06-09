@@ -61,9 +61,9 @@ public static class Solutions
     await GenerateLocalSlnx();
     foreach (var group in Consts.ProjectGroups)
     {
-      var path = group.Projects[0].ProjectPath.Split('/');
-      var folder = $"/{path[0]}/{path[1]}/";
-      await GenerateConnector(group.HostAppSlug, folder);
+      var connectors = await GetFullSlnx();
+      var slug = group.HostAppSlug;
+      await GenerateConnector(connectors, group, string.Concat(slug[0].ToString().ToUpper(), slug.AsSpan(1)));
     }
   }
 
@@ -77,12 +77,15 @@ public static class Solutions
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
     sln = Path.Combine(Environment.CurrentDirectory, "Local.sln");
     await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
+
+    var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
+    await GenerateConnector(connectors, revit, "Revit.Local");
   }
 
-  public static async Task GenerateConnector(string slug, string folder)
+  public static async Task GenerateConnector(SolutionModel connectors, ProjectGroup group, string? name)
   {
-    slug = string.Concat(slug[0].ToString().ToUpper(), slug.AsSpan(1));
-    var connectors = await GetFullSlnx();
+    var path = group.Projects[0].ProjectPath.Split('/');
+    var folder = $"/{path[0]}/{path[1]}/";
     var foldersToRemove = connectors
       .SolutionFolders.Where(x =>
         //need base folder
@@ -95,7 +98,7 @@ public static class Solutions
     {
       connectors.RemoveFolder(folderToRemove);
     }
-    var sln = Path.Combine(Environment.CurrentDirectory, $"Speckle.{slug}.slnx");
+    var sln = Path.Combine(Environment.CurrentDirectory, $"Speckle.{name}.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
   }
 
