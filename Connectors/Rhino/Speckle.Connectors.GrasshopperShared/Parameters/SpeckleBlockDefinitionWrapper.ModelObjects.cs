@@ -12,6 +12,14 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case ModelInstanceDefinition modelInstanceDef:
+        if (modelInstanceDef.Id == null)
+        {
+          // this is a definition with Grasshopper-only objects that we can't process
+          // .Objects returns ModelObjects which rely on Rhino Doc for casting, so we're pretty stuck at this point 😓
+          throw new InvalidOperationException(
+            $"Cannot convert native Grasshopper block definitions. Please bake to Rhino document first or use Speckle Block Definition components."
+          );
+        }
         return CastFromModelInstanceDefinition(modelInstanceDef);
       default:
         return false;
@@ -49,7 +57,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     foreach (var modelObj in modelObjects)
     {
       var objWrapperGoo = new SpeckleObjectWrapperGoo();
-      if (objWrapperGoo.CastFrom(modelObj)) // Let SpeckleObjectWrapper handle ModelObject casting
+      if (objWrapperGoo.CastFrom(modelObj))
       {
         objects.Add(objWrapperGoo.Value);
       }
