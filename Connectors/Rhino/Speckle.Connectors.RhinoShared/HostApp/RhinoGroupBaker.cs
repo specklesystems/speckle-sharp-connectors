@@ -37,7 +37,7 @@ public class RhinoGroupBaker
       {
         var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
         var appIds = groupProxy
-          .objects.SelectMany(oldObjId => LookupApplicationIds(oldObjId, applicationIdMap))
+          .objects.SelectMany(oldObjId => LookupApplicationIds(groupName, oldObjId, applicationIdMap))
           .Select(id => new Guid(id));
         _converterSettings.Current.Document.Groups.Add(groupName, appIds);
       }
@@ -48,7 +48,8 @@ public class RhinoGroupBaker
     }
   }
 
-  private static IEnumerable<string> LookupApplicationIds(
+  private IEnumerable<string> LookupApplicationIds(
+    string name,
     string oldObjId,
     Dictionary<string, IReadOnlyCollection<string>> applicationIdMap
   )
@@ -57,8 +58,8 @@ public class RhinoGroupBaker
     {
       return value;
     }
-
-    throw new SpeckleException("Group {group} references an application Id {appId} that cannot be mapped");
+    _logger.LogWarning("Group {group} references an application Id {appId} that cannot be mapped", name, oldObjId);
+    return [];
   }
 
   public void PurgeGroups(string baseLayerName)
