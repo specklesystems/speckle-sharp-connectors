@@ -7,8 +7,8 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
-/// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
+/// The Speckle Property Group Goo is a dictionary of (key, speckle property or property group).
+/// Flattened property group keys are the concatenated strings of all nested keys with the property delimiter
 /// </summary>
 public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
