@@ -389,7 +389,8 @@ public class SendComponentWorker : WorkerInstance
 
         using var scope = PriorityLoader.CreateScopeForActiveDocument();
         var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-        SendOperationResult? result = await sendOperation.Execute(
+        SendOperationResult? result = await sendOperation
+          .Execute(
             new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
             sendInfo,
             progress,
@@ -409,11 +410,7 @@ public class SendComponentWorker : WorkerInstance
         }
 
         var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-        await mixPanelManager.TrackEvent(
-          MixPanelEvents.Send,
-          sendComponent.ApiClient.Account,
-          customProperties
-        );
+        await mixPanelManager.TrackEvent(MixPanelEvents.Send, sendComponent.ApiClient.Account, customProperties);
 
         SpeckleUrlModelVersionResource? createdVersion =
           new(

@@ -390,7 +390,9 @@ public class ReceiveComponentWorker : WorkerInstance
         }
 
         using var scope = PriorityLoader.CreateScopeForActiveDocument();
-        Root = await scope.Get<GrasshopperReceiveOperation>().ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+        Root = await scope
+          .Get<GrasshopperReceiveOperation>()
+          .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
           .ConfigureAwait(false);
 
         if (CancellationToken.IsCancellationRequested)
@@ -450,11 +452,9 @@ public class ReceiveComponentWorker : WorkerInstance
             receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
           );
         }
-        await scope.Get<IMixPanelManager>().TrackEvent(
-          MixPanelEvents.Receive,
-          receiveComponent.ApiClient.Account,
-          customProperties
-        );
+        await scope
+          .Get<IMixPanelManager>()
+          .TrackEvent(MixPanelEvents.Receive, receiveComponent.ApiClient.Account, customProperties);
 
         // DONE
         done();

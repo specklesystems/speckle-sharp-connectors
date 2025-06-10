@@ -19,10 +19,11 @@ using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.GrasshopperShared.Registration;
 
-public static class ServiceScopeExtensions 
+public static class ServiceScopeExtensions
 {
   public static T Get<T>(this IServiceScope scope) => scope.ServiceProvider.GetRequiredService<T>();
 }
+
 public class PriorityLoader : GH_AssemblyPriority
 {
   private IDisposable? _disposableLogger;
