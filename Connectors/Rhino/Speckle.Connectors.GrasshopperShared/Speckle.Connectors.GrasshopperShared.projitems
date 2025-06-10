@@ -44,6 +44,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveAsyncComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperBlockPacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperMaterialPacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperColorPacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendAsyncComponent.cs" />
