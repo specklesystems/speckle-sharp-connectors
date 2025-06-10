@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
-using Speckle.Sdk.Helpers;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.TeklaShared.HostApp;
@@ -42,7 +42,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
   }
 
-  private void GenerateKey() => _modelKey = Crypt.Md5(_model.GetInfo().ModelPath, length: 32);
+  private void GenerateKey() => _modelKey = Md5.GetString(_model.GetInfo().ModelPath);
 
   protected override void HostAppSaveState(string modelCardState)
   {
