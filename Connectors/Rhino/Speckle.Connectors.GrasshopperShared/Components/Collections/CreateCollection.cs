@@ -152,6 +152,13 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
+      // disallowing block definitions in collections for now
+      if (obj is SpeckleBlockDefinitionWrapperGoo)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Block definitions cannot be added to collections.");
+        continue;
+      }
+
       var wrapperGoo = new SpeckleObjectWrapperGoo();
       if (wrapperGoo.CastFrom(obj))
       {
