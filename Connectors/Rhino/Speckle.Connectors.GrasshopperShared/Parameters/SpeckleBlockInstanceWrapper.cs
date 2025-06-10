@@ -31,6 +31,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
 
   public override string ToString() => $"Speckle Block Instance [{Name}]";
 
+  public List<string> Path { get; set; } = new();
+  public SpeckleCollectionWrapper? Parent { get; set; }
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
 
   public InstanceProxy InstanceProxy
@@ -169,7 +171,9 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
       Transform = _transform,
       Properties = Properties,
       ApplicationId = ApplicationId,
-      Name = Name
+      Name = Name,
+      Path = Path,
+      Parent = Parent
     };
 
   // Constructor ensures _instanceProxy is never null
