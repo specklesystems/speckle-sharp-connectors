@@ -13,12 +13,11 @@ public static class HandledModelCardErrors
 {
   public static void LogModelCardHandledError<T>(this ILogger<T> logger, Exception ex)
   {
-    LogLevel level = ex switch
+    var level = LogLevel.Error;
+    if (ex is SpeckleException)
     {
-      SpeckleException => LogLevel.Warning,
-      _ => LogLevel.Error
-    };
-
+      level = LogLevel.Warning;
+    }
     logger.Log(level, ex, "{bindingType} operation was not successful", typeof(T));
   }
 }

@@ -7,7 +7,7 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.Revit.Plugin;
 
 #pragma warning disable CA1032
-public class SpeckleRevitTaskException(Exception exception) : SpeckleException("Revit operation failed", exception)
+public class SpeckleRevitTaskException(Exception exception) : SpeckleException("Revit operation failed: " + exception.Message, exception)
 #pragma warning restore CA1032
 {
   public static async Task ProcessException<T>(
