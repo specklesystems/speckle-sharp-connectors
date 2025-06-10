@@ -93,16 +93,22 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
     // then update paths and parents of all children
     foreach (var element in Elements)
     {
-      if (element is SpeckleObjectWrapper o)
+      switch (element)
       {
-        o.Path = newPath;
-        o.Parent = this;
-      }
-      else if (element is SpeckleCollectionWrapper c)
-      {
-        // don't forget to add the child collection name to the path
-        newPath.Add(c.Name);
-        c.Path = newPath;
+        case SpeckleObjectWrapper o:
+          o.Path = newPath;
+          o.Parent = this;
+          break;
+        case SpeckleBlockInstanceWrapper bi:
+          bi.Path = newPath;
+          bi.Parent = this;
+          break;
+        case SpeckleCollectionWrapper c:
+          // don't forget to add the child collection name to the path
+          var childPath = newPath.ToList();
+          childPath.Add(c.Name);
+          c.Path = childPath;
+          break;
       }
     }
   }
@@ -119,11 +125,13 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       Topology = Topology,
       Elements = Elements
         .Select(e =>
-          e is SpeckleCollectionWrapper c
-            ? c.DeepCopy()
-            : e is SpeckleObjectWrapper o
-              ? o.DeepCopy()
-              : e
+          e switch
+          {
+            SpeckleCollectionWrapper c => c.DeepCopy(),
+            SpeckleObjectWrapper o => o.DeepCopy(),
+            SpeckleBlockInstanceWrapper bi => bi.DeepCopy(),
+            _ => e
+          }
         )
         .ToList()
     };
@@ -165,6 +173,13 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       else if (obj is SpeckleCollectionWrapper c)
       {
         c.Bake(doc, obj_ids, bakeObjects, currentLayerIndex);
+      }
+      else if (obj is SpeckleBlockInstanceWrapper bi)
+      {
+        if (bakeObjects)
+        {
+          bi.Bake(doc, obj_ids, currentLayerIndex);
+        }
       }
     }
 

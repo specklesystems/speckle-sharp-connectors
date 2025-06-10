@@ -152,19 +152,39 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
-      // disallowing block definitions in collections for now
-      if (obj is SpeckleBlockDefinitionWrapperGoo)
+      switch (obj)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Block definitions cannot be added to collections.");
-        continue;
-      }
+        // block definitions not allowed in collections (for now)
+        case SpeckleBlockDefinitionWrapperGoo:
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Block definitions cannot be added to collections.");
+          continue;
 
-      var wrapperGoo = new SpeckleObjectWrapperGoo();
-      if (wrapperGoo.CastFrom(obj))
-      {
-        wrapperGoo.Value.Path = childPath;
-        wrapperGoo.Value.Parent = parentCollection;
-        parentCollection.Elements.Add(wrapperGoo.Value);
+        // handle block instances directly
+        case SpeckleBlockInstanceWrapperGoo instanceGoo:
+          var instanceWrapper = instanceGoo.Value.DeepCopy();
+          instanceWrapper.Path = childPath;
+          instanceWrapper.Parent = parentCollection;
+          parentCollection.Elements.Add(instanceWrapper);
+          continue;
+
+        // handle object wrappers directly
+        case SpeckleObjectWrapperGoo objectGoo:
+          var objectWrapper = objectGoo.Value.DeepCopy();
+          objectWrapper.Path = childPath;
+          objectWrapper.Parent = parentCollection;
+          parentCollection.Elements.Add(objectWrapper);
+          continue;
+
+        // for other types, try casting to objects (geometry, etc.)
+        default:
+          var wrapperGoo = new SpeckleObjectWrapperGoo();
+          if (wrapperGoo.CastFrom(obj))
+          {
+            wrapperGoo.Value.Path = childPath;
+            wrapperGoo.Value.Parent = parentCollection;
+            parentCollection.Elements.Add(wrapperGoo.Value);
+          }
+          break;
       }
     }
   }
