@@ -172,7 +172,9 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    foreach (var kvp in Properties.Value)
+    // flatten props for user strings
+    Dictionary<string, SpecklePropertyGoo> flattenedProps = Properties.Flatten();
+    foreach (var kvp in flattenedProps)
     {
       att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
     }
@@ -228,7 +230,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public override IGH_Goo Duplicate()
   {

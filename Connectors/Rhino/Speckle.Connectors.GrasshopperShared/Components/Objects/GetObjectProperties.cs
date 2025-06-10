@@ -62,18 +62,27 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
       SpeckleObjectWrapperGoo objectWrapperGoo = new();
       da.GetData(0, ref objectWrapperGoo);
 
+      // flatten object properties, if any
+      SpecklePropertyGroupGoo properties = objectWrapperGoo.Value.Properties;
+      if (properties.Value.Count == 0)
+      {
+        return;
+      }
+
+      Dictionary<string, SpecklePropertyGoo> flattenedProps = properties.Flatten();
+
       for (int i = 0; i < paths.Count; i++)
       {
         var name = paths[i];
-        SpecklePropertyGoo objectProperty = FindProperty(objectWrapperGoo.Value.Properties, name);
+        SpecklePropertyGoo objectProperty = FindProperty(flattenedProps, name);
         da.SetData(i, objectProperty.Value);
       }
     }
   }
 
-  private SpecklePropertyGoo FindProperty(SpecklePropertyGroupGoo root, string unifiedPath)
+  private SpecklePropertyGoo FindProperty(Dictionary<string, SpecklePropertyGoo> props, string unifiedPath)
   {
-    if (!root.Value.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
+    if (!props.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
     {
       return new() { Path = unifiedPath, Value = "" };
     }

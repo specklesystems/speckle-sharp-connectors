@@ -29,7 +29,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     var objectPropertyGroups = VolatileData
       .AllData(true)
       .OfType<SpeckleObjectWrapperGoo>()
-      .Select(goo => goo.Value.Properties.Value)
+      .Select(goo => goo.Value.Properties)
       .ToList();
 
 #if RHINO8_OR_GREATER
@@ -39,7 +39,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       var modelObjects = VolatileData
         .AllData(true)
         .OfType<ModelObject>()
-        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties.Value)
+        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties)
         .ToList();
       objectPropertyGroups.AddRange(modelObjects);
     }
@@ -55,13 +55,16 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }
 
-  private static List<string> GetPropertyPaths(List<Dictionary<string, SpecklePropertyGoo>> objectPropertyGroups)
+  private static List<string> GetPropertyPaths(List<SpecklePropertyGroupGoo> objectPropertyGroups)
   {
     var result = new HashSet<string>();
-    foreach (var dict in objectPropertyGroups)
+    foreach (SpecklePropertyGroupGoo propGroup in objectPropertyGroups)
     {
+      // flatten the props
+      Dictionary<string, SpecklePropertyGoo> flattenedProps = propGroup.Flatten();
+
       result.AddRange(
-        dict.Keys.Where(k => !(k.EndsWith(".name") || k.EndsWith(".units") || k.EndsWith(".internalDefinitionName")))
+        flattenedProps.Keys.Where(k => !(k.EndsWith(".name") || k.EndsWith(".units") || k.EndsWith(".internalDefinitionName")))
       );
     }
     return result.ToList();

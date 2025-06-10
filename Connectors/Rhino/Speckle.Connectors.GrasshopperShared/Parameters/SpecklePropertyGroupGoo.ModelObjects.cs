@@ -9,8 +9,8 @@ using Rhino.DocObjects;
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
-/// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
+/// The Speckle Property Group Goo is a nested dictionary of (key, speckle property or property group).
+/// The <see cref="Flatten"/> method will use the property delimiter on the keys to flatten the property group into properties.
 /// </summary>
 public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
@@ -48,8 +48,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
       var attributes = new ObjectAttributes();
 
       // flatten the props
-      Dictionary<string, SpecklePropertyGoo> flattenedProps = new();
-      Flatten(Value, flattenedProps);
+      Dictionary<string, SpecklePropertyGoo> flattenedProps = Flatten();
       foreach (var entry in flattenedProps)
       {
         string stringValue = entry.Value.Value?.ToString() ?? "";

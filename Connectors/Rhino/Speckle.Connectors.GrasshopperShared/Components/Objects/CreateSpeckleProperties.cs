@@ -40,7 +40,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    var properties = new Dictionary<string, SpecklePropertyGoo>();
+    var properties = new Dictionary<string, ISpecklePropertyGoo>();
 
     // Validate for duplicate names
     var paramNames = Params.Input.Select(p => p.NickName).ToList();
@@ -71,13 +71,18 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     da.SetData(0, groupGoo);
   }
 
-  private SpecklePropertyGoo? ExtractPropertyValue(IGH_DataAccess da, int index, string paramName)
+  private ISpecklePropertyGoo? ExtractPropertyValue(IGH_DataAccess da, int index, string paramName)
   {
     object? value = null;
     da.GetData(index, ref value);
 
-    var propertyGoo = new SpecklePropertyGoo();
+    // check for a group input first
+    if (value is SpecklePropertyGroupGoo group)
+    {
+      return group;
+    }
 
+    var propertyGoo = new SpecklePropertyGoo();
     if (value == null)
     {
       return propertyGoo; // Return empty property
