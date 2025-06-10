@@ -1,6 +1,7 @@
 using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
@@ -11,16 +12,31 @@ using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Operations.Send;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.GrasshopperShared.Registration;
 
+public static class ServiceScopeExtensions 
+{
+  public static T Get<T>(this IServiceScope scope) => scope.ServiceProvider.GetRequiredService<T>();
+}
 public class PriorityLoader : GH_AssemblyPriority
 {
   private IDisposable? _disposableLogger;
   public static ServiceProvider? Container { get; set; }
+
+  public static IServiceScope CreateScopeForActiveDocument()
+  {
+    var scope = Container.CreateScope();
+    var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
+    scope
+      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+    return scope;
+  }
 
   public override GH_LoadingInstruction PriorityLoad()
   {
