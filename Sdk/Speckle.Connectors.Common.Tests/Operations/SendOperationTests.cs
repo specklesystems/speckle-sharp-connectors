@@ -106,7 +106,7 @@ public class SendOperationTests : MoqTest
     var accountId = "accountId";
     var url = new Uri("https://localhost");
     var sourceApplication = "sourceApplication";
-    var sendInfo = new SendInfo(accountId, url, projectId, modelId, string.Empty);
+    var sendInfo = new SendInfo(accountId, url, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
