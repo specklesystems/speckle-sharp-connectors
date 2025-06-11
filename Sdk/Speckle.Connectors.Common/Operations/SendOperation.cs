@@ -67,11 +67,10 @@ public sealed class SendOperation<T>(
     Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
     return Send(
       commitObject,
-      sendInfo.ServerUrl,
       sendInfo.ProjectId,
       sendInfo.ModelId,
-      account.token,
       sendInfo.SourceApplication,
+      account,
       onOperationProgressed,
       ct
     );
@@ -79,11 +78,10 @@ public sealed class SendOperation<T>(
 
   public async Task<(SerializeProcessResults, string)> Send(
     Base commitObject,
-    Uri serverUrl,
     string projectId,
     string modelId,
-    string token,
     string sourceApplication,
+    Account account,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
@@ -96,9 +94,9 @@ public sealed class SendOperation<T>(
 
     sendProgress.Begin();
     var sendResult = await operations.Send2(
-      serverUrl,
+      new Uri(account.serverInfo.url),
       projectId,
-      token,
+      account.token,
       commitObject,
       onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
       ct
@@ -116,8 +114,7 @@ public sealed class SendOperation<T>(
       modelId,
       projectId,
       sourceApplication,
-      serverUrl,
-      token,
+      account,
       ct
     );
 

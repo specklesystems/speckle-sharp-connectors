@@ -5,6 +5,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
@@ -13,6 +14,7 @@ public class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+  IAccountFactory accountFactory,
   ILogger<Sender> logger
 )
 {
@@ -35,15 +37,15 @@ public class Sender(
         return null;
       }
 
+      var account = await accountFactory.CreateAccount(serverUrl, token);
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
       var buildResults = await operation.Build(rhinoObjects, projectId, new Progress(), CancellationToken.None);
       var (results, versionId) = await operation.Send(
         buildResults.RootObject,
-        serverUrl,
         projectId,
         modelId,
         token,
-        string.Empty,
+        account,
         new Progress(),
         CancellationToken.None
       );

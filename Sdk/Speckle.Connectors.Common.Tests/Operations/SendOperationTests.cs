@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -11,6 +10,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -41,7 +41,6 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var ct = new CancellationToken();
     var objects = new List<object>();
@@ -112,7 +111,10 @@ public class SendOperationTests : MoqTest
     var ct = new CancellationToken();
 
     var token = "token";
-    var account = new Account() { token = token };
+    var account = new Account() { token = token, serverInfo = new ServerInfo()
+    {
+      url = url.ToString()
+    }};
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
@@ -127,7 +129,7 @@ public class SendOperationTests : MoqTest
     sendProgress.Setup(x => x.Begin());
 
     sendOperationVersionRecorder
-      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, url, token, ct))
+      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, account, ct))
       .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
