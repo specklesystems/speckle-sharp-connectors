@@ -137,49 +137,20 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> obj_ids, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
-    // get or make layers
-    if (!layersAlreadyCreated && bakeLayerIndex < 0)
+    if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
-      if (Path.Count > 0 && Parent != null)
-      {
-        bakeLayerIndex = Parent.Bake(doc, obj_ids, false);
-      }
-
+      bakeLayerIndex = Parent.Bake(doc, objIds, false);
       if (bakeLayerIndex < 0)
       {
         return;
       }
     }
 
-    // create attributes
-    using ObjectAttributes att = new() { Name = Name, LayerIndex = bakeLayerIndex };
-
-    if (Color is Color color)
-    {
-      att.ObjectColor = color;
-      att.ColorSource = ObjectColorSource.ColorFromObject;
-    }
-
-    if (Material is SpeckleMaterialWrapper materialWrapper)
-    {
-      int matIndex = materialWrapper.Bake(doc, materialWrapper.Name);
-      if (matIndex >= 0)
-      {
-        att.MaterialIndex = matIndex;
-        att.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-      }
-    }
-
-    foreach (var kvp in Properties.Value)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
-
-    // add to doc
-    Guid guid = doc.Objects.Add(GeometryBase, att);
-    obj_ids.Add(guid);
+    using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
+    Guid guid = doc.Objects.Add(GeometryBase, attributes);
+    objIds.Add(guid);
   }
 
   /// <summary>
@@ -252,15 +223,20 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       case SpeckleObjectWrapper wrapper:
         Value = wrapper.DeepCopy();
         return true;
+
       case GH_Goo<SpeckleObjectWrapper> speckleGrasshopperObjectGoo:
         Value = speckleGrasshopperObjectGoo.Value.DeepCopy();
         return true;
+
       case IGH_GeometricGoo geometricGoo:
-        var gooGB = geometricGoo.GeometricGooToGeometryBase();
-        var gooConverted = SpeckleConversionContext.ConvertToSpeckle(gooGB);
+        GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
+        return CastFrom(gooGB);
+
+      case GeometryBase geometryBase:
+        var gooConverted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
         Value = new SpeckleObjectWrapper()
         {
-          GeometryBase = gooGB,
+          GeometryBase = geometryBase,
           Base = gooConverted,
           Name = "",
           Color = null,
@@ -271,7 +247,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         return true;
     }
 
-    // Handle case of model objects in rhino 8
     return CastFromModelObject(source);
   }
 
@@ -388,7 +363,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   private bool TryCastToCircle<T>(ref T target)
   {
-    var circle = new Rhino.Geometry.Circle();
+    var circle = new Circle();
     if (GH_Convert.ToCircle(Value.GeometryBase, ref circle, GH_Conversion.Both))
     {
       target = (T)(object)new GH_Circle(circle);
@@ -468,14 +443,14 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // False if no data
     !VolatileData.IsEmpty;
 
-  public void BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleObjectWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        goo.Value.Bake(doc, objIds);
       }
     }
   }
@@ -485,12 +460,12 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
   /// </summary>
   /// <param name="doc"></param>
   /// <param name="att"></param>
-  /// <param name="obj_ids"></param>
+  /// <param name="objIds"></param>
   /// <remarks>
   /// The attributes come from the user dialog after calling bake.
   /// The selected layer from the dialog will only be user if no path is already present on the object.
   /// </remarks>
-  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
@@ -499,7 +474,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       {
         int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
         bool layerCreated = goo.Value.Path.Count == 0;
-        goo.Value.Bake(doc, obj_ids, layerIndex, layerCreated);
+        goo.Value.Bake(doc, objIds, layerIndex, layerCreated);
       }
     }
   }

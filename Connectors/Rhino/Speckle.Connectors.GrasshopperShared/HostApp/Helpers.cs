@@ -3,6 +3,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.DoubleNumerics;
@@ -211,5 +212,50 @@ public static class GrasshopperHelpers
       topology += myPath.ToString(false) + "-" + param.VolatileData.get_Branch(myPath).Count + " ";
     }
     return topology;
+  }
+}
+
+public static class BakingHelpers
+{
+  public static ObjectAttributes CreateObjectAttributes(
+    string name,
+    Color? color = null,
+    SpeckleMaterialWrapper? material = null,
+    SpecklePropertyGroupGoo? properties = null,
+    int layerIndex = -1
+  )
+  {
+    var attributes = new ObjectAttributes { Name = name };
+
+    if (layerIndex >= 0)
+    {
+      attributes.LayerIndex = layerIndex;
+    }
+
+    if (color is Color validColor)
+    {
+      attributes.ObjectColor = validColor;
+      attributes.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+
+    if (material is SpeckleMaterialWrapper materialWrapper)
+    {
+      int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Name);
+      if (matIndex >= 0)
+      {
+        attributes.MaterialIndex = matIndex;
+        attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+    }
+
+    if (properties?.Value != null)
+    {
+      foreach (var kvp in properties.Value)
+      {
+        attributes.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
+      }
+    }
+
+    return attributes;
   }
 }
