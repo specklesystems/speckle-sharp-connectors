@@ -106,13 +106,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
             root.elements.Add(objectCollection);
           }
 
-          var result = ConvertAutocadEntity(
-            entity,
-            applicationId,
-            objectCollection,
-            instanceProxies,
-            projectId
-          );
+          var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
           results.Add(result);
 
           onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));

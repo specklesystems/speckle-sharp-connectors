@@ -23,7 +23,6 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     CancellationToken ct = default
   )
   {
-
     // deep copy input (to not mutate input) and set the input collection name to "Grasshopper Model"
     var inputCollectionGoo = (SpeckleCollectionWrapperGoo)input[0].Duplicate();
     inputCollectionGoo.Value.Name = "Grasshopper Model";

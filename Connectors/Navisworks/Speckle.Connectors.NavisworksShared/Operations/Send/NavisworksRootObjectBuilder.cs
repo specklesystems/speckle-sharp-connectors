@@ -87,7 +87,9 @@ public class NavisworksRootObjectBuilder(
 
     if (onOperationProgressed == null || projectId == null)
     {
-      throw new ArgumentNullException(onOperationProgressed == null ? nameof(onOperationProgressed) : nameof(projectId));
+      throw new ArgumentNullException(
+        onOperationProgressed == null ? nameof(onOperationProgressed) : nameof(projectId)
+      );
     }
   }
 
