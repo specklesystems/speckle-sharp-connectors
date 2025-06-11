@@ -64,7 +64,9 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       Dictionary<string, SpecklePropertyGoo> flattenedProps = propGroup.Flatten();
 
       result.AddRange(
-        flattenedProps.Keys.Where(k => !(k.EndsWith(".name") || k.EndsWith(".units") || k.EndsWith(".internalDefinitionName")))
+        flattenedProps.Keys.Where(k =>
+          !(k.EndsWith(".name") || k.EndsWith(".units") || k.EndsWith(".internalDefinitionName"))
+        )
       );
     }
     return result.ToList();

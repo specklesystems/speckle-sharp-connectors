@@ -24,7 +24,6 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
 public class SendAsyncComponent : GH_AsyncComponent
 {
-
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
 
