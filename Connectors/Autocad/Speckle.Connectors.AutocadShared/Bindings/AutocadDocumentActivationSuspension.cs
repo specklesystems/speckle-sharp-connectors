@@ -23,6 +23,8 @@ public sealed class AutocadDocumentActivationSuspension(ILogger<AutocadDocumentA
 #pragma warning restore CA1031
     {
       logger.LogError(ex, "Failed to enable document activation.");
+      _suspended = false;
+      return this;
     }
     _suspended = true;
     return this;
