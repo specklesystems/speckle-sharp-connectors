@@ -4,7 +4,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
-using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
@@ -50,13 +49,6 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   // DI props
   public IClient ApiClient { get; private set; }
-  public IMixPanelManager MixPanelManager { get; private set; }
-  public GrasshopperReceiveOperation ReceiveOperation { get; private set; }
-  public RootObjectUnpacker RootObjectUnpacker { get; private set; }
-  public static IServiceScope? Scope { get; private set; }
-  public IAccountService AccountService { get; private set; }
-  public IAccountManager AccountManager { get; private set; }
-  public IClientFactory ClientFactory { get; private set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -77,17 +69,6 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   protected override void SolveInstance(IGH_DataAccess da)
   {
     da.DisableGapLogic();
-
-    // Dependency Injection
-    Scope = PriorityLoader.Container.CreateScope();
-    ReceiveOperation = Scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
-
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-    RootObjectUnpacker = Scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    AccountService = Scope.ServiceProvider.GetRequiredService<IAccountService>();
-    AccountManager = Scope.ServiceProvider.GetRequiredService<IAccountManager>();
-    ClientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
-
     // We need to call this always in here to be able to react and set events :/
     ParseInput(da);
 
@@ -193,7 +174,6 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   public override void RemovedFromDocument(GH_Document document)
   {
     RequestCancellation();
-    Scope?.Dispose();
     base.RemovedFromDocument(document);
   }
 
@@ -287,10 +267,11 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   {
     try
     {
+      using var scope = PriorityLoader.CreateScopeForActiveDocument();
       Account? account =
         urlResource.AccountId != null
-          ? AccountManager.GetAccount(urlResource.AccountId)
-          : AccountService.GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
+          ? scope.Get<IAccountManager>().GetAccount(urlResource.AccountId)
+          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
 
       if (account is null)
       {
@@ -298,7 +279,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
       }
 
       ApiClient?.Dispose();
-      ApiClient = ClientFactory.Create(account);
+      ApiClient = scope.Get<IClientFactory>().Create(account);
       ApiClient.Subscription.CreateProjectVersionsUpdatedSubscription(urlResource.ProjectId).Listeners +=
         ApiClient_OnVersionCreated;
     }
@@ -408,8 +389,10 @@ public class ReceiveComponentWorker : WorkerInstance
           return;
         }
 
-        Root = await receiveComponent
-          .ReceiveOperation.ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+        using var scope = PriorityLoader.CreateScopeForActiveDocument();
+        Root = await scope
+          .Get<GrasshopperReceiveOperation>()
+          .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
           .ConfigureAwait(false);
 
         if (CancellationToken.IsCancellationRequested)
@@ -421,7 +404,7 @@ public class ReceiveComponentWorker : WorkerInstance
         //receiveComponent.Message = $"Unpacking...";
         LocalToGlobalUnpacker localToGlobalUnpacker = new();
         TraversalContextUnpacker traversalContextUnpacker = new();
-        var unpackedRoot = receiveComponent.RootObjectUnpacker.Unpack(Root);
+        var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
 
         // "flatten" block instances
         var localToGlobalMaps = localToGlobalUnpacker.Unpack(
@@ -469,11 +452,9 @@ public class ReceiveComponentWorker : WorkerInstance
             receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
           );
         }
-        await receiveComponent.MixPanelManager.TrackEvent(
-          MixPanelEvents.Receive,
-          receiveComponent.ApiClient.Account,
-          customProperties
-        );
+        await scope
+          .Get<IMixPanelManager>()
+          .TrackEvent(MixPanelEvents.Receive, receiveComponent.ApiClient.Account, customProperties);
 
         // DONE
         done();
