@@ -58,7 +58,9 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
         {
           var result = objectConverter.Convert(target);
 
-          if (target is ADB.Entity autocadEntity)
+          // This is needed to retrieve property sets on solids
+          // Civil entity properties are retrieved in the CivilEntityToSpeckleTopLevelConverter
+          if (target is not CDB.Entity && target is ADB.Entity autocadEntity)
           {
             var properties = _propertiesExtractor.GetProperties(autocadEntity);
             if (properties.Count > 0)
