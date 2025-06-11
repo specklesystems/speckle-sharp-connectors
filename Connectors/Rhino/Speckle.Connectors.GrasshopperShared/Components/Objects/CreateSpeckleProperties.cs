@@ -92,7 +92,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
-        $"Parameter '{paramName}' contains invalid data type. Only strings, numbers, and booleans are supported."
+        $"Parameter '{paramName}' contains invalid data type. Only strings, numbers, booleans, and other Speckle properties are supported."
       );
       return null;
     }
