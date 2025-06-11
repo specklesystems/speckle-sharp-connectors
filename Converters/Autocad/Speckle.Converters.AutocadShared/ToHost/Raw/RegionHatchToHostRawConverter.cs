@@ -63,7 +63,8 @@ public class RegionHatchToHostRawConverter : ITypedConverter<SOG.Region, ADB.Hat
     CheckForNonPlanarLoops(convertedCurve);
     var dbCurve = (ADB.Curve)convertedCurve[0].Item1;
 
-    // If Spline, turn into segmented polyline - this is how AutoCAD imports Hatches with Curve boundaries from Rhino
+    // If Spline, turn into segmented polyline - this is how AutoCAD best imports Hatches with Curve boundaries from Rhino
+    // Splines from AutoCAD don't need to be segmented (shape is fully preserved), but we don't have a way to distinguish them
     if (dbCurve is ADB.Spline spline)
     {
       if (spline.NurbsData.Degree == 1)

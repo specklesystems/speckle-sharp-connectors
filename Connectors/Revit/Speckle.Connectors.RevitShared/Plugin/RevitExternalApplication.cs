@@ -1,9 +1,9 @@
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Connectors.Revit.DependencyInjection;
 using Speckle.Converters.RevitShared;
 using Speckle.Sdk;
@@ -30,6 +30,8 @@ internal sealed class RevitExternalApplication : IExternalApplication
     return HostAppVersion.v2024;
 #elif REVIT2025
     return HostAppVersion.v2025;
+#elif REVIT2026
+    return HostAppVersion.v2026;
 #else
     throw new NotImplementedException();
 #endif
@@ -50,7 +52,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
       _container = services.BuildServiceProvider();
       _container.UseDUI();
 
-      RevitTask.Initialize(application);
+      RevitAsync.Initialize(application);
       // resolve root object
       _revitPlugin = _container.GetRequiredService<IRevitPlugin>();
       _revitPlugin.Initialise();
@@ -58,7 +60,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
     catch (Exception e) when (!e.IsFatal())
     {
       _container
-        .GetRequiredService<ILoggerFactory>()
+        ?.GetRequiredService<ILoggerFactory>()
         .CreateLogger<RevitExternalApplication>()
         .LogCritical(e, "Unhandled exception");
       // POC: feedback?

@@ -1,15 +1,11 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -32,17 +28,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
-  private readonly IServiceProvider _serviceProvider;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
-  private readonly ILogger<RevitSendBinding> _logger;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
-  private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
+  private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -58,17 +51,15 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     DocumentModelStore store,
     ICancellationManager cancellationManager,
     IBrowserBridge bridge,
-    IServiceProvider serviceProvider,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
-    ILogger<RevitSendBinding> logger,
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IRevitTask revitTask,
+    ISendOperationManagerFactory sendOperationManagerFactory
   )
     : base("sendBinding", bridge)
   {
@@ -76,25 +67,25 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
-    _serviceProvider = serviceProvider;
     _sendConversionCache = sendConversionCache;
-    _operationProgressManager = operationProgressManager;
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
-    _logger = logger;
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
-    _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
+    _sendOperationManagerFactory = sendOperationManagerFactory;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
     // TODO filters need refresh events
 
-    revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-    _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    revitTask.Run(() =>
+    {
+      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
+    });
   }
 
   public List<ISendFilter> GetSendFilters() =>
@@ -109,7 +100,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new DetailLevelSetting(DetailLevelType.Medium),
       new ReferencePointSetting(ReferencePointType.InternalOrigin),
       new SendParameterNullOrEmptyStringsSetting(false),
-      new LinkedModelsSetting(true)
+      new LinkedModelsSetting(true),
+      new SendRebarsAsVolumetricSetting(false)
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -118,68 +110,26 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    // Note: removed top level handling thing as it was confusing me
-    try
-    {
-      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+    using var manager = _sendOperationManagerFactory.Create();
+
+    await manager.Process<DocumentToConvert>(
+      Commands,
+      modelCardId,
+      (sp, card) =>
       {
-        // Handle as GLOBAL ERROR at BrowserBridge
-        throw new InvalidOperationException("No publish model card was found.");
-      }
-
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
-
-      using var scope = _serviceProvider.CreateScope();
-      scope
-        .ServiceProvider.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
-        .Initialize(
-          _revitConversionSettingsFactory.Create(
-            _toSpeckleSettingsManager.GetDetailLevelSetting(modelCard),
-            _toSpeckleSettingsManager.GetReferencePointSetting(modelCard),
-            _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(modelCard),
-            _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard)
-          )
-        );
-
-      var elementsByTransform = await RefreshElementsIdsOnSender(modelCard.NotNull());
-
-      if (elementsByTransform.Count == 0)
-      {
-        // Handle as CARD ERROR in this function
-        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
-      }
-
-      var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<DocumentToConvert>>()
-        .Execute(
-          elementsByTransform,
-          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
-          cancellationItem.Token
-        );
-
-      await Commands.SetModelSendResult(modelCardId, sendResult.RootObjId, sendResult.ConversionResults);
-    }
-    catch (OperationCanceledException)
-    {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
-      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
-      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-    }
-    catch (SpeckleRevitTaskException ex)
-    {
-      await SpeckleRevitTaskException.ProcessException(modelCardId, ex, _logger, Commands);
-    }
-    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
-    {
-      _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex);
-    }
-    finally
-    {
-      // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
-      _cancellationManager.CancelOperation(modelCardId);
-    }
+        sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
+          .Initialize(
+            _revitConversionSettingsFactory.Create(
+              _toSpeckleSettingsManager.GetDetailLevelSetting(card),
+              _toSpeckleSettingsManager.GetReferencePointSetting(card),
+              _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(card),
+              _toSpeckleSettingsManager.GetLinkedModelsSetting(card),
+              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(card)
+            )
+          );
+      },
+      async x => await RefreshElementsIdsOnSender(x.NotNull())
+    );
   }
 
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)

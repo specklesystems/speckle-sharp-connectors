@@ -1,10 +1,11 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -59,6 +60,15 @@ public class LocalToGlobalToDirectShapeConverter
     // 2 - init DirectShape
     var result = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
 
+    // NOTE: this should technically be in a property extraction class / helper method
+    // This change is localised to [CNX-1825](https://linear.app/speckle/issue/CNX-1825/set-directshape-name)
+    // TODO: Property extraction is a greater conversation which needs to be had: [CNX-1830](https://linear.app/speckle/issue/CNX-1830/data-exchange-investigations)
+    var name = target.atomicObject.TryGetName();
+    if (name is not null)
+    {
+      result.SetName(name);
+    }
+
     // If there is no transforms to be applied, use the simple way of creating direct shapes
     if (target.matrix.Count == 0)
     {
@@ -75,7 +85,7 @@ public class LocalToGlobalToDirectShapeConverter
     // existence of units is must, to be able to scale the transform correctly
     if (target.atomicObject["units"] is string units)
     {
-      foreach (Matrix4x4 matrix in target.matrix)
+      foreach (Matrix4x4 matrix in target.matrix.Reverse())
       {
         DB.Transform revitTransform = _transformConverter.Convert((matrix, units));
         combinedTransform = combinedTransform.Multiply(revitTransform);

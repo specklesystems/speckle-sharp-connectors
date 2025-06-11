@@ -2,6 +2,8 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Logging;
+using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -11,6 +13,7 @@ using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Connectors.Common.Operations;
 
+[GenerateAutoInterface]
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
@@ -20,7 +23,7 @@ public sealed class SendOperation<T>(
   ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
   IThreadContext threadContext
-)
+) : ISendOperation<T>
 {
   public async Task<SendOperationResult> Execute(
     IReadOnlyList<T> objects,
