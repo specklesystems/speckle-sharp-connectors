@@ -12,18 +12,6 @@ using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
 
-public class RhinoImportResult
-{
-  [JsonProperty("success")]
-  public bool Success { get; set; }
-
-  [JsonProperty("commitId")]
-  public string CommitId { get; set; }
-
-  [JsonProperty("errorMessage")]
-  public string ErrorMessage { get; set; }
-}
-
 public static class Program
 {
   static Program()
@@ -122,37 +110,5 @@ public static class Program
     await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 
     return 0;
-  }
-}
-
-public class ImporterThreadContext : ThreadContext
-{
-  protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action)
-  {
-    var t = Task.Factory.StartNew(action, default, TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
-    return t.Unwrap();
-  }
-
-  protected override Task<T> MainToWorkerAsync<T>(Func<Task<T>> action)
-  {
-    Task<Task<T>> f = Task.Factory.StartNew(
-      action,
-      default,
-      TaskCreationOptions.AttachedToParent,
-      TaskScheduler.Default
-    );
-    return f.Unwrap();
-  }
-
-  protected override Task<T> WorkerToMain<T>(Func<T> action)
-  {
-    var t = Task.Factory.StartNew(action, default, TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
-    return t;
-  }
-
-  protected override Task<T> MainToWorker<T>(Func<T> action)
-  {
-    Task<T> f = Task.Factory.StartNew(action, default, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-    return f;
   }
 }
