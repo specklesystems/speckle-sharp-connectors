@@ -37,7 +37,7 @@ internal sealed class GrasshopperBlockPacker
   }
 
   /// <summary>
-  /// Processes a <see cref="SpeckleBlockDefinitionWrapper"/> and adds it to the collection (if not already present).
+  /// Processes a <see cref="SpeckleBlockDefinitionWrapper"/> and adds it to the current collection (if not already present).
   /// </summary>
   private List<SpeckleObjectWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition)
   {
