@@ -51,12 +51,6 @@
     <Project Path="Converters\Revit\Speckle.Converters.RevitShared.Tests\Speckle.Converters.RevitShared.Tests.shproj" />
     <Project Path="Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.shproj" />
   </Folder>
-  <Folder Name="/Importers/" />
-  <Folder Name="/Importers/Ifc/">
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj" />
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
-  </Folder>
   <Folder Name="/Sdk/">
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />
     <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
