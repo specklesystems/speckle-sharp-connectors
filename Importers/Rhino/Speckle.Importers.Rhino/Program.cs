@@ -68,28 +68,28 @@ public static class Program
 
     using (new RhinoCore([], WindowStyle.NoWindow))
     {
-        using var doc = RhinoDoc.Open(filePath, out _);
-        var services = new ServiceCollection();
-        services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
-        services.AddRhino(false);
-        services.AddRhinoConverters();
-        // override default
-        services.AddSingleton<IThreadContext>(new ImporterThreadContext());
+      using var doc = RhinoDoc.Open(filePath, out _);
+      var services = new ServiceCollection();
+      services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
+      services.AddRhino(false);
+      services.AddRhinoConverters();
+      // override default
+      services.AddSingleton<IThreadContext>(new ImporterThreadContext());
       services.AddTransient<Progress>();
-        Log.Logger = new LoggerConfiguration()
-          .Enrich.FromLogContext()
-          .WriteTo.Console(new RenderedCompactJsonFormatter())
-          .CreateLogger();
-        services.AddLogging(loggingBuilder =>
+      Log.Logger = new LoggerConfiguration()
+        .Enrich.FromLogContext()
+        .WriteTo.Console(new RenderedCompactJsonFormatter())
+        .CreateLogger();
+      services.AddLogging(loggingBuilder =>
       {
         loggingBuilder.ClearProviders();
         loggingBuilder.AddSerilog(dispose: true);
       });
 
-        // but the Rhino connector has `.rhp` as it is extension.
-        var container = services.BuildServiceProvider();
-        try
-        {
+      // but the Rhino connector has `.rhp` as it is extension.
+      var container = services.BuildServiceProvider();
+      try
+      {
         var sender = ActivatorUtilities.CreateInstance<Sender>(container);
         var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
 
