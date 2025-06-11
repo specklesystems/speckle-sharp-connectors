@@ -60,7 +60,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   )]
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -111,7 +111,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
             applicationId,
             objectCollection,
             instanceProxies,
-            sendInfo.ProjectId
+            projectId
           );
           results.Add(result);
 

@@ -7,7 +7,6 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.Newtonsoft.Json;
-using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
@@ -51,22 +50,6 @@ public static class Program
             Directory.CreateDirectory(accountsDir);
           }
 
-          Account account =
-            new()
-            {
-              token = token,
-              isDefault = false,
-              serverInfo = new Sdk.Api.GraphQL.Models.ServerInfo() { url = serverUrl },
-              userInfo = new UserInfo()
-              {
-                name = "John Speckle",
-                email = "john-speckle@example.org",
-                id = "johnny-speckle"
-              }
-            };
-
-          File.WriteAllText(Path.Combine(accountsDir, "user.json"), JsonConvert.SerializeObject(account));
-
           using (new RhinoCore([], WindowStyle.NoWindow))
           {
             using var doc = RhinoDoc.Open(filePath, out var _);
@@ -81,7 +64,7 @@ public static class Program
             // but the Rhino connector has `.rhp` as it is extension.
             var container = services.BuildServiceProvider();
             var sender = ActivatorUtilities.CreateInstance<Sender>(container);
-            var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl));
+            var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
 
             var result =
               versionId == null

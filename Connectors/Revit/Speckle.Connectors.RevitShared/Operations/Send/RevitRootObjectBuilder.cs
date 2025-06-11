@@ -32,17 +32,17 @@ public class RevitRootObjectBuilder(
 {
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   ) =>
     threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, sendInfo, onOperationProgressed, ct))
+      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
     );
 
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -184,7 +184,7 @@ public class RevitRootObjectBuilder(
             // TODO: we wont do !hasTransform here, and re-set application id before this
             if (
               !hasTransform
-              && sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
+              && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
             )
             {
               converted = value;

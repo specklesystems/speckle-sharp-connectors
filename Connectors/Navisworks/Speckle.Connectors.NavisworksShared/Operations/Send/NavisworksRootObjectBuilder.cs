@@ -32,18 +32,9 @@ public class NavisworksRootObjectBuilder(
 
   internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
 
-  /// <summary>
-  /// Asynchronously builds a Speckle object hierarchy from Navisworks model items.
-  /// </summary>
-  /// <param name="navisworksModelItems">The list of Navisworks items to convert.</param>
-  /// <param name="sendInfo">Information about the send operation.</param>
-  /// <param name="onOperationProgressed">Progress reporting callback.</param>
-  /// <param name="cancellationToken">Token to cancel the operation.</param>
-  /// <returns>A result containing the root collection and conversion results.</returns>
-  /// <exception cref="SpeckleException">Thrown when no objects can be converted.</exception>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -54,7 +45,7 @@ public class NavisworksRootObjectBuilder(
 #endif
     using var activity = activityFactory.Start("Build");
 
-    ValidateInputs(navisworksModelItems, sendInfo, onOperationProgressed);
+    ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     // 2. Initialize root collection
     var rootCollection = InitializeRootCollection();
@@ -62,7 +53,7 @@ public class NavisworksRootObjectBuilder(
     // 3. Convert all model items and store results
     var (convertedElements, conversionResults) = await ConvertModelItemsAsync(
       navisworksModelItems,
-      sendInfo,
+      projectId,
       onOperationProgressed,
       cancellationToken
     );
@@ -80,7 +71,7 @@ public class NavisworksRootObjectBuilder(
 
   private static void ValidateInputs(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -94,9 +85,9 @@ public class NavisworksRootObjectBuilder(
       throw new ArgumentNullException(nameof(navisworksModelItems));
     }
 
-    if (onOperationProgressed == null || sendInfo == null)
+    if (onOperationProgressed == null || projectId == null)
     {
-      throw new ArgumentNullException(onOperationProgressed == null ? nameof(onOperationProgressed) : nameof(sendInfo));
+      throw new ArgumentNullException(onOperationProgressed == null ? nameof(onOperationProgressed) : nameof(projectId));
     }
   }
 
@@ -109,7 +100,7 @@ public class NavisworksRootObjectBuilder(
 
   private Task<(Dictionary<string, Base?> converted, List<SendConversionResult> results)> ConvertModelItemsAsync(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -122,7 +113,7 @@ public class NavisworksRootObjectBuilder(
     foreach (var item in navisworksModelItems)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases, sendInfo);
+      var converted = ConvertNavisworksItem(item, convertedBases, projectId);
       results.Add(converted);
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
@@ -310,7 +301,7 @@ public class NavisworksRootObjectBuilder(
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases,
-    SendInfo sendInfo
+    string projectId
   )
   {
     string applicationId = elementSelectionService.GetModelItemPath(navisworksItem);
@@ -318,7 +309,7 @@ public class NavisworksRootObjectBuilder(
 
     try
     {
-      Base converted = sendConversionCache.TryGetValue(applicationId, sendInfo.ProjectId, out ObjectReference? cached)
+      Base converted = sendConversionCache.TryGetValue(applicationId, projectId, out ObjectReference? cached)
         ? cached
         : rootToSpeckleConverter.Convert(navisworksItem);
 

@@ -32,7 +32,7 @@ public sealed class SendOperation<T>(
   )
   {
     ct.ThrowIfCancellationRequested();
-    var buildResult = await Build(objects, sendInfo, onOperationProgressed, ct);
+    var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (results, versionId) = await threadContext.RunOnWorkerAsync(
@@ -44,17 +44,37 @@ public sealed class SendOperation<T>(
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<T> objects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
-    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
+    var buildResult = await rootObjectBuilder.Build(objects, projectId, onOperationProgressed, ct);
     ct.ThrowIfCancellationRequested();
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
     buildResult.RootObject["version"] = 3;
     return buildResult;
+  }
+
+  public Task<(SerializeProcessResults, string)> Send(
+    Base commitObject,
+    SendInfo sendInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
+  )
+  {
+    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
+    return Send(
+      commitObject,
+      sendInfo.ServerUrl,
+      sendInfo.ProjectId,
+      sendInfo.ModelId,
+      account.token,
+      sendInfo.SourceApplication,
+      onOperationProgressed,
+      ct
+    );
   }
 
   public async Task<(SerializeProcessResults, string)> Send(
@@ -102,28 +122,6 @@ public sealed class SendOperation<T>(
     );
 
     return (sendResult, versionId);
-  }
-
-  public Task<(SerializeProcessResults, string)> Send(
-    Base commitObject,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  )
-  {
-    ct.ThrowIfCancellationRequested();
-    onOperationProgressed.Report(new("Uploading...", null));
-    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
-    return Send(
-      commitObject,
-      sendInfo.ServerUrl,
-      sendInfo.ProjectId,
-      sendInfo.ModelId,
-      account.token,
-      sendInfo.SourceApplication,
-      onOperationProgressed,
-      ct
-    );
   }
 }
 

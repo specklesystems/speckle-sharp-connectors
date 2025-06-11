@@ -16,7 +16,7 @@ public class Sender(
   ILogger<Sender> logger
 )
 {
-  public async Task<string?> Send(string projectId, string modelId, Uri serverUrl)
+  public async Task<string?> Send(string projectId, string modelId, Uri serverUrl, string token)
   {
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
@@ -34,13 +34,16 @@ public class Sender(
       {
         return null;
       }
-      var sendInfo = new SendInfo("fake-account-id", serverUrl, projectId, modelId, string.Empty);
 
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-      var buildResults = await operation.Build(rhinoObjects, sendInfo, new Progress(), CancellationToken.None);
+      var buildResults = await operation.Build(rhinoObjects, projectId, new Progress(), CancellationToken.None);
       var (results, versionId) = await operation.Send(
         buildResults.RootObject,
-        sendInfo,
+        serverUrl,
+        projectId,
+        modelId,
+        token,
+        string.Empty,
         new Progress(),
         CancellationToken.None
       );

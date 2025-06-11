@@ -45,12 +45,13 @@ public class SendOperationTests : MoqTest
 
     var ct = new CancellationToken();
     var objects = new List<object>();
-    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), string.Empty, string.Empty, string.Empty);
+    var projectId = "projectId";
+    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), projectId, string.Empty, string.Empty);
     var progress = Create<IProgress<CardProgress>>();
 
     var conversionResults = new List<SendConversionResult>();
     var rootResult = new RootObjectBuilderResult(new TestBase(), conversionResults);
-    rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
+    rootObjectBuilder.Setup(x => x.Build(objects, projectId, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
     var versionId = "versionId";
@@ -104,6 +105,7 @@ public class SendOperationTests : MoqTest
     var modelId = "modelId";
     var accountId = "accountId";
     var url = new Uri("https://localhost");
+    var sourceApplication = "sourceApplication";
     var sendInfo = new SendInfo(accountId, url, projectId, modelId, string.Empty);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
@@ -124,7 +126,7 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
+    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, url, token, ct)).ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 
