@@ -156,7 +156,9 @@ public class CreateCollection : VariableParameterComponentBase
       {
         // block definitions not allowed in collections (for now)
         case SpeckleBlockDefinitionWrapperGoo:
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Block definitions cannot be added to collections.");
+        case SpeckleMaterialWrapperGoo:
+        case SpecklePropertyGroupGoo:
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
           continue;
 
         // handle block instances directly
@@ -183,6 +185,10 @@ public class CreateCollection : VariableParameterComponentBase
             wrapperGoo.Value.Path = childPath;
             wrapperGoo.Value.Parent = parentCollection;
             parentCollection.Elements.Add(wrapperGoo.Value);
+          }
+          else
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
           }
           break;
       }

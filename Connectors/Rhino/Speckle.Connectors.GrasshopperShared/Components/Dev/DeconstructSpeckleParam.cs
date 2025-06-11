@@ -47,20 +47,11 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
     switch (data)
     {
-      case SpeckleObjectWrapperGoo obj:
-        Name = string.IsNullOrEmpty(obj.Value.Name) ? obj.Value.Base.speckle_type : obj.Value.Name;
-        outputParams = CreateOutputParamsFromBase(obj.Value.Base);
+      case SpeckleWrapper wrapper:
+        Name = string.IsNullOrEmpty(wrapper.Name) ? wrapper.Base.speckle_type : wrapper.Name;
+        outputParams = CreateOutputParamsFromBase(wrapper.Base);
         break;
-      case SpeckleCollectionWrapperGoo coll:
-        Name = string.IsNullOrEmpty(coll.Value.Collection.name)
-          ? coll.Value.Collection.speckle_type
-          : coll.Value.Collection.name;
-        outputParams = CreateOutputParamsFromBase(coll.Value.Collection);
-        break;
-      case SpeckleMaterialWrapperGoo matGoo:
-        Name = string.IsNullOrEmpty(matGoo.Value.Name) ? matGoo.Value.Material.speckle_type : matGoo.Value.Name;
-        outputParams = CreateOutputParamsFromBase(matGoo.Value.Base);
-        break;
+
       case SpecklePropertyGroupGoo propGoo:
         Name = $"properties ({propGoo.Value.Count})";
         outputParams = new();
@@ -69,17 +60,6 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           outputParams.Add(CreateOutputParamByKeyValue(key, propGoo.Value[key].Value, GH_ParamAccess.item));
         }
         break;
-      case SpeckleBlockDefinitionWrapperGoo blockDef:
-        Name = string.IsNullOrEmpty(blockDef.Value.Name) ? blockDef.Value.Base.speckle_type : blockDef.Value.Name;
-        outputParams = CreateOutputParamsFromBase(blockDef.Value.Base);
-        break;
-
-      case SpeckleBlockInstanceWrapperGoo blockInst:
-        Name = string.IsNullOrEmpty(blockInst.Value.Name) ? blockInst.Value.Base.speckle_type : blockInst.Value.Name;
-        outputParams = CreateOutputParamsFromBase(blockInst.Value.Base);
-        break;
-      default:
-        return;
     }
 
     NickName = Name;
