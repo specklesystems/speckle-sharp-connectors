@@ -43,7 +43,7 @@ public class ClassPropertiesExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public Dictionary<string, object?> GetClassProperties(CDB.Entity entity)
+  public Dictionary<string, object?> GetClassProperties(ADB.Entity entity)
   {
     switch (entity)
     {
