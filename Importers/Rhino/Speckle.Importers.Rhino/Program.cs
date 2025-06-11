@@ -1,14 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.CommandLine;
+using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Rhino.Runtime.InProcess;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
-using System.CommandLine;
-using Speckle.Sdk.Logging;
-using Speckle.Sdk.Credentials;
 using Speckle.Newtonsoft.Json;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
 
@@ -37,7 +37,8 @@ public static class Program
     RootCommand rootCommand = new();
 
     Argument<string> pathArg = new(name: "Source File Path", description: "Path to file to load and parse");
-    Argument<string> resultsPathArg = new(name: "Results File Path", description: "Path to file to write results information (like version id)");
+    Argument<string> resultsPathArg =
+      new(name: "Results File Path", description: "Path to file to write results information (like version id)");
     Argument<string> projectIdArg = new(name: "Project Id", description: "The project id to publish to");
     Argument<string> modelIdArg = new(name: "Model Id", description: "The model id to publish to");
     Argument<string> serverUrlArg = new(name: "Server Url", description: "The url of the server to publish to.");
@@ -62,21 +63,19 @@ public static class Program
             Directory.CreateDirectory(accountsDir);
           }
 
-          Account account = new()
-          {
-            token = token,
-            isDefault = false,
-            serverInfo = new Sdk.Api.GraphQL.Models.ServerInfo()
+          Account account =
+            new()
             {
-              url = serverUrl
-            },
-            userInfo = new UserInfo()
-            {
-              name = "John Speckle",
-              email = "john-speckle@example.org",
-              id = "johnny-speckle"
-            }
-          };
+              token = token,
+              isDefault = false,
+              serverInfo = new Sdk.Api.GraphQL.Models.ServerInfo() { url = serverUrl },
+              userInfo = new UserInfo()
+              {
+                name = "John Speckle",
+                email = "john-speckle@example.org",
+                id = "johnny-speckle"
+              }
+            };
 
           File.WriteAllText(Path.Combine(accountsDir, "user.json"), JsonConvert.SerializeObject(account));
 
@@ -96,17 +95,10 @@ public static class Program
             var sender = ActivatorUtilities.CreateInstance<Sender>(container);
             var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl));
 
-            var result = versionId == null
-            ? new RhinoImportResult()
-            {
-              Success = false,
-              ErrorMessage = "Failed to create version!"
-            }
-            : new RhinoImportResult()
-            {
-              Success = true,
-              CommitId = versionId
-            };
+            var result =
+              versionId == null
+                ? new RhinoImportResult() { Success = false, ErrorMessage = "Failed to create version!" }
+                : new RhinoImportResult() { Success = true, CommitId = versionId };
 
             File.WriteAllText(resultsPath, JsonConvert.SerializeObject(result));
           }
@@ -114,11 +106,7 @@ public static class Program
         catch (Exception ex)
         {
           Console.WriteLine(ex);
-          var results = new RhinoImportResult()
-          {
-            Success = false,
-            ErrorMessage = ex.Message,
-          };
+          var results = new RhinoImportResult() { Success = false, ErrorMessage = ex.Message, };
           File.WriteAllText(resultsPath, JsonConvert.SerializeObject(results));
           throw;
         }
