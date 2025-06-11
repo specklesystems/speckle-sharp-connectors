@@ -29,6 +29,7 @@
     <PackageVersion Include="Grasshopper" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
     <PackageVersion Include="Semver" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Speckle.CSI.API" Version="2.4.0" />
     <PackageVersion Include="Speckle.DoubleNumerics" Version="4.1.0" />
     <PackageVersion Include="Speckle.Triangle" Version="1.0.0" />

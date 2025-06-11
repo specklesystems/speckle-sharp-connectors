@@ -15,6 +15,7 @@ public class Sender(
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
   IAccountFactory accountFactory,
+  Progress progress,
   ILogger<Sender> logger
 )
 {
@@ -39,18 +40,18 @@ public class Sender(
 
       var account = await accountFactory.CreateAccount(serverUrl, token);
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-      var buildResults = await operation.Build(rhinoObjects, projectId, new Progress(), CancellationToken.None);
+      var buildResults = await operation.Build(rhinoObjects, projectId, progress, CancellationToken.None);
       var (results, versionId) = await operation.Send(
         buildResults.RootObject,
         projectId,
         modelId,
         token,
         account,
-        new Progress(),
+        progress,
         CancellationToken.None
       );
 
-      Console.WriteLine($"Root: {results.RootId}");
+      logger.LogInformation($"Root: {results.RootId}");
 
       return versionId;
     }

@@ -1,7 +1,10 @@
 ﻿using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Runtime.InProcess;
+using Serilog;
+using Serilog.Formatting.Compact;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
@@ -38,60 +41,72 @@ public static class Program
     rootCommand.AddArgument(serverUrlArg);
     rootCommand.AddArgument(tokenArg);
 
-    rootCommand.SetHandler(
-      async (filePath, resultsPath, projectId, modelId, serverUrl, token) =>
-      {
-        try
-        {
-          // Create file with account info here
-          var accountsDir = SpecklePathProvider.AccountsFolderPath;
-          if (!Directory.Exists(accountsDir))
-          {
-            Directory.CreateDirectory(accountsDir);
-          }
-
-          using (new RhinoCore([], WindowStyle.NoWindow))
-          {
-            using var doc = RhinoDoc.Open(filePath, out var _);
-            var services = new ServiceCollection();
-            // var path = Path.Combine(RhinoApp.GetExecutableDirectory().FullName, "Rhino.exe");
-            services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
-            services.AddRhino(false);
-            services.AddRhinoConverters();
-            // override default
-            services.AddSingleton<IThreadContext>(new ImporterThreadContext());
-
-            // but the Rhino connector has `.rhp` as it is extension.
-            var container = services.BuildServiceProvider();
-            var sender = ActivatorUtilities.CreateInstance<Sender>(container);
-            var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
-
-            var result =
-              versionId == null
-                ? new RhinoImportResult() { Success = false, ErrorMessage = "Failed to create version!" }
-                : new RhinoImportResult() { Success = true, CommitId = versionId };
-
-            File.WriteAllText(resultsPath, JsonConvert.SerializeObject(result));
-          }
-        }
-        catch (Exception ex)
-        {
-          Console.WriteLine(ex);
-          var results = new RhinoImportResult() { Success = false, ErrorMessage = ex.Message, };
-          File.WriteAllText(resultsPath, JsonConvert.SerializeObject(results));
-          throw;
-        }
-      },
-      pathArg,
-      resultsPathArg,
-      projectIdArg,
-      modelIdArg,
-      serverUrlArg,
-      tokenArg
-    );
+    rootCommand.SetHandler(Handle, pathArg, resultsPathArg, projectIdArg, modelIdArg, serverUrlArg, tokenArg);
 
     await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 
     return 0;
+  }
+
+#pragma warning disable CA1506
+  private static async Task Handle(
+    string filePath,
+    string resultsPath,
+    string projectId,
+    string modelId,
+#pragma warning restore CA1506
+    string serverUrl,
+    string token
+  )
+  {
+    // Create file with account info here
+    var accountsDir = SpecklePathProvider.AccountsFolderPath;
+    if (!Directory.Exists(accountsDir))
+    {
+      Directory.CreateDirectory(accountsDir);
+    }
+
+    using (new RhinoCore([], WindowStyle.NoWindow))
+    {
+        using var doc = RhinoDoc.Open(filePath, out _);
+        var services = new ServiceCollection();
+        services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
+        services.AddRhino(false);
+        services.AddRhinoConverters();
+        // override default
+        services.AddSingleton<IThreadContext>(new ImporterThreadContext());
+      services.AddTransient<Progress>();
+        Log.Logger = new LoggerConfiguration()
+          .Enrich.FromLogContext()
+          .WriteTo.Console(new RenderedCompactJsonFormatter())
+          .CreateLogger();
+        services.AddLogging(loggingBuilder =>
+      {
+        loggingBuilder.ClearProviders();
+        loggingBuilder.AddSerilog(dispose: true);
+      });
+
+        // but the Rhino connector has `.rhp` as it is extension.
+        var container = services.BuildServiceProvider();
+        try
+        {
+        var sender = ActivatorUtilities.CreateInstance<Sender>(container);
+        var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
+
+        var result =
+          versionId == null
+            ? new RhinoImportResult() { Success = false, ErrorMessage = "Failed to create version!" }
+            : new RhinoImportResult() { Success = true, CommitId = versionId };
+
+        File.WriteAllText(resultsPath, JsonConvert.SerializeObject(result));
+      }
+      catch (Exception ex)
+      {
+        container.GetRequiredService<ILogger<Sender>>().LogError(ex, "Fatal error for import");
+        var results = new RhinoImportResult() { Success = false, ErrorMessage = ex.Message, };
+        File.WriteAllText(resultsPath, JsonConvert.SerializeObject(results));
+        throw;
+      }
+    }
   }
 }

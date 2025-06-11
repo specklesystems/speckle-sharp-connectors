@@ -10,6 +10,9 @@
   <ItemGroup>
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 

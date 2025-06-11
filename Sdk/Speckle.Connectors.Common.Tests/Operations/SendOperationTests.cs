@@ -111,10 +111,11 @@ public class SendOperationTests : MoqTest
     var ct = new CancellationToken();
 
     var token = "token";
-    var account = new Account() { token = token, serverInfo = new ServerInfo()
+    var account = new Account()
     {
-      url = url.ToString()
-    }};
+      token = token,
+      serverInfo = new ServerInfo() { url = url.ToString() }
+    };
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
