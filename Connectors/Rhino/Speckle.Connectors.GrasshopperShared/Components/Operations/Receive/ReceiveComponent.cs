@@ -35,10 +35,8 @@ public class ReceiveComponentOutput
   public SpeckleCollectionWrapperGoo RootObject { get; set; }
 }
 
-public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
+public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
-  private readonly IMixPanelManager _mixpanel;
-
   public ReceiveComponent()
     : base(
       "(Sync) Load",
@@ -46,10 +44,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       "Load a model from Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
-    )
-  {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-  }
+    ) { }
 
   public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
   protected override Bitmap Icon => Resources.speckle_operations_syncload;
@@ -99,9 +94,10 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     }
   }
 
-  protected override async Task<ReceiveComponentOutput> PerformScopedTask(
+#pragma warning disable CA1506
+  protected override async Task<ReceiveComponentOutput> PerformTask(
+#pragma warning restore CA1506
     ReceiveComponentInput input,
-    IServiceScope scope,
     CancellationToken cancellationToken = default
   )
   {
@@ -110,6 +106,7 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
       return new();
     }
 
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
     var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
@@ -154,7 +151,8 @@ public class ReceiveComponent : SpeckleScopedTaskCapableComponent<ReceiveCompone
     {
       customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
     }
-    await _mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
+    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
+    await mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
 
     // We need to rethink these lovely unpackers, there's a bit too many of 'em
     var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
