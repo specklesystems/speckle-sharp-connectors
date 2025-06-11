@@ -114,12 +114,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         }
       }
 
-      // flatten props
-      Dictionary<string, SpecklePropertyGoo> flattenedProps = Value.Properties.Flatten();
-      foreach (var kvp in flattenedProps)
-      {
-        atts.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-      }
+      // add props
+      Value.Properties.AssignToObjectAttributes(atts);
 
       target = (T)(object)atts;
       return true;

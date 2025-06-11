@@ -172,12 +172,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    // flatten props for user strings
-    Dictionary<string, SpecklePropertyGoo> flattenedProps = Properties.Flatten();
-    foreach (var kvp in flattenedProps)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
+    // add props
+    Properties.AssignToObjectAttributes(att);
 
     // add to doc
     Guid guid = doc.Objects.Add(GeometryBase, att);

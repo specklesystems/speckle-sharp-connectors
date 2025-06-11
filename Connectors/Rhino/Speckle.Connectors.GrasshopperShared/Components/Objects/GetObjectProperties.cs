@@ -74,17 +74,24 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
       for (int i = 0; i < paths.Count; i++)
       {
         var name = paths[i];
-        SpecklePropertyGoo objectProperty = FindProperty(flattenedProps, name);
-        da.SetData(i, objectProperty.Value);
+        if (FindProperty(flattenedProps, name) is SpecklePropertyGoo prop)
+        {
+          da.SetData(i, prop.Value);
+        }
+        else
+        {
+          da.SetData(i, null);
+        }
       }
     }
   }
 
-  private SpecklePropertyGoo FindProperty(Dictionary<string, SpecklePropertyGoo> props, string unifiedPath)
+  // attempts to find a property by concatenated key, or returns null if not
+  private SpecklePropertyGoo? FindProperty(Dictionary<string, SpecklePropertyGoo> props, string unifiedPath)
   {
     if (!props.TryGetValue(unifiedPath, out SpecklePropertyGoo currentGoo))
     {
-      return new() { Path = unifiedPath, Value = "" };
+      return null;
     }
 
     return currentGoo;

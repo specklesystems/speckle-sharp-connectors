@@ -66,7 +66,13 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         outputParams = new();
         foreach (var key in propGoo.Value.Keys)
         {
-          outputParams.Add(CreateOutputParamByProperties(key, propGoo.Value[key], GH_ParamAccess.item));
+          ISpecklePropertyGoo value = propGoo.Value[key];
+          object? outputValue = value is SpecklePropertyGoo prop
+            ? prop.Value
+            : value is SpecklePropertyGroupGoo propGroup
+              ? propGroup
+              : value;
+          outputParams.Add(CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item));
         }
         break;
       default:
@@ -229,24 +235,6 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         };
       return new() { new SpeckleObjectWrapperGoo(convertedWrapper) };
     }
-  }
-
-  private OutputParamWrapper CreateOutputParamByProperties(string key, ISpecklePropertyGoo iProp, GH_ParamAccess access)
-  {
-    Param_GenericObject param =
-      new()
-      {
-        Name = key,
-        NickName = key,
-        Description = "",
-        Access = access
-      };
-    return (iProp) switch
-    {
-      SpecklePropertyGoo prop => new OutputParamWrapper(param, prop.Value),
-      SpecklePropertyGroupGoo propGroup => new OutputParamWrapper(param, propGroup),
-      _ => new OutputParamWrapper(param, iProp)
-    };
   }
 
   private OutputParamWrapper CreateOutputParamByKeyValue(string key, object? value, GH_ParamAccess access)

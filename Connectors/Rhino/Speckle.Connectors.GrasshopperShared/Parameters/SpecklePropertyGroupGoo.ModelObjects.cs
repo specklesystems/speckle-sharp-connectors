@@ -45,17 +45,10 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     // grasshopper interface types
     if (type == typeof(IGH_ModelContentData))
     {
-      var attributes = new ObjectAttributes();
+      ObjectAttributes atts = new();
+      AssignToObjectAttributes(atts);
 
-      // flatten the props
-      Dictionary<string, SpecklePropertyGoo> flattenedProps = Flatten();
-      foreach (var entry in flattenedProps)
-      {
-        string stringValue = entry.Value.Value?.ToString() ?? "";
-        attributes.SetUserString(entry.Key, stringValue);
-      }
-
-      var modelObject = new ModelObject(RhinoDoc.ActiveDoc, attributes);
+      ModelObject modelObject = new(RhinoDoc.ActiveDoc, atts);
       target = (T)(object)modelObject;
       return true;
     }

@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -75,6 +76,19 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
 #endif
 
   /// <summary>
+  /// Adds this property group to the input object attributes
+  /// </summary>
+  /// <param name="atts"></param>
+  public void AssignToObjectAttributes(ObjectAttributes atts)
+  {
+    Dictionary<string, SpecklePropertyGoo> flattenedProps = Flatten();
+    foreach (var kvp in flattenedProps)
+    {
+      atts.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
+    }
+  }
+
+  /// <summary>
   /// Flattens the value into a dictionary with concatenated keys
   /// </summary>
   /// <returns></returns>
@@ -85,9 +99,11 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     return flattenedProps;
   }
 
-  private void FlattenWorker(Dictionary<string, ISpecklePropertyGoo> props,
+  private void FlattenWorker(
+    Dictionary<string, ISpecklePropertyGoo> props,
     Dictionary<string, SpecklePropertyGoo> flattenedProps,
-    string keyPrefix = "")
+    string keyPrefix = ""
+  )
   {
     foreach (var kvp in props)
     {
@@ -107,9 +123,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     }
   }
 
-  private Dictionary<string, ISpecklePropertyGoo> WrapDictionary(
-    Dictionary<string, object?> dict
-    )
+  private Dictionary<string, ISpecklePropertyGoo> WrapDictionary(Dictionary<string, object?> dict)
   {
     Dictionary<string, ISpecklePropertyGoo> wrappedDict = new();
 
@@ -145,17 +159,16 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     return dict;
   }
 
-  private Dictionary<string, object?> UnwrapWorker(
-    Dictionary<string, ISpecklePropertyGoo> properties
-    )
+  private Dictionary<string, object?> UnwrapWorker(Dictionary<string, ISpecklePropertyGoo> properties)
   {
     Dictionary<string, object?> dict = new();
     foreach (var kvp in properties)
     {
-      object? val = kvp.Value is SpecklePropertyGroupGoo propertyGroup ?
-        UnwrapWorker(propertyGroup.Value) : 
-        kvp.Value is SpecklePropertyGoo property ? 
-        property.Value : null;
+      object? val = kvp.Value is SpecklePropertyGroupGoo propertyGroup
+        ? UnwrapWorker(propertyGroup.Value)
+        : kvp.Value is SpecklePropertyGoo property
+          ? property.Value
+          : null;
       dict.Add(kvp.Key, val);
     }
 
