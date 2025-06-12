@@ -108,7 +108,7 @@ public static class Solutions
     var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.slnx");
     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
   }
-  
+
   public static async Task GenerateMacSolutions()
   {
     var connectors = await GetFullSlnx();
