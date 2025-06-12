@@ -122,7 +122,7 @@ public class CreateSpeckleBlockInstance : GH_Component
 
     if (inputInstance?.Value != null)
     {
-      result = inputInstance.Value.DeepCopy();
+      result = (SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy();
     }
     else
     {

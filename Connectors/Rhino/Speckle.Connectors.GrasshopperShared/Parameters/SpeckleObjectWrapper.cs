@@ -14,9 +14,9 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObjectWrapper : SpeckleWrapper
+public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
 {
-  public override required Base Base { get; set; }
+  public override Base Base { get; set; }
 
   /// <summary>
   /// The GeometryBase corresponding to the <see cref="SpeckleWrapper.Base"/>
@@ -25,7 +25,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
   /// POC: how will we send intervals and other gh native objects? do we? maybe not for now?
   /// Objects using fallback conversion (eg DataObjects) will create one wrapper per geometry in the display value.
   /// </remarks>
-  public required GeometryBase? GeometryBase { get; set; }
+  public GeometryBase? GeometryBase { get; set; }
 
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
@@ -46,11 +46,11 @@ public class SpeckleObjectWrapper : SpeckleWrapper
   /// Represents the guid of this <see cref="SpeckleObjectWrapper"/>
   /// </summary>
   /// <remarks>This property will usually be assigned in create components, or in publish components, and may differ from <see cref="Base.applicationId"/></remarks>
-  public required string? WrapperGuid { get; set; }
+  public string? WrapperGuid { get; set; }
 
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
-  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
     switch (GeometryBase)
     {
@@ -137,7 +137,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  public virtual void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
     if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
@@ -148,7 +148,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
+    using var attributes = CreateObjectAttributes(bakeLayerIndex, true);
     Guid guid = doc.Objects.Add(GeometryBase, attributes);
     objIds.Add(guid);
   }
@@ -183,7 +183,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     return true;
   }
 
-  public SpeckleObjectWrapper DeepCopy() =>
+  public virtual SpeckleObjectWrapper DeepCopy() =>
     new()
     {
       Base = Base.ShallowCopy(),
@@ -197,6 +197,52 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       Name = Name,
       Path = Path
     };
+
+  public virtual ObjectAttributes CreateObjectAttributes(int layerIndex = -1, bool bakeMaterial = false)
+  {
+    var attributes = new ObjectAttributes { Name = Name };
+
+    if (layerIndex >= 0)
+    {
+      attributes.LayerIndex = layerIndex;
+    }
+
+    AddColorToAttributes(attributes);
+    AddMaterialToAttributes(attributes, bakeMaterial);
+    AddPropertiesToAttributes(attributes);
+
+    return attributes;
+  }
+
+  protected virtual void AddPropertiesToAttributes(ObjectAttributes attributes) =>
+    Properties?.AssignToObjectAttributes(attributes);
+
+  protected virtual void AddColorToAttributes(ObjectAttributes attributes)
+  {
+    if (Color is Color validColor)
+    {
+      attributes.ObjectColor = validColor;
+      attributes.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+  }
+
+  protected virtual void AddMaterialToAttributes(ObjectAttributes attributes, bool bakeMaterial)
+  {
+    if (Material is SpeckleMaterialWrapper materialWrapper && bakeMaterial)
+    {
+      // Only handle the baking scenario here
+      // Existing baking logic from BakingHelpers (works in all Rhino versions)
+      int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Name);
+      if (matIndex >= 0)
+      {
+        attributes.MaterialIndex = matIndex;
+        attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+    }
+
+    // Note: bakeMaterial: false scenario (casting) is handled in ModelObjects.cs
+    // where it belongs, with proper Rhino 8+ conditional compilation
+  }
 }
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData

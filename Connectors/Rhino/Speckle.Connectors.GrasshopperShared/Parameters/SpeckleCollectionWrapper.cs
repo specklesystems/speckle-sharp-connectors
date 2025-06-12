@@ -21,7 +21,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// This is because changing the Name or ApplicationId will update Collection.
 /// </remarks>
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
-public class SpeckleCollectionWrapper : SpeckleWrapper
+public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
   public override required Base Base
@@ -56,7 +56,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
     }
   }
 
-  public List<SpeckleWrapper> Elements { get; set; } = new();
+  public List<ISpeckleCollectionObject> Elements { get; set; } = new();
 
   /// <summary>
   /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamically on <see cref="Collection"/>
@@ -99,10 +99,6 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
           o.Path = newPath;
           o.Parent = this;
           break;
-        case SpeckleBlockInstanceWrapper bi:
-          bi.Path = newPath;
-          bi.Parent = this;
-          break;
         case SpeckleCollectionWrapper c:
           // don't forget to add the child collection name to the path
           var childPath = newPath.ToList();
@@ -129,7 +125,6 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
           {
             SpeckleCollectionWrapper c => c.DeepCopy(),
             SpeckleObjectWrapper o => o.DeepCopy(),
-            SpeckleBlockInstanceWrapper bi => bi.DeepCopy(),
             _ => e
           }
         )
@@ -173,13 +168,6 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
       else if (obj is SpeckleCollectionWrapper c)
       {
         c.Bake(doc, obj_ids, bakeObjects, currentLayerIndex);
-      }
-      else if (obj is SpeckleBlockInstanceWrapper bi)
-      {
-        if (bakeObjects)
-        {
-          bi.Bake(doc, obj_ids, currentLayerIndex);
-        }
       }
     }
 

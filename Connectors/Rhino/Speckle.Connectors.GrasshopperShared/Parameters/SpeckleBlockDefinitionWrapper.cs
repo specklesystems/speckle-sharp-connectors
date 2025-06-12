@@ -5,7 +5,6 @@ using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
-using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -46,9 +45,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
   private static void ValidateObjects(List<SpeckleObjectWrapper> objects)
   {
-    var invalidObjects = objects
-      .Where(o => o.GetType() != typeof(SpeckleObjectWrapper) && o.GetType() != typeof(SpeckleBlockInstanceWrapper))
-      .ToList(); // Materialize the enumerable once
+    var invalidObjects = objects.Where(o => o.GetType() != typeof(SpeckleObjectWrapper)).ToList();
 
     if (invalidObjects.Count > 0)
     {
@@ -101,7 +98,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase);
-        attributes.Add(BakingHelpers.CreateObjectAttributes(obj.Name, obj.Color, obj.Material, obj.Properties));
+        attributes.Add(obj.CreateObjectAttributes(bakeMaterial: true));
       }
     }
 
