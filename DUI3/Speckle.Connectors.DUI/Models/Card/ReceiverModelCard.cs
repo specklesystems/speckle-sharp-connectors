@@ -16,10 +16,11 @@ public class ReceiverModelCard : ModelCard
   public bool HasDismissedUpdateWarning { get; set; }
   public List<string>? BakedObjectIds { get; set; }
 
-  public ReceiveInfo GetReceiveInfo(string sourceApplication) =>
-    new(
-      AccountId.NotNull(),
-      new Uri(ServerUrl.NotNull()),
+  public ReceiveInfo GetReceiveInfo(IAccountService accountService, string sourceApplication)
+  {
+    var account =  accountService.GetAccountWithServerUrlFallback(AccountId.NotNull(), new Uri(ServerUrl.NotNull()));
+    return new(
+      account,
       ProjectId.NotNull(),
       ProjectName.NotNull(),
       ModelId.NotNull(),
@@ -27,4 +28,5 @@ public class ReceiverModelCard : ModelCard
       SelectedVersionId.NotNull(),
       sourceApplication
     );
+  }
 }
