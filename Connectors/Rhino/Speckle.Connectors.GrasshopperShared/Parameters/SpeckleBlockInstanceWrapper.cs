@@ -191,7 +191,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
   }
 }
 
-public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData
 {
   public override string ToString() => $@"Speckle Block Instance Goo ({m_value.Definition?.Name ?? null})";
 

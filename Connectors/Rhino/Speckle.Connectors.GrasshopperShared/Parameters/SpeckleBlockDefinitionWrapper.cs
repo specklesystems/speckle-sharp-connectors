@@ -168,7 +168,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefinitionWrapper>, ISpeckleGoo
+public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefinitionWrapper>
 {
   public override IGH_Goo Duplicate() => new SpeckleBlockDefinitionWrapperGoo(Value.DeepCopy());
 
