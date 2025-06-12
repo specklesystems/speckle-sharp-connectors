@@ -7,7 +7,7 @@ public static class Solutions
 {
 #pragma warning disable CA1802
 #pragma warning disable IDE1006
-  private static readonly string DIRECTORY = "/Users/adam/git/speckle-sharp-connectors";
+  private static readonly string DIRECTORY = Environment.CurrentDirectory;
 #pragma warning restore IDE1006
 #pragma warning restore CA1802
   public static async Task CompareConnectorsToLocal()
