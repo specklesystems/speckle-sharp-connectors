@@ -73,13 +73,14 @@ public static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Objects\\Speckle.Objects.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk\\Speckle.Sdk.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
-    var sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.slnx");
+    var sln = Path.Combine(Environment.CurrentDirectory, "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
     sln = Path.Combine(Environment.CurrentDirectory, "Local.sln");
     await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
 
     var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
     await GenerateConnector(connectors, revit, "Revit.Local");
+    await GenerateMacSolutions();
   }
 
   public static async Task GenerateConnector(SolutionModel connectors, ProjectGroup group, string? name)
@@ -106,5 +107,24 @@ public static class Solutions
   {
     var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.slnx");
     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+  }
+  
+  public static async Task GenerateMacSolutions()
+  {
+    var connectors = await GetFullSlnx();
+    var foldersToRemove = connectors
+      .SolutionFolders.Where(x =>
+        //need base folder
+        !x.Path.Equals("/Connectors/")
+        //don't grab all
+        && (x.Path.StartsWith("/Connectors/"))
+      )
+      .ToList();
+    foreach (var folderToRemove in foldersToRemove)
+    {
+      connectors.RemoveFolder(folderToRemove);
+    }
+    var sln = Path.Combine(Environment.CurrentDirectory, $"Speckle.Connectors.Mac.slnx");
+    await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
   }
 }
