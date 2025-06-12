@@ -66,53 +66,57 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
     // iterate through this wrapper's elements to unwrap children
     // HashSet<string> collObjectIds = new();
-    foreach (SpeckleWrapper wrapperElement in wrapper.Elements.Cast<SpeckleWrapper>())
+    foreach (ISpeckleCollectionObject element in wrapper.Elements)
     {
-      if (wrapperElement is SpeckleCollectionWrapper collWrapper)
+      switch (element)
       {
-        // create an application id for this collection if none exists. This will be used for color and render material proxies
-        collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
+        case SpeckleCollectionWrapper collWrapper:
+          // create an application id for this collection if none exists. This will be used for color and render material proxies
+          collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
 
-        // add to collection and continue unwrap
-        currentColl.elements.Add(collWrapper.Collection);
-        Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
-      }
-      // NOTE: order is super important since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper
-      // this is fragile and not nice.
-      else if (wrapperElement is SpeckleBlockInstanceWrapper bi)
-      {
-        // process block instances - they get added to collection as DataObject
-        Base blockInstanceBase = ConvertWrapperToBase(bi);
-        currentColl.elements.Add(blockInstanceBase);
+          // add to collection and continue unwrap
+          currentColl.elements.Add(collWrapper.Collection);
+          Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
+          break;
 
-        // process block for definition collection and get defining objects
-        var definitionObjects = blockPacker.ProcessInstance(bi);
+        // NOTE: order is super important since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper
+        // this is fragile and not nice.
+        case SpeckleBlockInstanceWrapper bi:
+          // process block instances - they get added to collection as DataObject
+          Base blockInstanceBase = ConvertWrapperToBase(bi);
+          currentColl.elements.Add(blockInstanceBase);
 
-        if (definitionObjects != null)
-        {
-          foreach (var definitionObject in definitionObjects)
+          // process block for definition collection and get defining objects
+          var definitionObjects = blockPacker.ProcessInstance(bi);
+
+          if (definitionObjects != null)
           {
-            Base defObjectBase = ConvertWrapperToBase(definitionObject);
+            foreach (var definitionObject in definitionObjects)
+            {
+              Base defObjectBase = ConvertWrapperToBase(definitionObject);
 
-            // just add to current collection
-            // TODO: where on collection?
-            currentColl.elements.Add(defObjectBase);
+              // just add to current collection
+              // TODO: where on collection?
+              currentColl.elements.Add(defObjectBase);
 
-            colorPacker.ProcessColor(definitionObject.ApplicationId, definitionObject.Color);
-            materialPacker.ProcessMaterial(definitionObject.ApplicationId, definitionObject.Material);
+              colorPacker.ProcessColor(definitionObject.ApplicationId, definitionObject.Color);
+              materialPacker.ProcessMaterial(definitionObject.ApplicationId, definitionObject.Material);
+            }
           }
-        }
-      }
-      else if (wrapperElement is SpeckleObjectWrapper so)
-      {
-        // process the object first. This may result in application id mutations, so this must be done before processing color and materials.
-        //ProcessObjectWrapper(so, ref collObjectIds);
-        Base objectBase = ConvertWrapperToBase(so);
-        currentColl.elements.Add(objectBase);
 
-        // unpack color and render material
-        colorPacker.ProcessColor(so.ApplicationId, so.Color);
-        materialPacker.ProcessMaterial(so.ApplicationId, so.Material);
+          break;
+
+        case SpeckleObjectWrapper so:
+          // process the object first. This may result in application id mutations, so this must be done before processing color and materials.
+          //ProcessObjectWrapper(so, ref collObjectIds);
+          Base objectBase = ConvertWrapperToBase(so);
+          currentColl.elements.Add(objectBase);
+
+          // unpack color and render material
+          colorPacker.ProcessColor(so.ApplicationId, so.Color);
+          materialPacker.ProcessMaterial(so.ApplicationId, so.Material);
+
+          break;
       }
     }
 

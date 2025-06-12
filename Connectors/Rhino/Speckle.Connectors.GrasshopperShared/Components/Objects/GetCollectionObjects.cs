@@ -102,7 +102,7 @@ public class GetCollectionObjects : GH_Component
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (SpeckleWrapper element in collectionWrapper.Elements.Cast<SpeckleWrapper>())
+    foreach (ISpeckleCollectionObject element in collectionWrapper.Elements)
     {
       switch (element)
       {
@@ -112,6 +112,8 @@ public class GetCollectionObjects : GH_Component
             yield return item;
           }
           break;
+
+        // This includes SpeckleBlockInstanceWrapper since it inherits from SpeckleObjectWrapper
         case SpeckleObjectWrapper objectWrapper:
           yield return objectWrapper;
           break;
