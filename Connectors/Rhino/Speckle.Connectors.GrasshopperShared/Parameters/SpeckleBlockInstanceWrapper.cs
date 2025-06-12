@@ -24,16 +24,12 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// - Round-trip through Grasshopper's native block system may lose geometry
 /// - Casting to GH_InstanceReference works but results in points on bake
 /// </summary>
-public class SpeckleBlockInstanceWrapper : SpeckleWrapper
+public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
 
   public override string ToString() => $"Speckle Block Instance [{Name}]";
-
-  public List<string> Path { get; set; } = new();
-  public SpeckleCollectionWrapper? Parent { get; set; }
-  public SpecklePropertyGroupGoo Properties { get; set; } = new();
 
   public InstanceProxy InstanceProxy
   {
@@ -118,7 +114,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1)
+  public override void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
     if (Definition?.Objects == null)
     {

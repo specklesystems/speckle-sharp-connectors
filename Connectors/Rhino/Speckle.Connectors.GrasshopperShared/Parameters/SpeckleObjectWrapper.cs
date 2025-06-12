@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -14,7 +15,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObjectWrapper : SpeckleWrapper
+public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
 {
   public override required Base Base { get; set; }
 
@@ -48,7 +49,60 @@ public class SpeckleObjectWrapper : SpeckleWrapper
   /// <remarks>This property will usually be assigned in create components, or in publish components, and may differ from <see cref="Base.applicationId"/></remarks>
   public required string? WrapperGuid { get; set; }
 
+  public abstract GH_Goo<SpeckleObjectWrapper> CreateGoo();
+
+  public ObjectAttributes GetObjectAttributes(bool bakeAttributes = false)
+  {
+    ObjectAttributes attributes = new() { Name = Name };
+
+    // layers
+    if (bakeAttributes)
+    {
+      if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
+      {
+        bakeLayerIndex = Parent.Bake(doc, objIds, false);
+        if (bakeLayerIndex < 0)
+        {
+          return;
+        }
+      }
+    }
+    if (layerIndex >= 0)
+    {
+      attributes.LayerIndex = layerIndex;
+    }
+
+    if (Color is Color validColor)
+    {
+      attributes.ObjectColor = validColor;
+      attributes.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+
+    if (Material is SpeckleMaterialWrapper materialWrapper)
+    {
+      // check if mat exists in doc
+
+      // if bakeatts is true, create mat if it doesn't exist
+      int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Name);
+      if (matIndex >= 0)
+      {
+        attributes.MaterialIndex = matIndex;
+        attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+    }
+
+    // add props
+    Properties?.AssignToObjectAttributes(attributes);
+
+    return attributes;
+  }
+
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
+
+  public override GH_Goo<SpeckleObjectWrapper> CreateGoo()
+  {
+    return new SpeckleObjectWrapperGoo(this);
+  }
 
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
@@ -137,8 +191,10 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  public override void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
+    using ObjectAttributes atts = GetObjectAttributes(true);
+    /*
     if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
       bakeLayerIndex = Parent.Bake(doc, objIds, false);
@@ -148,8 +204,10 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
+
     using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
-    Guid guid = doc.Objects.Add(GeometryBase, attributes);
+    */
+    Guid guid = doc.Objects.Add(GeometryBase, atts);
     objIds.Add(guid);
   }
 
