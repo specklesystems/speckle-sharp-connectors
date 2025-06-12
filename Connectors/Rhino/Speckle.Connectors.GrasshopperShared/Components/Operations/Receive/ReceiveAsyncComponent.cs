@@ -268,10 +268,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     try
     {
       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-      Account? account =
-        urlResource.AccountId != null
-          ? scope.Get<IAccountManager>().GetAccount(urlResource.AccountId)
-          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
+      Account? account = urlResource.Account.GetAccount(scope);
 
       if (account is null)
       {

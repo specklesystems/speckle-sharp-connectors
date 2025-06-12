@@ -29,9 +29,9 @@ public class SendComponentInput
   }
 }
 
-public class SendComponentOutput(SpeckleUrlModelResource? resource)
+public class SendComponentOutput(GrasshopperSendInfo? resource)
 {
-  public SpeckleUrlModelResource? Resource { get; } = resource;
+  public GrasshopperSendInfo? Resource { get; } = resource;
 }
 
 public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
@@ -135,15 +135,10 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    Account? account =
-      input.Resource.AccountId != null
-        ? accountManager.GetAccount(input.Resource.AccountId)
-        : accountService.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server)); // fallback the account that matches with URL if any
+    Account? account = input.Resource.Account.GetAccount(scope);
 
     if (account is null)
     {
@@ -172,16 +167,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
-    SpeckleUrlLatestModelVersionResource createdVersionResource =
-      new(
-        sendInfo.AccountId,
-        sendInfo.ServerUrl.ToString(),
-        sendInfo.WorkspaceId,
-        sendInfo.ProjectId,
-        sendInfo.ModelId
-      );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+    Url = $"{sendInfo.Account.serverInfo.url}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
-    return new SendComponentOutput(createdVersionResource);
+    return new SendComponentOutput(sendInfo);
   }
 }

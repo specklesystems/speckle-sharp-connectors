@@ -8,43 +8,25 @@ using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
-public class GrasshopperReceiveOperation
+public class GrasshopperReceiveOperation(
+  IServerTransportFactory serverTransportFactory,
+  IProgressDisplayManager progressDisplayManager,
+  ISdkActivityFactory activityFactory,
+  IOperations operations,
+  IClientFactory clientFactory
+)
 {
-  private readonly IAccountService _accountService;
-  private readonly IServerTransportFactory _serverTransportFactory;
-  private readonly IProgressDisplayManager _progressDisplayManager;
-  private readonly ISdkActivityFactory _activityFactory;
-  private readonly IOperations _operations;
-  private readonly IClientFactory _clientFactory;
-
-  public GrasshopperReceiveOperation(
-    IAccountService accountService,
-    IServerTransportFactory serverTransportFactory,
-    IProgressDisplayManager progressDisplayManager,
-    ISdkActivityFactory activityFactory,
-    IOperations operations,
-    IClientFactory clientFactory
-  )
-  {
-    _accountService = accountService;
-    _serverTransportFactory = serverTransportFactory;
-    _progressDisplayManager = progressDisplayManager;
-    _activityFactory = activityFactory;
-    _operations = operations;
-    _clientFactory = clientFactory;
-  }
-
   public async Task<Base> ReceiveCommitObject(
     ReceiveInfo receiveInfo,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
-    using var execute = _activityFactory.Start("Receive Operation");
+    using var execute = activityFactory.Start("Receive Operation");
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
-    Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
-    using IClient apiClient = _clientFactory.Create(account);
+    Account account = receiveInfo.Account;
+    using IClient apiClient = clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 
     Speckle.Sdk.Api.GraphQL.Models.Version? version = await apiClient
@@ -56,11 +38,11 @@ public class GrasshopperReceiveOperation
       throw new InvalidOperationException($"Could not retrieve version from server.");
     }
 
-    using var transport = _serverTransportFactory.Create(account, receiveInfo.ProjectId);
+    using var transport = serverTransportFactory.Create(account, receiveInfo.ProjectId);
 
     double? previousPercentage = null;
-    _progressDisplayManager.Begin();
-    Base commitObject = await _operations
+    progressDisplayManager.Begin();
+    Base commitObject = await operations
       .Receive2(
         new Uri(account.serverInfo.url),
         receiveInfo.ProjectId,
@@ -73,11 +55,11 @@ public class GrasshopperReceiveOperation
             switch (args.ProgressEvent)
             {
               case ProgressEvent.CacheCheck:
-                previousPercentage = _progressDisplayManager.CalculatePercentage(args);
+                previousPercentage = progressDisplayManager.CalculatePercentage(args);
                 break;
             }
           }
-          if (!_progressDisplayManager.ShouldUpdate())
+          if (!progressDisplayManager.ShouldUpdate())
           {
             return;
           }
@@ -89,7 +71,7 @@ public class GrasshopperReceiveOperation
               onOperationProgressed.Report(new("Checking and Downloading... ", previousPercentage));
               break;
             case ProgressEvent.DeserializeObject:
-              onOperationProgressed.Report(new("Deserializing ...", _progressDisplayManager.CalculatePercentage(args)));
+              onOperationProgressed.Report(new("Deserializing ...", progressDisplayManager.CalculatePercentage(args)));
               break;
           }
         }),

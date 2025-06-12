@@ -74,15 +74,20 @@ public record SpeckleResourceBuilder
   {
     if (modelValue.Length == 32)
     {
-      return new SpeckleUrlModelObjectResource(accountId, serverUrl, workspaceId, projectId, modelValue); // Model value is an ObjectID
+      return new SpeckleUrlModelObjectResource(new(accountId, null, serverUrl), workspaceId, projectId, modelValue); // Model value is an ObjectID
     }
 
     if (!modelValue.Contains('@'))
     {
-      return new SpeckleUrlLatestModelVersionResource(accountId, serverUrl, workspaceId, projectId, modelValue); // Model has no version attached
+      return new SpeckleUrlLatestModelVersionResource(
+        new(accountId, null, serverUrl),
+        workspaceId,
+        projectId,
+        modelValue
+      ); // Model has no version attached
     }
 
     var res = modelValue.Split('@');
-    return new SpeckleUrlModelVersionResource(accountId, serverUrl, workspaceId, projectId, res[0], res[1]);
+    return new SpeckleUrlModelVersionResource(new(accountId, null, serverUrl), workspaceId, projectId, res[0], res[1]);
   }
 }

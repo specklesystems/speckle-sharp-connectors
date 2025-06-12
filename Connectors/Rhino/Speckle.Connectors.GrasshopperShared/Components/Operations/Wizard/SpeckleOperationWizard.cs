@@ -84,7 +84,7 @@ public class SpeckleOperationWizard
 
     var resource = resources.First();
 
-    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
+    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Account.Server));
     SetAccount(account, false);
 
     if (SelectedAccount == null)

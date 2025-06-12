@@ -16,6 +16,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 
@@ -49,11 +50,11 @@ public class SendAsyncComponent : GH_AsyncComponent
   public bool JustPastedIn { get; set; }
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
-  public IClient ApiClient { get; set; }
+  public IClient? ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
-  public SpeckleUrlModelResource? OutputParam { get; set; }
+  public GrasshopperSendInfo? OutputParam { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -131,12 +132,8 @@ public class SendAsyncComponent : GH_AsyncComponent
   {
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
-    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
-    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-
     // We need to call this always in here to be able to react and set events :/
-    ParseInput(da, accountService, accountManager, clientFactory);
+    ParseInput(da, scope);
 
     if (
       (AutoSend || CurrentComponentState == ComponentState.Ready || CurrentComponentState == ComponentState.Sending)
@@ -215,12 +212,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(
-    IGH_DataAccess da,
-    IAccountService accountService,
-    IAccountManager accountManager,
-    IClientFactory clientFactory
-  )
+  private void ParseInput(IGH_DataAccess da, IServiceScope scope)
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
@@ -234,17 +226,14 @@ public class SendAsyncComponent : GH_AsyncComponent
     UrlModelResource = dataInput;
     try
     {
-      Account? account =
-        dataInput.AccountId != null
-          ? accountManager.GetAccount(dataInput.AccountId)
-          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server)); // fallback the account that matches with URL if any
+      Account? account = dataInput.Account.GetAccount(scope);
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
       }
 
       ApiClient?.Dispose();
-      ApiClient = clientFactory.Create(account);
+      ApiClient = scope.Get<IClientFactory>().Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
     {
@@ -269,7 +258,7 @@ public class SendComponentWorker : WorkerInstance
     : base(p) { }
 
   private Stopwatch _stopwatch;
-  public SpeckleUrlModelResource? OutputParam { get; set; }
+  public GrasshopperSendInfo? OutputParam { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance Duplicate()
@@ -371,7 +360,7 @@ public class SendComponentWorker : WorkerInstance
 
         // Step 1 - SEND TO SERVER
         var sendInfo = await urlModelResource
-          .GetSendInfo(sendComponent.ApiClient, CancellationToken)
+          .GetSendInfo(sendComponent.ApiClient.NotNull(), CancellationToken)
           .ConfigureAwait(false);
 
         var progress = new Progress<CardProgress>(p =>
@@ -405,17 +394,8 @@ public class SendComponentWorker : WorkerInstance
         var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
         await mixPanelManager.TrackEvent(MixPanelEvents.Send, sendComponent.ApiClient.Account, customProperties);
 
-        SpeckleUrlModelVersionResource? createdVersion =
-          new(
-            sendInfo.AccountId,
-            sendInfo.ServerUrl.ToString(),
-            sendInfo.WorkspaceId,
-            sendInfo.ProjectId,
-            sendInfo.ModelId,
-            result.VersionId
-          );
-        OutputParam = createdVersion;
-        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+        OutputParam = sendInfo;
+        sendComponent.Url = $"{sendInfo.Account.serverInfo.url}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
         // DONE
         done();

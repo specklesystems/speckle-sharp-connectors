@@ -105,7 +105,7 @@ public class SpeckleSelectModelComponent : GH_Component
             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
           }
           _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
-          _storedServer = resource.Server;
+          _storedServer = resource.Account.Server;
           da.SetData(0, resource);
         }
         catch (SpeckleException e)
@@ -250,8 +250,7 @@ public class SpeckleSelectModelComponent : GH_Component
         da.SetData(
           0,
           new SpeckleUrlLatestModelVersionResource(
-            SpeckleOperationWizard.SelectedAccount.id,
-            SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+            new(SpeckleOperationWizard.SelectedAccount.id, null, SpeckleOperationWizard.SelectedAccount.serverInfo.url),
             SpeckleOperationWizard.SelectedWorkspace?.id,
             SpeckleOperationWizard.SelectedProject.id,
             SpeckleOperationWizard.SelectedModel.id
@@ -264,8 +263,7 @@ public class SpeckleSelectModelComponent : GH_Component
       da.SetData(
         0,
         new SpeckleUrlModelVersionResource(
-          SpeckleOperationWizard.SelectedAccount.id,
-          SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+          new(SpeckleOperationWizard.SelectedAccount.id, null, SpeckleOperationWizard.SelectedAccount.serverInfo.url),
           SpeckleOperationWizard.SelectedWorkspace?.id,
           SpeckleOperationWizard.SelectedProject.id,
           SpeckleOperationWizard.SelectedModel.id,
