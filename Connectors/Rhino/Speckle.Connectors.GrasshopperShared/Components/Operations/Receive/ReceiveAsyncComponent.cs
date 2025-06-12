@@ -290,9 +290,13 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   }
 }
 
-public sealed class ReceiveComponentWorker : WorkerInstance
+public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponent>
 {
-  public ReceiveComponentWorker(GH_Component p, string id = "baseWorker", CancellationToken cancellationToken = default)
+  public ReceiveComponentWorker(
+    ReceiveAsyncComponent p,
+    string id = "baseWorker",
+    CancellationToken cancellationToken = default
+  )
     : base(p, id, cancellationToken) { }
 
   public Base Root { get; set; }
@@ -300,14 +304,14 @@ public sealed class ReceiveComponentWorker : WorkerInstance
   public SpeckleCollectionWrapperGoo Result { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate(string id, CancellationToken cancellationToken)
+  public override WorkerInstance<ReceiveAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
   {
     return new ReceiveComponentWorker(Parent, id, cancellationToken);
   }
 
   public override void GetData(IGH_DataAccess da, GH_ComponentParamServer p)
   {
-    UrlModelResource = ((ReceiveAsyncComponent)Parent).UrlModelResource;
+    UrlModelResource = Parent.UrlModelResource;
   }
 
   public override void SetData(IGH_DataAccess da)
@@ -322,7 +326,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance
       Parent.AddRuntimeMessage(level, message);
     }
 
-    var parent = (ReceiveAsyncComponent)Parent;
+    var parent = Parent;
 
     parent.CurrentComponentState = ComponentState.UpToDate;
 
@@ -340,7 +344,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance
   public override void DoWork(Action<string, double> reportProgress, Action done)
 #pragma warning restore CA1506
   {
-    var receiveComponent = (ReceiveAsyncComponent)Parent;
+    var receiveComponent = Parent;
 
     try
     {

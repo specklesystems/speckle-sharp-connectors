@@ -23,7 +23,7 @@ using Speckle.Sdk.Models.Extensions;
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
-public class SendAsyncComponent : GH_AsyncComponent
+public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 {
   private ResourceCollection<Project>? LastFetchedProjects { get; set; }
   private ResourceCollection<Model>? LastFetchedModels { get; set; }
@@ -270,7 +270,7 @@ public class SendAsyncComponent : GH_AsyncComponent
   }
 }
 
-public class SendComponentWorker : WorkerInstance
+public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 {
   public SendComponentWorker(GH_Component p, string id = "baseWorker", CancellationToken cancellationToken = default)
     : base(p, id, cancellationToken) { }
@@ -294,16 +294,16 @@ public class SendComponentWorker : WorkerInstance
   {
     _stopwatch?.Stop();
 
-    if (((SendAsyncComponent)Parent).JustPastedIn)
+    if (Parent.JustPastedIn)
     {
-      ((SendAsyncComponent)Parent).JustPastedIn = false;
-      da.SetData(0, ((SendAsyncComponent)Parent).OutputParam);
+      Parent.JustPastedIn = false;
+      da.SetData(0, Parent.OutputParam);
       return;
     }
 
     if (CancellationToken.IsCancellationRequested)
     {
-      ((SendAsyncComponent)Parent).CurrentComponentState = ComponentState.Expired;
+      Parent.CurrentComponentState = ComponentState.Expired;
       return;
     }
 
@@ -314,9 +314,9 @@ public class SendComponentWorker : WorkerInstance
 
     da.SetData(0, OutputParam);
 
-    ((SendAsyncComponent)Parent).CurrentComponentState = ComponentState.UpToDate;
-    ((SendAsyncComponent)Parent).OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
-    ((SendAsyncComponent)Parent).OverallProgress = 0;
+    Parent.CurrentComponentState = ComponentState.UpToDate;
+    Parent.OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
+    Parent.OverallProgress = 0;
 
     var hasWarnings = RuntimeMessages.Count > 0;
     if (!hasWarnings)
@@ -340,7 +340,7 @@ public class SendComponentWorker : WorkerInstance
 
   public override void DoWork(Action<string, double> reportProgress, Action done)
   {
-    var sendComponent = (SendAsyncComponent)Parent;
+    var sendComponent = Parent;
 
     if (sendComponent.JustPastedIn)
     {
