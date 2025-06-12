@@ -141,19 +141,14 @@ public class SpeckleBlockInstanceWrapper : SpeckleWrapper
       existingDef = doc.InstanceDefinitions[index];
     }
 
-    // now create the actual instance using the definition
-    var attributes = new ObjectAttributes { Name = Name };
-
-    if (bakeLayerIndex >= 0)
-    {
-      attributes.LayerIndex = bakeLayerIndex;
-    }
-
-    // copy properties as user strings onto the instance
-    foreach (var kvp in Properties.Value)
-    {
-      attributes.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
+    // TODO: Use BakingHelpers for now (to be refactored)
+    var attributes = BakingHelpers.CreateObjectAttributes(
+      name: Name,
+      color: null, // TODO: can we override colors on an instance level?
+      material: null, // TODO: can we override materials on an instance level?
+      properties: Properties,
+      layerIndex: bakeLayerIndex
+    );
 
     // create the instance with our specific transform
     var instanceRef = doc.Objects.AddInstanceObject(existingDef.Index, Transform, attributes);
