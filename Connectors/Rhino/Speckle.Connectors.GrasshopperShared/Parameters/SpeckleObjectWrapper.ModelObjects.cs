@@ -11,7 +11,7 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public SpeckleObjectWrapperGoo(ModelObject mo)
   {
@@ -39,12 +39,12 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           modelConverted.applicationId = modelObject.Id?.ToString();
           modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
           Dictionary<string, object?> propertyDict = new();
-          foreach (var entry in propertyGroup.Value)
-          {
-            propertyDict.Add(entry.Key, entry.Value.Value);
-          }
+          foreach (var entry in modelObject.UserText)
+        {
+          propertyDict.Add(entry.Key, entry.Value);
+        }
 
-          modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
+        modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
 
           // get the object color and material
           Color? color = GetColorFromModelObject(modelObject);
@@ -127,10 +127,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           }
         }
 
-        foreach (var kvp in Value.Properties.Value)
-        {
-          objectAtts.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-        }
+        // add props
+        Value.Properties.AssignToObjectAttributes(atts);
 
         target = (T)(object)objectAtts;
         return true;

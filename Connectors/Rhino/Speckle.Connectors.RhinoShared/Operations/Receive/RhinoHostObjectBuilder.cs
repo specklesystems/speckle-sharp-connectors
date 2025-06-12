@@ -11,8 +11,8 @@ using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -35,6 +35,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
+  private readonly IReceiveConversionHandler _conversionHandler;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -46,7 +47,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
     ISdkActivityFactory activityFactory,
-    IThreadContext threadContext
+    IThreadContext threadContext,
+    IReceiveConversionHandler conversionHandler
   )
   {
     _converter = converter;
@@ -59,6 +61,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _groupBaker = groupBaker;
     _activityFactory = activityFactory;
     _threadContext = threadContext;
+    _conversionHandler = conversionHandler;
   }
 
 #pragma warning disable CA1506
@@ -142,79 +145,73 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       foreach (var (path, obj) in atomicObjectsWithoutInstanceComponentsWithPath)
       {
-        using (var convertActivity = _activityFactory.Start("Converting object"))
+        onOperationProgressed.Report(
+          new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
+        );
+        var ex = _conversionHandler.TryConvert(() =>
         {
-          onOperationProgressed.Report(
-            new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
-          );
+          // 0: get pre-created layer from cache in layer baker
+          int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
           cancellationToken.ThrowIfCancellationRequested();
-          try
+
+          // 1: create object attributes for baking
+          ObjectAttributes atts = obj.GetAttributes();
+          atts.LayerIndex = layerIndex;
+
+          // 2: convert
+          var result = _converter.Convert(obj);
+
+          // 3: bake
+          var conversionIds = new List<string>();
+          if (result is GeometryBase geometryBase)
           {
-            // 0: get pre-created layer from cache in layer baker
-            int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
-
-            // 1: create object attributes for baking
-            ObjectAttributes atts = obj.GetAttributes();
-            atts.LayerIndex = layerIndex;
-
-            // 2: convert
-            var result = _converter.Convert(obj);
-
-            // 3: bake
-            var conversionIds = new List<string>();
-            if (result is GeometryBase geometryBase)
+            var guid = BakeObject(geometryBase, obj, null, atts);
+            conversionIds.Add(guid.ToString());
+          }
+          else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
+          {
+            // NOTE: I'm unhappy about this case (dim). It's needed as the raw encoder approach can hypothetically return
+            // multiple "geometry bases" - but this is not a fallback conversion.
+            // EXTRA NOTE: Oguzhan says i shouldn't be unhappy about this - it's a legitimate case
+            // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
+            foreach (var gb in geometryBases)
             {
-              var guid = BakeObject(geometryBase, obj, null, atts);
+              var guid = BakeObject(gb, obj, null, atts);
               conversionIds.Add(guid.ToString());
             }
-            else if (result is List<GeometryBase> geometryBases) // one to many raw encoding case
-            {
-              // NOTE: I'm unhappy about this case (dim). It's needed as the raw encoder approach can hypothetically return
-              // multiple "geometry bases" - but this is not a fallback conversion.
-              // EXTRA NOTE: Oguzhan says i shouldn't be unhappy about this - it's a legitimate case
-              // EXTRA EXTRA NOTE: TY Ogu, i am no longer than unhappy about it. It's legit "mess".
-              foreach (var gb in geometryBases)
-              {
-                var guid = BakeObject(gb, obj, null, atts);
-                conversionIds.Add(guid.ToString());
-              }
-            }
-            else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
-            {
-              var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
-              conversionIds.AddRange(guids.Select(id => id.ToString()));
-            }
-
-            if (conversionIds.Count == 0)
-            {
-              // TODO: add this condition to report object - same as in autocad
-              throw new SpeckleException("Object did not convert to any native geometry");
-            }
-
-            // 4: log
-            var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
-            conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
-            if (conversionIds.Count == 1)
-            {
-              bakedObjectIds.Add(id);
-            }
-            else
-            {
-              // first item always a group id if it is a one-to-many,
-              // we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
-              bakedObjectIds.AddRange(conversionIds.Skip(1));
-            }
-
-            // 5: populate app id map
-            applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
-            convertActivity?.SetStatus(SdkActivityStatusCode.Ok);
           }
-          catch (Exception ex) when (!ex.IsFatal())
+          else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
           {
-            conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
-            convertActivity?.SetStatus(SdkActivityStatusCode.Error);
-            convertActivity?.RecordException(ex);
+            var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
+            conversionIds.AddRange(guids.Select(id => id.ToString()));
           }
+
+          if (conversionIds.Count == 0)
+          {
+            // TODO: add this condition to report object - same as in autocad
+            throw new ConversionException("Object did not convert to any native geometry");
+          }
+
+          // 4: log
+          var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
+          conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
+          if (conversionIds.Count == 1)
+          {
+            bakedObjectIds.Add(id);
+          }
+          else
+          {
+            // first item always a group id if it is a one-to-many,
+            // we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
+            bakedObjectIds.AddRange(conversionIds.Skip(1));
+          }
+
+          // 5: populate app id map
+          applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
+        });
+        if (ex is not null)
+        {
+          conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
         }
       }
     }

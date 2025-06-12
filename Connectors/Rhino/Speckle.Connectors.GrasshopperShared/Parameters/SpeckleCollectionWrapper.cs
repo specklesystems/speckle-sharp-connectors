@@ -237,7 +237,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper
   }
 }
 
-public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper> //, IGH_PreviewData // can be made previewable later
 {
   public override IGH_Goo Duplicate() => new SpeckleCollectionWrapperGoo(Value.DeepCopy());
 

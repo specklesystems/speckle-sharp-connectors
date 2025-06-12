@@ -57,7 +57,13 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         outputParams = new();
         foreach (var key in propGoo.Value.Keys)
         {
-          outputParams.Add(CreateOutputParamByKeyValue(key, propGoo.Value[key].Value, GH_ParamAccess.item));
+          ISpecklePropertyGoo value = propGoo.Value[key];
+          object? outputValue = value is SpecklePropertyGoo prop
+            ? prop.Value
+            : value is SpecklePropertyGroupGoo propGroup
+              ? propGroup
+              : value;
+          outputParams.Add(CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item));
         }
         break;
     }

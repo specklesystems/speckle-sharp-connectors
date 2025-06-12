@@ -9,7 +9,6 @@
     <Import_RootNamespace>Speckle.Connectors.GrasshopperShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\SpeckleScopedTaskCapableComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\SpeckleTaskCapableComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\Operator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\ValueSet.cs" />
@@ -61,6 +60,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleBlockInstanceWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleBlockDefinitionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleBlockDefinitionWrapper.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Interfaces.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleMaterialWrapper.ModelObjects.cs" />
@@ -69,7 +69,6 @@
     <Compile Include="..\Speckle.Connectors.GrasshopperShared\HostApp\SpeckleConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.ModelObjects.cs" />
