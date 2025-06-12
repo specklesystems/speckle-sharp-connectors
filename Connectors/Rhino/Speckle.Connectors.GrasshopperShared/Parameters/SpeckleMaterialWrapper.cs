@@ -2,7 +2,6 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.DocObjects;
-using Rhino.Render;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -61,7 +60,7 @@ public class SpeckleMaterialWrapper : SpeckleWrapper
   }
 }
 
-public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>, ISpeckleGoo
+public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
@@ -157,40 +156,6 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>,
     // add additional dynamic props for rhino material receive
     speckleRenderMaterial["specular"] = mat.Specular.ToArgb();
     speckleRenderMaterial["shine"] = mat.Shine;
-
-    return speckleRenderMaterial;
-  }
-
-  private SpeckleRenderMaterial ToSpeckleRenderMaterial(Rhino.Render.RenderMaterial mat)
-  {
-    Rhino.DocObjects.PhysicallyBasedMaterial pbRenderMaterial = mat.ConvertToPhysicallyBased(
-      RenderTexture.TextureGeneration.Allow
-    );
-
-    // get opacity
-    // POC: pbr will return opacity = 0 for these because they are not pbr materials, they are transparent materials with IOR. Currently hardcoding 0.2 value in lieu of proper type support in rhino.
-    double opacity = (mat.SmellsLikeGem || mat.SmellsLikeGlass) ? 0.2 : pbRenderMaterial.Opacity;
-
-    string renderMaterialName = mat.Name ?? "default"; // default rhino material has no name
-    Color diffuse = pbRenderMaterial.BaseColor.AsSystemColor();
-    Color emissive = mat.TypeName.Equals("Emission")
-      ? pbRenderMaterial.Material.EmissionColor
-      : pbRenderMaterial.Emission.AsSystemColor(); // pbRenderMaterial.emission gives wrong color for emission materials, and material.emissioncolor gives the wrong value for most others *shrug*
-
-    SpeckleRenderMaterial speckleRenderMaterial =
-      new()
-      {
-        name = renderMaterialName,
-        opacity = opacity,
-        metalness = pbRenderMaterial.Metallic,
-        roughness = pbRenderMaterial.Roughness,
-        diffuse = diffuse.ToArgb(),
-        emissive = emissive.ToArgb(),
-        applicationId = mat.Id.ToString(),
-        ["typeName"] = mat.TypeName,
-        ["ior"] = pbRenderMaterial.Material.IndexOfRefraction,
-        ["shine"] = pbRenderMaterial.Material.Shine,
-      };
 
     return speckleRenderMaterial;
   }
