@@ -42,7 +42,7 @@ Console.WriteLine($"Converted to Speckle Bases: {ms2 - ms} ms");
 
 var factory = serviceProvider.GetRequiredService<ISerializeProcessFactory>();
 var cache = $"C:\\Users\\adam\\Git\\temp\\{Guid.NewGuid()}.db";
-using var sqlite = new SqLiteJsonCacheManager($"Data Source={cache};", 2);
+using var sqlite = SqLiteJsonCacheManager.FromFilePath(cache, 2);
 await using var process2 = factory.CreateSerializeProcess(
   sqlite,
   new DummyServerObjectManager(),
