@@ -249,7 +249,7 @@ public static class BakingHelpers
     }
 
     // add props
-    properties.AssignToObjectAttributes(attributes);
+    properties?.AssignToObjectAttributes(attributes);
 
     return attributes;
   }
