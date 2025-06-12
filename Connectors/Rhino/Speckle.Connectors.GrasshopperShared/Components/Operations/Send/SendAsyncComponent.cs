@@ -272,16 +272,16 @@ public class SendAsyncComponent : GH_AsyncComponent
 
 public class SendComponentWorker : WorkerInstance
 {
-  public SendComponentWorker(GH_Component p)
-    : base(p) { }
+  public SendComponentWorker(GH_Component p, string id = "baseWorker", CancellationToken cancellationToken = default)
+    : base(p, id, cancellationToken) { }
 
-  private Stopwatch _stopwatch;
+  private Stopwatch? _stopwatch;
   public SpeckleUrlModelResource? OutputParam { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate()
+  public override WorkerInstance Duplicate(string id, CancellationToken cancellationToken)
   {
-    return new SendComponentWorker(Parent);
+    return new SendComponentWorker(Parent, id, cancellationToken);
   }
 
   public override void GetData(IGH_DataAccess da, GH_ComponentParamServer p)
@@ -292,7 +292,7 @@ public class SendComponentWorker : WorkerInstance
 
   public override void SetData(IGH_DataAccess da)
   {
-    _stopwatch.Stop();
+    _stopwatch?.Stop();
 
     if (((SendAsyncComponent)Parent).JustPastedIn)
     {
@@ -333,7 +333,7 @@ public class SendComponentWorker : WorkerInstance
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Publish duration: {_stopwatch.ElapsedMilliseconds / 1000f}s"
+        $"Publish duration: {_stopwatch?.ElapsedMilliseconds / 1000f}s"
       );
     }
   }
@@ -478,7 +478,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
     {
       if (((SendAsyncComponent)Owner).AutoSend)
       {
-        var autoSendButton = GH_Capsule.CreateTextCapsule(
+        using var autoSendButton = GH_Capsule.CreateTextCapsule(
           ButtonBounds,
           ButtonBounds,
           GH_Palette.Blue,
@@ -488,7 +488,6 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
         );
 
         autoSendButton.Render(graphics, Selected, Owner.Locked, false);
-        autoSendButton.Dispose();
       }
       else
       {
@@ -499,7 +498,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
 
         var text = state == ComponentState.Sending ? "Publishing..." : "Publish";
 
-        var button = GH_Capsule.CreateTextCapsule(
+        using var button = GH_Capsule.CreateTextCapsule(
           ButtonBounds,
           ButtonBounds,
           palette,
@@ -508,7 +507,6 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
           state == ComponentState.Expired ? 10 : 0
         );
         button.Render(graphics, Selected, Owner.Locked, false);
-        button.Dispose();
       }
     }
   }

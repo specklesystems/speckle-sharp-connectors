@@ -290,19 +290,19 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   }
 }
 
-public class ReceiveComponentWorker : WorkerInstance
+public sealed class ReceiveComponentWorker : WorkerInstance
 {
-  public ReceiveComponentWorker(GH_Component p)
-    : base(p) { }
+  public ReceiveComponentWorker(GH_Component p, string id = "baseWorker", CancellationToken cancellationToken = default)
+    : base(p, id, cancellationToken) { }
 
   public Base Root { get; set; }
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo Result { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate()
+  public override WorkerInstance Duplicate(string id, CancellationToken cancellationToken)
   {
-    return new ReceiveComponentWorker(Parent);
+    return new ReceiveComponentWorker(Parent, id, cancellationToken);
   }
 
   public override void GetData(IGH_DataAccess da, GH_ComponentParamServer p)
