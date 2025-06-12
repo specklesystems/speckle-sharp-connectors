@@ -248,13 +248,8 @@ public static class BakingHelpers
       }
     }
 
-    if (properties?.Value != null)
-    {
-      foreach (var kvp in properties.Value)
-      {
-        attributes.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-      }
-    }
+    // add props
+    properties.AssignToObjectAttributes(attributes);
 
     return attributes;
   }
