@@ -129,6 +129,10 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
                 nativeObjects.Add(new SpeckleCollectionWrapperGoo(collWrapper));
                 break;
 
+              case SpeckleBlockInstanceWrapper instanceWrapper:
+                nativeObjects.Add(new SpeckleBlockInstanceWrapperGoo(instanceWrapper));
+                break;
+
               case SpeckleObjectWrapper objWrapper:
                 nativeObjects.Add(new SpeckleObjectWrapperGoo(objWrapper));
                 break;
@@ -155,6 +159,16 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         case SpeckleCollectionWrapper collWrapper:
           result.Add(
             CreateOutputParamByKeyValue(prop.Key, new SpeckleCollectionWrapperGoo(collWrapper), GH_ParamAccess.item)
+          );
+          break;
+
+        case SpeckleBlockInstanceWrapper instanceWrapper:
+          result.Add(
+            CreateOutputParamByKeyValue(
+              prop.Key,
+              new SpeckleBlockInstanceWrapperGoo(instanceWrapper),
+              GH_ParamAccess.item
+            )
           );
           break;
 
