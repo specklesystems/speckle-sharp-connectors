@@ -926,6 +926,7 @@ Global
 		Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems*{01f98733-7352-47ad-a594-537d979de3de}*SharedItemsImports = 5
 		Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems*{025c85f8-f741-4600-bc46-5fead754b65d}*SharedItemsImports = 5
+		Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems*{0454eabf-8252-4421-9e94-eec6143dc012}*SharedItemsImports = 5
 		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{04fc86a3-2e25-41a1-98c5-10898616cd78}*SharedItemsImports = 5
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{0b5ab325-3791-4a81-b0ef-bca040381be2}*SharedItemsImports = 5
 		Connectors\CSi\Speckle.Connectors.CsiShared\Speckle.Connectors.CsiShared.projitems*{115d6106-1801-484a-b4e5-bcc94b6e5c7f}*SharedItemsImports = 5
@@ -996,6 +997,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{afab80bd-a4dd-4cad-9937-acbfed668a48}*SharedItemsImports = 5
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{b12d6a2e-51fd-4197-b442-46c7d8f5e4e4}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{b37d4b9a-8d3f-4fa5-b9c8-e6c5f8a0c1e2}*SharedItemsImports = 13
+		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{b42013eb-6180-4fbd-a6f9-ecb7822fda84}*SharedItemsImports = 5
 		Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.projitems*{b6985672-4704-4f86-a3e0-2310bf8e6d73}*SharedItemsImports = 5
 		Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems*{b6fbb8f4-4e2d-41d9-ac3f-1e30d0c8e87c}*SharedItemsImports = 13
 		Connectors\Autocad\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems*{bbf2c19e-221e-4aa0-8521-fe75d8f4a2b0}*SharedItemsImports = 5

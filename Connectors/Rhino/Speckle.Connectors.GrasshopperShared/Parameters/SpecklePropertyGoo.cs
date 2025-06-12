@@ -3,7 +3,7 @@ using Grasshopper.Kernel.Types;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public class SpecklePropertyGoo : GH_Goo<object>, ISpeckleGoo
+public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 

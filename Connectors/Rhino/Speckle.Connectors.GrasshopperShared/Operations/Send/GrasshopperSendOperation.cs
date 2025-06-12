@@ -107,6 +107,7 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
   private DataObject ConvertWrappersToDataObject(List<SpeckleObjectWrapper> wrappers, string appId)
   {
     Dictionary<string, object?> props = new();
+
     wrappers.First().Properties.CastTo<Dictionary<string, object?>>(ref props);
 
     return new()
