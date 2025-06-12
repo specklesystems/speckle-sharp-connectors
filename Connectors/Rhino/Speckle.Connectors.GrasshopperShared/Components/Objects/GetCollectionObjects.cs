@@ -102,7 +102,7 @@ public class GetCollectionObjects : GH_Component
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (SpeckleWrapper element in collectionWrapper.Elements)
+    foreach (SpeckleWrapper element in collectionWrapper.Elements.Cast<SpeckleWrapper>())
     {
       switch (element)
       {

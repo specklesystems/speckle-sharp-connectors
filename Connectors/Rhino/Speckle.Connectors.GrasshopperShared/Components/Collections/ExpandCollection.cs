@@ -2,6 +2,7 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -51,15 +52,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     Name = wrapper.Name;
     NickName = wrapper.Name;
 
-    var objects = wrapper
-      .Elements.Where(el => el is not SpeckleCollectionWrapper)
-      .OfType<SpeckleObjectWrapper>()
-      .Select(o => new SpeckleObjectWrapperGoo(o))
-      .ToList();
-    var collections = wrapper
-      .Elements.Where(el => el is SpeckleCollectionWrapper)
-      .OfType<SpeckleCollectionWrapper>()
-      .ToList();
+    var objects = wrapper.Elements.OfType<SpeckleObjectWrapper>().ToList();
+    var collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -72,6 +66,20 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
           "Some collections may contain a mix of objects and other collections. Here we output the atomic objects from within this collection.",
         Access = GH_ParamAccess.list
       };
+
+      List<IGH_Goo> atomicObjectGoos = new();
+
+      foreach (var obj in objects)
+      {
+        if (obj is SpeckleBlockInstanceWrapper instanceWrapper)
+        {
+          atomicObjectGoos.Add(new SpeckleBlockInstanceWrapperGoo(instanceWrapper));
+        }
+        else if (obj is SpeckleObjectWrapper objWrapper)
+        {
+          atomicObjectGoos.Add(new SpeckleObjectWrapperGoo(objWrapper));
+        }
+      }
 
       outputParams.Add(new OutputParamWrapper(param, objects, null));
     }
