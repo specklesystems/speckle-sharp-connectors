@@ -6,7 +6,6 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
 using Timer = System.Timers.Timer;
 
