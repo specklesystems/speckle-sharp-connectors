@@ -38,7 +38,8 @@ public class ReceiveOperationTests : MoqTest
     var modelName = "modelName";
 
     var ct = new CancellationToken();
-    var receiveInfo = new ReceiveInfo(account,
+    var receiveInfo = new ReceiveInfo(
+      account,
       string.Empty,
       projectName,
       string.Empty,

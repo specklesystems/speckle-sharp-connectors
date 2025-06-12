@@ -195,8 +195,9 @@ public class ReceiveOperationManagerTests : MoqTest
       .ReturnsAsync(hostResult);
     _speckleAppMock.Setup(x => x.Slug).Returns("slug");
 
-    _accountServiceMock.Setup(x =>
-      x.GetAccountWithServerUrlFallback(modelCard.AccountId, new Uri(modelCard.ServerUrl))).Returns(account);
+    _accountServiceMock
+      .Setup(x => x.GetAccountWithServerUrlFallback(modelCard.AccountId, new Uri(modelCard.ServerUrl)))
+      .Returns(account);
 
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       async (s, f) => await f()

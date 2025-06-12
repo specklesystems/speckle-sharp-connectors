@@ -18,7 +18,7 @@ public class ReceiverModelCard : ModelCard
 
   public ReceiveInfo GetReceiveInfo(IAccountService accountService, string sourceApplication)
   {
-    var account =  accountService.GetAccountWithServerUrlFallback(AccountId.NotNull(), new Uri(ServerUrl.NotNull()));
+    var account = accountService.GetAccountWithServerUrlFallback(AccountId.NotNull(), new Uri(ServerUrl.NotNull()));
     return new(
       account,
       ProjectId.NotNull(),

@@ -50,7 +50,12 @@ public sealed class ReceiveOperationManager(
       var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
-        () => ro.Execute(modelCard.GetReceiveInfo(accountService, speckleApplication.Slug), progress, cancellationItem.Token)
+        () =>
+          ro.Execute(
+            modelCard.GetReceiveInfo(accountService, speckleApplication.Slug),
+            progress,
+            cancellationItem.Token
+          )
       );
 
       if (conversionResults is null)
