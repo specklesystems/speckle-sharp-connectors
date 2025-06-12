@@ -126,7 +126,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
         foreach (var kvp in obj.Properties.Value)
         {
-          att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
+          att.SetUserString(kvp.Key, kvp.Value?.ToString() ?? "");
         }
 
         attributes.Add(att);

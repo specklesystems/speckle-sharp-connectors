@@ -40,11 +40,11 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
           Dictionary<string, object?> propertyDict = new();
           foreach (var entry in modelObject.UserText)
-        {
-          propertyDict.Add(entry.Key, entry.Value);
-        }
+          {
+            propertyDict.Add(entry.Key, entry.Value);
+          }
 
-        modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
+          modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
 
           // get the object color and material
           Color? color = GetColorFromModelObject(modelObject);
@@ -128,7 +128,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         }
 
         // add props
-        Value.Properties.AssignToObjectAttributes(atts);
+        Value.Properties.AssignToObjectAttributes(objectAtts);
 
         target = (T)(object)objectAtts;
         return true;
