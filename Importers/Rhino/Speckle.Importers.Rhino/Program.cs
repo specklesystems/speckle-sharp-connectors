@@ -68,7 +68,9 @@ public static class Program
 
     using (new RhinoCore([], WindowStyle.NoWindow))
     {
+      //doc is often null so dispose the active doc too
       using var doc = RhinoDoc.Open(filePath, out _);
+      using var __ = RhinoDoc.ActiveDoc;
       var services = new ServiceCollection();
       services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
       services.AddRhino(false);
