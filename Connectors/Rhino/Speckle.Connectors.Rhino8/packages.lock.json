@@ -302,7 +302,10 @@
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
       "grasshopperasynccomponent": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "PolySharp": "[1.14.1, )"
+        }
       },
       "speckle.connectors.common": {
         "type": "Project",

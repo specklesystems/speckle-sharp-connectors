@@ -342,7 +342,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
   }
 
-  public override async Task DoWork(Action<string, double> reportProgress)
+  public override async Task DoWork(Action<string, double> reportProgress, ComponentDoneCallback done)
   {
     if (Parent.JustPastedIn)
     {
@@ -352,14 +352,18 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     try
     {
       await Send(reportProgress);
+      done();
     }
-    catch (OperationCanceledException)
+    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
     {
-      Parent.CurrentComponentState = ComponentState.Cancelled;
+      Parent.CurrentComponentState = ComponentState.Expired;
+      //No need to call `done()` - GrasshopperAsyncComponent assumes immediate cancel,
+      //thus it has already performed clean-up actions that would normally be done on `done()`
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
+      done();
     }
   }
 
