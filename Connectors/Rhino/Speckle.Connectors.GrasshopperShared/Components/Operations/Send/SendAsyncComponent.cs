@@ -272,14 +272,18 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
 public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 {
-  public SendComponentWorker(GH_Component p, string id = "baseWorker", CancellationToken cancellationToken = default)
+  public SendComponentWorker(
+    SendAsyncComponent p,
+    string id = "baseWorker",
+    CancellationToken cancellationToken = default
+  )
     : base(p, id, cancellationToken) { }
 
   private Stopwatch? _stopwatch;
   public SpeckleUrlModelResource? OutputParam { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate(string id, CancellationToken cancellationToken)
+  public override WorkerInstance<SendAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
   {
     return new SendComponentWorker(Parent, id, cancellationToken);
   }
@@ -338,102 +342,80 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
   }
 
-  public override void DoWork(Action<string, double> reportProgress, Action done)
+  public override async Task DoWork(Action<string, double> reportProgress)
   {
-    var sendComponent = Parent;
-
-    if (sendComponent.JustPastedIn)
+    if (Parent.JustPastedIn)
     {
-      done();
-      return;
-    }
-
-    if (CancellationToken.IsCancellationRequested)
-    {
-      sendComponent.CurrentComponentState = ComponentState.Expired;
       return;
     }
 
     try
     {
-      SpeckleUrlModelResource? urlModelResource = sendComponent.UrlModelResource;
-      if (urlModelResource is null)
-      {
-        throw new InvalidOperationException("Url Resource was null");
-      }
-
-      SpeckleCollectionWrapperGoo? rootCollectionWrapper = sendComponent.RootCollectionWrapper;
-      if (rootCollectionWrapper is null)
-      {
-        throw new InvalidOperationException("Root Collection was null");
-      }
-
-      var t = Task.Run(async () =>
-      {
-        if (CancellationToken.IsCancellationRequested)
-        {
-          sendComponent.CurrentComponentState = ComponentState.Expired;
-          return;
-        }
-
-        // Step 1 - SEND TO SERVER
-        var sendInfo = await urlModelResource
-          .GetSendInfo(sendComponent.ApiClient, CancellationToken)
-          .ConfigureAwait(false);
-
-        var progress = new Progress<CardProgress>(p =>
-        {
-          reportProgress(Id, p.Progress ?? 0);
-          //sendComponent.Message = $"{p.Status}";
-        });
-
-        using var scope = PriorityLoader.CreateScopeForActiveDocument();
-        var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-        SendOperationResult? result = await sendOperation
-          .Execute(
-            new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
-            sendInfo,
-            progress,
-            CancellationToken
-          )
-          .ConfigureAwait(false);
-
-        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-        var customProperties = new Dictionary<string, object>()
-        {
-          { "isAsync", true },
-          { "auto", sendComponent.AutoSend }
-        };
-        if (sendInfo.WorkspaceId != null)
-        {
-          customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-        }
-
-        var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-        await mixPanelManager.TrackEvent(MixPanelEvents.Send, sendComponent.ApiClient.Account, customProperties);
-
-        SpeckleUrlModelVersionResource? createdVersion =
-          new(
-            sendInfo.AccountId,
-            sendInfo.ServerUrl.ToString(),
-            sendInfo.WorkspaceId,
-            sendInfo.ProjectId,
-            sendInfo.ModelId,
-            result.VersionId
-          );
-        OutputParam = createdVersion;
-        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-
-        // DONE
-        done();
-      });
-      t.Wait();
+      await Send(reportProgress);
+    }
+    catch (OperationCanceledException)
+    {
+      Parent.CurrentComponentState = ComponentState.Cancelled;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
-      done();
     }
+  }
+
+  private async Task Send(Action<string, double> reportProgress)
+  {
+    SpeckleUrlModelResource? urlModelResource = Parent.UrlModelResource;
+    if (urlModelResource is null)
+    {
+      throw new InvalidOperationException("Url Resource was null");
+    }
+
+    SpeckleCollectionWrapperGoo? rootCollectionWrapper = Parent.RootCollectionWrapper;
+    if (rootCollectionWrapper is null)
+    {
+      throw new InvalidOperationException("Root Collection was null");
+    }
+
+    // Step 1 - SEND TO SERVER
+    var sendInfo = await urlModelResource.GetSendInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
+
+    var progress = new Progress<CardProgress>(p =>
+    {
+      reportProgress(Id, p.Progress ?? 0);
+      //sendComponent.Message = $"{p.Status}";
+    });
+
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
+    SendOperationResult? result = await sendOperation.Execute(
+      new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
+      sendInfo,
+      progress,
+      CancellationToken
+    );
+
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+    var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };
+    if (sendInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
+    }
+
+    var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
+    await mixPanelManager.TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties);
+
+    SpeckleUrlModelVersionResource createdVersion =
+      new(
+        sendInfo.AccountId,
+        sendInfo.ServerUrl.ToString(),
+        sendInfo.WorkspaceId,
+        sendInfo.ProjectId,
+        sendInfo.ModelId,
+        result.VersionId
+      );
+    OutputParam = createdVersion;
+    Parent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }
 
