@@ -5,8 +5,13 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Rhino;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Analytics;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
@@ -15,6 +20,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
@@ -335,138 +341,126 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
   }
 
 #pragma warning disable CA1506
-  public override Task DoWork(Action<string, double> reportProgress)
+  public override async Task DoWork(Action<string, double> reportProgress, ComponentDoneCallback done)
 #pragma warning restore CA1506
   {
-    return Task.CompletedTask;
+    try
+    {
+      await Receive(reportProgress);
+      done();
+    }
+    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Remark, "Operation cancelled"));
+      Parent.CurrentComponentState = ComponentState.Expired;
+      //No need to call `done()` - GrasshopperAsyncComponent assumes immediate cancel,
+      //thus it has already performed clean-up actions that would normally be done on `done()`
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
+      done();
+    }
   }
-  //   var receiveComponent = Parent;
-  //
-  //   try
-  //   {
-  //     if (UrlModelResource is null)
-  //     {
-  //       throw new InvalidOperationException("Model Resource was null");
-  //     }
-  //
-  //     // Means it's a copy paste of an empty non-init component; set the record and exit fast.
-  //     if (receiveComponent.JustPastedIn && !receiveComponent.AutoReceive)
-  //     {
-  //       receiveComponent.JustPastedIn = false;
-  //       return;
-  //     }
-  //
-  //     receiveComponent.CurrentComponentState = ComponentState.Receiving;
-  //     RhinoApp.InvokeOnUiThread(
-  //       (Action)
-  //         delegate
-  //         {
-  //           receiveComponent.OnDisplayExpired(true);
-  //         }
-  //     );
-  //
-  //     var t = Task.Run(async () =>
-  //     {
-  //       // Step 1 - RECEIVE FROM SERVER
-  //       var receiveInfo = await UrlModelResource
-  //         .GetReceiveInfo(receiveComponent.ApiClient, CancellationToken)
-  //         .ConfigureAwait(false);
-  //
-  //       var progress = new Progress<CardProgress>(p =>
-  //       {
-  //         reportProgress(Id, p.Progress ?? 0);
-  //         //eceiveComponent.Message = $"{p.Status}";
-  //       });
-  //
-  //       if (CancellationToken.IsCancellationRequested)
-  //       {
-  //         return;
-  //       }
-  //
-  //       if (receiveInfo == null)
-  //       {
-  //         done();
-  //         return;
-  //       }
-  //
-  //       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-  //       Root = await scope
-  //         .Get<GrasshopperReceiveOperation>()
-  //         .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
-  //         .ConfigureAwait(false);
-  //
-  //       if (CancellationToken.IsCancellationRequested)
-  //       {
-  //         return;
-  //       }
-  //
-  //       // Step 2 - CONVERT
-  //       //receiveComponent.Message = $"Unpacking...";
-  //       LocalToGlobalUnpacker localToGlobalUnpacker = new();
-  //       TraversalContextUnpacker traversalContextUnpacker = new();
-  //       var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
-  //
-  //       // "flatten" block instances
-  //       var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-  //         unpackedRoot.DefinitionProxies,
-  //         unpackedRoot.ObjectsToConvert.ToList()
-  //       );
-  //
-  //       // TODO: unpack colors and render materials
-  //       GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
-  //       GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
-  //
-  //       GrasshopperCollectionRebuilder collectionRebuilder =
-  //         new((Root as Collection) ?? new Collection() { name = "unnamed" });
-  //
-  //       LocalToGlobalMapHandler mapHandler =
-  //         new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
-  //
-  //       int count = 0;
-  //       int total = localToGlobalMaps.Count;
-  //
-  //       foreach (var map in localToGlobalMaps)
-  //       {
-  //         mapHandler.CreateGrasshopperObjectFromMap(map);
-  //         count++;
-  //       }
-  //
-  //       Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-  //
-  //       // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-  //       var customProperties = new Dictionary<string, object>()
-  //       {
-  //         { "isAsync", true },
-  //         { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
-  //         { "auto", receiveComponent.AutoReceive }
-  //       };
-  //       if (receiveInfo.WorkspaceId != null)
-  //       {
-  //         customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
-  //       }
-  //
-  //       if (receiveInfo.SelectedVersionUserId != null)
-  //       {
-  //         customProperties.Add(
-  //           "isMultiplayer",
-  //           receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
-  //         );
-  //       }
-  //       await scope
-  //         .Get<IMixPanelManager>()
-  //         .TrackEvent(MixPanelEvents.Receive, receiveComponent.ApiClient.Account, customProperties);
-  //
-  //       // DONE
-  //       done();
-  //     });
-  //     t.Wait();
-  //   }
-  //   catch (Exception ex) when (!ex.IsFatal())
-  //   {
-  //     RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
-  //     done();
-  //   }
-  // }
+
+  private async Task Receive(Action<string, double> reportProgress)
+  {
+    if (UrlModelResource is null)
+    {
+      throw new InvalidOperationException("Model Resource was null");
+    }
+
+    // Means it's a copy paste of an empty non-init component; set the record and exit fast.
+    if (Parent.JustPastedIn && !Parent.AutoReceive)
+    {
+      Parent.JustPastedIn = false;
+      return;
+    }
+
+    Parent.CurrentComponentState = ComponentState.Receiving;
+    RhinoApp.InvokeOnUiThread(
+      (Action)
+        delegate
+        {
+          Parent.OnDisplayExpired(true);
+        }
+    );
+
+    // Step 1 - RECEIVE FROM SERVER
+    var receiveInfo = await UrlModelResource.GetReceiveInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
+
+    var progress = new Progress<CardProgress>(p =>
+    {
+      reportProgress(Id, p.Progress ?? 0);
+      //eceiveComponent.Message = $"{p.Status}";
+    });
+
+    CancellationToken.ThrowIfCancellationRequested();
+
+    if (receiveInfo == null)
+    {
+      return;
+    }
+
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    Root = await scope
+      .Get<GrasshopperReceiveOperation>()
+      .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+      .ConfigureAwait(false);
+
+    CancellationToken.ThrowIfCancellationRequested();
+
+    // Step 2 - CONVERT
+    //receiveComponent.Message = $"Unpacking...";
+    LocalToGlobalUnpacker localToGlobalUnpacker = new();
+    TraversalContextUnpacker traversalContextUnpacker = new();
+    var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
+
+    // "flatten" block instances
+    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
+      unpackedRoot.DefinitionProxies,
+      unpackedRoot.ObjectsToConvert.ToList()
+    );
+
+    // TODO: unpack colors and render materials
+    GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
+    GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
+
+    GrasshopperCollectionRebuilder collectionRebuilder =
+      new((Root as Collection) ?? new Collection() { name = "unnamed" });
+
+    LocalToGlobalMapHandler mapHandler =
+      new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
+
+    int count = 0;
+    int total = localToGlobalMaps.Count;
+
+    foreach (var map in localToGlobalMaps)
+    {
+      mapHandler.CreateGrasshopperObjectFromMap(map);
+      count++;
+    }
+
+    Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+    var customProperties = new Dictionary<string, object>()
+    {
+      { "isAsync", true },
+      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+      { "auto", Parent.AutoReceive }
+    };
+    if (receiveInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+    }
+
+    if (receiveInfo.SelectedVersionUserId != null)
+    {
+      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != Parent.ApiClient.Account.userInfo.id);
+    }
+    await scope.Get<IMixPanelManager>().TrackEvent(MixPanelEvents.Receive, Parent.ApiClient.Account, customProperties);
+  }
 }
 
 public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
@@ -525,7 +519,7 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
       else
       {
         var palette =
-          state == ComponentState.Expired || state == ComponentState.UpToDate || state == ComponentState.Cancelled
+          state == ComponentState.Expired || state == ComponentState.UpToDate
             ? GH_Palette.Black
             : GH_Palette.Transparent;
         var text = state != ComponentState.Receiving ? "Load" : "Loading...";

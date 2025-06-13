@@ -356,6 +356,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
     catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
     {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Remark, "Operation cancelled"));
       Parent.CurrentComponentState = ComponentState.Expired;
       //No need to call `done()` - GrasshopperAsyncComponent assumes immediate cancel,
       //thus it has already performed clean-up actions that would normally be done on `done()`

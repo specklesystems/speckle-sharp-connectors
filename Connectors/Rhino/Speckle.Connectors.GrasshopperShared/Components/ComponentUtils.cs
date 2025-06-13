@@ -13,7 +13,6 @@ public static class ComponentCategories
 
 public enum ComponentState
 {
-  Cancelled,
   Expired,
   NeedsInput,
   Receiving,
