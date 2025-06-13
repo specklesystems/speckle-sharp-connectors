@@ -36,6 +36,7 @@ public class SpeckleOperationWizard
   private readonly Func<string, Task> _updateComponentMessage;
   private readonly IAccountService _accountService;
   private readonly IAccountManager _accountManager;
+  private readonly IAccountFactory _accountFactory;
 
   /// <param name="refreshComponent"> Callback function to trigger when component need to refresh itself.</param>
   /// <param name="isSender"> Whether it will be used in sender or receiver. Accordingly, the wizard will manage versions or not.</param>
@@ -46,6 +47,7 @@ public class SpeckleOperationWizard
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
     _accountManager = PriorityLoader.Container.GetRequiredService<IAccountManager>();
     _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
+    _accountFactory = PriorityLoader.Container.GetRequiredService<IAccountFactory>();
 
     var userSelectedAccountId = _accountService.GetUserSelectedAccountId();
     Accounts = _accountManager.GetAccounts().ToList();
@@ -144,6 +146,12 @@ public class SpeckleOperationWizard
     {
       _accountService.SetUserSelectedAccountId(account.id);
     }
+  }
+  
+  public void SetAccountFromToken(string token, Uri url)
+  {
+    var account = _accountFactory.CreateAccount(url, token).GetAwaiter().GetResult();
+    SetAccount(account, false);
   }
 
   public void SetAccountFromId(string accountId)
