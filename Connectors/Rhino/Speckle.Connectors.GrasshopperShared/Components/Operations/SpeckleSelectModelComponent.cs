@@ -91,28 +91,18 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       // Deal with inputs
       string? urlInput = null;
-
       // SCENARIO 1: Component has input wire connected
-      if (da.GetData(0, ref urlInput))
-      {
-        ParseUrl(da, urlInput);
-      }
+      da.GetData(0, ref urlInput);
 
       string? tokenInput = null;
-      if (da.GetData(1, ref tokenInput))
-      {
-        TokenInput = tokenInput;
-        if (TokenInput != null && UrlInput != null)
-        {
-          SpeckleOperationWizard.SetAccountFromToken(tokenInput.NotNull(), new Uri(UrlInput));
-        }
-      }
+      da.GetData(1, ref tokenInput);
 
-      //using a token and/or url so don't do the wizard
-      if (!string.IsNullOrEmpty(urlInput) || !string.IsNullOrEmpty(tokenInput))
+      //using a token and url so don't do the wizard
+      if (string.IsNullOrEmpty(urlInput))
       {
         return;
       }
+      ParseAndSetUrlToken(da, urlInput, tokenInput);
 
       // SCENARIO 2: Component is running with no wires connected to input.
       if (!ParseWizard(da))
@@ -126,7 +116,7 @@ public class SpeckleSelectModelComponent : GH_Component
         new SpeckleUrlModelVersionResource(
           new(
             SpeckleOperationWizard.SelectedAccount.NotNull().id,
-            null,
+            TokenInput,
             SpeckleOperationWizard.SelectedAccount.serverInfo.url
           ),
           SpeckleOperationWizard.SelectedWorkspace?.id,
@@ -148,23 +138,29 @@ public class SpeckleSelectModelComponent : GH_Component
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
     }
   }
-
-  private void ParseUrl(IGH_DataAccess da, string? urlInput)
+  
+  private void ParseAndSetUrlToken(IGH_DataAccess da, string? url, string? tokenInput)
   {
-    UrlInput = urlInput;
     //Lock button interactions before anything else, to ensure any input (even invalid ones) lock the state.
     SpeckleOperationWizard.SetComponentButtonsState(false);
-
-    if (urlInput == null || string.IsNullOrEmpty(urlInput))
+    
+    if (url == null || string.IsNullOrEmpty(url))
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input url was empty or null");
       return;
     }
 
+    CheckPermission(da, url, tokenInput);
+    UrlInput = url;
+    TokenInput = tokenInput;
+  }
+
+  private void CheckPermission(IGH_DataAccess da, string urlInput, string? token)
+  {
     try
     {
       // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-      var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
+      var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInputAndToken(urlInput, token, true);
       if (!hasPermission)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
@@ -173,7 +169,16 @@ public class SpeckleSelectModelComponent : GH_Component
       _storedServer = resource.Account.Server;
       da.SetData(0, resource);
     }
-    catch (SpeckleException e)
+    catch (AggregateException e) when (!e.IsFatal())
+    {
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        string.Join("\n", e.InnerExceptions.Select(innerE => innerE.Message))
+      );
+    }
+#pragma warning disable CA1031
+    catch (Exception e)
+#pragma warning restore CA1031
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
     }
