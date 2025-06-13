@@ -393,12 +393,9 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    SendOperationResult? result = await sendOperation.Execute(
-      new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
-      sendInfo,
-      progress,
-      CancellationToken
-    );
+    SendOperationResult? result = await sendOperation
+      .Execute(new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper }, sendInfo, progress, CancellationToken)
+      .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };
@@ -408,7 +405,9 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
 
     var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-    await mixPanelManager.TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties);
+    await mixPanelManager
+      .TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties)
+      .ConfigureAwait(false);
 
     SpeckleUrlModelVersionResource createdVersion =
       new(
