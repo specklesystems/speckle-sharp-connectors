@@ -147,7 +147,7 @@ public class SpeckleOperationWizard
       _accountService.SetUserSelectedAccountId(account.id);
     }
   }
-  
+
   public void SetAccountFromToken(string token, Uri url)
   {
     var account = _accountFactory.CreateAccount(url, token).GetAwaiter().GetResult();
