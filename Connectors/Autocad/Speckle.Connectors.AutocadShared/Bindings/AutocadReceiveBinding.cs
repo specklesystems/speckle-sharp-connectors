@@ -17,9 +17,16 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
     ICancellationManager cancellationManager,
     IAutocadConversionSettingsFactory autocadConversionSettingsFactory,
     IThreadContext threadContext,
-    IReceiveOperationManagerFactory receiveOperationManagerFactory
+    IReceiveOperationManagerFactory receiveOperationManagerFactory,
+    IAutocadDocumentActivationSuspension autocadDocumentActivationSuspension
   )
-    : base(parent, cancellationManager, threadContext, receiveOperationManagerFactory)
+    : base(
+      parent,
+      cancellationManager,
+      threadContext,
+      receiveOperationManagerFactory,
+      autocadDocumentActivationSuspension
+    )
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }

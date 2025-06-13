@@ -118,24 +118,26 @@ public sealed class BrowserBridge : IBrowserBridge
 
   //don't wait for browser runs on purpose
   public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _threadContext
-      .RunOnWorkerAsync(async () =>
+    _topLevelExceptionHandler.FireAndForget(async () =>
+    {
+      await _threadContext.RunOnWorkerAsync(async () =>
       {
-        var task = await _topLevelExceptionHandler
-          .CatchUnhandledAsync(async () =>
-          {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            NotifyUIMethodCallResultReady(requestId, resultJson);
-          })
-          .ConfigureAwait(false);
-        if (task.Exception is not null)
+        try
         {
-          string resultJson = SerializeFormattedException(task.Exception);
+          var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+          string resultJson = _jsonSerializer.Serialize(result);
           NotifyUIMethodCallResultReady(requestId, resultJson);
+#pragma warning disable CA1031
         }
-      })
-      .FireAndForget();
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+          string resultJson = SerializeFormattedException(ex);
+          NotifyUIMethodCallResultReady(requestId, resultJson);
+          _logger.LogError(ex, "An unhandled Exception occured");
+        }
+      });
+    });
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
