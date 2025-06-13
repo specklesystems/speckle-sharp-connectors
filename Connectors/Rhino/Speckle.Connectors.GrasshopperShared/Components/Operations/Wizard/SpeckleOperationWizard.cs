@@ -78,14 +78,18 @@ public class SpeckleOperationWizard
   }
 
 #pragma warning disable CA1054
-  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInputAndToken(string url, string? token, bool isSender)
+  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInputAndToken(
+    string url,
+    string? token,
+    bool isSender
+  )
 #pragma warning restore CA1054
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
     // Should notify user if any of this goes wrong.
 
-    var resources = SpeckleResourceBuilder.FromUrlString(url);
+    var resources = SpeckleResourceBuilder.FromUrlString(url, token);
     if (resources.Length == 0)
     {
       throw new SpeckleException($"Input url string was empty");
@@ -100,15 +104,17 @@ public class SpeckleOperationWizard
     Account account;
     if (string.IsNullOrEmpty(token))
     {
-       account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Account.Server));
+      account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Account.Server));
       SetAccount(account, false);
     }
     else
     {
-      account = _accountFactory.CreateAccount(new Uri(resource.Account.Server), token.NotNull()).GetAwaiter().GetResult();
+      account = _accountFactory
+        .CreateAccount(new Uri(resource.Account.Server), token.NotNull())
+        .GetAwaiter()
+        .GetResult();
       SetAccount(account, false);
     }
-
 
     if (SelectedAccount == null)
     {
@@ -130,7 +136,10 @@ public class SpeckleOperationWizard
     switch (resource)
     {
       case SpeckleUrlLatestModelVersionResource latestVersionResource:
-        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).GetAwaiter().GetResult();
+        var model = client
+          .Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId)
+          .GetAwaiter()
+          .GetResult();
         ModelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource versionResource:

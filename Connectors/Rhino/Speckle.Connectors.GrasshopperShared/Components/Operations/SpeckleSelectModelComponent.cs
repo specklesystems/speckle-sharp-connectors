@@ -98,11 +98,11 @@ public class SpeckleSelectModelComponent : GH_Component
       da.GetData(1, ref tokenInput);
 
       //using a token and url so don't do the wizard
-      if (string.IsNullOrEmpty(urlInput))
+      if (!string.IsNullOrEmpty(urlInput))
       {
+        ParseAndSetUrlToken(da, urlInput, tokenInput);
         return;
       }
-      ParseAndSetUrlToken(da, urlInput, tokenInput);
 
       // SCENARIO 2: Component is running with no wires connected to input.
       if (!ParseWizard(da))
@@ -138,24 +138,29 @@ public class SpeckleSelectModelComponent : GH_Component
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
     }
   }
-  
-  private void ParseAndSetUrlToken(IGH_DataAccess da, string? url, string? tokenInput)
+
+  private bool ParseAndSetUrlToken(IGH_DataAccess da, string? url, string? tokenInput)
   {
     //Lock button interactions before anything else, to ensure any input (even invalid ones) lock the state.
     SpeckleOperationWizard.SetComponentButtonsState(false);
-    
+
     if (url == null || string.IsNullOrEmpty(url))
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input url was empty or null");
-      return;
+      return false;
     }
 
-    CheckPermission(da, url, tokenInput);
-    UrlInput = url;
-    TokenInput = tokenInput;
+    if (CheckPermission(da, url, tokenInput))
+    {
+      UrlInput = url;
+      TokenInput = tokenInput;
+      return true;
+    }
+
+    return false;
   }
 
-  private void CheckPermission(IGH_DataAccess da, string urlInput, string? token)
+  private bool CheckPermission(IGH_DataAccess da, string urlInput, string? token)
   {
     try
     {
@@ -168,6 +173,7 @@ public class SpeckleSelectModelComponent : GH_Component
       _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
       _storedServer = resource.Account.Server;
       da.SetData(0, resource);
+      return true;
     }
     catch (AggregateException e) when (!e.IsFatal())
     {
@@ -182,6 +188,8 @@ public class SpeckleSelectModelComponent : GH_Component
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
     }
+
+    return false;
   }
 
 #pragma warning disable CA1502
