@@ -102,6 +102,10 @@ public class SpeckleSelectModelComponent : GH_Component
       if (da.GetData(1, ref tokenInput))
       {
         TokenInput = tokenInput;
+        if (TokenInput != null && UrlInput != null)
+        {
+          SpeckleOperationWizard.SetAccountFromToken(tokenInput.NotNull(), new Uri(UrlInput));
+        }
       }
 
       //using a token and/or url so don't do the wizard
@@ -183,9 +187,10 @@ public class SpeckleSelectModelComponent : GH_Component
     SpeckleOperationWizard.SetComponentButtonsState(true);
 
     // When user unplugs the URL input, we need to reset all first
-    if (UrlInput != null)
+    if (UrlInput != null || TokenInput != null)
     {
       UrlInput = null;
+      TokenInput = null;
       SpeckleOperationWizard.ResetHandlers();
       _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
     }
