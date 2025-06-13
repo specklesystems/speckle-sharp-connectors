@@ -1,12 +1,12 @@
 using Speckle.Connectors.Common.Operations;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
 public record GrasshopperSendInfo(
-  string AccountId,
-  Uri ServerUrl,
+  Account Account,
   string? WorkspaceId,
   string ProjectId,
   string ModelId,
   string SourceApplication
-) : SendInfo(AccountId, ServerUrl, ProjectId, ModelId, SourceApplication);
+) : SendInfo(Account, ProjectId, ModelId, SourceApplication);

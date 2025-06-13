@@ -14,7 +14,6 @@ namespace Speckle.Connectors.Common.Operations;
 [GenerateAutoInterface]
 public sealed class ReceiveOperation(
   IHostObjectBuilder hostObjectBuilder,
-  IAccountService accountService,
   IReceiveProgress receiveProgress,
   ISdkActivityFactory activityFactory,
   IOperations operations,
@@ -32,7 +31,7 @@ public sealed class ReceiveOperation(
     cancellationToken.ThrowIfCancellationRequested();
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
-    Account account = accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
+    var account = receiveInfo.Account;
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     var version = await receiveVersionRetriever.GetVersion(account, receiveInfo, cancellationToken);
 
@@ -90,7 +89,7 @@ public sealed class ReceiveOperation(
   {
     using var conversionActivity = activityFactory.Start("ReceiveOperation.ConvertObjects");
     conversionActivity?.SetTag("smellsLikeV2Data", commitObject.SmellsLikeV2Data());
-    conversionActivity?.SetTag("receiveInfo.serverUrl", receiveInfo.ServerUrl);
+    conversionActivity?.SetTag("receiveInfo.serverUrl", receiveInfo.Account.serverInfo.url);
     conversionActivity?.SetTag("receiveInfo.projectId", receiveInfo.ProjectId);
     conversionActivity?.SetTag("receiveInfo.modelId", receiveInfo.ModelId);
     conversionActivity?.SetTag("receiveInfo.selectedVersionId", receiveInfo.SelectedVersionId);
