@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -11,6 +10,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -41,16 +41,16 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var ct = new CancellationToken();
     var objects = new List<object>();
-    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), string.Empty, string.Empty, string.Empty);
+    var projectId = "projectId";
+    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), projectId, string.Empty, string.Empty);
     var progress = Create<IProgress<CardProgress>>();
 
     var conversionResults = new List<SendConversionResult>();
     var rootResult = new RootObjectBuilderResult(new TestBase(), conversionResults);
-    rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
+    rootObjectBuilder.Setup(x => x.Build(objects, projectId, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
     var versionId = "versionId";
@@ -104,13 +104,18 @@ public class SendOperationTests : MoqTest
     var modelId = "modelId";
     var accountId = "accountId";
     var url = new Uri("https://localhost");
-    var sendInfo = new SendInfo(accountId, url, projectId, modelId, string.Empty);
+    var sourceApplication = "sourceApplication";
+    var sendInfo = new SendInfo(accountId, url, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
 
     var token = "token";
-    var account = new Account() { token = token };
+    var account = new Account()
+    {
+      token = token,
+      serverInfo = new ServerInfo() { url = url.ToString() }
+    };
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
@@ -124,7 +129,9 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
+    sendOperationVersionRecorder
+      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, account, ct))
+      .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 

@@ -2,7 +2,6 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
@@ -33,26 +32,56 @@ public sealed class SendOperation<T>(
   )
   {
     ct.ThrowIfCancellationRequested();
-    var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
-
-    ct.ThrowIfCancellationRequested();
-    // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
-    // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
-
-    buildResult.RootObject["version"] = 3;
+    var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (results, versionId) = await threadContext.RunOnWorkerAsync(
       () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
     );
     ct.ThrowIfCancellationRequested();
-
     return new(results.RootId, versionId, results.ConvertedReferences, buildResult.ConversionResults);
+  }
+
+  public async Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<T> objects,
+    string projectId,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
+  )
+  {
+    var buildResult = await rootObjectBuilder.Build(objects, projectId, onOperationProgressed, ct);
+    ct.ThrowIfCancellationRequested();
+    // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
+    // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
+    buildResult.RootObject["version"] = 3;
+    return buildResult;
+  }
+
+  public Task<(SerializeProcessResults, string)> Send(
+    Base commitObject,
+    SendInfo sendInfo,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken ct = default
+  )
+  {
+    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
+    return Send(
+      commitObject,
+      sendInfo.ProjectId,
+      sendInfo.ModelId,
+      sendInfo.SourceApplication,
+      account,
+      onOperationProgressed,
+      ct
+    );
   }
 
   public async Task<(SerializeProcessResults, string)> Send(
     Base commitObject,
-    SendInfo sendInfo,
+    string projectId,
+    string modelId,
+    string sourceApplication,
+    Account account,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
@@ -61,28 +90,34 @@ public sealed class SendOperation<T>(
 
     onOperationProgressed.Report(new("Uploading...", null));
 
-    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
-    using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
     var sendResult = await operations.Send2(
-      sendInfo.ServerUrl,
-      sendInfo.ProjectId,
+      new Uri(account.serverInfo.url),
+      projectId,
       account.token,
       commitObject,
       onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
       ct
     );
 
-    sendConversionCache.StoreSendResult(sendInfo.ProjectId, sendResult.ConvertedReferences);
+    sendConversionCache.StoreSendResult(projectId, sendResult.ConvertedReferences);
 
     ct.ThrowIfCancellationRequested();
 
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    var versionId = await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
+    var versionId = await sendOperationVersionRecorder.RecordVersion(
+      sendResult.RootId,
+      modelId,
+      projectId,
+      sourceApplication,
+      account,
+      ct
+    );
+
     return (sendResult, versionId);
   }
 }

@@ -8,27 +8,10 @@ public interface IRootObjectBuilder<in T>
 {
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<T> objects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   );
 }
-
-// public abstract class RootObjectBuilderBase<T> : IRootObjectBuilder<T>
-// {
-//   public Task<RootObjectBuilderResult> BuildAsync(
-//     IReadOnlyList<T> objects,
-//     SendInfo sendInfo,
-//     IProgress<CardProgress> onOperationProgressed,
-//     CancellationToken cancellationToken
-//   ) => Task.FromResult(Build(objects, sendInfo, onOperationProgressed, cancellationToken));
-//
-//   public abstract RootObjectBuilderResult Build(
-//     IReadOnlyList<T> objects,
-//     SendInfo sendInfo,
-//     IProgress<CardProgress> onOperationProgressed,
-//     CancellationToken cancellationToken
-//   );
-// }
 
 public record RootObjectBuilderResult(Base RootObject, IReadOnlyList<SendConversionResult> ConversionResults);
