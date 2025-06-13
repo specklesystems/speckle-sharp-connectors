@@ -18,8 +18,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleBlockInstance.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleBlockDefinition.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetCollectionObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
