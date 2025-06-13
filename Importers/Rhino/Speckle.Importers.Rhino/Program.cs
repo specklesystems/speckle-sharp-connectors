@@ -82,7 +82,7 @@ public static class Program
       using var doc = RhinoDoc.Open(filePath, out _);
       using var __ = RhinoDoc.ActiveDoc;
       var services = new ServiceCollection();
-      services.Initialize(HostApplications.Rhino, HostAppVersion.v2026);
+      services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
       services.AddRhino(false);
       services.AddRhinoConverters();
       // override default
