@@ -24,28 +24,38 @@ public static class Program
   [STAThread]
   public static async Task<int> Main(string[] args)
   {
-    RootCommand rootCommand = new();
+    try
+    {
+      RootCommand rootCommand = new();
 
-    Argument<string> pathArg = new(name: "Source File Path", description: "Path to file to load and parse");
-    Argument<string> resultsPathArg =
-      new(name: "Results File Path", description: "Path to file to write results information (like version id)");
-    Argument<string> projectIdArg = new(name: "Project Id", description: "The project id to publish to");
-    Argument<string> modelIdArg = new(name: "Model Id", description: "The model id to publish to");
-    Argument<string> serverUrlArg = new(name: "Server Url", description: "The url of the server to publish to.");
-    Argument<string> tokenArg = new(name: "Token", description: "The speckle token to use for publish");
+      Argument<string> pathArg = new(name: "Source File Path", description: "Path to file to load and parse");
+      Argument<string> resultsPathArg =
+        new(name: "Results File Path", description: "Path to file to write results information (like version id)");
+      Argument<string> projectIdArg = new(name: "Project Id", description: "The project id to publish to");
+      Argument<string> modelIdArg = new(name: "Model Id", description: "The model id to publish to");
+      Argument<string> serverUrlArg = new(name: "Server Url", description: "The url of the server to publish to.");
+      Argument<string> tokenArg = new(name: "Token", description: "The speckle token to use for publish");
 
-    rootCommand.AddArgument(pathArg);
-    rootCommand.AddArgument(resultsPathArg);
-    rootCommand.AddArgument(projectIdArg);
-    rootCommand.AddArgument(modelIdArg);
-    rootCommand.AddArgument(serverUrlArg);
-    rootCommand.AddArgument(tokenArg);
+      rootCommand.AddArgument(pathArg);
+      rootCommand.AddArgument(resultsPathArg);
+      rootCommand.AddArgument(projectIdArg);
+      rootCommand.AddArgument(modelIdArg);
+      rootCommand.AddArgument(serverUrlArg);
+      rootCommand.AddArgument(tokenArg);
 
-    rootCommand.SetHandler(Handle, pathArg, resultsPathArg, projectIdArg, modelIdArg, serverUrlArg, tokenArg);
+      rootCommand.SetHandler(Handle, pathArg, resultsPathArg, projectIdArg, modelIdArg, serverUrlArg, tokenArg);
 
-    await rootCommand.InvokeAsync(args).ConfigureAwait(false);
+      await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 
-    return 0;
+      return 0;
+    }
+#pragma warning disable CA1031
+    catch (Exception e)
+#pragma warning restore CA1031
+    {
+      Console.WriteLine(e);
+      return -1;
+    }
   }
 
 #pragma warning disable CA1506
