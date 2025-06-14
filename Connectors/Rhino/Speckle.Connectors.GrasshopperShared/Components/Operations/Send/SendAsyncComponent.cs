@@ -139,7 +139,7 @@ public class SendAsyncComponent : GH_AsyncComponent
       var mCollErrText =
         "Only one single collection supported. Please group your input collections into one single one before sending.";
       var mLinksErrText =
-        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components.";
+        "Only one single model can be published to from this node. To send to multiple models, please use different publish components.";
 
       if (multipleCollections)
       {
