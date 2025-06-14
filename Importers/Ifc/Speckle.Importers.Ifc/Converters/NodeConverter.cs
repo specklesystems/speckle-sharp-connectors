@@ -24,7 +24,9 @@ public sealed class NodeConverter(
   public Base Convert(IfcModel model, IfcNode node)
   {
     if (!node.IsIfcRoot)
+    {
       throw new ArgumentException("Expected to be an IfcRoot", paramName: nameof(node));
+    }
 
     return node switch
     {
