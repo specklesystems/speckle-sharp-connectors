@@ -52,8 +52,8 @@ public class SendAsyncComponent : GH_AsyncComponent
   public IClient ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
-
   public SpeckleUrlModelResource? OutputParam { get; set; }
+  public bool HasMultipleInputs { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -129,6 +129,31 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    var multipleResources = Params.Input[0].VolatileData.AllData(true).Count() != 1;
+    var multipleCollections = Params.Input[1].VolatileData.AllData(true).Count() != 1;
+
+    HasMultipleInputs = multipleCollections || multipleResources;
+
+    if (HasMultipleInputs)
+    {
+      var mCollErrText =
+        "Only one single collection supported. Please group your input collections into one single one before sending.";
+      var mLinksErrText =
+        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components.";
+
+      if (multipleCollections)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mCollErrText);
+      }
+
+      if (multipleResources)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mLinksErrText);
+      }
+
+      return;
+    }
+
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
     var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
@@ -335,7 +360,7 @@ public class SendComponentWorker : WorkerInstance
   {
     var sendComponent = (SendAsyncComponent)Parent;
 
-    if (sendComponent.JustPastedIn)
+    if (sendComponent.JustPastedIn || sendComponent.HasMultipleInputs)
     {
       done();
       return;
@@ -512,6 +537,11 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
     {
       if (((RectangleF)ButtonBounds).Contains(e.CanvasLocation))
       {
+        // Ignore button presses on a component with invalid inputs to prevent multiple sends
+        if ((Owner as SendAsyncComponent)?.HasMultipleInputs == true)
+        {
+          return GH_ObjectResponse.Handled;
+        }
         if (((SendAsyncComponent)Owner).AutoSend)
         {
           ((SendAsyncComponent)Owner).AutoSend = false;
