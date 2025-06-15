@@ -71,19 +71,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       };
 
       // Create appropriate Goo types for each object (downside of the inheritance refactor)
-      List<IGH_Goo> atomicObjectGoos = new();
-
-      foreach (var obj in objects)
-      {
-        if (obj is SpeckleBlockInstanceWrapper instanceWrapper)
-        {
-          atomicObjectGoos.Add(new SpeckleBlockInstanceWrapperGoo(instanceWrapper));
-        }
-        else if (obj is SpeckleObjectWrapper objWrapper)
-        {
-          atomicObjectGoos.Add(new SpeckleObjectWrapperGoo(objWrapper));
-        }
-      }
+      List<IGH_Goo> atomicObjectGoos = objects.Select(obj => obj.CreateGoo()).ToList();
 
       outputParams.Add(new OutputParamWrapper(param, atomicObjectGoos, null));
     }
@@ -125,19 +113,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       else
       {
         // Create appropriate Goo types for child objects
-        // feels like we're working around a design decision here
-        List<IGH_Goo> childObjectGoos = new();
-        foreach (var obj in childWrapper.Elements.OfType<SpeckleObjectWrapper>())
-        {
-          if (obj is SpeckleBlockInstanceWrapper instanceWrapper)
-          {
-            childObjectGoos.Add(new SpeckleBlockInstanceWrapperGoo(instanceWrapper));
-          }
-          else
-          {
-            childObjectGoos.Add(new SpeckleObjectWrapperGoo(obj));
-          }
-        }
+        List<IGH_Goo> childObjectGoos = childWrapper
+          .Elements.OfType<SpeckleObjectWrapper>()
+          .Select(obj => obj.CreateGoo())
+          .ToList();
         outputValue = childObjectGoos;
       }
 

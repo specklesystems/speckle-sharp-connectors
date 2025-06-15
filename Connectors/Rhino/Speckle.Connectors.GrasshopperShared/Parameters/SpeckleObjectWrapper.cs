@@ -214,6 +214,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     return attributes;
   }
 
+  public virtual IGH_Goo CreateGoo() => new SpeckleObjectWrapperGoo(this);
+
   protected virtual void AddPropertiesToAttributes(ObjectAttributes attributes) =>
     Properties?.AssignToObjectAttributes(attributes);
 

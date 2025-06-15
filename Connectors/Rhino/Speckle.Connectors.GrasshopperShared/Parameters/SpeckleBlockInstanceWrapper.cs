@@ -158,6 +158,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
       Transform = _transform // block instance specific
     };
 
+  public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
+
   private void UpdateTransformFromProxy()
   {
     var units = _instanceProxy.units;
