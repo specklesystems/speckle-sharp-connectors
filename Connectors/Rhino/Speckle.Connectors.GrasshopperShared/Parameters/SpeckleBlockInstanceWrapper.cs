@@ -145,7 +145,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
     new SpeckleBlockInstanceWrapper // covariant return types to satisfy inheritance chain
     {
       Base = InstanceProxy.ShallowCopy(),
-      GeometryBase = null, // safe default. GeometryBase is null for instances?
+      GeometryBase = null, // We need this GeometryBase property on instances. It corresponds to an InstanceReferenceGeometry object that inherits from GeometryBase in rhinocommon
       Color = null, // TODO: commented out in props
       Material = null, // TODO: commented out in props
       WrapperGuid = WrapperGuid,
