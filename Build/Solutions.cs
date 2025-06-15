@@ -1,48 +1,49 @@
-﻿using Microsoft.Build.Construction;
-using Microsoft.VisualStudio.SolutionPersistence.Model;
+﻿using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace Build;
 
 public static class Solutions
 {
-  private static bool ValidProjects(KeyValuePair<string, ProjectInSolution> projectInSolution) =>
-    projectInSolution.Value.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat;
-
-  public static void CompareConnectorsToLocal()
+#pragma warning disable CA1802
+#pragma warning disable IDE1006
+  private static readonly string DIRECTORY = Environment.CurrentDirectory;
+#pragma warning restore IDE1006
+#pragma warning restore CA1802
+  public static async Task CompareConnectorsToLocal()
   {
-    var localSln = SolutionFile.Parse(Path.Combine(Environment.CurrentDirectory, "Local.sln"));
-    var connectorsSln = SolutionFile.Parse(Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.sln"));
-    var localProjects = localSln.ProjectsByGuid.Where(ValidProjects).ToDictionary();
+    var localSln = await GetSolution("Local.sln");
+    var connectorsSln = await GetSolution("Speckle.Connectors.sln");
+    var localProjects = localSln.SolutionProjects.ToList();
 
-    foreach ((string? _, ProjectInSolution? value) in connectorsSln.ProjectsByGuid.Where(ValidProjects))
+    foreach (var value in connectorsSln.SolutionProjects)
     {
-      var localProject = localProjects.Values.FirstOrDefault(x => x.ProjectName == value.ProjectName);
+      var localProject = localProjects.FirstOrDefault(x => x.ActualDisplayName == value.ActualDisplayName);
       if (localProject is null)
       {
-        throw new InvalidOperationException($"Could not find in LOCAL solution: {value.ProjectName}");
+        throw new InvalidOperationException($"Could not find in LOCAL solution: {value.ActualDisplayName}");
       }
 
-      if (value.ProjectName != localProject.ProjectName)
+      if (value.ActualDisplayName != localProject.ActualDisplayName)
       {
         throw new InvalidOperationException(
           "Projects with different names have same Guid in solution: "
-            + value.ProjectName
+            + value.ActualDisplayName
             + " and "
-            + localProject.ProjectName
+            + localProject.ActualDisplayName
         );
       }
-      localProjects.Remove(localProjects.Single(x => x.Value.ProjectName == value.ProjectName).Key);
+      localProjects.Remove(localProjects.Single(x => x.ActualDisplayName == value.ActualDisplayName));
     }
 
     void CheckAndRemoveKnown(string projectName)
     {
-      var localProject = localProjects.Values.FirstOrDefault(x => x.ProjectName == projectName);
+      var localProject = localProjects.FirstOrDefault(x => x.ActualDisplayName == projectName);
       if (localProject is null)
       {
         throw new InvalidOperationException($"Could not find in LOCAL solution: {projectName}");
       }
-      localProjects.Remove(localProjects.Single(x => x.Value.ProjectName == projectName).Key);
+      localProjects.Remove(localProjects.Single(x => x.ActualDisplayName == projectName));
     }
 
     CheckAndRemoveKnown("Speckle.Objects");
@@ -51,7 +52,7 @@ public static class Solutions
     if (localProjects.Count != 0)
     {
       throw new InvalidOperationException(
-        "Could not find in CONNECTOR solution: " + localProjects.First().Value.ProjectName
+        "Could not find in CONNECTOR solution: " + localProjects.First().ActualDisplayName
       );
     }
   }
@@ -73,13 +74,14 @@ public static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Objects\\Speckle.Objects.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk\\Speckle.Sdk.csproj");
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
-    var sln = Path.Combine("C:\\Users\\adam\\Git\\speckle-sharp-connectors", "Local.slnx");
+    var sln = Path.Combine(DIRECTORY, "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
-    sln = Path.Combine(Environment.CurrentDirectory, "Local.sln");
+    sln = Path.Combine(DIRECTORY, "Local.sln");
     await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
 
     var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
     await GenerateConnector(connectors, revit, "Revit.Local");
+    await GenerateMacSolutions();
   }
 
   public static async Task GenerateConnector(SolutionModel connectors, ProjectGroup group, string? name)
@@ -98,13 +100,38 @@ public static class Solutions
     {
       connectors.RemoveFolder(folderToRemove);
     }
-    var sln = Path.Combine(Environment.CurrentDirectory, $"Speckle.{name}.slnx");
+    var sln = Path.Combine(DIRECTORY, $"Speckle.{name}.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
   }
 
   public static async Task<SolutionModel> GetFullSlnx()
   {
-    var connectorsSln = Path.Combine(Environment.CurrentDirectory, "Speckle.Connectors.slnx");
+    var connectorsSln = Path.Combine(DIRECTORY, "Speckle.Connectors.slnx");
     return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
+  }
+
+  public static async Task<SolutionModel> GetSolution(string solutionName)
+  {
+    var connectorsSln = Path.Combine(DIRECTORY, solutionName);
+    return await SolutionSerializers.SlnFileV12.OpenAsync(connectorsSln, default);
+  }
+
+  public static async Task GenerateMacSolutions()
+  {
+    var connectors = await GetFullSlnx();
+    var foldersToRemove = connectors
+      .SolutionFolders.Where(x =>
+        //need base folder
+        !x.Path.Equals("/Connectors/")
+        //don't grab all
+        && (x.Path.StartsWith("/Connectors/"))
+      )
+      .ToList();
+    foreach (var folderToRemove in foldersToRemove)
+    {
+      connectors.RemoveFolder(folderToRemove);
+    }
+    var sln = Path.Combine(DIRECTORY, $"Speckle.Connectors.Mac.slnx");
+    await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
   }
 }
