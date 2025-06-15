@@ -47,9 +47,21 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
     switch (data)
     {
-      case SpeckleWrapper wrapper:
-        Name = string.IsNullOrEmpty(wrapper.Name) ? wrapper.Base.speckle_type : wrapper.Name;
-        outputParams = CreateOutputParamsFromBase(wrapper.Base);
+      case SpeckleObjectWrapperGoo objectGoo when objectGoo.Value != null:
+        Name = string.IsNullOrEmpty(objectGoo.Value.Name) ? objectGoo.Value.Base.speckle_type : objectGoo.Value.Name;
+        outputParams = CreateOutputParamsFromBase(objectGoo.Value.Base);
+        break;
+
+      case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
+        Name = string.IsNullOrEmpty(blockInstanceGoo.Value.Name)
+          ? blockInstanceGoo.Value.Base.speckle_type
+          : blockInstanceGoo.Value.Name;
+        outputParams = CreateOutputParamsFromBase(blockInstanceGoo.Value.Base);
+        break;
+
+      case SpeckleBlockDefinitionWrapperGoo blockDef:
+        Name = string.IsNullOrEmpty(blockDef.Value.Name) ? blockDef.Value.Base.speckle_type : blockDef.Value.Name;
+        outputParams = CreateOutputParamsFromBase(blockDef.Value.Base);
         break;
 
       case SpecklePropertyGroupGoo propGoo:
