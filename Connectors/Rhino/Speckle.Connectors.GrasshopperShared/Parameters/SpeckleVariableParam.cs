@@ -112,6 +112,12 @@ public class SpeckleVariableParam : Param_GenericObject
 
         // Tell the parent component its layout needs to be recalculated
         Attributes.Parent?.ExpireLayout();
+
+        // Expire solution when name changes to refresh downstream components
+        if (AlwaysInheritNames)
+        {
+          ExpireSolution(true);
+        }
       }
       finally
       {
@@ -167,6 +173,12 @@ public class SpeckleVariableParam : Param_GenericObject
         if (AlwaysInheritNames && !_isUpdatingName) // Double-check in case it changed
         {
           TryInheritName();
+
+          // downstream components to be refreshed when source names change
+          if (OnPingDocument() != null)
+          {
+            OnPingDocument().ScheduleSolution(5, _ => ExpireSolution(true));
+          }
         }
       });
     }
