@@ -28,14 +28,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-<!--    <PackageReference Include="GrasshopperAsyncComponent" />-->
+    <PackageReference Include="GrasshopperAsyncComponent" />
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\GrasshopperAsyncComponent\GrasshopperAsyncComponent\GrasshopperAsyncComponent.csproj" />
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>

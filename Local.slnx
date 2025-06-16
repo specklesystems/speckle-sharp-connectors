@@ -141,9 +141,6 @@
     <Project Path="Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.shproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/">
-    <Project Path="..\GrasshopperAsyncComponent\GrasshopperAsyncComponent\GrasshopperAsyncComponent.csproj" Type="Classic C#">
-      <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />
-    </Project>
     <File Path="Connectors\Rhino\Directory.Build.targets" />
   </Folder>
   <Folder Name="/Connectors/Rhino/7/">
