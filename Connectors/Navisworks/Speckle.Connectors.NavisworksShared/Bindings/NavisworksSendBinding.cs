@@ -66,7 +66,8 @@ public class NavisworksSendBinding : ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
-      new NavisworksSavedSetsFilter(new ElementSelectionService())
+      new NavisworksSavedSetsFilter(new ElementSelectionService()),
+      new NavisworksSavedViewsFilter(new ElementSelectionService())
     ];
 
   public List<ICardSetting> GetSendSettings() =>
