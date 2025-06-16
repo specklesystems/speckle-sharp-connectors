@@ -172,10 +172,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    foreach (var kvp in Properties.Value)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
+    // add props
+    Properties.AssignToObjectAttributes(att);
 
     // add to doc
     Guid guid = doc.Objects.Add(GeometryBase, att);
@@ -202,10 +200,12 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       return false;
     }
 
+    /*
     if (!Properties.Equals(objWrapper.Properties))
     {
       return false;
     }
+    */
 
     return true;
   }
@@ -226,7 +226,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public override IGH_Goo Duplicate()
   {
