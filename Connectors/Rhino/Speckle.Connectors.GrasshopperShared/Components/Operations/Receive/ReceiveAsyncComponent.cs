@@ -68,6 +68,16 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    MultipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+    if (MultipleResources)
+    {
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        "Only one model can be loaded at a time. To load to multiple models, please use different load components."
+      );
+      return;
+    }
+
     da.DisableGapLogic();
     // We need to call this always in here to be able to react and set events :/
     ParseInput(da);
@@ -100,6 +110,8 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
       OnDisplayExpired(true);
     }
   }
+
+  public bool MultipleResources { get; set; }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
@@ -561,14 +573,21 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
       return GH_ObjectResponse.Handled;
     }
 
-    if (((ReceiveAsyncComponent)Owner).AutoReceive)
+    // NOTE: why do we kill auto receive when clicking on the button?
+    // It's enabled via the context menu, I expect it to be disabled from the same place
+    // if (((ReceiveAsyncComponent)Owner).AutoReceive)
+    // {
+    //   ((ReceiveAsyncComponent)Owner).AutoReceive = false;
+    //   Owner.OnDisplayExpired(true);
+    //   return GH_ObjectResponse.Handled;
+    // }
+
+    // TODO: check if owner has null account/client, and call the reset thing SYNC
+    if ((Owner as ReceiveAsyncComponent)?.MultipleResources == true)
     {
-      ((ReceiveAsyncComponent)Owner).AutoReceive = false;
-      Owner.OnDisplayExpired(true);
       return GH_ObjectResponse.Handled;
     }
 
-    // TODO: check if owner has null account/client, and call the reset thing SYNC
     ((ReceiveAsyncComponent)Owner).CurrentComponentState = ComponentState.Ready;
     Owner.ExpireSolution(true);
     return GH_ObjectResponse.Handled;
