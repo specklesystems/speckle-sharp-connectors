@@ -16,7 +16,6 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 
@@ -25,14 +24,8 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
 public class SendAsyncComponent : GH_AsyncComponent
 {
-  private ResourceCollection<Project>? LastFetchedProjects { get; set; }
-  private ResourceCollection<Model>? LastFetchedModels { get; set; }
-
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
-
-  private ToolStripDropDown? ProjectDropDown { get; set; }
-  private ToolStripDropDown? ModelDropDown { get; set; }
 
   public SendAsyncComponent()
     : base(
@@ -57,13 +50,10 @@ public class SendAsyncComponent : GH_AsyncComponent
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
-  public MixPanelManager MixPanelManager { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
 
   public SpeckleUrlModelResource? OutputParam { get; set; }
-  public SendOperation<SpeckleCollectionWrapperGoo> SendOperation { get; private set; }
-  public static IServiceScope? Scope { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -118,7 +108,7 @@ public class SendAsyncComponent : GH_AsyncComponent
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     Menu_AppendSeparator(menu);
@@ -139,14 +129,11 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    // Dependency Injection
-    Scope = PriorityLoader.Container.CreateScope();
-    SendOperation = Scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
-    MixPanelManager = Scope.ServiceProvider.GetRequiredService<MixPanelManager>();
-    var accountService = Scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = Scope.ServiceProvider.GetRequiredService<AccountManager>();
-    var clientFactory = Scope.ServiceProvider.GetRequiredService<IClientFactory>();
+    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
+    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
 
     // We need to call this always in here to be able to react and set events :/
     ParseInput(da, accountService, accountManager, clientFactory);
@@ -181,7 +168,6 @@ public class SendAsyncComponent : GH_AsyncComponent
   public override void RemovedFromDocument(GH_Document document)
   {
     RequestCancellation();
-    Scope?.Dispose();
     base.RemovedFromDocument(document);
   }
 
@@ -231,8 +217,8 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   private void ParseInput(
     IGH_DataAccess da,
-    AccountService accountService,
-    AccountManager accountManager,
+    IAccountService accountService,
+    IAccountManager accountManager,
     IClientFactory clientFactory
   )
   {
@@ -336,7 +322,7 @@ public class SendComponentWorker : WorkerInstance
       */
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully published to Speckle. Right-click to view online."
+        $"Successfully published to Speckle. Right-click on the component to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
@@ -394,8 +380,10 @@ public class SendComponentWorker : WorkerInstance
           //sendComponent.Message = $"{p.Status}";
         });
 
-        SendOperationResult? result = await sendComponent
-          .SendOperation.Execute(
+        using var scope = PriorityLoader.CreateScopeForActiveDocument();
+        var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
+        SendOperationResult? result = await sendOperation
+          .Execute(
             new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
             sendInfo,
             progress,
@@ -413,11 +401,9 @@ public class SendComponentWorker : WorkerInstance
         {
           customProperties.Add("workspace_id", sendInfo.WorkspaceId);
         }
-        await sendComponent.MixPanelManager.TrackEvent(
-          MixPanelEvents.Send,
-          sendComponent.ApiClient.Account,
-          customProperties
-        );
+
+        var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
+        await mixPanelManager.TrackEvent(MixPanelEvents.Send, sendComponent.ApiClient.Account, customProperties);
 
         SpeckleUrlModelVersionResource? createdVersion =
           new(
@@ -429,8 +415,7 @@ public class SendComponentWorker : WorkerInstance
             result.VersionId
           );
         OutputParam = createdVersion;
-        sendComponent.Url =
-          $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}@{result.VersionId}";
+        sendComponent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
         // DONE
         done();

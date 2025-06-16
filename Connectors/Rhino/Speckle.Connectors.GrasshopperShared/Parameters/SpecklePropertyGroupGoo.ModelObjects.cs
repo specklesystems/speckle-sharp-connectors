@@ -2,14 +2,17 @@
 using Grasshopper.Rhinoceros;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
+using Grasshopper.Rhinoceros.Params;
+using Rhino;
+using Rhino.DocObjects;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 /// <summary>
-/// The Speckle Property Group Goo is a flat dictionary of (speckle property path, speckle property).
-/// The speckle property path is the concatenated string of all original flattened keys with the property delimiter
+/// The Speckle Property Group Goo is a nested dictionary of (key, speckle property or property group).
+/// The <see cref="Flatten"/> method will use the property delimiter on the keys to flatten the property group into properties.
 /// </summary>
-public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, SpecklePropertyGoo>>, ISpeckleGoo
+public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
   private bool CastFromModelObject(object source)
   {
@@ -19,7 +22,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
         return CastFromModelObject(modelObject.UserText);
 
       case ModelUserText userText:
-        Dictionary<string, SpecklePropertyGoo> dictionary = new();
+        Dictionary<string, ISpecklePropertyGoo> dictionary = new();
         foreach (KeyValuePair<string, string> entry in userText)
         {
           string key = entry.Key;
@@ -33,6 +36,24 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, Speckle
       default:
         return false;
     }
+  }
+
+  private bool CastToModelObject<T>(ref T target)
+  {
+    var type = typeof(T);
+
+    // grasshopper interface types
+    if (type == typeof(IGH_ModelContentData))
+    {
+      ObjectAttributes atts = new();
+      AssignToObjectAttributes(atts);
+
+      ModelObject modelObject = new(RhinoDoc.ActiveDoc, atts);
+      target = (T)(object)modelObject;
+      return true;
+    }
+
+    return false;
   }
 }
 #endif

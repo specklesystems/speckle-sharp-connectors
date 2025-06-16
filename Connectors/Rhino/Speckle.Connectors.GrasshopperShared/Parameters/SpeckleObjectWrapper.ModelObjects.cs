@@ -11,11 +11,55 @@ using Grasshopper.Rhinoceros.Render;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public SpeckleObjectWrapperGoo(ModelObject mo)
   {
     CastFrom(mo);
+  }
+
+  private bool TryCastToExtrusion<T>(ref T target)
+  {
+    Extrusion? extrusion = null;
+    if (GH_Convert.ToExtrusion(Value.GeometryBase, ref extrusion, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Extrusion(extrusion);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToPointcloud<T>(ref T target)
+  {
+    PointCloud? pointCloud = null;
+    if (GH_Convert.ToPointCloud(Value.GeometryBase, ref pointCloud, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_PointCloud(pointCloud);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToHatch<T>(ref T target)
+  {
+    Hatch? hatch = null;
+    if (GH_Convert.ToHatch(Value.GeometryBase, ref hatch, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Hatch(hatch);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToSubD<T>(ref T target)
+  {
+    SubD? subd = null;
+    if (GH_Convert.ToSubD(Value.GeometryBase, ref subd, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_SubD(subd);
+      return true;
+    }
+    return false;
   }
 
   private bool CastToModelObject<T>(ref T target)
@@ -70,10 +114,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         }
       }
 
-      foreach (var kvp in Value.Properties.Value)
-      {
-        atts.SetUserString(kvp.Key, kvp.Value.Value.ToString());
-      }
+      // add props
+      Value.Properties.AssignToObjectAttributes(atts);
 
       target = (T)(object)atts;
       return true;
@@ -121,7 +163,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         propertyGroup.CastFrom(modelObject.UserText);
 
         // get the object layer
-
         SpeckleCollectionWrapperGoo collWrapperGoo = new();
         SpeckleCollectionWrapper? collWrapper = collWrapperGoo.CastFrom(modelObject.Layer)
           ? collWrapperGoo.Value
@@ -131,9 +172,9 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         modelConverted.applicationId = modelObject.Id?.ToString();
         modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
         Dictionary<string, object?> propertyDict = new();
-        foreach (var entry in propertyGroup.Value)
+        foreach (var entry in modelObject.UserText)
         {
-          propertyDict.Add(entry.Key, entry.Value.Value);
+          propertyDict.Add(entry.Key, entry.Value);
         }
 
         modelConverted[Constants.PROPERTIES_PROP] = propertyDict;

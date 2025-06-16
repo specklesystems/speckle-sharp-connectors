@@ -172,10 +172,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    foreach (var kvp in Properties.Value)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value.ToString());
-    }
+    // add props
+    Properties.AssignToObjectAttributes(att);
 
     // add to doc
     Guid guid = doc.Objects.Add(GeometryBase, att);
@@ -202,10 +200,12 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       return false;
     }
 
+    /*
     if (!Properties.Equals(objWrapper.Properties))
     {
       return false;
     }
+    */
 
     return true;
   }
@@ -226,7 +226,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public override IGH_Goo Duplicate()
   {
@@ -283,15 +283,129 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
   public override bool CastTo<T>(ref T target)
   {
-    var type = typeof(T);
-
-    if (type == typeof(IGH_GeometricGoo))
+    if (Value.GeometryBase == null)
     {
-      target = (T)(object)GH_Convert.ToGeometricGoo(Value.GeometryBase);
-      return true;
+      return CastToModelObject(ref target);
     }
 
-    return CastToModelObject(ref target);
+    return target switch
+    {
+      GH_Surface => TryCastToSurface(ref target),
+      GH_Mesh => TryCastToMesh(ref target),
+      GH_Brep => TryCastToBrep(ref target),
+      GH_Line => TryCastToLine(ref target),
+      GH_Curve => TryCastToCurve(ref target),
+      GH_Point => TryCastToPoint(ref target),
+      GH_Circle => TryCastToCircle(ref target),
+      GH_Arc => TryCastToArc(ref target),
+#if RHINO8_OR_GREATER
+      GH_Extrusion => TryCastToExtrusion(ref target),
+      GH_PointCloud => TryCastToPointcloud(ref target),
+      GH_SubD => TryCastToSubD(ref target),
+      GH_Hatch => TryCastToHatch(ref target),
+#endif
+      IGH_GeometricGoo => TryCastToGeometricGoo(ref target),
+      _ => CastToModelObject(ref target)
+    };
+  }
+
+  private bool TryCastToSurface<T>(ref T target)
+  {
+    Surface? surface = null;
+    if (GH_Convert.ToSurface(Value.GeometryBase, ref surface, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Surface(surface);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToMesh<T>(ref T target)
+  {
+    Mesh? mesh = null;
+    if (GH_Convert.ToMesh(Value.GeometryBase, ref mesh, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Mesh(mesh);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToBrep<T>(ref T target)
+  {
+    Brep? brep = null;
+    if (GH_Convert.ToBrep(Value.GeometryBase, ref brep, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Brep(brep);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToLine<T>(ref T target)
+  {
+    Line line = new();
+    if (GH_Convert.ToLine(Value.GeometryBase, ref line, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Line(line);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToCurve<T>(ref T target)
+  {
+    Curve? curve = null;
+    if (GH_Convert.ToCurve(Value.GeometryBase, ref curve, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Curve(curve);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToPoint<T>(ref T target)
+  {
+    Point3d point = new();
+    if (GH_Convert.ToPoint3d(Value.GeometryBase, ref point, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Point(point);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToGeometricGoo<T>(ref T target)
+  {
+    var geometricGoo = GH_Convert.ToGeometricGoo(Value.GeometryBase);
+    if (geometricGoo != null && geometricGoo is T convertedGoo)
+    {
+      target = convertedGoo;
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToCircle<T>(ref T target)
+  {
+    var circle = new Rhino.Geometry.Circle();
+    if (GH_Convert.ToCircle(Value.GeometryBase, ref circle, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Circle(circle);
+      return true;
+    }
+    return false;
+  }
+
+  private bool TryCastToArc<T>(ref T target)
+  {
+    var arc = new Arc();
+    if (GH_Convert.ToArc(Value.GeometryBase, ref arc, GH_Conversion.Both))
+    {
+      target = (T)(object)new GH_Arc(arc);
+      return true;
+    }
+    return false;
   }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
@@ -366,6 +480,16 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     }
   }
 
+  /// <summary>
+  /// Bakes the object
+  /// </summary>
+  /// <param name="doc"></param>
+  /// <param name="att"></param>
+  /// <param name="obj_ids"></param>
+  /// <remarks>
+  /// The attributes come from the user dialog after calling bake.
+  /// The selected layer from the dialog will only be user if no path is already present on the object.
+  /// </remarks>
   public void BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
   {
     // Iterate over all data stored in the parameter
@@ -373,7 +497,9 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     {
       if (item is SpeckleObjectWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids);
+        int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
+        bool layerCreated = goo.Value.Path.Count == 0;
+        goo.Value.Bake(doc, obj_ids, layerIndex, layerCreated);
       }
     }
   }

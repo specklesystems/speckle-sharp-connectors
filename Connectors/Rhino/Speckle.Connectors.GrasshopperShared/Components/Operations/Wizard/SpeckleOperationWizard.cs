@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -34,8 +34,8 @@ public class SpeckleOperationWizard
 
   private readonly Func<Task> _refreshComponent;
   private readonly Func<string, Task> _updateComponentMessage;
-  private readonly AccountService _accountService;
-  private readonly AccountManager _accountManager;
+  private readonly IAccountService _accountService;
+  private readonly IAccountManager _accountManager;
 
   /// <param name="refreshComponent"> Callback function to trigger when component need to refresh itself.</param>
   /// <param name="isSender"> Whether it will be used in sender or receiver. Accordingly, the wizard will manage versions or not.</param>
@@ -44,12 +44,12 @@ public class SpeckleOperationWizard
     _refreshComponent = refreshComponent;
     _updateComponentMessage = updateComponentMessage;
     _clientFactory = PriorityLoader.Container.GetRequiredService<IClientFactory>();
-    _accountManager = PriorityLoader.Container.GetRequiredService<AccountManager>();
-    _accountService = PriorityLoader.Container.GetRequiredService<AccountService>();
+    _accountManager = PriorityLoader.Container.GetRequiredService<IAccountManager>();
+    _accountService = PriorityLoader.Container.GetRequiredService<IAccountService>();
 
     var userSelectedAccountId = _accountService.GetUserSelectedAccountId();
     Accounts = _accountManager.GetAccounts().ToList();
-    SelectedAccount = userSelectedAccountId == null ? null : _accountManager.GetAccount(userSelectedAccountId);
+    SelectedAccount = Accounts.FirstOrDefault(a => a.id == userSelectedAccountId);
 
     WorkspaceMenuHandler = new WorkspaceMenuHandler(FetchWorkspaces, CreateNewWorkspace);
     ProjectMenuHandler = new ProjectMenuHandler(FetchProjects);

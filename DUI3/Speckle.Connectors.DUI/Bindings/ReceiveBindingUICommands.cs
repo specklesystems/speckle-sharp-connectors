@@ -3,7 +3,20 @@ using Speckle.Connectors.DUI.Bridge;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
-public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands
+public interface IReceiveBindingUICommands
+{
+  Task SetModelError(string modelCardId, Exception exception);
+
+  Task SetModelReceiveResult(
+    string modelCardId,
+    IEnumerable<string> bakedObjectIds,
+    IEnumerable<ConversionResult> conversionResults
+  );
+
+  IBrowserBridge Bridge { get; }
+}
+
+public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands, IReceiveBindingUICommands
 {
   // POC: put here events once we needed for receive specific
   private const string SET_MODEL_RECEIVE_RESULT_UI_COMMAND_NAME = "setModelReceiveResult";

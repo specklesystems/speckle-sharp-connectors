@@ -34,14 +34,14 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       value = target.TextString,
       height = target.Height,
       maxWidth = null, // always 1 line
-      origin = _pointConverter.Convert(target.Position),
       plane = GetTextPlane(target),
-      alignmentH = SA.AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
-      alignmentV = SA.AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
+      screenOriented = false,
+      alignmentH = AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
+      alignmentV = AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
       units = _settingsStore.Current.SpeckleUnits
     };
 
-  private SOG.Plane? GetTextPlane(ADB.DBText target)
+  private SOG.Plane GetTextPlane(ADB.DBText target)
   {
     AG.Plane plane = new(target.Position, target.Normal);
 

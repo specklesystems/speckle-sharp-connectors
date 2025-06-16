@@ -34,10 +34,8 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
   public SpeckleUrlModelResource? Resource { get; } = resource;
 }
 
-public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInput, SendComponentOutput>
+public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
-  private readonly MixPanelManager _mixpanel;
-
   public SendComponent()
     : base(
       "(Sync) Publish",
@@ -45,10 +43,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       "Publish a collection to Speckle, synchronously",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
-    )
-  {
-    _mixpanel = PriorityLoader.Container.GetRequiredService<MixPanelManager>();
-  }
+    ) { }
 
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
 
@@ -119,7 +114,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created version online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
     }
 
     static void Open(string url)
@@ -129,9 +124,8 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     }
   }
 
-  protected override async Task<SendComponentOutput> PerformScopedTask(
+  protected override async Task<SendComponentOutput> PerformTask(
     SendComponentInput input,
-    IServiceScope scope,
     CancellationToken cancellationToken = default
   )
   {
@@ -140,8 +134,9 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
       return new(null);
     }
 
-    var accountService = scope.ServiceProvider.GetRequiredService<AccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<AccountManager>();
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
@@ -173,7 +168,9 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
     {
       customProperties.Add("workspace_id", sendInfo.WorkspaceId);
     }
-    await _mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+
+    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
+    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
     SpeckleUrlLatestModelVersionResource createdVersionResource =
       new(
@@ -183,7 +180,7 @@ public class SendComponent : SpeckleScopedTaskCapableComponent<SendComponentInpu
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}"; // TODO: missing "@VersionId"
+    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
 
     return new SendComponentOutput(createdVersionResource);
   }

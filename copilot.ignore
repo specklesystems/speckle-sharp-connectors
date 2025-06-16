@@ -1,0 +1,3 @@
+# Ignore the Speckle.Performance directory for GitHub Copilot suggestions
+Speckle.Performance/
+Connectors/
