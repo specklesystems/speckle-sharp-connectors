@@ -111,6 +111,7 @@ public class SpeckleSelectModelComponent : GH_Component
         catch (SpeckleException e)
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+          da.AbortComponentSolution();
         }
         return; // Fast exit!
       }
@@ -154,6 +155,7 @@ public class SpeckleSelectModelComponent : GH_Component
         ProjectContextMenuButton.Enabled = false;
         ModelContextMenuButton.Enabled = false;
         VersionContextMenuButton.Enabled = false;
+        da.AbortComponentSolution();
         return;
       }
 
@@ -172,6 +174,7 @@ public class SpeckleSelectModelComponent : GH_Component
         {
           // Create a workspace flow
           SpeckleOperationWizard.CreateNewWorkspaceUIState();
+          da.AbortComponentSolution();
           return;
         }
       }
@@ -191,6 +194,7 @@ public class SpeckleSelectModelComponent : GH_Component
         }
         else
         {
+          da.AbortComponentSolution();
           return;
         }
       }
@@ -212,6 +216,8 @@ public class SpeckleSelectModelComponent : GH_Component
       {
         ModelContextMenuButton.Enabled = false;
         VersionContextMenuButton.Enabled = false;
+
+        da.AbortComponentSolution();
         return;
       }
 
@@ -231,6 +237,7 @@ public class SpeckleSelectModelComponent : GH_Component
       if (SpeckleOperationWizard.SelectedModel == null)
       {
         VersionContextMenuButton.Enabled = false;
+        da.AbortComponentSolution();
         return;
       }
 
@@ -279,10 +286,12 @@ public class SpeckleSelectModelComponent : GH_Component
         GH_RuntimeMessageLevel.Error,
         string.Join("\n", e.InnerExceptions.Select(innerE => innerE.Message))
       );
+      da.AbortComponentSolution();
     }
     catch (Exception e) when (!e.IsFatal())
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      da.AbortComponentSolution();
     }
   }
 

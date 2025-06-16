@@ -156,6 +156,8 @@ public static class GrasshopperHelpers
         return el.ToNurbsCurve();
       case Sphere sp:
         return sp.ToBrep();
+      case Box box:
+        return box.ToBrep();
     }
 
     throw new SpeckleException("Failed to cast IGH_GeometricGoo to geometry base");
