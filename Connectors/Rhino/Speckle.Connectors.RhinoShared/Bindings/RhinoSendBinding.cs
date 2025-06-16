@@ -312,6 +312,19 @@ public sealed class RhinoSendBinding : ISendBinding
       return;
     }
 
+    // Invalidate any objects whose materials have changed
+    if (!ChangedMaterialIndexes.IsEmpty)
+    {
+      var changedMaterialIndexes = ChangedMaterialIndexes.Keys.ToArray();
+      foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
+      {
+        if (changedMaterialIndexes.Contains(rhinoObject.Attributes.MaterialIndex))
+        {
+          ChangedObjectIds[rhinoObject.Id.ToString()] = 1;
+        }
+      }
+    }
+
     if (ChangedObjectIds.IsEmpty && ChangedObjectIdsInGroupsOrLayers.IsEmpty)
     {
       return;
