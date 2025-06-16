@@ -232,7 +232,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     int? previousFilterIndex = index == 1 ? null : _outputFilterIndices[index - 2];
     int? nextFilterIndex = index > _outputFilterIndices.Count ? null : _outputFilterIndices[index - 1];
     return (previousFilterIndex is null && nextFilterIndex != 0)
-      || nextFilterIndex is null
+      || (nextFilterIndex is null && previousFilterIndex != Filters.Count - 1)
       || nextFilterIndex - previousFilterIndex > 1;
   }
 
@@ -245,7 +245,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     int? previousFilterIndex = _outputFilterIndices is null || index == 1 ? null : _outputFilterIndices[index - 2];
     _outputFilterIndices = null;
 
-    ObjectType filter = previousFilterIndex is null ? Filters.First() : Filters[(int)previousFilterIndex];
+    ObjectType filter = previousFilterIndex is null ? Filters.First() : Filters[(int)previousFilterIndex + 1];
     return new Param_GenericObject
     {
       Name = filter.ToString(),
