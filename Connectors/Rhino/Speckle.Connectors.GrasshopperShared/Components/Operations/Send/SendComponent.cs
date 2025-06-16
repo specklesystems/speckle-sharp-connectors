@@ -129,8 +129,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     CancellationToken cancellationToken = default
   )
   {
-    var multipleResources = Params.Input[0].VolatileData.AllData(true).Count() != 1;
-    var multipleCollections = Params.Input[1].VolatileData.AllData(true).Count() != 1;
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+    var multipleCollections = Params.Input[1].VolatileData.HasInputCountGreaterThan(1);
 
     var hasMultipleInputs = multipleCollections || multipleResources;
 

@@ -101,7 +101,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     CancellationToken cancellationToken = default
   )
   {
-    var multipleResources = Params.Input[0].VolatileData.AllData(true).Count() != 1;
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
     if (multipleResources)
     {
       AddRuntimeMessage(

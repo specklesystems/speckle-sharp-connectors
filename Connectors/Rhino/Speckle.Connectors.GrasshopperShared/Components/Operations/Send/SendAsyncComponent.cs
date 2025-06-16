@@ -129,8 +129,8 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    var multipleResources = Params.Input[0].VolatileData.AllData(true).Count() != 1;
-    var multipleCollections = Params.Input[1].VolatileData.AllData(true).Count() != 1;
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+    var multipleCollections = Params.Input[1].VolatileData.HasInputCountGreaterThan(1);
 
     HasMultipleInputs = multipleCollections || multipleResources;
 
