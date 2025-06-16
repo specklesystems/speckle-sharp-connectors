@@ -11,15 +11,6 @@
           "RhinoCommon": "[8.9.24194.18121]"
         }
       },
-      "GrasshopperAsyncComponent": {
-        "type": "Direct",
-        "requested": "[2.0.1-alpha.1, )",
-        "resolved": "2.0.1-alpha.1",
-        "contentHash": "TTS+uLYa1mRMCRHceT9WC0cpXHrKhIHQqLQ8CJxbmYv0U62WeOtUNt2W+3UjmmxKJlypIXpXdFdVEZboodOT2Q==",
-        "dependencies": {
-          "PolySharp": "1.14.1"
-        }
-      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
