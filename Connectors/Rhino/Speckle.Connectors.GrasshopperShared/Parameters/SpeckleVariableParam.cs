@@ -175,10 +175,7 @@ public class SpeckleVariableParam : Param_GenericObject
           TryInheritName();
 
           // downstream components to be refreshed when source names change
-          if (OnPingDocument() != null)
-          {
-            OnPingDocument().ScheduleSolution(5, _ => ExpireSolution(true));
-          }
+          OnPingDocument()?.ScheduleSolution(5, _ => ExpireSolution(true));
         }
       });
     }
