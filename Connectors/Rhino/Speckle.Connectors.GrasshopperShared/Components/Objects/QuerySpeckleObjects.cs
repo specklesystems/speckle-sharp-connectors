@@ -1,7 +1,7 @@
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -59,10 +59,39 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   }
 
   // The list of filters that can be added by the user as a dynamic output
-  private string[] Filters => Enum.GetNames(typeof(GeometryBaseFilter));
+  // The order of this array will determine the order of outputs in this component
+  private List<ObjectType> Filters =>
+    [
+      ObjectType.InstanceReference,
+      ObjectType.Point,
+      ObjectType.PointSet,
+      ObjectType.Curve,
+      ObjectType.Extrusion,
+      ObjectType.Brep,
+      ObjectType.SubD,
+      ObjectType.Mesh,
+      ObjectType.Hatch
+    ];
+
+  private string GetFilterNickName(ObjectType type) =>
+    type switch
+    {
+      ObjectType.InstanceReference => "Block Instances",
+      ObjectType.Point => "Points",
+      ObjectType.PointSet => "Point Clouds",
+      ObjectType.Curve => "Curves",
+      ObjectType.Extrusion => "Extrusions",
+      ObjectType.Brep => "Breps",
+      ObjectType.SubD => "SubDs",
+      ObjectType.Mesh => "Meshes",
+      ObjectType.Hatch => "Hatches",
+      _ => ""
+    };
+
+  private List<int>? _outputFilterIndices;
 
   // Caches the list of all objects by geometrybase type
-  private readonly Dictionary<string, List<SpeckleObjectWrapper>> _filterDict = new();
+  private readonly Dictionary<ObjectType, List<SpeckleObjectWrapper>> _filterDict = new();
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
@@ -102,14 +131,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // Set output objects
     for (int i = 0; i < Params.Output.Count; i++)
     {
-      IGH_Param param = Params.Output[i];
-      if (i != 0 && !_filterDict.ContainsKey(param.Name))
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Unsupported output name: {param.Name}");
-        return;
-      }
-
-      List<SpeckleObjectWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[param.Name];
+      List<SpeckleObjectWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[Filters[i - 1]];
       if (targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
         var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputValues);
@@ -131,16 +153,16 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
       return;
     }
 
-    foreach (GeometryBaseFilter filter in Enum.GetValues(typeof(GeometryBaseFilter)))
+    foreach (ObjectType filter in Filters)
     {
-      _filterDict.Add(filter.ToString(), new());
+      _filterDict.Add(filter, new());
     }
 
     foreach (var wrapper in objs)
     {
       if (
-        wrapper.GeometryBase?.GetType()?.Name is string type
-        && _filterDict.TryGetValue(type, out List<SpeckleObjectWrapper>? value)
+        wrapper.GeometryBase?.ObjectType is ObjectType objType
+        && _filterDict.TryGetValue(objType, out List<SpeckleObjectWrapper>? value)
       )
       {
         value.Add(wrapper);
@@ -189,31 +211,51 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
   {
-    // index should account for the first output always being all objects
-    if (side == GH_ParameterSide.Input || index == 0 || index > Filters.Length)
+    if (side == GH_ParameterSide.Input || index == 0 || index > Filters.Count)
     {
       return false;
     }
 
-    // test to see if index corresponds to a missing filter in current outputs
-    return Params.Output.Count <= index || Params.Output[index].Name != Filters[index - 1];
+    // repopulate current output params if needed
+    if (_outputFilterIndices is null)
+    {
+      _outputFilterIndices = new();
+      foreach (var output in Params.Output)
+      {
+        if (Enum.TryParse(output.Name, out ObjectType filter))
+        {
+          _outputFilterIndices.Add(Filters.IndexOf(filter));
+        }
+      }
+    }
+
+    int? previousFilterIndex = index == 1 ? null : _outputFilterIndices[index - 2];
+    int? nextFilterIndex = index > _outputFilterIndices.Count ? null : _outputFilterIndices[index - 1];
+    return (previousFilterIndex is null && nextFilterIndex != 0)
+      || nextFilterIndex is null
+      || nextFilterIndex - previousFilterIndex > 1;
   }
 
   public bool CanRemoveParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output && index != 0;
 
   public IGH_Param CreateParameter(GH_ParameterSide side, int index)
   {
+    _outputFilterIndices = null;
     // index should account for the first output which is always all objects
     return new Param_GenericObject
     {
-      Name = Filters[index - 1],
-      NickName = Filters[index - 1],
-      MutableNickName = true,
+      Name = Filters[index - 1].ToString(),
+      NickName = GetFilterNickName(Filters[index - 1]),
+      MutableNickName = false,
       Optional = true
     };
   }
 
-  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output;
+  public bool DestroyParameter(GH_ParameterSide side, int index)
+  {
+    _outputFilterIndices = null;
+    return side == GH_ParameterSide.Output;
+  }
 
   public void VariableParameterMaintenance() { }
 
@@ -234,28 +276,5 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // an empty filter dict will trigger the SortObjectsByGeometryBaseType method.
     // we only want to re-sort objects if an input has changed, not on every trigger of solve instance.
     _filterDict.Clear();
-  }
-
-  /// <summary>
-  /// The geometry base type filters we are exposing to the user.
-  /// The output param order corresponds to the order of the enums present here.
-  /// The Description is used for the output param name, and the Enum string shoud correspond to the type name.
-  /// </summary>
-  private enum GeometryBaseFilter
-  {
-    [Description("Block Instance")]
-    InstanceReferenceGeometry,
-
-    [Description("Points")]
-    Point,
-
-    [Description("Curves")]
-    Curve,
-
-    [Description("Extrusions")]
-    Extrusion,
-
-    [Description("Brep")]
-    Brep
   }
 }
