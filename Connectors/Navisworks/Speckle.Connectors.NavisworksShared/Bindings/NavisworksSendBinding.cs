@@ -33,6 +33,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly ToSpeckleSettingsManagerNavisworks _toSpeckleSettingsManagerNavisworks;
   private readonly IElementSelectionService _selectionService;
   private readonly IThreadContext _threadContext;
+  private readonly IAccountService _accountService;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
 
   public NavisworksSendBinding(
@@ -44,6 +45,7 @@ public class NavisworksSendBinding : ISendBinding
     ToSpeckleSettingsManagerNavisworks toSpeckleSettingsManagerNavisworks,
     IElementSelectionService selectionService,
     IThreadContext threadContext,
+    IAccountService accountService,
     ISendOperationManagerFactory sendOperationManagerFactory
   )
   {
@@ -56,6 +58,7 @@ public class NavisworksSendBinding : ISendBinding
     _toSpeckleSettingsManagerNavisworks = toSpeckleSettingsManagerNavisworks;
     _selectionService = selectionService;
     _threadContext = threadContext;
+    _accountService = accountService;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     SubscribeToNavisworksEvents();
   }
@@ -143,7 +146,7 @@ public class NavisworksSendBinding : ISendBinding
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
       .Execute(
         navisworksModelItems,
-        modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
+        modelCard.GetSendInfo(_accountService, _speckleApplication.ApplicationAndVersion),
         onOperationProgressed,
         token
       );
