@@ -89,8 +89,11 @@ public class RhinoMaterialUnpacker
     }
     else if (material is not null)
     {
-      RenderMaterial convertedRender = ConvertMaterialToRenderMaterial(material);
-      myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
+      RenderMaterial? convertedRender = ConvertMaterialToRenderMaterial(material);
+      if (convertedRender is not null)
+      {
+        myMaterial = ConvertRenderMaterialToSpeckle(convertedRender);
+      }
     }
 
     if (myMaterial is null)
@@ -174,7 +177,7 @@ public class RhinoMaterialUnpacker
   }
 
   // converts a rhino material to a rhino render material
-  private RenderMaterial ConvertMaterialToRenderMaterial(Material material)
+  private RenderMaterial? ConvertMaterialToRenderMaterial(Material material)
   {
     // get physically based render material
     Material pbMaterial = material;

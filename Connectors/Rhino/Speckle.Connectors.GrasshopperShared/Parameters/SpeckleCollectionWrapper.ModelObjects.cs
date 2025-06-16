@@ -7,7 +7,7 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper>, ISpeckleGoo //, IGH_PreviewData // can be made previewable later
+public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapper> //, IGH_PreviewData // can be made previewable later
 {
   private bool CastToModelLayer<T>(ref T target)
   {

@@ -7,11 +7,8 @@ using Rhino.DocObjects;
 using Rhino.DocObjects.Tables;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.DUI.Exceptions;
-using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
@@ -19,9 +16,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Rhino.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
@@ -32,16 +27,13 @@ public sealed class RhinoSendBinding : ISendBinding
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;
-  private readonly IServiceProvider _serviceProvider;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
-  private readonly IOperationProgressManager _operationProgressManager;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
-  private readonly ISpeckleApplication _speckleApplication;
-  private readonly ISdkActivityFactory _activityFactory;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
+  private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
@@ -65,30 +57,24 @@ public sealed class RhinoSendBinding : ISendBinding
     DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
-    IServiceProvider serviceProvider,
     ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
-    IOperationProgressManager operationProgressManager,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-    ISpeckleApplication speckleApplication,
-    ISdkActivityFactory activityFactory,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    ISendOperationManagerFactory sendOperationManagerFactory
   )
   {
     _store = store;
     _idleManager = idleManager;
-    _serviceProvider = serviceProvider;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
-    _operationProgressManager = operationProgressManager;
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
-    _speckleApplication = speckleApplication;
     Parent = parent;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _sendOperationManagerFactory = sendOperationManagerFactory;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
-    _activityFactory = activityFactory;
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
   }
@@ -168,7 +154,21 @@ public sealed class RhinoSendBinding : ISendBinding
 
         if (args is RhinoDoc.RenderMaterialAssignmentChangedEventArgs changedEventArgs)
         {
-          ChangedObjectIds[changedEventArgs.ObjectId.ToString()] = 1;
+          // Update ChangedObjectIdsInGroupsOrLayers (without triggering objects' expiration)
+          // 1. If Material was changed directly on the object:
+          if (changedEventArgs.ObjectId != Guid.Empty)
+          {
+            ChangedObjectIdsInGroupsOrLayers[changedEventArgs.ObjectId.ToString()] = 1;
+          }
+          // 2. If parent Layer material has changed:
+          else if (changedEventArgs.LayerId != Guid.Empty)
+          {
+            var layer = RhinoDoc.ActiveDoc.Layers.FindId(changedEventArgs.LayerId);
+            foreach (Guid objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
+            {
+              ChangedObjectIdsInGroupsOrLayers[objectId.ToString()] = 1;
+            }
+          }
           _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         }
       });
@@ -206,17 +206,10 @@ public sealed class RhinoSendBinding : ISendBinding
         }
 
         var layer = RhinoDoc.ActiveDoc.Layers[args.LayerIndex];
-
-        var allLayers = args.Document.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
-          l.FullPath != null && l.FullPath.Contains(layer.Name)
-        ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
-        foreach (var childLayer in allLayers)
+        // Record IDs of all sub-objects affected by the LayerTable event (without triggering each objects' expiration)
+        foreach (Guid objectId in GetChildObjectIdsFromLayerAndSubLayers(layer))
         {
-          var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
-          foreach (var obj in sublayerObjs)
-          {
-            ChangedObjectIdsInGroupsOrLayers[obj.Id.ToString()] = 1;
-          }
+          ChangedObjectIdsInGroupsOrLayers[objectId.ToString()] = 1;
         }
         _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
         await Commands.RefreshSendFilters();
@@ -284,57 +277,25 @@ public sealed class RhinoSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
-    using var activity = _activityFactory.Start();
-    using var scope = _serviceProvider.CreateScope();
-    scope
-      .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
-    try
-    {
-      if (_store.GetModelById(modelCardId) is not SenderModelCard modelCard)
+    using var manager = _sendOperationManagerFactory.Create();
+
+    await manager.Process(
+      Commands,
+      modelCardId,
+      (sp, _) =>
+        sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
+          .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc)),
+      card =>
       {
-        // Handle as GLOBAL ERROR at BrowserBridge
-        throw new InvalidOperationException("No publish model card was found.");
-      }
-
-      using var cancellationItem = _cancellationManager.GetCancellationItem(modelCardId);
-
-      List<RhinoObject> rhinoObjects = modelCard
-        .SendFilter.NotNull()
-        .RefreshObjectIds()
-        .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
-        .Where(obj => obj != null)
-        .ToList();
-
-      if (rhinoObjects.Count == 0)
-      {
-        // Handle as CARD ERROR in this function
-        throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
-      }
-
-      var sendResult = await scope
-        .ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>()
-        .Execute(
-          rhinoObjects,
-          modelCard.GetSendInfo(_speckleApplication.ApplicationAndVersion),
-          _operationProgressManager.CreateOperationProgressEventHandler(Parent, modelCardId, cancellationItem.Token),
-          cancellationItem.Token
+        return Task.FromResult<IReadOnlyList<RhinoObject>>(
+          card.SendFilter.NotNull()
+            .RefreshObjectIds()
+            .Select(id => RhinoDoc.ActiveDoc.Objects.FindId(new Guid(id)))
+            .Where(obj => obj != null)
+            .ToList()
         );
-
-      await Commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
-    }
-    catch (OperationCanceledException)
-    {
-      // SWALLOW -> UI handles it immediately, so we do not need to handle anything for now!
-      // Idea for later -> when cancel called, create promise from UI to solve it later with this catch block.
-      // So have 3 state on UI -> Cancellation clicked -> Cancelling -> Cancelled
-      return;
-    }
-    catch (Exception ex) when (!ex.IsFatal()) // UX reasons - we will report operation exceptions as model card error. We may change this later when we have more exception documentation
-    {
-      _logger.LogModelCardHandledError(ex);
-      await Commands.SetModelError(modelCardId, ex);
-    }
+      }
+    );
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -406,5 +367,21 @@ public sealed class RhinoSendBinding : ISendBinding
     _sendConversionCache.ClearCache();
     var senderModelCardIds = _store.GetSenders().Select(s => s.ModelCardId.NotNull());
     await Commands.SetModelsExpired(senderModelCardIds);
+  }
+
+  private IEnumerable<Guid> GetChildObjectIdsFromLayerAndSubLayers(Layer layer)
+  {
+    var allLayers = RhinoDoc.ActiveDoc.Layers.Where(l => /* NOTE: layer path may actually be null in some cases (rhino's fault, not ours) */
+      l.FullPath != null && l.FullPath.Contains(layer.Name)
+    ); // not  e imperfect, but layer.GetChildren(true) is valid only in v8 and above; this filter will include the original layer.
+
+    foreach (var childLayer in allLayers)
+    {
+      var sublayerObjs = RhinoDoc.ActiveDoc.Objects.FindByLayer(childLayer) ?? [];
+      foreach (var obj in sublayerObjs)
+      {
+        yield return obj.Id;
+      }
+    }
   }
 }

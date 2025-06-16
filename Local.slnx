@@ -199,7 +199,7 @@
     <Project Path="Sdk\Speckle.Performance\Speckle.Performance.csproj" />
     <Project Path="Sdk\Speckle.Testing\Speckle.Testing.csproj" />
   </Folder>
-  <Project Path="../speckle-sharp-sdk/src/Speckle.Objects/Speckle.Objects.csproj" />
-  <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk.Dependencies/Speckle.Sdk.Dependencies.csproj" />
-  <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk/Speckle.Sdk.csproj" />
+  <Project Path="..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
+  <Project Path="..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj" />
+  <Project Path="..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
 </Solution>
