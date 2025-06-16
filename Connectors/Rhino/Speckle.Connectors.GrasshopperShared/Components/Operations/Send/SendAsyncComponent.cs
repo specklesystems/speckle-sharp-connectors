@@ -356,7 +356,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Publish duration: {_stopwatch?.ElapsedMilliseconds / 1000f}s"
+        $"Publish duration: {_stopwatch.ElapsedMilliseconds / 1000f}s"
       );
     }
   }
