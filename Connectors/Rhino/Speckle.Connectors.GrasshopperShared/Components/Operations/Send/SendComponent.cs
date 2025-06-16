@@ -129,6 +129,31 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     CancellationToken cancellationToken = default
   )
   {
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+    var multipleCollections = Params.Input[1].VolatileData.HasInputCountGreaterThan(1);
+
+    var hasMultipleInputs = multipleCollections || multipleResources;
+
+    if (hasMultipleInputs)
+    {
+      var mCollErrText =
+        "Only one single collection supported. Please group your input collections into one single one before sending.";
+      var mLinksErrText =
+        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components.";
+
+      if (multipleCollections)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mCollErrText);
+      }
+
+      if (multipleResources)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mLinksErrText);
+      }
+
+      return new(null);
+    }
+
     if (!input.Run)
     {
       return new(null);
