@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -41,13 +40,20 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
+    var keyedSemaphoreLock = Create<IKeyedSemaphoreLock>();
+
+    var projectId = "projectId";
 
     var ct = new CancellationToken();
     var objects = new List<object>();
-    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), string.Empty, string.Empty, string.Empty);
+    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), projectId, string.Empty, string.Empty);
     var progress = Create<IProgress<CardProgress>>();
 
+    var keyedLock = Create<IDisposable>();
+    keyedLock.Setup(x => x.Dispose());
+    keyedSemaphoreLock
+      .Setup(x => x.AcquireLockAsync(projectId, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(keyedLock.Object);
     var conversionResults = new List<SendConversionResult>();
     var rootResult = new RootObjectBuilderResult(new TestBase(), conversionResults);
     rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
@@ -71,7 +77,8 @@ public class SendOperationTests : MoqTest
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
-      threadContext.Object
+      threadContext.Object,
+      keyedSemaphoreLock.Object
     );
     var result = await sendOperation.Execute(objects, sendInfo, progress.Object, ct);
     result.Should().NotBeNull();
@@ -98,6 +105,7 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
+    var keyedSemaphoreLock = Create<IKeyedSemaphoreLock>();
 
     var commitObject = new TestBase();
     var projectId = "projectId";
@@ -137,7 +145,8 @@ public class SendOperationTests : MoqTest
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
-      threadContext.Object
+      threadContext.Object,
+      keyedSemaphoreLock.Object
     );
     var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
     result.Should().Be(serializeProcessResults);
