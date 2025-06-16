@@ -180,7 +180,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
   public override void DisplayProgress(object sender, ElapsedEventArgs e)
   {
-    if (Workers.Count == 0)
+    if (WorkerCount == 0)
     {
       return;
     }
@@ -342,7 +342,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
   }
 
-  public override async Task DoWork(Action<string, double> reportProgress, ComponentDoneCallback done)
+  public override async Task DoWork(Action<string, double> reportProgress, Action done)
   {
     if (Parent.JustPastedIn)
     {
