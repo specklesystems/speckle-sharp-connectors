@@ -16,6 +16,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
 
@@ -314,7 +315,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
   public override void SetData(IGH_DataAccess da)
   {
-    _stopwatch?.Stop();
+    _stopwatch.NotNull("GetData must be called before SetData").Stop();
 
     if (Parent.JustPastedIn)
     {
