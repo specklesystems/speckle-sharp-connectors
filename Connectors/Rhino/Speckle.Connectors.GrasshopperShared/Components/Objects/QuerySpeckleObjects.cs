@@ -240,12 +240,16 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   public IGH_Param CreateParameter(GH_ParameterSide side, int index)
   {
-    _outputFilterIndices = null;
+    // get the next filter name based on what the previous output filter at this index is
     // index should account for the first output which is always all objects
+    int? previousFilterIndex = _outputFilterIndices is null || index == 1 ? null : _outputFilterIndices[index - 2];
+    _outputFilterIndices = null;
+
+    ObjectType filter = previousFilterIndex is null ? Filters.First() : Filters[(int)previousFilterIndex];
     return new Param_GenericObject
     {
-      Name = Filters[index - 1].ToString(),
-      NickName = GetFilterNickName(Filters[index - 1]),
+      Name = filter.ToString(),
+      NickName = GetFilterNickName(filter),
       MutableNickName = false,
       Optional = true
     };
