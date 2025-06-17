@@ -5,7 +5,6 @@ using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -114,7 +113,13 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     if (!string.IsNullOrEmpty(path))
     {
       targetCollectionWrapper =
-        path == "_objects" ? collectionWrapperGoo.Value : FindCollection(collectionWrapperGoo.Value, path);
+        path == "_objects" ? collectionWrapperGoo.Value : FindCollectionAtPath(collectionWrapperGoo.Value, path);
+      if (targetCollectionWrapper is null)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"No collection was found at {path}");
+        return;
+      }
+
       filteredObjects = targetCollectionWrapper.Elements.OfType<SpeckleObjectWrapper>().ToList();
     }
     else
@@ -189,7 +194,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     }
   }
 
-  private SpeckleCollectionWrapper FindCollection(SpeckleCollectionWrapper root, string unifiedPath)
+  private SpeckleCollectionWrapper? FindCollectionAtPath(SpeckleCollectionWrapper root, string unifiedPath)
   {
     // POC: SpeckleCollections now have a full list<string> path prop on them always. Is this easier to use?
     List<string> paths = unifiedPath.Split([Constants.LAYER_PATH_DELIMITER], StringSplitOptions.None).ToList();
@@ -206,7 +211,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
       }
     }
 
-    throw new SpeckleException("Did not find collection");
+    return null;
   }
 
   public bool CanInsertParameter(GH_ParameterSide side, int index)
