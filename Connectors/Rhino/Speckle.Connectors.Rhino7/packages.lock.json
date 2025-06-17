@@ -351,6 +351,15 @@
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
+      "GrasshopperAsyncComponent": {
+        "type": "CentralTransitive",
+        "requested": "[2.0.1, )",
+        "resolved": "2.0.1",
+        "contentHash": "K/LyJbYscXIdV07tPhsZgyUdwzf7vsXJBraVik6ge35T9lLYrriG5Dy9XF8ox7Q2ko5y5aTzh768+vYCdDkL5g==",
+        "dependencies": {
+          "PolySharp": "1.14.1"
+        }
+      },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",
