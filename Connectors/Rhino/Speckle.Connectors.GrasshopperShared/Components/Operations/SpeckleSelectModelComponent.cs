@@ -111,7 +111,11 @@ public class SpeckleSelectModelComponent : GH_Component
         try
         {
           // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInputAndToken(urlInput, TokenInput, true);
+          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInputAndToken(
+            urlInput,
+            TokenInput,
+            true
+          );
           if (!hasPermission)
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
@@ -134,7 +138,7 @@ public class SpeckleSelectModelComponent : GH_Component
       SpeckleOperationWizard.SetComponentButtonsState(true);
 
       // When user unplugs the URL input, we need to reset all first
-      if (UrlInput != null|| TokenInput != null)
+      if (UrlInput != null || TokenInput != null)
       {
         UrlInput = null;
         TokenInput = null;
