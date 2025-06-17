@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connectors.DUI.Bindings;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.DUI.Logging;
@@ -13,7 +12,6 @@ namespace Speckle.Connectors.DUI.Logging;
 public static class HandledModelCardErrors
 {
   public static void LogModelCardHandledError<T>(this ILogger<T> logger, Exception ex)
-    where T : IBinding
   {
     LogLevel level = ex switch
     {

@@ -197,7 +197,7 @@ public class SpeckleOperationWizard
     {
       return;
     }
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var workspace = client.Workspace.Get(workspaceId).Result;
     SelectedWorkspace = workspace;
     WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
@@ -209,7 +209,7 @@ public class SpeckleOperationWizard
     {
       return;
     }
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var project = client.Project.Get(projectId).Result;
     SelectedProject = project;
     ProjectMenuHandler.RedrawMenuButton(SelectedProject);
@@ -222,7 +222,7 @@ public class SpeckleOperationWizard
       return;
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var model = client.Model.Get(modelId, SelectedProject.id).Result;
     SelectedModel = model;
     ModelMenuHandler.RedrawMenuButton(SelectedModel);
@@ -235,7 +235,7 @@ public class SpeckleOperationWizard
       return;
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var version = client.Version.Get(versionId, SelectedProject.id).Result;
     SelectedVersion = version;
     VersionMenuHandler?.RedrawMenuButton(SelectedVersion);
@@ -251,7 +251,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<Workspace>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var workspaces = await client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText));
     WorkspaceMenuHandler.Workspaces = workspaces;
     return workspaces;
@@ -267,7 +267,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<Workspace>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var workspaces = client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText)).Result;
     WorkspaceMenuHandler.Workspaces = workspaces;
     return workspaces;
@@ -283,7 +283,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<ProjectWithPermissions>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var workspaceId = SelectedWorkspace?.id ?? null;
     var projects = await client.ActiveUser.GetProjectsWithPermissions(
       10,
@@ -309,7 +309,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<ProjectWithPermissions>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var workspaceId = SelectedWorkspace?.id ?? null;
     var projects = client
       .ActiveUser.GetProjectsWithPermissions(
@@ -337,7 +337,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<Model>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var projectWithModels = await client
       .Project.GetWithModels(SelectedProject.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
       .ConfigureAwait(true);
@@ -373,7 +373,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<Version>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var newVersionsResult = await client
       .Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount)
       .ConfigureAwait(true);
@@ -395,7 +395,7 @@ public class SpeckleOperationWizard
       return new ResourceCollection<Version>();
     }
 
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var newVersionsResult = client.Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount).Result;
     if (VersionMenuHandler != null)
     {
@@ -411,7 +411,7 @@ public class SpeckleOperationWizard
     {
       return;
     }
-    IClient client = _clientFactory.Create(SelectedAccount);
+    using IClient client = _clientFactory.Create(SelectedAccount);
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
     Workspace? selectedWorkspace =
       SelectedWorkspace

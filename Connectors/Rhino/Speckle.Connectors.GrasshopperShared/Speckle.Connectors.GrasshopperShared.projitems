@@ -16,6 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\GetCollectionObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
@@ -53,6 +54,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Interfaces.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleMaterialWrapper.ModelObjects.cs" />
@@ -61,7 +63,6 @@
     <Compile Include="..\Speckle.Connectors.GrasshopperShared\HostApp\SpeckleConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\ISpeckleGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleCollectionWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleObjectWrapper.ModelObjects.cs" />

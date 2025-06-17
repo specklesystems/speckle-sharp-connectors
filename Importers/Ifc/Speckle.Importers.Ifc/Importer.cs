@@ -38,13 +38,16 @@ public sealed class Importer(
     CancellationToken cancellationToken
   )
   {
+    var filePath = new FilePath(args.FilePath);
     var stopwatch = Stopwatch.StartNew();
 
-    var ifcModel = ifcFactory.Open(args.FilePath);
+    Console.WriteLine($"Starting processing file : {filePath.GetFileName()}");
+
+    var ifcModel = ifcFactory.Open(filePath);
     var ms = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Opened with WebIFC: {ms} ms");
 
-    var graph = IfcGraph.Load(new FilePath(args.FilePath));
+    var graph = IfcGraph.Load(filePath);
     var ms2 = stopwatch.ElapsedMilliseconds;
     Console.WriteLine($"Loaded with StepParser: {ms2 - ms} ms");
 
@@ -90,7 +93,15 @@ public sealed class Importer(
     );
     ms = ms2;
     ms2 = stopwatch.ElapsedMilliseconds;
-    Console.WriteLine($"Committed to Speckle: {ms2 - ms} ms");
+
+    Console.WriteLine($"Committed to Speckle: {ms2 - ms} ms - {GetUrl(speckleVersion, modelId)}");
+    Console.WriteLine();
+
     return speckleVersion;
+  }
+
+  private static string GetUrl(Version version, string modelId)
+  {
+    return version.previewUrl.ToString().Replace("preview", "projects").Replace("commits/", $"models/{modelId}@");
   }
 }
