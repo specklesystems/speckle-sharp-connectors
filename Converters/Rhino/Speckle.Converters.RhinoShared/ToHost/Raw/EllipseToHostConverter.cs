@@ -1,4 +1,5 @@
-﻿using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -41,7 +42,12 @@ public class EllipseToHostConverter
   RG.NurbsCurve ITypedConverter<SOG.Ellipse, RG.NurbsCurve>.Convert(SOG.Ellipse target)
   {
     var rhinoEllipse = Convert(target);
-    var rhinoNurbsEllipse = rhinoEllipse.ToNurbsCurve();
+    RG.NurbsCurve? rhinoNurbsEllipse = rhinoEllipse.ToNurbsCurve();
+    if (rhinoNurbsEllipse is null)
+    {
+      throw new ConversionException("Conversion to nurbs failed most likely due to an invalid ellipse.");
+    }
+
     rhinoNurbsEllipse.Domain = _intervalConverter.Convert(target.domain);
 
     if (target.trimDomain != null)
