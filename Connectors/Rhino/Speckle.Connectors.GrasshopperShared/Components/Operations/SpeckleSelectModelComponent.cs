@@ -164,6 +164,16 @@ public class SpeckleSelectModelComponent : GH_Component
         }
       }
 
+      if (
+        _justPastedIn
+        && !string.IsNullOrEmpty(TokenInput)
+        && _storedServer != null
+        && SpeckleOperationWizard.SelectedAccount == null
+      )
+      {
+        SpeckleOperationWizard.SetAccountFromToken(TokenInput.NotNull(), new(_storedServer));
+      }
+
       // Validate backing data
       if (SpeckleOperationWizard.SelectedAccount == null)
       {
