@@ -64,12 +64,12 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
       SpecklePropertyGroupGoo emptyProps = new();
       da.SetData(0, emptyProps);
       da.SetDataList(1, emptyProps.Value.Keys);
-      da.SetDataList(1, emptyProps.Value.Values);
+      da.SetDataList(2, emptyProps.Value.Values);
       return;
     }
 
     // validate that keys and values are of same length
-    if (hasKeys && hasValues && inputKeys.Count != inputValues.Count)
+    if (inputKeys.Count != inputValues.Count)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Keys and values are mismatched in length");
       return;
@@ -128,6 +128,6 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
     var groupGoo = new SpecklePropertyGroupGoo(result);
     da.SetData(0, groupGoo);
     da.SetDataList(1, result.Keys);
-    da.SetDataList(1, result.Values);
+    da.SetDataList(2, result.Values);
   }
 }
