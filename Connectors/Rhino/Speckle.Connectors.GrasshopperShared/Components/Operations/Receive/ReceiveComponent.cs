@@ -101,6 +101,15 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     CancellationToken cancellationToken = default
   )
   {
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+    if (multipleResources)
+    {
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        "Only one model can be loaded at a time. To load to multiple models, please use different load components."
+      );
+      return new();
+    }
     if (!input.Run)
     {
       return new();
