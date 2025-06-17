@@ -116,7 +116,6 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
         path == "_objects" ? collectionWrapperGoo.Value : FindCollectionAtPath(collectionWrapperGoo.Value, path);
       if (targetCollectionWrapper is null)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"No collection was found at {path}");
         return;
       }
 
@@ -201,13 +200,22 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     SpeckleCollectionWrapper currentCollectionWrapper = root;
     while (paths.Count != 0)
     {
-      currentCollectionWrapper = currentCollectionWrapper
-        .Elements.OfType<SpeckleCollectionWrapper>()
-        .First(wrapper => wrapper.Name == paths.First());
-      paths.RemoveAt(0);
-      if (paths.Count == 0)
+      try
       {
-        return currentCollectionWrapper;
+        currentCollectionWrapper = currentCollectionWrapper
+          .Elements.OfType<SpeckleCollectionWrapper>()
+          .First(wrapper => wrapper.Name == paths.First());
+
+        paths.RemoveAt(0);
+        if (paths.Count == 0)
+        {
+          return currentCollectionWrapper;
+        }
+      }
+      catch (InvalidOperationException) // when no wrappers match the current path
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"[{unifiedPath}] is an invalid path for this collection");
+        return null;
       }
     }
 
