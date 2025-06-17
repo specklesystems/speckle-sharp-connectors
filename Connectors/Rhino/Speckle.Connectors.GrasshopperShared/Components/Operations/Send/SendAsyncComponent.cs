@@ -53,10 +53,9 @@ public class SendAsyncComponent : GH_AsyncComponent
   public IClient? ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
-  public SpeckleUrlModelResource? OutputParam { get; set; }
-  public bool HasMultipleInputs { get; set; }
 
   public GrasshopperSendInfo? OutputParam { get; set; }
+  public bool HasMultipleInputs { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
