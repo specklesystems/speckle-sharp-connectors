@@ -14,7 +14,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObjectWrapper : SpeckleWrapper
+public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
 {
   public override required Base Base { get; set; }
 
@@ -42,15 +42,9 @@ public class SpeckleObjectWrapper : SpeckleWrapper
   /// </summary>
   public SpeckleMaterialWrapper? Material { get; set; }
 
-  /// <summary>
-  /// Represents the guid of this <see cref="SpeckleObjectWrapper"/>
-  /// </summary>
-  /// <remarks>This property will usually be assigned in create components, or in publish components, and may differ from <see cref="Base.applicationId"/></remarks>
-  public required string? WrapperGuid { get; set; }
-
   public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
 
-  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
     switch (GeometryBase)
     {
@@ -137,7 +131,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     }
   }
 
-  public void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
+  public virtual void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
     if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
     {
@@ -148,7 +142,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    using var attributes = BakingHelpers.CreateObjectAttributes(Name, Color, Material, Properties, bakeLayerIndex);
+    using var attributes = CreateObjectAttributes(bakeLayerIndex, true);
     Guid guid = doc.Objects.Add(GeometryBase, attributes);
     objIds.Add(guid);
   }
@@ -183,20 +177,67 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     return true;
   }
 
-  public SpeckleObjectWrapper DeepCopy() =>
+  public virtual SpeckleObjectWrapper DeepCopy() =>
     new()
     {
       Base = Base.ShallowCopy(),
       GeometryBase = GeometryBase?.Duplicate(),
       Color = Color,
       Material = Material,
-      WrapperGuid = WrapperGuid,
       ApplicationId = ApplicationId,
       Parent = Parent,
       Properties = Properties,
       Name = Name,
       Path = Path
     };
+
+  public virtual ObjectAttributes CreateObjectAttributes(int layerIndex = -1, bool bakeMaterial = false)
+  {
+    var attributes = new ObjectAttributes { Name = Name };
+
+    if (layerIndex >= 0)
+    {
+      attributes.LayerIndex = layerIndex;
+    }
+
+    AddColorToAttributes(attributes);
+    AddMaterialToAttributes(attributes, bakeMaterial);
+    AddPropertiesToAttributes(attributes);
+
+    return attributes;
+  }
+
+  public virtual IGH_Goo CreateGoo() => new SpeckleObjectWrapperGoo(this);
+
+  protected virtual void AddPropertiesToAttributes(ObjectAttributes attributes) =>
+    Properties?.AssignToObjectAttributes(attributes);
+
+  protected virtual void AddColorToAttributes(ObjectAttributes attributes)
+  {
+    if (Color is Color validColor)
+    {
+      attributes.ObjectColor = validColor;
+      attributes.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+  }
+
+  protected virtual void AddMaterialToAttributes(ObjectAttributes attributes, bool bakeMaterial)
+  {
+    if (Material is SpeckleMaterialWrapper materialWrapper && bakeMaterial)
+    {
+      // Only handle the baking scenario here
+      // Existing baking logic from BakingHelpers (works in all Rhino versions)
+      int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Name);
+      if (matIndex >= 0)
+      {
+        attributes.MaterialIndex = matIndex;
+        attributes.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+    }
+
+    // Note: bakeMaterial: false scenario (casting) is handled in ModelObjects.cs
+    // where it belongs, with proper Rhino 8+ conditional compilation
+  }
 }
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
@@ -243,7 +284,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
           Name = "",
           Color = null,
           Material = null,
-          WrapperGuid = null,
           ApplicationId = Guid.NewGuid().ToString()
         };
         return true;
@@ -403,6 +443,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     Value = value;
   }
 
+  // NOTE: parameterless constructor should only be used for casting
   public SpeckleObjectWrapperGoo()
   {
     Value = new()
@@ -411,7 +452,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       GeometryBase = null,
       Color = null,
       Material = null,
-      WrapperGuid = null,
     };
   }
 }

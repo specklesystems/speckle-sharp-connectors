@@ -210,7 +210,7 @@ public class CreateSpeckleObject : GH_Component
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Warning,
-          $"Material input is not valid. Only Display Materials, Baked Model Materials, and Speckle Materials are accepted."
+          "Material input is not valid. Only Display Materials, Baked Model Materials, and Speckle Materials are accepted."
         );
         return;
       }
