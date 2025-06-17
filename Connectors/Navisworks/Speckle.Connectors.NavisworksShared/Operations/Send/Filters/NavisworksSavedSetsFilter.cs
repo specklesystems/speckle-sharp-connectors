@@ -2,7 +2,6 @@
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
-using Speckle.Converter.Navisworks.Constants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
@@ -85,12 +84,14 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
   {
     List<NAV.SelectionSet> savedSetRecords = [];
 
-    CollectSavedSets(NavisworksApp.ActiveDocument.SelectionSets.RootItem, savedSetRecords);
+    var root = NavisworksApp.ActiveDocument.SelectionSets.RootItem;
+
+    CollectSavedSets(root, savedSetRecords);
 
     Items = savedSetRecords
       .Select(setRecord =>
       {
-        string hierarchicalName = BuildHierarchicalName(setRecord);
+        string hierarchicalName = SavedItemHelpers.BuildHierarchicalName(setRecord, root);
         return new SendFilterSelectItem(setRecord.Guid.ToString(), hierarchicalName);
       })
       .ToList();
@@ -103,7 +104,7 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
       return;
     }
 
-    foreach (NAV.SavedItem item in ((NAV.FolderItem)parentItem).Children)
+    foreach (NAV.SavedItem item in ((NAV.GroupItem)parentItem).Children)
     {
       if (item.IsGroup)
       {
@@ -114,19 +115,5 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
         collectedSets.Add((NAV.SelectionSet)item);
       }
     }
-  }
-
-  private static string BuildHierarchicalName(NAV.SavedItem item)
-  {
-    var pathParts = new List<string> { item.DisplayName };
-
-    var current = item.Parent;
-    while (current != null && current != NavisworksApp.ActiveDocument.SelectionSets.RootItem)
-    {
-      pathParts.Insert(0, current.DisplayName);
-      current = current.Parent;
-    }
-
-    return string.Join(PathConstants.SET_SEPARATOR, pathParts);
   }
 }
