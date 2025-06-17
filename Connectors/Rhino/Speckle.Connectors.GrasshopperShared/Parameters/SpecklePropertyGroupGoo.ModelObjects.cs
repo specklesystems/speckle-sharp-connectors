@@ -25,9 +25,8 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
         Dictionary<string, ISpecklePropertyGoo> dictionary = new();
         foreach (KeyValuePair<string, string> entry in userText)
         {
-          string key = entry.Key;
-          SpecklePropertyGoo value = new() { Path = key, Value = entry.Value };
-          dictionary.Add(key, value);
+          SpecklePropertyGoo value = new() { Value = entry.Value };
+          dictionary.Add(entry.Key, value);
         }
 
         Value = dictionary;

@@ -76,7 +76,9 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
     }
 
     // process the properties
-    Dictionary<string, ISpecklePropertyGoo> result = inputProperties is null ? new() : inputProperties.Value;
+    Dictionary<string, ISpecklePropertyGoo> result = inputProperties is null
+      ? new()
+      : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
 
     // process keys and values
     if (hasKeys)
