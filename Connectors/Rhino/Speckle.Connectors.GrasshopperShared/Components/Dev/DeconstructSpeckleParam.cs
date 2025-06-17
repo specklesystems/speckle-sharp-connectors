@@ -28,12 +28,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter(
-      "Speckle Param",
-      "SP",
-      "Speckle param to deconstruct. Expects Collections, Objects, Materials, or Properties",
-      GH_ParamAccess.item
-    );
+    pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param to deconstruct", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
@@ -47,21 +42,20 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
     switch (data)
     {
+      case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
+        outputParams = ParseSpeckleWrapper(collectionGoo.Value);
+        break;
       case SpeckleObjectWrapperGoo objectGoo when objectGoo.Value != null:
-        Name = string.IsNullOrEmpty(objectGoo.Value.Name) ? objectGoo.Value.Base.speckle_type : objectGoo.Value.Name;
-        outputParams = CreateOutputParamsFromBase(objectGoo.Value.Base);
+        outputParams = ParseSpeckleWrapper(objectGoo.Value);
         break;
-
       case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
-        Name = string.IsNullOrEmpty(blockInstanceGoo.Value.Name)
-          ? blockInstanceGoo.Value.Base.speckle_type
-          : blockInstanceGoo.Value.Name;
-        outputParams = CreateOutputParamsFromBase(blockInstanceGoo.Value.Base);
+        outputParams = ParseSpeckleWrapper(blockInstanceGoo.Value);
         break;
-
       case SpeckleBlockDefinitionWrapperGoo blockDef:
-        Name = string.IsNullOrEmpty(blockDef.Value.Name) ? blockDef.Value.Base.speckle_type : blockDef.Value.Name;
-        outputParams = CreateOutputParamsFromBase(blockDef.Value.Base);
+        outputParams = ParseSpeckleWrapper(blockDef.Value);
+        break;
+      case SpeckleMaterialWrapperGoo materialGoo when materialGoo.Value != null:
+        outputParams = ParseSpeckleWrapper(materialGoo.Value);
         break;
 
       case SpecklePropertyGroupGoo propGoo:
@@ -78,6 +72,10 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           outputParams.Add(CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item));
         }
         break;
+
+      default:
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Type cannot be deconstructed: {data.GetType().Name}");
+        return;
     }
 
     NickName = Name;
@@ -110,6 +108,12 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         }
       }
     }
+  }
+
+  private List<OutputParamWrapper> ParseSpeckleWrapper(SpeckleWrapper wrapper)
+  {
+    Name = string.IsNullOrEmpty(wrapper.Name) ? wrapper.Base.speckle_type : wrapper.Name;
+    return CreateOutputParamsFromBase(wrapper.Base);
   }
 
   private List<OutputParamWrapper> CreateOutputParamsFromBase(Base @base)
