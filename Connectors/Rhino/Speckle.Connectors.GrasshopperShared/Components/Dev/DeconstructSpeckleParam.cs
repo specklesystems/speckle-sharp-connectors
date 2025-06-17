@@ -211,8 +211,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
             GeometryBase = g,
             Name = b["name"] as string ?? "",
             Color = null,
-            Material = null,
-            WrapperGuid = null
+            Material = null
           };
 
         convertedWrappers.Add(new(convertedWrapper));
@@ -231,8 +230,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           GeometryBase = null,
           Name = @base[Constants.NAME_PROP] as string ?? "",
           Color = null,
-          Material = null,
-          WrapperGuid = null,
+          Material = null
         };
       return new() { new SpeckleObjectWrapperGoo(convertedWrapper) };
     }

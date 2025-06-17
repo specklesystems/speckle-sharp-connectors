@@ -63,8 +63,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
               Name = modelObject.Name.ToString(),
               Color = color,
               Material = materialWrapper.Value,
-              Properties = propertyGroup,
-              WrapperGuid = null // keep this null, processed on send
+              Properties = propertyGroup
             };
 
           Value = so;

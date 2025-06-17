@@ -80,7 +80,8 @@ public partial class SpeckleBlockInstanceWrapperGoo
         applicationId = Guid.NewGuid().ToString()
       },
       Transform = Transform.Identity,
-      ApplicationId = Guid.NewGuid().ToString()
+      ApplicationId = Guid.NewGuid().ToString(),
+      GeometryBase = null
     };
     return true;
   }
@@ -182,7 +183,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
     Value = new SpeckleBlockInstanceWrapper()
     {
-      InstanceProxy = new InstanceProxy()
+      Base = new InstanceProxy()
       {
         definitionId = definitionId.ToString(),
         maxDepth = 1,
@@ -192,7 +193,8 @@ public partial class SpeckleBlockInstanceWrapperGoo
       },
       Transform = instanceRef.Xform,
       ApplicationId = Guid.NewGuid().ToString(),
-      Definition = definition // May be null in pure Grasshopper workflows
+      Definition = definition, // May be null in pure Grasshopper workflows
+      GeometryBase = null
     };
     return true;
   }

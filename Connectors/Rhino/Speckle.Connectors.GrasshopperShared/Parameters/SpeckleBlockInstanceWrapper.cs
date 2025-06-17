@@ -8,11 +8,10 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
-using Plane = Rhino.Geometry.Plane;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollectionObject
+public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
@@ -28,7 +27,9 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
       units = units,
       applicationId = Guid.NewGuid().ToString()
     };
-    InstanceProxy = _instanceProxy;
+
+    Base = _instanceProxy; // set required base
+    GeometryBase = null; // block instances typically don't have direct geometry
   }
 
   public InstanceProxy InstanceProxy
@@ -37,6 +38,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
     set
     {
       _instanceProxy = value ?? throw new ArgumentNullException(nameof(value));
+      Base = _instanceProxy; // keep base in sync
       UpdateTransformFromProxy();
     }
   }
@@ -52,16 +54,18 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
     }
   }
 
-  public override Base Base
+  public override required Base Base
   {
-    get => InstanceProxy;
+    get => _instanceProxy;
     set
     {
       if (value is not InstanceProxy proxy)
       {
         throw new ArgumentException("Cannot create block instance wrapper from a non-InstanceProxy Base");
       }
-      InstanceProxy = proxy;
+
+      _instanceProxy = proxy;
+      UpdateTransformFromProxy();
     }
   }
 
@@ -97,7 +101,6 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
           Material = obj.Material,
           Properties = obj.Properties,
           Name = obj.Name,
-          WrapperGuid = obj.WrapperGuid,
           ApplicationId = obj.ApplicationId
         };
 
@@ -142,20 +145,19 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper, ISpeckleCollect
   }
 
   public override SpeckleObjectWrapper DeepCopy() =>
-    new SpeckleBlockInstanceWrapper // covariant return types to satisfy inheritance chain
+    new SpeckleBlockInstanceWrapper
     {
       Base = InstanceProxy.ShallowCopy(),
-      GeometryBase = null, // We need this GeometryBase property on instances. It corresponds to an InstanceReferenceGeometry object that inherits from GeometryBase in rhinocommon
+      GeometryBase = GeometryBase?.Duplicate(),
       Color = null, // TODO: commented out in props
       Material = null, // TODO: commented out in props
-      WrapperGuid = WrapperGuid,
       ApplicationId = ApplicationId,
       Parent = Parent,
       Properties = Properties,
       Name = Name,
       Path = Path,
       Definition = Definition?.DeepCopy(), // block instance specific
-      Transform = _transform // block instance specific
+      // Transform will be updated when Base / InstanceProxy is set
     };
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
@@ -198,17 +200,13 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         }
         return false;
 
-      case Transform transform:
-        return CreateFromTransform(transform);
-      case Plane plane:
-        var planeTransform = Transform.PlaneToPlane(Plane.WorldXY, plane);
-        return CreateFromTransform(planeTransform);
-
       case InstanceProxy instanceProxy:
         Value = new SpeckleBlockInstanceWrapper
         {
           Base = instanceProxy,
-          ApplicationId = instanceProxy.applicationId ?? Guid.NewGuid().ToString()
+          GeometryBase = null,
+          ApplicationId = instanceProxy.applicationId ?? Guid.NewGuid().ToString(),
+          Name = "Block Instance"
         };
         return true;
     }
@@ -242,14 +240,6 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
 
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
-
-  private bool CreateFromTransform(Transform transform)
-  {
-    Value ??= new SpeckleBlockInstanceWrapper();
-
-    Value.Transform = transform;
-    return true;
-  }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
   {
@@ -300,9 +290,25 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   public override IGH_Goo Duplicate() =>
     new SpeckleBlockInstanceWrapperGoo((SpeckleBlockInstanceWrapper)Value.DeepCopy());
 
+  // NOTE: parameterless constructor should only be used for casting
   public SpeckleBlockInstanceWrapperGoo()
   {
-    Value = new SpeckleBlockInstanceWrapper { Name = "Block Instance", ApplicationId = Guid.NewGuid().ToString() };
+    string units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+
+    Value = new SpeckleBlockInstanceWrapper
+    {
+      Base = new InstanceProxy
+      {
+        definitionId = "placeholder",
+        maxDepth = 1,
+        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+        units = units,
+        applicationId = Guid.NewGuid().ToString()
+      },
+      GeometryBase = null, // Required property - must be explicit
+      Name = "Block Instance",
+      ApplicationId = Guid.NewGuid().ToString()
+    };
   }
 
   public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)

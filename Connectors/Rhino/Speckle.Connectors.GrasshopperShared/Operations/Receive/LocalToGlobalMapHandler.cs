@@ -104,7 +104,6 @@ internal sealed class LocalToGlobalMapHandler
           Name = name,
           Color = null,
           Material = null,
-          WrapperGuid = map.AtomicObject.applicationId,
           ApplicationId = original.applicationId ?? Guid.NewGuid().ToString() // create if none
         };
 

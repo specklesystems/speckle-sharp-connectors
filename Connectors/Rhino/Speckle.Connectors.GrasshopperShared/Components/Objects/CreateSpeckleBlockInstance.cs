@@ -1,9 +1,12 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -126,7 +129,24 @@ public class CreateSpeckleBlockInstance : GH_Component
     }
     else
     {
-      result = new SpeckleBlockInstanceWrapper { Name = "Block Instance", ApplicationId = Guid.NewGuid().ToString() };
+      // TODO: this is gross. we need a better factory pattern. below is repeated twice in SpeckleBlockInstanceWrapper.cs
+      var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+      var newAppId = Guid.NewGuid().ToString();
+
+      result = new SpeckleBlockInstanceWrapper
+      {
+        Base = new InstanceProxy
+        {
+          definitionId = "placeholder",
+          maxDepth = 1,
+          transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+          units = units,
+          applicationId = newAppId
+        },
+        GeometryBase = null,
+        Name = "Block Instance",
+        ApplicationId = newAppId
+      };
       mutated = true;
     }
 
