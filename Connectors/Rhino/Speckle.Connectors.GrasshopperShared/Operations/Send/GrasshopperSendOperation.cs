@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -9,6 +10,16 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
 public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollectionWrapperGoo>
 {
+  private readonly IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> _instanceObjectsManager;
+
+  // each Build() call gets a fresh scoped IInstanceObjectsManager
+  public GrasshopperRootObjectBuilder(
+    IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> instanceObjectsManager
+  )
+  {
+    _instanceObjectsManager = instanceObjectsManager;
+  }
+
   // Keeps track of the wrapper applicationId of processed objects for send.
   // This is used to keep track of the following situations:
   // 1 - objects with the same name, properties, and application id are packaged into a data object. this can happen when receiving data objects.
@@ -33,7 +44,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     // create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
     GrasshopperMaterialPacker materialPacker = new();
-    GrasshopperBlockPacker blockPacker = new();
+    GrasshopperBlockPacker blockPacker = new(_instanceObjectsManager);
 
     // unwrap the input collection to remove all wrappers
     Collection root = Unwrap(inputCollectionGoo.Value, colorPacker, materialPacker, blockPacker);
@@ -82,7 +93,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
         // NOTE: order is super important since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper
         // this is fragile and not nice.
         case SpeckleBlockInstanceWrapper bi:
-          // process block instances - they get added to collection as DataObject
+          // process block instances - they get added to collection as Base
           Base blockInstanceBase = ConvertWrapperToBase(bi);
           currentColl.elements.Add(blockInstanceBase);
 
