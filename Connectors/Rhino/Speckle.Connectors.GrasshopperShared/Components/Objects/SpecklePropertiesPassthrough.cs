@@ -13,7 +13,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 public class SpecklePropertiesPassthrough : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_properties_create;
+  protected override Bitmap Icon => Resources.speckle_properties_properties;
 
   private enum PropertyMode
   {
