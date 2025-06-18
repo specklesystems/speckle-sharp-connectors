@@ -11,9 +11,9 @@ using Speckle.Sdk.Models.Instances;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("2F8A9B1C-3D4E-5F6A-7B8C-9D0E1F2A3B4C")]
-public class CreateSpeckleBlockInstance : GH_Component
+public class SpeckleBlockInstancePassthrough : GH_Component
 {
-  public CreateSpeckleBlockInstance()
+  public SpeckleBlockInstancePassthrough()
     : base(
       "Speckle Block Instance",
       "SBI",

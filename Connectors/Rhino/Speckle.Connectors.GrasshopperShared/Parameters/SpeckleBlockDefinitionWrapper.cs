@@ -279,7 +279,7 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public override Guid ComponentGuid => new("C71BE6AD-E27B-4E7F-87DA-569D4DEE77BE");
 
-  protected override Bitmap Icon => Resources.speckle_param_object; // TODO: claire Icon for speckle param block instance
+  protected override Bitmap Icon => Resources.speckle_param_block_def;
 
   public override void RegisterRemoteIDs(GH_GuidTable idList)
   {

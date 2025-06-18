@@ -176,7 +176,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (SpeckleWrapper element in collectionWrapper.Elements)
+    foreach (ISpeckleCollectionObject element in collectionWrapper.Elements)
     {
       switch (element)
       {
