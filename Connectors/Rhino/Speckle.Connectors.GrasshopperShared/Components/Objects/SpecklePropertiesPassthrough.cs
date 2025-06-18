@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -9,19 +10,48 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 /// CreateSpeckleProperties passthrough component by key value pairs
 /// </summary>
 [Guid("FED2298C-0D2B-4868-94B5-B8D17F9385A5")]
-public class CreateSpecklePropertiesByKeyValue : GH_Component
+public class SpecklePropertiesPassthrough : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_create;
 
-  public CreateSpecklePropertiesByKeyValue()
+  private enum PropertyMode
+  {
+    Merge, // this should be default mode
+    Replace,
+    Remove
+  }
+
+  private PropertyMode _mode = PropertyMode.Merge;
+  private PropertyMode Mode
+  {
+    get => _mode;
+    set
+    {
+      if (_mode != value)
+      {
+        _mode = value;
+        Message = Mode.ToString();
+        ExpireSolution(true);
+        //OnDisplayExpired(true);
+        UpdateDisplayMessage();
+      }
+    }
+  }
+
+  protected virtual void UpdateDisplayMessage() { }
+
+  public SpecklePropertiesPassthrough()
     : base(
-      "Create Properties KVP",
-      "CP",
-      "Creates a set of properties for Speckle objects by keyvalue",
+      "Speckle Properties",
+      "SP",
+      "Creates or modifies a set of properties for Speckle objects by keyvalue",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
-    ) { }
+    )
+  {
+    Message = Mode.ToString();
+  }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -76,9 +106,10 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
     }
 
     // process the properties
-    Dictionary<string, ISpecklePropertyGoo> result = inputProperties is null
-      ? new()
-      : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
+    Dictionary<string, ISpecklePropertyGoo> result =
+      inputProperties is null || Mode == PropertyMode.Replace
+        ? new()
+        : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
 
     // process keys and values
     if (hasKeys)
@@ -95,9 +126,9 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
       }
 
       // set keyvalue pairs
-      result.Clear();
       for (int i = 0; i < inputKeys.Count; i++)
       {
+        string key = inputKeys[i];
         object? value = inputValues[i];
         ISpecklePropertyGoo? convertedValue = null;
         switch (value)
@@ -123,7 +154,31 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
             break;
         }
 
-        result.Add(inputKeys[i], convertedValue);
+        switch (Mode)
+        {
+          case PropertyMode.Merge:
+            if (result.ContainsKey(key))
+            {
+              result[key] = convertedValue;
+            }
+            else
+            {
+              result.Add(key, convertedValue);
+            }
+            break;
+          case PropertyMode.Replace:
+            result.Add(key, convertedValue);
+            break;
+          case PropertyMode.Remove:
+            if (result.TryGetValue(key, out ISpecklePropertyGoo existingValue))
+            {
+              if (existingValue.Equals(convertedValue))
+              {
+                result.Remove(key);
+              }
+            }
+            break;
+        }
       }
     }
 
@@ -131,5 +186,54 @@ public class CreateSpecklePropertiesByKeyValue : GH_Component
     da.SetData(0, groupGoo);
     da.SetDataList(1, result.Keys);
     da.SetDataList(2, result.Values);
+  }
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu); // modes section
+    foreach (PropertyMode mode in Enum.GetValues(typeof(PropertyMode)))
+    {
+      var modeItem = Menu_AppendItem(menu, mode.ToString(), (_, _) => Mode = mode, true, mode == Mode);
+      switch (mode)
+      {
+        case PropertyMode.Merge:
+          modeItem.ToolTipText =
+            "Input keyvalue pairs will be merged with existing properties. Any existing keys will be updated with new values.";
+          break;
+        case PropertyMode.Replace:
+          modeItem.ToolTipText = "Existing properties will be cleared and replaced by input keyvalue pairs.";
+          break;
+        case PropertyMode.Remove:
+          modeItem.ToolTipText =
+            "Existing keyvalue pairs that match the input keyvalue pairs will be removed from properties.";
+          break;
+      }
+    }
+
+    Menu_AppendSeparator(menu);
+  }
+
+  public override bool Write(GH_IWriter writer)
+  {
+    var result = base.Write(writer);
+    writer.SetString("Mode", Mode.ToString());
+    return result;
+  }
+
+  public override bool Read(GH_IReader reader)
+  {
+    var result = base.Read(reader);
+    string mode = "";
+    if (reader.TryGetString("Mode", ref mode))
+    {
+      if (Enum.TryParse(mode, out PropertyMode modeEnum))
+      {
+        Mode = modeEnum;
+      }
+    }
+
+    return result;
   }
 }

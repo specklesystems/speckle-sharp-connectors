@@ -119,4 +119,14 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
 
     return false;
   }
+
+  public bool Equals(ISpecklePropertyGoo other)
+  {
+    if (other is not SpecklePropertyGoo prop)
+    {
+      return false;
+    }
+
+    return Value == prop.Value;
+  }
 }
