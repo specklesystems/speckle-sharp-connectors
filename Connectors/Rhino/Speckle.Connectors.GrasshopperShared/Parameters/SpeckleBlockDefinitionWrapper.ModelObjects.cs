@@ -1,6 +1,7 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
+using Rhino.DocObjects;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -59,15 +60,14 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     }
 
     var objects = new List<SpeckleObjectWrapper>();
-
     var modelObjects = modelInstanceDef.Objects ?? Array.Empty<ModelObject>();
 
     foreach (var modelObj in modelObjects)
     {
-      var objWrapperGoo = new SpeckleObjectWrapperGoo();
-      if (objWrapperGoo.CastFrom(modelObj))
+      var wrapperGoo = ConvertModelObjectToAppropriateWrapper(modelObj);
+      if (wrapperGoo != null)
       {
-        objects.Add(objWrapperGoo.Value);
+        objects.Add(wrapperGoo);
       }
     }
 
@@ -78,7 +78,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
         name = modelInstanceDef.Name,
         applicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
         objects = objects.Select(o => o.ApplicationId ?? Guid.NewGuid().ToString()).ToList(),
-        maxDepth = 1
+        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
       Name = modelInstanceDef.Name,
       ApplicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
@@ -86,6 +86,20 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     };
 
     return objects.Count > 0;
+  }
+
+  private SpeckleObjectWrapper? ConvertModelObjectToAppropriateWrapper(ModelObject modelObj)
+  {
+    // Handle the special case: Instance references need block instance wrapper
+    if (modelObj.ObjectType == ObjectType.InstanceReference)
+    {
+      var blockInstGoo = new SpeckleBlockInstanceWrapperGoo();
+      return blockInstGoo.CastFrom(modelObj) ? blockInstGoo.Value : null;
+    }
+
+    // Everything else goes to regular object wrapper
+    var objWrapperGoo = new SpeckleObjectWrapperGoo();
+    return objWrapperGoo.CastFrom(modelObj) ? objWrapperGoo.Value : null;
   }
 }
 #endif

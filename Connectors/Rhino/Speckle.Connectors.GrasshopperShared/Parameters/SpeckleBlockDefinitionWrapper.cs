@@ -45,7 +45,8 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
   private static void ValidateObjects(List<SpeckleObjectWrapper> objects)
   {
-    var invalidObjects = objects.Where(o => o.GetType() != typeof(SpeckleObjectWrapper)).ToList();
+    // SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, check if it's assignable, not exact type match
+    var invalidObjects = objects.Where(o => !typeof(SpeckleObjectWrapper).IsAssignableFrom(o.GetType())).ToList();
 
     if (invalidObjects.Count > 0)
     {
@@ -247,7 +248,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       {
         name = "Unnamed Block",
         objects = new List<string>(),
-        maxDepth = 1
+        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
     };
   }

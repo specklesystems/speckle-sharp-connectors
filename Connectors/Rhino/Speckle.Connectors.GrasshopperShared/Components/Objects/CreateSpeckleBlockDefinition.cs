@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Models.Instances;
@@ -33,11 +34,10 @@ public class CreateSpeckleBlockDefinition : GH_Component
     );
     Params.Input[0].Optional = true;
 
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
+    pManager.AddGenericParameter(
       "Objects",
       "O",
-      "Objects to include in the Block Definition. Speckle Objects and geometry are accepted.", // TODO: nested definitions? or other instances?
+      "Objects to include in the Block Definition. Speckle Objects and Block Instances are accepted.",
       GH_ParamAccess.list
     );
     Params.Input[1].Optional = true;
@@ -79,11 +79,11 @@ public class CreateSpeckleBlockDefinition : GH_Component
     da.GetData(0, ref inputBlockDef);
 
     SpeckleBlockDefinitionWrapper result;
-    if (inputBlockDef != null) // if != null → user has piped in a definition and we're modifying existing
+    if (inputBlockDef != null) // if != null → user has piped in a definition, and we're modifying existing
     {
       result = inputBlockDef.Value.DeepCopy();
     }
-    else // if == null → we're creating a brand spanking new one
+    else // if null → we're creating a brand spanking new one
     {
       result = new SpeckleBlockDefinitionWrapper()
       {
@@ -91,7 +91,7 @@ public class CreateSpeckleBlockDefinition : GH_Component
         {
           name = "Unnamed Block",
           objects = new List<string>(),
-          maxDepth = 1
+          maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         },
         Objects = new List<SpeckleObjectWrapper>(),
         ApplicationId = Guid.NewGuid().ToString()
@@ -100,7 +100,7 @@ public class CreateSpeckleBlockDefinition : GH_Component
     }
 
     // get whatever objects the user wants inside the block definition
-    List<SpeckleObjectWrapperGoo> inputObjects = new();
+    List<IGH_Goo> inputObjects = new();
     da.GetDataList(1, inputObjects);
 
     if (inputObjects.Count > 0)
@@ -110,18 +110,38 @@ public class CreateSpeckleBlockDefinition : GH_Component
 
       foreach (var objGoo in inputObjects)
       {
-        if (objGoo?.Value != null)
-        {
-          var obj = objGoo.Value.DeepCopy();
+        SpeckleObjectWrapper? obj = null;
 
-          // ensure the object has an application ID
+        // Handle SpeckleObjectWrapper
+        if (objGoo is SpeckleObjectWrapperGoo speckleObjGoo && speckleObjGoo.Value != null)
+        {
+          obj = speckleObjGoo.Value.DeepCopy();
+        }
+        // Handle SpeckleBlockInstanceWrapper
+        else if (objGoo is SpeckleBlockInstanceWrapperGoo blockInstGoo && blockInstGoo.Value != null)
+        {
+          obj = blockInstGoo.Value.DeepCopy();
+        }
+        // Handle other convertible types
+        else if (objGoo != null)
+        {
+          // Try to convert geometry, etc.
+          var tempGoo = new SpeckleObjectWrapperGoo();
+          if (tempGoo.CastFrom(objGoo))
+          {
+            obj = tempGoo.Value;
+          }
+        }
+
+        if (obj != null)
+        {
           obj.ApplicationId ??= Guid.NewGuid().ToString();
           processedObjects.Add(obj);
           objectIds.Add(obj.ApplicationId);
         }
       }
 
-      result.Objects = processedObjects; // update objects
+      result.Objects = processedObjects;
       result.InstanceDefinitionProxy.objects = objectIds;
       mutated = true;
     }

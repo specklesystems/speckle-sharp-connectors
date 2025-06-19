@@ -22,7 +22,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     _instanceProxy = new InstanceProxy
     {
       definitionId = "placeholder",
-      maxDepth = 1,
+      maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
       units = units,
       applicationId = Guid.NewGuid().ToString()
@@ -300,7 +300,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       Base = new InstanceProxy
       {
         definitionId = "placeholder",
-        maxDepth = 1,
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
         units = units,
         applicationId = Guid.NewGuid().ToString()

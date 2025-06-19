@@ -138,7 +138,7 @@ public class CreateSpeckleBlockInstance : GH_Component
         Base = new InstanceProxy
         {
           definitionId = "placeholder",
-          maxDepth = 1,
+          maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
           transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
           units = units,
           applicationId = newAppId

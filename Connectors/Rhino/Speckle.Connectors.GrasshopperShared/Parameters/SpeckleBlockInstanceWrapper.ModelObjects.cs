@@ -24,6 +24,11 @@ public partial class SpeckleBlockInstanceWrapperGoo
       case ModelInstanceDefinition modelInstanceDef:
         return CastFromModelInstanceDefinition(modelInstanceDef);
 
+      // When implementing nested blocks support, discovered that nested blocks coming from Rhino arrive as ModelObjects
+      // containing InstanceReferenceGeometry.
+      case ModelObject modelObject:
+        return CreateFromModelObject(modelObject);
+
       default:
         return false;
     }
@@ -74,7 +79,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       Base = new InstanceProxy()
       {
         definitionId = modelInstanceDef.Id?.ToString() ?? "unknown",
-        maxDepth = 1,
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
         units = units,
         applicationId = Guid.NewGuid().ToString()
@@ -186,7 +191,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       Base = new InstanceProxy()
       {
         definitionId = definitionId.ToString(),
-        maxDepth = 1,
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
         units = units,
         applicationId = Guid.NewGuid().ToString()
@@ -220,5 +225,43 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
     return false;
   }
+
+  /// <summary>
+  /// Nested blocks from Rhino come wrapped in ModelObject containers. ModelObject contains InstanceReferenceGeometry +
+  /// metadata (ID, layer, materials, etc.). We need to extract the InstanceReferenceGeometry from the ModelObject
+  /// and process it with existing logic.
+  /// </summary>
+  private bool CreateFromModelObject(ModelObject modelObject)
+  {
+    // GUARD: Only handle InstanceReference ModelObjects
+    // (SpeckleObjectWrapper handles all other geometry types)
+    if (modelObject.ObjectType != ObjectType.InstanceReference)
+    {
+      return false;
+    }
+
+    // EXTRACT: Get the InstanceReferenceGeometry from ModelObject container
+    // Same pattern as SpeckleObjectWrapper: ModelObject → GeometryBase extraction
+    // Inline helper to keep geometry extraction logic contained within this method
+    GeometryBase? geometryBase = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
+
+    if (geometryBase is not InstanceReferenceGeometry instanceRefGeo)
+    {
+      return false;
+    }
+
+    // DELEGATE: Use existing logic to process the extracted InstanceReferenceGeometry
+    // This preserves all existing behavior while adding ModelObject support
+    return CreateFromInstanceReference(instanceRefGeo);
+  }
+
+  // CONSISTENCY: Same helper method as SpeckleObjectWrapper for consistent API
+  //
+  // RATIONALE:
+  // - Maintains consistent patterns across all wrapper types
+  // - Uses identical method signature and implementation as SpeckleObjectWrapper
+  // - Makes the codebase predictable - if you know SpeckleObjectWrapper, you know this
+  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
+    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 }
 #endif
