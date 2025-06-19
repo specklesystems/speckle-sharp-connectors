@@ -20,6 +20,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksDocumentModelStore.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\NavisworksMaterialUnpacker.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSavedViewsFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\SavedItemHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GeometryNodeMerger.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksHierarchyBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs"/>

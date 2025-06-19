@@ -23,7 +23,7 @@ using Speckle.Sdk.Models.Extensions;
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
-public class SendAsyncComponent : GH_AsyncComponent
+public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 {
   public GhContextMenuButton ProjectContextMenuButton { get; set; }
   public GhContextMenuButton ModelContextMenuButton { get; set; }
@@ -50,11 +50,10 @@ public class SendAsyncComponent : GH_AsyncComponent
   public bool JustPastedIn { get; set; }
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
-  public IClient? ApiClient { get; set; }
+  public IClient ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
-
-  public GrasshopperSendInfo? OutputParam { get; set; }
+  public SpeckleUrlModelResource? OutputParam { get; set; }
   public bool HasMultipleInputs { get; set; }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -158,8 +157,12 @@ public class SendAsyncComponent : GH_AsyncComponent
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
+    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
+    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
+    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
+
     // We need to call this always in here to be able to react and set events :/
-    ParseInput(da, scope);
+    ParseInput(da, accountService, accountManager, clientFactory);
 
     if (
       (AutoSend || CurrentComponentState == ComponentState.Ready || CurrentComponentState == ComponentState.Sending)
@@ -196,7 +199,7 @@ public class SendAsyncComponent : GH_AsyncComponent
 
   public override void DisplayProgress(object sender, ElapsedEventArgs e)
   {
-    if (Workers.Count == 0)
+    if (WorkerCount == 0)
     {
       return;
     }
@@ -238,7 +241,12 @@ public class SendAsyncComponent : GH_AsyncComponent
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(IGH_DataAccess da, IServiceScope scope)
+  private void ParseInput(
+    IGH_DataAccess da,
+    IAccountService accountService,
+    IAccountManager accountManager,
+    IClientFactory clientFactory
+  )
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
@@ -252,14 +260,17 @@ public class SendAsyncComponent : GH_AsyncComponent
     UrlModelResource = dataInput;
     try
     {
-      Account? account = dataInput.Account.GetAccount(scope);
+      Account? account =
+        dataInput.AccountId != null
+          ? accountManager.GetAccount(dataInput.AccountId)
+          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server)); // fallback the account that matches with URL if any
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
       }
 
       ApiClient?.Dispose();
-      ApiClient = scope.Get<IClientFactory>().Create(account);
+      ApiClient = clientFactory.Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
     {
@@ -278,18 +289,22 @@ public class SendAsyncComponent : GH_AsyncComponent
   }
 }
 
-public class SendComponentWorker : WorkerInstance
+public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 {
-  public SendComponentWorker(GH_Component p)
-    : base(p) { }
+  public SendComponentWorker(
+    SendAsyncComponent p,
+    string id = "baseWorker",
+    CancellationToken cancellationToken = default
+  )
+    : base(p, id, cancellationToken) { }
 
-  private Stopwatch _stopwatch;
-  public GrasshopperSendInfo? OutputParam { get; set; }
+  private Stopwatch? _stopwatch;
+  public SpeckleUrlModelResource? OutputParam { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate()
+  public override WorkerInstance<SendAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
   {
-    return new SendComponentWorker(Parent);
+    return new SendComponentWorker(Parent, id, cancellationToken);
   }
 
   public override void GetData(IGH_DataAccess da, GH_ComponentParamServer p)
@@ -300,18 +315,18 @@ public class SendComponentWorker : WorkerInstance
 
   public override void SetData(IGH_DataAccess da)
   {
-    _stopwatch.Stop();
+    _stopwatch.NotNull("GetData must be called before SetData").Stop();
 
-    if (((SendAsyncComponent)Parent).JustPastedIn)
+    if (Parent.JustPastedIn)
     {
-      ((SendAsyncComponent)Parent).JustPastedIn = false;
-      da.SetData(0, ((SendAsyncComponent)Parent).OutputParam);
+      Parent.JustPastedIn = false;
+      da.SetData(0, Parent.OutputParam);
       return;
     }
 
     if (CancellationToken.IsCancellationRequested)
     {
-      ((SendAsyncComponent)Parent).CurrentComponentState = ComponentState.Expired;
+      Parent.CurrentComponentState = ComponentState.Expired;
       return;
     }
 
@@ -322,9 +337,9 @@ public class SendComponentWorker : WorkerInstance
 
     da.SetData(0, OutputParam);
 
-    ((SendAsyncComponent)Parent).CurrentComponentState = ComponentState.UpToDate;
-    ((SendAsyncComponent)Parent).OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
-    ((SendAsyncComponent)Parent).OverallProgress = 0;
+    Parent.CurrentComponentState = ComponentState.UpToDate;
+    Parent.OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
+    Parent.OverallProgress = 0;
 
     var hasWarnings = RuntimeMessages.Count > 0;
     if (!hasWarnings)
@@ -346,93 +361,84 @@ public class SendComponentWorker : WorkerInstance
     }
   }
 
-  public override void DoWork(Action<string, double> reportProgress, Action done)
+  public override async Task DoWork(Action<string, double> reportProgress, Action done)
   {
-    var sendComponent = (SendAsyncComponent)Parent;
-
-    if (sendComponent.JustPastedIn || sendComponent.HasMultipleInputs)
+    if (Parent.JustPastedIn || Parent.HasMultipleInputs)
     {
-      done();
-      return;
-    }
-
-    if (CancellationToken.IsCancellationRequested)
-    {
-      sendComponent.CurrentComponentState = ComponentState.Expired;
       return;
     }
 
     try
     {
-      SpeckleUrlModelResource? urlModelResource = sendComponent.UrlModelResource;
-      if (urlModelResource is null)
-      {
-        throw new InvalidOperationException("Url Resource was null");
-      }
-
-      SpeckleCollectionWrapperGoo? rootCollectionWrapper = sendComponent.RootCollectionWrapper;
-      if (rootCollectionWrapper is null)
-      {
-        throw new InvalidOperationException("Root Collection was null");
-      }
-
-      var t = Task.Run(async () =>
-      {
-        if (CancellationToken.IsCancellationRequested)
-        {
-          sendComponent.CurrentComponentState = ComponentState.Expired;
-          return;
-        }
-
-        // Step 1 - SEND TO SERVER
-        var sendInfo = await urlModelResource
-          .GetSendInfo(sendComponent.ApiClient.NotNull(), CancellationToken)
-          .ConfigureAwait(false);
-
-        var progress = new Progress<CardProgress>(p =>
-        {
-          reportProgress(Id, p.Progress ?? 0);
-          //sendComponent.Message = $"{p.Status}";
-        });
-
-        using var scope = PriorityLoader.CreateScopeForActiveDocument();
-        var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-        SendOperationResult? result = await sendOperation
-          .Execute(
-            new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
-            sendInfo,
-            progress,
-            CancellationToken
-          )
-          .ConfigureAwait(false);
-
-        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-        var customProperties = new Dictionary<string, object>()
-        {
-          { "isAsync", true },
-          { "auto", sendComponent.AutoSend }
-        };
-        if (sendInfo.WorkspaceId != null)
-        {
-          customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-        }
-
-        var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-        await mixPanelManager.TrackEvent(MixPanelEvents.Send, sendComponent.ApiClient.Account, customProperties);
-
-        OutputParam = sendInfo;
-        sendComponent.Url = $"{sendInfo.Account.serverInfo.url}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-
-        // DONE
-        done();
-      });
-      t.Wait();
+      await Send(reportProgress);
+      done();
+    }
+    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Remark, "Operation cancelled"));
+      Parent.CurrentComponentState = ComponentState.Expired;
+      //No need to call `done()` - GrasshopperAsyncComponent assumes immediate cancel,
+      //thus it has already performed clean-up actions that would normally be done on `done()`
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
       done();
     }
+  }
+
+  private async Task Send(Action<string, double> reportProgress)
+  {
+    SpeckleUrlModelResource? urlModelResource = Parent.UrlModelResource;
+    if (urlModelResource is null)
+    {
+      throw new InvalidOperationException("Url Resource was null");
+    }
+
+    SpeckleCollectionWrapperGoo? rootCollectionWrapper = Parent.RootCollectionWrapper;
+    if (rootCollectionWrapper is null)
+    {
+      throw new InvalidOperationException("Root Collection was null");
+    }
+
+    // Step 1 - SEND TO SERVER
+    var sendInfo = await urlModelResource.GetSendInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
+
+    var progress = new Progress<CardProgress>(p =>
+    {
+      reportProgress(Id, p.Progress ?? 0);
+      //sendComponent.Message = $"{p.Status}";
+    });
+
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
+    SendOperationResult? result = await sendOperation
+      .Execute(new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper }, sendInfo, progress, CancellationToken)
+      .ConfigureAwait(false);
+
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+    var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };
+    if (sendInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
+    }
+
+    var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
+    await mixPanelManager
+      .TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties)
+      .ConfigureAwait(false);
+
+    SpeckleUrlModelVersionResource createdVersion =
+      new(
+        sendInfo.AccountId,
+        sendInfo.ServerUrl.ToString(),
+        sendInfo.WorkspaceId,
+        sendInfo.ProjectId,
+        sendInfo.ModelId,
+        result.VersionId
+      );
+    OutputParam = createdVersion;
+    Parent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }
 
@@ -477,7 +483,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
     {
       if (((SendAsyncComponent)Owner).AutoSend)
       {
-        var autoSendButton = GH_Capsule.CreateTextCapsule(
+        using var autoSendButton = GH_Capsule.CreateTextCapsule(
           ButtonBounds,
           ButtonBounds,
           GH_Palette.Blue,
@@ -487,7 +493,6 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
         );
 
         autoSendButton.Render(graphics, Selected, Owner.Locked, false);
-        autoSendButton.Dispose();
       }
       else
       {
@@ -498,7 +503,7 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
 
         var text = state == ComponentState.Sending ? "Publishing..." : "Publish";
 
-        var button = GH_Capsule.CreateTextCapsule(
+        using var button = GH_Capsule.CreateTextCapsule(
           ButtonBounds,
           ButtonBounds,
           palette,
@@ -507,7 +512,6 @@ public class SendAsyncComponentAttributes : GH_ComponentAttributes
           state == ComponentState.Expired ? 10 : 0
         );
         button.Render(graphics, Selected, Owner.Locked, false);
-        button.Dispose();
       }
     }
   }
