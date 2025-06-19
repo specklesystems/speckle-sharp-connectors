@@ -132,6 +132,8 @@ public static class Solutions
       connectors.RemoveFolder(folderToRemove);
     }
     var sln = Path.Combine(DIRECTORY, $"Speckle.Connectors.Mac.slnx");
-    await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
+    await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default); 
+    sln = Path.Combine(DIRECTORY, $"Speckle.Connectors.Mac.sln");
+    await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
   }
 }
