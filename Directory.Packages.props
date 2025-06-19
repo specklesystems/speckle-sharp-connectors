@@ -9,7 +9,7 @@
     <PackageVersion Include="Esri.ArcGISPro.Extensions30" Version="3.2.0.49743" />
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="Glob" Version="1.1.9" />
-    <PackageVersion Include="GrasshopperAsyncComponent" Version="1.2.3" />
+    <PackageVersion Include="GrasshopperAsyncComponent" Version="2.0.1" />
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
     <PackageVersion Include="JetBrains.Profiler.SelfApi" Version="2.5.12" />
     <PackageVersion Include="LibTessDotNet" Version="1.1.15" />
