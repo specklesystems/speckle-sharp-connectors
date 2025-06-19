@@ -79,6 +79,12 @@ internal sealed class GrasshopperBlockPacker
     {
       if (obj is SpeckleBlockInstanceWrapper nestedInstance)
       {
+        objectsToAdd.Add(nestedInstance);
+        _instanceObjectsManager.AddAtomicObject(
+          nestedInstance.ApplicationId ?? Guid.NewGuid().ToString(),
+          nestedInstance
+        );
+
         var nestedObjects = ProcessInstance(nestedInstance, depth + 1);
         if (nestedObjects != null)
         {
