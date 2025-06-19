@@ -76,12 +76,10 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       Base = new InstanceDefinitionProxy
       {
         name = modelInstanceDef.Name,
-        applicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
         objects = objects.Select(o => o.ApplicationId ?? Guid.NewGuid().ToString()).ToList(),
         maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
       Name = modelInstanceDef.Name,
-      ApplicationId = modelInstanceDef.Id?.ToString() ?? Guid.NewGuid().ToString(),
       Objects = objects
     };
 

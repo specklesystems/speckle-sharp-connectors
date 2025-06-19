@@ -81,11 +81,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
         definitionId = modelInstanceDef.Id?.ToString() ?? "unknown",
         maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
+        units = units
       },
       Transform = Transform.Identity,
-      ApplicationId = Guid.NewGuid().ToString(),
       GeometryBase = null
     };
     return true;
@@ -193,11 +191,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
         definitionId = definitionId.ToString(),
         maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
+        units = units
       },
       Transform = instanceRef.Xform,
-      ApplicationId = Guid.NewGuid().ToString(),
       Definition = definition, // May be null in pure Grasshopper workflows
       GeometryBase = null
     };
@@ -254,14 +250,5 @@ public partial class SpeckleBlockInstanceWrapperGoo
     // This preserves all existing behavior while adding ModelObject support
     return CreateFromInstanceReference(instanceRefGeo);
   }
-
-  // CONSISTENCY: Same helper method as SpeckleObjectWrapper for consistent API
-  //
-  // RATIONALE:
-  // - Maintains consistent patterns across all wrapper types
-  // - Uses identical method signature and implementation as SpeckleObjectWrapper
-  // - Makes the codebase predictable - if you know SpeckleObjectWrapper, you know this
-  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
 }
 #endif

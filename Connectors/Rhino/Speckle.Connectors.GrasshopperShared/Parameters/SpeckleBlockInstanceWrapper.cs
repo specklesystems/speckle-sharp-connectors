@@ -25,7 +25,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
       units = units,
-      applicationId = Guid.NewGuid().ToString()
+      applicationId = Guid.NewGuid().ToString() // Base needs valid proxy (wrapper sync demands immediate valid id)
     };
 
     Base = _instanceProxy; // set required base
@@ -307,7 +307,6 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       },
       GeometryBase = null, // Required property - must be explicit
       Name = "Block Instance",
-      ApplicationId = Guid.NewGuid().ToString()
     };
   }
 

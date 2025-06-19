@@ -93,8 +93,7 @@ public class CreateSpeckleBlockDefinition : GH_Component
           objects = new List<string>(),
           maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         },
-        Objects = new List<SpeckleObjectWrapper>(),
-        ApplicationId = Guid.NewGuid().ToString()
+        Objects = new List<SpeckleObjectWrapper>()
       };
       mutated = true;
     }

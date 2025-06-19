@@ -41,7 +41,7 @@ internal sealed class GrasshopperBlockPacker
       return null;
     }
 
-    var instanceId = blockInstance.ApplicationId ?? Guid.NewGuid().ToString();
+    var instanceId = blockInstance.ApplicationId ?? Guid.NewGuid().ToString(); // Safety net - final validation before object tracking
 
     blockInstance.InstanceProxy.maxDepth = depth;
     _instanceObjectsManager.AddInstanceProxy(instanceId, blockInstance.InstanceProxy);
