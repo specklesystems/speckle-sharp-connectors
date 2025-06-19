@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
@@ -20,6 +22,8 @@ internal sealed class RevitReceiveBinding(
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
   private IReceiveBindingUICommands Commands { get; } = new ReceiveBindingUICommands(parent);
+
+  public List<ICardSetting> GetReceiveSettings() => [new ReferencePointSetting(ReferencePointType.InternalOrigin)];
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 
