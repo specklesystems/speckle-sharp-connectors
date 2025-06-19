@@ -90,13 +90,86 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
   public (int index, bool existingDefinitionUpdated) Bake(RhinoDoc doc, List<Guid> objIds, string? name = null)
   {
+    // Collect all nested definitions in depth order
+    var nestedDefinitions = new List<SpeckleBlockDefinitionWrapper>();
+    CollectNestedDefinitionsDepthFirst(this, nestedDefinitions, new HashSet<string>());
+
+    // Bake all nested definitions first
+    foreach (var nestedDef in nestedDefinitions)
+    {
+      if (doc.InstanceDefinitions.Find(nestedDef.Name) == null)
+      {
+        nestedDef.BakeWithoutDependencyCheck(doc, objIds);
+      }
+    }
+
+    // Now bake this definition (all dependencies should exist)
+    return BakeWithoutDependencyCheck(doc, objIds, name);
+  }
+
+  private void CollectNestedDefinitionsDepthFirst(
+    SpeckleBlockDefinitionWrapper definition,
+    List<SpeckleBlockDefinitionWrapper> collector,
+    HashSet<string> visited
+  )
+  {
+    var defId = definition.ApplicationId ?? definition.Name ?? "";
+
+    // Prevent infinite recursion
+    if (visited.Contains(defId))
+    {
+      return;
+    }
+
+    visited.Add(defId);
+
+    // Traverse nested definitions depth-first
+    foreach (var obj in definition.Objects)
+    {
+      if (obj is SpeckleBlockInstanceWrapper blockInstance && blockInstance.Definition != null)
+      {
+        // Recursively collect nested definitions first
+        CollectNestedDefinitionsDepthFirst(blockInstance.Definition, collector, visited);
+
+        // Add the nested definition to our collection (if not already added)
+        if (
+          collector.All(d =>
+            (d.ApplicationId ?? d.Name) != (blockInstance.Definition.ApplicationId ?? blockInstance.Definition.Name)
+          )
+        )
+        {
+          collector.Add(blockInstance.Definition);
+        }
+      }
+    }
+  }
+
+  private (int index, bool existingDefinitionUpdated) BakeWithoutDependencyCheck(
+    RhinoDoc doc,
+    List<Guid> objIds,
+    string? name = null
+  )
+  {
     string blockDefinitionName = name ?? Name;
     var geometries = new List<GeometryBase>();
     var attributes = new List<ObjectAttributes>();
 
     foreach (var obj in Objects)
     {
-      if (obj.GeometryBase != null)
+      // Handle nested block instances - create InstanceReferenceGeometry
+      if (obj is SpeckleBlockInstanceWrapper blockInstance)
+      {
+        var existingNestedDef = doc.InstanceDefinitions.Find(blockInstance.Definition?.Name);
+        if (existingNestedDef != null)
+        {
+          var instanceRefGeo = new InstanceReferenceGeometry(existingNestedDef.Id, blockInstance.Transform);
+          geometries.Add(instanceRefGeo);
+          attributes.Add(blockInstance.CreateObjectAttributes(bakeMaterial: true));
+        }
+        // If nested definition doesn't exist, skip it (this shouldn't happen if dependency ordering worked)
+      }
+      // Handle regular geometry objects
+      else if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase);
         attributes.Add(obj.CreateObjectAttributes(bakeMaterial: true));
@@ -116,7 +189,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
     if (existingDef != null)
     {
-      // update existing definition
+      // Update existing definition
       bool success = doc.InstanceDefinitions.ModifyGeometry(
         existingDef.Index,
         geometries.ToArray(),
