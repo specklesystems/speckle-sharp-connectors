@@ -230,7 +230,7 @@ public class CreateSpeckleObject : GH_Component
         : result.Value.Path.FirstOrDefault();
 
     // set all the data
-    da.SetData(0, result.Value);
+    da.SetData(0, result);
     da.SetData(1, result.Value.GeometryBase);
     da.SetData(2, result.Value.Name);
     da.SetData(3, result.Value.Properties);
