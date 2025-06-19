@@ -1,5 +1,5 @@
 using Autodesk.AutoCAD.DatabaseServices;
-// using Speckle.Converters.AutocadShared.ToSpeckle;
+using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -12,18 +12,17 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
-
-  // private readonly PropertiesExtractor _propertiesExtractor; // NOTE: commented out as we can't test (no sample file)
+  private readonly PropertiesExtractor _propertiesExtractor;
 
   public AutocadRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore
-  // PropertiesExtractor propertiesExtractor // NOTE: commented out as we can't test (no sample file)
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore,
+    PropertiesExtractor propertiesExtractor
   )
   {
     _toSpeckle = toSpeckle;
     _settingsStore = settingsStore;
-    // _propertiesExtractor = propertiesExtractor; // NOTE: commented out as we can't test (no sample file)
+    _propertiesExtractor = propertiesExtractor;
   }
 
   public Base Convert(object target)
@@ -45,13 +44,12 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 
         var convertedObject = objectConverter.Convert(dbObject);
 
-        // NOTE: commented out as we can't test (no sample file)
         // add properties
-        // Dictionary<string, object?> properties = _propertiesExtractor.GetProperties((Entity)dbObject);
-        // if (properties.Count > 0)
-        // {
-        //   convertedObject["properties"] = properties;
-        // }
+        Dictionary<string, object?> properties = _propertiesExtractor.GetProperties((Entity)dbObject);
+        if (properties.Count > 0)
+        {
+          convertedObject["properties"] = properties;
+        }
 
         tr.Commit();
         return convertedObject;
