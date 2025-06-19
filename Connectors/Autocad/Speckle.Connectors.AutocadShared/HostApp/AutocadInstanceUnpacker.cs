@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
@@ -17,16 +18,19 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 {
   private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
+  private readonly IPropertiesExtractor _propertiesExtractor;
   private readonly ILogger<AutocadInstanceUnpacker> _logger;
 
   public AutocadInstanceUnpacker(
     IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager,
+    IPropertiesExtractor propertiesExtractor,
     ILogger<AutocadInstanceUnpacker> logger
   )
   {
     _unitsConverter = unitsConverter;
     _instanceObjectsManager = instanceObjectsManager;
+    _propertiesExtractor = propertiesExtractor;
     _logger = logger;
   }
 
@@ -71,6 +75,13 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           transform = GetMatrix(instance.BlockTransform.ToArray()),
           units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
+
+      var properties = _propertiesExtractor.GetProperties(instance);
+      if (properties?.Count > 0)
+      {
+        instanceProxy["properties"] = properties;
+      }
+
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
       // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.

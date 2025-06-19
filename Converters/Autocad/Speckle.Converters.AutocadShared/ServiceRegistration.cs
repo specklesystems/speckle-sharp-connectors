@@ -27,6 +27,7 @@ public static class ServiceRegistration
 
     // add other classes
     // serviceCollection.AddScoped<PropertiesExtractor>(); // NOTE: commented out until we can test in acad
+    serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
   }
 }
