@@ -50,7 +50,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public bool JustPastedIn { get; set; }
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
-  public IClient? ApiClient { get; set; }
+  public Account? CurrentAccount { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
   public GrasshopperSendInfo? OutputParam { get; set; }
@@ -251,14 +251,11 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     UrlModelResource = dataInput;
     try
     {
-      Account? account = dataInput.Account.GetAccount(scope);
-      if (account is null)
+      CurrentAccount = dataInput.Account.GetAccount(scope);
+      if (CurrentAccount is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
       }
-
-      ApiClient?.Dispose();
-      ApiClient = scope.Get<IClientFactory>().Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
     {
@@ -390,8 +387,9 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
 
     // Step 1 - SEND TO SERVER
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendInfo = await urlModelResource
-      .GetSendInfo(Parent.ApiClient.NotNull(), CancellationToken)
+      .GetSendInfo(scope.Get<IClientFactory>().Create(Parent.CurrentAccount.NotNull()), CancellationToken)
       .ConfigureAwait(false);
 
     var progress = new Progress<CardProgress>(p =>
@@ -400,7 +398,6 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       //sendComponent.Message = $"{p.Status}";
     });
 
-    using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     SendOperationResult? result = await sendOperation
       .Execute(new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper }, sendInfo, progress, CancellationToken)
@@ -415,7 +412,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
     var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
     await mixPanelManager
-      .TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties)
+      .TrackEvent(MixPanelEvents.Send, Parent.CurrentAccount.NotNull(), customProperties)
       .ConfigureAwait(false);
 
     OutputParam = sendInfo;
