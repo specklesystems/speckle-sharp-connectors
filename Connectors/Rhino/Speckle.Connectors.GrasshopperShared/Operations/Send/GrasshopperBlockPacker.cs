@@ -5,13 +5,9 @@ using Speckle.Sdk.Models.Instances;
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
 /// <summary>
-/// Processes block instances (and underlying definitions) for publish.
+/// Processes block instances and their nested definitions for publish.
+/// Handles nested definitions and depth tracking (injected InstanceObjectsManager).
 /// </summary>
-/// <remarks>
-/// Only <see cref="SpeckleCollectionWrapper"/> can be published. Collections accept <see cref="SpeckleObjectWrapper"/>
-/// and <see cref="SpeckleBlockInstanceWrapper"/>. They (for now) explicitly don't allow <see cref="SpeckleBlockDefinitionWrapper"/>.
-/// Therefore, the case where a definition is directly provided won't occur.
-/// </remarks>
 internal sealed class GrasshopperBlockPacker
 {
   private readonly IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> _instanceObjectsManager;
@@ -30,10 +26,11 @@ internal sealed class GrasshopperBlockPacker
   public Dictionary<string, InstanceDefinitionProxy> InstanceDefinitionProxies { get; } = [];
 
   /// <summary>
-  /// Processes a <see cref="SpeckleBlockInstanceWrapper"/> by validating inputs before delegating to private method.
-  /// Returns the <see cref="SpeckleObjectWrapper"/>s that make up the definition(s). These need to be added to the collection.
+  /// Processes a <see cref="SpeckleBlockInstanceWrapper"/> by tracking it in InstanceObjectsManager and recursively
+  /// processing its definition. Handles depth calculation for nested block hierarchies.
   /// </summary>
-  /// /// <param name="depth">Current nesting depth (0 = top level, increases for nested instances)</param>
+  /// <param name="blockInstance">The block instance to process</param>
+  /// <param name="depth">Current nesting depth (0 = top level, increases for nested instances)</param>
   public List<SpeckleObjectWrapper>? ProcessInstance(SpeckleBlockInstanceWrapper? blockInstance, int depth = 0)
   {
     if (blockInstance?.Definition == null)
@@ -50,7 +47,8 @@ internal sealed class GrasshopperBlockPacker
   }
 
   /// <summary>
-  /// Processes a <see cref="SpeckleBlockDefinitionWrapper"/> and adds it to the current collection (if not already present).
+  /// Processes a block definition, adding it and its objects to InstanceObjectsManager.
+  /// Updates maxDepth for existing definitions when encountered at greater depths.
   /// </summary>
   private List<SpeckleObjectWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition, int depth = 0)
   {
