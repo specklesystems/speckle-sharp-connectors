@@ -1,8 +1,12 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk;
+using Speckle.Sdk.Api;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 
@@ -49,9 +53,82 @@ public class TokenUrlComponent : GH_Component
       return;
     }
 
-    // do work here
-
-    // output url resource
-    da.SetData(0, new SpeckleUrlModelVersionResource());
+    try
+    {
+      // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
+      var (resource, hasPermission) = SolveInstanceWithUrAndToken(urlInput, tokenInput, true);
+      if (!hasPermission)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
+      }
+      da.SetData(0, resource);
+    }
+    catch (SpeckleException e)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      da.AbortComponentSolution();
+    }
   }
+  
+    public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrAndToken(
+    string input,
+    string token,
+    bool isSender
+  )
+  {
+    // When input is provided, lock interaction of buttons so only text is shown (no context menu)
+    // Should perform validation, fill in all internal data of the component (project, model, version, account)
+    // Should notify user if any of this goes wrong.
+
+    var resources = SpeckleResourceBuilder.FromUrlString(input, token);
+    if (resources.Length == 0)
+    {
+      throw new SpeckleException($"Input url string was empty");
+    }
+
+    if (resources.Length > 1)
+    {
+      throw new SpeckleException($"Input multi-model url is not supported");
+    }
+
+    var resource = resources.First();
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var account = resource.Account.GetAccount(scope);
+    if (account != null)
+    {
+      scope.Get<IAccountService>().SetUserSelectedAccountId(account.id);
+    } else {
+      throw new SpeckleException("No account found for server URL");
+    }
+
+    IClient client = scope.Get<IClientFactory>().Create(account);
+
+    var project = client.Project.Get(resource.ProjectId).Result;
+    var projectPermissions = client.Project.GetPermissions(resource.ProjectId).Result;
+    if (project != null && project.workspaceId != null)
+    {
+      var workspace = client.Workspace.Get(project.workspaceId).Result;
+    }
+    
+  
+    switch (resource)
+    {
+      case SpeckleUrlLatestModelVersionResource latestVersionResource:
+        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
+        break;
+      case SpeckleUrlModelVersionResource versionResource:
+        var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
+        // TODO: this wont be the case when we have separation between send and receive components
+        var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
+        break;
+      case SpeckleUrlModelObjectResource:
+        throw new SpeckleException("Object URLs are not supported");
+      default:
+        throw new SpeckleException("Unknown Speckle resource type");
+    }
+
+
+    return (resource, isSender ? projectPermissions.canPublish.authorized : projectPermissions.canLoad.authorized);
+  }
+    
 }
