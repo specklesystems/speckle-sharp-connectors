@@ -90,8 +90,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
           break;
 
-        // NOTE: order is super important since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper
-        // this is fragile and not nice.
+        // NOTE: order is important; since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, this needs to come first
         case SpeckleBlockInstanceWrapper bi:
           // process block instances - they get added to collection as Base
           Base blockInstanceBase = ConvertWrapperToBase(bi);
