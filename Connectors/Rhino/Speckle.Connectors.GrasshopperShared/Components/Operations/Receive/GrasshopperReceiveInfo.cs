@@ -11,5 +11,6 @@ public record GrasshopperReceiveInfo(
   string ModelId,
   string ModelName,
   string SelectedVersionId,
+  string SourceApplication,
   string? SelectedVersionUserId
-) : ReceiveInfo(Account, ProjectId, ProjectName, ModelId, ModelName, SelectedVersionId);
+) : ReceiveInfo(Account, ProjectId, ProjectName, ModelId, ModelName, SelectedVersionId, SourceApplication);

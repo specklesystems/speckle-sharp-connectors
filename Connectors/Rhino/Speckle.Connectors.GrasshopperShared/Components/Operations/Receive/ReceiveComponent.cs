@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -143,7 +144,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     var customProperties = new Dictionary<string, object>()
     {
       { "isAsync", false },
-      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug }
+      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }
     };
     if (receiveInfo.WorkspaceId != null)
     {

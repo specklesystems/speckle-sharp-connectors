@@ -8,5 +8,6 @@ public record ReceiveInfo(
   string ProjectName,
   string ModelId,
   string ModelName,
-  string SelectedVersionId
+  string SelectedVersionId,
+  string SourceAppilcation
 );

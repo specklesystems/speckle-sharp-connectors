@@ -18,7 +18,6 @@ public sealed class ReceiveOperation(
   ISdkActivityFactory activityFactory,
   IOperations operations,
   IReceiveVersionRetriever receiveVersionRetriever,
-  ISpeckleApplication application,
   IThreadContext threadContext
 ) : IReceiveOperation
 {
@@ -94,7 +93,7 @@ public sealed class ReceiveOperation(
     conversionActivity?.SetTag("receiveInfo.projectId", receiveInfo.ProjectId);
     conversionActivity?.SetTag("receiveInfo.modelId", receiveInfo.ModelId);
     conversionActivity?.SetTag("receiveInfo.selectedVersionId", receiveInfo.SelectedVersionId);
-    conversionActivity?.SetTag("receiveInfo.sourceApplication", application.Slug);
+    conversionActivity?.SetTag("receiveInfo.sourceApplication", receiveInfo.SourceAppilcation);
 
     try
     {

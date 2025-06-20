@@ -69,8 +69,8 @@ public class TokenUrlComponent : GH_Component
       da.AbortComponentSolution();
     }
   }
-  
-    public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrAndToken(
+
+  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrAndToken(
     string input,
     string token,
     bool isSender
@@ -97,7 +97,9 @@ public class TokenUrlComponent : GH_Component
     if (account != null)
     {
       scope.Get<IAccountService>().SetUserSelectedAccountId(account.id);
-    } else {
+    }
+    else
+    {
       throw new SpeckleException("No account found for server URL");
     }
 
@@ -109,8 +111,7 @@ public class TokenUrlComponent : GH_Component
     {
       var workspace = client.Workspace.Get(project.workspaceId).Result;
     }
-    
-  
+
     switch (resource)
     {
       case SpeckleUrlLatestModelVersionResource latestVersionResource:
@@ -127,8 +128,6 @@ public class TokenUrlComponent : GH_Component
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-
     return (resource, isSender ? projectPermissions.canPublish.authorized : projectPermissions.canLoad.authorized);
   }
-    
 }
