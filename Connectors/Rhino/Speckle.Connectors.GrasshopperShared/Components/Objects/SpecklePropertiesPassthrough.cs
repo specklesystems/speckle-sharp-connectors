@@ -33,13 +33,9 @@ public class SpecklePropertiesPassthrough : GH_Component
         _mode = value;
         Message = Mode.ToString();
         ExpireSolution(true);
-        //OnDisplayExpired(true);
-        UpdateDisplayMessage();
       }
     }
   }
-
-  protected virtual void UpdateDisplayMessage() { }
 
   public SpecklePropertiesPassthrough()
     : base(
