@@ -20,13 +20,11 @@ public class ReceiveConversionHandler(ISdkActivityFactory activityFactory) : IRe
     catch (ConversionException ce)
     {
       //handle conversions but don't log to seq
-      convertActivity?.SetStatus(SdkActivityStatusCode.Error);
       return ce;
     }
     catch (OperationCanceledException)
     {
       //handle conversions but don't log to seq and also throw
-      convertActivity?.SetStatus(SdkActivityStatusCode.Error);
       throw;
     }
     catch (Exception ex) when (!ex.IsFatal())
