@@ -27,7 +27,8 @@ public class SendOperationManagerFactory(
       operationProgressManager,
       store,
       cancellationManager,
-      activityFactory,accountService,
+      activityFactory,
+      accountService,
       loggerFactory.CreateLogger<SendOperationManager>()
     );
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models;
-using Speckle.InterfaceGenerator; 
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -24,7 +24,8 @@ public class ReceiveOperationManagerFactory(
 #pragma warning restore CA2000
       cancellationManager,
       store,
-      operationProgressManager,accountService,
+      operationProgressManager,
+      accountService,
       loggerFactory.CreateLogger<ReceiveOperationManager>()
     );
 }

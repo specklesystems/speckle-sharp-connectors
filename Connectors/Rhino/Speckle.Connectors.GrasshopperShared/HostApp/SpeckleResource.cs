@@ -63,12 +63,7 @@ public record SpeckleUrlLatestModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(
-      client.Account,
-      WorkspaceId,
-      ProjectId,
-      ModelId
-    );
+    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId);
   }
 }
 
@@ -112,12 +107,7 @@ public record SpeckleUrlModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(
-      client.Account,
-      WorkspaceId,
-      ProjectId,
-      ModelId
-    );
+    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId);
   }
 }
 
@@ -138,7 +128,6 @@ public record SpeckleUrlModelObjectResource(
     CancellationToken cancellationToken = default
   ) => throw new NotImplementedException("Object Resources are not supported yet");
 }
-
 
 public record AccountResource(string? AccountId, string? Token, string Server)
 {

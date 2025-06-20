@@ -2,4 +2,4 @@
 
 namespace Speckle.Connectors.Common.Operations;
 
-public record SendInfo(Account Account,string ProjectId, string ModelId);
+public record SendInfo(Account Account, string ProjectId, string ModelId);

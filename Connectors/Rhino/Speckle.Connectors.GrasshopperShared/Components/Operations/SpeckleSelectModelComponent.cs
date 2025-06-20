@@ -258,9 +258,9 @@ public class SpeckleSelectModelComponent : GH_Component
           0,
           new SpeckleUrlLatestModelVersionResource(
             new AccountResource(
-            SpeckleOperationWizard.SelectedAccount.id,
-            null,
-            SpeckleOperationWizard.SelectedAccount.serverInfo.url
+              SpeckleOperationWizard.SelectedAccount.id,
+              null,
+              SpeckleOperationWizard.SelectedAccount.serverInfo.url
             ),
             SpeckleOperationWizard.SelectedWorkspace?.id,
             SpeckleOperationWizard.SelectedProject.id,

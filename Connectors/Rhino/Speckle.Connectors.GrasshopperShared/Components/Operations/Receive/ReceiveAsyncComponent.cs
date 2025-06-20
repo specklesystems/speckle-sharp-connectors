@@ -279,7 +279,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     try
     {
       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-      Account? account = 
+      Account? account =
         urlResource.Account.AccountId != null
           ? scope.Get<IAccountManager>().GetAccount(urlResource.Account.AccountId)
           : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Account.Server)); // fallback the account that matches with URL if any
@@ -458,7 +458,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     var customProperties = new Dictionary<string, object>()
     {
       { "isAsync", true },
-      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug},
+      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug },
       { "auto", Parent.AutoReceive }
     };
     if (receiveInfo.WorkspaceId != null)

@@ -6,7 +6,8 @@ using Speckle.Sdk.Credentials;
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
-public class ReceiveVersionRetriever(IClientFactory clientFactory, ISpeckleApplication application) : IReceiveVersionRetriever
+public class ReceiveVersionRetriever(IClientFactory clientFactory, ISpeckleApplication application)
+  : IReceiveVersionRetriever
 {
   public async Task<Speckle.Sdk.Api.GraphQL.Models.Version> GetVersion(
     Account account,
@@ -29,9 +30,6 @@ public class ReceiveVersionRetriever(IClientFactory clientFactory, ISpeckleAppli
   {
     using var apiClient = clientFactory.Create(account);
 
-    await apiClient.Version.Received(
-      new(version.id, receiveInfo.ProjectId, application.Slug),
-      cancellationToken
-    );
+    await apiClient.Version.Received(new(version.id, receiveInfo.ProjectId, application.Slug), cancellationToken);
   }
 }

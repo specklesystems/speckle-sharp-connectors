@@ -56,7 +56,14 @@ public record SpeckleResourceBuilder
     {
       foreach (Capture additionalModelsCapture in additionalModels.Captures)
       {
-        var extraModel = GetUrlModelResource(null, token ,serverUrl, null, projectId.Value, additionalModelsCapture.Value);
+        var extraModel = GetUrlModelResource(
+          null,
+          token,
+          serverUrl,
+          null,
+          projectId.Value,
+          additionalModelsCapture.Value
+        );
         result.Add(extraModel);
       }
     }
@@ -80,7 +87,12 @@ public record SpeckleResourceBuilder
 
     if (!modelValue.Contains('@'))
     {
-      return new SpeckleUrlLatestModelVersionResource(new(accountId, token, serverUrl), workspaceId, projectId, modelValue); // Model has no version attached
+      return new SpeckleUrlLatestModelVersionResource(
+        new(accountId, token, serverUrl),
+        workspaceId,
+        projectId,
+        modelValue
+      ); // Model has no version attached
     }
 
     var res = modelValue.Split('@');

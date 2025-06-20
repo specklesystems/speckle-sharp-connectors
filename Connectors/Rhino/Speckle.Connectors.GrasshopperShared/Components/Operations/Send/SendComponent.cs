@@ -192,10 +192,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
     SpeckleUrlLatestModelVersionResource createdVersionResource =
-      new(new(
-        sendInfo.Account.id,
-        null,
-        sendInfo.Account.serverInfo.url),
+      new(
+        new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
         sendInfo.ModelId

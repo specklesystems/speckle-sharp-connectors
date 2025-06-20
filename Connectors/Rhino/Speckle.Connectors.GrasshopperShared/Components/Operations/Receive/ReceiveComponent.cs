@@ -143,7 +143,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     var customProperties = new Dictionary<string, object>()
     {
       { "isAsync", false },
-      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug}
+      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug }
     };
     if (receiveInfo.WorkspaceId != null)
     {

@@ -429,9 +429,8 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       .ConfigureAwait(false);
 
     SpeckleUrlModelVersionResource createdVersion =
-      new(new(
-        sendInfo.Account.id, null,
-        sendInfo.Account.serverInfo.url),
+      new(
+        new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
         sendInfo.ModelId,
