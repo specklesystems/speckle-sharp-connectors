@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models;
-using Speckle.InterfaceGenerator;
-using Speckle.Sdk;
+using Speckle.InterfaceGenerator; 
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -13,7 +13,7 @@ public class ReceiveOperationManagerFactory(
   IOperationProgressManager operationProgressManager,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
-  ISpeckleApplication speckleApplication,
+  IAccountService accountService,
   ILoggerFactory loggerFactory
 ) : IReceiveOperationManagerFactory
 {
@@ -24,8 +24,7 @@ public class ReceiveOperationManagerFactory(
 #pragma warning restore CA2000
       cancellationManager,
       store,
-      speckleApplication,
-      operationProgressManager,
+      operationProgressManager,accountService,
       loggerFactory.CreateLogger<ReceiveOperationManager>()
     );
 }

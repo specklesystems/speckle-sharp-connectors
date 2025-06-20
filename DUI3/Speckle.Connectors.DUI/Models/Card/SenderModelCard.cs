@@ -11,6 +11,9 @@ public class SenderModelCard : ModelCard
   // [JsonIgnore]
   // public HashSet<string> ChangedObjectIds { get; set; } = new();
 
-  public SendInfo GetSendInfo(string hostApplication) =>
-    new(AccountId.NotNull(), new Uri(ServerUrl.NotNull()), ProjectId.NotNull(), ModelId.NotNull(), hostApplication);
+  public SendInfo GetSendInfo(IAccountService accountService)
+  {
+    var account = accountService.GetAccountWithServerUrlFallback(AccountId.NotNull(), new Uri(ServerUrl.NotNull()));
+    return new(account, ProjectId.NotNull(), ModelId.NotNull());
+  }
 }

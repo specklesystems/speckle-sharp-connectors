@@ -99,13 +99,13 @@ public class SpeckleSelectModelComponent : GH_Component
         try
         {
           // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
+          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true, null);
           if (!hasPermission)
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
           }
           _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
-          _storedServer = resource.Server;
+          _storedServer = resource.Account.Server;
           da.SetData(0, resource);
         }
         catch (SpeckleException e)
@@ -257,8 +257,11 @@ public class SpeckleSelectModelComponent : GH_Component
         da.SetData(
           0,
           new SpeckleUrlLatestModelVersionResource(
+            new AccountResource(
             SpeckleOperationWizard.SelectedAccount.id,
-            SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+            null,
+            SpeckleOperationWizard.SelectedAccount.serverInfo.url
+            ),
             SpeckleOperationWizard.SelectedWorkspace?.id,
             SpeckleOperationWizard.SelectedProject.id,
             SpeckleOperationWizard.SelectedModel.id
@@ -271,8 +274,11 @@ public class SpeckleSelectModelComponent : GH_Component
       da.SetData(
         0,
         new SpeckleUrlModelVersionResource(
-          SpeckleOperationWizard.SelectedAccount.id,
-          SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+          new AccountResource(
+            SpeckleOperationWizard.SelectedAccount.id,
+            null,
+            SpeckleOperationWizard.SelectedAccount.serverInfo.url
+          ),
           SpeckleOperationWizard.SelectedWorkspace?.id,
           SpeckleOperationWizard.SelectedProject.id,
           SpeckleOperationWizard.SelectedModel.id,

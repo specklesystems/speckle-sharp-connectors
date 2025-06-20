@@ -1,16 +1,15 @@
 using Speckle.Connectors.Common.Operations;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
 public record GrasshopperReceiveInfo(
-  string AccountId,
-  Uri ServerUrl,
+  Account Account,
   string? WorkspaceId,
   string ProjectId,
   string ProjectName,
   string ModelId,
   string ModelName,
   string SelectedVersionId,
-  string SourceApplication,
   string? SelectedVersionUserId
-) : ReceiveInfo(AccountId, ServerUrl, ProjectId, ProjectName, ModelId, ModelName, SelectedVersionId, SourceApplication);
+) : ReceiveInfo(Account, ProjectId, ProjectName, ModelId, ModelName, SelectedVersionId);

@@ -261,9 +261,9 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     try
     {
       Account? account =
-        dataInput.AccountId != null
-          ? accountManager.GetAccount(dataInput.AccountId)
-          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Server)); // fallback the account that matches with URL if any
+        dataInput.Account.AccountId != null
+          ? accountManager.GetAccount(dataInput.Account.AccountId)
+          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Account.Server)); // fallback the account that matches with URL if any
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
@@ -429,16 +429,16 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       .ConfigureAwait(false);
 
     SpeckleUrlModelVersionResource createdVersion =
-      new(
-        sendInfo.AccountId,
-        sendInfo.ServerUrl.ToString(),
+      new(new(
+        sendInfo.Account.id, null,
+        sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
         sendInfo.ModelId,
         result.VersionId
       );
     OutputParam = createdVersion;
-    Parent.Url = $"{createdVersion.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+    Parent.Url = $"{createdVersion.Account.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }
 

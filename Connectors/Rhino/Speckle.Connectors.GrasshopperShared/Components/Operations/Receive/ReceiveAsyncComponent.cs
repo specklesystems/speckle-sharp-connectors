@@ -5,7 +5,6 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
 using Rhino;
-using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
@@ -280,10 +279,10 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     try
     {
       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-      Account? account =
-        urlResource.AccountId != null
-          ? scope.Get<IAccountManager>().GetAccount(urlResource.AccountId)
-          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
+      Account? account = 
+        urlResource.Account.AccountId != null
+          ? scope.Get<IAccountManager>().GetAccount(urlResource.Account.AccountId)
+          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Account.Server)); // fallback the account that matches with URL if any
 
       if (account is null)
       {
@@ -373,7 +372,9 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
   }
 
+#pragma warning disable CA1506
   private async Task Receive(Action<string, double> reportProgress)
+#pragma warning restore CA1506
   {
     if (UrlModelResource is null)
     {
@@ -457,7 +458,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     var customProperties = new Dictionary<string, object>()
     {
       { "isAsync", true },
-      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+      { "sourceHostApp", scope.Get<ISpeckleApplication>().Slug},
       { "auto", Parent.AutoReceive }
     };
     if (receiveInfo.WorkspaceId != null)

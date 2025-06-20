@@ -18,8 +18,8 @@ public sealed class ReceiveOperationManager(
   IServiceScope serviceScope,
   ICancellationManager cancellationManager,
   IDocumentModelStore store,
-  ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
+  IAccountService accountService,
   ILogger<ReceiveOperationManager> logger
 ) : IReceiveOperationManager
 {
@@ -49,7 +49,7 @@ public sealed class ReceiveOperationManager(
       var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
-        () => ro.Execute(modelCard.GetReceiveInfo(speckleApplication.Slug), progress, cancellationItem.Token)
+        () => ro.Execute(modelCard.GetReceiveInfo(accountService), progress, cancellationItem.Token)
       );
 
       if (conversionResults is null)
