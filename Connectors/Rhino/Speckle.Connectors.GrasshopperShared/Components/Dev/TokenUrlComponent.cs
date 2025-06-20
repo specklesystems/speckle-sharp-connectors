@@ -47,7 +47,7 @@ public class TokenUrlComponent : GH_Component
     }
 
     string tokenInput = "";
-    if (!da.GetData(0, ref tokenInput))
+    if (!da.GetData(1, ref tokenInput))
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Speckle token is missing");
       return;
