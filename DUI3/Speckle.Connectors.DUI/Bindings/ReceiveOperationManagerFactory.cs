@@ -25,8 +25,8 @@ public class ReceiveOperationManagerFactory(
       serviceProvider.CreateScope(),
 #pragma warning restore CA2000
       cancellationManager,
-      speckleApplication,
       store,
+      speckleApplication,
       operationProgressManager,
       accountService,
       loggerFactory.CreateLogger<ReceiveOperationManager>()
