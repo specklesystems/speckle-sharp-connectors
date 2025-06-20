@@ -17,8 +17,8 @@ public partial interface IReceiveOperationManager : IDisposable;
 public sealed class ReceiveOperationManager(
   IServiceScope serviceScope,
   ICancellationManager cancellationManager,
-  ISpeckleApplication speckleApplication,
   IDocumentModelStore store,
+  ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
   IAccountService accountService,
   ILogger<ReceiveOperationManager> logger

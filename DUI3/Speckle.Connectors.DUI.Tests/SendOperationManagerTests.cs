@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
@@ -21,7 +22,9 @@ namespace Speckle.Connectors.DUI.Tests;
 public class SendOperationManagerTests : MoqTest
 {
   [Test]
+#pragma warning disable CA1506
   public async Task TestHappyProcess()
+#pragma warning restore CA1506
   {
     // Arrange
     var serviceScopeMock = Create<IServiceScope>();
@@ -56,6 +59,10 @@ public class SendOperationManagerTests : MoqTest
 
     var cancellationManager = Create<ICancellationManager>();
     var cancellationItem = Create<ICancellationItem>();
+    var accountService = Create<IAccountService>();
+    accountService
+      .Setup(x => x.GetAccountWithServerUrlFallback(modelCard.AccountId, new(modelCard.ServerUrl)))
+      .Returns(new Account());
     cancellationItem.Setup(x => x.Token).Returns(CancellationToken.None);
     cancellationItem.Setup(x => x.Dispose());
     cancellationManager.Setup(x => x.GetCancellationItem(modelCard.ModelCardId)).Returns(cancellationItem.Object);
@@ -96,6 +103,7 @@ public class SendOperationManagerTests : MoqTest
       cancellationManager.Object,
       speckleApplication.Object,
       activityFactory.Object,
+      accountService.Object,
       logger.Object
     );
 

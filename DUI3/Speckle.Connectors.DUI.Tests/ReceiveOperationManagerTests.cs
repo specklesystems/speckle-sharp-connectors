@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
 using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests;
@@ -24,6 +25,7 @@ public class ReceiveOperationManagerTests : MoqTest
   private Mock<ISpeckleApplication> _speckleAppMock;
   private Mock<IOperationProgressManager> _progressManagerMock;
   private Mock<ILogger<ReceiveOperationManager>> _loggerMock;
+  private Mock<IAccountService> _accountServiceMock;
   private ReceiveOperationManager _manager;
 
   [SetUp]
@@ -35,12 +37,14 @@ public class ReceiveOperationManagerTests : MoqTest
     _speckleAppMock = Create<ISpeckleApplication>();
     _progressManagerMock = Create<IOperationProgressManager>();
     _loggerMock = Create<ILogger<ReceiveOperationManager>>(MockBehavior.Loose);
+    _accountServiceMock = Create<IAccountService>();
     _manager = new ReceiveOperationManager(
       _serviceScopeMock.Object,
       _cancellationManagerMock.Object,
       _storeMock.Object,
       _speckleAppMock.Object,
       _progressManagerMock.Object,
+      _accountServiceMock.Object,
       _loggerMock.Object
     );
     _serviceScopeMock.Setup(x => x.Dispose());
@@ -189,7 +193,10 @@ public class ReceiveOperationManagerTests : MoqTest
       .Setup(x => x.Execute(It.IsAny<ReceiveInfo>(), progressHandler.Object, CancellationToken.None))
       .ReturnsAsync(hostResult);
     _speckleAppMock.Setup(x => x.Slug).Returns("slug");
-
+    var account = new Account();
+    _accountServiceMock
+      .Setup(x => x.GetAccountWithServerUrlFallback(modelCard.AccountId, new Uri(modelCard.ServerUrl)))
+      .Returns(account);
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       async (s, f) => await f()
     );
