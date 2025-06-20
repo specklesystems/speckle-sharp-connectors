@@ -3,13 +3,13 @@
   <ItemGroup>
     <PublicReleasePath Include="$(AppData)\McNeel\Rhinoceros\$(RhinoVersion).0\Plug-ins\Speckle.Connectors.Rhino$(RhinoVersion) (2153799A-0CEC-40DE-BC3A-01E5055222FF)" />
   </ItemGroup>
-  <Target AfterTargets="Build" Name="WarnIfPublicReleaseVersionInstalled" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Build" Name="WarnIfPublicReleaseVersionInstalled" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'And '$(MSBuildRuntime)' == 'CLR'">
     <Warning
       Text="Conflicting Rhino plugin detected - Do you have a public release installed?"
       Condition="Exists(@(PublicReleasePath))" />
   </Target>
 
-  <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Build"  Name="AfterBuildRhino" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'And '$(MSBuildRuntime)' == 'CLR'">
     <Message Text="Rhino Version $(RhinoVersion)" Importance="high"/>
   </Target>
 </Project>
