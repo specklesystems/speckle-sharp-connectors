@@ -17,6 +17,7 @@ public partial interface IReceiveOperationManager : IDisposable;
 public sealed class ReceiveOperationManager(
   IServiceScope serviceScope,
   ICancellationManager cancellationManager,
+  ISpeckleApplication speckleApplication,
   IDocumentModelStore store,
   IOperationProgressManager operationProgressManager,
   IAccountService accountService,
@@ -49,7 +50,7 @@ public sealed class ReceiveOperationManager(
       var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
-        () => ro.Execute(modelCard.GetReceiveInfo(accountService), progress, cancellationItem.Token)
+        () => ro.Execute(modelCard.GetReceiveInfo(accountService, speckleApplication), progress, cancellationItem.Token)
       );
 
       if (conversionResults is null)

@@ -20,6 +20,7 @@ public sealed class SendOperationManager(
   IOperationProgressManager operationProgressManager,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
+  ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
   IAccountService accountService,
   ILogger<SendOperationManager> logger
@@ -79,7 +80,7 @@ public sealed class SendOperationManager(
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = modelCard.GetSendInfo(accountService);
+      var sendInfo = modelCard.GetSendInfo(accountService, speckleApplication);
 
       var sendResult = await serviceScope
         .ServiceProvider.GetRequiredService<ISendOperation<T>>()
