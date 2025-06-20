@@ -21,7 +21,7 @@
   </ItemGroup>
 
 
-  <Target Name="PostBuild" AfterTargets="Build">
+  <Target Name="PostBuild" AfterTargets="Build" Condition="'$(NavisworksVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'  And '$(MSBuildRuntime)' == 'CLR'">
     <Message Text="Navisworks Version $(NavisworksVersion)" Importance="high"/>
     <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
   
