@@ -9,5 +9,5 @@ public record ReceiveInfo(
   string ModelId,
   string ModelName,
   string SelectedVersionId,
-  string SourceAppilcation
+  string SourceApplication
 );

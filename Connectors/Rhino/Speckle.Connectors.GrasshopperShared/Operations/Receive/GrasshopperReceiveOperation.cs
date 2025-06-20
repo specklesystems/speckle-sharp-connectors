@@ -1,6 +1,5 @@
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Logging;
-using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -13,7 +12,6 @@ public class GrasshopperReceiveOperation
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
   private readonly ISdkActivityFactory _activityFactory;
-  private readonly ISpeckleApplication _application;
   private readonly IOperations _operations;
   private readonly IClientFactory _clientFactory;
 
@@ -21,7 +19,6 @@ public class GrasshopperReceiveOperation
     IServerTransportFactory serverTransportFactory,
     IProgressDisplayManager progressDisplayManager,
     ISdkActivityFactory activityFactory,
-    ISpeckleApplication application,
     IOperations operations,
     IClientFactory clientFactory
   )
@@ -29,7 +26,6 @@ public class GrasshopperReceiveOperation
     _serverTransportFactory = serverTransportFactory;
     _progressDisplayManager = progressDisplayManager;
     _activityFactory = activityFactory;
-    _application = application;
     _operations = operations;
     _clientFactory = clientFactory;
   }
@@ -98,7 +94,7 @@ public class GrasshopperReceiveOperation
       .ConfigureAwait(false);
 
     await apiClient
-      .Version.Received(new(version.id, receiveInfo.ProjectId, _application.Slug), cancellationToken)
+      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
       .ConfigureAwait(false);
     return commitObject;
   }

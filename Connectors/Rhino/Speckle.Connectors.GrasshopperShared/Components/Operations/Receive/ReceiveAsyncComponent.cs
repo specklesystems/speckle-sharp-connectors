@@ -280,11 +280,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     try
     {
       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-      Account? account =
-        urlResource.Account.AccountId != null
-          ? scope.Get<IAccountManager>().GetAccount(urlResource.Account.AccountId)
-          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Account.Server)); // fallback the account that matches with URL if any
-
+      Account? account = urlResource.Account.GetAccount(scope);
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");

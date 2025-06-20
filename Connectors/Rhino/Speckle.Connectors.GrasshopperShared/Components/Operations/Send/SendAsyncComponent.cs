@@ -157,12 +157,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
-    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
-    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-
     // We need to call this always in here to be able to react and set events :/
-    ParseInput(da, accountService, accountManager, clientFactory);
+    ParseInput(da, scope);
 
     if (
       (AutoSend || CurrentComponentState == ComponentState.Ready || CurrentComponentState == ComponentState.Sending)
@@ -241,12 +237,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(
-    IGH_DataAccess da,
-    IAccountService accountService,
-    IAccountManager accountManager,
-    IClientFactory clientFactory
-  )
+  private void ParseInput(IGH_DataAccess da, IServiceScope scope)
   {
     HostApp.SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
@@ -260,17 +251,14 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     UrlModelResource = dataInput;
     try
     {
-      Account? account =
-        dataInput.Account.AccountId != null
-          ? accountManager.GetAccount(dataInput.Account.AccountId)
-          : accountService.GetAccountWithServerUrlFallback("", new Uri(dataInput.Account.Server)); // fallback the account that matches with URL if any
+      Account? account = dataInput.Account.GetAccount(scope);
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
       }
 
       ApiClient?.Dispose();
-      ApiClient = clientFactory.Create(account);
+      ApiClient = scope.Get<IClientFactory>().Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
     {
