@@ -112,7 +112,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     HashSet<string> visited
   )
   {
-    var defId = definition.ApplicationId ?? definition.Name ?? "";
+    var defId = definition.ApplicationId ?? definition.Name;
     if (visited.Contains(defId))
     {
       return;

@@ -162,6 +162,31 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
+  /// <summary>
+  /// Creates a new SpeckleBlockInstanceWrapper with default values, centralizing creation logic.
+  /// </summary>
+  /// <remarks>Factory pattern alleviates code duplication, this was repeated three times previously!</remarks>
+  public static SpeckleBlockInstanceWrapper CreateDefault(string? name = null)
+  {
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    var appId = Guid.NewGuid().ToString();
+
+    return new SpeckleBlockInstanceWrapper
+    {
+      Base = new InstanceProxy
+      {
+        definitionId = "placeholder",
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+        units = units,
+        applicationId = appId
+      },
+      GeometryBase = null,
+      Name = name ?? "Block Instance",
+      ApplicationId = appId
+    };
+  }
+
   private void UpdateTransformFromProxy()
   {
     var units = _instanceProxy.units;
@@ -293,21 +318,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   // NOTE: parameterless constructor should only be used for casting
   public SpeckleBlockInstanceWrapperGoo()
   {
-    string units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-
-    Value = new SpeckleBlockInstanceWrapper
-    {
-      Base = new InstanceProxy
-      {
-        definitionId = "placeholder",
-        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
-      },
-      GeometryBase = null, // Required property - must be explicit
-      Name = "Block Instance",
-    };
+    Value = SpeckleBlockInstanceWrapper.CreateDefault();
   }
 
   public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)

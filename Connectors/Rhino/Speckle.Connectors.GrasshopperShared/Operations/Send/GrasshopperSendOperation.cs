@@ -92,7 +92,8 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
         // NOTE: order is important; since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, this needs to come first
         case SpeckleBlockInstanceWrapper bi:
-          // process block instances - they get added to collection as Base
+          // NOTE: Depth calculation handled by GrasshopperBlockPacker.ProcessInstance()
+          // Objects start with maxDepth=0, then updated during processing
           Base blockInstanceBase = ConvertWrapperToBase(bi);
           currentColl.elements.Add(blockInstanceBase);
 
@@ -157,7 +158,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
     var properties = wrapper switch
     {
-      SpeckleObjectWrapper obj => obj.Properties,
+      SpeckleObjectWrapper obj => obj.Properties, // handles both block instances and objects due to inheritance
       _ => throw new ArgumentException($"Unsupported wrapper type: {wrapper.GetType().Name}")
     };
     properties.CastTo(ref props);

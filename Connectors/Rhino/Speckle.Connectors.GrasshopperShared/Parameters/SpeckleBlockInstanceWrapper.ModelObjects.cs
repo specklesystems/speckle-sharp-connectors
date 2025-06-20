@@ -72,20 +72,8 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
   private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-
-    Value = new SpeckleBlockInstanceWrapper()
-    {
-      Base = new InstanceProxy()
-      {
-        definitionId = modelInstanceDef.Id?.ToString() ?? "unknown",
-        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-        units = units
-      },
-      Transform = Transform.Identity,
-      GeometryBase = null
-    };
+    Value = SpeckleBlockInstanceWrapper.CreateDefault();
+    Value.InstanceProxy.definitionId = modelInstanceDef.Id?.ToString() ?? "unknown";
     return true;
   }
 
