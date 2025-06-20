@@ -8,9 +8,9 @@ using Speckle.Sdk.Models.Instances;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("8D2E3F4A-1B5C-4E7F-9A8B-3C6D9E2F1A4B")]
-public class CreateSpeckleBlockDefinition : GH_Component
+public class SpeckleBlockDefinitionPassthrough : GH_Component
 {
-  public CreateSpeckleBlockDefinition()
+  public SpeckleBlockDefinitionPassthrough()
     : base(
       "Speckle Block Definition",
       "SBD",
