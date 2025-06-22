@@ -36,7 +36,13 @@ public class CreateCollection : VariableParameterComponentBase
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Collection", "C", "Created parent collection", GH_ParamAccess.item);
+    pManager.AddParameter(
+      new SpeckleCollectionParam(),
+      "Collection",
+      "C",
+      "Created parent collection",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
