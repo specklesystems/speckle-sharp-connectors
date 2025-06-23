@@ -7,7 +7,7 @@ public static class ComponentCategories
   public const string PRIMARY_RIBBON = "Speckle";
 
   // categories
-  public const string OPERATIONS = "    Publish & Load";
+  public const string OPERATIONS = "    Models";
   public const string OBJECTS = "   Objects";
   public const string COLLECTIONS = "  Collections";
   public const string PARAMETERS = " Params";

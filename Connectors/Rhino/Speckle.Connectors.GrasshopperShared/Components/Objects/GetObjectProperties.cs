@@ -12,7 +12,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
   public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => Resources.speckle_properties_query;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.secondary | GH_Exposure.obscure;
 
   public GetObjectProperties()
     : base(
