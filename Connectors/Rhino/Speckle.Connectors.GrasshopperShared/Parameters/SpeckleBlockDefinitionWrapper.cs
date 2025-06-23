@@ -386,7 +386,7 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleBlockDefinitionWrapperGoo goo)
@@ -394,6 +394,11 @@ public class SpeckleBlockDefinitionWrapperParam
         goo.Value.DrawPreview(args, isSelected);
       }
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 
   public bool Hidden { get; set; }
