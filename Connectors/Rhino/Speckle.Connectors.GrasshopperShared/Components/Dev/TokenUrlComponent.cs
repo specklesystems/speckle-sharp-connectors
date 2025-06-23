@@ -23,7 +23,7 @@ public class TokenUrlComponent : GH_Component
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_inputs_model;
+  protected override Bitmap Icon => Resources.speckle_inputs_token;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -81,14 +81,10 @@ public class TokenUrlComponent : GH_Component
     // Should notify user if any of this goes wrong.
 
     var resources = SpeckleResourceBuilder.FromUrlString(input, token);
-    if (resources.Length == 0)
+    if (resources.Length != 1)
     {
-      throw new SpeckleException($"Input url string was empty");
-    }
-
-    if (resources.Length > 1)
-    {
-      throw new SpeckleException($"Input multi-model url is not supported");
+      // POC: this shouldn't ever hit since exceptions are thrown in the FromUrlString method
+      throw new SpeckleException($"FromUrlString parser returned an invalid resource");
     }
 
     var resource = resources.First();
