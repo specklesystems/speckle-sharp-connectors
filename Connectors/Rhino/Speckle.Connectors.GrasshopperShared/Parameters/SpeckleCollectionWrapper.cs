@@ -158,15 +158,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     // then bake elements in this collection
     foreach (var obj in Elements)
     {
-      // SpeckleBlockInstanceWrapper checked before SpeckleObjectWrapper
-      if (obj is SpeckleBlockInstanceWrapper blockInstance)
-      {
-        if (bakeObjects)
-        {
-          blockInstance.Bake(doc, objIds, currentLayerIndex, true);
-        }
-      }
-      else if (obj is SpeckleObjectWrapper so)
+      if (obj is SpeckleObjectWrapper so)
       {
         if (bakeObjects)
         {
