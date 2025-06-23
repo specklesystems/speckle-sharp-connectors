@@ -1,4 +1,3 @@
-using Grasshopper.Kernel;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models.Instances;
