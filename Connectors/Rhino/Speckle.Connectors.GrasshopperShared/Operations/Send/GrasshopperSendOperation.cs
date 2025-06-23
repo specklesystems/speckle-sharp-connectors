@@ -90,43 +90,20 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
           break;
 
-        // NOTE: order is important; since SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, this needs to come first
-        case SpeckleBlockInstanceWrapper bi:
-          // NOTE: Depth calculation handled by GrasshopperBlockPacker.ProcessInstance()
-          // Objects start with maxDepth=0, then updated during processing
-          Base blockInstanceBase = ConvertWrapperToBase(bi);
-          currentColl.elements.Add(blockInstanceBase);
-
-          // process block for definition collection and get defining objects
-          var definitionObjects = blockPacker.ProcessInstance(bi);
-
-          if (definitionObjects != null)
-          {
-            foreach (var definitionObject in definitionObjects)
-            {
-              Base defObjectBase = ConvertWrapperToBase(definitionObject);
-
-              // just add to current collection
-              // TODO: where on collection?
-              currentColl.elements.Add(defObjectBase);
-
-              colorPacker.ProcessColor(definitionObject.ApplicationId, definitionObject.Color);
-              materialPacker.ProcessMaterial(definitionObject.ApplicationId, definitionObject.Material);
-            }
-          }
-
-          break;
-
-        case SpeckleObjectWrapper so:
-          // process the object first. This may result in application id mutations, so this must be done before processing color and materials.
-          //ProcessObjectWrapper(so, ref collObjectIds);
+        case SpeckleObjectWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
+          // convert wrapper to base and add to collection - common for all object wrappers
           Base objectBase = ConvertWrapperToBase(so);
           currentColl.elements.Add(objectBase);
 
-          // unpack color and render material
+          // do block instance specific stuff (if this object wrapper is actually a block instance)
+          if (so is SpeckleBlockInstanceWrapper blockInstance)
+          {
+            ProcessBlockInstanceDefinition(blockInstance, colorPacker, materialPacker, blockPacker, currentColl);
+          }
+
+          // process color and material for all object wrappers (including block instances)
           colorPacker.ProcessColor(so.ApplicationId, so.Color);
           materialPacker.ProcessMaterial(so.ApplicationId, so.Material);
-
           break;
       }
     }
@@ -169,6 +146,40 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     baseObject.applicationId ??= Guid.NewGuid().ToString();
 
     return baseObject;
+  }
+
+  /// <summary>
+  /// Processes a block instance's definition and adds the defining objects to the current collection.
+  /// Handles nested block hierarchies and depth calculation via GrasshopperBlockPacker.
+  /// </summary>
+  private void ProcessBlockInstanceDefinition(
+    SpeckleBlockInstanceWrapper blockInstance,
+    GrasshopperColorPacker colorPacker,
+    GrasshopperMaterialPacker materialPacker,
+    GrasshopperBlockPacker blockPacker,
+    Collection currentColl
+  )
+  {
+    // NOTE: Depth calculation handled by GrasshopperBlockPacker.ProcessInstance()
+    // Objects start with maxDepth=0, then updated during processing
+
+    // process block for definition collection and get defining objects
+    var definitionObjects = blockPacker.ProcessInstance(blockInstance);
+
+    if (definitionObjects != null)
+    {
+      foreach (var definitionObject in definitionObjects)
+      {
+        Base defObjectBase = ConvertWrapperToBase(definitionObject);
+
+        // just add to current collection
+        // TODO: where on collection?
+        currentColl.elements.Add(defObjectBase);
+
+        colorPacker.ProcessColor(definitionObject.ApplicationId, definitionObject.Color);
+        materialPacker.ProcessMaterial(definitionObject.ApplicationId, definitionObject.Material);
+      }
+    }
   }
 
   /*
