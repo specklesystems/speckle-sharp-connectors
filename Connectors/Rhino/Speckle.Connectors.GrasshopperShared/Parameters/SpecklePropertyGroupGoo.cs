@@ -75,6 +75,31 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
 
+  public bool Equals(ISpecklePropertyGoo other)
+  {
+    if (other is not SpecklePropertyGroupGoo propGroup)
+    {
+      return false;
+    }
+
+    if (Value.Keys.Count != propGroup.Value.Keys.Count)
+    {
+      return false;
+    }
+
+    var thisProps = Flatten();
+    var otherProps = propGroup.Flatten();
+    foreach (var entry in thisProps)
+    {
+      if (!otherProps.TryGetValue(entry.Key, out SpecklePropertyGoo otherValue) || !entry.Value.Equals(otherValue))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /// <summary>
   /// Adds this property group to the input object attributes
   /// </summary>

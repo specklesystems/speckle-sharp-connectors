@@ -533,7 +533,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleObjectWrapperGoo goo)
@@ -541,5 +541,10 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
         goo.Value.DrawPreview(args, isSelected);
       }
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 }

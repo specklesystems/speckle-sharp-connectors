@@ -345,11 +345,16 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
       return;
     }
 
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var elem in _previewObjects)
     {
       elem.DrawPreview(args, isSelected);
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 
   public void DrawViewportWires(IGH_PreviewArgs args)

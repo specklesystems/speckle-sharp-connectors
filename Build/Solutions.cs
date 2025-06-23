@@ -81,7 +81,6 @@ public static class Solutions
 
     var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
     await GenerateConnector(connectors, revit, "Revit.Local");
-    await GenerateMacSolutions();
   }
 
   public static async Task GenerateConnector(SolutionModel connectors, ProjectGroup group, string? name)
@@ -114,26 +113,5 @@ public static class Solutions
   {
     var connectorsSln = Path.Combine(DIRECTORY, solutionName);
     return await SolutionSerializers.SlnFileV12.OpenAsync(connectorsSln, default);
-  }
-
-  public static async Task GenerateMacSolutions()
-  {
-    var connectors = await GetFullSlnx();
-    var foldersToRemove = connectors
-      .SolutionFolders.Where(x =>
-        //need base folder
-        !x.Path.Equals("/Connectors/")
-        //don't grab all
-        && (x.Path.StartsWith("/Connectors/"))
-      )
-      .ToList();
-    foreach (var folderToRemove in foldersToRemove)
-    {
-      connectors.RemoveFolder(folderToRemove);
-    }
-    var sln = Path.Combine(DIRECTORY, $"Speckle.Connectors.Mac.slnx");
-    await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default); 
-    sln = Path.Combine(DIRECTORY, $"Speckle.Connectors.Mac.sln");
-    await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
   }
 }
