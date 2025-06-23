@@ -52,7 +52,9 @@ public class LevelUnpacker
           displayValue = [],
           properties = _propertiesExtractor.GetProperties(level)
         };
-        levelDataObject["elevation"] = level.Elevation;
+        var unitSettings = _converterSettings.Current.Document.GetUnits();
+        var lengthUnitType = unitSettings.GetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length).GetUnitTypeId();
+        levelDataObject["elevation"] = UnitUtils.ConvertFromInternalUnits(level.Elevation, lengthUnitType);
         levelDataObject["units"] = _converterSettings.Current.SpeckleUnits;
 
         levelProxies[element.LevelId.ToString()] = new LevelProxy()
