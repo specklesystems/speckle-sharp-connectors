@@ -38,7 +38,8 @@ internal sealed class GrasshopperBlockPacker
       return null;
     }
 
-    var instanceId = blockInstance.ApplicationId ?? Guid.NewGuid().ToString(); // Safety net - final validation before object tracking
+    blockInstance.ApplicationId ??= Guid.NewGuid().ToString();
+    var instanceId = blockInstance.ApplicationId;
 
     blockInstance.InstanceProxy.maxDepth = depth;
     _instanceObjectsManager.AddInstanceProxy(instanceId, blockInstance.InstanceProxy);
@@ -78,10 +79,8 @@ internal sealed class GrasshopperBlockPacker
       if (obj is SpeckleBlockInstanceWrapper nestedInstance)
       {
         objectsToAdd.Add(nestedInstance);
-        _instanceObjectsManager.AddAtomicObject(
-          nestedInstance.ApplicationId ?? Guid.NewGuid().ToString(),
-          nestedInstance
-        );
+        nestedInstance.ApplicationId ??= Guid.NewGuid().ToString();
+        _instanceObjectsManager.AddAtomicObject(nestedInstance.ApplicationId, nestedInstance);
 
         var nestedObjects = ProcessInstance(nestedInstance, depth + 1);
         if (nestedObjects != null)

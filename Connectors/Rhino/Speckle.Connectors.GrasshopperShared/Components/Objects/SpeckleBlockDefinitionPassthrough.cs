@@ -93,7 +93,8 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
           objects = new List<string>(),
           maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         },
-        Objects = new List<SpeckleObjectWrapper>()
+        Objects = new List<SpeckleObjectWrapper>(),
+        ApplicationId = Guid.NewGuid().ToString()
       };
       mutated = true;
     }
@@ -134,7 +135,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
         if (obj != null)
         {
-          obj.ApplicationId ??= Guid.NewGuid().ToString();
+          if (obj.ApplicationId == null)
+          {
+            throw new InvalidOperationException("Object ApplicationId should have been assigned during casting");
+          }
           processedObjects.Add(obj);
           objectIds.Add(obj.ApplicationId);
         }

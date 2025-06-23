@@ -72,7 +72,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
   private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
   {
-    Value = SpeckleBlockInstanceWrapper.CreateDefault();
+    Value = SpeckleBlockInstanceWrapper.CreateDefault(); // NOTE: CreateDefault() assigns `ApplicationId`
     Value.InstanceProxy.definitionId = modelInstanceDef.Id?.ToString() ?? "unknown";
     return true;
   }
@@ -181,6 +181,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
         transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
         units = units
       },
+      ApplicationId = instanceRef.ParentIdefId.ToString(), // Use the instance definition's ID
       Transform = instanceRef.Xform,
       Definition = definition, // May be null in pure Grasshopper workflows
       GeometryBase = null
@@ -236,7 +237,14 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
     // DELEGATE: Use existing logic to process the extracted InstanceReferenceGeometry
     // This preserves all existing behavior while adding ModelObject support
-    return CreateFromInstanceReference(instanceRefGeo);
+    var result = CreateFromInstanceReference(instanceRefGeo);
+    if (result && Value != null)
+    {
+      // Override with ModelObject's ID if available (preferred for round-trip scenarios)
+      Value.ApplicationId = modelObject.Id?.ToString() ?? Value.ApplicationId;
+    }
+
+    return result;
   }
 }
 #endif
