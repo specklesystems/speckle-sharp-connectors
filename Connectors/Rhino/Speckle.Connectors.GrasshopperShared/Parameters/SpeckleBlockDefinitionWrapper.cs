@@ -45,7 +45,8 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 
   private static void ValidateObjects(List<SpeckleObjectWrapper> objects)
   {
-    var invalidObjects = objects.Where(o => o.GetType() != typeof(SpeckleObjectWrapper)).ToList();
+    // SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, check if it's assignable, not exact type match
+    var invalidObjects = objects.Where(o => !typeof(SpeckleObjectWrapper).IsAssignableFrom(o.GetType())).ToList();
 
     if (invalidObjects.Count > 0)
     {
@@ -87,15 +88,80 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
+  /// <summary>
+  /// Bakes this block definition to Rhino, automatically handing nested block dependencies.
+  /// Nested definitions are baked first, to ensure that InstanceReferenceGeometry can find them
+  /// </summary>
   public (int index, bool existingDefinitionUpdated) Bake(RhinoDoc doc, List<Guid> objIds, string? name = null)
   {
-    string blockDefinitionName = name ?? Name;
+    // Collect and bake nested dependencies first
+    var visited = new HashSet<string>();
+    BakeNestedDefinitions(this, doc, objIds, visited);
+
+    // Now bake this definition
+    return BakeCurrentDefinition(doc, objIds, name);
+  }
+
+  /// <summary>
+  /// Recursively bakes nested block definitions in dependency order.
+  /// </summary>
+  private static void BakeNestedDefinitions(
+    SpeckleBlockDefinitionWrapper definition,
+    RhinoDoc doc,
+    List<Guid> objIds,
+    HashSet<string> visited
+  )
+  {
+    var defId = definition.ApplicationId ?? definition.Name;
+    if (visited.Contains(defId))
+    {
+      return;
+    }
+
+    visited.Add(defId);
+
+    // Bake nested dependencies first
+    foreach (var obj in definition.Objects)
+    {
+      if (obj is SpeckleBlockInstanceWrapper { Definition: not null } blockInstance)
+      {
+        BakeNestedDefinitions(blockInstance.Definition, doc, objIds, visited);
+
+        // Bake the nested definition if not already in document
+        if (doc.InstanceDefinitions.Find(blockInstance.Definition.Name) == null)
+        {
+          blockInstance.Definition.BakeCurrentDefinition(doc, objIds);
+        }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Creates the Rhino InstanceDefinition, converting nested instances to InstanceReferenceGeometry.
+  /// </summary>
+  private (int index, bool existingDefinitionUpdated) BakeCurrentDefinition(
+    RhinoDoc doc,
+    List<Guid> objIds,
+    string? name = null
+  )
+  {
+    string definitionName = name ?? Name;
     var geometries = new List<GeometryBase>();
     var attributes = new List<ObjectAttributes>();
 
     foreach (var obj in Objects)
     {
-      if (obj.GeometryBase != null)
+      if (obj is SpeckleBlockInstanceWrapper blockInstance && blockInstance.Definition != null)
+      {
+        // Convert to InstanceReferenceGeometry (nested definition should exist by now)
+        var referenceDefinition = doc.InstanceDefinitions.Find(blockInstance.Definition.Name);
+        if (referenceDefinition != null)
+        {
+          geometries.Add(new InstanceReferenceGeometry(referenceDefinition.Id, blockInstance.Transform));
+          attributes.Add(blockInstance.CreateObjectAttributes(bakeMaterial: true));
+        }
+      }
+      else if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase);
         attributes.Add(obj.CreateObjectAttributes(bakeMaterial: true));
@@ -107,50 +173,32 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       return (-1, false);
     }
 
-    // Check if definition already exists
-    var existingDef = doc.InstanceDefinitions.Find(blockDefinitionName);
+    var documentDefinition = doc.InstanceDefinitions.Find(definitionName);
 
-    int blockDefinitionIndex;
-    Guid blockDefinitionId;
-
-    if (existingDef != null)
+    if (documentDefinition != null)
     {
-      // update existing definition
+      // Update existing
       bool success = doc.InstanceDefinitions.ModifyGeometry(
-        existingDef.Index,
+        documentDefinition.Index,
         geometries.ToArray(),
         attributes.ToArray()
       );
-
-      if (!success)
+      if (success)
       {
-        return (-1, true); // tried to update but failed
+        objIds.Add(documentDefinition.Id);
+        return (documentDefinition.Index, true);
       }
-
-      blockDefinitionIndex = existingDef.Index;
-      blockDefinitionId = existingDef.Id;
+      return (-1, true);
     }
-    else
+
+    // Create new
+    int index = doc.InstanceDefinitions.Add(definitionName, string.Empty, Point3d.Origin, geometries, attributes);
+    if (index >= 0)
     {
-      // Create new definition
-      blockDefinitionIndex = doc.InstanceDefinitions.Add(
-        blockDefinitionName,
-        string.Empty, // NOTE: currently no description
-        Point3d.Origin, // NOTE: will be baked with ref point at origin
-        geometries,
-        attributes
-      );
-
-      if (blockDefinitionIndex == -1) // returns -1 on failure and a valid index (≥ 0) on success
-      {
-        return (-1, false); // creation failed
-      }
-
-      blockDefinitionId = doc.InstanceDefinitions[blockDefinitionIndex].Id;
+      objIds.Add(doc.InstanceDefinitions[index].Id);
+      return (index, false);
     }
-
-    objIds.Add(blockDefinitionId);
-    return (blockDefinitionIndex, existingDef != null);
+    return (-1, false);
   }
 
   public SpeckleBlockDefinitionWrapper DeepCopy() =>
@@ -247,7 +295,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       {
         name = "Unnamed Block",
         objects = new List<string>(),
-        maxDepth = 1
+        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
     };
   }
@@ -338,7 +386,7 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleBlockDefinitionWrapperGoo goo)
@@ -346,6 +394,11 @@ public class SpeckleBlockDefinitionWrapperParam
         goo.Value.DrawPreview(args, isSelected);
       }
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 
   public bool Hidden { get; set; }

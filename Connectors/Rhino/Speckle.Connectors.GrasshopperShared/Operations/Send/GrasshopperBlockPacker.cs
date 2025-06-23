@@ -1,18 +1,22 @@
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
 /// <summary>
-/// Processes block instances (and underlying definitions) for publish.
+/// Processes block instances and their nested definitions for publish.
+/// Handles nested definitions and depth tracking (injected InstanceObjectsManager).
 /// </summary>
-/// <remarks>
-/// Only <see cref="SpeckleCollectionWrapper"/> can be published. Collections accept <see cref="SpeckleObjectWrapper"/>
-/// and <see cref="SpeckleBlockInstanceWrapper"/>. They (for now) explicitly don't allow <see cref="SpeckleBlockDefinitionWrapper"/>.
-/// Therefore, the case where a definition is directly provided won't occur.
-/// </remarks>
 internal sealed class GrasshopperBlockPacker
 {
+  private readonly IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> _instanceObjectsManager;
+
+  public GrasshopperBlockPacker(IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> instanceObjectsManager)
+  {
+    _instanceObjectsManager = instanceObjectsManager;
+  }
+
   /// <summary>
   /// Stores a map of instance definition id to instance definition proxy
   /// </summary>
@@ -22,42 +26,81 @@ internal sealed class GrasshopperBlockPacker
   public Dictionary<string, InstanceDefinitionProxy> InstanceDefinitionProxies { get; } = [];
 
   /// <summary>
-  /// Processes a <see cref="SpeckleBlockInstanceWrapper"/> by validating inputs before delegating to private method.
-  /// Returns the <see cref="SpeckleObjectWrapper"/>s that make up the definition(s). These need to be added to the collection.
+  /// Processes a <see cref="SpeckleBlockInstanceWrapper"/> by tracking it in InstanceObjectsManager and recursively
+  /// processing its definition. Handles depth calculation for nested block hierarchies.
   /// </summary>
-  public List<SpeckleObjectWrapper>? ProcessInstance(SpeckleBlockInstanceWrapper? blockInstance)
+  /// <param name="blockInstance">The block instance to process</param>
+  /// <param name="depth">Current nesting depth (0 = top level, increases for nested instances)</param>
+  public List<SpeckleObjectWrapper>? ProcessInstance(SpeckleBlockInstanceWrapper? blockInstance, int depth = 0)
   {
-    // NOTE: in pure gh workflows Definition might be null ALTHOUGH we're throwing an Exception 🤨. But rather safe than sorry.
-    if (blockInstance?.Definition != null)
+    if (blockInstance?.Definition == null)
     {
-      return ProcessDefinition(blockInstance.Definition);
+      return null;
     }
 
-    return null;
+    blockInstance.ApplicationId ??= Guid.NewGuid().ToString();
+    var instanceId = blockInstance.ApplicationId;
+
+    blockInstance.InstanceProxy.maxDepth = depth;
+    _instanceObjectsManager.AddInstanceProxy(instanceId, blockInstance.InstanceProxy);
+
+    return ProcessDefinition(blockInstance.Definition, depth);
   }
 
   /// <summary>
-  /// Processes a <see cref="SpeckleBlockDefinitionWrapper"/> and adds it to the current collection (if not already present).
+  /// Processes a block definition, adding it and its objects to InstanceObjectsManager.
+  /// Updates maxDepth for existing definitions when encountered at greater depths.
   /// </summary>
-  private List<SpeckleObjectWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition)
+  private List<SpeckleObjectWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition, int depth = 0)
   {
     // Use wrapper's id as definitive identifier. Create if empty.
     definition.ApplicationId ??= Guid.NewGuid().ToString();
     string definitionId = definition.ApplicationId;
 
-    // Only add if not in InstanceDefinitionProxies
-    if (!InstanceDefinitionProxies.ContainsKey(definitionId))
+    // Check if already processed using InstanceObjectsManager
+    if (
+      _instanceObjectsManager.TryGetInstanceDefinitionProxy(definitionId, out InstanceDefinitionProxy? definitionProxy)
+    )
     {
-      // 💩 Sync proxy appId to wrapper appId. Can this mismatch even occur? Is this the right approach?
-      InstanceDefinitionProxy proxy = definition.InstanceDefinitionProxy;
-      proxy.applicationId = definitionId;
-      InstanceDefinitionProxies[definitionId] = proxy;
+      int depthDifference = depth - definitionProxy.maxDepth;
+      if (depthDifference > 0)
+      {
+        // Use InstanceObjectsManager to update max depth
+        _instanceObjectsManager.UpdateChildrenMaxDepth(definitionProxy, depthDifference);
+      }
 
-      // Return objects to be added to collection (only happens once per definition)
-      return definition.Objects;
+      return null; // this prevents infinite recursion
     }
 
-    // Already processed this definition - don't return objects
-    return null;
+    // Process objects recursively
+    var objectsToAdd = new List<SpeckleObjectWrapper>();
+    foreach (var obj in definition.Objects)
+    {
+      if (obj.ApplicationId == null) // we should be loud about this. If gone through all casting etc. this should be complete!
+      {
+        throw new InvalidOperationException(
+          $"Object in block definition '{definition.Name}' missing ApplicationId during send operation. This indicates a processing pipeline error."
+        );
+      }
+
+      objectsToAdd.Add(obj);
+      _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
+
+      if (obj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        var nestedObjects = ProcessInstance(nestedInstance, depth + 1);
+        if (nestedObjects != null)
+        {
+          objectsToAdd.AddRange(nestedObjects);
+        }
+      }
+    }
+
+    // Add definition to InstanceObjectsManager
+    definition.InstanceDefinitionProxy.maxDepth = depth;
+    _instanceObjectsManager.AddDefinitionProxy(definitionId, definition.InstanceDefinitionProxy);
+    InstanceDefinitionProxies[definitionId] = definition.InstanceDefinitionProxy;
+
+    return objectsToAdd;
   }
 }

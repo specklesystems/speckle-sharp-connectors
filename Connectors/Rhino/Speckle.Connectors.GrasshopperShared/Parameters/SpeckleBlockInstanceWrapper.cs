@@ -22,13 +22,12 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     _instanceProxy = new InstanceProxy
     {
       definitionId = "placeholder",
-      maxDepth = 1,
+      maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-      units = units,
-      applicationId = Guid.NewGuid().ToString()
+      units = units
     };
-
     Base = _instanceProxy; // set required base
+    ApplicationId = Guid.NewGuid().ToString();
     GeometryBase = null; // block instances typically don't have direct geometry
   }
 
@@ -162,6 +161,31 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
+  /// <summary>
+  /// Creates a new SpeckleBlockInstanceWrapper with default values, centralizing creation logic.
+  /// </summary>
+  /// <remarks>Factory pattern alleviates code duplication, this was repeated three times previously!</remarks>
+  public static SpeckleBlockInstanceWrapper CreateDefault(string? name = null)
+  {
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    var appId = Guid.NewGuid().ToString();
+
+    return new SpeckleBlockInstanceWrapper
+    {
+      Base = new InstanceProxy
+      {
+        definitionId = "placeholder",
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+        units = units,
+        applicationId = appId
+      },
+      GeometryBase = null,
+      Name = name ?? "Block Instance",
+      ApplicationId = appId
+    };
+  }
+
   private void UpdateTransformFromProxy()
   {
     var units = _instanceProxy.units;
@@ -293,22 +317,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   // NOTE: parameterless constructor should only be used for casting
   public SpeckleBlockInstanceWrapperGoo()
   {
-    string units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-
-    Value = new SpeckleBlockInstanceWrapper
-    {
-      Base = new InstanceProxy
-      {
-        definitionId = "placeholder",
-        maxDepth = 1,
-        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-        units = units,
-        applicationId = Guid.NewGuid().ToString()
-      },
-      GeometryBase = null, // Required property - must be explicit
-      Name = "Block Instance",
-      ApplicationId = Guid.NewGuid().ToString()
-    };
+    Value = SpeckleBlockInstanceWrapper.CreateDefault();
   }
 
   public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)
@@ -394,7 +403,7 @@ public class SpeckleBlockInstanceParam
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleBlockInstanceWrapperGoo goo)
@@ -402,6 +411,11 @@ public class SpeckleBlockInstanceParam
         goo.Value.DrawPreview(args, isSelected);
       }
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 
   public bool Hidden { get; set; }

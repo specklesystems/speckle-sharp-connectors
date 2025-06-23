@@ -135,10 +135,10 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// Bakes this collection as a layer, in its path structure.
   /// </summary>
   /// <param name="doc"></param>
-  /// <param name="obj_ids"></param>
+  /// <param name="objIds"></param>
   /// <param name="bakeObjects"></param>
   /// <returns>The index of the baked layer</returns>
-  public int Bake(RhinoDoc doc, List<Guid> obj_ids, bool bakeObjects, int parentLayerIndex = -1)
+  public int Bake(RhinoDoc doc, List<Guid> objIds, bool bakeObjects, int parentLayerIndex = -1)
   {
     if (!LayerExists(doc, Path, out int currentLayerIndex))
     {
@@ -147,11 +147,11 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
         Guid parentLayerId = doc.Layers[parentLayerIndex].Id;
         currentLayerIndex = CreateLayer(doc, Collection.name, parentLayerId, Color);
         Guid currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
-        obj_ids.Add(currentLayerId);
+        objIds.Add(currentLayerId);
       }
       else
       {
-        currentLayerIndex = CreateLayerByPath(doc, Path, Color, obj_ids);
+        currentLayerIndex = CreateLayerByPath(doc, Path, Color, objIds);
       }
     }
 
@@ -162,12 +162,12 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
       {
         if (bakeObjects)
         {
-          so.Bake(doc, obj_ids, currentLayerIndex, true);
+          so.Bake(doc, objIds, currentLayerIndex, true);
         }
       }
       else if (obj is SpeckleCollectionWrapper c)
       {
-        c.Bake(doc, obj_ids, bakeObjects, currentLayerIndex);
+        c.Bake(doc, objIds, bakeObjects, currentLayerIndex);
       }
     }
 
@@ -192,7 +192,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     return doc.Layers.Add(layer);
   }
 
-  private int CreateLayerByPath(RhinoDoc doc, List<string> path, Color? color, List<Guid> obj_ids)
+  private int CreateLayerByPath(RhinoDoc doc, List<string> path, Color? color, List<Guid> objIds)
   {
     if (path.Count == 0 || doc == null)
     {
@@ -215,7 +215,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
       {
         currentLayerIndex = CreateLayer(doc, layerName, currentLayerId, color);
         currentLayerId = doc.Layers.FindIndex(currentLayerIndex).Id;
-        obj_ids.Add(currentLayerId);
+        objIds.Add(currentLayerId);
       }
 
       parentLayerIndex = currentLayerIndex;
@@ -297,26 +297,26 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
   bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;
 
-  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, List<Guid> obj_ids)
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, true);
+        goo.Value.Bake(doc, objIds, true);
       }
     }
   }
 
-  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> obj_ids)
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds)
   {
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleCollectionWrapperGoo goo)
       {
-        goo.Value.Bake(doc, obj_ids, true);
+        goo.Value.Bake(doc, objIds, true);
       }
     }
   }
