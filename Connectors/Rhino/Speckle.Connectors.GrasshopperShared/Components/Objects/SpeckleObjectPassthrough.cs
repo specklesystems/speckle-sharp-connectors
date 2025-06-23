@@ -9,9 +9,9 @@ using Speckle.Sdk.Models;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class CreateSpeckleObject : GH_Component
+public class SpeckleObjectPassthrough : GH_Component
 {
-  public CreateSpeckleObject()
+  public SpeckleObjectPassthrough()
     : base(
       "Speckle Object",
       "SO",
@@ -230,7 +230,7 @@ public class CreateSpeckleObject : GH_Component
         : result.Value.Path.FirstOrDefault();
 
     // set all the data
-    da.SetData(0, result.Value);
+    da.SetData(0, result);
     da.SetData(1, result.Value.GeometryBase);
     da.SetData(2, result.Value.Name);
     da.SetData(3, result.Value.Properties);
