@@ -26,7 +26,8 @@ public class RootObjectUnpacker
       TryGetInstanceDefinitionProxies(root),
       TryGetGroupProxies(root),
       TryGetRenderMaterialProxies(root),
-      TryGetColorProxies(root)
+      TryGetColorProxies(root),
+      TryGetLevelProxies(root)
     );
 
   public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
@@ -43,6 +44,9 @@ public class RootObjectUnpacker
 
   public IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) =>
     TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
+
+  public IReadOnlyCollection<LevelProxy>? TryGetLevelProxies(Base root) =>
+    TryGetProxies<LevelProxy>(root, ProxyKeys.LEVEL);
 
   public (
     IReadOnlyCollection<TraversalContext> atomicObjects,
