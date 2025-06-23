@@ -112,24 +112,28 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       {
         SpeckleObjectWrapper? obj = null;
 
-        // Handle SpeckleObjectWrapper
-        if (objGoo is SpeckleObjectWrapperGoo speckleObjGoo && speckleObjGoo.Value != null)
+        // Try casting to SpeckleObjectWrapper first (handles object wrapper, model objects, loose geometry)
+        var objectGoo = new SpeckleObjectWrapperGoo();
+        if (objectGoo.CastFrom(objGoo))
         {
-          obj = speckleObjGoo.Value.DeepCopy();
+          obj = objectGoo.Value;
         }
-        // Handle SpeckleBlockInstanceWrapper
-        else if (objGoo is SpeckleBlockInstanceWrapperGoo blockInstGoo && blockInstGoo.Value != null)
+        else
         {
-          obj = blockInstGoo.Value.DeepCopy();
-        }
-        // Handle other convertible types
-        else if (objGoo != null)
-        {
-          // Try to convert geometry, etc.
-          var tempGoo = new SpeckleObjectWrapperGoo();
-          if (tempGoo.CastFrom(objGoo))
+          // Try casting to SpeckleBlockInstanceWrapper (handles instance goo, model instances)
+          var instanceGoo = new SpeckleBlockInstanceWrapperGoo();
+          if (instanceGoo.CastFrom(objGoo))
           {
-            obj = tempGoo.Value;
+            obj = instanceGoo.Value;
+          }
+          else
+          {
+            // Neither casting worked
+            AddRuntimeMessage(
+              GH_RuntimeMessageLevel.Warning,
+              $"Object of type {objGoo?.GetType().Name ?? "null"} could not be added to definition"
+            );
+            continue; // skip this object
           }
         }
 
