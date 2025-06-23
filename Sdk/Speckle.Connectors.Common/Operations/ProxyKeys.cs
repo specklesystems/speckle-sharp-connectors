@@ -10,4 +10,5 @@ public static class ProxyKeys
   public const string PROPERTYSET_DEFINITIONS = "propertySetDefinitions";
   public const string MATERIAL = "materialProxies";
   public const string SECTION = "sectionProxies";
+  public const string LEVEL = "levelProxies";
 }
