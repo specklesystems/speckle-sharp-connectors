@@ -426,11 +426,13 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     TraversalContextUnpacker traversalContextUnpacker = new();
     var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
 
-    // "flatten" block instances
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-      unpackedRoot.DefinitionProxies,
-      unpackedRoot.ObjectsToConvert.ToList()
-    );
+    // split atomic objects from block components before conversion
+    var (atomicObjects, blockInstances) = scope
+      .Get<RootObjectUnpacker>()
+      .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+
+    // only convert atomic objects to geometry
+    var localToGlobalMaps = localToGlobalUnpacker.Unpack(unpackedRoot.DefinitionProxies, atomicObjects.ToArray());
 
     // TODO: unpack colors and render materials
     GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);

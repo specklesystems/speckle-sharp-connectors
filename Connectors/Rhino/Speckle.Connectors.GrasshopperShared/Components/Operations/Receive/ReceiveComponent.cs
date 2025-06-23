@@ -170,10 +170,15 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
     var unpackedRoot = rootObjectUnpacker.Unpack(root);
 
-    // "flatten" block instances
+    // split atomic objects from block components before conversion
+    var (atomicObjects, blockInstances) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+      unpackedRoot.ObjectsToConvert
+    );
+
+    // only convert atomic objects to geometry
     var localToGlobalMaps = localToGlobalUnpacker.Unpack(
       unpackedRoot.DefinitionProxies,
-      unpackedRoot.ObjectsToConvert.ToList()
+      atomicObjects.ToArray() // only non-block objects
     );
 
     // unpack colors and render materials
