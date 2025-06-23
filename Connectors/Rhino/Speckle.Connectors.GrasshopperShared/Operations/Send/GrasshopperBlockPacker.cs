@@ -1,3 +1,4 @@
+using Grasshopper.Kernel;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models.Instances;
@@ -76,22 +77,23 @@ internal sealed class GrasshopperBlockPacker
     var objectsToAdd = new List<SpeckleObjectWrapper>();
     foreach (var obj in definition.Objects)
     {
+      if (obj.ApplicationId == null) // we should be loud about this. If gone through all casting etc. this should be complete!
+      {
+        throw new InvalidOperationException(
+          $"Object in block definition '{definition.Name}' missing ApplicationId during send operation. This indicates a processing pipeline error."
+        );
+      }
+
+      objectsToAdd.Add(obj);
+      _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
+
       if (obj is SpeckleBlockInstanceWrapper nestedInstance)
       {
-        objectsToAdd.Add(nestedInstance);
-        nestedInstance.ApplicationId ??= Guid.NewGuid().ToString();
-        _instanceObjectsManager.AddAtomicObject(nestedInstance.ApplicationId, nestedInstance);
-
         var nestedObjects = ProcessInstance(nestedInstance, depth + 1);
         if (nestedObjects != null)
         {
           objectsToAdd.AddRange(nestedObjects);
         }
-      }
-      else
-      {
-        objectsToAdd.Add(obj);
-        _instanceObjectsManager.AddAtomicObject(obj.ApplicationId ?? Guid.NewGuid().ToString(), obj);
       }
     }
 
