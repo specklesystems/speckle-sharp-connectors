@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -127,9 +128,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
     return modelDef;
   }
 
-  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef)
+  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef, string? appId = null)
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.None;
     var definitionId = instanceRef.ParentIdefId;
 
     // Try to preserve existing definition first (for round-trip scenarios)
@@ -159,7 +160,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
         transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
         units = units
       },
-      ApplicationId = instanceRef.ParentIdefId.ToString(), // Use the instance definition's ID
+      ApplicationId = appId,
       Transform = instanceRef.Xform,
       Definition = definition, // May be null in pure Grasshopper workflows
       GeometryBase = null
@@ -207,22 +208,12 @@ public partial class SpeckleBlockInstanceWrapperGoo
     // Same pattern as SpeckleObjectWrapper: ModelObject → GeometryBase extraction
     // Inline helper to keep geometry extraction logic contained within this method
     GeometryBase? geometryBase = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
-
     if (geometryBase is not InstanceReferenceGeometry instanceRefGeo)
     {
       return false;
     }
 
-    // DELEGATE: Use existing logic to process the extracted InstanceReferenceGeometry
-    // This preserves all existing behavior while adding ModelObject support
-    var result = CreateFromInstanceReference(instanceRefGeo);
-    if (result && Value != null)
-    {
-      // Override with ModelObject's ID if available (preferred for round-trip scenarios)
-      Value.ApplicationId = modelObject.Id?.ToString() ?? Value.ApplicationId;
-    }
-
-    return result;
+    return CreateFromInstanceReference(instanceRefGeo, modelObject.Id?.ToString());
   }
 }
 #endif
