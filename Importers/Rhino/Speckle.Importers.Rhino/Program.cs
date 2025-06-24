@@ -43,7 +43,7 @@ public static class Program
       rootCommand.AddArgument(serverUrlArg);
       rootCommand.AddArgument(tokenArg);
 
-      rootCommand.SetHandler(Handle, pathArg, resultsPathArg, projectIdArg, modelIdArg, serverUrlArg, tokenArg);
+      await Handle("C:\\Users\\adam\\Downloads\\cube Untitled.3dm", string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
 
       await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 
@@ -79,7 +79,8 @@ public static class Program
     using (new RhinoCore([], WindowStyle.NoWindow))
     {
       //doc is often null so dispose the active doc too
-      using var doc = RhinoDoc.Open(filePath, out _);
+      using var doc = RhinoDoc.CreateHeadless(null);
+      doc.Import(filePath, Importer.GetOptions(Path.GetExtension(filePath)));
       using var __ = RhinoDoc.ActiveDoc;
       var services = new ServiceCollection();
       services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
