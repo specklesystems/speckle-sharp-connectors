@@ -14,6 +14,7 @@ public class FilterSpeckleObjects : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_filter;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   public FilterSpeckleObjects()
     : base(
