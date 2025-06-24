@@ -54,7 +54,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     int propIndex = pManager.AddGenericParameter(
       "Properties",
       "P",
-      "The properties of the Speckle Instance. Speckle Properties are accepted.",
+      "The properties of the Speckle Instance. Speckle Properties and User Content are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[propIndex].Optional = true;
