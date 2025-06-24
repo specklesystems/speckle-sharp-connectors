@@ -62,7 +62,7 @@ public class ReceiveOperationManagerTests : MoqTest
         await _manager.Process(
           commands.Object,
           "id1",
-          _ => { },
+          (_, _) => { },
           (s, f) => Task.FromResult<HostObjectBuilderResult?>(null)
         )
     );
@@ -100,7 +100,7 @@ public class ReceiveOperationManagerTests : MoqTest
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       (s, f) => throw exception
     );
-    await _manager.Process(commands.Object, "id2", _ => { }, processor);
+    await _manager.Process(commands.Object, "id2", (_, _) => { }, processor);
     _cancellationManagerMock.Verify(x => x.CancelOperation("id2"), Times.Once);
   }
 
@@ -136,7 +136,7 @@ public class ReceiveOperationManagerTests : MoqTest
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       (s, f) => throw exception
     );
-    await _manager.Process(commands.Object, "id3", _ => { }, processor);
+    await _manager.Process(commands.Object, "id3", (_, _) => { }, processor);
 
     commands.Verify(x => x.SetModelError("id3", It.IsAny<Exception>()), Times.Once);
     _cancellationManagerMock.Verify(x => x.CancelOperation("id3"), Times.Once);
@@ -193,7 +193,7 @@ public class ReceiveOperationManagerTests : MoqTest
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       async (s, f) => await f()
     );
-    await _manager.Process(commands.Object, "id4", _ => { }, processor);
+    await _manager.Process(commands.Object, "id4", (_, _) => { }, processor);
 
     commands.Verify(
       x => x.SetModelReceiveResult("id4", bakedIds, It.IsAny<IEnumerable<ConversionResult>>()),

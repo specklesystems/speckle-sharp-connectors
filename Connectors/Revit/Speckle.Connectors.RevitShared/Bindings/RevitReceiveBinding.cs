@@ -15,6 +15,8 @@ internal sealed class RevitReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   ILogger<RevitReceiveBinding> logger,
+  //Speckle.Connectors.Revit.Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
+  ToSpeckleSettingsManager toSpeckleSettingsManager,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
   IReceiveOperationManagerFactory receiveOperationManagerFactory
 ) : IReceiveBinding
@@ -23,7 +25,8 @@ internal sealed class RevitReceiveBinding(
   public IBrowserBridge Parent { get; } = parent;
   private IReceiveBindingUICommands Commands { get; } = new ReceiveBindingUICommands(parent);
 
-  public List<ICardSetting> GetReceiveSettings() => [new ReferencePointSetting(ReferencePointType.InternalOrigin)];
+  public List<ICardSetting> GetReceiveSettings() =>
+    [new Speckle.Connectors.Revit.Operations.Receive.Settings.ReferencePointSetting(ReceiveReferencePointType.Source)];
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 
@@ -33,13 +36,14 @@ internal sealed class RevitReceiveBinding(
     await manager.Process(
       Commands,
       modelCardId,
-      (sp) =>
+      (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
           .Initialize(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
-              null,
+              //toHostSettingsManager.GetReferencePointSetting(card),
+              toSpeckleSettingsManager.GetReferencePointSetting(card),
               false,
               true,
               false

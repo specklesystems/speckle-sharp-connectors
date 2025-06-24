@@ -184,12 +184,23 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
-      using (
+      /*using (
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
             ReferencePointTransform = referencePointTransform
           }
+        )
+      )*/
+
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings.ReferencePointTransform == null
+            ? currentSettings with
+            {
+              ReferencePointTransform = referencePointTransform
+            }
+            : currentSettings
         )
       )
       {

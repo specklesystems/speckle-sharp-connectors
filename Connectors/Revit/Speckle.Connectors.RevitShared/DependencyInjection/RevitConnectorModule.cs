@@ -61,6 +61,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
+    //serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies

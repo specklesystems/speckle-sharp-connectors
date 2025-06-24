@@ -1,4 +1,4 @@
-﻿namespace Speckle.Connectors.DUI;
+namespace Speckle.Connectors.DUI;
 
 // POC: XAML file accept Static only, but later we can search more is it possible to inject this? or necessary??
 
@@ -12,7 +12,8 @@
 /// </remarks>
 public static class Url
 {
-  public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
+  //public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
+  public static readonly Uri Netlify = new("https://deploy-preview-35--boisterous-douhua-e3cefb.netlify.app");
 
   // public static readonly Uri Netlify = new("http://localhost:8082/");
 
