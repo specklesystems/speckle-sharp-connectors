@@ -21,9 +21,6 @@ public partial class SpeckleBlockInstanceWrapperGoo
       case GH_InstanceReference ghInstanceRef:
         return ghInstanceRef.Value != null && CreateFromInstanceReference(ghInstanceRef.Value);
 
-      case ModelInstanceDefinition modelInstanceDef:
-        return CastFromModelInstanceDefinition(modelInstanceDef);
-
       // When implementing nested blocks support, discovered that nested blocks coming from Rhino arrive as ModelObjects
       // containing InstanceReferenceGeometry.
       case ModelObject modelObject:
@@ -70,16 +67,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
     }
   }
 
-  private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
-  {
-    Value = SpeckleBlockInstanceWrapper.CreateDefault(); // NOTE: CreateDefault() assigns `ApplicationId`
-    Value.InstanceProxy.definitionId = modelInstanceDef.Id?.ToString() ?? "unknown";
-    return true;
-  }
-
   private ModelInstanceDefinition? CreateModelInstanceDefinition(SpeckleBlockDefinitionWrapper definition)
   {
-    var modelInstanceDefGoo = new SpeckleBlockDefinitionWrapperGoo(definition);
+    SpeckleBlockDefinitionWrapperGoo modelInstanceDefGoo = new(definition);
     ModelInstanceDefinition existingModelDef = new();
     if (modelInstanceDefGoo.CastTo(ref existingModelDef))
     {
@@ -108,19 +98,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase.Duplicate());
-
-        var att = new ObjectAttributes { Name = obj.Name };
-        if (obj.Color is Color color)
-        {
-          att.ObjectColor = color;
-          att.ColorSource = ObjectColorSource.ColorFromObject;
-        }
-
-        foreach (var kvp in obj.Properties.Value)
-        {
-          att.SetUserString(kvp.Key, kvp.Value?.ToString() ?? "");
-        }
-
+        ObjectAttributes att = obj.CreateObjectAttributes();
         attributes.Add(att);
       }
     }
@@ -143,8 +121,8 @@ public partial class SpeckleBlockInstanceWrapperGoo
       return null;
     }
 
-    var tempRhinoDef = doc.InstanceDefinitions[defIndex];
-    var modelDef = new ModelInstanceDefinition(tempRhinoDef);
+    InstanceDefinition? tempRhinoDef = doc.InstanceDefinitions[defIndex];
+    ModelInstanceDefinition modelDef = new(tempRhinoDef);
 
     return modelDef;
   }

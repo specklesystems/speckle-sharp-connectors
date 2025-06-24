@@ -44,7 +44,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
   private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
   {
     var doc = RhinoDoc.ActiveDoc;
-    var instanceDef = doc?.InstanceDefinitions.Find(modelInstanceDef.Name);
+    InstanceDefinition? instanceDef = doc?.InstanceDefinitions.Find(modelInstanceDef.Name);
     if (instanceDef == null)
     {
       // Rhino → Model → Model Block Definition passthrough component returns type ModelInstanceDefinition
@@ -80,7 +80,8 @@ public partial class SpeckleBlockDefinitionWrapperGoo
         maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
       Name = modelInstanceDef.Name,
-      Objects = objects
+      Objects = objects,
+      ApplicationId = instanceDef.Id.ToString()
     };
 
     return objects.Count > 0;
