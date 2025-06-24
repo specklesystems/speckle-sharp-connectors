@@ -150,14 +150,14 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     // process name
     if (inputName != null)
     {
+      if (string.IsNullOrWhiteSpace(inputName))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Pass in a non-empty name for the definition.");
+        return;
+      }
+
       result.Value.Name = inputName;
       mutated = true;
-    }
-
-    // Ensure we have a valid name since this is critical for block definitions on receiving in many apps
-    if (string.IsNullOrEmpty(result.Value.Name))
-    {
-      result.Value.Name = "Unnamed Block";
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object

@@ -291,8 +291,11 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       {
         name = "Unnamed Block",
         objects = new List<string>(),
-        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
+
+      ApplicationId = Guid.NewGuid().ToString(),
+      Name = "Unnamed Block"
     };
   }
 }
