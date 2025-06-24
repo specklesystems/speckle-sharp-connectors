@@ -1,7 +1,4 @@
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
-using Speckle.Sdk;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.DUI.Models.Card;
 
@@ -11,10 +8,4 @@ public class SenderModelCard : ModelCard
 
   // [JsonIgnore]
   // public HashSet<string> ChangedObjectIds { get; set; } = new();
-
-  public SendInfo GetSendInfo(IAccountService accountService, ISpeckleApplication application)
-  {
-    var account = accountService.GetAccountWithServerUrlFallback(AccountId.NotNull(), new Uri(ServerUrl.NotNull()));
-    return new(account, ProjectId.NotNull(), ModelId.NotNull(), application.ApplicationAndVersion);
-  }
 }

@@ -8,6 +8,8 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.DUI.Bindings;
@@ -22,7 +24,7 @@ public sealed class SendOperationManager(
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
-  IAccountService accountService,
+  IAccountManager accountManager,
   ILogger<SendOperationManager> logger
 ) : ISendOperationManager
 {
@@ -80,7 +82,7 @@ public sealed class SendOperationManager(
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = modelCard.GetSendInfo(accountService, speckleApplication);
+      var sendInfo = GetSendInfo(modelCard);
 
       var sendResult = await serviceScope
         .ServiceProvider.GetRequiredService<ISendOperation<T>>()
@@ -100,6 +102,17 @@ public sealed class SendOperationManager(
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
     }
+  }
+
+  private SendInfo GetSendInfo(SenderModelCard modelCard)
+  {
+    var account = accountManager.GetAccount(modelCard.AccountId.NotNull());
+    return new(
+      account,
+      modelCard.ProjectId.NotNull(),
+      modelCard.ModelId.NotNull(),
+      speckleApplication.ApplicationAndVersion
+    );
   }
 
   [AutoInterfaceIgnore]

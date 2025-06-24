@@ -25,7 +25,7 @@ public class ReceiveOperationManagerTests : MoqTest
   private Mock<ISpeckleApplication> _speckleAppMock;
   private Mock<IOperationProgressManager> _progressManagerMock;
   private Mock<ILogger<ReceiveOperationManager>> _loggerMock;
-  private Mock<IAccountService> _accountServiceMock;
+  private Mock<IAccountManager> _accountServiceMock;
   private ReceiveOperationManager _manager;
 
   [SetUp]
@@ -37,7 +37,7 @@ public class ReceiveOperationManagerTests : MoqTest
     _speckleAppMock = Create<ISpeckleApplication>();
     _progressManagerMock = Create<IOperationProgressManager>();
     _loggerMock = Create<ILogger<ReceiveOperationManager>>(MockBehavior.Loose);
-    _accountServiceMock = Create<IAccountService>();
+    _accountServiceMock = Create<IAccountManager>();
     _manager = new ReceiveOperationManager(
       _serviceScopeMock.Object,
       _cancellationManagerMock.Object,
@@ -194,9 +194,7 @@ public class ReceiveOperationManagerTests : MoqTest
       .ReturnsAsync(hostResult);
     _speckleAppMock.Setup(x => x.Slug).Returns("slug");
     var account = new Account();
-    _accountServiceMock
-      .Setup(x => x.GetAccountWithServerUrlFallback(modelCard.AccountId, new Uri(modelCard.ServerUrl)))
-      .Returns(account);
+    _accountServiceMock.Setup(x => x.GetAccount(modelCard.AccountId)).Returns(account);
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       async (s, f) => await f()
     );

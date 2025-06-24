@@ -8,6 +8,8 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -20,7 +22,7 @@ public sealed class ReceiveOperationManager(
   IDocumentModelStore store,
   ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
-  IAccountService accountService,
+  IAccountManager accountManager,
   ILogger<ReceiveOperationManager> logger
 ) : IReceiveOperationManager
 {
@@ -50,7 +52,7 @@ public sealed class ReceiveOperationManager(
       var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
-        () => ro.Execute(modelCard.GetReceiveInfo(accountService, speckleApplication), progress, cancellationItem.Token)
+        () => ro.Execute(GetReceiveInfo(modelCard), progress, cancellationItem.Token)
       );
 
       if (conversionResults is null)
@@ -81,6 +83,20 @@ public sealed class ReceiveOperationManager(
       // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
       cancellationManager.CancelOperation(modelCardId);
     }
+  }
+
+  private ReceiveInfo GetReceiveInfo(ReceiverModelCard modelCard)
+  {
+    var account = accountManager.GetAccount(modelCard.AccountId.NotNull());
+    return new(
+      account,
+      modelCard.ProjectId.NotNull(),
+      modelCard.ProjectName.NotNull(),
+      modelCard.ModelId.NotNull(),
+      modelCard.ModelName.NotNull(),
+      modelCard.SelectedVersionId.NotNull(),
+      speckleApplication.Slug
+    );
   }
 
   [AutoInterfaceIgnore]

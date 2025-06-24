@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Models;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.DUI.Bindings;
@@ -17,7 +17,7 @@ public class SendOperationManagerFactory(
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
-  IAccountService accountService,
+  IAccountManager accountManager,
   ILoggerFactory loggerFactory
 ) : ISendOperationManagerFactory
 {
@@ -31,7 +31,7 @@ public class SendOperationManagerFactory(
       cancellationManager,
       speckleApplication,
       activityFactory,
-      accountService,
+      accountManager,
       loggerFactory.CreateLogger<SendOperationManager>()
     );
 }
