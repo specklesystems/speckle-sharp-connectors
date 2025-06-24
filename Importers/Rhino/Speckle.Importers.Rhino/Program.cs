@@ -43,7 +43,7 @@ public static class Program
       rootCommand.AddArgument(serverUrlArg);
       rootCommand.AddArgument(tokenArg);
 
-      await Handle("C:\\Users\\adam\\Downloads\\cube Untitled.3dm", string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
+      rootCommand.SetHandler(Handle, pathArg, resultsPathArg, projectIdArg, modelIdArg, serverUrlArg, tokenArg);
 
       await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 
