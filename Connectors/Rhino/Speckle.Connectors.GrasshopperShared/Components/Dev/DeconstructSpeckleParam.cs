@@ -228,11 +228,18 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       List<SpeckleObjectWrapperGoo> convertedWrappers = new();
       foreach ((GeometryBase g, Base b) in convertedBase)
       {
-        SpeckleObjectWrapperGoo objGoo = new();
-        if (objGoo.CastFrom(b))
-        {
-          convertedWrappers.Add(objGoo);
-        }
+        SpeckleObjectWrapper convertedWrapper =
+          new()
+          {
+            Base = b,
+            GeometryBase = g,
+            Name = b["name"] as string ?? "",
+            Color = null,
+            Material = null,
+            WrapperGuid = null
+          };
+
+        convertedWrappers.Add(new(convertedWrapper));
       }
 
       return convertedWrappers;
