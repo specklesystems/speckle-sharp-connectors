@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target AfterTargets="Build" Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'And '$(MSBuildRuntime)' == 'CLR'">
+  <Target AfterTargets="Build" Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
     <ItemGroup>
       <TeklaDlls Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.bmp" />
       <TeklaBmp Include="$(TargetDir)\Resources\et_element_Speckle.bmp"/>

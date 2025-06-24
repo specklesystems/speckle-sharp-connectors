@@ -71,6 +71,7 @@ public class ModelMenuHandler
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
+    menu.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
     _menu = menu;
     _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 

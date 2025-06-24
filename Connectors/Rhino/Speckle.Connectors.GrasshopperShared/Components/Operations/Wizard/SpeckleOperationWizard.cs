@@ -26,6 +26,7 @@ public class SpeckleOperationWizard
   public Project? SelectedProject { get; private set; }
   public Model? SelectedModel { get; private set; }
   public Version? SelectedVersion { get; private set; }
+  public bool IsLatestVersion { get; private set; }
 
   public WorkspaceMenuHandler WorkspaceMenuHandler { get; }
   public ProjectMenuHandler ProjectMenuHandler { get; }
@@ -116,7 +117,7 @@ public class SpeckleOperationWizard
 
         // TODO: this wont be the case when we have separation between send and receive components
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        VersionMenuHandler?.RedrawMenuButton(v);
+        VersionMenuHandler?.RedrawMenuButton(v, false);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");
@@ -238,7 +239,7 @@ public class SpeckleOperationWizard
     using IClient client = _clientFactory.Create(SelectedAccount);
     var version = client.Version.Get(versionId, SelectedProject.id).Result;
     SelectedVersion = version;
-    VersionMenuHandler?.RedrawMenuButton(SelectedVersion);
+    VersionMenuHandler?.RedrawMenuButton(SelectedVersion, IsLatestVersion);
   }
 
   /// <summary>
@@ -438,13 +439,14 @@ public class SpeckleOperationWizard
   private void OnModelSelected(object sender, ModelSelectedEventArgs e)
   {
     SelectedModel = e.SelectedModel;
-    ResetVersions();
+    ResetVersions(true);
     _refreshComponent.Invoke();
   }
 
   private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
   {
     SelectedVersion = e.SelectedVersion;
+    IsLatestVersion = e.IsLatest;
     _refreshComponent.Invoke();
   }
 
@@ -469,10 +471,10 @@ public class SpeckleOperationWizard
     ResetVersions();
   }
 
-  private void ResetVersions()
+  private void ResetVersions(bool defaultToLatest = false)
   {
     SelectedVersion = null;
-    VersionMenuHandler?.Reset();
+    VersionMenuHandler?.Reset(defaultToLatest);
   }
 
   private Task CreateNewWorkspace()
