@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
@@ -330,6 +331,30 @@ public class SpeckleSelectModelComponent : GH_Component
         SpeckleOperationWizard.SelectedAccount?.id != account.id,
         SpeckleOperationWizard.SelectedAccount?.id == account.id
       );
+    }
+
+    if (SpeckleOperationWizard.SelectedAccount != null && SpeckleOperationWizard.SelectedProject != null)
+    {
+      Menu_AppendSeparator(menu);
+      Menu_AppendItem(
+        menu,
+        $"View model online ↗",
+        (s, e) =>
+          Open(
+            SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+            SpeckleOperationWizard.SelectedProject.id,
+            SpeckleOperationWizard.SelectedModel?.id,
+            SpeckleOperationWizard.SelectedVersion?.id
+          )
+      );
+    }
+
+    static void Open(string server, string projectId, string? modelId, string? versionId)
+    {
+      string url =
+        $"{server}/projects/{projectId}/models/{(modelId is null ? "" : modelId)}{(versionId is null ? "" : $"@{versionId}")}";
+      var psi = new ProcessStartInfo { FileName = url, UseShellExecute = true };
+      Process.Start(psi);
     }
   }
 
