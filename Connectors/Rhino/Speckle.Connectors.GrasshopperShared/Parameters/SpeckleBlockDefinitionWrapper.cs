@@ -57,10 +57,6 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
-  /*public Color? Color { get; set; }
-  public SpeckleMaterialWrapper? Material { get; set; }*/
-
   public override string ToString() => $"Speckle Block Definition [{Name}]";
 
   /// <summary>

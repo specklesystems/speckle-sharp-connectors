@@ -25,43 +25,43 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter(
+    int objIndex = pManager.AddGenericParameter(
       "Object",
       "O",
       "Input Object. Speckle Objects, Model Objects, and geometry are accepted.",
       GH_ParamAccess.item
     );
-    Params.Input[0].Optional = true;
+    Params.Input[objIndex].Optional = true;
 
-    pManager.AddGenericParameter(
+    int geoIndex = pManager.AddGenericParameter(
       "Geometry",
       "G",
       "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
       GH_ParamAccess.item
     );
-    Params.Input[1].Optional = true;
+    Params.Input[geoIndex].Optional = true;
 
-    pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
-    Params.Input[2].Optional = true;
+    int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
+    Params.Input[nameIndex].Optional = true;
 
-    pManager.AddGenericParameter(
+    int propIndex = pManager.AddGenericParameter(
       "Properties",
       "P",
       "The properties of the Speckle Object. Speckle Properties and User Content are accepted.",
       GH_ParamAccess.item
     );
-    Params.Input[3].Optional = true;
+    Params.Input[propIndex].Optional = true;
 
-    pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
-    Params.Input[4].Optional = true;
+    int colorIndex = pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
+    Params.Input[colorIndex].Optional = true;
 
-    pManager.AddGenericParameter(
+    int matIndex = pManager.AddGenericParameter(
       "Material",
       "m",
       "The material of the Speckle Object. Display Materials, Model Materials, and Speckle Materials are accepted.",
       GH_ParamAccess.item
     );
-    Params.Input[5].Optional = true;
+    Params.Input[matIndex].Optional = true;
 
     /* POC: disable for now as we are doing anything with this
     pManager.AddTextParameter(

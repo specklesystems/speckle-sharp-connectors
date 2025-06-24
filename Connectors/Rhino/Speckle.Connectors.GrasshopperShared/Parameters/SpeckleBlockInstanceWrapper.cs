@@ -6,6 +6,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
@@ -18,14 +19,15 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public SpeckleBlockInstanceWrapper()
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
-    _instanceProxy = new InstanceProxy
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString();
+    _instanceProxy = new()
     {
       definitionId = "placeholder",
       maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-      units = units
+      units = units ?? Units.None
     };
+
     Base = _instanceProxy; // set required base
     ApplicationId = Guid.NewGuid().ToString();
     GeometryBase = null; // block instances typically don't have direct geometry
@@ -71,10 +73,6 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   // NOTE: GeometryBase from SpeckleObjectWrapper can be:
   // - null for pure instances
   // - OR flattened geometry for preview (decide this later)
-
-  // TODO: These are now inherited from SpeckleObjectWrapper - no implementation needed for now
-  // public Color? Color { get; set; }  // inherited from SpeckleObjectWrapper
-  // public SpeckleMaterialWrapper? Material { get; set; }  // inherited from SpeckleObjectWrapper
 
   public override string ToString() => $"Speckle Block Instance [{Name}]";
 
@@ -148,15 +146,15 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     {
       Base = InstanceProxy.ShallowCopy(),
       GeometryBase = GeometryBase?.Duplicate(),
-      Color = null, // TODO: commented out in props
-      Material = null, // TODO: commented out in props
+      Color = Color,
+      Material = Material,
       ApplicationId = ApplicationId,
       Parent = Parent,
       Properties = Properties,
       Name = Name,
       Path = Path,
+      Transform = Transform, // TODO: note from previous, "Transform will be updated when Base / InstanceProxy is set", but why not copy the transform here??
       Definition = Definition?.DeepCopy(), // block instance specific
-      // Transform will be updated when Base / InstanceProxy is set
     };
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
@@ -178,10 +176,10 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
         maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
         transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
         units = units,
-        applicationId = appId
+        applicationId = appId,
       },
       GeometryBase = null,
-      Name = name ?? "Block Instance",
+      Name = name ?? "",
       ApplicationId = appId
     };
   }
