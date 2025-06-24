@@ -8,6 +8,7 @@ using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 
@@ -55,7 +56,24 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         Name = string.IsNullOrEmpty(coll.Value.Collection.name)
           ? coll.Value.Collection.speckle_type
           : coll.Value.Collection.name;
-        outputParams = CreateOutputParamsFromBase(coll.Value.Collection);
+
+        // the elements prop of collections is empty. Need to also process the elements in the wrapper and add it to the outputParams
+        List<object> children = new();
+        foreach (var element in coll.Value.Elements)
+        {
+          switch (element)
+          {
+            case SpeckleCollectionWrapper childColl:
+              children.Add(new SpeckleCollectionWrapperGoo(childColl));
+              break;
+            case SpeckleObjectWrapper childObj:
+              children.Add(new SpeckleObjectWrapperGoo(childObj));
+              break;
+          }
+        }
+
+        outputParams = CreateOutputParamsFromBase(coll.Value.Collection, children);
+
         break;
       case SpeckleMaterialWrapperGoo matGoo:
         Name = string.IsNullOrEmpty(matGoo.Value.Name) ? matGoo.Value.Material.speckle_type : matGoo.Value.Name;
@@ -111,7 +129,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     }
   }
 
-  private List<OutputParamWrapper> CreateOutputParamsFromBase(Base @base)
+  private List<OutputParamWrapper> CreateOutputParamsFromBase(Base @base, List<object>? children = null)
   {
     List<OutputParamWrapper> result = new();
     if (@base == null)
@@ -132,6 +150,13 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
         case IList list:
           List<object> nativeObjects = new();
+
+          // override list value if base is a collection and this is the elements prop, since this is empty if coming from a collectionwrapper
+          if (@base is Collection && prop.Key == "elements" && children != null)
+          {
+            list = children;
+          }
+
           foreach (var x in list)
           {
             switch (x)
@@ -203,18 +228,11 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       List<SpeckleObjectWrapperGoo> convertedWrappers = new();
       foreach ((GeometryBase g, Base b) in convertedBase)
       {
-        SpeckleObjectWrapper convertedWrapper =
-          new()
-          {
-            Base = b,
-            GeometryBase = g,
-            Name = b["name"] as string ?? "",
-            Color = null,
-            Material = null,
-            WrapperGuid = null
-          };
-
-        convertedWrappers.Add(new(convertedWrapper));
+        SpeckleObjectWrapperGoo objGoo = new();
+        if (objGoo.CastFrom(b))
+        {
+          convertedWrappers.Add(objGoo);
+        }
       }
 
       return convertedWrappers;
@@ -233,6 +251,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           Material = null,
           WrapperGuid = null,
         };
+
       return new() { new SpeckleObjectWrapperGoo(convertedWrapper) };
     }
   }
