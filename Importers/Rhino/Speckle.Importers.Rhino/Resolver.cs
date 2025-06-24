@@ -55,7 +55,12 @@ public static class Resolver
     {
       return null;
     }
+
     string path = System.IO.Path.Combine(RhinoSystemDirectory, assemblyName + ".dll");
+    if (assemblyName.StartsWith("Speckle.Connectors.Rhino"))
+    {
+      path = Path.Combine(Environment.CurrentDirectory, assemblyName + ".rhp");
+    }
     if (System.IO.File.Exists(path))
     {
       return Assembly.LoadFrom(path);
