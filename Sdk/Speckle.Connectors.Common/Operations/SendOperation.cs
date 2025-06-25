@@ -17,7 +17,6 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
-  IAccountService accountService,
   ISendProgress sendProgress,
   IOperations operations,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
@@ -61,13 +60,13 @@ public sealed class SendOperation<T>(
 
     onOperationProgressed.Report(new("Uploading...", null));
 
-    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
+    Account account = sendInfo.Account;
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
     var sendResult = await operations.Send2(
-      sendInfo.ServerUrl,
+      new(sendInfo.Account.serverInfo.url),
       sendInfo.ProjectId,
       account.token,
       commitObject,
