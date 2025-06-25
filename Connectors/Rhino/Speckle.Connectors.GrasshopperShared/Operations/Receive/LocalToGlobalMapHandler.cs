@@ -120,10 +120,8 @@ internal sealed class LocalToGlobalMapHandler
     IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
   )
   {
-    if (blocks.Count > 0 || definitionProxies?.Count > 0)
-    {
-      var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
-      blockUnpacker.UnpackBlocks(blocks, definitionProxies, ConvertedObjectsMap, CollectionRebuilder);
-    }
+    // GrasshopperBlockUnpacker handles empty inputs, so no need for defensive check here
+    var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
+    blockUnpacker.UnpackBlocks(blocks, definitionProxies, ConvertedObjectsMap, CollectionRebuilder);
   }
 }
