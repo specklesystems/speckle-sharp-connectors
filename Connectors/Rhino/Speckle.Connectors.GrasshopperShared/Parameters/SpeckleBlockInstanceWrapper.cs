@@ -386,10 +386,7 @@ public class SpeckleBlockInstanceParam
     }
   }
 
-  private bool OwnerSelected()
-  {
-    return Attributes?.Parent?.Selected ?? false;
-  }
+  private bool OwnerSelected() => Attributes?.Parent?.Selected ?? false;
 
   public bool Hidden { get; set; }
   public BoundingBox ClippingBox

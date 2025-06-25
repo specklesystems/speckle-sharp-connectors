@@ -73,7 +73,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) // TODO: what materials are here??
+  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material)
   {
     foreach (var obj in Objects)
     {
@@ -242,10 +242,9 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
 
-  public override bool CastTo<T>(ref T target)
-  {
-    return CastToModelObject(ref target);
-  }
+  public override bool CastTo<T>(ref T target) => CastToModelObject(ref target);
+
+  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => Value?.DrawPreviewRaw(args.Pipeline, args.Material);
 
   /// <summary>
   /// Creates a deep copy of this block definition wrapper for proper data handling.
@@ -363,7 +362,7 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public void DrawViewportWires(IGH_PreviewArgs args)
   {
-    // TODO: Do block definitions even have separate wire preview?
+    // TODO?
   }
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
