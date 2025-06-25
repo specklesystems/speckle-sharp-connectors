@@ -160,16 +160,10 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
 
-    Account? account =
-      input.Resource.AccountId != null
-        ? accountManager.GetAccount(input.Resource.AccountId)
-        : accountService.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server)); // fallback the account that matches with URL if any
-
+    Account? account = input.Resource.Account.GetAccount(scope);
     if (account is null)
     {
       throw new SpeckleAccountManagerException($"No default account was found");
@@ -199,14 +193,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     SpeckleUrlLatestModelVersionResource createdVersionResource =
       new(
-        sendInfo.AccountId,
-        sendInfo.ServerUrl.ToString(),
+        new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{createdVersionResource.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-
+    Url = $"{sendInfo.Account.serverInfo.url}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource);
   }
 }

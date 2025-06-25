@@ -57,6 +57,7 @@ public static class ServiceRegistration
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<DocumentToConvert>>();
     serviceCollection.AddScoped<ElementUnpacker>();
+    serviceCollection.AddScoped<LevelUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();

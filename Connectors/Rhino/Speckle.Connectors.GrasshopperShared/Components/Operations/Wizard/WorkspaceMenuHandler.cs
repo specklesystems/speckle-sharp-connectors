@@ -1,4 +1,4 @@
-﻿using System.Drawing.Drawing2D;
+using System.Drawing.Drawing2D;
 using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
@@ -56,6 +56,7 @@ public class WorkspaceMenuHandler
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
+    menu.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
     _menu = menu;
     _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 

@@ -23,6 +23,7 @@ public class RevitRootObjectBuilder(
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
+  LevelUnpacker levelUnpacker,
   IThreadContext threadContext,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
@@ -229,11 +230,14 @@ public class RevitRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(
-      atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList()
-    );
+    var flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
+    var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
+
     var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
+
+    var levelProxies = levelUnpacker.Unpack(flatElements);
+    rootObject[ProxyKeys.LEVEL] = levelProxies;
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;

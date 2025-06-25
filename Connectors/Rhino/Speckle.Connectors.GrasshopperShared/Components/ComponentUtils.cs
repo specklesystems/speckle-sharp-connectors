@@ -3,8 +3,11 @@ namespace Speckle.Connectors.GrasshopperShared.Components;
 // NOTE: The number of spaces determines the order in which they display in the ribbon (nice hack)
 public static class ComponentCategories
 {
+  // ribbon
   public const string PRIMARY_RIBBON = "Speckle";
-  public const string OPERATIONS = "    Ops";
+
+  // categories
+  public const string OPERATIONS = "    Models";
   public const string OBJECTS = "   Objects";
   public const string COLLECTIONS = "  Collections";
   public const string PARAMETERS = " Params";

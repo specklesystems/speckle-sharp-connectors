@@ -1,3 +1,5 @@
-﻿namespace Speckle.Connectors.Common.Operations;
+﻿using Speckle.Sdk.Credentials;
 
-public record SendInfo(string AccountId, Uri ServerUrl, string ProjectId, string ModelId, string SourceApplication);
+namespace Speckle.Connectors.Common.Operations;
+
+public record SendInfo(Account Account, string ProjectId, string ModelId, string SourceApplication);

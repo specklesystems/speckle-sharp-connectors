@@ -22,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentModelStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentToConvert.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\LevelUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />

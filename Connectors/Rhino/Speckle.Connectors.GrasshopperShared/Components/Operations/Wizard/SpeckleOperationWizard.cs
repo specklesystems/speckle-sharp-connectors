@@ -26,6 +26,7 @@ public class SpeckleOperationWizard
   public Project? SelectedProject { get; private set; }
   public Model? SelectedModel { get; private set; }
   public Version? SelectedVersion { get; private set; }
+  public bool IsLatestVersion { get; private set; }
 
   public WorkspaceMenuHandler WorkspaceMenuHandler { get; }
   public ProjectMenuHandler ProjectMenuHandler { get; }
@@ -65,13 +66,17 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInput(string input, bool isSender)
+  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInput(
+    string input,
+    bool isSender,
+    string? token
+  )
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
     // Should notify user if any of this goes wrong.
 
-    var resources = SpeckleResourceBuilder.FromUrlString(input);
+    var resources = SpeckleResourceBuilder.FromUrlString(input, token);
     if (resources.Length == 0)
     {
       throw new SpeckleException($"Input url string was empty");
@@ -83,8 +88,8 @@ public class SpeckleOperationWizard
     }
 
     var resource = resources.First();
-
-    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var account = resource.Account.GetAccount(scope);
     SetAccount(account, false);
 
     if (SelectedAccount == null)
@@ -116,7 +121,7 @@ public class SpeckleOperationWizard
 
         // TODO: this wont be the case when we have separation between send and receive components
         var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
-        VersionMenuHandler?.RedrawMenuButton(v);
+        VersionMenuHandler?.RedrawMenuButton(v, false);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");
@@ -238,7 +243,7 @@ public class SpeckleOperationWizard
     using IClient client = _clientFactory.Create(SelectedAccount);
     var version = client.Version.Get(versionId, SelectedProject.id).Result;
     SelectedVersion = version;
-    VersionMenuHandler?.RedrawMenuButton(SelectedVersion);
+    VersionMenuHandler?.RedrawMenuButton(SelectedVersion, IsLatestVersion);
   }
 
   /// <summary>
@@ -438,13 +443,14 @@ public class SpeckleOperationWizard
   private void OnModelSelected(object sender, ModelSelectedEventArgs e)
   {
     SelectedModel = e.SelectedModel;
-    ResetVersions();
+    ResetVersions(true);
     _refreshComponent.Invoke();
   }
 
   private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
   {
     SelectedVersion = e.SelectedVersion;
+    IsLatestVersion = e.IsLatest;
     _refreshComponent.Invoke();
   }
 
@@ -469,10 +475,10 @@ public class SpeckleOperationWizard
     ResetVersions();
   }
 
-  private void ResetVersions()
+  private void ResetVersions(bool defaultToLatest = false)
   {
     SelectedVersion = null;
-    VersionMenuHandler?.Reset();
+    VersionMenuHandler?.Reset(defaultToLatest);
   }
 
   private Task CreateNewWorkspace()

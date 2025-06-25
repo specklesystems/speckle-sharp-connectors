@@ -16,7 +16,6 @@ namespace Speckle.Connectors.Common.Operations;
 public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
-  IAccountService accountService,
   ISendProgress sendProgress,
   IOperations operations,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
@@ -36,7 +35,16 @@ public sealed class SendOperation<T>(
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (results, versionId) = await threadContext.RunOnWorkerAsync(
-      () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+      () =>
+        Send(
+          buildResult.RootObject,
+          sendInfo.ProjectId,
+          sendInfo.ModelId,
+          sendInfo.SourceApplication,
+          sendInfo.Account,
+          onOperationProgressed,
+          ct
+        )
     );
     ct.ThrowIfCancellationRequested();
     return new(results.RootId, versionId, results.ConvertedReferences, buildResult.ConversionResults);
@@ -55,25 +63,6 @@ public sealed class SendOperation<T>(
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
     buildResult.RootObject["version"] = 3;
     return buildResult;
-  }
-
-  public Task<(SerializeProcessResults, string)> Send(
-    Base commitObject,
-    SendInfo sendInfo,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
-  )
-  {
-    Account account = accountService.GetAccountWithServerUrlFallback(sendInfo.AccountId, sendInfo.ServerUrl);
-    return Send(
-      commitObject,
-      sendInfo.ProjectId,
-      sendInfo.ModelId,
-      sendInfo.SourceApplication,
-      account,
-      onOperationProgressed,
-      ct
-    );
   }
 
   public async Task<(SerializeProcessResults, string)> Send(
