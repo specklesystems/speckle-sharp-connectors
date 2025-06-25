@@ -10,5 +10,6 @@ public record RootObjectUnpackerResult(
   IReadOnlyCollection<InstanceDefinitionProxy>? DefinitionProxies,
   IReadOnlyCollection<GroupProxy>? GroupProxies,
   IReadOnlyCollection<RenderMaterialProxy>? RenderMaterialProxies,
-  IReadOnlyCollection<ColorProxy>? ColorProxies
+  IReadOnlyCollection<ColorProxy>? ColorProxies,
+  IReadOnlyCollection<LevelProxy>? LevelProxies
 );

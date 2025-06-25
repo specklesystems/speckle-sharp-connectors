@@ -16,6 +16,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_query;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   public QuerySpeckleObjects()
     : base(

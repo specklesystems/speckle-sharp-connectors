@@ -1,8 +1,9 @@
-﻿namespace Speckle.Connectors.Common.Operations;
+﻿using Speckle.Sdk.Credentials;
+
+namespace Speckle.Connectors.Common.Operations;
 
 public record ReceiveInfo(
-  string AccountId,
-  Uri ServerUrl,
+  Account Account,
   string ProjectId,
   string ProjectName,
   string ModelId,
