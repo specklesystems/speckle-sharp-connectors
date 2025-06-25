@@ -1,3 +1,4 @@
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 
@@ -24,4 +25,10 @@ public abstract class SpeckleWrapper
     get => Base.applicationId;
     set => Base.applicationId = value;
   }
+
+  /// <summary>
+  /// Creates an <see cref="IGH_Goo"/> from this wrapper
+  /// </summary>
+  /// <returns></returns>
+  public abstract IGH_Goo CreateGoo();
 }

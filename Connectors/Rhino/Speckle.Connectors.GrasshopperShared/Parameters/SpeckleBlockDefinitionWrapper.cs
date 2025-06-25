@@ -57,7 +57,9 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  public override string ToString() => $"Speckle Block Definition [{Name}]";
+  public override string ToString() => $"Speckle Block Definition Wrapper [{Name}({Objects.Count})]";
+
+  public override IGH_Goo CreateGoo() => new SpeckleBlockDefinitionWrapperGoo(this);
 
   /// <summary>
   /// Creates a preview of the block definition by displaying all contained objects

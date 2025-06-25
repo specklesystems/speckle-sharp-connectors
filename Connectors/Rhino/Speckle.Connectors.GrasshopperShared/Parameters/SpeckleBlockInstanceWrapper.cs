@@ -81,11 +81,9 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     }
   }
 
-  // NOTE: GeometryBase from SpeckleObjectWrapper can be:
-  // - null for pure instances
-  // - OR flattened geometry for preview (decide this later)
+  public override string ToString() => $"Speckle Instance Wrapper [{Definition?.Name}]";
 
-  public override string ToString() => $"Speckle Block Instance [{Name}]";
+  public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
   public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
@@ -167,8 +165,6 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       Transform = Transform, // TODO: note from previous, "Transform will be updated when Base / InstanceProxy is set", but why not copy the transform here??
       Definition = Definition?.DeepCopy(), // block instance specific
     };
-
-  public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
   private void UpdateTransformFromProxy()
   {

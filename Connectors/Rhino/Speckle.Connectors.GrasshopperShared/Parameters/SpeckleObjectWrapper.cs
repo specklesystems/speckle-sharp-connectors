@@ -42,7 +42,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public SpeckleMaterialWrapper? Material { get; set; }
 
-  public override string ToString() => $"Speckle Wrapper [{GeometryBase?.GetType().Name}]";
+  public override string ToString() => $"Speckle Object Wrapper [{GeometryBase?.GetType().Name}]";
 
   public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
@@ -147,36 +147,6 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     objIds.Add(guid);
   }
 
-  /// <summary>
-  /// Determines similarity of two SpeckleObjectWrappers.
-  /// If the path, name, and properties of the wrappers are the same, they should be considered similar.
-  /// This should be used to pack similar objects into one `DataObject` on send.
-  /// </summary>
-  /// <param name="objWrapper">The object wrapper to compare to</param>
-  /// <returns></returns>
-  /// <remarks> Application Id is not considered in similarity, because these can be unique to objects inside the same displayvalue for proxy reasons</remarks>
-  public bool SmellsLike(SpeckleObjectWrapper objWrapper)
-  {
-    if (Path != objWrapper.Path)
-    {
-      return false;
-    }
-
-    if (Name != objWrapper.Name)
-    {
-      return false;
-    }
-
-    /*
-    if (!Properties.Equals(objWrapper.Properties))
-    {
-      return false;
-    }
-    */
-
-    return true;
-  }
-
   public virtual SpeckleObjectWrapper DeepCopy() =>
     new()
     {
@@ -207,7 +177,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     return attributes;
   }
 
-  public virtual IGH_Goo CreateGoo() => new SpeckleObjectWrapperGoo(this);
+  public override IGH_Goo CreateGoo() => new SpeckleObjectWrapperGoo(this);
 
   protected virtual void AddPropertiesToAttributes(ObjectAttributes attributes) =>
     Properties?.AssignToObjectAttributes(attributes);

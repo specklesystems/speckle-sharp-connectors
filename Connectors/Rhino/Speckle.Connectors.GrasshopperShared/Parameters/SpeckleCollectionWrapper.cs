@@ -77,7 +77,9 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public required SpeckleMaterialWrapper? Material { get; set; }
 
-  public override string ToString() => $"{Name} [{Elements.Count}]";
+  public override string ToString() => $"Speckle Collection Wrapper [{Name} ({Elements.Count})]";
+
+  public override IGH_Goo CreateGoo() => new SpeckleCollectionWrapperGoo(this);
 
   /// <summary>
   /// Will attempt to retrieve an existing Layer from the <see cref="Path"/>.
