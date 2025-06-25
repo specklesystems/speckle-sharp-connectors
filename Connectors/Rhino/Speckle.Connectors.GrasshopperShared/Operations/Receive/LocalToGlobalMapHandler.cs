@@ -100,8 +100,12 @@ internal sealed class LocalToGlobalMapHandler
           GeometryBase = geometryBase,
           Properties = propertyGroup,
           Name = name,
-          Color = null,
-          Material = null,
+          Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+            ? cachedObjColor
+            : null,
+          Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+            ? cachedObjMaterial
+            : null,
           ApplicationId = objId
         };
 

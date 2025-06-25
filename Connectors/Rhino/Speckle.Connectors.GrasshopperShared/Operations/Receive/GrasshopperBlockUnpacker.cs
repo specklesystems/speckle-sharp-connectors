@@ -103,10 +103,10 @@ internal sealed class GrasshopperBlockUnpacker
       if (component is InstanceDefinitionProxy definitionProxy)
       {
         // Create definition using current state of convertedObjectsMap
-        var definition = CreateBlockDefinitionWrapper(definitionProxy, convertedObjectsMap);
+        var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
+        var definition = CreateBlockDefinitionWrapper(definitionProxy, definitionId, convertedObjectsMap);
         if (definition != null)
         {
-          var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
           definitions[definitionId] = definition;
         }
         else
@@ -117,11 +117,17 @@ internal sealed class GrasshopperBlockUnpacker
       else if (component is InstanceProxy instanceProxy)
       {
         // Create instance using available definitions
-        var instance = CreateBlockInstanceWrapper(instanceProxy, definitions);
+        string instanceId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString();
+        SpeckleBlockInstanceWrapper? instance = CreateBlockInstanceWrapper(
+          instanceProxy,
+          instanceId,
+          definitions,
+          _colorUnpacker,
+          _materialUnpacker
+        );
         if (instance != null)
         {
           AddInstanceToCollection(instance, collectionPath, collectionRebuilder);
-          var instanceId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString();
           convertedObjectsMap[instanceId] = instance;
         }
         else
@@ -140,6 +146,7 @@ internal sealed class GrasshopperBlockUnpacker
   /// </remarks>
   private SpeckleBlockDefinitionWrapper? CreateBlockDefinitionWrapper(
     InstanceDefinitionProxy definitionProxy,
+    string definitionId,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap
   )
   {
@@ -168,7 +175,7 @@ internal sealed class GrasshopperBlockUnpacker
       Base = definitionProxy,
       Name = definitionProxy.name,
       Objects = definitionObjects,
-      ApplicationId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString()
+      ApplicationId = definitionId
     };
   }
 
@@ -177,7 +184,10 @@ internal sealed class GrasshopperBlockUnpacker
   /// </summary>
   private SpeckleBlockInstanceWrapper? CreateBlockInstanceWrapper(
     InstanceProxy instanceProxy,
-    Dictionary<string, SpeckleBlockDefinitionWrapper> definitions
+    string instanceId,
+    Dictionary<string, SpeckleBlockDefinitionWrapper> definitions,
+    GrasshopperColorUnpacker colorUnpacker,
+    GrasshopperMaterialUnpacker materialUnpacker
   )
   {
     // Find the referenced definition
@@ -191,10 +201,16 @@ internal sealed class GrasshopperBlockUnpacker
     {
       Base = instanceProxy,
       Name = instanceProxy["name"] as string ?? "",
-      ApplicationId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString(),
+      ApplicationId = instanceId,
       Transform = transform,
       Definition = definition,
-      GeometryBase = new InstanceReferenceGeometry(Guid.Empty, transform) //Instances shouldn't be using this except for the filter objects node
+      GeometryBase = new InstanceReferenceGeometry(Guid.Empty, transform), //Instances shouldn't be using this except for the filter objects node,
+      Color = colorUnpacker.Cache.TryGetValue(instanceProxy.applicationId ?? "", out var cachedInstanceColor)
+        ? cachedInstanceColor
+        : null,
+      Material = materialUnpacker.Cache.TryGetValue(instanceProxy.applicationId ?? "", out var cachedInstanceMaterial)
+        ? cachedInstanceMaterial
+        : null,
     };
   }
 
