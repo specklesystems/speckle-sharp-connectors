@@ -11,12 +11,12 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
-internal sealed class RevitReceiveBinding(
+public sealed class RevitReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   ILogger<RevitReceiveBinding> logger,
-  //Speckle.Connectors.Revit.Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
-  ToSpeckleSettingsManager toSpeckleSettingsManager,
+  Speckle.Connectors.Revit.Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
+  //ToSpeckleSettingsManager toSpeckleSettingsManager,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
   IReceiveOperationManagerFactory receiveOperationManagerFactory
 ) : IReceiveBinding
@@ -42,8 +42,8 @@ internal sealed class RevitReceiveBinding(
           .Initialize(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
-              //toHostSettingsManager.GetReferencePointSetting(card),
-              toSpeckleSettingsManager.GetReferencePointSetting(card),
+              toHostSettingsManager.GetReferencePointSetting(card),
+              //toSpeckleSettingsManager.GetReferencePointSetting(card),
               false,
               true,
               false
