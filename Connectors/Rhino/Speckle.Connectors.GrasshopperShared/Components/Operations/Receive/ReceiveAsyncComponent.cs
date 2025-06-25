@@ -372,9 +372,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
   }
 
-#pragma warning disable CA1506
   private async Task Receive(Action<string, double> reportProgress)
-#pragma warning restore CA1506
   {
     if (UrlModelResource is null)
     {
