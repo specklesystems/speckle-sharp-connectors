@@ -22,7 +22,8 @@ public sealed class SendOperation<T>(
   IOperations operations,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
-  IThreadContext threadContext
+  IThreadContext threadContext,
+  IKeyedSemaphoreLock keyedSemaphoreLock
 ) : ISendOperation<T>
 {
   public async Task<SendOperationResult> Execute(
@@ -32,6 +33,7 @@ public sealed class SendOperation<T>(
     CancellationToken ct = default
   )
   {
+    using var _ = await keyedSemaphoreLock.AcquireLockAsync(sendInfo.ProjectId, ct);
     ct.ThrowIfCancellationRequested();
     var buildResult = await rootObjectBuilder.Build(objects, sendInfo, onOperationProgressed, ct);
 
