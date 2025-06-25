@@ -163,7 +163,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       ApplicationId = appId,
       Transform = instanceRef.Xform,
       Definition = definition, // May be null in pure Grasshopper workflows
-      GeometryBase = null
+      GeometryBase = new InstanceReferenceGeometry(definitionId, instanceRef.Xform)
     };
     return true;
   }

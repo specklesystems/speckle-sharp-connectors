@@ -230,15 +230,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       case GH_Goo<SpeckleBlockDefinitionWrapper> blockDefinitionGoo:
         Value = blockDefinitionGoo.Value.DeepCopy();
         return true;
-
-      case InstanceDefinitionProxy speckleInstanceDefProxy:
-        Value = new SpeckleBlockDefinitionWrapper()
-        {
-          Base = speckleInstanceDefProxy,
-          Name = speckleInstanceDefProxy.name,
-          ApplicationId = speckleInstanceDefProxy.applicationId ?? Guid.NewGuid().ToString()
-        };
-        return true;
     }
 
     // Rhino 8 Model Objects
@@ -253,14 +244,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
 
   public override bool CastTo<T>(ref T target)
   {
-    var type = typeof(T);
-
-    if (type == typeof(InstanceDefinitionProxy))
-    {
-      target = (T)(object)Value.InstanceDefinitionProxy;
-      return true;
-    }
-
     return CastToModelObject(ref target);
   }
 
