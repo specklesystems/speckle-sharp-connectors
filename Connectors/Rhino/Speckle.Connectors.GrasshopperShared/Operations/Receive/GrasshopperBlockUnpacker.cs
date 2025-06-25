@@ -30,7 +30,7 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Processes block definitions and instances from receive pipeline and reconstructs them as Grasshopper wrapper objects.
+  /// Creates block definitions and instances from receive pipeline and reconstructs them as Grasshopper wrapper objects.
   /// </summary>
   public void UnpackBlocks(
     IReadOnlyCollection<TraversalContext> blockComponents,
@@ -42,8 +42,8 @@ internal sealed class GrasshopperBlockUnpacker
     // Step 1: Extract and sort all components by depth (deepest first)
     var sortedComponents = ExtractAndSortBlocks(blockComponents, definitionProxies);
 
-    // Step 2: Process in dependency order - definitions and instances interleaved
-    ProcessComponentsInDependencyOrder(sortedComponents, convertedObjectsMap, collectionRebuilder);
+    // Step 2: Create in dependency order - definitions and instances in a tricky little balance here
+    CreateBlocksInDependencyOrder(sortedComponents, convertedObjectsMap, collectionRebuilder);
   }
 
   /// <summary>
@@ -84,10 +84,10 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Processes definitions and instances in dependency order, populating convertedObjectsMap
+  /// Creates definitions and instances in dependency order, populating convertedObjectsMap
   /// with instances as they're created (following Rhino's applicationIdMap pattern).
   /// </summary>
-  private void ProcessComponentsInDependencyOrder(
+  private void CreateBlocksInDependencyOrder(
     List<(Collection[] path, IInstanceComponent component)> sortedComponents,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
     GrasshopperCollectionRebuilder collectionRebuilder
@@ -95,12 +95,13 @@ internal sealed class GrasshopperBlockUnpacker
   {
     var definitions = new Dictionary<string, SpeckleBlockDefinitionWrapper>();
 
+    // NOTE: This relies on ExtractAndSortBlocks to have done its job correctly!
     foreach (var (collectionPath, component) in sortedComponents)
     {
       if (component is InstanceDefinitionProxy definitionProxy)
       {
-        // Build definition using current state of convertedObjectsMap
-        var definition = BuildDefinition(definitionProxy, convertedObjectsMap);
+        // Create definition using current state of convertedObjectsMap
+        var definition = CreateBlockDefinitionWrapper(definitionProxy, convertedObjectsMap);
         if (definition != null)
         {
           var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
@@ -113,11 +114,11 @@ internal sealed class GrasshopperBlockUnpacker
       }
       else if (component is InstanceProxy instanceProxy)
       {
-        // Build instance using available definitions
-        var instance = BuildInstance(instanceProxy, definitions);
+        // Create instance using available definitions
+        var instance = CreateBlockInstanceWrapper(instanceProxy, definitions);
         if (instance != null)
         {
-          PlaceInstanceInCollection(instance, collectionPath, collectionRebuilder);
+          AddInstanceToCollection(instance, collectionPath, collectionRebuilder);
           var instanceId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString();
           convertedObjectsMap[instanceId] = instance;
         }
@@ -130,9 +131,12 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Builds a single block definition from its proxy using pre-converted defining objects.
-  /// /// </summary>
-  private SpeckleBlockDefinitionWrapper? BuildDefinition(
+  /// Creates a <see cref="SpeckleBlockDefinitionWrapper"/> from its proxy using pre-converted defining objects.
+  /// </summary>
+  /// <remarks>
+  /// Note the importance of defining objects having to already be converted at this stage.
+  /// </remarks>
+  private SpeckleBlockDefinitionWrapper? CreateBlockDefinitionWrapper(
     InstanceDefinitionProxy definitionProxy,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap
   )
@@ -167,9 +171,9 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Builds a single block instance from its proxy using pre-built definitions.
+  /// Creates a <see cref="SpeckleBlockInstanceWrapper"/> from its proxy using.
   /// </summary>
-  private SpeckleBlockInstanceWrapper? BuildInstance(
+  private SpeckleBlockInstanceWrapper? CreateBlockInstanceWrapper(
     InstanceProxy instanceProxy,
     Dictionary<string, SpeckleBlockDefinitionWrapper> definitions
   )
@@ -191,9 +195,9 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Places a block instance in the appropriate collection and sets up hierarchy relationships.
+  /// Adds an instance to the collection and sets up hierarchy relationships.
   /// </summary>
-  private void PlaceInstanceInCollection(
+  private void AddInstanceToCollection(
     SpeckleBlockInstanceWrapper instance,
     Collection[] collectionPath,
     GrasshopperCollectionRebuilder collectionRebuilder
