@@ -293,6 +293,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   public override Guid ComponentGuid => new("6E871D5B-B221-4992-882A-EFE6796F3010");
   protected override Bitmap Icon => Resources.speckle_param_collection;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;

@@ -66,13 +66,17 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInput(string input, bool isSender)
+  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInput(
+    string input,
+    bool isSender,
+    string? token
+  )
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
     // Should notify user if any of this goes wrong.
 
-    var resources = SpeckleResourceBuilder.FromUrlString(input);
+    var resources = SpeckleResourceBuilder.FromUrlString(input, token);
     if (resources.Length == 0)
     {
       throw new SpeckleException($"Input url string was empty");
@@ -84,8 +88,8 @@ public class SpeckleOperationWizard
     }
 
     var resource = resources.First();
-
-    var account = _accountService.GetAccountWithServerUrlFallback(string.Empty, new Uri(resource.Server));
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var account = resource.Account.GetAccount(scope);
     SetAccount(account, false);
 
     if (SelectedAccount == null)
