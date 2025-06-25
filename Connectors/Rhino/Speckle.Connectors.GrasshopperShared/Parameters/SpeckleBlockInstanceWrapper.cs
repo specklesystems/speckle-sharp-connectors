@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
@@ -17,20 +18,30 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
 
-  public SpeckleBlockInstanceWrapper()
+  public SpeckleBlockInstanceWrapper() { }
+
+  /// <summary>
+  /// A default constructor for speckle block instances, with default values
+  /// </summary>
+  /// <param name="transform">This should be the identity transform, and will be set as identity regardless of value passed in.</param>
+  [SetsRequiredMembers]
+  public SpeckleBlockInstanceWrapper(Transform transform)
   {
+    // gross af but override the incoming transform to be identity, since this constructor should be a default constructor
+    Transform identity = transform == Transform.Identity ? transform : Transform.Identity;
+
     var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString();
     _instanceProxy = new()
     {
       definitionId = "placeholder",
       maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-      transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
+      transform = GrasshopperHelpers.TransformToMatrix(identity, units),
       units = units ?? Units.None
     };
 
     Base = _instanceProxy; // set required base
     ApplicationId = Guid.NewGuid().ToString();
-    GeometryBase = null; // block instances typically don't have direct geometry
+    GeometryBase = new InstanceReferenceGeometry(Guid.Empty, identity);
   }
 
   public InstanceProxy InstanceProxy
@@ -45,7 +56,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   }
   public SpeckleBlockDefinitionWrapper? Definition { get; set; }
 
-  public Transform Transform
+  public required Transform Transform
   {
     get => _transform;
     set
@@ -142,7 +153,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   }
 
   public override SpeckleObjectWrapper DeepCopy() =>
-    new SpeckleBlockInstanceWrapper
+    new SpeckleBlockInstanceWrapper()
     {
       Base = InstanceProxy.ShallowCopy(),
       GeometryBase = GeometryBase?.Duplicate(),
@@ -189,41 +200,19 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         return true;
 
       case GH_Goo<SpeckleBlockInstanceWrapper> wrapperGoo:
-        if (wrapperGoo.Value != null)
-        {
-          Value = (SpeckleBlockInstanceWrapper)wrapperGoo.Value.DeepCopy();
-          return true;
-        }
-        return false;
-
-      case InstanceProxy instanceProxy:
-        Value = new SpeckleBlockInstanceWrapper
-        {
-          Base = instanceProxy,
-          GeometryBase = null,
-          ApplicationId = instanceProxy.applicationId ?? Guid.NewGuid().ToString(),
-          Name = "Block Instance"
-        };
+        Value = (SpeckleBlockInstanceWrapper)wrapperGoo.Value.DeepCopy();
         return true;
     }
+
     return CastFromModelObject(source);
   }
 
   public override bool CastTo<T>(ref T target)
   {
-    if (Value == null)
-    {
-      return false;
-    }
-
     switch (target)
     {
       case Transform:
         target = (T)(object)Value.Transform;
-        return true;
-
-      case InstanceProxy:
-        target = (T)(object)Value.InstanceProxy;
         return true;
 
       default:
@@ -291,19 +280,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   /// </summary>
   public SpeckleBlockInstanceWrapperGoo()
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.None;
-    Value = new()
-    {
-      Base = new InstanceProxy
-      {
-        definitionId = "placeholder",
-        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        transform = GrasshopperHelpers.TransformToMatrix(Transform.Identity, units),
-        units = units
-      },
-      GeometryBase = null,
-      ApplicationId = Guid.NewGuid().ToString()
-    };
+    Value = new SpeckleBlockInstanceWrapper(Transform.Identity);
   }
 
   public SpeckleBlockInstanceWrapperGoo(SpeckleBlockInstanceWrapper value)
@@ -337,7 +314,6 @@ public class SpeckleBlockInstanceParam
     ) { }
 
   public override Guid ComponentGuid => new("938CCD6E-B202-4A0C-9D68-ABD7683B0EDE");
-
   protected override Bitmap Icon => Resources.speckle_param_block_instance;
 
   public override void RegisterRemoteIDs(GH_GuidTable idList)

@@ -1,4 +1,6 @@
+using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -184,13 +186,15 @@ internal sealed class GrasshopperBlockUnpacker
       return null; // Definition not found or failed to build
     }
 
+    Transform transform = GrasshopperHelpers.MatrixToTransform(instanceProxy.transform, instanceProxy.units);
     return new SpeckleBlockInstanceWrapper
     {
       Base = instanceProxy,
-      Name = $"Instance of {definition.Name}",
+      Name = instanceProxy["name"] as string ?? "",
       ApplicationId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString(),
+      Transform = transform,
       Definition = definition,
-      GeometryBase = null // Block instances don't have direct geometry
+      GeometryBase = new InstanceReferenceGeometry(Guid.Empty, transform) //Instances shouldn't be using this except for the filter objects node
     };
   }
 
