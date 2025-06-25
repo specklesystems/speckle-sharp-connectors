@@ -4,6 +4,7 @@
     <Configurations>Debug;Release;Local</Configurations>
     <RhinoVersion>8</RhinoVersion>
     <DefineConstants>$(DefineConstants);RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+    <TargetExt>.rhp</TargetExt>
     <StartProgram>$(ProgramFiles)\Rhino $(RhinoVersion)\System\Rhino.exe</StartProgram>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWpf>true</UseWpf>
