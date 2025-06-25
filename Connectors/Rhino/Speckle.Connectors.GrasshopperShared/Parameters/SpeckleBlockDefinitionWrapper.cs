@@ -57,10 +57,6 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  // TODO: we need to wait on this. not sure how to tackle this 🤯 overrides etc.
-  /*public Color? Color { get; set; }
-  public SpeckleMaterialWrapper? Material { get; set; }*/
-
   public override string ToString() => $"Speckle Block Definition [{Name}]";
 
   /// <summary>
@@ -295,8 +291,11 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       {
         name = "Unnamed Block",
         objects = new List<string>(),
-        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
+
+      ApplicationId = Guid.NewGuid().ToString(),
+      Name = "Unnamed Block"
     };
   }
 }

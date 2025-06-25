@@ -18,6 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockInstancePassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
@@ -92,7 +93,13 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Components\Dev\" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_filter.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_deconstruct.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_object.png" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />

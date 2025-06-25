@@ -115,18 +115,12 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var accountService = scope.ServiceProvider.GetRequiredService<IAccountService>();
-    var accountManager = scope.ServiceProvider.GetRequiredService<IAccountManager>();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
     // Do the thing 👇🏼
 
-    Account? account =
-      input.Resource.AccountId != null
-        ? accountManager.GetAccount(input.Resource.AccountId)
-        : accountService.GetAccountWithServerUrlFallback("", new Uri(input.Resource.Server)); // fallback the account that matches with URL if any
-
+    Account? account = input.Resource.Account.GetAccount(scope);
     if (account is null)
     {
       throw new SpeckleAccountManagerException($"No default account was found");

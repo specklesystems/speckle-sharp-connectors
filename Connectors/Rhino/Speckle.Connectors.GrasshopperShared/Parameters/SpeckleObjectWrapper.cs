@@ -478,8 +478,8 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     ) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
-
   protected override Bitmap Icon => Resources.speckle_param_object;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   public bool IsBakeCapable =>
     // False if no data

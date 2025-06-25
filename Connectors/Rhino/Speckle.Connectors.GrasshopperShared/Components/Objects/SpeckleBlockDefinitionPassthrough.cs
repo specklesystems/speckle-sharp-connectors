@@ -3,7 +3,6 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -25,11 +24,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleBlockDefinitionWrapperParam(),
+    pManager.AddGenericParameter(
       "Block Definition",
       "BD",
-      "Input Block Definition. Speckle Block Definitions and Rhino Instance Definitions are accepted.",
+      "Input Block Definition. Speckle definitions and Model definitions are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[0].Optional = true;
@@ -37,15 +35,13 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     pManager.AddGenericParameter(
       "Objects",
       "O",
-      "Objects to include in the Block Definition. Speckle Objects and Block Instances are accepted.",
+      "Objects to include in the Block Definition. Speckle objects and instances or Model objects and instances are accepted.",
       GH_ParamAccess.list
     );
     Params.Input[1].Optional = true;
 
-    pManager.AddTextParameter("Name", "N", "Name of the Block Definition", GH_ParamAccess.item);
+    pManager.AddTextParameter("Name", "N", "Name of the Speckle Definition", GH_ParamAccess.item);
     Params.Input[2].Optional = true;
-
-    // TODO: what about description, base point parameter, color/Material overrides for the definition itself
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -71,58 +67,58 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    IGH_Goo? inputDefinition = null;
+    da.GetData(0, ref inputDefinition);
+
+    List<IGH_Goo> inputGeometry = new();
+    da.GetDataList(1, inputGeometry);
+
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
     // keep track of mutation
     bool mutated = false;
 
-    // are we modifying an existing block definition or creating a new one?
-    SpeckleBlockDefinitionWrapperGoo? inputBlockDef = null;
-    da.GetData(0, ref inputBlockDef);
-
-    SpeckleBlockDefinitionWrapper result;
-    if (inputBlockDef != null) // if != null → user has piped in a definition, and we're modifying existing
+    // process the definition
+    SpeckleBlockDefinitionWrapperGoo result = new();
+    if (inputDefinition != null)
     {
-      result = inputBlockDef.Value.DeepCopy();
-    }
-    else // if null → we're creating a brand spanking new one
-    {
-      result = new SpeckleBlockDefinitionWrapper()
+      if (!result.CastFrom(inputDefinition))
       {
-        Base = new InstanceDefinitionProxy
-        {
-          name = "Unnamed Block",
-          objects = new List<string>(),
-          maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        },
-        Objects = new List<SpeckleObjectWrapper>(),
-        ApplicationId = Guid.NewGuid().ToString()
-      };
-      mutated = true;
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          $"Definition input is not valid. Only Speckle definitions or Model definitions are accepted."
+        );
+        return;
+      }
     }
 
-    // get whatever objects the user wants inside the block definition
-    List<IGH_Goo> inputObjects = new();
-    da.GetDataList(1, inputObjects);
-
-    if (inputObjects.Count > 0)
+    if (inputDefinition == null && inputGeometry.Count == 0)
     {
-      var processedObjects = new List<SpeckleObjectWrapper>();
-      var objectIds = new List<string>();
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Objects.");
+      return;
+    }
 
-      foreach (var objGoo in inputObjects)
+    // process geometry
+    if (inputGeometry.Count > 0)
+    {
+      List<SpeckleObjectWrapper> processedObjects = new();
+
+      foreach (IGH_Goo geo in inputGeometry)
       {
-        SpeckleObjectWrapper? obj = null;
+        SpeckleObjectWrapper obj;
 
         // Try casting to SpeckleObjectWrapper first (handles object wrapper, model objects, loose geometry)
-        var objectGoo = new SpeckleObjectWrapperGoo();
-        if (objectGoo.CastFrom(objGoo))
+        SpeckleObjectWrapperGoo objectGoo = new();
+        if (objectGoo.CastFrom(geo))
         {
           obj = objectGoo.Value;
         }
         else
         {
           // Try casting to SpeckleBlockInstanceWrapper (handles instance goo, model instances)
-          var instanceGoo = new SpeckleBlockInstanceWrapperGoo();
-          if (instanceGoo.CastFrom(objGoo))
+          SpeckleBlockInstanceWrapperGoo instanceGoo = new();
+          if (instanceGoo.CastFrom(geo))
           {
             obj = instanceGoo.Value;
           }
@@ -131,63 +127,47 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
             // Neither casting worked
             AddRuntimeMessage(
               GH_RuntimeMessageLevel.Warning,
-              $"Object of type {objGoo?.GetType().Name ?? "null"} could not be added to definition"
+              $"Object of type {geo.GetType().Name} could not be added to definition"
             );
+
             continue; // skip this object
           }
         }
 
-        if (obj != null)
+        if (obj.ApplicationId == null)
         {
-          if (obj.ApplicationId == null)
-          {
-            throw new InvalidOperationException("Object ApplicationId should have been assigned during casting");
-          }
-          processedObjects.Add(obj);
-          objectIds.Add(obj.ApplicationId);
+          throw new InvalidOperationException("Object ApplicationId should have been assigned during casting");
         }
+
+        processedObjects.Add(obj);
       }
 
-      result.Objects = processedObjects;
-      result.InstanceDefinitionProxy.objects = objectIds;
+      result.Value.Objects = processedObjects;
+      result.Value.InstanceDefinitionProxy.objects = processedObjects.Select(o => o.ApplicationId!).ToList(); // TODO: this could also be set at the same time as `Objects` on the definition wrapper.
       mutated = true;
     }
 
-    // name for the block
-    string? inputName = null;
-    da.GetData(2, ref inputName);
-
+    // process name
     if (inputName != null)
     {
-      result.Name = inputName;
-      result.InstanceDefinitionProxy.name = inputName;
+      if (string.IsNullOrWhiteSpace(inputName))
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Pass in a non-empty name for the definition.");
+        return;
+      }
+
+      result.Value.Name = inputName;
       mutated = true;
     }
 
-    if (mutated)
-    {
-      result.ApplicationId = Guid.NewGuid().ToString();
-      result.InstanceDefinitionProxy.applicationId = result.ApplicationId;
-    }
-
-    // we need a valid name
-    if (string.IsNullOrEmpty(result.Name))
-    {
-      result.Name = "Unnamed Block";
-      result.InstanceDefinitionProxy.name = result.Name;
-    }
-
-    if (result.Objects.Count == 0 && inputBlockDef == null)
-    {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Warning,
-        "Block Definition has no objects. Provide objects to create a valid block definition."
-      );
-    }
+    // process application Id. Use a new appId if mutated, or if this is a new object
+    result.Value.ApplicationId = mutated
+      ? Guid.NewGuid().ToString()
+      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
 
     // set outputs
-    da.SetData(0, new SpeckleBlockDefinitionWrapperGoo(result)); // the "finished" block
-    da.SetDataList(1, result.Objects.Select(o => new SpeckleObjectWrapperGoo(o))); // objects inside
-    da.SetData(2, result.Name); // name of block
+    da.SetData(0, result);
+    da.SetDataList(1, result.Value.Objects.Select(o => new SpeckleObjectWrapperGoo(o)));
+    da.SetData(2, result.Value.Name);
   }
 }
