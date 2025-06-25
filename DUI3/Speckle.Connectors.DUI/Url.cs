@@ -12,8 +12,9 @@ namespace Speckle.Connectors.DUI;
 /// </remarks>
 public static class Url
 {
-  //public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
-  public static readonly Uri Netlify = new("https://deploy-preview-35--boisterous-douhua-e3cefb.netlify.app");
+  public static readonly Uri Netlify = new("https://boisterous-douhua-e3cefb.netlify.app/");
+
+  //public static readonly Uri Netlify = new("https://deploy-preview-35--boisterous-douhua-e3cefb.netlify.app");
 
   // public static readonly Uri Netlify = new("http://localhost:8082/");
 
