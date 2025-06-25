@@ -16,6 +16,7 @@ using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
@@ -34,7 +35,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly IElementSelectionService _selectionService;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
-  private readonly IAccountService _accountService;
+  private readonly IAccountManager _accountManager;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -46,7 +47,7 @@ public class NavisworksSendBinding : ISendBinding
     IElementSelectionService selectionService,
     IThreadContext threadContext,
     ISendOperationManagerFactory sendOperationManagerFactory,
-    IAccountService accountService
+    IAccountManager accountManager
   )
   {
     Parent = parent;
@@ -59,7 +60,7 @@ public class NavisworksSendBinding : ISendBinding
     _selectionService = selectionService;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
-    _accountService = accountService;
+    _accountManager = accountManager;
     SubscribeToNavisworksEvents();
   }
 
@@ -145,12 +146,18 @@ public class NavisworksSendBinding : ISendBinding
   ) =>
     await scope
       .ServiceProvider.GetRequiredService<SendOperation<NAV.ModelItem>>()
-      .Execute(
-        navisworksModelItems,
-        modelCard.GetSendInfo(_accountService, _speckleApplication),
-        onOperationProgressed,
-        token
-      );
+      .Execute(navisworksModelItems, GetSendInfo(modelCard), onOperationProgressed, token);
+
+  private SendInfo GetSendInfo(SenderModelCard modelCard)
+  {
+    var account = _accountManager.GetAccount(modelCard.AccountId.NotNull());
+    return new(
+      account,
+      modelCard.ProjectId.NotNull(),
+      modelCard.ModelId.NotNull(),
+      _speckleApplication.ApplicationAndVersion
+    );
+  }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
