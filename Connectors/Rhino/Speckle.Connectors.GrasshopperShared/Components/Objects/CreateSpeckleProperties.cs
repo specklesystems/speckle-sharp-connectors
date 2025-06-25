@@ -17,6 +17,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_create;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   public CreateSpeckleProperties()
     : base(
@@ -40,7 +41,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    var properties = new Dictionary<string, SpecklePropertyGoo>();
+    var properties = new Dictionary<string, ISpecklePropertyGoo>();
 
     // Validate for duplicate names
     var paramNames = Params.Input.Select(p => p.NickName).ToList();
@@ -71,13 +72,18 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     da.SetData(0, groupGoo);
   }
 
-  private SpecklePropertyGoo? ExtractPropertyValue(IGH_DataAccess da, int index, string paramName)
+  private ISpecklePropertyGoo? ExtractPropertyValue(IGH_DataAccess da, int index, string paramName)
   {
     object? value = null;
     da.GetData(index, ref value);
 
-    var propertyGoo = new SpecklePropertyGoo();
+    // check for a group input first
+    if (value is SpecklePropertyGroupGoo group)
+    {
+      return group;
+    }
 
+    var propertyGoo = new SpecklePropertyGoo();
     if (value == null)
     {
       return propertyGoo; // Return empty property
@@ -87,7 +93,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
-        $"Parameter '{paramName}' contains invalid data type. Only strings, numbers, and booleans are supported."
+        $"Parameter '{paramName}' contains invalid data type. Only strings, numbers, booleans, and other Speckle properties are supported."
       );
       return null;
     }

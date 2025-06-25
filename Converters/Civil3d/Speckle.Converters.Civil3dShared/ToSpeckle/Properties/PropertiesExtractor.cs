@@ -3,7 +3,7 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 /// <summary>
 /// Extracts properties for the CivilObject class.
 /// </summary>
-public class PropertiesExtractor
+public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PartDataExtractor _partDataExtractor;
@@ -23,7 +23,7 @@ public class PropertiesExtractor
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
   }
 
-  public Dictionary<string, object?> GetProperties(CDB.Entity entity)
+  public Dictionary<string, object?> GetProperties(ADB.Entity entity)
   {
     // first get all class properties, which will be at the root level of props dictionary
     Dictionary<string, object?> properties = _classPropertiesExtractor.GetClassProperties(entity);

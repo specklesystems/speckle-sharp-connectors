@@ -172,10 +172,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       }
     }
 
-    foreach (var kvp in Properties.Value)
-    {
-      att.SetUserString(kvp.Key, kvp.Value.Value?.ToString() ?? "");
-    }
+    // add props
+    Properties.AssignToObjectAttributes(att);
 
     // add to doc
     Guid guid = doc.Objects.Add(GeometryBase, att);
@@ -202,10 +200,12 @@ public class SpeckleObjectWrapper : SpeckleWrapper
       return false;
     }
 
+    /*
     if (!Properties.Equals(objWrapper.Properties))
     {
       return false;
     }
+    */
 
     return true;
   }
@@ -226,7 +226,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper
     };
 }
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData, ISpeckleGoo
+public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
   public override IGH_Goo Duplicate()
   {
@@ -461,8 +461,8 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     ) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
-
   protected override Bitmap Icon => Resources.speckle_param_object;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   public bool IsBakeCapable =>
     // False if no data
@@ -533,7 +533,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
       if (item is SpeckleObjectWrapperGoo goo)
@@ -541,5 +541,10 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
         goo.Value.DrawPreview(args, isSelected);
       }
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 }

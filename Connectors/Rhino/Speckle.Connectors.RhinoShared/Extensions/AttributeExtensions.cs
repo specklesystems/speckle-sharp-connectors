@@ -19,8 +19,8 @@ public static class SpeckleAttributeExtensions
     ObjectAttributes atts = new() { Name = name };
     Dictionary<string, string> userStrings = new();
     Dictionary<string, object?> properties = @base is DataObject dataObj
-      ? dataObj.properties
-      : @base["properties"] as Dictionary<string, object?> ?? new();
+      ? dataObj.properties ?? []
+      : @base["properties"] as Dictionary<string, object?> ?? [];
     FlattenDictionaryToUserStrings(properties, userStrings, "");
     foreach (var kvp in userStrings)
     {
@@ -40,7 +40,7 @@ public static class SpeckleAttributeExtensions
   private static void FlattenDictionaryToUserStrings(
     Dictionary<string, object?> dict,
     Dictionary<string, string> flattenedDict,
-    string keyPrefix = ""
+    string keyPrefix
   )
   {
     foreach (var kvp in dict)
