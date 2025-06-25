@@ -27,7 +27,6 @@ public sealed class ReceiveOperationManager(
     IReceiveBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, ModelCard> initializeScope,
-    //Action<IServiceProvider> initializeScope,
     Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>> processor
   )
   {
@@ -42,7 +41,6 @@ public sealed class ReceiveOperationManager(
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
       initializeScope(serviceScope.ServiceProvider, modelCard);
-      //initializeScope(serviceScope.ServiceProvider);
       var progress = operationProgressManager.CreateOperationProgressEventHandler(
         commands.Bridge,
         modelCardId,
