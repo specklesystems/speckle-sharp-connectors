@@ -7,7 +7,6 @@ using GrasshopperAsyncComponent;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -373,7 +372,9 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
   }
 
+#pragma warning disable CA1506
   private async Task Receive(Action<string, double> reportProgress)
+#pragma warning restore CA1506
   {
     if (UrlModelResource is null)
     {
@@ -422,36 +423,39 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
     // Step 2 - CONVERT
     //receiveComponent.Message = $"Unpacking...";
-    LocalToGlobalUnpacker localToGlobalUnpacker = new();
     TraversalContextUnpacker traversalContextUnpacker = new();
     var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
 
-    // split atomic objects from block components before conversion
+    // separate atomic objects from block instances
     var (atomicObjects, blockInstances) = scope
       .Get<RootObjectUnpacker>()
       .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
 
-    // only convert atomic objects to geometry
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(unpackedRoot.DefinitionProxies, atomicObjects.ToArray());
+    // initialize unpackers and collection builder
+    var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
+    var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
+    var collectionRebuilder = new GrasshopperCollectionRebuilder(
+      (Root as Collection) ?? new Collection { name = "unnamed" }
+    );
 
-    // TODO: unpack colors and render materials
-    GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
-    GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
+    // convert atomic objects directly
+    var mapHandler = new LocalToGlobalMapHandler(
+      traversalContextUnpacker,
+      collectionRebuilder,
+      colorUnpacker,
+      materialUnpacker
+    );
 
-    GrasshopperCollectionRebuilder collectionRebuilder =
-      new((Root as Collection) ?? new Collection() { name = "unnamed" });
-
-    LocalToGlobalMapHandler mapHandler =
-      new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
-
-    int count = 0;
-    int total = localToGlobalMaps.Count;
-
-    foreach (var map in localToGlobalMaps)
+    foreach (var atomicContext in atomicObjects)
     {
-      mapHandler.CreateGrasshopperObjectFromMap(map);
-      count++;
+      mapHandler.ConvertAtomicObject(atomicContext);
     }
+
+    // process block instances using converted atomic objects
+    // NOTE: Objects of block definitions appear both as standalone objects and within block definitions when baked.
+    // block processing needs converted objects, but object filtering needs block definitions.
+    // TODO: post-processing cleanup?
+    mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
 
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
 

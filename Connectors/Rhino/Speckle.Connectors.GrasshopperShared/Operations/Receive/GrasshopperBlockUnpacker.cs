@@ -10,10 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// Reconstructs block instances and definitions from received proxies back into Grasshopper wrapper objects.
 /// </summary>
 /// <remarks>
-/// Grasshopper equivalent of RhinoInstanceBaker, but instead of baking to a document, we reconstruct the block wrappers
-/// and integrate them into the collection structure.
-/// Block definitions reconstructed and stored by ID for instance reference.
-/// Block instances reconstructed and then placed in collections by the caller.
+/// Geometry objects that define blocks must already be converted and present in convertedObjectsMap at this stage.
 /// </remarks>
 internal sealed class GrasshopperBlockUnpacker
 {
@@ -42,18 +39,16 @@ internal sealed class GrasshopperBlockUnpacker
     GrasshopperCollectionRebuilder collectionRebuilder
   )
   {
-    // Step 1: Extract and sort all blocks by depth
-    var allComponents = ExtractAndSortBlocks(blockComponents, definitionProxies);
+    // Step 1: Extract and sort all components by depth (deepest first)
+    var sortedComponents = ExtractAndSortBlocks(blockComponents, definitionProxies);
 
-    // Step 2: Reconstruct all definitions first (instances will reference them)
-    var reconstructedDefinitions = ReconstructAllDefinitions(allComponents, convertedObjectsMap);
-
-    // Step 3: Reconstruct all instances and place them in collections
-    ReconstructAndPlaceInstances(allComponents, reconstructedDefinitions, collectionRebuilder);
+    // Step 2: Process in dependency order - definitions and instances interleaved
+    ProcessComponentsInDependencyOrder(sortedComponents, convertedObjectsMap, collectionRebuilder);
   }
 
   /// <summary>
   /// Extracts blocks from TraversalContext and adds metadata definitions, then sorts by depth.
+  /// Deepest definitions first, then instances, to handle nested hierarchies correctly.
   /// </summary>
   private List<(Collection[] path, IInstanceComponent component)> ExtractAndSortBlocks(
     IReadOnlyCollection<TraversalContext> blockComponents,
@@ -62,7 +57,7 @@ internal sealed class GrasshopperBlockUnpacker
   {
     var allComponents = new List<(Collection[] path, IInstanceComponent component)>();
 
-    // Extract from traversal contexts
+    // Extract instances from traversal contexts
     foreach (var traversalContext in blockComponents)
     {
       if (traversalContext.Current is IInstanceComponent instanceComponent)
@@ -72,7 +67,7 @@ internal sealed class GrasshopperBlockUnpacker
       }
     }
 
-    // Add definition proxies from metadata
+    // Add definition proxies from metadata (these don't have collection paths)
     if (definitionProxies != null)
     {
       foreach (var definitionProxy in definitionProxies)
@@ -81,7 +76,7 @@ internal sealed class GrasshopperBlockUnpacker
       }
     }
 
-    // Sort by depth (deepest definitions first, then instances)
+    // Sort by depth (deepest first) then by type (definitions before instances)
     return allComponents
       .OrderByDescending(x => x.component.maxDepth)
       .ThenBy(x => x.component is InstanceDefinitionProxy ? 0 : 1)
@@ -89,154 +84,114 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Reconstructs all block definitions and returns them in a lookup map.
-  /// Definitions are reconstructed independently of collection placement.
+  /// Processes definitions and instances in dependency order, populating convertedObjectsMap
+  /// with instances as they're created (following Rhino's applicationIdMap pattern).
   /// </summary>
-  private Dictionary<string, SpeckleBlockDefinitionWrapper> ReconstructAllDefinitions(
+  private void ProcessComponentsInDependencyOrder(
     List<(Collection[] path, IInstanceComponent component)> sortedComponents,
-    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap
-  )
-  {
-    var reconstructedDefinitions = new Dictionary<string, SpeckleBlockDefinitionWrapper>();
-
-    foreach (var (_, component) in sortedComponents)
-    {
-      if (component is InstanceDefinitionProxy definitionProxy)
-      {
-        var definition = ReconstructBlockDefinition(definitionProxy, convertedObjectsMap);
-        if (definition != null)
-        {
-          var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
-          reconstructedDefinitions[definitionId] = definition;
-        }
-      }
-    }
-
-    return reconstructedDefinitions;
-  }
-
-  /// <summary>
-  /// Reconstructs all block instances and places them in the appropriate collections.
-  /// </summary>
-  private void ReconstructAndPlaceInstances(
-    List<(Collection[] path, IInstanceComponent component)> sortedComponents,
-    Dictionary<string, SpeckleBlockDefinitionWrapper> reconstructedDefinitions,
+    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
     GrasshopperCollectionRebuilder collectionRebuilder
   )
   {
+    var definitions = new Dictionary<string, SpeckleBlockDefinitionWrapper>();
+
     foreach (var (collectionPath, component) in sortedComponents)
     {
-      if (component is InstanceProxy instanceProxy)
+      if (component is InstanceDefinitionProxy definitionProxy)
       {
-        var instance = ReconstructBlockInstance(instanceProxy, reconstructedDefinitions);
+        // Build definition using current state of convertedObjectsMap
+        var definition = BuildDefinition(definitionProxy, convertedObjectsMap);
+        if (definition != null)
+        {
+          var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
+          definitions[definitionId] = definition;
+        }
+        else
+        {
+          // TODO: throw?
+        }
+      }
+      else if (component is InstanceProxy instanceProxy)
+      {
+        // Build instance using available definitions
+        var instance = BuildInstance(instanceProxy, definitions);
         if (instance != null)
         {
           PlaceInstanceInCollection(instance, collectionPath, collectionRebuilder);
+          var instanceId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString();
+          convertedObjectsMap[instanceId] = instance;
+        }
+        else
+        {
+          // TODO: throw?
         }
       }
     }
   }
 
   /// <summary>
-  /// Reconstructs a single block definition from its proxy.
-  /// </summary>
-  private SpeckleBlockDefinitionWrapper? ReconstructBlockDefinition(
+  /// Builds a single block definition from its proxy using pre-converted defining objects.
+  /// /// </summary>
+  private SpeckleBlockDefinitionWrapper? BuildDefinition(
     InstanceDefinitionProxy definitionProxy,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap
   )
   {
-    try
+    var definitionObjects = new List<SpeckleObjectWrapper>();
+
+    foreach (var objectId in definitionProxy.objects)
     {
-      // Find all constituent objects
-      var definitionObjects = new List<SpeckleObjectWrapper>();
-
-      foreach (var objectId in definitionProxy.objects)
+      if (convertedObjectsMap.TryGetValue(objectId, out var convertedObject))
       {
-        if (convertedObjectsMap.TryGetValue(objectId, out var convertedObject))
-        {
-          definitionObjects.Add(convertedObject);
-        }
-        else
-        {
-          Console.WriteLine(
-            $@"Warning: Could not find object with ID {objectId} for block definition {definitionProxy.name}"
-          );
-        }
+        definitionObjects.Add(convertedObject);
       }
-
-      if (definitionObjects.Count == 0)
+      else
       {
-        Console.WriteLine($@"Warning: Block definition {definitionProxy.name} has no valid objects, skipping");
-        return null;
+        // TODO: throw?
       }
-
-      // Create the wrapper
-      return new SpeckleBlockDefinitionWrapper
-      {
-        Base = definitionProxy,
-        Name = definitionProxy.name,
-        Objects = definitionObjects,
-        ApplicationId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString()
-      };
     }
-    catch (ArgumentException ex)
+
+    // Only create definition if we have objects
+    if (definitionObjects.Count == 0)
     {
-      Console.WriteLine(
-        $@"Invalid arguments when reconstructing block definition {definitionProxy.name}: {ex.Message}"
-      );
       return null;
     }
-    catch (InvalidOperationException ex)
+
+    return new SpeckleBlockDefinitionWrapper
     {
-      Console.WriteLine(
-        $@"Invalid operation when reconstructing block definition {definitionProxy.name}: {ex.Message}"
-      );
-      return null;
-    }
+      Base = definitionProxy,
+      Name = definitionProxy.name,
+      Objects = definitionObjects,
+      ApplicationId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString()
+    };
   }
 
   /// <summary>
-  /// Reconstructs a single block instance from its proxy.
+  /// Builds a single block instance from its proxy using pre-built definitions.
   /// </summary>
-  private SpeckleBlockInstanceWrapper? ReconstructBlockInstance(
+  private SpeckleBlockInstanceWrapper? BuildInstance(
     InstanceProxy instanceProxy,
-    Dictionary<string, SpeckleBlockDefinitionWrapper> reconstructedDefinitions
+    Dictionary<string, SpeckleBlockDefinitionWrapper> definitions
   )
   {
-    try
+    // Find the referenced definition
+    if (!definitions.TryGetValue(instanceProxy.definitionId, out var definition))
     {
-      // Find the referenced definition
-      var definitionId = instanceProxy.definitionId;
-      if (!reconstructedDefinitions.TryGetValue(definitionId, out var definition))
-      {
-        Console.WriteLine($@"Warning: Could not find definition with ID {definitionId} for block instance");
-        return null;
-      }
+      return null; // Definition not found or failed to build
+    }
 
-      // Create the wrapper
-      return new SpeckleBlockInstanceWrapper
-      {
-        Base = instanceProxy,
-        Name = $"Instance of {definition.Name}",
-        ApplicationId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString(),
-        Definition = definition,
-        GeometryBase = null
-      };
-    }
-    catch (ArgumentException ex)
+    return new SpeckleBlockInstanceWrapper
     {
-      Console.WriteLine($@"Invalid arguments when reconstructing block instance: {ex.Message}");
-      return null;
-    }
-    catch (InvalidOperationException ex)
-    {
-      Console.WriteLine($@"Invalid operation when reconstructing block instance: {ex.Message}");
-      return null;
-    }
+      Base = instanceProxy,
+      Name = $"Instance of {definition.Name}",
+      ApplicationId = instanceProxy.applicationId ?? instanceProxy.id ?? Guid.NewGuid().ToString(),
+      Definition = definition,
+      GeometryBase = null // Block instances don't have direct geometry
+    };
   }
 
   /// <summary>
-  /// Places a reconstructed block instance in the appropriate collection.
+  /// Places a block instance in the appropriate collection and sets up hierarchy relationships.
   /// </summary>
   private void PlaceInstanceInCollection(
     SpeckleBlockInstanceWrapper instance,
@@ -244,7 +199,6 @@ internal sealed class GrasshopperBlockUnpacker
     GrasshopperCollectionRebuilder collectionRebuilder
   )
   {
-    // Convert to the format expected by collection rebuilder
     var pathList = collectionPath.ToList();
 
     // Get or create the target collection
@@ -254,7 +208,7 @@ internal sealed class GrasshopperBlockUnpacker
       _materialUnpacker
     );
 
-    // Set up instance properties for collection placement
+    // Set up instance hierarchy properties
     instance.Path = pathList.Select(c => c.name).ToList();
     instance.Parent = targetCollection;
 
