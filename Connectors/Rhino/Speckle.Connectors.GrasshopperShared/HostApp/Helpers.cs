@@ -96,7 +96,7 @@ public static class GrasshopperHelpers
     return t;
   }
 
-  public static Matrix4x4 TransformToMatrix(Transform rhinoTransform, string units)
+  public static Matrix4x4 TransformToMatrix(Transform rhinoTransform, string? units)
   {
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
     var conversionFactor = Units.GetConversionFactor(currentDoc.ModelUnitSystem.ToSpeckleString(), units);

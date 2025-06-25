@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -20,9 +21,6 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
       case GH_InstanceReference ghInstanceRef:
         return ghInstanceRef.Value != null && CreateFromInstanceReference(ghInstanceRef.Value);
-
-      case ModelInstanceDefinition modelInstanceDef:
-        return CastFromModelInstanceDefinition(modelInstanceDef);
 
       // When implementing nested blocks support, discovered that nested blocks coming from Rhino arrive as ModelObjects
       // containing InstanceReferenceGeometry.
@@ -70,16 +68,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
     }
   }
 
-  private bool CastFromModelInstanceDefinition(ModelInstanceDefinition modelInstanceDef)
-  {
-    Value = SpeckleBlockInstanceWrapper.CreateDefault(); // NOTE: CreateDefault() assigns `ApplicationId`
-    Value.InstanceProxy.definitionId = modelInstanceDef.Id?.ToString() ?? "unknown";
-    return true;
-  }
-
   private ModelInstanceDefinition? CreateModelInstanceDefinition(SpeckleBlockDefinitionWrapper definition)
   {
-    var modelInstanceDefGoo = new SpeckleBlockDefinitionWrapperGoo(definition);
+    SpeckleBlockDefinitionWrapperGoo modelInstanceDefGoo = new(definition);
     ModelInstanceDefinition existingModelDef = new();
     if (modelInstanceDefGoo.CastTo(ref existingModelDef))
     {
@@ -108,19 +99,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       if (obj.GeometryBase != null)
       {
         geometries.Add(obj.GeometryBase.Duplicate());
-
-        var att = new ObjectAttributes { Name = obj.Name };
-        if (obj.Color is Color color)
-        {
-          att.ObjectColor = color;
-          att.ColorSource = ObjectColorSource.ColorFromObject;
-        }
-
-        foreach (var kvp in obj.Properties.Value)
-        {
-          att.SetUserString(kvp.Key, kvp.Value?.ToString() ?? "");
-        }
-
+        ObjectAttributes att = obj.CreateObjectAttributes();
         attributes.Add(att);
       }
     }
@@ -143,15 +122,15 @@ public partial class SpeckleBlockInstanceWrapperGoo
       return null;
     }
 
-    var tempRhinoDef = doc.InstanceDefinitions[defIndex];
-    var modelDef = new ModelInstanceDefinition(tempRhinoDef);
+    InstanceDefinition? tempRhinoDef = doc.InstanceDefinitions[defIndex];
+    ModelInstanceDefinition modelDef = new(tempRhinoDef);
 
     return modelDef;
   }
 
-  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef)
+  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef, string? appId = null)
   {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? "none";
+    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.None;
     var definitionId = instanceRef.ParentIdefId;
 
     // Try to preserve existing definition first (for round-trip scenarios)
@@ -181,10 +160,10 @@ public partial class SpeckleBlockInstanceWrapperGoo
         transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
         units = units
       },
-      ApplicationId = instanceRef.ParentIdefId.ToString(), // Use the instance definition's ID
+      ApplicationId = appId,
       Transform = instanceRef.Xform,
       Definition = definition, // May be null in pure Grasshopper workflows
-      GeometryBase = null
+      GeometryBase = new InstanceReferenceGeometry(definitionId, instanceRef.Xform)
     };
     return true;
   }
@@ -229,22 +208,12 @@ public partial class SpeckleBlockInstanceWrapperGoo
     // Same pattern as SpeckleObjectWrapper: ModelObject → GeometryBase extraction
     // Inline helper to keep geometry extraction logic contained within this method
     GeometryBase? geometryBase = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
-
     if (geometryBase is not InstanceReferenceGeometry instanceRefGeo)
     {
       return false;
     }
 
-    // DELEGATE: Use existing logic to process the extracted InstanceReferenceGeometry
-    // This preserves all existing behavior while adding ModelObject support
-    var result = CreateFromInstanceReference(instanceRefGeo);
-    if (result && Value != null)
-    {
-      // Override with ModelObject's ID if available (preferred for round-trip scenarios)
-      Value.ApplicationId = modelObject.Id?.ToString() ?? Value.ApplicationId;
-    }
-
-    return result;
+    return CreateFromInstanceReference(instanceRefGeo, modelObject.Id?.ToString());
   }
 }
 #endif

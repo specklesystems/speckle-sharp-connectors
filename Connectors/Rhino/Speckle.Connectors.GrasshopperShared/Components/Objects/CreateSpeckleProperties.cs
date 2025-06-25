@@ -17,7 +17,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_create;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   public CreateSpeckleProperties()
     : base(
