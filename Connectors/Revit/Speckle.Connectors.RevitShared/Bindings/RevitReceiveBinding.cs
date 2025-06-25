@@ -15,7 +15,6 @@ public sealed class RevitReceiveBinding(
   IBrowserBridge parent,
   ILogger<RevitReceiveBinding> logger,
   Speckle.Connectors.Revit.Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
-  //ToSpeckleSettingsManager toSpeckleSettingsManager,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
   IReceiveOperationManagerFactory receiveOperationManagerFactory
 ) : IReceiveBinding
@@ -44,7 +43,6 @@ public sealed class RevitReceiveBinding(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
               toHostSettingsManager.GetReferencePointSetting(card),
-              //toSpeckleSettingsManager.GetReferencePointSetting(card),
               false,
               true,
               false
