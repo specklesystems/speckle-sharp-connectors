@@ -290,6 +290,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   public override Guid ComponentGuid => new("6E871D5B-B221-4992-882A-EFE6796F3010");
   protected override Bitmap Icon => Resources.speckle_param_collection;
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;
@@ -345,11 +346,16 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
       return;
     }
 
-    var isSelected = args.Document.SelectedObjects().Contains(this);
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var elem in _previewObjects)
     {
       elem.DrawPreview(args, isSelected);
     }
+  }
+
+  private bool OwnerSelected()
+  {
+    return Attributes?.Parent?.Selected ?? false;
   }
 
   public void DrawViewportWires(IGH_PreviewArgs args)
