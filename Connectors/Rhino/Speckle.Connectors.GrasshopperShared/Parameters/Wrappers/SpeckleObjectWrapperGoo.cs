@@ -16,7 +16,8 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     Value = value;
   }
 
-  // NOTE: parameterless constructor should only be used for casting
+  /// <summary>Parameterless constructor</summary>
+  /// <remarks>Should only be used for casting!</remarks>
   public SpeckleObjectWrapperGoo()
   {
     Value = new()
