@@ -44,18 +44,28 @@ public partial class SpeckleBlockInstanceWrapperGoo
 
         if (Value.Definition == null)
         {
+          // No definition available - create minimal instance reference for compatibility
+          // This handles edge cases where we have a transform but no block definition
           var minimalInstanceRef = new InstanceReferenceGeometry(Guid.Empty, Value.Transform);
           target = (T)(object)new GH_InstanceReference(minimalInstanceRef);
           return true;
         }
 
+        // Create or find the block definition in the Rhino document
+        // This either finds existing definition or creates temporary one for pure GH workflows
         var modelInstanceDef = CreateModelInstanceDefinition(Value.Definition);
         if (modelInstanceDef == null)
         {
           return false;
         }
 
-        var instanceRefGeo = new InstanceReferenceGeometry(Guid.Empty, Value.Transform);
+        // ModelInstanceDefinition.Id contains the real definition ID from document (either found or just created)
+        // Fallback to Guid.Empty only for theoretical edge cases where ID might be null
+        var definitionId = modelInstanceDef.Id ?? Guid.Empty;
+
+        // Create InstanceReferenceGeometry with the actual definition ID
+        // This preserves the link to the real block definition in the Rhino document (if any)
+        var instanceRefGeo = new InstanceReferenceGeometry(definitionId, Value.Transform);
         var ghInstanceRef = new GH_InstanceReference(instanceRefGeo, modelInstanceDef);
         target = (T)(object)ghInstanceRef;
         return true;

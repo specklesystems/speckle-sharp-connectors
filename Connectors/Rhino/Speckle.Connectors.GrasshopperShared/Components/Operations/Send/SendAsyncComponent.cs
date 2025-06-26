@@ -425,7 +425,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
         result.VersionId
       );
     OutputParam = createdVersion;
-    Parent.Url = $"{createdVersion.Account.Server}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+    Parent.Url = $"{createdVersion.Account.Server}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }
 

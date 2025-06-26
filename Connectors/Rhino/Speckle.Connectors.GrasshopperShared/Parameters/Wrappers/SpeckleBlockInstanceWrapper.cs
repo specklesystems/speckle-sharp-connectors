@@ -18,6 +18,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   private List<SpeckleObjectWrapper>? _cachedTransformedObjects;
   private Transform _lastCachedTransform = Transform.Unset;
   private const int MAX_DISPLAY_DEPTH = 3;
+  private SpeckleBlockDefinitionWrapper? _definition;
 
   public SpeckleBlockInstanceWrapper() { }
 
@@ -55,7 +56,24 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       UpdateTransformFromProxy();
     }
   }
-  public SpeckleBlockDefinitionWrapper? Definition { get; set; }
+
+  public SpeckleBlockDefinitionWrapper? Definition
+  {
+    get => _definition;
+    set
+    {
+      _definition = value;
+
+      if (_definition != null)
+      {
+        _instanceProxy.definitionId =
+          _definition.ApplicationId
+          ?? throw new InvalidOperationException(
+            "Block definition must have ApplicationId before being assigned to instance"
+          );
+      }
+    }
+  }
 
   public required Transform Transform
   {
@@ -191,10 +209,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       Definition = Definition?.DeepCopy(),
     };
 
-  private void UpdateTransformFromProxy()
-  {
+  private void UpdateTransformFromProxy() =>
     _transform = GrasshopperHelpers.MatrixToTransform(_instanceProxy.transform, _instanceProxy.units);
-  }
 
   private void UpdateProxyFromTransform()
   {
