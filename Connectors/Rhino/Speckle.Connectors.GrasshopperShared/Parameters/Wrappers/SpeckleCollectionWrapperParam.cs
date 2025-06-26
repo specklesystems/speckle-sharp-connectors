@@ -66,21 +66,10 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  private List<SpeckleObjectWrapper> _previewObjects = new();
+  private readonly List<SpeckleObjectWrapper> _previewObjects = new();
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
-    _previewObjects = new();
-    _clippingBox = new();
-
-    foreach (var item in VolatileData.AllData(true))
-    {
-      if (item is SpeckleCollectionWrapperGoo goo)
-      {
-        FlattenForPreview(goo.Value);
-      }
-    }
-
     if (_previewObjects.Count == 0)
     {
       return;
@@ -101,6 +90,23 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
   public void DrawViewportWires(IGH_PreviewArgs args)
   {
     // todo?
+  }
+
+  // Called when volatile data has been collected.
+  // post-process or analyze the volatile data here.
+  // this is where we will recompute and store the objects for preview
+  protected override void OnVolatileDataCollected()
+  {
+    base.OnVolatileDataCollected();
+    _previewObjects.Clear();
+    _clippingBox = new();
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleCollectionWrapperGoo goo)
+      {
+        FlattenForPreview(goo.Value);
+      }
+    }
   }
 
   private void FlattenForPreview(SpeckleCollectionWrapper collWrapper)

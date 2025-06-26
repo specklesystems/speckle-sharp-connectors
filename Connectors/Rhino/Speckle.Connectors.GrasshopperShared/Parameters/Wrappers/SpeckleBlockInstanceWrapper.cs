@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
+using Rhino.Display;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Common;
@@ -14,6 +15,9 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
+  private List<SpeckleObjectWrapper>? _cachedTransformedObjects;
+  private Transform _lastCachedTransform = Transform.Unset;
+  private const int MAX_DISPLAY_DEPTH = 3;
   private SpeckleBlockDefinitionWrapper? _definition;
 
   public SpeckleBlockInstanceWrapper() { }
@@ -100,37 +104,61 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
-  public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) =>
+    DrawDepthLimitedPreview(args, isSelected, 0);
+
+  internal void DrawDepthLimitedPreview(IGH_PreviewArgs args, bool isSelected, int depth)
   {
-    if (Definition?.Objects == null)
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Just stop
+    }
+
+    if (Definition?.Objects == null || Definition.Objects.Count == 0)
     {
       return;
     }
 
-    foreach (var obj in Definition.Objects)
+    foreach (var transformedObj in GetTransformedObjectsForDisplay())
     {
-      if (obj.GeometryBase != null)
+      if (transformedObj is SpeckleBlockInstanceWrapper nestedInstance)
       {
-        var transformedGeometry = obj.GeometryBase.Duplicate();
-        transformedGeometry.Transform(Transform);
-
-        var tempWrapper = new SpeckleObjectWrapper
-        {
-          Base = obj.Base,
-          GeometryBase = transformedGeometry,
-          Color = obj.Color,
-          Material = obj.Material,
-          Properties = obj.Properties,
-          Name = obj.Name,
-          ApplicationId = obj.ApplicationId
-        };
-
-        tempWrapper.DrawPreview(args, isSelected);
+        nestedInstance.DrawDepthLimitedPreview(args, isSelected, depth + 1);
+      }
+      else
+      {
+        transformedObj.DrawPreview(args, isSelected);
       }
     }
   }
 
-  // TODO: public void DrawPreviewRaw() ?
+  public new void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) =>
+    DrawDepthLimitedPreviewRaw(display, material, 0);
+
+  internal void DrawDepthLimitedPreviewRaw(DisplayPipeline display, DisplayMaterial material, int depth)
+  {
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Just stop
+    }
+
+    if (Definition?.Objects == null || Definition.Objects.Count == 0)
+    {
+      return;
+    }
+
+    foreach (var transformedObj in GetTransformedObjectsForDisplay())
+    {
+      if (transformedObj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        nestedInstance.DrawDepthLimitedPreviewRaw(display, material, depth + 1);
+      }
+      else
+      {
+        transformedObj.DrawPreviewRaw(display, material);
+      }
+    }
+  }
 
   public override void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
@@ -189,5 +217,45 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     var units = _instanceProxy.units;
     _instanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
     _instanceProxy.units = units;
+  }
+
+  /// <summary>
+  /// Gets or builds a cached list of transformed objects for displaying.
+  /// Only rebuilds the cache when the transform changes, dramatically improving performance.
+  /// </summary>
+  private List<SpeckleObjectWrapper> GetTransformedObjectsForDisplay()
+  {
+    // Check if cache is valid (transform hasn't changed)
+    if (_cachedTransformedObjects != null && Transform.Equals(_lastCachedTransform))
+    {
+      return _cachedTransformedObjects;
+    }
+
+    // Rebuild cache
+    _cachedTransformedObjects = new List<SpeckleObjectWrapper>();
+    _lastCachedTransform = Transform;
+
+    if (Definition?.Objects == null)
+    {
+      return _cachedTransformedObjects;
+    }
+
+    foreach (var obj in Definition.Objects)
+    {
+      if (obj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        var copiedNestedInstance = (SpeckleBlockInstanceWrapper)nestedInstance.DeepCopy(); // don't mutate original
+        copiedNestedInstance.Transform = Transform * nestedInstance.Transform; // combine transforms for nested blocks
+        _cachedTransformedObjects.Add(copiedNestedInstance);
+      }
+      else if (obj.GeometryBase != null)
+      {
+        var copiedObj = obj.DeepCopy(); // don't mutate original
+        copiedObj.GeometryBase!.Transform(Transform);
+        _cachedTransformedObjects.Add(copiedObj);
+      }
+    }
+
+    return _cachedTransformedObjects;
   }
 }

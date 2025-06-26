@@ -134,11 +134,6 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
           }
         }
 
-        if (obj.ApplicationId == null)
-        {
-          throw new InvalidOperationException("Object ApplicationId should have been assigned during casting");
-        }
-
         processedObjects.Add(obj);
       }
 

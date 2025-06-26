@@ -7,7 +7,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
 {
-  public override bool IsValid => Value.Base is not null;
+  public override bool IsValid => Value.Base is not null && Value.ApplicationId is not null;
   public override string TypeName => "Speckle Object";
   public override string TypeDescription => "Represents a geometry object from Speckle";
 
