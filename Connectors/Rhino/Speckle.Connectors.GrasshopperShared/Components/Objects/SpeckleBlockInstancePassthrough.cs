@@ -169,7 +169,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     SpeckleBlockDefinitionWrapperGoo definition = new();
     if (inputDefinition != null)
     {
-      if (!definition.CastFrom(inputDefinition!))
+      if (!definition.CastFrom(inputDefinition))
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
@@ -179,9 +179,6 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       }
 
       result.Value.Definition = definition.Value;
-      // TODO: this smells fishy, we should decide if this is the appid or name...
-      // TODO: also, this can be refactored so that setting the instance definition will automatically set the instance definition ID
-      result.Value.InstanceProxy.definitionId = definition.Value.ApplicationId ?? definition.Value.Name;
       mutated = true;
     }
 

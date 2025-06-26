@@ -14,6 +14,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
+  private SpeckleBlockDefinitionWrapper? _definition;
 
   public SpeckleBlockInstanceWrapper() { }
 
@@ -51,7 +52,20 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       UpdateTransformFromProxy();
     }
   }
-  public SpeckleBlockDefinitionWrapper? Definition { get; set; }
+
+  public SpeckleBlockDefinitionWrapper? Definition
+  {
+    get => _definition;
+    set
+    {
+      _definition = value;
+      if (_definition != null)
+      {
+        _definition.ApplicationId ??= Guid.NewGuid().ToString();
+        _instanceProxy.definitionId = _definition.ApplicationId;
+      }
+    }
+  }
 
   public required Transform Transform
   {
