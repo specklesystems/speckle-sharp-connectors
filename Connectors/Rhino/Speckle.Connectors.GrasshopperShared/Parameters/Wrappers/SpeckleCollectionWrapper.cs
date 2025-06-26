@@ -121,6 +121,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
           e switch
           {
             SpeckleCollectionWrapper c => c.DeepCopy(),
+            SpeckleBlockInstanceWrapper b => b.DeepCopy(),
             SpeckleObjectWrapper o => o.DeepCopy(),
             _ => e
           }

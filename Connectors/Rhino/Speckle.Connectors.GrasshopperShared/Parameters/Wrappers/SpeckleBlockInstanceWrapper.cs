@@ -163,10 +163,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
       Definition = Definition?.DeepCopy(),
     };
 
-  private void UpdateTransformFromProxy()
-  {
+  private void UpdateTransformFromProxy() =>
     _transform = GrasshopperHelpers.MatrixToTransform(_instanceProxy.transform, _instanceProxy.units);
-  }
 
   private void UpdateProxyFromTransform()
   {
