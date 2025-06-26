@@ -29,6 +29,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   public override string ToString() =>
     $"Speckle Block Instance : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
+  //POC: we probably shouldn't be deep copying here!!! do so in each component that mutates inputs...
   public override bool CastFrom(object source)
   {
     switch (source)
@@ -42,6 +43,13 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       case GH_Goo<SpeckleBlockInstanceWrapper> goo:
         Value = (SpeckleBlockInstanceWrapper)goo.Value.DeepCopy();
         return true;
+      case SpeckleObjectWrapperGoo objWrapperGoo:
+        if (objWrapperGoo.Value is SpeckleBlockInstanceWrapper objWrapper)
+        {
+          Value = objWrapper;
+          return true;
+        }
+        break;
       case GH_Goo<SpeckleObjectWrapper> goo:
         if (goo.Value is SpeckleBlockInstanceWrapper wrapper)
         {
@@ -58,6 +66,9 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     switch (target)
     {
+      case SpeckleObjectWrapperGoo:
+        target = (T)(object)Value;
+        return true;
       case Transform:
         target = (T)(object)Value.Transform;
         return true;

@@ -4,7 +4,6 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -26,7 +25,8 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    int objIndex = pManager.AddGenericParameter(
+    int objIndex = pManager.AddParameter(
+      new SpeckleObjectParam(),
       "Object",
       "O",
       "Input Object. Speckle Objects, Model Objects, and geometry are accepted.",
@@ -45,7 +45,8 @@ public class SpeckleObjectPassthrough : GH_Component
     int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
     Params.Input[nameIndex].Optional = true;
 
-    int propIndex = pManager.AddGenericParameter(
+    int propIndex = pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
       "Properties",
       "P",
       "The properties of the Speckle Object. Speckle Properties and User Content are accepted.",
@@ -56,7 +57,8 @@ public class SpeckleObjectPassthrough : GH_Component
     int colorIndex = pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
     Params.Input[colorIndex].Optional = true;
 
-    int matIndex = pManager.AddGenericParameter(
+    int matIndex = pManager.AddParameter(
+      new SpeckleMaterialParam(),
       "Material",
       "m",
       "The material of the Speckle Object. Display Materials, Model Materials, and Speckle Materials are accepted.",
@@ -116,60 +118,43 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    IGH_Goo? inputObject = null;
+    SpeckleObjectWrapperGoo? inputObject = null;
     da.GetData(0, ref inputObject);
 
     IGH_GeometricGoo? inputGeometry = null;
     da.GetData(1, ref inputGeometry);
 
-    string? inputName = null;
-    da.GetData(2, ref inputName);
-
-    IGH_Goo? inputProperties = null;
-    da.GetData(3, ref inputProperties);
-
-    Color? inputColor = null;
-    da.GetData(4, ref inputColor);
-
-    IGH_Goo? inputMaterial = null;
-    da.GetData(5, ref inputMaterial);
-
-    //string? inputPath = null;
-    //da.GetData(6, ref inputPath);
-
-    // keep track of mutation
-    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
-    bool mutated = false;
-
-    // process the object
-    SpeckleObjectWrapperGoo result = new();
-    if (inputObject != null)
-    {
-      if (!result.CastFrom(inputObject))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          $"Object input is not valid. Only Speckle Objects, Baked Model Objects, and Geometry are accepted."
-        );
-        return;
-      }
-    }
-
-    // process geometry
-    // at this point, we can ensure that the Base in the wrapper is a DataObject.
     if (inputObject == null && inputGeometry == null)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in an Object or Geometry.");
       return;
     }
 
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
+    SpecklePropertyGroupGoo? inputProperties = null;
+    da.GetData(3, ref inputProperties);
+
+    Color? inputColor = null;
+    da.GetData(4, ref inputColor);
+
+    SpeckleMaterialWrapperGoo? inputMaterial = null;
+    da.GetData(5, ref inputMaterial);
+
+    // keep track of mutation
+    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
+    bool mutated = false;
+
+    // process the object
+    // deep copy so we don't mutate the object
+    SpeckleObjectWrapperGoo result = inputObject != null ? new(inputObject.Value.DeepCopy()) : new();
+
+    // process geometry
     if (inputGeometry != null)
     {
-      result.Value.GeometryBase = inputGeometry.ToGeometryBase();
-      Base converted = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
-      converted[Constants.NAME_PROP] = result.Value.Name;
-      converted.applicationId = result.Value.ApplicationId;
-      result.Value.Base = converted;
+      result.Value = inputGeometry.ToSpeckleObjectWrapper();
+      result.Value.Base[Constants.NAME_PROP] = result.Value.Name;
       mutated = true;
     }
 
@@ -183,17 +168,7 @@ public class SpeckleObjectPassthrough : GH_Component
     // process properties
     if (inputProperties != null)
     {
-      SpecklePropertyGroupGoo propGoo = new();
-      if (!propGoo.CastFrom(inputProperties))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          $"Properties input is not valid. Only Speckle Properties and User Content are accepted."
-        );
-        return;
-      }
-
-      result.Value.Properties = propGoo;
+      result.Value.Properties = inputProperties;
       mutated = true;
     }
 
@@ -203,20 +178,10 @@ public class SpeckleObjectPassthrough : GH_Component
       result.Value.Color = inputColor;
     }
 
-    // process  material (no mutation)
+    // process material (no mutation)
     if (inputMaterial != null)
     {
-      SpeckleMaterialWrapperGoo matWrapperGoo = new();
-      if (!matWrapperGoo.CastFrom(inputMaterial))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          "Material input is not valid. Only Display Materials, Baked Model Materials, and Speckle Materials are accepted."
-        );
-        return;
-      }
-
-      result.Value.Material = matWrapperGoo.Value;
+      result.Value.Material = inputMaterial.Value;
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
