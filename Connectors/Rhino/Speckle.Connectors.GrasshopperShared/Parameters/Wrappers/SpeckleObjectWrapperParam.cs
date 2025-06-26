@@ -111,8 +111,5 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     }
   }
 
-  private bool OwnerSelected()
-  {
-    return Attributes?.Parent?.Selected ?? false;
-  }
+  private bool OwnerSelected() => Attributes?.Parent?.Selected ?? false;
 }

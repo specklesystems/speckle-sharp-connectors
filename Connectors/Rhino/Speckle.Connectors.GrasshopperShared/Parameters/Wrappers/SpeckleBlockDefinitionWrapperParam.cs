@@ -87,7 +87,7 @@ public class SpeckleBlockDefinitionWrapperParam
 
   public void DrawViewportWires(IGH_PreviewArgs args)
   {
-    // TODO: Do block definitions even have separate wire preview?
+    // TODO?
   }
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
@@ -102,10 +102,7 @@ public class SpeckleBlockDefinitionWrapperParam
     }
   }
 
-  private bool OwnerSelected()
-  {
-    return Attributes?.Parent?.Selected ?? false;
-  }
+  private bool OwnerSelected() => Attributes?.Parent?.Selected ?? false;
 
   public bool Hidden { get; set; }
 

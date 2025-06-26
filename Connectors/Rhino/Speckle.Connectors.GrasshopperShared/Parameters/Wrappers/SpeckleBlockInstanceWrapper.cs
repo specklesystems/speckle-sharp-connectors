@@ -17,6 +17,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   private Transform _transform = Transform.Identity;
   private List<SpeckleObjectWrapper>? _cachedTransformedObjects;
   private Transform _lastCachedTransform = Transform.Unset;
+  private const int MAX_DISPLAY_DEPTH = 3;
 
   public SpeckleBlockInstanceWrapper() { }
 
@@ -85,19 +86,59 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 
-  public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) =>
+    DrawDepthLimitedPreview(args, isSelected, 0);
+
+  internal void DrawDepthLimitedPreview(IGH_PreviewArgs args, bool isSelected, int depth)
   {
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Just stop
+    }
+
+    if (Definition?.Objects == null || Definition.Objects.Count == 0)
+    {
+      return;
+    }
+
     foreach (var transformedObj in GetTransformedObjectsForDisplay())
     {
-      transformedObj.DrawPreview(args, isSelected);
+      if (transformedObj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        nestedInstance.DrawDepthLimitedPreview(args, isSelected, depth + 1);
+      }
+      else
+      {
+        transformedObj.DrawPreview(args, isSelected);
+      }
     }
   }
 
-  public new void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material)
+  public new void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) =>
+    DrawDepthLimitedPreviewRaw(display, material, 0);
+
+  internal void DrawDepthLimitedPreviewRaw(DisplayPipeline display, DisplayMaterial material, int depth)
   {
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Just stop
+    }
+
+    if (Definition?.Objects == null || Definition.Objects.Count == 0)
+    {
+      return;
+    }
+
     foreach (var transformedObj in GetTransformedObjectsForDisplay())
     {
-      transformedObj.DrawPreviewRaw(display, material);
+      if (transformedObj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        nestedInstance.DrawDepthLimitedPreviewRaw(display, material, depth + 1);
+      }
+      else
+      {
+        transformedObj.DrawPreviewRaw(display, material);
+      }
     }
   }
 

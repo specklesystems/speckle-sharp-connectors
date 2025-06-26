@@ -15,6 +15,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
 {
   public InstanceDefinitionProxy InstanceDefinitionProxy { get; set; }
+  private const int MAX_DISPLAY_DEPTH = 3;
 
   public override required Base Base
   {
@@ -65,19 +66,46 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
   /// <remarks>
   /// Leveraging already defined preview logic for the objects which make up this block. Refer to <see cref="SpeckleObjectWrapper.DrawPreview"/>.
   /// </remarks>
-  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) =>
+    DrawDepthLimitedPreview(args, isSelected, 0);
+
+  private void DrawDepthLimitedPreview(IGH_PreviewArgs args, bool isSelected, int depth)
   {
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Stop early if too deep
+    }
+
     foreach (var obj in Objects)
     {
-      obj.DrawPreview(args, isSelected);
+      if (obj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        nestedInstance.DrawDepthLimitedPreview(args, isSelected, depth + 1);
+      }
+      else
+      {
+        obj.DrawPreview(args, isSelected);
+      }
     }
   }
 
-  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) // TODO: what materials are here??
+  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material) =>
+    DrawDepthLimitedPreviewRaw(display, material, 0);
+
+  private void DrawDepthLimitedPreviewRaw(DisplayPipeline display, DisplayMaterial material, int depth)
   {
+    if (depth > MAX_DISPLAY_DEPTH)
+    {
+      return; // Stop early if too deep
+    }
+
     foreach (var obj in Objects)
     {
-      if (obj.GeometryBase != null)
+      if (obj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        nestedInstance.DrawDepthLimitedPreviewRaw(display, material, depth + 1);
+      }
+      else
       {
         obj.DrawPreviewRaw(display, material);
       }
