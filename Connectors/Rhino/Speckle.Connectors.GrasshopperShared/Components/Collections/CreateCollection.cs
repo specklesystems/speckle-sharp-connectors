@@ -184,7 +184,7 @@ public class CreateCollection : VariableParameterComponentBase
           continue;
 
         // for other types, try casting to objects (geometry, etc.) or instances
-        // POC: this looks like duplicate code!! add this to the base object wrapper class as virtual and override in instance maybe, or may instance goo inherit from object goo.
+        // POC: this looks like duplicate code!! Should cleanup later to handle InstanceWrapper : ObjectWrapper inheritance better
         default:
           var wrapperGoo = new SpeckleObjectWrapperGoo();
           if (wrapperGoo.CastFrom(obj))

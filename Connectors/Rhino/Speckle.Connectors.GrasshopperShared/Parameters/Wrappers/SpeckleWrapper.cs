@@ -4,6 +4,9 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
+/// <summary>
+/// A wrapper class for Speckle <see cref="Base"/>
+/// </summary>
 public abstract class SpeckleWrapper
 {
   /// <summary>
@@ -15,6 +18,9 @@ public abstract class SpeckleWrapper
     set => Base[Constants.NAME_PROP] = value;
   }
 
+  /// <summary>
+  /// The wrapped <see cref="Base"/>
+  /// </summary>
   public abstract Base Base { get; set; }
 
   /// <summary>

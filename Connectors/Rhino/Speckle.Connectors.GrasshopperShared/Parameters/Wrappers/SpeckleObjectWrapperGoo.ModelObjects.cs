@@ -48,9 +48,10 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
 
           // get the object color and material
           Color? color = GetColorFromModelObject(modelObject);
-          SpeckleMaterialWrapperGoo? materialWrapper = new();
+          SpeckleMaterialWrapperGoo? materialWrapper = null;
           if (GetMaterialFromModelObject(modelObject) is Rhino.Render.RenderMaterial renderMat)
           {
+            materialWrapper = new();
             materialWrapper.CastFrom(renderMat);
           }
 
@@ -62,7 +63,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
               Parent = collWrapper,
               Name = modelObject.Name.ToString(),
               Color = color,
-              Material = materialWrapper.Value,
+              Material = materialWrapper?.Value,
               Properties = propertyGroup
             };
 
