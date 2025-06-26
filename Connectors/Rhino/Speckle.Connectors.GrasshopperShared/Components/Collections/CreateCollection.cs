@@ -183,7 +183,8 @@ public class CreateCollection : VariableParameterComponentBase
           parentCollection.Elements.Add(objectWrapper);
           continue;
 
-        // for other types, try casting to objects (geometry, etc.)
+        // for other types, try casting to objects (geometry, etc.) or instances
+        // POC: this looks like duplicate code!! Should cleanup later to handle InstanceWrapper : ObjectWrapper inheritance better
         default:
           var wrapperGoo = new SpeckleObjectWrapperGoo();
           if (wrapperGoo.CastFrom(obj))
@@ -194,7 +195,17 @@ public class CreateCollection : VariableParameterComponentBase
           }
           else
           {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
+            var instanceGoo = new SpeckleBlockInstanceWrapperGoo();
+            if (instanceGoo.CastFrom(obj))
+            {
+              instanceGoo.Value.Path = childPath;
+              wrapperGoo.Value.Parent = parentCollection;
+              parentCollection.Elements.Add(instanceGoo.Value);
+            }
+            else
+            {
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
+            }
           }
           break;
       }

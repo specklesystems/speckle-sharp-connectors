@@ -1,8 +1,12 @@
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
+/// <summary>
+/// A wrapper class for Speckle <see cref="Base"/>
+/// </summary>
 public abstract class SpeckleWrapper
 {
   /// <summary>
@@ -14,6 +18,9 @@ public abstract class SpeckleWrapper
     set => Base[Constants.NAME_PROP] = value;
   }
 
+  /// <summary>
+  /// The wrapped <see cref="Base"/>
+  /// </summary>
   public abstract Base Base { get; set; }
 
   /// <summary>
@@ -24,4 +31,10 @@ public abstract class SpeckleWrapper
     get => Base.applicationId;
     set => Base.applicationId = value;
   }
+
+  /// <summary>
+  /// Creates an <see cref="IGH_Goo"/> from this wrapper
+  /// </summary>
+  /// <returns></returns>
+  public abstract IGH_Goo CreateGoo();
 }
