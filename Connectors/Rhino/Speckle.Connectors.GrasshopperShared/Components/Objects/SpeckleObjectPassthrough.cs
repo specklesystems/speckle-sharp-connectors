@@ -165,7 +165,7 @@ public class SpeckleObjectPassthrough : GH_Component
 
     if (inputGeometry != null)
     {
-      result.Value.GeometryBase = inputGeometry.GeometricGooToGeometryBase();
+      result.Value.GeometryBase = inputGeometry.ToGeometryBase();
       Base converted = SpeckleConversionContext.ConvertToSpeckle(result.Value.GeometryBase);
       converted[Constants.NAME_PROP] = result.Value.Name;
       converted.applicationId = result.Value.ApplicationId;
