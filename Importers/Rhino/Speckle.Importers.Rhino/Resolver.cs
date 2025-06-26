@@ -59,7 +59,7 @@ public static class Resolver
     string path = System.IO.Path.Combine(RhinoSystemDirectory, assemblyName + ".dll");
     if (assemblyName.StartsWith("Speckle.Connectors.Rhino"))
     {
-      path = Path.Combine(Environment.CurrentDirectory, assemblyName + ".rhp");
+      path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), assemblyName + ".rhp");
     }
     if (System.IO.File.Exists(path))
     {
