@@ -77,23 +77,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
     // TODO?
   }
 
-  public void DrawViewportMeshes(GH_PreviewMeshArgs args)
-  {
-    if (Value?.Definition?.Objects == null)
-    {
-      return;
-    }
-
-    foreach (var obj in Value.Definition.Objects)
-    {
-      if (obj.GeometryBase != null)
-      {
-        var transformedGeometry = obj.GeometryBase.Duplicate();
-        transformedGeometry.Transform(Value.Transform);
-        obj.DrawPreviewRaw(args.Pipeline, args.Material);
-      }
-    }
-  }
+  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => Value?.DrawPreviewRaw(args.Pipeline, args.Material);
 
   public BoundingBox ClippingBox
   {

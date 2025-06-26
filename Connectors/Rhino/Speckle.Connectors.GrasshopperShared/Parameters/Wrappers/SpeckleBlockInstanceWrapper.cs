@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino;
+using Rhino.Display;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Common;
@@ -14,6 +15,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
+  private List<SpeckleObjectWrapper>? _cachedTransformedObjects;
+  private Transform _lastCachedTransform = Transform.Unset;
 
   public SpeckleBlockInstanceWrapper() { }
 
@@ -84,35 +87,19 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
 
   public override void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
-    if (Definition?.Objects == null)
+    foreach (var transformedObj in GetTransformedObjectsForDisplay())
     {
-      return;
-    }
-
-    foreach (var obj in Definition.Objects)
-    {
-      if (obj.GeometryBase != null)
-      {
-        var transformedGeometry = obj.GeometryBase.Duplicate();
-        transformedGeometry.Transform(Transform);
-
-        var tempWrapper = new SpeckleObjectWrapper
-        {
-          Base = obj.Base,
-          GeometryBase = transformedGeometry,
-          Color = obj.Color,
-          Material = obj.Material,
-          Properties = obj.Properties,
-          Name = obj.Name,
-          ApplicationId = obj.ApplicationId
-        };
-
-        tempWrapper.DrawPreview(args, isSelected);
-      }
+      transformedObj.DrawPreview(args, isSelected);
     }
   }
 
-  // TODO: public void DrawPreviewRaw() ?
+  public new void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material)
+  {
+    foreach (var transformedObj in GetTransformedObjectsForDisplay())
+    {
+      transformedObj.DrawPreviewRaw(display, material);
+    }
+  }
 
   public override void Bake(RhinoDoc doc, List<Guid> objIds, int bakeLayerIndex = -1, bool layersAlreadyCreated = false)
   {
@@ -173,5 +160,45 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     var units = _instanceProxy.units;
     _instanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
     _instanceProxy.units = units;
+  }
+
+  /// <summary>
+  /// Gets or builds a cached list of transformed objects for displaying.
+  /// Only rebuilds the cache when the transform changes, dramatically improving performance.
+  /// </summary>
+  private List<SpeckleObjectWrapper> GetTransformedObjectsForDisplay()
+  {
+    // Check if cache is valid (transform hasn't changed)
+    if (_cachedTransformedObjects != null && Transform.Equals(_lastCachedTransform))
+    {
+      return _cachedTransformedObjects;
+    }
+
+    // Rebuild cache
+    _cachedTransformedObjects = new List<SpeckleObjectWrapper>();
+    _lastCachedTransform = Transform;
+
+    if (Definition?.Objects == null)
+    {
+      return _cachedTransformedObjects;
+    }
+
+    foreach (var obj in Definition.Objects)
+    {
+      if (obj is SpeckleBlockInstanceWrapper nestedInstance)
+      {
+        var copiedNestedInstance = (SpeckleBlockInstanceWrapper)nestedInstance.DeepCopy(); // don't mutate original
+        copiedNestedInstance.Transform = Transform * nestedInstance.Transform; // combine transforms for nested blocks
+        _cachedTransformedObjects.Add(copiedNestedInstance);
+      }
+      else if (obj.GeometryBase != null)
+      {
+        var copiedObj = obj.DeepCopy(); // don't mutate original
+        copiedObj.GeometryBase!.Transform(Transform);
+        _cachedTransformedObjects.Add(copiedObj);
+      }
+    }
+
+    return _cachedTransformedObjects;
   }
 }
