@@ -6,7 +6,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanceWrapper>, IGH_PreviewData
 {
-  public override bool IsValid => Value?.InstanceProxy != null;
+  public override bool IsValid => Value?.InstanceProxy != null && Value.ApplicationId is not null;
   public override string TypeName => "Speckle Block Instance";
   public override string TypeDescription => "Represents an instance object from Speckle";
 

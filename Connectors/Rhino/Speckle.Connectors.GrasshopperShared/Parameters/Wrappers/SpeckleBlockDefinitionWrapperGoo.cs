@@ -9,7 +9,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <remarks>Casting </remarks>
 public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefinitionWrapper>
 {
-  public override bool IsValid => Value?.InstanceDefinitionProxy is not null;
+  public override bool IsValid => Value?.InstanceDefinitionProxy is not null && Value.ApplicationId is not null;
   public override string TypeName => "Speckle Block Definition";
   public override string TypeDescription => "Represents an instance definition proxy from Speckle";
 
