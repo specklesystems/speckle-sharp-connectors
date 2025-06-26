@@ -68,26 +68,23 @@ public static class GrasshopperHelpers
   public static string GetSpeckleApplicationId(this SpeckleCollectionWrapper collectionWrapper) =>
     $"{string.Join(Constants.LAYER_PATH_DELIMITER, collectionWrapper.Path)}";
 
-  public static Transform MatrixToTransform(Matrix4x4 matrix, string units)
+  public static Transform MatrixToTransform(Matrix4x4 matrix)
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    var conversionFactor = Units.GetConversionFactor(units, currentDoc.ModelUnitSystem.ToSpeckleString());
-
     var t = Transform.Identity;
     t.M00 = matrix.M11;
     t.M01 = matrix.M12;
     t.M02 = matrix.M13;
-    t.M03 = matrix.M14 * conversionFactor;
+    t.M03 = matrix.M14;
 
     t.M10 = matrix.M21;
     t.M11 = matrix.M22;
     t.M12 = matrix.M23;
-    t.M13 = matrix.M24 * conversionFactor;
+    t.M13 = matrix.M24;
 
     t.M20 = matrix.M31;
     t.M21 = matrix.M32;
     t.M22 = matrix.M33;
-    t.M23 = matrix.M34 * conversionFactor;
+    t.M23 = matrix.M34;
 
     t.M30 = matrix.M41;
     t.M31 = matrix.M42;
@@ -96,27 +93,24 @@ public static class GrasshopperHelpers
     return t;
   }
 
-  public static Matrix4x4 TransformToMatrix(Transform rhinoTransform, string? units)
+  public static Matrix4x4 TransformToMatrix(Transform rhinoTransform)
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    var conversionFactor = Units.GetConversionFactor(currentDoc.ModelUnitSystem.ToSpeckleString(), units);
-
     var m = new Matrix4x4
     {
       M11 = rhinoTransform.M00,
       M12 = rhinoTransform.M01,
       M13 = rhinoTransform.M02,
-      M14 = rhinoTransform.M03 * conversionFactor,
+      M14 = rhinoTransform.M03,
 
       M21 = rhinoTransform.M10,
       M22 = rhinoTransform.M11,
       M23 = rhinoTransform.M12,
-      M24 = rhinoTransform.M13 * conversionFactor,
+      M24 = rhinoTransform.M13,
 
       M31 = rhinoTransform.M20,
       M32 = rhinoTransform.M21,
       M33 = rhinoTransform.M22,
-      M34 = rhinoTransform.M23 * conversionFactor,
+      M34 = rhinoTransform.M23,
 
       M41 = rhinoTransform.M30,
       M42 = rhinoTransform.M31,

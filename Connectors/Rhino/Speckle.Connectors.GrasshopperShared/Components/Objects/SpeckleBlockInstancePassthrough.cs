@@ -2,13 +2,14 @@ using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("2F8A9B1C-3D4E-5F6A-7B8C-9D0E1F2A3B4C")]
-public class SpeckleBlockInstancePassthrough : GH_Component
+public class SpeckleBlockInstancePassthrough : GH_Component, IDocChangeListener
 {
   public SpeckleBlockInstancePassthrough()
     : base(
@@ -17,7 +18,10 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       "Create or modify a Speckle Block Instance",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
-    ) { }
+    )
+  {
+    DocChangeMonitor.Subscribe(this);
+  }
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_inst;
@@ -269,4 +273,19 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       GH_Plane ghPlane => Transform.PlaneToPlane(Plane.WorldXY, ghPlane.Value),
       _ => null
     };
+
+  /// <summary>
+  /// Expires component when doc changes, block instances are recomputed.
+  /// </summary>
+  public void OnDocumentChanged()
+  {
+    ExpireSolution(true);
+    OnPingDocument()?.NewSolution(true); // force solution to recompute
+  }
+
+  public override void RemovedFromDocument(GH_Document document)
+  {
+    DocChangeMonitor.Unsubscribe(this);
+    base.RemovedFromDocument(document);
+  }
 }

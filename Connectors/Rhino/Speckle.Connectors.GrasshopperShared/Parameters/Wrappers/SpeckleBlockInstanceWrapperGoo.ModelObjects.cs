@@ -167,7 +167,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       {
         definitionId = definitionId.ToString(),
         maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
+        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform),
         units = units
       },
       ApplicationId = appId,

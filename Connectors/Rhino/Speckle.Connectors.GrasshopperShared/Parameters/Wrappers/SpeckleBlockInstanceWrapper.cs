@@ -37,7 +37,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     {
       definitionId = "placeholder",
       maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-      transform = GrasshopperHelpers.TransformToMatrix(identity, units),
+      transform = GrasshopperHelpers.TransformToMatrix(identity),
       units = units ?? Units.None
     };
 
@@ -210,14 +210,10 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     };
 
   private void UpdateTransformFromProxy() =>
-    _transform = GrasshopperHelpers.MatrixToTransform(_instanceProxy.transform, _instanceProxy.units);
+    _transform = GrasshopperHelpers.MatrixToTransform(_instanceProxy.transform);
 
-  private void UpdateProxyFromTransform()
-  {
-    var units = _instanceProxy.units;
-    _instanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform, units);
-    _instanceProxy.units = units;
-  }
+  private void UpdateProxyFromTransform() =>
+    _instanceProxy.transform = GrasshopperHelpers.TransformToMatrix(_transform);
 
   /// <summary>
   /// Gets or builds a cached list of transformed objects for displaying.

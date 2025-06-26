@@ -196,7 +196,7 @@ internal sealed class GrasshopperBlockUnpacker
       return null; // Definition not found or failed to build
     }
 
-    Transform transform = GrasshopperHelpers.MatrixToTransform(instanceProxy.transform, instanceProxy.units);
+    Transform transform = GrasshopperHelpers.MatrixToTransform(instanceProxy.transform);
     return new SpeckleBlockInstanceWrapper
     {
       Base = instanceProxy,
