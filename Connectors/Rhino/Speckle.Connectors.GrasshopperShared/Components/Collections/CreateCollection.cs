@@ -199,7 +199,7 @@ public class CreateCollection : VariableParameterComponentBase
             if (instanceGoo.CastFrom(obj))
             {
               instanceGoo.Value.Path = childPath;
-              wrapperGoo.Value.Parent = parentCollection;
+              instanceGoo.Value.Parent = parentCollection;
               parentCollection.Elements.Add(instanceGoo.Value);
             }
             else

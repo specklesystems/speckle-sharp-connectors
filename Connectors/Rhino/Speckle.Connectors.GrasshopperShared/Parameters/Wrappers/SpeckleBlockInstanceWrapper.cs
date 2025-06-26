@@ -59,10 +59,14 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     set
     {
       _definition = value;
+
       if (_definition != null)
       {
-        _definition.ApplicationId ??= Guid.NewGuid().ToString();
-        _instanceProxy.definitionId = _definition.ApplicationId;
+        _instanceProxy.definitionId =
+          _definition.ApplicationId
+          ?? throw new InvalidOperationException(
+            "Block definition must have ApplicationId before being assigned to instance"
+          );
       }
     }
   }
