@@ -39,7 +39,8 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public SpeckleMaterialWrapper? Material { get; set; }
 
-  public override string ToString() => $"Speckle Object Wrapper [{GeometryBase?.GetType().Name}]";
+  public override string ToString() =>
+    $"Speckle Object : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}]";
 
   public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {

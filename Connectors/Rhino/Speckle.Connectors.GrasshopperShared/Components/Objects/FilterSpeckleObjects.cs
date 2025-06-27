@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
@@ -84,12 +85,15 @@ public class FilterSpeckleObjects : GH_Component
       return;
     }
 
-    if (inputObjects.Any(o => o is not SpeckleObjectWrapperGoo && o is not SpeckleBlockInstanceWrapperGoo))
+    List<SpeckleObjectWrapper?> objects = inputObjects
+      .Select(o => o.ToSpeckleObjectWrapper())
+      .Where(o => o is not null)
+      .ToList();
+
+    int unsupported = inputObjects.Count - objects.Count;
+    if (unsupported > 0)
     {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Error,
-        $"Invalid input objects. Only Speckle Objects and Speckle Block Instances are accepted."
-      );
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Input contained {unsupported} unsupported objects.");
       return;
     }
 
@@ -106,21 +110,9 @@ public class FilterSpeckleObjects : GH_Component
 
     List<SpeckleObjectWrapper> matchedObjects = new();
     List<SpeckleObjectWrapper> removedObjects = new();
-    for (int i = 0; i < inputObjects.Count; i++)
+    for (int i = 0; i < objects.Count; i++)
     {
-      SpeckleObjectWrapper wrapper;
-      switch (inputObjects[i])
-      {
-        case SpeckleBlockInstanceWrapperGoo instanceGoo:
-          wrapper = instanceGoo.Value;
-          break;
-        case SpeckleObjectWrapperGoo objectGoo:
-          wrapper = objectGoo.Value;
-          break;
-        default:
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Invalid input detected: {inputObjects[i].TypeName}.");
-          return;
-      }
+      SpeckleObjectWrapper wrapper = objects[i]!;
 
       // filter by name
       if (!MatchesSearchPattern(name, wrapper.Name))
@@ -178,8 +170,8 @@ public class FilterSpeckleObjects : GH_Component
     }
 
     // Set output objects
-    dataAccess.SetDataList(0, matchedObjects);
-    dataAccess.SetDataList(1, removedObjects);
+    dataAccess.SetDataList(0, matchedObjects.Select(o => o.CreateGoo()));
+    dataAccess.SetDataList(1, removedObjects.Select(o => o.CreateGoo()));
   }
 
   private bool MatchesSearchPattern(string searchPattern, string target)

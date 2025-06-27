@@ -100,7 +100,8 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     }
   }
 
-  public override string ToString() => $"Speckle Instance Wrapper [{Definition?.Name}]";
+  public override string ToString() =>
+    $"Speckle Block Instance : {(string.IsNullOrWhiteSpace(Name) ? Definition?.Name : Name)}";
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockInstanceWrapperGoo(this);
 

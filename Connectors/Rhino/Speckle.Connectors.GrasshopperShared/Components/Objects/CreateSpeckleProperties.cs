@@ -36,7 +36,13 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.item);
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "P",
+      "Properties for Speckle Objects",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess da)

@@ -56,7 +56,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  public override string ToString() => $"Speckle Block Definition Wrapper [{Name}({Objects.Count})]";
+  public override string ToString() => $"Speckle Block Definition : {Name} ({Objects.Count})";
 
   public override IGH_Goo CreateGoo() => new SpeckleBlockDefinitionWrapperGoo(this);
 
