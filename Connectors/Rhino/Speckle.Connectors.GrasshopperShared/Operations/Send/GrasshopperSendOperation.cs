@@ -92,7 +92,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
         case SpeckleObjectWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
-          Base objectBase = ConvertWrapperToBase(so);
+          Base objectBase = Unwrap(so);
           currentColl.elements.Add(objectBase);
 
           // do block instance specific stuff (if this object wrapper is actually a block instance)
@@ -129,21 +129,14 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   /// <remarks>
   /// Only intended for <see cref="SpeckleObjectWrapper"/> and <see cref="SpeckleBlockInstanceWrapper"/>!
   /// </remarks>
-  private Base ConvertWrapperToBase(SpeckleWrapper wrapper)
+  private Base Unwrap(SpeckleObjectWrapper wrapper)
   {
     Dictionary<string, object?> props = [];
-
-    var properties = wrapper switch
-    {
-      SpeckleObjectWrapper obj => obj.Properties, // handles both block instances and objects due to inheritance
-      _ => throw new ArgumentException($"Unsupported wrapper type: {wrapper.GetType().Name}")
-    };
-    properties.CastTo(ref props);
-
     Base baseObject = wrapper.Base;
-    baseObject["name"] = wrapper.Name;
-    baseObject["properties"] = props;
-    baseObject.applicationId ??= Guid.NewGuid().ToString();
+    if (wrapper.Properties.CastTo(ref props))
+    {
+      baseObject["properties"] = props; // setting props here on base since it's not auto-set, like name and appid
+    }
 
     return baseObject;
   }

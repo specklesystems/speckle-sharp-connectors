@@ -35,13 +35,13 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
     switch (source)
     {
       case SpeckleBlockInstanceWrapper sourceWrapper:
-        Value = (SpeckleBlockInstanceWrapper)sourceWrapper.DeepCopy();
+        Value = sourceWrapper;
         return true;
       case SpeckleBlockInstanceWrapperGoo wrapperGoo:
-        Value = (SpeckleBlockInstanceWrapper)wrapperGoo.Value.DeepCopy();
+        Value = wrapperGoo.Value;
         return true;
       case GH_Goo<SpeckleBlockInstanceWrapper> goo:
-        Value = (SpeckleBlockInstanceWrapper)goo.Value.DeepCopy();
+        Value = goo.Value;
         return true;
       case SpeckleObjectWrapperGoo objWrapperGoo:
         if (objWrapperGoo.Value is SpeckleBlockInstanceWrapper objWrapper)
@@ -53,7 +53,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       case GH_Goo<SpeckleObjectWrapper> goo:
         if (goo.Value is SpeckleBlockInstanceWrapper wrapper)
         {
-          Value = (SpeckleBlockInstanceWrapper)wrapper.DeepCopy();
+          Value = wrapper;
           return true;
         }
         break;

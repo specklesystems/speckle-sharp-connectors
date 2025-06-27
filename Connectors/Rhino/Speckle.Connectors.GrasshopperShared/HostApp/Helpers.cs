@@ -127,6 +127,12 @@ public static class GrasshopperHelpers
     return m;
   }
 
+  /// <summary>
+  /// Attempts to cast an IGH_Goo to a Speckle Object Wrapper
+  /// </summary>
+  /// <param name="goo"></param>
+  /// <returns>A reference to the Speckle Object Wrapper from the goo, if any</returns>
+  /// <remarks>This method **does not** deep copy the return value</remarks>
   public static SpeckleObjectWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
   {
     SpeckleBlockInstanceWrapperGoo instanceGoo = new();

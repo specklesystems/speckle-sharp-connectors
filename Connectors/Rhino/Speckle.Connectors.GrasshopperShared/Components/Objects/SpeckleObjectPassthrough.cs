@@ -78,7 +78,7 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(new SpeckleObjectParam(), "Object", "O", "Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter("Object", "O", "Speckle Object", GH_ParamAccess.item);
 
     pManager.AddGenericParameter(
       "Geometry",
@@ -231,7 +231,7 @@ public class SpeckleObjectPassthrough : GH_Component
         : result!.Path.FirstOrDefault();
 
     // set all the data
-    da.SetData(0, result);
+    da.SetData(0, result.CreateGoo());
     da.SetData(1, result.GeometryBase);
     da.SetData(2, result.Name);
     da.SetData(3, result.Properties);
