@@ -20,7 +20,8 @@ public class InstanceReferenceGeometryToSpeckleConverter : ITypedConverter<RG.In
   /// <param name="target">The instance reference geometry object to convert.</param>
   /// <returns>The converted Speckle Instance proxy.</returns>
   /// <remarks>
-  /// ⚠️ This conversion does not respect the instance definition and just creates a transform.
+  /// ⚠️ This conversion does not produce correct depth.
+  /// The def id on the instance may not be reliable for proxies.
   /// </remarks>
   public InstanceProxy Convert(RG.InstanceReferenceGeometry target)
   {
@@ -51,7 +52,7 @@ public class InstanceReferenceGeometryToSpeckleConverter : ITypedConverter<RG.In
     return new InstanceProxy()
     {
       definitionId = target.ParentIdefId.ToString(),
-      maxDepth = 0, // default value since this is to omuch to calculate and will be done in connectors
+      maxDepth = 0, // default value since this is toonmuch to calculate and will be done in connectors
       transform = m,
       units = _settingsStore.Current.SpeckleUnits
     };
