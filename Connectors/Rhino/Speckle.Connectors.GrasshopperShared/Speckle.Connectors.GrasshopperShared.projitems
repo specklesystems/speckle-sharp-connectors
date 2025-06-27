@@ -87,15 +87,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_filter.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_deconstruct.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_objects_object.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_account.png" />
   </ItemGroup>
 </Project>

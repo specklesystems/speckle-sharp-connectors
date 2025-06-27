@@ -26,7 +26,13 @@ public class AccountManagerComponent : GH_Component, IDisposable
   public GhContextMenuButton SignInButton { get; }
 
   public AccountManagerComponent()
-    : base("Speckle", "Speckle", "Account manager.", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
+    : base(
+      "Accounts",
+      "A",
+      "Sign in to a Speckle Account",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OPERATIONS
+    )
   {
     Attributes = new AccountManagerComponentAttributes(this);
     _accountManager = PriorityLoader.Container.GetRequiredService<IAccountManager>();
@@ -121,9 +127,9 @@ public class AccountManagerComponent : GH_Component, IDisposable
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     var urlIndex = pManager.AddTextParameter(
-      "Custom Server Url",
+      "Server Url",
       "Url",
-      "Optional URL that if you want to sign into self deployed Speckle server.",
+      "Optional URL for signing into a self deployed Speckle server.",
       GH_ParamAccess.item
     );
     pManager[urlIndex].Optional = true;
@@ -131,7 +137,7 @@ public class AccountManagerComponent : GH_Component, IDisposable
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddTextParameter($"Accounts", "Accounts", "List of available account", GH_ParamAccess.list);
+    pManager.AddTextParameter($"Accounts", "Accounts", "List of available accounts", GH_ParamAccess.list);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
