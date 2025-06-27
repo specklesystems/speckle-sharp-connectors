@@ -14,21 +14,28 @@ public partial class SpeckleBlockInstanceWrapperGoo
     switch (source)
     {
       case InstanceReferenceGeometry instanceRef:
-        return CreateFromInstanceReference(instanceRef);
+        SpeckleObjectWrapperGoo objGoo = new();
+        objGoo.CastFrom(instanceRef);
+        if (objGoo.Value is SpeckleBlockInstanceWrapper instanceWrapper)
+        {
+          Value = instanceWrapper;
+          return true;
+        }
+        return false;
 
       case GH_InstanceReference ghInstanceRef:
-        return ghInstanceRef.Value != null && CreateFromInstanceReference(ghInstanceRef.Value);
+        return ghInstanceRef.Value != null && CastFromModelObject(ghInstanceRef.Value);
 
       // Rhino model objects can be instances
       case ModelObject modelObject:
         if (modelObject.ObjectType == ObjectType.InstanceReference)
         {
-          SpeckleObjectWrapperGoo objGoo = new();
-          objGoo.CastFrom(modelObject); // handles all model object casting like geo conversion, model object name and props and color and mat
+          SpeckleObjectWrapperGoo modelObjGoo = new();
+          modelObjGoo.CastFrom(modelObject); // handles all model object casting like geo conversion, model object name and props and color and mat
 
-          if (objGoo.Value is SpeckleBlockInstanceWrapper instanceWrapper)
+          if (modelObjGoo.Value is SpeckleBlockInstanceWrapper modelInstanceWrapper)
           {
-            Value = instanceWrapper;
+            Value = modelInstanceWrapper;
             return true;
           }
         }
