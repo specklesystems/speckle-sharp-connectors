@@ -1,6 +1,8 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -57,6 +59,21 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
           return true;
         }
         break;
+      case IGH_GeometricGoo geometricGoo:
+        if (geometricGoo is not InstanceReferenceGeometry instance)
+        {
+          return false;
+        }
+
+        Base converted = SpeckleConversionContext.ConvertToSpeckle(instance);
+        Value = new SpeckleBlockInstanceWrapper()
+        {
+          GeometryBase = instance,
+          Base = converted,
+          Transform = instance.Xform,
+          ApplicationId = Guid.NewGuid().ToString(),
+        };
+        return true;
     }
 
     return CastFromModelObject(source);

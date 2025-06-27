@@ -124,10 +124,10 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   }
 
   /// <summary>
-  /// Converts a <see cref="SpeckleWrapper"/> to underlying Base object with dynamically attached properties.
+  /// Converts a <see cref="SpeckleObjectWrapper"/> to underlying Base object with dynamically attached properties.
   /// </summary>
   /// <remarks>
-  /// Only intended for <see cref="SpeckleObjectWrapper"/> and <see cref="SpeckleBlockInstanceWrapper"/>!
+  /// POC: if we move properties assignment to auto set the wrapped base, we can get rid of this entirely!
   /// </remarks>
   private Base Unwrap(SpeckleObjectWrapper wrapper)
   {
@@ -163,7 +163,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     {
       foreach (var definitionObject in definitionObjects)
       {
-        Base defObjectBase = ConvertWrapperToBase(definitionObject);
+        Base defObjectBase = Unwrap(definitionObject);
 
         // just add to current collection
         // TODO: where on collection?

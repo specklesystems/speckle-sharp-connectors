@@ -33,10 +33,10 @@ public class SpeckleObjectPassthrough : GH_Component
     );
     Params.Input[objIndex].Optional = true;
 
-    int geoIndex = pManager.AddGenericParameter(
+    int geoIndex = pManager.AddGeometryParameter(
       "Geometry",
       "G",
-      "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
+      "Geometry of the Speckle Object.",
       GH_ParamAccess.item
     );
     Params.Input[geoIndex].Optional = true;
@@ -80,7 +80,7 @@ public class SpeckleObjectPassthrough : GH_Component
   {
     pManager.AddGenericParameter("Object", "O", "Speckle Object", GH_ParamAccess.item);
 
-    pManager.AddGenericParameter(
+    pManager.AddGeometryParameter(
       "Geometry",
       "G",
       "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
@@ -135,15 +135,7 @@ public class SpeckleObjectPassthrough : GH_Component
     }
 
     IGH_GeometricGoo? inputGeometry = null;
-    try
-    {
-      da.GetData(1, ref inputGeometry);
-    }
-    catch (MissingMethodException)
-    {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Invalid object type found in input geometry");
-      return;
-    }
+    da.GetData(1, ref inputGeometry);
 
     if (result == null && inputGeometry == null)
     {
@@ -168,19 +160,34 @@ public class SpeckleObjectPassthrough : GH_Component
     bool mutated = false;
 
     // process geometry
+    // deep copy so we don't mutate the input geo which may be speckle objects
     if (inputGeometry != null)
     {
       if (inputGeometry.ToSpeckleObjectWrapper() is SpeckleObjectWrapper geoWrapper)
       {
+        SpeckleObjectWrapper mutatingGeo = geoWrapper.DeepCopy();
         if (result is null)
         {
-          result = geoWrapper;
+          result = mutatingGeo;
         }
         else
         {
-          result.Base = geoWrapper.Base;
-          result.GeometryBase = geoWrapper.GeometryBase;
-          result.Base[Constants.NAME_PROP] = result.Name;
+          // we need to switch to the actual object wrapper type of the incoming geo if this is a mutation on the object
+          if (mutatingGeo is SpeckleBlockInstanceWrapper mutatingInstance && result is not SpeckleBlockInstanceWrapper)
+          {
+            MatchNonGeometryProps(mutatingInstance, result);
+            result = mutatingInstance;
+          }
+          else if (mutatingGeo is not SpeckleBlockInstanceWrapper && result is SpeckleBlockInstanceWrapper)
+          {
+            MatchNonGeometryProps(mutatingGeo, result);
+            result = mutatingGeo;
+          }
+
+          mutatingGeo.Base[Constants.NAME_PROP] = result.Name; // assign these before assigning base since otherwise wrapper name and app will reset
+          mutatingGeo.Base.applicationId = result.ApplicationId; // assign these before assigning base since otherwise wrapper name and app will reset
+          result.Base = mutatingGeo.Base;
+          result.GeometryBase = mutatingGeo.GeometryBase;
         }
 
         mutated = true;
@@ -238,5 +245,17 @@ public class SpeckleObjectPassthrough : GH_Component
     da.SetData(4, result.Color);
     da.SetData(5, result.Material);
     da.SetData(6, path);
+  }
+
+  // keeps the geometry and wrapped base the same while assigning all other props from the inut wrapper
+  private void MatchNonGeometryProps(SpeckleObjectWrapper wrapper, SpeckleObjectWrapper wrapperToMatch)
+  {
+    wrapper.Name = wrapperToMatch.Name;
+    wrapper.ApplicationId = wrapperToMatch.ApplicationId;
+    wrapper.Properties = wrapperToMatch.Properties;
+    wrapper.Parent = wrapperToMatch.Parent;
+    wrapper.Path = wrapperToMatch.Path;
+    wrapper.Color = wrapperToMatch.Color;
+    wrapper.Material = wrapperToMatch.Material;
   }
 }
