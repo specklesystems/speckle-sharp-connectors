@@ -33,7 +33,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public override IGH_Goo Duplicate() => new SpeckleObjectWrapperGoo(Value.DeepCopy());
 
   public override string ToString() =>
-    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}]";
+    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
   /// <summary>
   /// Casts from Speckle objects, geometry base, and model objects.

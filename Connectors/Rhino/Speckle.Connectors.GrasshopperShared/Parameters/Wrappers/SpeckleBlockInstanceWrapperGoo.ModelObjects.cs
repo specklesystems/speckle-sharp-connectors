@@ -4,9 +4,6 @@ using Grasshopper.Rhinoceros.Model;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Sdk.Common;
-using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -22,10 +19,21 @@ public partial class SpeckleBlockInstanceWrapperGoo
       case GH_InstanceReference ghInstanceRef:
         return ghInstanceRef.Value != null && CreateFromInstanceReference(ghInstanceRef.Value);
 
-      // When implementing nested blocks support, discovered that nested blocks coming from Rhino arrive as ModelObjects
-      // containing InstanceReferenceGeometry.
+      // Rhino model objects can be instances
       case ModelObject modelObject:
-        return CreateFromModelObject(modelObject);
+        if (modelObject.ObjectType == ObjectType.InstanceReference)
+        {
+          SpeckleObjectWrapperGoo objGoo = new();
+          objGoo.CastFrom(modelObject); // handles all model object casting like geo conversion, model object name and props and color and mat
+
+          if (objGoo.Value is SpeckleBlockInstanceWrapper instanceWrapper)
+          {
+            Value = instanceWrapper;
+            return true;
+          }
+        }
+
+        return false;
 
       default:
         return false;
@@ -138,46 +146,6 @@ public partial class SpeckleBlockInstanceWrapperGoo
     return modelDef;
   }
 
-  private bool CreateFromInstanceReference(InstanceReferenceGeometry instanceRef, string? appId = null)
-  {
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.None;
-    var definitionId = instanceRef.ParentIdefId;
-
-    // Try to preserve existing definition first (for round-trip scenarios)
-    SpeckleBlockDefinitionWrapper? definition = Value?.Definition;
-
-    // Look in document if we don't have an existing definition
-    if (definition == null)
-    {
-      var doc = RhinoDoc.ActiveDoc;
-      var instanceDef = doc?.InstanceDefinitions.FindId(definitionId);
-      if (instanceDef != null)
-      {
-        var defGoo = new SpeckleBlockDefinitionWrapperGoo();
-        if (defGoo.CastFrom(instanceDef))
-        {
-          definition = defGoo.Value;
-        }
-      }
-    }
-
-    Value = new SpeckleBlockInstanceWrapper()
-    {
-      Base = new InstanceProxy()
-      {
-        definitionId = definitionId.ToString(),
-        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-        transform = GrasshopperHelpers.TransformToMatrix(instanceRef.Xform, units),
-        units = units
-      },
-      ApplicationId = appId,
-      Transform = instanceRef.Xform,
-      Definition = definition, // May be null in pure Grasshopper workflows
-      GeometryBase = new InstanceReferenceGeometry(definitionId, instanceRef.Xform)
-    };
-    return true;
-  }
-
   private bool CreateInstanceReferenceGeometry<T>(ref T target)
   {
     // Only works if the block definition exists in the Rhino document
@@ -198,32 +166,6 @@ public partial class SpeckleBlockInstanceWrapperGoo
     }
 
     return false;
-  }
-
-  /// <summary>
-  /// Nested blocks from Rhino come wrapped in ModelObject containers. ModelObject contains InstanceReferenceGeometry +
-  /// metadata (ID, layer, materials, etc.). We need to extract the InstanceReferenceGeometry from the ModelObject
-  /// and process it with existing logic.
-  /// </summary>
-  private bool CreateFromModelObject(ModelObject modelObject)
-  {
-    // GUARD: Only handle InstanceReference ModelObjects
-    // (SpeckleObjectWrapper handles all other geometry types)
-    if (modelObject.ObjectType != ObjectType.InstanceReference)
-    {
-      return false;
-    }
-
-    // EXTRACT: Get the InstanceReferenceGeometry from ModelObject container
-    // Same pattern as SpeckleObjectWrapper: ModelObject → GeometryBase extraction
-    // Inline helper to keep geometry extraction logic contained within this method
-    GeometryBase? geometryBase = RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
-    if (geometryBase is not InstanceReferenceGeometry instanceRefGeo)
-    {
-      return false;
-    }
-
-    return CreateFromInstanceReference(instanceRefGeo, modelObject.Id?.ToString());
   }
 }
 #endif

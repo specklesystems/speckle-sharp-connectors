@@ -1,11 +1,11 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Rhino;
-using Rhino.Geometry;
 using Grasshopper.Rhinoceros.Model;
-using Rhino.DocObjects;
 using Grasshopper.Rhinoceros.Render;
+using Rhino;
+using Rhino.DocObjects;
+using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 
@@ -36,8 +36,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             : null;
 
           // update the converted Base with props as well
-          modelConverted.applicationId = modelObject.Id?.ToString();
-          modelConverted[Constants.NAME_PROP] = modelObject.Name.ToString();
           Dictionary<string, object?> propertyDict = new();
           foreach (var entry in modelObject.UserText)
           {
@@ -55,19 +53,56 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             materialWrapper.CastFrom(renderMat);
           }
 
-          SpeckleObjectWrapper so =
-            new()
+          // get the definition if this is an instance
+          // and set the value as the instance wrapper
+          if (modelGB is InstanceReferenceGeometry instance)
+          {
+            // Try to preserve existing definition first (for round-trip scenarios)
+            SpeckleBlockDefinitionWrapper? definition = (Value as SpeckleBlockInstanceWrapper)?.Definition;
+
+            // Look in document if we don't have an existing definition
+            if (definition == null)
             {
-              GeometryBase = modelGB,
+              var definitionId = instance.ParentIdefId;
+              var instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
+              if (instanceDef != null)
+              {
+                var defGoo = new SpeckleBlockDefinitionWrapperGoo();
+                if (defGoo.CastFrom(instanceDef))
+                {
+                  definition = defGoo.Value;
+                }
+              }
+            }
+
+            Value = new SpeckleBlockInstanceWrapper()
+            {
+              GeometryBase = instance,
               Base = modelConverted,
+              Transform = instance.Xform,
+              Definition = definition, // May be null in pure Grasshopper workflows
               Parent = collWrapper,
               Name = modelObject.Name.ToString(),
               Color = color,
               Material = materialWrapper?.Value,
-              Properties = propertyGroup
+              Properties = propertyGroup,
+              ApplicationId = modelObject.Id?.ToString()
             };
 
-          Value = so;
+            return true;
+          }
+
+          Value = new SpeckleObjectWrapper()
+          {
+            GeometryBase = modelGB,
+            Base = modelConverted,
+            Parent = collWrapper,
+            Name = modelObject.Name.ToString(),
+            Color = color,
+            Material = materialWrapper?.Value,
+            Properties = propertyGroup,
+            ApplicationId = modelObject.Id?.ToString()
+          };
           return true;
         }
 
