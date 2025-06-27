@@ -170,9 +170,29 @@ public class SpeckleObjectPassthrough : GH_Component
     // process geometry
     if (inputGeometry != null)
     {
-      result = inputGeometry.ToSpeckleObjectWrapper();
-      result.Base[Constants.NAME_PROP] = result.Name;
-      mutated = true;
+      if (inputGeometry.ToSpeckleObjectWrapper() is SpeckleObjectWrapper geoWrapper)
+      {
+        if (result is null)
+        {
+          result = geoWrapper;
+        }
+        else
+        {
+          result.Base = geoWrapper.Base;
+          result.GeometryBase = geoWrapper.GeometryBase;
+          result.Base[Constants.NAME_PROP] = result.Name;
+        }
+
+        mutated = true;
+      }
+      else
+      {
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          $"{inputGeometry.TypeName} is not a valid type for Speckle Objects."
+        );
+        return;
+      }
     }
 
     // process name

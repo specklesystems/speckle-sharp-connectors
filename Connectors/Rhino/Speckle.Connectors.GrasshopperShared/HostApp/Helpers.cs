@@ -9,7 +9,6 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
@@ -147,28 +146,6 @@ public static class GrasshopperHelpers
         return null;
       }
     }
-  }
-
-  public static SpeckleObjectWrapper ToSpeckleObjectWrapper(this IGH_GeometricGoo geoGoo)
-  {
-    GeometryBase gb = geoGoo.ToGeometryBase();
-    Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
-    string appId = Guid.NewGuid().ToString();
-
-    return gb is InstanceReferenceGeometry instance
-      ? new SpeckleBlockInstanceWrapper()
-      {
-        GeometryBase = gb,
-        Base = converted,
-        Transform = instance.Xform,
-        ApplicationId = appId,
-      }
-      : new SpeckleObjectWrapper()
-      {
-        GeometryBase = gb,
-        Base = converted,
-        ApplicationId = appId
-      };
   }
 
   /// <summary>
