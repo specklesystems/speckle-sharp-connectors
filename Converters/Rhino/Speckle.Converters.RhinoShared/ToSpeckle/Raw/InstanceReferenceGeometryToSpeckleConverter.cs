@@ -52,7 +52,7 @@ public class InstanceReferenceGeometryToSpeckleConverter : ITypedConverter<RG.In
     return new InstanceProxy()
     {
       definitionId = target.ParentIdefId.ToString(),
-      maxDepth = 0, // default value since this is toonmuch to calculate and will be done in connectors
+      maxDepth = 0, // default value since this is too much to calculate and will be done in connectors
       transform = m,
       units = _settingsStore.Current.SpeckleUnits
     };
