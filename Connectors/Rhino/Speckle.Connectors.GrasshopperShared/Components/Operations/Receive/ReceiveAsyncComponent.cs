@@ -442,9 +442,13 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       materialUnpacker
     );
 
+    var definitionObjectIds = unpackedRoot.DefinitionProxies.GetDefinitionObjectIds();
+
     foreach (var atomicContext in atomicObjects)
     {
-      mapHandler.ConvertAtomicObject(atomicContext);
+      var objId = atomicContext.Current.applicationId;
+      bool isDefinitionObject = objId != null && definitionObjectIds.Contains(objId);
+      mapHandler.ConvertAtomicObject(atomicContext, isDefinitionObject);
     }
 
     // process block instances using converted atomic objects

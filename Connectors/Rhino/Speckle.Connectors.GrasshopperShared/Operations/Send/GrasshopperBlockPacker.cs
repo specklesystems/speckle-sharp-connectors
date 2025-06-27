@@ -74,6 +74,8 @@ internal sealed class GrasshopperBlockPacker
 
     // Process objects recursively
     var objectsToAdd = new List<SpeckleObjectWrapper>();
+    var currentObjectIds = new List<string>(); // Track current object IDs for proxy update
+
     foreach (var obj in definition.Objects)
     {
       if (obj.ApplicationId == null) // we should be loud about this. If gone through all casting etc. this should be complete!
@@ -84,6 +86,7 @@ internal sealed class GrasshopperBlockPacker
       }
 
       objectsToAdd.Add(obj);
+      currentObjectIds.Add(obj.ApplicationId); // Collect current ID
       _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
 
       if (obj is SpeckleBlockInstanceWrapper nestedInstance)
@@ -97,6 +100,7 @@ internal sealed class GrasshopperBlockPacker
     }
 
     // Add definition to InstanceObjectsManager
+    definition.InstanceDefinitionProxy.objects = currentObjectIds;
     definition.InstanceDefinitionProxy.maxDepth = depth;
     _instanceObjectsManager.AddDefinitionProxy(definitionId, definition.InstanceDefinitionProxy);
     InstanceDefinitionProxies[definitionId] = definition.InstanceDefinitionProxy;
