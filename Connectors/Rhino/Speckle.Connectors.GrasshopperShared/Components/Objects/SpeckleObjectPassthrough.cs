@@ -129,7 +129,7 @@ public class SpeckleObjectPassthrough : GH_Component
       }
       else
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Unsupported object type: {inputObject?.TypeName}");
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Unsupported object type: {inputObject?.TypeName}");
         return;
       }
     }

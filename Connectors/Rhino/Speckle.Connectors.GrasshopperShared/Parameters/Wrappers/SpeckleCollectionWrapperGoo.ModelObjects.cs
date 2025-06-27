@@ -3,6 +3,7 @@ using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros;
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
+using Rhino.DocObjects;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -55,42 +56,70 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
 
   private bool CastFromModelLayer(object source)
   {
-    if (source is ModelLayer modelLayer)
+    switch (source)
     {
-      Collection modelCollection =
-        new()
+      case ModelLayer modelLayer:
+        Collection modelCollection =
+          new()
+          {
+            name = modelLayer.Name,
+            elements = new(),
+            applicationId = modelLayer.Id?.ToString()
+          };
+
+        // get color and material
+        Color? layerColor = null;
+        if (modelLayer.DisplayColor is ModelColor color)
         {
-          name = modelLayer.Name,
-          elements = new(),
-          applicationId = modelLayer.Id?.ToString()
+          layerColor = Color.FromArgb(color.ToArgb());
+        }
+
+        SpeckleMaterialWrapper? layerMaterial = null;
+        if (modelLayer.Material?.Id is Guid id)
+        {
+          var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
+          SpeckleMaterialWrapperGoo materialGoo = new();
+          materialGoo.CastFrom(mat);
+          layerMaterial = materialGoo.Value;
+        }
+
+        Value = new SpeckleCollectionWrapper()
+        {
+          Base = modelCollection,
+          Name = modelLayer.Name,
+          Color = layerColor,
+          Material = layerMaterial,
+          Path = GetModelLayerPath(modelLayer)
         };
 
-      // get color and material
-      Color? layerColor = null;
-      if (modelLayer.DisplayColor is ModelColor color)
-      {
-        layerColor = Color.FromArgb(color.ToArgb());
-      }
+        return true;
+      case Rhino.DocObjects.Layer layer:
+        Collection layerCollection =
+          new()
+          {
+            name = layer.Name,
+            elements = new(),
+            applicationId = layer.Id.ToString()
+          };
 
-      SpeckleMaterialWrapper? layerMaterial = null;
-      if (modelLayer.Material?.Id is Guid id)
-      {
-        var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
-        SpeckleMaterialWrapperGoo materialGoo = new();
-        materialGoo.CastFrom(mat);
-        layerMaterial = materialGoo.Value;
-      }
+        // get color and material
+        SpeckleMaterialWrapperGoo matGoo = new();
+        matGoo.CastFrom(layer.RenderMaterial);
 
-      Value = new SpeckleCollectionWrapper()
-      {
-        Base = modelCollection,
-        Name = modelLayer.Name,
-        Color = layerColor,
-        Material = layerMaterial,
-        Path = GetModelLayerPath(modelLayer)
-      };
+        // get path
+        List<string> path = layer
+          .FullPath.Split(new[] { ModelComponent.NamePathSeparator }, StringSplitOptions.None)
+          .ToList();
 
-      return true;
+        Value = new SpeckleCollectionWrapper()
+        {
+          Base = layerCollection,
+          Name = layer.Name,
+          Color = Color.FromArgb(layer.Color.ToArgb()),
+          Material = matGoo.Value,
+          Path = path
+        };
+        return true;
     }
 
     return false;

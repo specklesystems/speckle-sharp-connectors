@@ -132,7 +132,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
     // set outputs
     da.SetData(0, result);
-    da.SetDataList(1, result.Value.Objects);
+    da.SetDataList(1, result.Value.Objects.Select(o => o.CreateGoo()));
     da.SetData(2, result.Value.Name);
   }
 }

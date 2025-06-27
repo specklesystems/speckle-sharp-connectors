@@ -5,6 +5,7 @@ using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Params;
 using Rhino;
 using Rhino.DocObjects;
+using System.Collections.Specialized;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -30,6 +31,17 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
         }
 
         Value = dictionary;
+        return true;
+
+      case NameValueCollection nvCollection:
+        Dictionary<string, ISpecklePropertyGoo> dict = new();
+        foreach (string s in nvCollection)
+        {
+          SpecklePropertyGoo value = new() { Value = nvCollection.GetValues(s) };
+          dict.Add(s, value);
+        }
+
+        Value = dict;
         return true;
 
       default:
