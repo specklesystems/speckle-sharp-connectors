@@ -215,12 +215,13 @@ public static class GrasshopperHelpers
     }
     return topology;
   }
-  
+
   /// <summary>
   /// Gets all object IDs that are contained within block definitions.
   /// </summary>
   public static HashSet<string> GetDefinitionObjectIds(
-    this IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies)
+    this IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
+  )
   {
     if (definitionProxies == null)
     {
