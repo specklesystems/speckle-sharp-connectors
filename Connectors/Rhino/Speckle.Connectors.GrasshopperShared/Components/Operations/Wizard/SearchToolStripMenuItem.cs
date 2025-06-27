@@ -121,12 +121,6 @@ public class SearchToolStripMenuItem
 
   private void RegisterEvents()
   {
-    // Resets the search filter
-    // ParentDropDown.Opening += async (sender, args) =>
-    // {
-    //   await _onSearchTextChanged.Invoke("");
-    // };
-
     ParentDropDown.ItemClicked += (sender, args) =>
     {
       // we are not closing the dropdown only if user clicked the first item of the dropdown which is TextBox that we use for search
@@ -138,8 +132,14 @@ public class SearchToolStripMenuItem
       ParentDropDown.Close();
     };
 
-    ParentDropDown.Closed += (sender, args) =>
+    // Resets the list with empty search texts, otherwise on next menu pop up we end up with latest state
+    ParentDropDown.Closed += async (sender, args) =>
     {
+      // clear list only if search text is not null
+      if (SearchText != null)
+      {
+        await _onSearchTextChanged.Invoke("");
+      }
       SearchText = null;
     };
   }
