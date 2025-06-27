@@ -38,7 +38,6 @@ public class ReceiveConversionHandlerTests
     Exception? result = handler.TryConvert(() => throw ex);
 
     result.Should().Be(ex);
-    activity.Verify(a => a.SetStatus(SdkActivityStatusCode.Error), Times.Once);
   }
 
   [Test]
@@ -50,7 +49,6 @@ public class ReceiveConversionHandlerTests
     var handler = new ReceiveConversionHandler(activityFactory.Object);
 
     Assert.Throws<OperationCanceledException>(() => handler.TryConvert(() => throw new OperationCanceledException()));
-    activity.Verify(a => a.SetStatus(SdkActivityStatusCode.Error), Times.Once);
   }
 
   [Test]

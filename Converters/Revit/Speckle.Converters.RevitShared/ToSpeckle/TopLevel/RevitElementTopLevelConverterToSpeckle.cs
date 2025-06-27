@@ -98,7 +98,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     List<Base> displayValue = _displayValueExtractor.GetDisplayValue(target);
 
     // get level
-    string? level = _levelExtractor.GetLevel(target);
+    string? level = _levelExtractor.GetLevelName(target);
 
     // get children elements
     // this is a bespoke method by class type.

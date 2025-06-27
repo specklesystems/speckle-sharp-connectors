@@ -82,7 +82,7 @@ public class PropertySetExtractor
       propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
 
       // get all property values in the propertyset
-      Dictionary<string, object?> properties = new();
+      Dictionary<string, object?> propertySetData = new();
       foreach (AAECPDB.PropertySetData data in propertySet.PropertySetData)
       {
         string dataName =
@@ -97,19 +97,10 @@ public class PropertySetExtractor
         PropertyHandler propHandler = new();
         propHandler.TryAddToDictionary(propertyValueDict, "units", () => data.UnitType.GetTypeDisplayName(true)); // units not always applicable to def, will throw
 
-        properties[dataName] = propertyValueDict;
+        propertySetData[dataName] = propertyValueDict;
       }
 
-      // add property set to dict
-      Dictionary<string, object?> propertySetDict =
-        new()
-        {
-          ["name"] = name,
-          ["properties"] = properties,
-          ["definitionName"] = name
-        };
-
-      return (name, propertySetDict);
+      return (name, propertySetData);
     }
     catch (Exception e) when (!e.IsFatal())
     {
