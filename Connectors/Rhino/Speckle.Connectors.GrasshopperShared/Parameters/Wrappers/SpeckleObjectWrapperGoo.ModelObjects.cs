@@ -22,6 +22,92 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     switch (source)
     {
+      case RhinoObject rhinoObject:
+        GeometryBase gb = rhinoObject.Geometry;
+        Base gbConverted = SpeckleConversionContext.ConvertToSpeckle(gb);
+
+        // get the object layer
+        /*
+        SpeckleCollectionWrapperGoo collWrapperGoo = new();
+        SpeckleCollectionWrapper? collWrapper = null;
+        if (RhinoDoc.ActiveDoc?.Layers[rhinoObject.Attributes.LayerIndex] is Layer layer)
+        {
+          collWrapper = collWrapperGoo.CastFrom(layer)
+          ? collWrapperGoo.Value
+          : null;
+        }
+        
+
+        // update the converted Base with props as well
+        Dictionary<string, object?> props = new();
+        foreach (var entry in rhinoObject.Attributes.GetUserStrings())
+        {
+          props.Add(entry.Key, entry.Value);
+        }
+        gbConverted[Constants.PROPERTIES_PROP] = props;
+        */
+
+        // get the object color and material
+        Color? c = GetColorFromModelObject(rhinoObject);
+        SpeckleMaterialWrapperGoo? mat = null;
+        if (GetMaterialFromModelObject(rhinoObject) is Rhino.Render.RenderMaterial m)
+        {
+          mat = new();
+          mat.CastFrom(m);
+        }
+
+        // get the definition if this is an instance
+        // and set the value as the instance wrapper
+        if (gb is InstanceReferenceGeometry inst)
+        {
+          // Try to preserve existing definition first (for round-trip scenarios)
+          SpeckleBlockDefinitionWrapper? definition = (Value as SpeckleBlockInstanceWrapper)?.Definition;
+
+          // Look in document if we don't have an existing definition
+          if (definition == null)
+          {
+            var definitionId = inst.ParentIdefId;
+            InstanceDefinition? instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
+            if (instanceDef != null)
+            {
+              var defGoo = new SpeckleBlockDefinitionWrapperGoo();
+              if (defGoo.CastFrom(instanceDef))
+              {
+                definition = defGoo.Value;
+              }
+            }
+          }
+
+          Value = new SpeckleBlockInstanceWrapper()
+          {
+            GeometryBase = inst,
+            Base = gbConverted,
+            Transform = inst.Xform,
+            Definition = definition, // May be null in pure Grasshopper workflows
+            Parent = null,
+            Name = rhinoObject.Name,
+            Color = c,
+            Material = mat?.Value,
+            Properties = new(),
+            ApplicationId = rhinoObject.Id.ToString()
+          };
+
+          return true;
+        }
+
+        Value = new SpeckleObjectWrapper()
+        {
+          GeometryBase = gb,
+          Base = gbConverted,
+          Parent = null,
+          Name = rhinoObject.Name,
+          Color = c,
+          Material = mat?.Value,
+          Properties = new(),
+          ApplicationId = rhinoObject.Id.ToString()
+        };
+        return true;
+
       case ModelObject modelObject:
         if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
         {
@@ -64,7 +150,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             if (definition == null)
             {
               var definitionId = instance.ParentIdefId;
-              var instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
+              InstanceDefinition? instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
               if (instanceDef != null)
               {
                 var defGoo = new SpeckleBlockDefinitionWrapperGoo();
