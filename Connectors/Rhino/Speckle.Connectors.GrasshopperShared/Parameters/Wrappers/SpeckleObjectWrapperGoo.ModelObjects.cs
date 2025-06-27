@@ -19,7 +19,10 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   }
 
   // Gross AF. **WHY** are guids not preserved when constructing model objects from rhinoobjects, for the love of rhino dev gods
+  // disabling cyclomatic complexity for poc
+#pragma warning disable CA1502
   private bool CastFromModelObject(object source)
+#pragma warning restore CA1502
   {
     switch (source)
     {
