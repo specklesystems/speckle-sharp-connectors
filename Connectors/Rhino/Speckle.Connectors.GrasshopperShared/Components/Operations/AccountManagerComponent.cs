@@ -76,7 +76,6 @@ public class AccountManagerComponent : GH_Component, IDisposable
   {
     var previousAccountCount = Accounts?.Count ?? 0;
     Accounts = _accountManager.GetAccounts().ToList();
-    Debug.WriteLine($"Account count: {Accounts.Count}");
     return previousAccountCount < Accounts.Count;
   }
 
