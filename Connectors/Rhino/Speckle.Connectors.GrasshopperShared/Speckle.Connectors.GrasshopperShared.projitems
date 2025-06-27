@@ -27,6 +27,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleObjectPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponentAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperReceiveInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\GrasshopperSendInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\ModelMenuHandler.cs" />
