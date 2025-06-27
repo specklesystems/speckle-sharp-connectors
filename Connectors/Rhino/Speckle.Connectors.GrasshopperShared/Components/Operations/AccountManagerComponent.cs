@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
@@ -19,6 +20,8 @@ public class AccountManagerComponent : GH_Component, IDisposable
   private string? CustomUrlInput { get; set; }
   private readonly IAccountManager _accountManager;
   public override Guid ComponentGuid => new("c8ede281-acdf-49bf-8611-e9579be1bd41");
+
+  protected override Bitmap Icon => Resources.speckle_operations_account;
 
   public GhContextMenuButton SignInButton { get; }
 
@@ -101,7 +104,7 @@ public class AccountManagerComponent : GH_Component, IDisposable
         // Optionally cancel timeout timer
         _timeoutTimer?.Stop();
 
-        this.OnPingDocument()
+        OnPingDocument()
           ?.ScheduleSolution(
             100,
             doc =>
@@ -171,7 +174,7 @@ public class AccountManagerComponent : GH_Component, IDisposable
 
   public void Dispose()
   {
-    this.Dispose(true);
+    Dispose(true);
     GC.SuppressFinalize(this);
   }
 }

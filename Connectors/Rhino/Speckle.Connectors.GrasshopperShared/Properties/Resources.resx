@@ -151,6 +151,9 @@
   <data name="speckle_objects_query" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_objects_query.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="speckle_operations_account" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\speckle_operations_account.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="speckle_operations_load" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\speckle_operations_load.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
