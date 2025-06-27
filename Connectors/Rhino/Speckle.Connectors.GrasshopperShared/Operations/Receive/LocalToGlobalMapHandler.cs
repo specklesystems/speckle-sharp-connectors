@@ -40,11 +40,12 @@ internal sealed class LocalToGlobalMapHandler
   }
 
   /// <summary>
-  /// Converts atomic object.
+  /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
   /// </summary>
-  /// <remarks>
-  /// Definition objects are converted and added to ConvertedObjectsMap but not to collection hierarchy.
-  /// </remarks>
+  /// <param name="isDefinitionObject">
+  /// If true, object is added to ConvertedObjectsMap but excluded from collection hierarchy
+  /// to prevent duplication (definition objects appear both standalone and within block definitions).
+  /// </param>
   public void ConvertAtomicObject(TraversalContext atomicContext, bool isDefinitionObject = false)
   {
     var obj = atomicContext.Current;
@@ -66,7 +67,7 @@ internal sealed class LocalToGlobalMapHandler
 
       var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
       SpeckleCollectionWrapper? objectCollection = null;
-      
+
       if (!isDefinitionObject)
       {
         objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
@@ -119,7 +120,7 @@ internal sealed class LocalToGlobalMapHandler
 
         // Always add to ConvertedObjectsMap (regardless of definition or atomic objects). Blocks need for unpacking
         ConvertedObjectsMap[objId] = wrapper;
-        
+
         // Only add atomic objects to collection hierarchy if it's not a definition object
         if (!isDefinitionObject && objectCollection != null)
         {
