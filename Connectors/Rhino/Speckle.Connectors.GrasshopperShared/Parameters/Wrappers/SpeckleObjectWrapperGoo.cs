@@ -50,26 +50,11 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       case SpeckleObjectWrapperGoo wrapperGoo:
         Value = wrapperGoo.Value.DeepCopy();
         return true;
-      case GH_Goo<SpeckleObjectWrapper> goo:
-        Value = goo.Value.DeepCopy();
-        return true;
       case SpeckleBlockInstanceWrapperGoo instanceWrapperGoo:
         Value = instanceWrapperGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
-        GeometryBase gooGB = geometricGoo.ToGeometryBase();
-        return CastFrom(gooGB);
-      case GeometryBase geometryBase:
-        var gooConverted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
-        Value = new SpeckleObjectWrapper()
-        {
-          GeometryBase = geometryBase,
-          Base = gooConverted,
-          Name = "",
-          Color = null,
-          Material = null,
-          ApplicationId = Guid.NewGuid().ToString()
-        };
+        Value = geometricGoo.ToSpeckleObjectWrapper();
         return true;
     }
 

@@ -128,19 +128,47 @@ public static class GrasshopperHelpers
     return m;
   }
 
+  public static SpeckleObjectWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
+  {
+    SpeckleBlockInstanceWrapperGoo instanceGoo = new();
+    if (instanceGoo.CastFrom(goo))
+    {
+      return instanceGoo.Value;
+    }
+    else
+    {
+      SpeckleObjectWrapperGoo objGoo = new();
+      if (objGoo.CastFrom(goo))
+      {
+        return objGoo.Value;
+      }
+      else
+      {
+        return null;
+      }
+    }
+  }
+
   public static SpeckleObjectWrapper ToSpeckleObjectWrapper(this IGH_GeometricGoo geoGoo)
   {
     GeometryBase gb = geoGoo.ToGeometryBase();
     Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
+    string appId = Guid.NewGuid().ToString();
 
     return gb is InstanceReferenceGeometry instance
       ? new SpeckleBlockInstanceWrapper()
       {
         GeometryBase = gb,
         Base = converted,
-        Transform = instance.Xform
+        Transform = instance.Xform,
+        ApplicationId = appId,
       }
-      : new SpeckleObjectWrapper() { GeometryBase = gb, Base = converted };
+      : new SpeckleObjectWrapper()
+      {
+        GeometryBase = gb,
+        Base = converted,
+        ApplicationId = appId
+      };
   }
 
   /// <summary>

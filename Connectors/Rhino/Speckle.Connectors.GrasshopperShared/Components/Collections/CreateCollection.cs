@@ -158,56 +158,17 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
-      switch (obj)
+      // deep copy to avoid mutations
+      if (obj?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper objWrapper)
       {
-        // block definitions not allowed in collections (for now)
-        case SpeckleBlockDefinitionWrapperGoo:
-        case SpeckleMaterialWrapperGoo:
-        case SpecklePropertyGroupGoo:
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
-          continue;
-
-        // handle block instances directly
-        case SpeckleBlockInstanceWrapperGoo instanceGoo:
-          var instanceWrapper = instanceGoo.Value.DeepCopy();
-          instanceWrapper.Path = childPath;
-          instanceWrapper.Parent = parentCollection;
-          parentCollection.Elements.Add(instanceWrapper);
-          continue;
-
-        // handle object wrappers directly
-        case SpeckleObjectWrapperGoo objectGoo:
-          var objectWrapper = objectGoo.Value.DeepCopy();
-          objectWrapper.Path = childPath;
-          objectWrapper.Parent = parentCollection;
-          parentCollection.Elements.Add(objectWrapper);
-          continue;
-
-        // for other types, try casting to objects (geometry, etc.) or instances
-        // POC: this looks like duplicate code!! Should cleanup later to handle InstanceWrapper : ObjectWrapper inheritance better
-        default:
-          var wrapperGoo = new SpeckleObjectWrapperGoo();
-          if (wrapperGoo.CastFrom(obj))
-          {
-            wrapperGoo.Value.Path = childPath;
-            wrapperGoo.Value.Parent = parentCollection;
-            parentCollection.Elements.Add(wrapperGoo.Value);
-          }
-          else
-          {
-            var instanceGoo = new SpeckleBlockInstanceWrapperGoo();
-            if (instanceGoo.CastFrom(obj))
-            {
-              instanceGoo.Value.Path = childPath;
-              instanceGoo.Value.Parent = parentCollection;
-              parentCollection.Elements.Add(instanceGoo.Value);
-            }
-            else
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"{obj.GetType().Name} cannot be added to collections.");
-            }
-          }
-          break;
+        SpeckleObjectWrapper wrapper = objWrapper.DeepCopy();
+        wrapper.Path = childPath;
+        wrapper.Parent = parentCollection;
+        parentCollection.Elements.Add(wrapper);
+      }
+      else
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{obj?.GetType().Name} type cannot be added to collections.");
       }
     }
   }

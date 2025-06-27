@@ -50,9 +50,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       case SpeckleBlockDefinitionWrapperGoo wrapperGoo:
         Value = wrapperGoo.Value.DeepCopy();
         return true;
-      case GH_Goo<SpeckleBlockDefinitionWrapper> goo:
-        Value = goo.Value.DeepCopy();
-        return true;
     }
 
     // Rhino 8 Model Objects

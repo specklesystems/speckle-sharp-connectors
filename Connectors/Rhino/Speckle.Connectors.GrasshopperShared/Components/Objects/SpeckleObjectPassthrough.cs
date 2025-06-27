@@ -25,11 +25,10 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    int objIndex = pManager.AddParameter(
-      new SpeckleObjectParam(),
+    int objIndex = pManager.AddGenericParameter(
       "Object",
       "O",
-      "Input Object. Speckle Objects, Model Objects, and geometry are accepted.",
+      "Input Object. Speckle Objects and Model Objects are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[objIndex].Optional = true;
@@ -118,13 +117,35 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    SpeckleObjectWrapperGoo? inputObject = null;
-    da.GetData(0, ref inputObject);
+    // process the object
+    // deep copy so we don't mutate the object
+    IGH_Goo? inputObject = null;
+    SpeckleObjectWrapper? result = null;
+    if (da.GetData(0, ref inputObject))
+    {
+      if (inputObject?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
+      {
+        result = gooWrapper.DeepCopy();
+      }
+      else
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Unsupported object type: {inputObject?.TypeName}");
+        return;
+      }
+    }
 
     IGH_GeometricGoo? inputGeometry = null;
-    da.GetData(1, ref inputGeometry);
+    try
+    {
+      da.GetData(1, ref inputGeometry);
+    }
+    catch (MissingMethodException)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Invalid object type found in input geometry");
+      return;
+    }
 
-    if (inputObject == null && inputGeometry == null)
+    if (result == null && inputGeometry == null)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in an Object or Geometry.");
       return;
@@ -146,62 +167,56 @@ public class SpeckleObjectPassthrough : GH_Component
     // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
     bool mutated = false;
 
-    // process the object
-    // deep copy so we don't mutate the object
-    SpeckleObjectWrapperGoo result = inputObject != null ? new(inputObject.Value.DeepCopy()) : new();
-
     // process geometry
     if (inputGeometry != null)
     {
-      result.Value = inputGeometry.ToSpeckleObjectWrapper();
-      result.Value.Base[Constants.NAME_PROP] = result.Value.Name;
+      result = inputGeometry.ToSpeckleObjectWrapper();
+      result.Base[Constants.NAME_PROP] = result.Name;
       mutated = true;
     }
 
     // process name
     if (inputName != null)
     {
-      result.Value.Name = inputName;
+      result!.Name = inputName;
       mutated = true;
     }
 
     // process properties
     if (inputProperties != null)
     {
-      result.Value.Properties = inputProperties;
+      result!.Properties = inputProperties;
       mutated = true;
     }
 
     // process color (no mutation)
     if (inputColor != null)
     {
-      result.Value.Color = inputColor;
+      result!.Color = inputColor;
     }
 
     // process material (no mutation)
     if (inputMaterial != null)
     {
-      result.Value.Material = inputMaterial.Value;
+      result!.Material = inputMaterial.Value;
     }
 
     // process application Id. Use a new appId if mutated, or if this is a new object
-    result.Value.ApplicationId = mutated
-      ? Guid.NewGuid().ToString()
-      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
+    result!.ApplicationId = mutated ? Guid.NewGuid().ToString() : result!.ApplicationId ?? Guid.NewGuid().ToString();
 
     // get the path
     string path =
-      result.Value.Path.Count > 1
-        ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Value.Path)
-        : result.Value.Path.FirstOrDefault();
+      result!.Path.Count > 1
+        ? string.Join(Constants.LAYER_PATH_DELIMITER, result!.Path)
+        : result!.Path.FirstOrDefault();
 
     // set all the data
     da.SetData(0, result);
-    da.SetData(1, result.Value.GeometryBase);
-    da.SetData(2, result.Value.Name);
-    da.SetData(3, result.Value.Properties);
-    da.SetData(4, result.Value.Color);
-    da.SetData(5, result.Value.Material);
+    da.SetData(1, result.GeometryBase);
+    da.SetData(2, result.Name);
+    da.SetData(3, result.Properties);
+    da.SetData(4, result.Color);
+    da.SetData(5, result.Material);
     da.SetData(6, path);
   }
 }
