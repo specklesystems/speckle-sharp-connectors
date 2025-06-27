@@ -4,7 +4,6 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 
@@ -12,9 +11,6 @@ namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 public class ToHostSettingsManager : IToHostSettingsManager
 {
   private readonly RevitContext _revitContext;
-
-  // cache invalidation process run with ModelCardId since the settings are model specific
-  private readonly Dictionary<string, Transform?> _referencePointCache = new();
 
   public ToHostSettingsManager(RevitContext revitContext)
   {
@@ -35,8 +31,6 @@ public class ToHostSettingsManager : IToHostSettingsManager
       // get the current transform from setting first
       // we are doing this because we can't track if reference points were changed between send operations.
       Transform? currentTransform = GetTransform(referencePoint);
-
-      _referencePointCache[modelCard.ModelCardId.NotNull()] = currentTransform;
       return currentTransform;
     }
 

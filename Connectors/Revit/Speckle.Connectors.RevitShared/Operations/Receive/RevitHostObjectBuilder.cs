@@ -221,6 +221,24 @@ public sealed class RevitHostObjectBuilder(
     return conversionResults.builderResult;
   }
 
+  private Autodesk.Revit.DB.Transform? CalculateNewTransform(
+    Autodesk.Revit.DB.Transform? receiveTransform,
+    Autodesk.Revit.DB.Transform? rootTransform
+  )
+  {
+    if (receiveTransform == null)
+    {
+      return rootTransform;
+    }
+
+    if (rootTransform == null)
+    {
+      return receiveTransform;
+    }
+
+    return rootTransform.Multiply(receiveTransform);
+  }
+
   private (
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
@@ -279,24 +297,6 @@ public sealed class RevitHostObjectBuilder(
       }
     }
     return (new(bakedObjectIds, conversionResults), postBakePaintTargets);
-  }
-
-  private static Autodesk.Revit.DB.Transform? CalculateNewTransform(
-    Autodesk.Revit.DB.Transform? receiveTransform,
-    Autodesk.Revit.DB.Transform? rootTransform
-  )
-  {
-    if (receiveTransform == null)
-    {
-      return rootTransform;
-    }
-
-    if (rootTransform == null)
-    {
-      return receiveTransform;
-    }
-
-    return rootTransform.Multiply(receiveTransform);
   }
 
   /// <summary>
