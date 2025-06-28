@@ -23,7 +23,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     switch (source)
     {
       case RhinoObject rhinoObject:
-        return HandleRhinoObject(rhinoObject);
+        return HandleModelObject(rhinoObject);
 
       case ModelObject modelObject:
         return HandleModelObject(modelObject);
@@ -31,34 +31,6 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       default:
         return false;
     }
-  }
-
-  // Gross AF. **WHY** are guids not preserved when constructing model objects from rhinoobjects 😔
-  private bool HandleRhinoObject(RhinoObject rhinoObject)
-  {
-    var geometryBase = rhinoObject.Geometry;
-    var converted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
-
-    // get layer, props, color, and mat
-    SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(rhinoObject);
-    SpecklePropertyGroupGoo? props = GetPropsFromModelObjectAndAssignToBase(rhinoObject, converted);
-    Color? color = GetColorFromModelObject(rhinoObject);
-    SpeckleMaterialWrapper? material = GetMaterialFromModelObject(rhinoObject);
-
-    // try get definition if this is an instance
-    SpeckleBlockDefinitionWrapper? definition = GetBlockDefinition(geometryBase);
-
-    return SetValueAsObjectOrInstanceWrapper(
-      geometryBase,
-      converted,
-      rhinoObject.Name,
-      props,
-      collection,
-      color,
-      material,
-      rhinoObject.Id.ToString(),
-      definition
-    );
   }
 
   private bool HandleModelObject(ModelObject modelObject)

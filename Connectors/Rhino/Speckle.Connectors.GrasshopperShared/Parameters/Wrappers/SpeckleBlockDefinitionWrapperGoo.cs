@@ -45,10 +45,10 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
     switch (source)
     {
       case SpeckleBlockDefinitionWrapper sourceWrapper:
-        Value = sourceWrapper.DeepCopy();
+        Value = sourceWrapper;
         return true;
       case SpeckleBlockDefinitionWrapperGoo wrapperGoo:
-        Value = wrapperGoo.Value.DeepCopy();
+        Value = wrapperGoo.Value;
         return true;
     }
 
