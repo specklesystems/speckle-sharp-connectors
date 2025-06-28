@@ -66,6 +66,13 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     for (int i = 0; i < Params.Input.Count; i++)
     {
       var paramName = Params.Input[i].NickName;
+
+      var data = Params.Input[i].VolatileData.AllData(true).ToList();
+      if (data.Count == 0)
+      {
+        continue;
+      }
+
       var propertyValue = ExtractPropertyValue(da, i, paramName);
 
       if (propertyValue != null)

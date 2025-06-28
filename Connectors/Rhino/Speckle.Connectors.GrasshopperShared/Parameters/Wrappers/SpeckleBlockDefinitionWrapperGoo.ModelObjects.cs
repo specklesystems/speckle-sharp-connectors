@@ -60,7 +60,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
           );
         }
 
-        return CastFromModelObject(modelInstanceDef);
+        return CastFromModelObject(instanceDef);
       default:
         return false;
     }
@@ -73,7 +73,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     if (type == typeof(ModelInstanceDefinition))
     {
       var doc = RhinoDoc.ActiveDoc;
-      var instanceDef = doc?.InstanceDefinitions.Find(Value.Name);
+      var instanceDef = doc?.InstanceDefinitions.Find(Value.Name); // POC: this seems dangerous as users can change rhino block names
       if (instanceDef != null)
       {
         // ⚠️ ModelInstanceDefinition(InstanceDefinition) constructor strips .Id and we can't set it afterward
