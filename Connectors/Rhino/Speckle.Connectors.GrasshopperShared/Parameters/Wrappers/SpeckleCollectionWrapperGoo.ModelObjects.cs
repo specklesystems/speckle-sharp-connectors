@@ -3,7 +3,6 @@ using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros;
 using Grasshopper.Rhinoceros.Model;
 using Rhino;
-using Rhino.DocObjects;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -92,33 +91,6 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
           Path = GetModelLayerPath(modelLayer)
         };
 
-        return true;
-      case Rhino.DocObjects.Layer layer:
-        Collection layerCollection =
-          new()
-          {
-            name = layer.Name,
-            elements = new(),
-            applicationId = layer.Id.ToString()
-          };
-
-        // get color and material
-        SpeckleMaterialWrapperGoo matGoo = new();
-        matGoo.CastFrom(layer.RenderMaterial);
-
-        // get path
-        List<string> path = layer
-          .FullPath.Split(new[] { ModelComponent.NamePathSeparator }, StringSplitOptions.None)
-          .ToList();
-
-        Value = new SpeckleCollectionWrapper()
-        {
-          Base = layerCollection,
-          Name = layer.Name,
-          Color = Color.FromArgb(layer.Color.ToArgb()),
-          Material = matGoo.Value,
-          Path = path
-        };
         return true;
     }
 

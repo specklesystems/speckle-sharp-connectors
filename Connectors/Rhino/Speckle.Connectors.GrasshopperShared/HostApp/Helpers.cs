@@ -143,14 +143,7 @@ public static class GrasshopperHelpers
     else
     {
       SpeckleObjectWrapperGoo objGoo = new();
-      if (objGoo.CastFrom(goo))
-      {
-        return objGoo.Value;
-      }
-      else
-      {
-        return null;
-      }
+      return objGoo.CastFrom(goo) ? objGoo.Value : null;
     }
   }
 
