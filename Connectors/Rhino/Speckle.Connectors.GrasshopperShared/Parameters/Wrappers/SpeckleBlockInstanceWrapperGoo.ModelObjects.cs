@@ -26,6 +26,9 @@ public partial class SpeckleBlockInstanceWrapperGoo
       case GH_InstanceReference ghInstanceRef:
         return ghInstanceRef.Value != null && CastFromModelObject(ghInstanceRef.Value);
 
+      case RhinoObject rhinoObject:
+        return CastFromModelObject((ModelObject)rhinoObject); // use this casting method to handle rhinoobjects: using constructor will result in a null guid!!
+
       // Rhino model objects can be instances
       case ModelObject modelObject:
         if (modelObject.ObjectType == ObjectType.InstanceReference)

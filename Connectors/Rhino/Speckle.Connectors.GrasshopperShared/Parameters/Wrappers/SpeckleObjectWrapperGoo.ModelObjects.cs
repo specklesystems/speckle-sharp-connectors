@@ -23,7 +23,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     switch (source)
     {
       case RhinoObject rhinoObject:
-        return HandleModelObject(rhinoObject);
+        return CastFromModelObject((ModelObject)rhinoObject); // use this casting method to handle rhinoobjects: using constructor will result in a null guid!!
 
       case ModelObject modelObject:
         return HandleModelObject(modelObject);

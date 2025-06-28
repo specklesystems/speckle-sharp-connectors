@@ -1,5 +1,7 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
@@ -60,6 +62,14 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         }
         break;
       case IGH_GeometricGoo geometricGoo:
+        // this happens when you assign instances in rhino to a model isntance param
+        // need to get the id of the referenced geometry here and pass the retrieved object
+        if (geometricGoo.IsReferencedGeometry)
+        {
+          return RhinoDoc.ActiveDoc?.Objects.FindId(geometricGoo.ReferenceID) is RhinoObject rhinoObj
+            && CastFromModelObject(rhinoObj);
+        }
+
         if (geometricGoo is not InstanceReferenceGeometry instance)
         {
           return false;

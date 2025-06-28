@@ -16,7 +16,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo
         List<SpeckleObjectWrapper> objects = new();
         foreach (var defObj in instanceDefinition.GetObjects())
         {
-          ModelObject defModelObj = new(); // TODO!! MODEL OBJECTS ARE DUMB AND DON'T RESULT IN A VALID ID WHEN CONSTRUCTED THIS WAY
           SpeckleObjectWrapperGoo defObjGoo = new();
           if (defObjGoo.CastFrom(defObj))
           {
