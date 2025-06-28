@@ -18,179 +18,80 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     CastFrom(mo);
   }
 
-  // Gross AF. **WHY** are guids not preserved when constructing model objects from rhinoobjects, for the love of rhino dev gods
-  // disabling cyclomatic complexity for poc
-#pragma warning disable CA1502
   private bool CastFromModelObject(object source)
-#pragma warning restore CA1502
   {
     switch (source)
     {
       case RhinoObject rhinoObject:
-        GeometryBase gb = rhinoObject.Geometry;
-        Base gbConverted = SpeckleConversionContext.ConvertToSpeckle(gb);
-
-        // get the object layer
-        SpeckleCollectionWrapperGoo cWrapperGoo = new();
-        if (RhinoDoc.ActiveDoc?.Layers[rhinoObject.Attributes.LayerIndex] is Layer layer)
-        {
-          cWrapperGoo.CastFrom(layer);
-        }
-
-        // get props and update base
-        SpecklePropertyGroupGoo propGroup = new();
-        propGroup.CastFrom(rhinoObject.Attributes.GetUserStrings());
-        Dictionary<string, object?> propsDict = new();
-        propGroup.CastTo<Dictionary<string, object?>>(ref propsDict);
-        gbConverted[Constants.PROPERTIES_PROP] = propsDict;
-
-        // get the object color and material
-        Color? c = GetColorFromModelObject(rhinoObject);
-        SpeckleMaterialWrapperGoo? mat = null;
-        if (GetMaterialFromModelObject(rhinoObject) is Rhino.Render.RenderMaterial m)
-        {
-          mat = new();
-          mat.CastFrom(m);
-        }
-
-        // get the definition if this is an instance
-        // and set the value as the instance wrapper
-        if (gb is InstanceReferenceGeometry instRefGeo)
-        {
-          SpeckleBlockDefinitionWrapper? def = null;
-
-          var definitionId = instRefGeo.ParentIdefId;
-          InstanceDefinition? instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
-          if (instanceDef != null)
-          {
-            var defGoo = new SpeckleBlockDefinitionWrapperGoo();
-            if (defGoo.CastFrom(instanceDef))
-            {
-              def = defGoo.Value;
-            }
-          }
-
-          Value = new SpeckleBlockInstanceWrapper()
-          {
-            GeometryBase = gb,
-            Base = gbConverted,
-            Transform = instRefGeo.Xform,
-            Definition = def,
-            Parent = cWrapperGoo.Value,
-            Name = rhinoObject.Name,
-            Color = c,
-            Material = mat?.Value,
-            Properties = propGroup,
-            ApplicationId = rhinoObject.Id.ToString()
-          };
-
-          return true;
-        }
-
-        Value = new SpeckleObjectWrapper()
-        {
-          GeometryBase = gb,
-          Base = gbConverted,
-          Parent = cWrapperGoo.Value,
-          Name = rhinoObject.Name,
-          Color = null,
-          Material = null,
-          Properties = new(),
-          ApplicationId = rhinoObject.Id.ToString()
-        };
-        return true;
+        return HandleRhinoObject(rhinoObject);
 
       case ModelObject modelObject:
-        if (GetGeometryFromModelObject(modelObject) is GeometryBase modelGB)
-        {
-          Base modelConverted = SpeckleConversionContext.ConvertToSpeckle(modelGB);
-
-          // get the object layer
-          SpeckleCollectionWrapperGoo collWrapperGoo = new();
-          SpeckleCollectionWrapper? collWrapper = collWrapperGoo.CastFrom(modelObject.Layer)
-            ? collWrapperGoo.Value
-            : null;
-
-          // get props and update base
-          SpecklePropertyGroupGoo propertyGroup = new();
-          propertyGroup.CastFrom(modelObject.UserText);
-          Dictionary<string, object?> propertyDict = new();
-          foreach (var entry in modelObject.UserText)
-          {
-            propertyDict.Add(entry.Key, entry.Value);
-          }
-
-          modelConverted[Constants.PROPERTIES_PROP] = propertyDict;
-
-          // get the object color and material
-          Color? color = GetColorFromModelObject(modelObject);
-          SpeckleMaterialWrapperGoo? materialWrapper = null;
-          if (GetMaterialFromModelObject(modelObject) is Rhino.Render.RenderMaterial renderMat)
-          {
-            materialWrapper = new();
-            materialWrapper.CastFrom(renderMat);
-          }
-
-          // get the definition if this is an instance
-          // and set the value as the instance wrapper
-          if (modelGB is InstanceReferenceGeometry instance)
-          {
-            // Try to preserve existing definition first (for round-trip scenarios)
-            SpeckleBlockDefinitionWrapper? definition = (Value as SpeckleBlockInstanceWrapper)?.Definition;
-
-            // Look in document if we don't have an existing definition
-            if (definition == null)
-            {
-              var definitionId = instance.ParentIdefId;
-              InstanceDefinition? instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(definitionId);
-              if (instanceDef != null)
-              {
-                var defGoo = new SpeckleBlockDefinitionWrapperGoo();
-                if (defGoo.CastFrom(instanceDef))
-                {
-                  definition = defGoo.Value;
-                }
-              }
-            }
-
-            Value = new SpeckleBlockInstanceWrapper()
-            {
-              GeometryBase = instance,
-              Base = modelConverted,
-              Transform = instance.Xform,
-              Definition = definition, // May be null in pure Grasshopper workflows
-              Parent = collWrapper,
-              Name = modelObject.Name.ToString(),
-              Color = color,
-              Material = materialWrapper?.Value,
-              Properties = propertyGroup,
-              ApplicationId = modelObject.Id?.ToString()
-            };
-
-            return true;
-          }
-
-          Value = new SpeckleObjectWrapper()
-          {
-            GeometryBase = modelGB,
-            Base = modelConverted,
-            Parent = collWrapper,
-            Name = modelObject.Name.ToString(),
-            Color = color,
-            Material = materialWrapper?.Value,
-            Properties = propertyGroup,
-            ApplicationId = modelObject.Id?.ToString()
-          };
-          return true;
-        }
-
-        throw new InvalidOperationException(
-          $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
-        );
+        return HandleModelObject(modelObject);
 
       default:
         return false;
     }
+  }
+
+  // Gross AF. **WHY** are guids not preserved when constructing model objects from rhinoobjects 😔
+  private bool HandleRhinoObject(RhinoObject rhinoObject)
+  {
+    var geometryBase = rhinoObject.Geometry;
+    var converted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
+
+    // get layer, props, color, and mat
+    SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(rhinoObject);
+    SpecklePropertyGroupGoo? props = GetPropsFromModelObjectAndAssignToBase(rhinoObject, converted);
+    Color? color = GetColorFromModelObject(rhinoObject);
+    SpeckleMaterialWrapper? material = GetMaterialFromModelObject(rhinoObject);
+
+    // try get definition if this is an instance
+    SpeckleBlockDefinitionWrapper? definition = GetBlockDefinition(geometryBase);
+
+    return SetValueAsObjectOrInstanceWrapper(
+      geometryBase,
+      converted,
+      rhinoObject.Name,
+      props,
+      collection,
+      color,
+      material,
+      rhinoObject.Id.ToString(),
+      definition
+    );
+  }
+
+  private bool HandleModelObject(ModelObject modelObject)
+  {
+    if (RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry is not GeometryBase geometryBase)
+    {
+      throw new InvalidOperationException(
+        $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
+      );
+    }
+
+    Base converted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
+
+    // get layer, props, color, and mat
+    SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(modelObject);
+    SpecklePropertyGroupGoo? props = GetPropsFromModelObjectAndAssignToBase(modelObject, converted);
+    Color? color = GetColorFromModelObject(modelObject);
+    SpeckleMaterialWrapper? material = GetMaterialFromModelObject(modelObject);
+
+    // get the definition if this is an instance
+    SpeckleBlockDefinitionWrapper? definition = GetBlockDefinition(geometryBase);
+
+    return SetValueAsObjectOrInstanceWrapper(
+      geometryBase,
+      converted,
+      modelObject.Name.ToString(),
+      props,
+      collection,
+      color,
+      material,
+      modelObject.Id.ToString(),
+      definition
+    );
   }
 
   private bool CastToModelObject<T>(ref T target)
@@ -277,32 +178,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     }
   }
 
-  private GeometryBase? GetGeometryFromModelObject(ModelObject modelObject) =>
-    RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry;
-
-  private Color? GetColorFromModelObject(ModelObject modelObject)
-  {
-    // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
-    int? argb = null;
-    switch (modelObject.Display.Color?.Source)
-    {
-      case ObjectColorSource.ColorFromLayer:
-        argb = modelObject.Layer.DisplayColor?.ToArgb();
-        break;
-      case ObjectColorSource.ColorFromObject:
-        argb = modelObject.Display.Color?.Color.ToArgb();
-        break;
-      case ObjectColorSource.ColorFromMaterial:
-        Rhino.Render.RenderMaterial? mat = GetMaterialFromModelObject(modelObject);
-        argb = mat?.ToMaterial(Rhino.Render.RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();
-        break;
-      default:
-        break;
-    }
-    return argb is int validArgb ? Color.FromArgb(validArgb) : null;
-  }
-
-  private Rhino.Render.RenderMaterial? GetMaterialFromModelObject(ModelObject modelObject)
+  private Rhino.Render.RenderMaterial? GetRenderMaterial(ModelObject modelObject)
   {
     // we need to retrieve the actual material by the material source (otherwise will return default material for anything other than by object)
     Guid? matId = null;
@@ -318,8 +194,128 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
       default:
         break;
     }
-
     return matId is Guid validId ? RhinoDoc.ActiveDoc.RenderMaterials.Find(validId) : null;
+  }
+
+  private bool SetValueAsObjectOrInstanceWrapper(
+    GeometryBase geometryBase,
+    Base @base,
+    string name,
+    SpecklePropertyGroupGoo props,
+    SpeckleCollectionWrapper? parent,
+    Color? color,
+    SpeckleMaterialWrapper? mat,
+    string appId,
+    SpeckleBlockDefinitionWrapper? definition = null
+  )
+  {
+    Value = geometryBase is InstanceReferenceGeometry instance
+      ? new SpeckleBlockInstanceWrapper()
+      {
+        GeometryBase = instance,
+        Base = @base,
+        Transform = instance.Xform,
+        Definition = definition, // May be null in pure Grasshopper workflows
+        Parent = parent,
+        Name = name,
+        Color = color,
+        Material = mat,
+        Properties = props,
+        ApplicationId = appId
+      }
+      : new SpeckleObjectWrapper()
+      {
+        GeometryBase = geometryBase,
+        Base = @base,
+        Parent = parent,
+        Name = name,
+        Color = color,
+        Material = mat,
+        Properties = props,
+        ApplicationId = appId
+      };
+
+    return true;
+  }
+
+  private SpeckleBlockDefinitionWrapper? GetBlockDefinition(GeometryBase geometryBase)
+  {
+    SpeckleBlockDefinitionWrapper? definition = null;
+    if (geometryBase is InstanceReferenceGeometry instance)
+    {
+      var instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(instance.ParentIdefId);
+      if (instanceDef != null)
+      {
+        var defGoo = new SpeckleBlockDefinitionWrapperGoo();
+        if (defGoo.CastFrom(instanceDef))
+        {
+          definition = defGoo.Value;
+        }
+      }
+    }
+
+    return definition;
+  }
+
+  private SpeckleCollectionWrapper? GetLayerCollectionFromModelObject(ModelObject modelObject)
+  {
+    SpeckleCollectionWrapperGoo collWrapperGoo = new();
+    return collWrapperGoo.CastFrom(modelObject.Layer) ? collWrapperGoo.Value : null;
+  }
+
+  private SpecklePropertyGroupGoo GetPropsFromModelObjectAndAssignToBase(ModelObject modelObject, Base @base)
+  {
+    SpecklePropertyGroupGoo propertyGroup = new();
+    if (propertyGroup.CastFrom(modelObject.UserText))
+    {
+      Dictionary<string, object?> propertyDict = new();
+      foreach (var entry in modelObject.UserText)
+      {
+        propertyDict.Add(entry.Key, entry.Value);
+      }
+
+      @base[Constants.PROPERTIES_PROP] = propertyDict;
+    }
+
+    return propertyGroup;
+  }
+
+  private SpeckleMaterialWrapper? GetMaterialFromModelObject(ModelObject modelObject)
+  {
+    Rhino.Render.RenderMaterial? mat = GetRenderMaterial(modelObject);
+
+    if (mat is Rhino.Render.RenderMaterial renderMat)
+    {
+      var wrapper = new SpeckleMaterialWrapperGoo();
+      if (wrapper.CastFrom(renderMat))
+      {
+        return wrapper.Value;
+      }
+    }
+
+    return null;
+  }
+
+  private Color? GetColorFromModelObject(ModelObject modelObject)
+  {
+    // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
+    int? argb = null;
+    switch (modelObject.Display.Color?.Source)
+    {
+      case ObjectColorSource.ColorFromLayer:
+        argb = modelObject.Layer.DisplayColor?.ToArgb();
+        break;
+      case ObjectColorSource.ColorFromObject:
+        argb = modelObject.Display.Color?.Color.ToArgb();
+        break;
+      case ObjectColorSource.ColorFromMaterial:
+        Rhino.Render.RenderMaterial? mat = GetRenderMaterial(modelObject);
+        argb = mat?.ToMaterial(Rhino.Render.RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();
+        break;
+      default:
+        break;
+    }
+    return argb is int validArgb ? Color.FromArgb(validArgb) : null;
   }
 
   private bool TryCastToExtrusion<T>(ref T target)
