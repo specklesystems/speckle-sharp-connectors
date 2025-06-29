@@ -194,7 +194,6 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
 
     // process block instances using converted atomic objects
-    // NOTE: Objects of block definitions appear both as standalone objects and within block definitions when baked.
     // block processing needs converted objects, but object filtering needs block definitions.
     mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
 
