@@ -31,9 +31,9 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Data",
-      "D",
-      "The data you want to expand",
+      "Collection",
+      "C",
+      "The Collection you want to expand",
       GH_ParamAccess.item
     );
   }

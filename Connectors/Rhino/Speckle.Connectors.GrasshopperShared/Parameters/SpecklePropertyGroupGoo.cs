@@ -15,7 +15,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $"Speckle Properties [{Value.Count}]";
+  public override string ToString() => $"Speckle Properties : ({Value.Count})";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle property group goo";

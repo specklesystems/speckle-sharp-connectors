@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
@@ -24,7 +25,8 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter(
+    pManager.AddParameter(
+      new SpeckleBlockDefinitionWrapperParam(),
       "Block Definition",
       "BD",
       "Input Block Definition. Speckle definitions and Model definitions are accepted.",
@@ -54,87 +56,55 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       GH_ParamAccess.item
     );
 
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
-      "Objects",
-      "O",
-      "Objects contained in the Block Definition",
-      GH_ParamAccess.list
-    );
+    pManager.AddGenericParameter("Objects", "O", "Objects contained in the Block Definition", GH_ParamAccess.list);
 
     pManager.AddTextParameter("Name", "N", "Name of the Block Definition", GH_ParamAccess.item);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    IGH_Goo? inputDefinition = null;
+    SpeckleBlockDefinitionWrapperGoo? inputDefinition = null;
     da.GetData(0, ref inputDefinition);
 
-    List<IGH_Goo> inputGeometry = new();
-    da.GetDataList(1, inputGeometry);
+    List<IGH_Goo> inputObjects = new();
+    da.GetDataList(1, inputObjects);
 
-    string? inputName = null;
-    da.GetData(2, ref inputName);
-
-    // keep track of mutation
-    bool mutated = false;
-
-    // process the definition
-    SpeckleBlockDefinitionWrapperGoo result = new();
-    if (inputDefinition != null)
-    {
-      if (!result.CastFrom(inputDefinition))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Definition input is not valid. Only Speckle definitions or Model definitions are accepted."
-        );
-        return;
-      }
-    }
-
-    if (inputDefinition == null && inputGeometry.Count == 0)
+    if (inputDefinition == null && inputObjects.Count == 0)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Objects.");
       return;
     }
 
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
+    if (inputDefinition == null && string.IsNullOrWhiteSpace(inputName))
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Name for the definition.");
+      return;
+    }
+
+    // keep track of mutation
+    bool mutated = false;
+
+    // process the definition
+    // deep copy so we don't mutate the object
+    SpeckleBlockDefinitionWrapperGoo result = inputDefinition != null ? new(inputDefinition.Value.DeepCopy()) : new();
+
     // process geometry
-    if (inputGeometry.Count > 0)
+    if (inputObjects.Count > 0)
     {
       List<SpeckleObjectWrapper> processedObjects = new();
-
-      foreach (IGH_Goo geo in inputGeometry)
+      foreach (IGH_Goo goo in inputObjects)
       {
-        SpeckleObjectWrapper obj;
-
-        // Try casting to SpeckleObjectWrapper first (handles object wrapper, model objects, loose geometry)
-        SpeckleObjectWrapperGoo objectGoo = new();
-        if (objectGoo.CastFrom(geo))
+        if (goo.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
         {
-          obj = objectGoo.Value;
+          processedObjects.Add(gooWrapper);
         }
         else
         {
-          // Try casting to SpeckleBlockInstanceWrapper (handles instance goo, model instances)
-          SpeckleBlockInstanceWrapperGoo instanceGoo = new();
-          if (instanceGoo.CastFrom(geo))
-          {
-            obj = instanceGoo.Value;
-          }
-          else
-          {
-            // Neither casting worked
-            AddRuntimeMessage(
-              GH_RuntimeMessageLevel.Warning,
-              $"Object of type {geo.GetType().Name} could not be added to definition"
-            );
-
-            continue; // skip this object
-          }
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Unsupported type {goo.TypeName} not added to definition");
         }
-
-        processedObjects.Add(obj);
       }
 
       result.Value.Objects = processedObjects;
@@ -162,7 +132,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
     // set outputs
     da.SetData(0, result);
-    da.SetDataList(1, result.Value.Objects.Select(o => new SpeckleObjectWrapperGoo(o)));
+    da.SetDataList(1, result.Value.Objects.Select(o => o.CreateGoo()));
     da.SetData(2, result.Value.Name);
   }
 }
