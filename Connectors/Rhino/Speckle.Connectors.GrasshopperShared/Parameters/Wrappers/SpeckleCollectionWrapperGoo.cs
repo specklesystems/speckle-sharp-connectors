@@ -29,9 +29,6 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
       case SpeckleCollectionWrapperGoo wrapperGoo:
         Value = wrapperGoo.Value;
         return true;
-      case GH_Goo<SpeckleCollectionWrapper> goo:
-        Value = goo.Value;
-        return true;
     }
 
     // Handle case of model objects in rhino 8

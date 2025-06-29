@@ -35,9 +35,6 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
       case SpeckleMaterialWrapperGoo wrapperGoo:
         Value = wrapperGoo.Value;
         return true;
-      case GH_Goo<SpeckleMaterialWrapper> goo:
-        Value = goo.Value;
-        return true;
       case GH_Material materialGoo:
         var gooMaterial = ToRhinoMaterial(materialGoo.Value);
         Value = new()
