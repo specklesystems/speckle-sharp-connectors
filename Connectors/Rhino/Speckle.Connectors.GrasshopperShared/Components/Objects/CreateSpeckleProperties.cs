@@ -36,7 +36,13 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Properties", "P", "Properties for Speckle Objects", GH_ParamAccess.item);
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "P",
+      "Properties for Speckle Objects",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
@@ -60,6 +66,13 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     for (int i = 0; i < Params.Input.Count; i++)
     {
       var paramName = Params.Input[i].NickName;
+
+      var data = Params.Input[i].VolatileData.AllData(true).ToList();
+      if (data.Count == 0)
+      {
+        continue;
+      }
+
       var propertyValue = ExtractPropertyValue(da, i, paramName);
 
       if (propertyValue != null)

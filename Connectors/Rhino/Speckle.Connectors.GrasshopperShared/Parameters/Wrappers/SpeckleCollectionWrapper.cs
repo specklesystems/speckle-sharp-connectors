@@ -72,7 +72,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public required SpeckleMaterialWrapper? Material { get; set; }
 
-  public override string ToString() => $"Speckle Collection Wrapper [{Name} ({Elements.Count})]";
+  public override string ToString() => $"Speckle Collection : {Name} ({Elements.Count})";
 
   public override IGH_Goo CreateGoo() => new SpeckleCollectionWrapperGoo(this);
 

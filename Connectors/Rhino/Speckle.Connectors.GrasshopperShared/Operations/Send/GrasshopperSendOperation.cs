@@ -92,7 +92,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
         case SpeckleObjectWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
-          Base objectBase = ConvertWrapperToBase(so);
+          Base objectBase = Unwrap(so);
           string applicationId = objectBase.applicationId!;
           currentColl.elements.Add(objectBase);
 
@@ -125,26 +125,19 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   }
 
   /// <summary>
-  /// Converts a <see cref="SpeckleWrapper"/> to underlying Base object with dynamically attached properties.
+  /// Converts a <see cref="SpeckleObjectWrapper"/> to underlying Base object with dynamically attached properties.
   /// </summary>
   /// <remarks>
-  /// Only intended for <see cref="SpeckleObjectWrapper"/> and <see cref="SpeckleBlockInstanceWrapper"/>!
+  /// POC: if we move properties assignment to auto set the wrapped base, we can get rid of this entirely!
   /// </remarks>
-  private Base ConvertWrapperToBase(SpeckleWrapper wrapper)
+  private Base Unwrap(SpeckleObjectWrapper wrapper)
   {
     Dictionary<string, object?> props = [];
-
-    var properties = wrapper switch
-    {
-      SpeckleObjectWrapper obj => obj.Properties, // handles both block instances and objects due to inheritance
-      _ => throw new ArgumentException($"Unsupported wrapper type: {wrapper.GetType().Name}")
-    };
-    properties.CastTo(ref props);
-
     Base baseObject = wrapper.Base;
-    baseObject["name"] = wrapper.Name;
-    baseObject["properties"] = props;
-    baseObject.applicationId ??= Guid.NewGuid().ToString();
+    if (wrapper.Properties.CastTo(ref props))
+    {
+      baseObject["properties"] = props; // setting props here on base since it's not auto-set, like name and appid
+    }
 
     return baseObject;
   }
@@ -171,7 +164,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     {
       foreach (var definitionObject in definitionObjects)
       {
-        Base defObjectBase = ConvertWrapperToBase(definitionObject);
+        Base defObjectBase = Unwrap(definitionObject);
         string applicationId = defObjectBase.applicationId!;
 
         // just add to current collection for now

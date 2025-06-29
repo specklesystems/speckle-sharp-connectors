@@ -129,15 +129,35 @@ public static class GrasshopperHelpers
   }
 
   /// <summary>
+  /// Attempts to cast an IGH_Goo to a Speckle Object Wrapper
+  /// </summary>
+  /// <param name="goo"></param>
+  /// <returns>A reference to the Speckle Object Wrapper from the goo, if any</returns>
+  /// <remarks>This method **does not** deep copy the return value</remarks>
+  public static SpeckleObjectWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
+  {
+    SpeckleBlockInstanceWrapperGoo instanceGoo = new();
+    if (instanceGoo.CastFrom(goo))
+    {
+      return instanceGoo.Value;
+    }
+    else
+    {
+      SpeckleObjectWrapperGoo objGoo = new();
+      return objGoo.CastFrom(goo) ? objGoo.Value : null;
+    }
+  }
+
+  /// <summary>
   /// Attempts to cast the goo to a geometry base object.
   /// </summary>
-  /// <param name="geoGeo"></param>
+  /// <param name="geoGoo"></param>
   /// <returns></returns>
   /// <exception cref="SpeckleException">If it fails to cast</exception>
-  public static GeometryBase GeometricGooToGeometryBase(this IGH_GeometricGoo geoGeo)
+  public static GeometryBase ToGeometryBase(this IGH_GeometricGoo geoGoo)
   {
     // note: some objects (like text entities) can have multiple properties of name "Value"
-    var value = geoGeo.GetType().GetProperties().FirstOrDefault(x => x.Name == "Value")?.GetValue(geoGeo);
+    var value = geoGoo.GetType().GetProperties().FirstOrDefault(x => x.Name == "Value")?.GetValue(geoGoo);
     switch (value)
     {
       case GeometryBase gb:

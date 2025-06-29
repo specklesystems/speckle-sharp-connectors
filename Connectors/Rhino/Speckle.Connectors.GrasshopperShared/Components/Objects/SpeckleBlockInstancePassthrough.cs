@@ -25,7 +25,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    int instanceIndex = pManager.AddGenericParameter(
+    int instanceIndex = pManager.AddParameter(
+      new SpeckleBlockInstanceParam(),
       "Block Instance",
       "BI",
       "Input Block Instance. Speckle instances and Grasshopper instances are accepted.",
@@ -33,7 +34,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     );
     Params.Input[instanceIndex].Optional = true;
 
-    int definitionIndex = pManager.AddGenericParameter(
+    int definitionIndex = pManager.AddParameter(
+      new SpeckleBlockDefinitionWrapperParam(),
       "Definition",
       "D",
       "Block Instance Definition. Speckle definitions and Grasshopper definitions are accepted.",
@@ -52,7 +54,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Instance", GH_ParamAccess.item);
     Params.Input[nameIndex].Optional = true;
 
-    int propIndex = pManager.AddGenericParameter(
+    int propIndex = pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
       "Properties",
       "P",
       "The properties of the Speckle Instance. Speckle Properties and User Content are accepted.",
@@ -68,7 +71,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     );
     Params.Input[colorIndex].Optional = true;
 
-    int matIndex = pManager.AddGenericParameter(
+    int matIndex = pManager.AddParameter(
+      new SpeckleMaterialParam(),
       "Material",
       "m",
       "The material of the Speckle Instance. Display Materials, Model Materials, and Speckle Materials are accepted.",
@@ -120,44 +124,11 @@ public class SpeckleBlockInstancePassthrough : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    IGH_Goo? inputInstance = null;
+    SpeckleBlockInstanceWrapperGoo? inputInstance = null;
     da.GetData(0, ref inputInstance);
 
-    IGH_Goo? inputDefinition = null;
+    SpeckleBlockDefinitionWrapperGoo? inputDefinition = null;
     da.GetData(1, ref inputDefinition);
-
-    IGH_Goo? inputTransform = null;
-    da.GetData(2, ref inputTransform);
-
-    string? inputName = null;
-    da.GetData(3, ref inputName);
-
-    IGH_Goo? inputProperties = null;
-    da.GetData(4, ref inputProperties);
-
-    Color? inputColor = null;
-    da.GetData(5, ref inputColor);
-
-    IGH_Goo? inputMaterial = null;
-    da.GetData(6, ref inputMaterial);
-
-    // keep track of mutation
-    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
-    bool mutated = false;
-
-    // process the instance
-    SpeckleBlockInstanceWrapperGoo result = new();
-    if (inputInstance != null)
-    {
-      if (!result.CastFrom(inputInstance))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Instance input is not valid. Only Speckle Instances or Model Instances are accepted."
-        );
-        return;
-      }
-    }
 
     if (inputInstance == null && inputDefinition == null)
     {
@@ -165,20 +136,34 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       return;
     }
 
+    IGH_Goo? inputTransform = null;
+    da.GetData(2, ref inputTransform);
+
+    string? inputName = null;
+    da.GetData(3, ref inputName);
+
+    SpecklePropertyGroupGoo? inputProperties = null;
+    da.GetData(4, ref inputProperties);
+
+    Color? inputColor = null;
+    da.GetData(5, ref inputColor);
+
+    SpeckleMaterialWrapperGoo? inputMaterial = null;
+    da.GetData(6, ref inputMaterial);
+
+    // keep track of mutation
+    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
+    bool mutated = false;
+
+    // process the instance
+    // deep copy so we don't mutate the object
+    SpeckleBlockInstanceWrapperGoo result =
+      inputInstance != null ? new((SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy()) : new();
+
     // process definition
-    SpeckleBlockDefinitionWrapperGoo definition = new();
     if (inputDefinition != null)
     {
-      if (!definition.CastFrom(inputDefinition))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Error,
-          $"Definition input is not valid. Only Speckle definitions or Model definitions are accepted."
-        );
-        return;
-      }
-
-      result.Value.Definition = definition.Value;
+      result.Value.Definition = inputDefinition.Value;
       mutated = true;
     }
 
@@ -211,17 +196,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     // Process properties
     if (inputProperties != null)
     {
-      SpecklePropertyGroupGoo propGoo = new();
-      if (!propGoo.CastFrom(inputProperties))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          $"Properties input is not valid. Only Speckle Properties and User Content are accepted."
-        );
-        return;
-      }
-
-      result.Value.Properties = propGoo;
+      result.Value.Properties = inputProperties;
       mutated = true;
     }
 
@@ -234,17 +209,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     // process  material (no mutation)
     if (inputMaterial != null)
     {
-      SpeckleMaterialWrapperGoo matWrapperGoo = new();
-      if (!matWrapperGoo.CastFrom(inputMaterial))
-      {
-        AddRuntimeMessage(
-          GH_RuntimeMessageLevel.Warning,
-          "Material input is not valid. Only Display Materials, Baked Model Materials, and Speckle Materials are accepted."
-        );
-        return;
-      }
-
-      result.Value.Material = matWrapperGoo.Value;
+      result.Value.Material = inputMaterial.Value;
     }
 
     // Generate new ApplicationId if mutated

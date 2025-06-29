@@ -1,6 +1,10 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino;
+using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -29,26 +33,57 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   public override string ToString() =>
     $"Speckle Block Instance : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
+  //POC: we probably shouldn't be deep copying here!!! do so in each component that mutates inputs...
   public override bool CastFrom(object source)
   {
     switch (source)
     {
       case SpeckleBlockInstanceWrapper sourceWrapper:
-        Value = (SpeckleBlockInstanceWrapper)sourceWrapper.DeepCopy();
+        Value = sourceWrapper;
         return true;
       case SpeckleBlockInstanceWrapperGoo wrapperGoo:
-        Value = (SpeckleBlockInstanceWrapper)wrapperGoo.Value.DeepCopy();
+        Value = wrapperGoo.Value;
         return true;
       case GH_Goo<SpeckleBlockInstanceWrapper> goo:
-        Value = (SpeckleBlockInstanceWrapper)goo.Value.DeepCopy();
+        Value = goo.Value;
         return true;
-      case GH_Goo<SpeckleObjectWrapper> goo:
-        if (goo.Value is SpeckleBlockInstanceWrapper wrapper)
+      case SpeckleObjectWrapperGoo objWrapperGoo:
+        if (objWrapperGoo.Value is SpeckleBlockInstanceWrapper objWrapper)
         {
-          Value = (SpeckleBlockInstanceWrapper)wrapper.DeepCopy();
+          Value = objWrapper;
           return true;
         }
         break;
+      case GH_Goo<SpeckleObjectWrapper> goo:
+        if (goo.Value is SpeckleBlockInstanceWrapper wrapper)
+        {
+          Value = wrapper;
+          return true;
+        }
+        break;
+      case IGH_GeometricGoo geometricGoo:
+        // this happens when you assign instances in rhino to a model isntance param
+        // need to get the id of the referenced geometry here and pass the retrieved object
+        if (geometricGoo.IsReferencedGeometry)
+        {
+          return RhinoDoc.ActiveDoc?.Objects.FindId(geometricGoo.ReferenceID) is RhinoObject rhinoObj
+            && CastFromModelObject(rhinoObj);
+        }
+
+        if (geometricGoo is not InstanceReferenceGeometry instance)
+        {
+          return false;
+        }
+
+        Base converted = SpeckleConversionContext.ConvertToSpeckle(instance);
+        Value = new SpeckleBlockInstanceWrapper()
+        {
+          GeometryBase = instance,
+          Base = converted,
+          Transform = instance.Xform,
+          ApplicationId = Guid.NewGuid().ToString(),
+        };
+        return true;
     }
 
     return CastFromModelObject(source);
@@ -58,6 +93,9 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     switch (target)
     {
+      case SpeckleObjectWrapperGoo:
+        target = (T)(object)Value;
+        return true;
       case Transform:
         target = (T)(object)Value.Transform;
         return true;

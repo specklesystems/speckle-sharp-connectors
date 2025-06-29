@@ -32,7 +32,7 @@ public class SpeckleMaterialWrapper : SpeckleWrapper
   // The guid of the rhino render material that corresponds to the rhino material, if it exists.
   public required Guid RhinoRenderMaterialId { get; set; }
 
-  public override string ToString() => $"Speckle Material Wrapper [{typeof(Material)}]";
+  public override string ToString() => $"Speckle Material : {Name}";
 
   public override IGH_Goo CreateGoo() => new SpeckleMaterialWrapperGoo(this);
 

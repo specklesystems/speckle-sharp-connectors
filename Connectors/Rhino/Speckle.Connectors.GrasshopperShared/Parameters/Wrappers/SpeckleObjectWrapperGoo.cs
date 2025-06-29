@@ -2,6 +2,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -32,7 +33,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   public override IGH_Goo Duplicate() => new SpeckleObjectWrapperGoo(Value.DeepCopy());
 
   public override string ToString() =>
-    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}]";
+    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
   /// <summary>
   /// Casts from Speckle objects, geometry base, and model objects.
@@ -45,28 +46,32 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     switch (source)
     {
       case SpeckleObjectWrapper wrapper:
-        Value = wrapper.DeepCopy();
+        Value = wrapper;
         return true;
       case SpeckleObjectWrapperGoo wrapperGoo:
-        Value = wrapperGoo.Value.DeepCopy();
+        Value = wrapperGoo.Value;
         return true;
-      case GH_Goo<SpeckleObjectWrapper> goo:
-        Value = goo.Value.DeepCopy();
+      case SpeckleBlockInstanceWrapperGoo instanceWrapperGoo:
+        Value = instanceWrapperGoo.Value;
         return true;
       case IGH_GeometricGoo geometricGoo:
-        GeometryBase gooGB = geometricGoo.GeometricGooToGeometryBase();
-        return CastFrom(gooGB);
-      case GeometryBase geometryBase:
-        var gooConverted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
-        Value = new SpeckleObjectWrapper()
-        {
-          GeometryBase = geometryBase,
-          Base = gooConverted,
-          Name = "",
-          Color = null,
-          Material = null,
-          ApplicationId = Guid.NewGuid().ToString()
-        };
+        GeometryBase gb = geometricGoo.ToGeometryBase();
+        Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
+        string appId = Guid.NewGuid().ToString();
+        Value = gb is InstanceReferenceGeometry instance
+          ? new SpeckleBlockInstanceWrapper()
+          {
+            GeometryBase = gb,
+            Base = converted,
+            Transform = instance.Xform,
+            ApplicationId = appId,
+          }
+          : new SpeckleObjectWrapper()
+          {
+            GeometryBase = gb,
+            Base = converted,
+            ApplicationId = appId
+          };
         return true;
     }
 
