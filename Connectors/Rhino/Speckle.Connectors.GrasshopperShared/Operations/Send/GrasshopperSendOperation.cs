@@ -93,6 +93,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
         case SpeckleObjectWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
           Base objectBase = Unwrap(so);
+          string applicationId = objectBase.applicationId!;
           currentColl.elements.Add(objectBase);
 
           // do block instance specific stuff (if this object wrapper is actually a block instance)
@@ -102,8 +103,8 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           }
 
           // process color and material for all object wrappers (including block instances)
-          colorPacker.ProcessColor(so.ApplicationId, so.Color);
-          materialPacker.ProcessMaterial(so.ApplicationId, so.Material);
+          colorPacker.ProcessColor(applicationId, so.Color);
+          materialPacker.ProcessMaterial(applicationId, so.Material);
           break;
       }
     }
@@ -164,13 +165,13 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
       foreach (var definitionObject in definitionObjects)
       {
         Base defObjectBase = Unwrap(definitionObject);
+        string applicationId = defObjectBase.applicationId!;
 
-        // just add to current collection
-        // TODO: where on collection?
+        // just add to current collection for now
         currentColl.elements.Add(defObjectBase);
 
-        colorPacker.ProcessColor(definitionObject.ApplicationId, definitionObject.Color);
-        materialPacker.ProcessMaterial(definitionObject.ApplicationId, definitionObject.Material);
+        colorPacker.ProcessColor(applicationId, definitionObject.Color);
+        materialPacker.ProcessMaterial(applicationId, definitionObject.Material);
       }
     }
   }
