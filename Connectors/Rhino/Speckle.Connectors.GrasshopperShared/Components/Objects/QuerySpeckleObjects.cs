@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
 using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -49,8 +50,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
+    pManager.AddGenericParameter(
       "Objects",
       "O",
       "The objects in the input collection that match the queries",
@@ -137,14 +137,15 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     for (int i = 0; i < Params.Output.Count; i++)
     {
       List<SpeckleObjectWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[Filters[i - 1]];
+      List<IGH_Goo> outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
       if (targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
-        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputValues);
+        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputGoos);
         dataAccess.SetDataTree(i, tree);
       }
       else
       {
-        dataAccess.SetDataList(i, outputValues);
+        dataAccess.SetDataList(i, outputGoos);
       }
     }
   }
@@ -177,7 +178,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
-    foreach (SpeckleWrapper element in collectionWrapper.Elements)
+    foreach (ISpeckleCollectionObject element in collectionWrapper.Elements)
     {
       switch (element)
       {

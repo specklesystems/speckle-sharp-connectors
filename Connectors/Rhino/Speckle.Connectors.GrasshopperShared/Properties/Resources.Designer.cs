@@ -143,6 +143,26 @@ namespace Speckle.Connectors.GrasshopperShared.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap speckle_objects_block_inst {
+            get {
+                object obj = ResourceManager.GetObject("speckle_objects_block_inst", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap speckle_objects_block_def {
+            get {
+                object obj = ResourceManager.GetObject("speckle_objects_block_def", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap speckle_objects_filter {
             get {
                 object obj = ResourceManager.GetObject("speckle_objects_filter", resourceCulture);
@@ -216,6 +236,26 @@ namespace Speckle.Connectors.GrasshopperShared.Properties {
         public static System.Drawing.Bitmap speckle_operations_syncpublish {
             get {
                 object obj = ResourceManager.GetObject("speckle_operations_syncpublish", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap speckle_param_block_def {
+            get {
+                object obj = ResourceManager.GetObject("speckle_param_block_def", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap speckle_param_block_instance {
+            get {
+                object obj = ResourceManager.GetObject("speckle_param_block_instance", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

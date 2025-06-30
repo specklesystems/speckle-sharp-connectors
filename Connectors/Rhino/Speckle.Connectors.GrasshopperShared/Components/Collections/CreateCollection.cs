@@ -158,12 +158,17 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
-      var wrapperGoo = new SpeckleObjectWrapperGoo();
-      if (wrapperGoo.CastFrom(obj))
+      // deep copy to avoid mutations
+      if (obj?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper objWrapper)
       {
-        wrapperGoo.Value.Path = childPath;
-        wrapperGoo.Value.Parent = parentCollection;
-        parentCollection.Elements.Add(wrapperGoo.Value);
+        SpeckleObjectWrapper wrapper = objWrapper.DeepCopy();
+        wrapper.Path = childPath;
+        wrapper.Parent = parentCollection;
+        parentCollection.Elements.Add(wrapper);
+      }
+      else
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{obj?.GetType().Name} type cannot be added to collections.");
       }
     }
   }
