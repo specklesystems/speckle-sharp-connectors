@@ -32,6 +32,8 @@ public class SpeckleSelectModelComponent : GH_Component
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
 
+  public override GH_Exposure Exposure => GH_Exposure.primary;
+
   public SpeckleSelectModelComponent()
     : base(
       "Speckle Model URL",

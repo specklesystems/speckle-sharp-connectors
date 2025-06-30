@@ -44,6 +44,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => Resources.speckle_operations_publish;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool AutoSend { get; set; }
