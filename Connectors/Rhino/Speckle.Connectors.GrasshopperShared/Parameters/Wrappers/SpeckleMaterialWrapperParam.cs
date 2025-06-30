@@ -31,7 +31,7 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
 
   public override Guid ComponentGuid => new("1A08CF79-2072-4B14-9430-E4465FF0C0FE");
   protected override Bitmap Icon => Resources.speckle_param_material;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   bool IGH_BakeAwareObject.IsBakeCapable => // False if no data
     !VolatileData.IsEmpty;

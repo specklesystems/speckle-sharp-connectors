@@ -37,6 +37,8 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_operations_load;
 
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
+
   public string InputType { get; set; }
   public bool AutoReceive { get; set; }
   public string ReceivedVersionId { get; set; }

@@ -23,6 +23,8 @@ public class AccountManagerComponent : GH_Component, IDisposable
 
   protected override Bitmap Icon => Resources.speckle_operations_account;
 
+  public override GH_Exposure Exposure => GH_Exposure.primary;
+
   public GhContextMenuButton SignInButton { get; }
 
   public AccountManagerComponent()
