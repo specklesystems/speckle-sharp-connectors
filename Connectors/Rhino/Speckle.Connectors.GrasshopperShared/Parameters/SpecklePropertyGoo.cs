@@ -126,7 +126,28 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
     {
       return false;
     }
-
-    return Value == prop.Value;
+    switch (Value)
+    {
+      case string s:
+        return s == prop.Value.ToString();
+      case bool b:
+        return prop.Value is bool otherBool
+          ? b == otherBool
+          : bool.TryParse(prop.Value.ToString(), out bool parsedBool) && b == parsedBool;
+      case double d:
+        return prop.Value is double otherDouble
+          ? d == otherDouble
+          : double.TryParse(prop.Value.ToString(), out double parsedDouble) && d == parsedDouble;
+      case float f:
+        return prop.Value is float otherFloat
+          ? f == otherFloat
+          : float.TryParse(prop.Value.ToString(), out float parsedFloat) && f == parsedFloat;
+      case int i:
+        return prop.Value is int otherInt
+          ? i == otherInt
+          : int.TryParse(prop.Value.ToString(), out int parsedInt) && i == parsedInt;
+      default:
+        return Value == prop.Value;
+    }
   }
 }
