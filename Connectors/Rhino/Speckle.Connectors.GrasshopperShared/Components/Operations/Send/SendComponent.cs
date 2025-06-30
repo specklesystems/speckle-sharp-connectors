@@ -198,7 +198,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
         sendInfo.ProjectId,
         sendInfo.ModelId
       );
-    Url = $"{sendInfo.Account.serverInfo.url}projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+    Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource);
   }
 }
