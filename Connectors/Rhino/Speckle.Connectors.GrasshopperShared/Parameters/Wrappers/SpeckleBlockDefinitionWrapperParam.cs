@@ -35,6 +35,8 @@ public class SpeckleBlockDefinitionWrapperParam
 
   protected override Bitmap Icon => Resources.speckle_param_block_def;
 
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
+
   public override void RegisterRemoteIDs(GH_GuidTable idList)
   {
     // Register Rhino InstanceDefinition GUIDs so Grasshopper can track when
