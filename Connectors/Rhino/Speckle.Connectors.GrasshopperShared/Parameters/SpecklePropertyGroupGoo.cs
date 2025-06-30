@@ -207,7 +207,7 @@ public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>
 {
   public override Guid ComponentGuid => new("AF4757C3-BA33-4ACD-A92B-C80356043129");
   protected override Bitmap Icon => Resources.speckle_param_properties;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   public SpecklePropertyGroupParam()
     : this(GH_ParamAccess.item) { }
