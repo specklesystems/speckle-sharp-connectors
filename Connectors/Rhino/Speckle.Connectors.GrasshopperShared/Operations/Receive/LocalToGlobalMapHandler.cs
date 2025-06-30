@@ -13,14 +13,13 @@ using Speckle.Sdk.Models.Instances;
 /// </summary>
 /// <remarks>
 /// Follows Rhino's approach: atomic objects are converted directly without pre-transformation,
-/// with instance transformations handled separately during block reconstruction.
+/// with instance transformations handled separately during block reconstruction. Implements consumedObjectIds
+/// tracking to prevent objects consumed by block definitions from appearing as standalone objects.
 /// </remarks>
 internal sealed class LocalToGlobalMapHandler
 {
   public Dictionary<string, SpeckleObjectWrapper> ConvertedObjectsMap { get; } = new();
   public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
-
-  // TODO: ConsumedObjectIds logic needed - objects consumed by block definitions currently appear as both standalone objects and within blocks.
 
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
   private readonly GrasshopperColorUnpacker _colorUnpacker;
@@ -134,13 +133,31 @@ internal sealed class LocalToGlobalMapHandler
     }
   }
 
+  /// <summary>
+  /// Converts block instances and definitions from traversal contexts into Grasshopper wrapper objects.
+  /// Automatically handles cleanup of consumed objects from the collection hierarchy.
+  /// </summary>
+  /// <remarks>
+  /// Deliberately handles both block conversion AND consumed object cleanup in a single operation.
+  /// Too much, I know, BUT it ensures the cleanup always occurs immediately after block processing without
+  /// requiring receive components to call a separate cleanup method in the correct order.
+  /// </remarks>
   public void ConvertBlockInstances(
     IReadOnlyCollection<TraversalContext> blocks,
     IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
   )
   {
-    // GrasshopperBlockUnpacker handles empty inputs, so no need for defensive check here
     var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
-    blockUnpacker.UnpackBlocks(blocks, definitionProxies, ConvertedObjectsMap, CollectionRebuilder);
+
+    // Get consumed object IDs from unpacker
+    var consumedObjectIds = blockUnpacker.UnpackBlocks(
+      blocks,
+      definitionProxies,
+      ConvertedObjectsMap,
+      CollectionRebuilder
+    );
+
+    // Clean up consumed objects from collections
+    CollectionRebuilder.RemoveConsumedObjects(consumedObjectIds);
   }
 }

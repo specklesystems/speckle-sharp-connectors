@@ -95,4 +95,36 @@ internal sealed class GrasshopperCollectionRebuilder
 
     return previousCollectionWrapper;
   }
+
+  /// <summary>
+  /// Removes consumed objects from the collection hierarchy.
+  /// Matches Rhino's pattern: createdObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id))
+  /// </summary>
+  /// <param name="consumedObjectIds">Set of object IDs that have been consumed by block definitions</param>
+  public void RemoveConsumedObjects(HashSet<string> consumedObjectIds)
+  {
+    if (consumedObjectIds.Count == 0)
+    {
+      return;
+    }
+
+    RemoveConsumedObjectsFromCollection(RootCollectionWrapper, consumedObjectIds);
+  }
+
+  private static void RemoveConsumedObjectsFromCollection(
+    SpeckleCollectionWrapper collection,
+    HashSet<string> consumedObjectIds
+  )
+  {
+    // Remove consumed objects from this level
+    collection.Elements.RemoveAll(element =>
+      element is SpeckleObjectWrapper obj && obj.ApplicationId != null && consumedObjectIds.Contains(obj.ApplicationId)
+    );
+
+    // Recurse into child collections
+    foreach (var childCollection in collection.Elements.OfType<SpeckleCollectionWrapper>())
+    {
+      RemoveConsumedObjectsFromCollection(childCollection, consumedObjectIds);
+    }
+  }
 }
