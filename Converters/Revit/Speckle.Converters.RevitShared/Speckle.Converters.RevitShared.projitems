@@ -28,6 +28,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ScalingServiceToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\DetailLevelType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)settings\ReceiveReferencePointType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ReferencePointType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettingsFactory.cs" />

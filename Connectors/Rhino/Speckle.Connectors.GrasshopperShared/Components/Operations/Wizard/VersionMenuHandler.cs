@@ -1,11 +1,12 @@
-﻿using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
-public class VersionSelectedEventArgs(Version? version) : EventArgs
+public class VersionSelectedEventArgs(Version? version, bool isLatest) : EventArgs
 {
   public Version? SelectedVersion { get; } = version;
+  public bool IsLatest { get; } = isLatest;
 }
 
 public class VersionMenuHandler
@@ -14,6 +15,7 @@ public class VersionMenuHandler
   private readonly Func<int, Task<ResourceCollection<Version>>> _fetchVersions;
   private ToolStripDropDown? _menu;
   private Version? SelectedVersion { get; set; }
+  public bool IsLatest { get; set; }
 
   public ResourceCollection<Version>? Versions { get; set; }
 
@@ -32,14 +34,15 @@ public class VersionMenuHandler
     );
   }
 
-  public void Reset()
+  public void Reset(bool isLatest = false)
   {
     _menu?.Items.Clear();
     _menu?.Close();
+    IsLatest = isLatest;
     SelectedVersion = null;
     Versions = null;
     FetchedVersionCount = 10;
-    RedrawMenuButton(null);
+    RedrawMenuButton(null, isLatest);
   }
 
   private async Task Refetch(int versionCount)
@@ -50,6 +53,7 @@ public class VersionMenuHandler
 
   private bool PopulateMenu(ToolStripDropDown menu)
   {
+    menu.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
     _menu = menu;
 
     if (Versions is null)
@@ -78,7 +82,7 @@ public class VersionMenuHandler
       return;
     }
 
-    AddMenuItem("Latest Version", (_, _) => OnVersionSelected(null), true, SelectedVersion == null);
+    AddMenuItem("Latest Version", (_, _) => OnVersionSelected(null, true), true, SelectedVersion == null);
     AddMenuSeparator();
 
     foreach (var version in Versions.items)
@@ -87,7 +91,7 @@ public class VersionMenuHandler
 
       var versionItem = AddMenuItem(
         $"{version.id} - {desc}",
-        (_, _) => OnVersionSelected(version),
+        (_, _) => OnVersionSelected(version, false),
         true,
         SelectedVersion?.id == version.id
       );
@@ -122,8 +126,9 @@ public class VersionMenuHandler
     }
   }
 
-  public void RedrawMenuButton(Version? version)
+  public void RedrawMenuButton(Version? version, bool isLatest)
   {
+    IsLatest = isLatest;
     var suffix = VersionContextMenuButton.Enabled
       ? "Left-click to select another version."
       : "Selection is disabled due to component input.";
@@ -133,26 +138,21 @@ public class VersionMenuHandler
       VersionContextMenuButton.NickName = version.id;
       VersionContextMenuButton.Description = $"{version.message ?? "No message"}\n\n{suffix}";
     }
-    // else if (_model != null)
-    // {
-    //   VersionContextMenuButton.NickName = "Latest Version";
-    //   VersionContextMenuButton.Name = "Latest Version";
-    //   VersionContextMenuButton.Description = "Gets the latest version from the selected model";
-    // }
     else
     {
-      VersionContextMenuButton.Name = "Select Version";
+      VersionContextMenuButton.Name = IsLatest ? "Latest Version" : "Select Version";
       VersionContextMenuButton.NickName = "Version";
-      VersionContextMenuButton.Description = "Left-click to select version";
+      VersionContextMenuButton.Description = "Left-click to select a specific version";
     }
   }
 
-  private void OnVersionSelected(Version? version)
+  private void OnVersionSelected(Version? version, bool isLatest)
   {
     _menu?.Close();
     SelectedVersion = version;
-    RedrawMenuButton(SelectedVersion);
-    VersionSelected?.Invoke(this, new VersionSelectedEventArgs(version));
+    IsLatest = isLatest;
+    RedrawMenuButton(SelectedVersion, isLatest);
+    VersionSelected?.Invoke(this, new VersionSelectedEventArgs(version, isLatest));
   }
 
   private ToolStripMenuItem AddMenuItem(
@@ -162,7 +162,7 @@ public class VersionMenuHandler
     bool? isChecked = null
   )
   {
-    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false };
+    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false, TextAlign = ContentAlignment.MiddleLeft };
     item.Click += click;
     if (visible == false)
     {
@@ -173,5 +173,8 @@ public class VersionMenuHandler
     return item;
   }
 
-  private void AddMenuSeparator() => _menu?.Items.Add(new ToolStripSeparator());
+  private void AddMenuSeparator()
+  {
+    _menu?.Items.Add(new ToolStripSeparator());
+  }
 }

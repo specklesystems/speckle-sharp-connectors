@@ -16,6 +16,7 @@ public class SearchToolStripMenuItem
 
   public SearchToolStripMenuItem(ToolStripDropDown parent, Func<string, Task> onSearchTextChanged)
   {
+    parent.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
     ParentDropDown = parent;
     ParentDropDown.Opacity = 0.95;
     ParentDropDown.TopLevel = true;
@@ -38,9 +39,11 @@ public class SearchToolStripMenuItem
   {
     var item = new ToolStripMenuItem(text)
     {
+      TextAlign = ContentAlignment.MiddleLeft,
       Checked = isChecked ?? false,
       Image = image,
-      ImageScaling = ToolStripItemImageScaling.SizeToFit
+      ImageScaling = ToolStripItemImageScaling.SizeToFit,
+      ImageAlign = ContentAlignment.MiddleLeft
     };
     item.Click += click;
     if (visible == false)
@@ -60,10 +63,10 @@ public class SearchToolStripMenuItem
   {
     var textBox = new TextBox
     {
-      BorderStyle = BorderStyle.None,
-      Width = 600,
-      Font = new Font("Segoe UI", 9),
       TextAlign = HorizontalAlignment.Left,
+      BorderStyle = BorderStyle.None,
+      Width = ParentDropDown.Width,
+      Font = new Font("Segoe UI", 9),
       Text = SEARCH_PLACEHOLDER_TEXT,
       BackColor = Color.White,
     };
@@ -105,10 +108,10 @@ public class SearchToolStripMenuItem
 
     SearchHost = new ToolStripControlHost(textBox)
     {
+      Alignment = ToolStripItemAlignment.Left,
+      ControlAlign = ContentAlignment.MiddleLeft,
       Name = SearchItemId,
-      AutoSize = false,
-      Size = new Size(170, 24),
-      Margin = new Padding(4),
+      Margin = new Padding(2),
       Padding = new Padding(2)
     };
 
@@ -118,12 +121,6 @@ public class SearchToolStripMenuItem
 
   private void RegisterEvents()
   {
-    // Resets the search filter
-    // ParentDropDown.Opening += async (sender, args) =>
-    // {
-    //   await _onSearchTextChanged.Invoke("");
-    // };
-
     ParentDropDown.ItemClicked += (sender, args) =>
     {
       // we are not closing the dropdown only if user clicked the first item of the dropdown which is TextBox that we use for search
@@ -135,8 +132,14 @@ public class SearchToolStripMenuItem
       ParentDropDown.Close();
     };
 
-    ParentDropDown.Closed += (sender, args) =>
+    // Resets the list with empty search texts, otherwise on next menu pop up we end up with latest state
+    ParentDropDown.Closed += async (sender, args) =>
     {
+      // clear list only if search text is not null
+      if (SearchText != null)
+      {
+        await _onSearchTextChanged.Invoke("");
+      }
       SearchText = null;
     };
   }

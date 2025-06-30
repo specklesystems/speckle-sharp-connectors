@@ -15,11 +15,11 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $"PropertyGroup ({Value.Count})";
+  public override string ToString() => $"Speckle Properties : ({Value.Count})";
 
   public override bool IsValid => true;
-  public override string TypeName => "Speckle property group wrapper";
-  public override string TypeDescription => "Speckle property group wrapper";
+  public override string TypeName => "Speckle property group goo";
+  public override string TypeDescription => "Speckle property group goo";
 
   public SpecklePropertyGroupGoo()
   {
@@ -74,6 +74,31 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
 #if !RHINO8_OR_GREATER
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
+
+  public bool Equals(ISpecklePropertyGoo other)
+  {
+    if (other is not SpecklePropertyGroupGoo propGroup)
+    {
+      return false;
+    }
+
+    if (Value.Keys.Count != propGroup.Value.Keys.Count)
+    {
+      return false;
+    }
+
+    var thisProps = Flatten();
+    var otherProps = propGroup.Flatten();
+    foreach (var entry in thisProps)
+    {
+      if (!otherProps.TryGetValue(entry.Key, out SpecklePropertyGoo otherValue) || !entry.Value.Equals(otherValue))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   /// <summary>
   /// Adds this property group to the input object attributes
@@ -182,6 +207,7 @@ public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>
 {
   public override Guid ComponentGuid => new("AF4757C3-BA33-4ACD-A92B-C80356043129");
   protected override Bitmap Icon => Resources.speckle_param_properties;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   public SpecklePropertyGroupParam()
     : this(GH_ParamAccess.item) { }

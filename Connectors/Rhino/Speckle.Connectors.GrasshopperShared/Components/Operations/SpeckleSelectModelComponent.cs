@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
@@ -30,6 +31,8 @@ public class SpeckleSelectModelComponent : GH_Component
   private SpeckleOperationWizard SpeckleOperationWizard { get; }
 
   protected override Bitmap Icon => Resources.speckle_inputs_model;
+
+  public override GH_Exposure Exposure => GH_Exposure.primary;
 
   public SpeckleSelectModelComponent()
     : base(
@@ -99,13 +102,13 @@ public class SpeckleSelectModelComponent : GH_Component
         try
         {
           // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true);
+          var (resource, hasPermission) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true, null);
           if (!hasPermission)
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
           }
           _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
-          _storedServer = resource.Server;
+          _storedServer = resource.Account.Server;
           da.SetData(0, resource);
         }
         catch (SpeckleException e)
@@ -257,8 +260,11 @@ public class SpeckleSelectModelComponent : GH_Component
         da.SetData(
           0,
           new SpeckleUrlLatestModelVersionResource(
-            SpeckleOperationWizard.SelectedAccount.id,
-            SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+            new AccountResource(
+              SpeckleOperationWizard.SelectedAccount.id,
+              null,
+              SpeckleOperationWizard.SelectedAccount.serverInfo.url
+            ),
             SpeckleOperationWizard.SelectedWorkspace?.id,
             SpeckleOperationWizard.SelectedProject.id,
             SpeckleOperationWizard.SelectedModel.id
@@ -271,8 +277,11 @@ public class SpeckleSelectModelComponent : GH_Component
       da.SetData(
         0,
         new SpeckleUrlModelVersionResource(
-          SpeckleOperationWizard.SelectedAccount.id,
-          SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+          new AccountResource(
+            SpeckleOperationWizard.SelectedAccount.id,
+            null,
+            SpeckleOperationWizard.SelectedAccount.serverInfo.url
+          ),
           SpeckleOperationWizard.SelectedWorkspace?.id,
           SpeckleOperationWizard.SelectedProject.id,
           SpeckleOperationWizard.SelectedModel.id,
@@ -324,6 +333,30 @@ public class SpeckleSelectModelComponent : GH_Component
         SpeckleOperationWizard.SelectedAccount?.id != account.id,
         SpeckleOperationWizard.SelectedAccount?.id == account.id
       );
+    }
+
+    if (SpeckleOperationWizard.SelectedAccount != null && SpeckleOperationWizard.SelectedProject != null)
+    {
+      Menu_AppendSeparator(menu);
+      Menu_AppendItem(
+        menu,
+        $"View model online ↗",
+        (s, e) =>
+          Open(
+            SpeckleOperationWizard.SelectedAccount.serverInfo.url,
+            SpeckleOperationWizard.SelectedProject.id,
+            SpeckleOperationWizard.SelectedModel?.id,
+            SpeckleOperationWizard.SelectedVersion?.id
+          )
+      );
+    }
+
+    static void Open(string server, string projectId, string? modelId, string? versionId)
+    {
+      string url =
+        $"{server}/projects/{projectId}/models/{(modelId is null ? "" : modelId)}{(versionId is null ? "" : $"@{versionId}")}";
+      var psi = new ProcessStartInfo { FileName = url, UseShellExecute = true };
+      Process.Start(psi);
     }
   }
 
