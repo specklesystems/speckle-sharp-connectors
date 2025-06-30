@@ -3,24 +3,35 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public sealed class LevelExtractor
 {
   // stores the map of level id to level name
-  private readonly Dictionary<DB.ElementId, string> _levelCache = new();
+  private readonly Dictionary<DB.ElementId, DB.Level> _levelCache = new();
 
   public LevelExtractor() { }
 
-  public string? GetLevel(DB.Element element)
+  public string? GetLevelName(DB.Element element)
+  {
+    var level = GetLevel(element);
+    if (level is null)
+    {
+      return null;
+    }
+
+    return level.Name;
+  }
+
+  public DB.Level? GetLevel(DB.Element element)
   {
     // get level, if any
     if (element.LevelId != DB.ElementId.InvalidElementId)
     {
-      if (_levelCache.TryGetValue(element.LevelId, out string? name))
+      if (_levelCache.TryGetValue(element.LevelId, out DB.Level? cachedLevel))
       {
-        return name;
+        return cachedLevel;
       }
 
       if (element.Document.GetElement(element.LevelId) is DB.Level level)
       {
-        _levelCache[element.LevelId] = level.Name;
-        return level.Name;
+        _levelCache[element.LevelId] = level;
+        return level;
       }
     }
 

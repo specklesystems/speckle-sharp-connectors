@@ -7,9 +7,7 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
 {
   public override IGH_Goo Duplicate() => throw new NotImplementedException();
 
-  public override string ToString() => $"{Path} - {Value}";
-
-  public string Path { get; set; }
+  public override string ToString() => $"{Value}";
 
   public override bool IsValid => true;
   public override string TypeName => "Speckle property wrapper";
@@ -36,51 +34,39 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
     {
       case SpecklePropertyGoo speckleProperty:
         Value = speckleProperty.Value;
-        Path = speckleProperty.Path;
         return true;
       case double d:
         Value = d;
-        Path = string.Empty;
         return true;
       case int i:
         Value = i;
-        Path = string.Empty;
         return true;
       case string s:
         Value = s;
-        Path = string.Empty;
         return true;
       case bool b:
         Value = b;
-        Path = string.Empty;
         return true;
       case KeyValuePair<string, object?> kvp:
         Value = kvp.Value ?? "";
-        Path = kvp.Key;
         return true;
       case KeyValuePair<string, string> kvp:
         Value = kvp.Value;
-        Path = kvp.Key;
         return true;
       case GH_String ghS:
         Value = ghS.Value;
-        Path = string.Empty;
         return true;
       case GH_Text t:
         Value = t.Text;
-        Path = string.Empty;
         return true;
       case GH_Number n:
         Value = n.Value;
-        Path = string.Empty;
         return true;
       case GH_Integer ghI:
         Value = ghI.Value;
-        Path = string.Empty;
         return true;
       case GH_Boolean ghB:
         Value = ghB.Value;
-        Path = string.Empty;
         return true;
     }
 
@@ -132,5 +118,37 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
     }
 
     return false;
+  }
+
+  public bool Equals(ISpecklePropertyGoo other)
+  {
+    if (other is not SpecklePropertyGoo prop)
+    {
+      return false;
+    }
+
+    switch (Value)
+    {
+      case string s:
+        return s == prop.Value.ToString();
+      case bool b:
+        return prop.Value is bool otherBool
+          ? b == otherBool
+          : bool.TryParse(prop.Value.ToString(), out bool parsedBool) && b == parsedBool;
+      case double d:
+        return prop.Value is double otherDouble
+          ? d == otherDouble
+          : double.TryParse(prop.Value.ToString(), out double parsedDouble) && d == parsedDouble;
+      case float f:
+        return prop.Value is float otherFloat
+          ? f == otherFloat
+          : float.TryParse(prop.Value.ToString(), out float parsedFloat) && f == parsedFloat;
+      case int i:
+        return prop.Value is int otherInt
+          ? i == otherInt
+          : int.TryParse(prop.Value.ToString(), out int parsedInt) && i == parsedInt;
+      default:
+        return Value == prop.Value;
+    }
   }
 }

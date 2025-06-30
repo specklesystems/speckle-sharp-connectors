@@ -8,6 +8,8 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -20,13 +22,14 @@ public sealed class ReceiveOperationManager(
   IDocumentModelStore store,
   ISpeckleApplication speckleApplication,
   IOperationProgressManager operationProgressManager,
+  IAccountManager accountManager,
   ILogger<ReceiveOperationManager> logger
 ) : IReceiveOperationManager
 {
   public async Task Process(
     IReceiveBindingUICommands commands,
     string modelCardId,
-    Action<IServiceProvider> initializeScope,
+    Action<IServiceProvider, ModelCard> initializeScope,
     Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>> processor
   )
   {
@@ -40,7 +43,7 @@ public sealed class ReceiveOperationManager(
     {
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
-      initializeScope(serviceScope.ServiceProvider);
+      initializeScope(serviceScope.ServiceProvider, modelCard);
       var progress = operationProgressManager.CreateOperationProgressEventHandler(
         commands.Bridge,
         modelCardId,
@@ -49,7 +52,7 @@ public sealed class ReceiveOperationManager(
       var ro = serviceScope.ServiceProvider.GetRequiredService<IReceiveOperation>();
       var conversionResults = await processor(
         modelCard.ModelName,
-        () => ro.Execute(modelCard.GetReceiveInfo(speckleApplication.Slug), progress, cancellationItem.Token)
+        () => ro.Execute(GetReceiveInfo(modelCard), progress, cancellationItem.Token)
       );
 
       if (conversionResults is null)
@@ -80,6 +83,20 @@ public sealed class ReceiveOperationManager(
       // otherwise the id of the operation persists on the cancellation manager and triggers 'Operations cancelled because of document swap!' message to UI.
       cancellationManager.CancelOperation(modelCardId);
     }
+  }
+
+  private ReceiveInfo GetReceiveInfo(ReceiverModelCard modelCard)
+  {
+    var account = accountManager.GetAccount(modelCard.AccountId.NotNull());
+    return new(
+      account,
+      modelCard.ProjectId.NotNull(),
+      modelCard.ProjectName.NotNull(),
+      modelCard.ModelId.NotNull(),
+      modelCard.ModelName.NotNull(),
+      modelCard.SelectedVersionId.NotNull(),
+      speckleApplication.Slug
+    );
   }
 
   [AutoInterfaceIgnore]

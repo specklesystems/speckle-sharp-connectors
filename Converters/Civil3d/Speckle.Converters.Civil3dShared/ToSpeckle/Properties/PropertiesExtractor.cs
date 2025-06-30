@@ -3,7 +3,7 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 /// <summary>
 /// Extracts properties for the CivilObject class.
 /// </summary>
-public class PropertiesExtractor
+public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PartDataExtractor _partDataExtractor;

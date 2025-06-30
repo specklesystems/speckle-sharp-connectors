@@ -7,7 +7,6 @@ using GrasshopperAsyncComponent;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -26,7 +25,7 @@ using Speckle.Sdk.Models.Extensions;
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
 [Guid("1587DF34-83E5-4AFE-B42E-F7C5C37ECD68")]
-public class ReceiveAsyncComponent : GH_AsyncComponent
+public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
 {
   public ReceiveAsyncComponent()
     : base("Load", "L", "Load a model from Speckle", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
@@ -280,11 +279,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
     try
     {
       using var scope = PriorityLoader.CreateScopeForActiveDocument();
-      Account? account =
-        urlResource.AccountId != null
-          ? scope.Get<IAccountManager>().GetAccount(urlResource.AccountId)
-          : scope.Get<IAccountService>().GetAccountWithServerUrlFallback("", new Uri(urlResource.Server)); // fallback the account that matches with URL if any
-
+      Account? account = urlResource.Account.GetAccount(scope);
       if (account is null)
       {
         throw new SpeckleAccountManagerException($"No default account was found");
@@ -302,24 +297,28 @@ public class ReceiveAsyncComponent : GH_AsyncComponent
   }
 }
 
-public class ReceiveComponentWorker : WorkerInstance
+public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponent>
 {
-  public ReceiveComponentWorker(GH_Component p)
-    : base(p) { }
+  public ReceiveComponentWorker(
+    ReceiveAsyncComponent p,
+    string id = "baseWorker",
+    CancellationToken cancellationToken = default
+  )
+    : base(p, id, cancellationToken) { }
 
   public Base Root { get; set; }
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo Result { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
-  public override WorkerInstance Duplicate()
+  public override WorkerInstance<ReceiveAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
   {
-    return new ReceiveComponentWorker(Parent);
+    return new ReceiveComponentWorker(Parent, id, cancellationToken);
   }
 
   public override void GetData(IGH_DataAccess da, GH_ComponentParamServer p)
   {
-    UrlModelResource = ((ReceiveAsyncComponent)Parent).UrlModelResource;
+    UrlModelResource = Parent.UrlModelResource;
   }
 
   public override void SetData(IGH_DataAccess da)
@@ -334,7 +333,7 @@ public class ReceiveComponentWorker : WorkerInstance
       Parent.AddRuntimeMessage(level, message);
     }
 
-    var parent = (ReceiveAsyncComponent)Parent;
+    var parent = Parent;
 
     parent.CurrentComponentState = ComponentState.UpToDate;
 
@@ -348,136 +347,129 @@ public class ReceiveComponentWorker : WorkerInstance
     da.SetData(0, Result);
   }
 
-#pragma warning disable CA1506
-  public override void DoWork(Action<string, double> reportProgress, Action done)
-#pragma warning restore CA1506
+  public override async Task DoWork(Action<string, double> reportProgress, Action done)
   {
-    var receiveComponent = (ReceiveAsyncComponent)Parent;
-
     try
     {
-      if (UrlModelResource is null)
-      {
-        throw new InvalidOperationException("Model Resource was null");
-      }
-
-      // Means it's a copy paste of an empty non-init component; set the record and exit fast.
-      if (receiveComponent.JustPastedIn && !receiveComponent.AutoReceive)
-      {
-        receiveComponent.JustPastedIn = false;
-        return;
-      }
-
-      receiveComponent.CurrentComponentState = ComponentState.Receiving;
-      RhinoApp.InvokeOnUiThread(
-        (Action)
-          delegate
-          {
-            receiveComponent.OnDisplayExpired(true);
-          }
-      );
-
-      var t = Task.Run(async () =>
-      {
-        // Step 1 - RECEIVE FROM SERVER
-        var receiveInfo = await UrlModelResource
-          .GetReceiveInfo(receiveComponent.ApiClient, CancellationToken)
-          .ConfigureAwait(false);
-
-        var progress = new Progress<CardProgress>(p =>
-        {
-          reportProgress(Id, p.Progress ?? 0);
-          //eceiveComponent.Message = $"{p.Status}";
-        });
-
-        if (CancellationToken.IsCancellationRequested)
-        {
-          return;
-        }
-
-        if (receiveInfo == null)
-        {
-          done();
-          return;
-        }
-
-        using var scope = PriorityLoader.CreateScopeForActiveDocument();
-        Root = await scope
-          .Get<GrasshopperReceiveOperation>()
-          .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
-          .ConfigureAwait(false);
-
-        if (CancellationToken.IsCancellationRequested)
-        {
-          return;
-        }
-
-        // Step 2 - CONVERT
-        //receiveComponent.Message = $"Unpacking...";
-        LocalToGlobalUnpacker localToGlobalUnpacker = new();
-        TraversalContextUnpacker traversalContextUnpacker = new();
-        var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
-
-        // "flatten" block instances
-        var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-          unpackedRoot.DefinitionProxies,
-          unpackedRoot.ObjectsToConvert.ToList()
-        );
-
-        // TODO: unpack colors and render materials
-        GrasshopperColorUnpacker colorUnpacker = new(unpackedRoot);
-        GrasshopperMaterialUnpacker materialUnpacker = new(unpackedRoot);
-
-        GrasshopperCollectionRebuilder collectionRebuilder =
-          new((Root as Collection) ?? new Collection() { name = "unnamed" });
-
-        LocalToGlobalMapHandler mapHandler =
-          new(traversalContextUnpacker, collectionRebuilder, colorUnpacker, materialUnpacker);
-
-        int count = 0;
-        int total = localToGlobalMaps.Count;
-
-        foreach (var map in localToGlobalMaps)
-        {
-          mapHandler.CreateGrasshopperObjectFromMap(map);
-          count++;
-        }
-
-        Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-
-        // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-        var customProperties = new Dictionary<string, object>()
-        {
-          { "isAsync", true },
-          { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
-          { "auto", receiveComponent.AutoReceive }
-        };
-        if (receiveInfo.WorkspaceId != null)
-        {
-          customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
-        }
-
-        if (receiveInfo.SelectedVersionUserId != null)
-        {
-          customProperties.Add(
-            "isMultiplayer",
-            receiveInfo.SelectedVersionUserId != receiveComponent.ApiClient.Account.userInfo.id
-          );
-        }
-        await scope
-          .Get<IMixPanelManager>()
-          .TrackEvent(MixPanelEvents.Receive, receiveComponent.ApiClient.Account, customProperties);
-
-        // DONE
-        done();
-      });
-      t.Wait();
+      await Receive(reportProgress);
+      done();
+    }
+    catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+    {
+      RuntimeMessages.Add((GH_RuntimeMessageLevel.Remark, "Operation cancelled"));
+      Parent.CurrentComponentState = ComponentState.Expired;
+      //No need to call `done()` - GrasshopperAsyncComponent assumes immediate cancel,
+      //thus it has already performed clean-up actions that would normally be done on `done()`
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       RuntimeMessages.Add((GH_RuntimeMessageLevel.Error, ex.ToFormattedString()));
       done();
     }
+  }
+
+#pragma warning disable CA1506
+  private async Task Receive(Action<string, double> reportProgress)
+#pragma warning restore CA1506
+  {
+    if (UrlModelResource is null)
+    {
+      throw new InvalidOperationException("Model Resource was null");
+    }
+
+    // Means it's a copy paste of an empty non-init component; set the record and exit fast.
+    if (Parent.JustPastedIn && !Parent.AutoReceive)
+    {
+      Parent.JustPastedIn = false;
+      return;
+    }
+
+    Parent.CurrentComponentState = ComponentState.Receiving;
+    RhinoApp.InvokeOnUiThread(
+      (Action)
+        delegate
+        {
+          Parent.OnDisplayExpired(true);
+        }
+    );
+
+    // Step 1 - RECEIVE FROM SERVER
+    var receiveInfo = await UrlModelResource.GetReceiveInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
+
+    var progress = new Progress<CardProgress>(p =>
+    {
+      reportProgress(Id, p.Progress ?? 0);
+      //eceiveComponent.Message = $"{p.Status}";
+    });
+
+    CancellationToken.ThrowIfCancellationRequested();
+
+    if (receiveInfo == null)
+    {
+      return;
+    }
+
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    Root = await scope
+      .Get<GrasshopperReceiveOperation>()
+      .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+      .ConfigureAwait(false);
+
+    CancellationToken.ThrowIfCancellationRequested();
+
+    // Step 2 - CONVERT
+    //receiveComponent.Message = $"Unpacking...";
+    TraversalContextUnpacker traversalContextUnpacker = new();
+    var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
+
+    // separate atomic objects from block instances
+    var (atomicObjects, blockInstances) = scope
+      .Get<RootObjectUnpacker>()
+      .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+
+    // initialize unpackers and collection builder
+    var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
+    var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
+    var collectionRebuilder = new GrasshopperCollectionRebuilder(
+      (Root as Collection) ?? new Collection { name = "unnamed" }
+    );
+
+    // convert atomic objects directly
+    var mapHandler = new LocalToGlobalMapHandler(
+      traversalContextUnpacker,
+      collectionRebuilder,
+      colorUnpacker,
+      materialUnpacker
+    );
+
+    foreach (var atomicContext in atomicObjects)
+    {
+      mapHandler.ConvertAtomicObject(atomicContext);
+    }
+
+    // process block instances using converted atomic objects
+    // block processing needs converted objects, but object filtering needs block definitions.
+    mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
+
+    Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+    var customProperties = new Dictionary<string, object>()
+    {
+      { "isAsync", true },
+      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+      { "auto", Parent.AutoReceive }
+    };
+    if (receiveInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+    }
+
+    if (receiveInfo.SelectedVersionUserId != null)
+    {
+      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != Parent.ApiClient.Account.userInfo.id);
+    }
+    await scope.Get<IMixPanelManager>().TrackEvent(MixPanelEvents.Receive, Parent.ApiClient.Account, customProperties);
   }
 }
 
@@ -537,7 +529,7 @@ public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
       else
       {
         var palette =
-          state == ComponentState.Expired || state == ComponentState.UpToDate || state == ComponentState.Cancelled
+          state == ComponentState.Expired || state == ComponentState.UpToDate
             ? GH_Palette.Black
             : GH_Palette.Transparent;
         var text = state != ComponentState.Receiving ? "Load" : "Loading...";

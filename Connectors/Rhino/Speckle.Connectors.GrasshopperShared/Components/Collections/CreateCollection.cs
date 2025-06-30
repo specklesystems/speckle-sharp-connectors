@@ -36,7 +36,13 @@ public class CreateCollection : VariableParameterComponentBase
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Collection", "C", "Created parent collection", GH_ParamAccess.item);
+    pManager.AddParameter(
+      new SpeckleCollectionParam(),
+      "Collection",
+      "C",
+      "Created parent collection",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
@@ -152,12 +158,17 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
-      var wrapperGoo = new SpeckleObjectWrapperGoo();
-      if (wrapperGoo.CastFrom(obj))
+      // deep copy to avoid mutations
+      if (obj?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper objWrapper)
       {
-        wrapperGoo.Value.Path = childPath;
-        wrapperGoo.Value.Parent = parentCollection;
-        parentCollection.Elements.Add(wrapperGoo.Value);
+        SpeckleObjectWrapper wrapper = objWrapper.DeepCopy();
+        wrapper.Path = childPath;
+        wrapper.Parent = parentCollection;
+        parentCollection.Elements.Add(wrapper);
+      }
+      else
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{obj?.GetType().Name} type cannot be added to collections.");
       }
     }
   }

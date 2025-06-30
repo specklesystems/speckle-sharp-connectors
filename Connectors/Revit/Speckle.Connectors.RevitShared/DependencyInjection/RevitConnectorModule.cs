@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
+using Speckle.Connectors.Revit.Operations.Receive.Settings;
 using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
@@ -57,10 +58,12 @@ public static class ServiceRegistration
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<DocumentToConvert>>();
     serviceCollection.AddScoped<ElementUnpacker>();
+    serviceCollection.AddScoped<LevelUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
+    serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies
