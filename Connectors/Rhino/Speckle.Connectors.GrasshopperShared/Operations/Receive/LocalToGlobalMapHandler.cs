@@ -41,11 +41,7 @@ internal sealed class LocalToGlobalMapHandler
   /// <summary>
   /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
   /// </summary>
-  /// <param name="isDefinitionObject">
-  /// If true, object is added to ConvertedObjectsMap but excluded from collection hierarchy
-  /// to prevent duplication (definition objects appear both standalone and within block definitions).
-  /// </param>
-  public void ConvertAtomicObject(TraversalContext atomicContext, bool isDefinitionObject = false)
+  public void ConvertAtomicObject(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
@@ -65,16 +61,13 @@ internal sealed class LocalToGlobalMapHandler
       }
 
       var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
-      SpeckleCollectionWrapper? objectCollection = null;
 
-      if (!isDefinitionObject)
-      {
-        objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
-          path,
-          _colorUnpacker,
-          _materialUnpacker
-        );
-      }
+      // Always create collection - consumed objects will be cleaned up later
+      var objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+        path,
+        _colorUnpacker,
+        _materialUnpacker
+      );
 
       // Extract name and properties
       SpecklePropertyGroupGoo propertyGroup = new();
@@ -117,14 +110,9 @@ internal sealed class LocalToGlobalMapHandler
           ApplicationId = objId
         };
 
-        // Always add to ConvertedObjectsMap (regardless of definition or atomic objects). Blocks need for unpacking
+        // Always add to both map and collections
         ConvertedObjectsMap[objId] = wrapper;
-
-        // Only add atomic objects to collection hierarchy if it's not a definition object
-        if (!isDefinitionObject && objectCollection != null)
-        {
-          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
-        }
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
