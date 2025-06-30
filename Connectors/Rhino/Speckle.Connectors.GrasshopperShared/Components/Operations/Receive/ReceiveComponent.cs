@@ -182,15 +182,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       materialUnpacker
     );
 
-    // objects used in definitions need to be added to ConvertedObjectsMap but not directly to collection
-    // this flattened list allows us to create the bool flag needed by the ConvertAtomicObject method
-    var definitionObjectIds = unpackedRoot.DefinitionProxies.GetDefinitionObjectIds();
-
     foreach (var atomicContext in atomicObjects)
     {
-      var objId = atomicContext.Current.applicationId ?? atomicContext.Current.id;
-      bool isDefinitionObject = objId != null && definitionObjectIds.Contains(objId);
-      mapHandler.ConvertAtomicObject(atomicContext, isDefinitionObject);
+      mapHandler.ConvertAtomicObject(atomicContext);
     }
 
     // process block instances using converted atomic objects

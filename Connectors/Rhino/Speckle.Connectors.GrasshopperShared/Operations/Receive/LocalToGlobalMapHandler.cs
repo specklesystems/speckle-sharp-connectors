@@ -13,14 +13,13 @@ using Speckle.Sdk.Models.Instances;
 /// </summary>
 /// <remarks>
 /// Follows Rhino's approach: atomic objects are converted directly without pre-transformation,
-/// with instance transformations handled separately during block reconstruction.
+/// with instance transformations handled separately during block reconstruction. Implements consumedObjectIds
+/// tracking to prevent objects consumed by block definitions from appearing as standalone objects.
 /// </remarks>
 internal sealed class LocalToGlobalMapHandler
 {
   public Dictionary<string, SpeckleObjectWrapper> ConvertedObjectsMap { get; } = new();
   public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
-
-  // TODO: ConsumedObjectIds logic needed - objects consumed by block definitions currently appear as both standalone objects and within blocks.
 
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
   private readonly GrasshopperColorUnpacker _colorUnpacker;
@@ -42,11 +41,7 @@ internal sealed class LocalToGlobalMapHandler
   /// <summary>
   /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
   /// </summary>
-  /// <param name="isDefinitionObject">
-  /// If true, object is added to ConvertedObjectsMap but excluded from collection hierarchy
-  /// to prevent duplication (definition objects appear both standalone and within block definitions).
-  /// </param>
-  public void ConvertAtomicObject(TraversalContext atomicContext, bool isDefinitionObject = false)
+  public void ConvertAtomicObject(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
@@ -66,16 +61,13 @@ internal sealed class LocalToGlobalMapHandler
       }
 
       var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
-      SpeckleCollectionWrapper? objectCollection = null;
 
-      if (!isDefinitionObject)
-      {
-        objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
-          path,
-          _colorUnpacker,
-          _materialUnpacker
-        );
-      }
+      // Always create collection - consumed objects will be cleaned up later
+      var objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+        path,
+        _colorUnpacker,
+        _materialUnpacker
+      );
 
       // Extract name and properties
       SpecklePropertyGroupGoo propertyGroup = new();
@@ -118,14 +110,9 @@ internal sealed class LocalToGlobalMapHandler
           ApplicationId = objId
         };
 
-        // Always add to ConvertedObjectsMap (regardless of definition or atomic objects). Blocks need for unpacking
+        // Always add to both map and collections
         ConvertedObjectsMap[objId] = wrapper;
-
-        // Only add atomic objects to collection hierarchy if it's not a definition object
-        if (!isDefinitionObject && objectCollection != null)
-        {
-          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
-        }
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -134,13 +121,31 @@ internal sealed class LocalToGlobalMapHandler
     }
   }
 
+  /// <summary>
+  /// Converts block instances and definitions from traversal contexts into Grasshopper wrapper objects.
+  /// Automatically handles cleanup of consumed objects from the collection hierarchy.
+  /// </summary>
+  /// <remarks>
+  /// Deliberately handles both block conversion AND consumed object cleanup in a single operation.
+  /// Too much, I know, BUT it ensures the cleanup always occurs immediately after block processing without
+  /// requiring receive components to call a separate cleanup method in the correct order.
+  /// </remarks>
   public void ConvertBlockInstances(
     IReadOnlyCollection<TraversalContext> blocks,
     IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
   )
   {
-    // GrasshopperBlockUnpacker handles empty inputs, so no need for defensive check here
     var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
-    blockUnpacker.UnpackBlocks(blocks, definitionProxies, ConvertedObjectsMap, CollectionRebuilder);
+
+    // Get consumed object IDs from unpacker
+    var consumedObjectIds = blockUnpacker.UnpackBlocks(
+      blocks,
+      definitionProxies,
+      ConvertedObjectsMap,
+      CollectionRebuilder
+    );
+
+    // Clean up consumed objects from collections
+    CollectionRebuilder.RemoveConsumedObjects(consumedObjectIds);
   }
 }

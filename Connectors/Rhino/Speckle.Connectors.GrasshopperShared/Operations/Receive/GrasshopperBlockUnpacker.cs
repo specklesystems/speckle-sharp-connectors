@@ -10,9 +10,11 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 /// <summary>
 /// Reconstructs block instances and definitions from received proxies back into Grasshopper wrapper objects.
+/// Tracks and returns object IDs consumed by block definitions to prevent duplication in collection hierarchy.
 /// </summary>
 /// <remarks>
 /// Geometry objects that define blocks must already be converted and present in convertedObjectsMap at this stage.
+/// Follows Rhino's pattern where objects consumed by block definitions should not appear as standalone objects.
 /// </remarks>
 internal sealed class GrasshopperBlockUnpacker
 {
@@ -32,20 +34,22 @@ internal sealed class GrasshopperBlockUnpacker
   }
 
   /// <summary>
-  /// Creates block definitions and instances from receive pipeline and reconstructs them as Grasshopper wrapper objects.
+  /// Creates block definitions and instances from receive pipeline, returning consumed object IDs.
   /// </summary>
-  public void UnpackBlocks(
+  /// <returns>Set of object IDs that have been consumed by block definitions and should not appear standalone</returns>
+  public HashSet<string> UnpackBlocks(
     IReadOnlyCollection<TraversalContext> blockComponents,
     IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
     GrasshopperCollectionRebuilder collectionRebuilder
   )
   {
-    // Step 1: Extract and sort all components by depth (deepest first)
+    var consumedObjectIds = new HashSet<string>();
     var sortedComponents = ExtractAndSortBlocks(blockComponents, definitionProxies);
 
-    // Step 2: Create in dependency order - definitions and instances in a tricky little balance here
-    CreateBlocksInDependencyOrder(sortedComponents, convertedObjectsMap, collectionRebuilder);
+    CreateBlocksInDependencyOrder(sortedComponents, convertedObjectsMap, collectionRebuilder, consumedObjectIds);
+
+    return consumedObjectIds;
   }
 
   /// <summary>
@@ -92,7 +96,8 @@ internal sealed class GrasshopperBlockUnpacker
   private void CreateBlocksInDependencyOrder(
     List<(Collection[] path, IInstanceComponent component)> sortedComponents,
     Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
-    GrasshopperCollectionRebuilder collectionRebuilder
+    GrasshopperCollectionRebuilder collectionRebuilder,
+    HashSet<string> consumedObjectIds
   )
   {
     var definitions = new Dictionary<string, SpeckleBlockDefinitionWrapper>();
@@ -104,7 +109,12 @@ internal sealed class GrasshopperBlockUnpacker
       {
         // Create definition using current state of convertedObjectsMap
         var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
-        var definition = CreateBlockDefinitionWrapper(definitionProxy, definitionId, convertedObjectsMap);
+        var definition = CreateBlockDefinitionWrapper(
+          definitionProxy,
+          definitionId,
+          convertedObjectsMap,
+          consumedObjectIds
+        );
         if (definition != null)
         {
           definitions[definitionId] = definition;
@@ -140,23 +150,28 @@ internal sealed class GrasshopperBlockUnpacker
 
   /// <summary>
   /// Creates a <see cref="SpeckleBlockDefinitionWrapper"/> from its proxy using pre-converted defining objects.
+  /// Tracks consumed object IDs to prevent duplication in collection hierarchy.
   /// </summary>
   /// <remarks>
-  /// Note the importance of defining objects having to already be converted at this stage.
+  /// Objects used in block definitions are considered "consumed" and should not appear as standalone objects,
+  /// matching Rhino's behavior where doc.Objects.Delete() removes consumed objects after block creation.
   /// </remarks>
   private SpeckleBlockDefinitionWrapper? CreateBlockDefinitionWrapper(
     InstanceDefinitionProxy definitionProxy,
     string definitionId,
-    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap
+    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
+    HashSet<string> consumedObjectIds
   )
   {
     var definitionObjects = new List<SpeckleObjectWrapper>();
+    var currentDefinitionObjectIds = new HashSet<string>();
 
     foreach (var objectId in definitionProxy.objects)
     {
       if (convertedObjectsMap.TryGetValue(objectId, out var convertedObject))
       {
         definitionObjects.Add(convertedObject);
+        currentDefinitionObjectIds.Add(objectId);
       }
       else
       {
@@ -169,6 +184,9 @@ internal sealed class GrasshopperBlockUnpacker
     {
       return null;
     }
+
+    // Track consumed objects (matches Rhino's consumedObjectIds.UnionWith pattern)
+    consumedObjectIds.UnionWith(currentDefinitionObjectIds);
 
     return new SpeckleBlockDefinitionWrapper
     {

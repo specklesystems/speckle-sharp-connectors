@@ -9,7 +9,6 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
-using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
 
@@ -234,25 +233,5 @@ public static class GrasshopperHelpers
       topology += myPath.ToString(false) + "-" + param.VolatileData.get_Branch(myPath).Count + " ";
     }
     return topology;
-  }
-
-  /// <summary>
-  /// Gets all object IDs that are contained within block definitions.
-  /// </summary>
-  public static HashSet<string> GetDefinitionObjectIds(
-    this IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
-  )
-  {
-    if (definitionProxies == null)
-    {
-      return [];
-    }
-
-    // Flatten nested collections: definitionProxies -> objects -> individual objectIds
-    return definitionProxies
-      .Where(proxy => proxy?.objects != null)
-      .SelectMany(proxy => proxy.objects) // proxy.objects is List<string> of object IDs
-      .Where(id => !string.IsNullOrWhiteSpace(id))
-      .ToHashSet();
   }
 }
