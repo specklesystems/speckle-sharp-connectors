@@ -52,7 +52,12 @@ public class EllipseToHostConverter
 
     if (target.trimDomain != null)
     {
-      rhinoNurbsEllipse = rhinoNurbsEllipse.Trim(_intervalConverter.Convert(target.trimDomain)).ToNurbsCurve();
+      var trim = rhinoNurbsEllipse.Trim(_intervalConverter.Convert(target.trimDomain));
+      if (trim is null)
+      {
+        throw new ConversionException("Conversion to trimmed nurbs failed most likely due to an invalid ellipse.");
+      }
+      rhinoNurbsEllipse = trim.ToNurbsCurve();
     }
 
     return rhinoNurbsEllipse;
