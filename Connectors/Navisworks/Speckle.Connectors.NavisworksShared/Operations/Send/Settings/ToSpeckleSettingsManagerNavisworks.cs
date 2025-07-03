@@ -63,13 +63,12 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
       throw new ArgumentNullException(nameof(modelCard));
     }
 
-    var originString = modelCard.Settings?.First(s => s.Id == "originMode").Value as string;
-
-    if (originString is null || !OriginModeSetting.OriginModeMap.TryGetValue(originString, out OriginMode origin))
+    if (
+      modelCard.Settings?.First(s => s.Id == "originMode").Value is not string originString
+      || !OriginModeSetting.OriginModeMap.TryGetValue(originString, out OriginMode origin)
+    )
     {
-      return OriginModeSetting.OriginModeMap.TryGetValue(nameof(OriginMode.ModelOrigin), out OriginMode defaultOrigin)
-        ? defaultOrigin
-        : throw new ArgumentException($"Invalid origin mode value: {originString}");
+      return OriginMode.ModelOrigin; // Default to ModelOrigin if not specified or invalid
     }
 
     if (_originModeCache.TryGetValue(modelCard.ModelCardId.NotNull(), out OriginMode previousType))
