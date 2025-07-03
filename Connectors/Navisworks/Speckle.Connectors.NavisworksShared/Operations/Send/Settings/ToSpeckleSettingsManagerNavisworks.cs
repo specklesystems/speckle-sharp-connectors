@@ -63,23 +63,19 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
       throw new ArgumentNullException(nameof(modelCard));
     }
 
-    var originString = modelCard.Settings?.First(s => s.Id == "originMode").Value as string;
-
-    if (originString is not null && OriginModeSetting.OriginModeMap.TryGetValue(originString, out OriginMode origin))
+    var originString = modelCard.Settings?.FirstOrDefault(s => s.Id == "originMode")?.Value as string;
+    if (!OriginModeSetting.OriginModeMap.TryGetValue(originString ?? string.Empty, out var origin))
     {
-      if (_originModeCache.TryGetValue(modelCard.ModelCardId.NotNull(), out OriginMode previousType))
-      {
-        if (previousType != origin)
-        {
-          EvictCacheForModelCard(modelCard);
-        }
-      }
-
-      _originModeCache[modelCard.ModelCardId.NotNull()] = origin;
-      return origin;
+      return OriginMode.ModelOrigin; // Default to ModelOrigin if not specified or invalid
     }
 
-    throw new ArgumentException($"Invalid origin mode value: {originString}");
+    if (_originModeCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousType) && previousType != origin)
+    {
+      EvictCacheForModelCard(modelCard);
+    }
+
+    _originModeCache[modelCard.ModelCardId.NotNull()] = origin;
+    return origin;
   }
 
   public bool GetConvertHiddenElements(SenderModelCard modelCard)
