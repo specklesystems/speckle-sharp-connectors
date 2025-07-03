@@ -66,7 +66,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -106,7 +106,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
-        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo.ProjectId);
+        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId);
         results.Add(result);
 
         ++count;
