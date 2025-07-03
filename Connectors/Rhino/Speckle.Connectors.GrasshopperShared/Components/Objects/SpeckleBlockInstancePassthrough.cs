@@ -151,12 +151,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     SpeckleMaterialWrapperGoo? inputMaterial = null;
     da.GetData(6, ref inputMaterial);
 
-    // keep track of mutation
-    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
-    bool mutated = false;
-
     // process the instance
-    // deep copy so we don't mutate the object
+    // deep copy so we don't mutate the incoming object
     SpeckleBlockInstanceWrapperGoo result =
       inputInstance != null ? new((SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy()) : new();
 
@@ -164,7 +160,6 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     if (inputDefinition != null)
     {
       result.Value.Definition = inputDefinition.Value;
-      mutated = true;
     }
 
     // Process transform
@@ -174,7 +169,6 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       if (extractedTransform.HasValue)
       {
         result.Value.Transform = extractedTransform.Value;
-        mutated = true;
       }
       else
       {
@@ -190,14 +184,12 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     if (inputName != null)
     {
       result.Value.Name = inputName;
-      mutated = true;
     }
 
     // Process properties
     if (inputProperties != null)
     {
       result.Value.Properties = inputProperties;
-      mutated = true;
     }
 
     // process color (no mutation)
@@ -212,10 +204,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       result.Value.Material = inputMaterial.Value;
     }
 
-    // Generate new ApplicationId if mutated
-    result.Value.ApplicationId = mutated
-      ? Guid.NewGuid().ToString()
-      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
+    // no need to process application id.
+    // new appids are generated if this is a new object, otherwise the input object appID should be preserved for change tracking.
 
     // Set outputs
     da.SetData(0, result);

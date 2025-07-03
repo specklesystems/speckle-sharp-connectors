@@ -84,9 +84,6 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       return;
     }
 
-    // keep track of mutation
-    bool mutated = false;
-
     // process the definition
     // deep copy so we don't mutate the object
     SpeckleBlockDefinitionWrapperGoo result = inputDefinition != null ? new(inputDefinition.Value.DeepCopy()) : new();
@@ -109,7 +106,6 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
       result.Value.Objects = processedObjects;
       result.Value.InstanceDefinitionProxy.objects = processedObjects.Select(o => o.ApplicationId!).ToList(); // TODO: this could also be set at the same time as `Objects` on the definition wrapper.
-      mutated = true;
     }
 
     // process name
@@ -122,13 +118,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       }
 
       result.Value.Name = inputName;
-      mutated = true;
     }
 
-    // process application Id. Use a new appId if mutated, or if this is a new object
-    result.Value.ApplicationId = mutated
-      ? Guid.NewGuid().ToString()
-      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
+    // no need to process application Id.
+    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
 
     // set outputs
     da.SetData(0, result);
