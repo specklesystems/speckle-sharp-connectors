@@ -133,7 +133,7 @@ public static class GrasshopperHelpers
   /// <param name="goo"></param>
   /// <returns>A reference to the Speckle Object Wrapper from the goo, if any</returns>
   /// <remarks>This method **does not** deep copy the return value</remarks>
-  public static SpeckleObjectWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
+  public static SpeckleGeometryWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
   {
     SpeckleBlockInstanceWrapperGoo instanceGoo = new();
     if (instanceGoo.CastFrom(goo))
@@ -142,7 +142,7 @@ public static class GrasshopperHelpers
     }
     else
     {
-      SpeckleObjectWrapperGoo objGoo = new();
+      SpeckleGeometryWrapperGoo objGoo = new();
       return objGoo.CastFrom(goo) ? objGoo.Value : null;
     }
   }

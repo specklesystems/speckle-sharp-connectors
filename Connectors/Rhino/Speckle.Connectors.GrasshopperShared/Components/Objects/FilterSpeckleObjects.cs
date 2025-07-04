@@ -85,7 +85,7 @@ public class FilterSpeckleObjects : GH_Component
       return;
     }
 
-    List<SpeckleObjectWrapper?> objects = inputObjects
+    List<SpeckleGeometryWrapper?> objects = inputObjects
       .Select(o => o.ToSpeckleObjectWrapper())
       .Where(o => o is not null)
       .ToList();
@@ -108,11 +108,11 @@ public class FilterSpeckleObjects : GH_Component
     string speckleId = "";
     dataAccess.GetData(5, ref speckleId);
 
-    List<SpeckleObjectWrapper> matchedObjects = new();
-    List<SpeckleObjectWrapper> removedObjects = new();
+    List<SpeckleGeometryWrapper> matchedObjects = new();
+    List<SpeckleGeometryWrapper> removedObjects = new();
     for (int i = 0; i < objects.Count; i++)
     {
-      SpeckleObjectWrapper wrapper = objects[i]!;
+      SpeckleGeometryWrapper wrapper = objects[i]!;
 
       // filter by name
       if (!MatchesSearchPattern(name, wrapper.Name))

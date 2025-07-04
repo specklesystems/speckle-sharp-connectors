@@ -6,20 +6,20 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
+public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>, IGH_PreviewData
 {
   public override bool IsValid => Value.Base is not null && Value.ApplicationId is not null;
   public override string TypeName => "Speckle Object";
   public override string TypeDescription => "Represents a geometry object from Speckle";
 
-  public SpeckleObjectWrapperGoo(SpeckleObjectWrapper value)
+  public SpeckleGeometryWrapperGoo(SpeckleGeometryWrapper value)
   {
     Value = value;
   }
 
   /// <summary>Parameterless constructor</summary>
   /// <remarks>Should only be used for casting!</remarks>
-  public SpeckleObjectWrapperGoo()
+  public SpeckleGeometryWrapperGoo()
   {
     Value = new()
     {
@@ -30,7 +30,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
     };
   }
 
-  public override IGH_Goo Duplicate() => new SpeckleObjectWrapperGoo(Value.DeepCopy());
+  public override IGH_Goo Duplicate() => new SpeckleGeometryWrapperGoo(Value.DeepCopy());
 
   public override string ToString() =>
     $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
@@ -45,10 +45,10 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
   {
     switch (source)
     {
-      case SpeckleObjectWrapper wrapper:
+      case SpeckleGeometryWrapper wrapper:
         Value = wrapper;
         return true;
-      case SpeckleObjectWrapperGoo wrapperGoo:
+      case SpeckleGeometryWrapperGoo wrapperGoo:
         Value = wrapperGoo.Value;
         return true;
       case SpeckleBlockInstanceWrapperGoo instanceWrapperGoo:
@@ -66,7 +66,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
             Transform = instance.Xform,
             ApplicationId = appId,
           }
-          : new SpeckleObjectWrapper()
+          : new SpeckleGeometryWrapper()
           {
             GeometryBase = gb,
             Base = converted,
