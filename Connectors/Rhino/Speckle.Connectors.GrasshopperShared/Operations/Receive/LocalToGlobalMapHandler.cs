@@ -18,7 +18,7 @@ using Speckle.Sdk.Models.Instances;
 /// </remarks>
 internal sealed class LocalToGlobalMapHandler
 {
-  public Dictionary<string, SpeckleObjectWrapper> ConvertedObjectsMap { get; } = new();
+  public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = new();
   public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
 
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
@@ -93,7 +93,7 @@ internal sealed class LocalToGlobalMapHandler
 
       foreach ((GeometryBase geometryBase, Base original) in converted)
       {
-        var wrapper = new SpeckleObjectWrapper()
+        var wrapper = new SpeckleGeometryWrapper()
         {
           Base = original,
           Path = path.Select(p => p.name).ToList(),

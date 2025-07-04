@@ -7,18 +7,18 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwareObject, IGH_PreviewObject
+public class SpeckleGeometryWrapperParam : GH_Param<SpeckleGeometryWrapperGoo>, IGH_BakeAwareObject, IGH_PreviewObject
 {
-  public SpeckleObjectParam()
+  public SpeckleGeometryWrapperParam()
     : this(GH_ParamAccess.item) { }
 
-  public SpeckleObjectParam(IGH_InstanceDescription tag)
+  public SpeckleGeometryWrapperParam(IGH_InstanceDescription tag)
     : base(tag) { }
 
-  public SpeckleObjectParam(IGH_InstanceDescription tag, GH_ParamAccess access)
+  public SpeckleGeometryWrapperParam(IGH_InstanceDescription tag, GH_ParamAccess access)
     : base(tag, access) { }
 
-  public SpeckleObjectParam(GH_ParamAccess access)
+  public SpeckleGeometryWrapperParam(GH_ParamAccess access)
     : base(
       "Speckle Object",
       "SO",
@@ -41,7 +41,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleObjectWrapperGoo goo)
+      if (item is SpeckleGeometryWrapperGoo goo)
       {
         goo.Value.Bake(doc, objIds);
       }
@@ -63,7 +63,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     // Iterate over all data stored in the parameter
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleObjectWrapperGoo goo)
+      if (item is SpeckleGeometryWrapperGoo goo)
       {
         int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
         bool layerCreated = goo.Value.Path.Count == 0;
@@ -83,7 +83,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
       // Iterate over all data stored in the parameter
       foreach (var item in VolatileData.AllData(true))
       {
-        if (item is SpeckleObjectWrapperGoo goo && goo.Value.GeometryBase is GeometryBase gb)
+        if (item is SpeckleGeometryWrapperGoo goo && goo.Value.GeometryBase is GeometryBase gb)
         {
           var box = gb.GetBoundingBox(false);
           clippingBox.Union(box);
@@ -104,7 +104,7 @@ public class SpeckleObjectParam : GH_Param<SpeckleObjectWrapperGoo>, IGH_BakeAwa
     var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
     foreach (var item in VolatileData.AllData(true))
     {
-      if (item is SpeckleObjectWrapperGoo goo)
+      if (item is SpeckleGeometryWrapperGoo goo)
       {
         goo.Value.DrawPreview(args, isSelected);
       }

@@ -25,7 +25,7 @@ internal sealed class GrasshopperCollectionRebuilder
   }
 
   public void AppendSpeckleGrasshopperObject(
-    SpeckleObjectWrapper speckleGrasshopperObjectWrapper,
+    SpeckleGeometryWrapper speckleGrasshopperObjectWrapper,
     List<Collection> collectionPath,
     GrasshopperColorUnpacker colorUnpacker,
     GrasshopperMaterialUnpacker materialUnpacker
@@ -118,7 +118,9 @@ internal sealed class GrasshopperCollectionRebuilder
   {
     // Remove consumed objects from this level
     collection.Elements.RemoveAll(element =>
-      element is SpeckleObjectWrapper obj && obj.ApplicationId != null && consumedObjectIds.Contains(obj.ApplicationId)
+      element is SpeckleGeometryWrapper obj
+      && obj.ApplicationId != null
+      && consumedObjectIds.Contains(obj.ApplicationId)
     );
 
     // Recurse into child collections

@@ -94,10 +94,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     // process geometry
     if (inputObjects.Count > 0)
     {
-      List<SpeckleObjectWrapper> processedObjects = new();
+      List<SpeckleGeometryWrapper> processedObjects = new();
       foreach (IGH_Goo goo in inputObjects)
       {
-        if (goo.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
+        if (goo.ToSpeckleObjectWrapper() is SpeckleGeometryWrapper gooWrapper)
         {
           processedObjects.Add(gooWrapper);
         }

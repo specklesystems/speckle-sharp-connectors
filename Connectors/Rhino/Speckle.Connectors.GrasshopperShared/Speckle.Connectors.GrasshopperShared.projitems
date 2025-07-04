@@ -20,6 +20,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
@@ -27,7 +28,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleObjectPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponentAttributes.cs" />
@@ -74,13 +74,15 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapper.cs" />
@@ -90,8 +92,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperGoo.ModelObjects.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGoo.cs" />

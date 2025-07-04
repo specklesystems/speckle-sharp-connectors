@@ -10,9 +10,9 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 /// </summary>
 internal sealed class GrasshopperBlockPacker
 {
-  private readonly IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> _instanceObjectsManager;
+  private readonly IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> _instanceObjectsManager;
 
-  public GrasshopperBlockPacker(IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> instanceObjectsManager)
+  public GrasshopperBlockPacker(IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> instanceObjectsManager)
   {
     _instanceObjectsManager = instanceObjectsManager;
   }
@@ -31,7 +31,7 @@ internal sealed class GrasshopperBlockPacker
   /// </summary>
   /// <param name="blockInstance">The block instance to process</param>
   /// <param name="depth">Current nesting depth (0 = top level, increases for nested instances)</param>
-  public List<SpeckleObjectWrapper>? ProcessInstance(SpeckleBlockInstanceWrapper? blockInstance, int depth = 0)
+  public List<SpeckleGeometryWrapper>? ProcessInstance(SpeckleBlockInstanceWrapper? blockInstance, int depth = 0)
   {
     if (blockInstance?.Definition == null)
     {
@@ -51,7 +51,7 @@ internal sealed class GrasshopperBlockPacker
   /// Processes a block definition, adding it and its objects to InstanceObjectsManager.
   /// Updates maxDepth for existing definitions when encountered at greater depths.
   /// </summary>
-  private List<SpeckleObjectWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition, int depth = 0)
+  private List<SpeckleGeometryWrapper>? ProcessDefinition(SpeckleBlockDefinitionWrapper definition, int depth = 0)
   {
     // Use wrapper's id as definitive identifier. Create if empty.
     definition.ApplicationId ??= Guid.NewGuid().ToString();
@@ -73,7 +73,7 @@ internal sealed class GrasshopperBlockPacker
     }
 
     // Process objects recursively
-    var objectsToAdd = new List<SpeckleObjectWrapper>();
+    var objectsToAdd = new List<SpeckleGeometryWrapper>();
     var currentObjectIds = new List<string>(); // Track current object IDs for proxy update
 
     foreach (var obj in definition.Objects)

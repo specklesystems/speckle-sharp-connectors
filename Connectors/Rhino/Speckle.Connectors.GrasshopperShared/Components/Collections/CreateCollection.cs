@@ -159,9 +159,9 @@ public class CreateCollection : VariableParameterComponentBase
     foreach (var obj in objects)
     {
       // deep copy to avoid mutations
-      if (obj?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper objWrapper)
+      if (obj?.ToSpeckleObjectWrapper() is SpeckleGeometryWrapper objWrapper)
       {
-        SpeckleObjectWrapper wrapper = objWrapper.DeepCopy();
+        SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
         wrapper.Path = childPath;
         wrapper.Parent = parentCollection;
         parentCollection.Elements.Add(wrapper);

@@ -40,7 +40,7 @@ internal sealed class GrasshopperBlockUnpacker
   public HashSet<string> UnpackBlocks(
     IReadOnlyCollection<TraversalContext> blockComponents,
     IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies,
-    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
+    Dictionary<string, SpeckleGeometryWrapper> convertedObjectsMap,
     GrasshopperCollectionRebuilder collectionRebuilder
   )
   {
@@ -95,7 +95,7 @@ internal sealed class GrasshopperBlockUnpacker
   /// </summary>
   private void CreateBlocksInDependencyOrder(
     List<(Collection[] path, IInstanceComponent component)> sortedComponents,
-    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
+    Dictionary<string, SpeckleGeometryWrapper> convertedObjectsMap,
     GrasshopperCollectionRebuilder collectionRebuilder,
     HashSet<string> consumedObjectIds
   )
@@ -159,11 +159,11 @@ internal sealed class GrasshopperBlockUnpacker
   private SpeckleBlockDefinitionWrapper? CreateBlockDefinitionWrapper(
     InstanceDefinitionProxy definitionProxy,
     string definitionId,
-    Dictionary<string, SpeckleObjectWrapper> convertedObjectsMap,
+    Dictionary<string, SpeckleGeometryWrapper> convertedObjectsMap,
     HashSet<string> consumedObjectIds
   )
   {
-    var definitionObjects = new List<SpeckleObjectWrapper>();
+    var definitionObjects = new List<SpeckleGeometryWrapper>();
     var currentDefinitionObjectIds = new HashSet<string>();
 
     foreach (var objectId in definitionProxy.objects)
