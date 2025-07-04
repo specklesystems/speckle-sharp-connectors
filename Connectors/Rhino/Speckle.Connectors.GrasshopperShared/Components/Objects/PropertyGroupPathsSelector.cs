@@ -29,7 +29,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
   {
     var objectPropertyGroups = VolatileData
       .AllData(true)
-      .OfType<SpeckleObjectWrapperGoo>()
+      .OfType<SpeckleGeometryWrapperGoo>()
       .Select(goo => goo.Value.Properties)
       .ToList();
 
@@ -40,7 +40,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       var modelObjects = VolatileData
         .AllData(true)
         .OfType<ModelObject>()
-        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties)
+        .Select(mo => new SpeckleGeometryWrapperGoo(mo).Value.Properties)
         .ToList();
       objectPropertyGroups.AddRange(modelObjects);
     }

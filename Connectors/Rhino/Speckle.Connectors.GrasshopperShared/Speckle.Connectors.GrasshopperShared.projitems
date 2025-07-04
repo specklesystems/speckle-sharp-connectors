@@ -20,6 +20,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
@@ -27,7 +28,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleObjectPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponentAttributes.cs" />

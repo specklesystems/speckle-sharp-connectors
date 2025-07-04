@@ -91,7 +91,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   private List<int>? _outputFilterIndices;
 
   // Caches the list of all objects by geometrybase type
-  private readonly Dictionary<ObjectType, List<SpeckleObjectWrapper>> _filterDict = new();
+  private readonly Dictionary<ObjectType, List<SpeckleGeometryWrapper>> _filterDict = new();
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
@@ -109,7 +109,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // filter by collection path
     // Note: the collection paths selector will omit the target collection from the path of nested collections.
     // the discard ("_objects") will be used to indicate objects found directly in the target collection.
-    List<SpeckleObjectWrapper> filteredObjects;
+    List<SpeckleGeometryWrapper> filteredObjects;
     SpeckleCollectionWrapper? targetCollectionWrapper = null;
     if (!string.IsNullOrEmpty(path))
     {
@@ -120,7 +120,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
         return;
       }
 
-      filteredObjects = targetCollectionWrapper.Elements.OfType<SpeckleObjectWrapper>().ToList();
+      filteredObjects = targetCollectionWrapper.Elements.OfType<SpeckleGeometryWrapper>().ToList();
     }
     else
     {
@@ -136,7 +136,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // Set output objects
     for (int i = 0; i < Params.Output.Count; i++)
     {
-      List<SpeckleObjectWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[Filters[i - 1]];
+      List<SpeckleGeometryWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[Filters[i - 1]];
       List<IGH_Goo> outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
       if (targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
@@ -151,7 +151,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   }
 
   // Sort the input objects by the FilterType enums, based on the type of their geometryBase
-  private void SortObjectsByGeometryBaseType(List<SpeckleObjectWrapper> objs)
+  private void SortObjectsByGeometryBaseType(List<SpeckleGeometryWrapper> objs)
   {
     if (_filterDict.Count > 0)
     {
@@ -168,7 +168,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     {
       if (
         wrapper.GeometryBase?.ObjectType is ObjectType objType
-        && _filterDict.TryGetValue(objType, out List<SpeckleObjectWrapper>? value)
+        && _filterDict.TryGetValue(objType, out List<SpeckleGeometryWrapper>? value)
       )
       {
         value.Add(wrapper);
@@ -176,7 +176,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     }
   }
 
-  private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
+  private IEnumerable<SpeckleGeometryWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
   {
     foreach (ISpeckleCollectionObject element in collectionWrapper.Elements)
     {
@@ -188,7 +188,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
             yield return item;
           }
           break;
-        case SpeckleObjectWrapper objectWrapper:
+        case SpeckleGeometryWrapper objectWrapper:
           yield return objectWrapper;
           break;
       }

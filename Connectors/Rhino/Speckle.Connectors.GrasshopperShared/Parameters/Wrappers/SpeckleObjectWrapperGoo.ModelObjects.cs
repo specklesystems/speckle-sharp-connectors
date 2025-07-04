@@ -11,9 +11,9 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH_PreviewData
+public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>, IGH_PreviewData
 {
-  public SpeckleObjectWrapperGoo(ModelObject mo)
+  public SpeckleGeometryWrapperGoo(ModelObject mo)
   {
     CastFrom(mo);
   }
@@ -195,7 +195,7 @@ public partial class SpeckleObjectWrapperGoo : GH_Goo<SpeckleObjectWrapper>, IGH
         Properties = props,
         ApplicationId = appId
       }
-      : new SpeckleObjectWrapper()
+      : new SpeckleGeometryWrapper()
       {
         GeometryBase = geometryBase,
         Base = @base,

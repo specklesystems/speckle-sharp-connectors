@@ -10,11 +10,11 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
 public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollectionWrapperGoo>
 {
-  private readonly IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> _instanceObjectsManager;
+  private readonly IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> _instanceObjectsManager;
 
   // each Build() call gets a fresh scoped IInstanceObjectsManager
   public GrasshopperRootObjectBuilder(
-    IInstanceObjectsManager<SpeckleObjectWrapper, List<string>> instanceObjectsManager
+    IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> instanceObjectsManager
   )
   {
     _instanceObjectsManager = instanceObjectsManager;
@@ -90,7 +90,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
           break;
 
-        case SpeckleObjectWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
+        case SpeckleGeometryWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
           Base objectBase = Unwrap(so);
           string applicationId = objectBase.applicationId!;
@@ -125,12 +125,12 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   }
 
   /// <summary>
-  /// Converts a <see cref="SpeckleObjectWrapper"/> to underlying Base object with dynamically attached properties.
+  /// Converts a <see cref="SpeckleGeometryWrapper"/> to underlying Base object with dynamically attached properties.
   /// </summary>
   /// <remarks>
   /// POC: if we move properties assignment to auto set the wrapped base, we can get rid of this entirely!
   /// </remarks>
-  private Base Unwrap(SpeckleObjectWrapper wrapper)
+  private Base Unwrap(SpeckleGeometryWrapper wrapper)
   {
     Dictionary<string, object?> props = [];
     Base baseObject = wrapper.Base;
