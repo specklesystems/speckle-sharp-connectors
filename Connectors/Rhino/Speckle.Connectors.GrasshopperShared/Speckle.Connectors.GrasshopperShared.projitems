@@ -74,10 +74,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperParam.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapper.cs" />
@@ -87,8 +89,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapperGoo.ModelObjects.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleObjectWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGoo.cs" />
