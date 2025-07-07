@@ -25,7 +25,16 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
   /// <remarks>Should only be used for casting!</remarks>
   public SpeckleDataObjectWrapperGoo()
   {
-    Value = new() { Base = new(), Geometries = [] };
+    Value = new()
+    {
+      Base = new DataObject
+      {
+        name = "",
+        displayValue = [],
+        properties = new Dictionary<string, object?>()
+      },
+      Geometries = []
+    };
   }
 
   public override bool IsValid => Value?.DataObject is not null && Value.ApplicationId is not null;
