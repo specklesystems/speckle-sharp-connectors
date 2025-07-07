@@ -64,14 +64,14 @@ public sealed class RevitHostObjectBuilder(
   )
   {
     // TODO: formalise getting transform info from rootObject. this dict access is gross.
-    Autodesk.Revit.DB.Transform? referencePointTransform = null;
+    Autodesk.Revit.DB.Transform? referencePointTransformFromRootObject = null;
     if (
       rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
       && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is Dictionary<string, object> transformDict
       && transformDict.TryGetValue("transform", out var transformValue)
     )
     {
-      referencePointTransform = ReferencePointHelper.GetTransformFromRootObject(transformValue);
+      referencePointTransformFromRootObject = ReferencePointHelper.GetTransformFromRootObject(transformValue);
     }
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
@@ -184,11 +184,15 @@ public sealed class RevitHostObjectBuilder(
     {
       using var _ = activityFactory.Start("Baking objects");
       transactionManager.StartTransaction(true, "Baking objects");
+
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
-            ReferencePointTransform = referencePointTransform
+            ReferencePointTransform = CalculateNewTransform(
+              currentSettings.ReferencePointTransform,
+              referencePointTransformFromRootObject
+            )
           }
         )
       )
@@ -215,6 +219,24 @@ public sealed class RevitHostObjectBuilder(
     }
 
     return conversionResults.builderResult;
+  }
+
+  private Autodesk.Revit.DB.Transform? CalculateNewTransform(
+    Autodesk.Revit.DB.Transform? receiveTransform,
+    Autodesk.Revit.DB.Transform? rootTransform
+  )
+  {
+    if (receiveTransform == null)
+    {
+      return rootTransform;
+    }
+
+    if (rootTransform == null)
+    {
+      return receiveTransform;
+    }
+
+    return rootTransform.Multiply(receiveTransform);
   }
 
   private (

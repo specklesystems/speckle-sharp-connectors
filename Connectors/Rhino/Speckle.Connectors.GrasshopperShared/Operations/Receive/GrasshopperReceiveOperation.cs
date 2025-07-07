@@ -1,7 +1,6 @@
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Transports;
@@ -10,7 +9,6 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 public class GrasshopperReceiveOperation
 {
-  private readonly IAccountService _accountService;
   private readonly IServerTransportFactory _serverTransportFactory;
   private readonly IProgressDisplayManager _progressDisplayManager;
   private readonly ISdkActivityFactory _activityFactory;
@@ -18,7 +16,6 @@ public class GrasshopperReceiveOperation
   private readonly IClientFactory _clientFactory;
 
   public GrasshopperReceiveOperation(
-    IAccountService accountService,
     IServerTransportFactory serverTransportFactory,
     IProgressDisplayManager progressDisplayManager,
     ISdkActivityFactory activityFactory,
@@ -26,7 +23,6 @@ public class GrasshopperReceiveOperation
     IClientFactory clientFactory
   )
   {
-    _accountService = accountService;
     _serverTransportFactory = serverTransportFactory;
     _progressDisplayManager = progressDisplayManager;
     _activityFactory = activityFactory;
@@ -43,7 +39,7 @@ public class GrasshopperReceiveOperation
     using var execute = _activityFactory.Start("Receive Operation");
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
-    Account account = _accountService.GetAccountWithServerUrlFallback(receiveInfo.AccountId, receiveInfo.ServerUrl);
+    var account = receiveInfo.Account;
     using IClient apiClient = _clientFactory.Create(account);
     using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
 

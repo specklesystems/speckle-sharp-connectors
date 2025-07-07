@@ -13,16 +13,16 @@ public record SpeckleResourceBuilder
       @"/projects/(?<projectId>[\w\d]+)(?:/models/(?<model>[\w\d]+(?:@[\w\d]+)?)(?:,(?<additionalModels>[\w\d]+(?:@[\w\d]+)?))*)?"
     );
 
-  public static SpeckleUrlModelResource[] FromUrlString(string speckleModel)
+  public static SpeckleUrlModelResource[] FromUrlString(string speckleModel, string? token)
   {
     var uri = new Uri(speckleModel);
     var serverUrl = uri.GetLeftPart(UriPartial.Authority);
     var match = s_fe2UrlRegex.Match(speckleModel);
-    var result = ParseFe2RegexMatch(serverUrl, match);
+    var result = ParseFe2RegexMatch(serverUrl, match, token);
     return result;
   }
 
-  private static SpeckleUrlModelResource[] ParseFe2RegexMatch(string serverUrl, Match match)
+  private static SpeckleUrlModelResource[] ParseFe2RegexMatch(string serverUrl, Match match, string? token)
   {
     var projectId = match.Groups["projectId"];
     var model = match.Groups["model"];
@@ -48,7 +48,7 @@ public record SpeckleResourceBuilder
       throw new NotSupportedException("Federation model urls are not supported");
     }
 
-    var modelRes = GetUrlModelResource(null, serverUrl, null, projectId.Value, model.Value);
+    var modelRes = GetUrlModelResource(null, token, serverUrl, null, projectId.Value, model.Value);
 
     var result = new List<SpeckleUrlModelResource> { modelRes };
 
@@ -56,7 +56,14 @@ public record SpeckleResourceBuilder
     {
       foreach (Capture additionalModelsCapture in additionalModels.Captures)
       {
-        var extraModel = GetUrlModelResource(null, serverUrl, null, projectId.Value, additionalModelsCapture.Value);
+        var extraModel = GetUrlModelResource(
+          null,
+          token,
+          serverUrl,
+          null,
+          projectId.Value,
+          additionalModelsCapture.Value
+        );
         result.Add(extraModel);
       }
     }
@@ -66,6 +73,7 @@ public record SpeckleResourceBuilder
 
   private static SpeckleUrlModelResource GetUrlModelResource(
     string? accountId,
+    string? token,
     string serverUrl,
     string? workspaceId,
     string projectId,
@@ -74,15 +82,20 @@ public record SpeckleResourceBuilder
   {
     if (modelValue.Length == 32)
     {
-      return new SpeckleUrlModelObjectResource(accountId, serverUrl, workspaceId, projectId, modelValue); // Model value is an ObjectID
+      return new SpeckleUrlModelObjectResource(new(accountId, token, serverUrl), workspaceId, projectId, modelValue); // Model value is an ObjectID
     }
 
     if (!modelValue.Contains('@'))
     {
-      return new SpeckleUrlLatestModelVersionResource(accountId, serverUrl, workspaceId, projectId, modelValue); // Model has no version attached
+      return new SpeckleUrlLatestModelVersionResource(
+        new(accountId, token, serverUrl),
+        workspaceId,
+        projectId,
+        modelValue
+      ); // Model has no version attached
     }
 
     var res = modelValue.Split('@');
-    return new SpeckleUrlModelVersionResource(accountId, serverUrl, workspaceId, projectId, res[0], res[1]);
+    return new SpeckleUrlModelVersionResource(new(accountId, token, serverUrl), workspaceId, projectId, res[0], res[1]);
   }
 }

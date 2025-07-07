@@ -11,6 +11,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
 using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests;
@@ -24,6 +25,7 @@ public class ReceiveOperationManagerTests : MoqTest
   private Mock<ISpeckleApplication> _speckleAppMock;
   private Mock<IOperationProgressManager> _progressManagerMock;
   private Mock<ILogger<ReceiveOperationManager>> _loggerMock;
+  private Mock<IAccountManager> _accountServiceMock;
   private ReceiveOperationManager _manager;
 
   [SetUp]
@@ -35,12 +37,14 @@ public class ReceiveOperationManagerTests : MoqTest
     _speckleAppMock = Create<ISpeckleApplication>();
     _progressManagerMock = Create<IOperationProgressManager>();
     _loggerMock = Create<ILogger<ReceiveOperationManager>>(MockBehavior.Loose);
+    _accountServiceMock = Create<IAccountManager>();
     _manager = new ReceiveOperationManager(
       _serviceScopeMock.Object,
       _cancellationManagerMock.Object,
       _storeMock.Object,
       _speckleAppMock.Object,
       _progressManagerMock.Object,
+      _accountServiceMock.Object,
       _loggerMock.Object
     );
     _serviceScopeMock.Setup(x => x.Dispose());
@@ -62,7 +66,7 @@ public class ReceiveOperationManagerTests : MoqTest
         await _manager.Process(
           commands.Object,
           "id1",
-          _ => { },
+          (_, _) => { },
           (s, f) => Task.FromResult<HostObjectBuilderResult?>(null)
         )
     );
@@ -100,7 +104,7 @@ public class ReceiveOperationManagerTests : MoqTest
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       (s, f) => throw exception
     );
-    await _manager.Process(commands.Object, "id2", _ => { }, processor);
+    await _manager.Process(commands.Object, "id2", (_, _) => { }, processor);
     _cancellationManagerMock.Verify(x => x.CancelOperation("id2"), Times.Once);
   }
 
@@ -136,7 +140,7 @@ public class ReceiveOperationManagerTests : MoqTest
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       (s, f) => throw exception
     );
-    await _manager.Process(commands.Object, "id3", _ => { }, processor);
+    await _manager.Process(commands.Object, "id3", (_, _) => { }, processor);
 
     commands.Verify(x => x.SetModelError("id3", It.IsAny<Exception>()), Times.Once);
     _cancellationManagerMock.Verify(x => x.CancelOperation("id3"), Times.Once);
@@ -189,11 +193,12 @@ public class ReceiveOperationManagerTests : MoqTest
       .Setup(x => x.Execute(It.IsAny<ReceiveInfo>(), progressHandler.Object, CancellationToken.None))
       .ReturnsAsync(hostResult);
     _speckleAppMock.Setup(x => x.Slug).Returns("slug");
-
+    var account = new Account();
+    _accountServiceMock.Setup(x => x.GetAccount(modelCard.AccountId)).Returns(account);
     var processor = new Func<string?, Func<Task<HostObjectBuilderResult>>, Task<HostObjectBuilderResult?>>(
       async (s, f) => await f()
     );
-    await _manager.Process(commands.Object, "id4", _ => { }, processor);
+    await _manager.Process(commands.Object, "id4", (_, _) => { }, processor);
 
     commands.Verify(
       x => x.SetModelReceiveResult("id4", bakedIds, It.IsAny<IEnumerable<ConversionResult>>()),

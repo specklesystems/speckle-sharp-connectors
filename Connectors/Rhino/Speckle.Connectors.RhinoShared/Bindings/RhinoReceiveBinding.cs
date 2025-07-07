@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
@@ -28,7 +28,7 @@ public class RhinoReceiveBinding(
     await manager.Process(
       Commands,
       modelCardId,
-      (sp) =>
+      (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
           .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));

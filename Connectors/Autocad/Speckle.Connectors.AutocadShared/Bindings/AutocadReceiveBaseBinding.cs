@@ -2,6 +2,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models.Card;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
@@ -17,7 +18,7 @@ public abstract class AutocadReceiveBaseBinding(
 
   private ReceiveBindingUICommands Commands { get; } = new(parent);
 
-  protected abstract void InitializeSettings(IServiceProvider serviceProvider);
+  protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 

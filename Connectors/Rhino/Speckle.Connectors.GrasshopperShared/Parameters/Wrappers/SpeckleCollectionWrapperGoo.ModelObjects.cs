@@ -55,42 +55,43 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
 
   private bool CastFromModelLayer(object source)
   {
-    if (source is ModelLayer modelLayer)
+    switch (source)
     {
-      Collection modelCollection =
-        new()
+      case ModelLayer modelLayer:
+        Collection modelCollection =
+          new()
+          {
+            name = modelLayer.Name,
+            elements = new(),
+            applicationId = modelLayer.Id?.ToString()
+          };
+
+        // get color and material
+        Color? layerColor = null;
+        if (modelLayer.DisplayColor is ModelColor color)
         {
-          name = modelLayer.Name,
-          elements = new(),
-          applicationId = modelLayer.Id?.ToString()
+          layerColor = Color.FromArgb(color.ToArgb());
+        }
+
+        SpeckleMaterialWrapper? layerMaterial = null;
+        if (modelLayer.Material?.Id is Guid id)
+        {
+          var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
+          SpeckleMaterialWrapperGoo materialGoo = new();
+          materialGoo.CastFrom(mat);
+          layerMaterial = materialGoo.Value;
+        }
+
+        Value = new SpeckleCollectionWrapper()
+        {
+          Base = modelCollection,
+          Name = modelLayer.Name,
+          Color = layerColor,
+          Material = layerMaterial,
+          Path = GetModelLayerPath(modelLayer)
         };
 
-      // get color and material
-      Color? layerColor = null;
-      if (modelLayer.DisplayColor is ModelColor color)
-      {
-        layerColor = Color.FromArgb(color.ToArgb());
-      }
-
-      SpeckleMaterialWrapper? layerMaterial = null;
-      if (modelLayer.Material?.Id is Guid id)
-      {
-        var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
-        SpeckleMaterialWrapperGoo materialGoo = new();
-        materialGoo.CastFrom(mat);
-        layerMaterial = materialGoo.Value;
-      }
-
-      Value = new SpeckleCollectionWrapper()
-      {
-        Base = modelCollection,
-        Name = modelLayer.Name,
-        Color = layerColor,
-        Material = layerMaterial,
-        Path = GetModelLayerPath(modelLayer)
-      };
-
-      return true;
+        return true;
     }
 
     return false;

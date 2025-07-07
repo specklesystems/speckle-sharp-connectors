@@ -2,6 +2,7 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
@@ -30,9 +31,9 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
-      "Data",
-      "D",
-      "The data you want to expand",
+      "Collection",
+      "C",
+      "The Collection you want to expand",
       GH_ParamAccess.item
     );
   }
@@ -51,15 +52,11 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     Name = wrapper.Name;
     NickName = wrapper.Name;
 
-    var objects = wrapper
-      .Elements.Where(el => el is not SpeckleCollectionWrapper)
-      .OfType<SpeckleObjectWrapper>()
-      .Select(o => new SpeckleObjectWrapperGoo(o))
-      .ToList();
-    var collections = wrapper
-      .Elements.Where(el => el is SpeckleCollectionWrapper)
-      .OfType<SpeckleCollectionWrapper>()
-      .ToList();
+    // Separate objects and collections
+    // Note: SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper,
+    // so it will be included in objects
+    var objects = wrapper.Elements.OfType<SpeckleObjectWrapper>().ToList();
+    var collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -73,7 +70,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         Access = GH_ParamAccess.list
       };
 
-      outputParams.Add(new OutputParamWrapper(param, objects, null));
+      // Create appropriate Goo types for each object (downside of the inheritance refactor)
+      List<IGH_Goo> atomicObjectGoos = objects.Select(obj => obj.CreateGoo()).ToList();
+
+      outputParams.Add(new OutputParamWrapper(param, atomicObjectGoos, null));
     }
 
     foreach (SpeckleCollectionWrapper childWrapper in collections)
@@ -86,7 +86,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       */
 
       var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
-      var topology = childWrapper.Topology; // Note: this is a reminder for the future
+      var topology = childWrapper.Topology;
       var nickName = childWrapper.Name;
       if (nickName.Length > 16)
       {
@@ -102,18 +102,25 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
           ? GH_ParamAccess.item
           : topology is null
             ? GH_ParamAccess.list
-            : GH_ParamAccess.tree // we will directly set objects out; note access can be list or tree based on whether it will be a path based collection
+            : GH_ParamAccess.tree
       };
 
-      outputParams.Add(
-        new OutputParamWrapper(
-          param,
-          hasInnerCollections
-            ? new SpeckleCollectionWrapperGoo(childWrapper)
-            : childWrapper.Elements.OfType<SpeckleObjectWrapper>().Select(o => new SpeckleObjectWrapperGoo(o)).ToList(),
-          topology
-        )
-      );
+      object outputValue;
+      if (hasInnerCollections)
+      {
+        outputValue = new SpeckleCollectionWrapperGoo(childWrapper);
+      }
+      else
+      {
+        // Create appropriate Goo types for child objects
+        List<IGH_Goo> childObjectGoos = childWrapper
+          .Elements.OfType<SpeckleObjectWrapper>()
+          .Select(obj => obj.CreateGoo())
+          .ToList();
+        outputValue = childObjectGoos;
+      }
+
+      outputParams.Add(new OutputParamWrapper(param, outputValue, topology));
     }
 
     if (da.Iteration == 0 && OutputMismatch(outputParams))
@@ -142,7 +149,6 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
             da.SetDataList(i, outParamWrapper.Values as IList);
             break;
           case GH_ParamAccess.tree:
-            //TODO: means we need to convert the collection to a tree
             var topo = outParamWrapper.Topology.NotNull();
             var values = outParamWrapper.Values as IList;
             var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topo, values.NotNull());

@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 
@@ -24,7 +25,7 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }
 
-  protected override void InitializeSettings(IServiceProvider serviceProvider)
+  protected override void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc)
   {
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()

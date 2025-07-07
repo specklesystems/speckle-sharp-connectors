@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Models;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Credentials;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -14,6 +15,7 @@ public class ReceiveOperationManagerFactory(
   DocumentModelStore store,
   ICancellationManager cancellationManager,
   ISpeckleApplication speckleApplication,
+  IAccountManager accountManager,
   ILoggerFactory loggerFactory
 ) : IReceiveOperationManagerFactory
 {
@@ -26,6 +28,7 @@ public class ReceiveOperationManagerFactory(
       store,
       speckleApplication,
       operationProgressManager,
+      accountManager,
       loggerFactory.CreateLogger<ReceiveOperationManager>()
     );
 }

@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Common;
@@ -31,7 +32,7 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
 
   // POC: we're registering the conversion settings for autocad here because we need the autocad conversion settings to be able to use the autocad typed converters.
   // POC: We need a separate receive binding for civil3d due to using a different unit converter (needed for conversion settings construction)
-  protected override void InitializeSettings(IServiceProvider serviceProvider)
+  protected override void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc)
   {
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<Civil3dConversionSettings>>()

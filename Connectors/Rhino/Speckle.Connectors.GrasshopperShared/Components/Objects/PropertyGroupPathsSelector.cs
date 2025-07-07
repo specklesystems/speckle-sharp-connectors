@@ -1,3 +1,4 @@
+using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
@@ -21,8 +22,8 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     ) { }
 
   public override Guid ComponentGuid => new Guid("8882BE3A-81F1-4416-B420-58D69E4CC8F1");
-
   protected override Bitmap Icon => Resources.speckle_inputs_property;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   protected override void LoadVolatileData()
   {

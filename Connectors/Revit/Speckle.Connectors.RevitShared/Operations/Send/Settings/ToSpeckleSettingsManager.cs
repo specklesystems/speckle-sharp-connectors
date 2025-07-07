@@ -57,7 +57,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
+  public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (
@@ -75,9 +75,9 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out Transform? previousTransform))
       {
         // invalidate conversion cache if the transform has changed
-        if (previousTransform != currentTransform)
+        if (modelCard is SenderModelCard senderModelCard && previousTransform != currentTransform)
         {
-          EvictCacheForModelCard(modelCard);
+          EvictCacheForModelCard(senderModelCard);
         }
       }
 
