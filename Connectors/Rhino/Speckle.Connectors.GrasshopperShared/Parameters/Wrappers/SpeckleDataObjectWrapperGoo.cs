@@ -97,8 +97,8 @@ public class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH
           applicationId = geometryWrapper.ApplicationId
         };
 
-      // create wrapper
-      // NOTE: Name, ApplicationId and Properties kept in sync with wrapped DataObject through getters and setters
+      // create wrapper - Name, ApplicationId and Properties kept in sync with wrapped DataObject through getters/setters
+      // geometry will inherit DataObject properties through the syncing (hopefully)
       Value = new SpeckleDataObjectWrapper { Base = dataObject, Geometries = [geometryWrapper] };
 
       return true;
