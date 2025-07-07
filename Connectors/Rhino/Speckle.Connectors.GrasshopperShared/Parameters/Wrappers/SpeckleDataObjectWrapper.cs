@@ -1,5 +1,4 @@
 ﻿using Grasshopper.Kernel.Types;
-using Rhino.Geometry;
 using Speckle.Sdk.Models;
 using DataObject = Speckle.Objects.Data.DataObject;
 
@@ -13,7 +12,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// <summary>
   /// The wrapped DataObject.
   /// </summary>
-  public DataObject DataObject { get; set; } // Public for consistency with existing wrappers, but would private be better to force things through Base that validates?
+  public DataObject DataObject { get; set; }
 
   /// <summary>
   /// Validated gateway to the typed property (validates and delegates to DataObject).
@@ -32,12 +31,16 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   }
 
   /// <summary>
-  /// Converted geometries from DataObject.displayValue.
+  /// Contains a list of <see cref="SpeckleGeometryWrapper"/>.
   /// </summary>
-  public List<GeometryBase> Geometries { get; set; } = [];
+  /// <remarks>
+  /// A list of the wrappers as opposed to the geometry bases allows us to hold on to the color and material information.
+  /// However, this does make syncing of name, props etc. more challenging.
+  /// </remarks>
+  public List<SpeckleGeometryWrapper> Geometries { get; set; } = [];
 
   /// <summary>
-  /// Structured properties from the DataObject.
+  /// Properties on the wrapper and wrapped Base (DataObject) are kept in sync here.
   /// </summary>
   public SpecklePropertyGroupGoo Properties { get; set; } = new();
 
@@ -60,7 +63,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     new()
     {
       Base = DataObject.ShallowCopy(),
-      Geometries = new List<GeometryBase>(Geometries),
+      Geometries = [.. Geometries],
       Properties = Properties,
       ApplicationId = ApplicationId,
       Name = Name
