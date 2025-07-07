@@ -15,15 +15,11 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public override string Name
   {
-    get
-    {
-      SyncGeometriesToDataObject();
-      return DataObject.name;
-    }
+    get => DataObject.name;
     set
     {
       DataObject.name = value;
-      SyncGeometriesToDataObject();
+      SyncGeometryNames(); // Only sync names when name changes
     }
   }
 
@@ -60,24 +56,13 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// <summary>
   /// Try to keep DataObject.properties as source of truth.
   /// </summary>
-  /// <remarks>
-  /// Property ownership rules:
-  /// - Single geometry → DataObject: Geometry properties become DataObject properties
-  /// - DataObject mutation: DataObject properties overwrite all geometry properties
-  /// - Multiple geometries → DataObject: First geometry's properties become DataObject properties, others inherit
-  /// - Individual geometry mutation: Ignored
-  /// </remarks>
   public SpecklePropertyGroupGoo Properties
   {
-    get
-    {
-      SyncGeometriesToDataObject();
-      return new SpecklePropertyGroupGoo(DataObject.properties);
-    }
+    get => new(DataObject.properties);
     set
     {
       DataObject.properties = value.Unwrap();
-      SyncGeometriesToDataObject();
+      SyncGeometryProperties(value); // Pass existing goo, only sync properties
     }
   }
 
@@ -107,21 +92,24 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     };
 
   /// <summary>
-  /// Syncs all geometry wrappers' properties and names to match the DataObject.
+  /// Syncs geometry names to match the DataObject name.
   /// </summary>
-  /// <remarks>
-  /// All geometries in the list should reflect the current DataObject state.
-  /// </remarks>
-  private void SyncGeometriesToDataObject()
+  private void SyncGeometryNames()
   {
-    // Create property group once and reuse for all geometries
-    SpecklePropertyGroupGoo dataObjectProperties = new(DataObject.properties);
-
     foreach (var geometry in Geometries)
     {
-      // All geometries inherit the same name and properties from DataObject
       geometry.Name = DataObject.name;
-      geometry.Properties = dataObjectProperties;
+    }
+  }
+
+  /// <summary>
+  /// Syncs geometry properties to match the DataObject properties.
+  /// </summary>
+  private void SyncGeometryProperties(SpecklePropertyGroupGoo propertyGoo)
+  {
+    foreach (var geometry in Geometries)
+    {
+      geometry.Properties = propertyGoo; // Reuse the passed goo
     }
   }
 }

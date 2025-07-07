@@ -1,8 +1,6 @@
 ﻿using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
-using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using DataObject = Speckle.Objects.Data.DataObject;
 
@@ -143,54 +141,30 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
   /// </summary>
   private bool CastFromSpeckleGeometryWrapper(SpeckleGeometryWrapper geometryWrapper)
   {
-    try
-    {
-      // create DataObject with single displayValue
-      DataObject dataObject =
-        new()
-        {
-          name = geometryWrapper.Name,
-          displayValue = [geometryWrapper.Base],
-          properties = geometryWrapper.Properties.Unwrap(),
-          applicationId = geometryWrapper.ApplicationId
-        };
+    // create DataObject with single displayValue
+    DataObject dataObject =
+      new()
+      {
+        name = geometryWrapper.Name,
+        displayValue = [geometryWrapper.Base],
+        properties = geometryWrapper.Properties.Unwrap(),
+        applicationId = geometryWrapper.ApplicationId
+      };
 
-      // create wrapper - Name, ApplicationId and Properties kept in sync with wrapped DataObject through getters/setters
-      // geometry will inherit DataObject properties through the syncing (hopefully)
-      Value = new SpeckleDataObjectWrapper { Base = dataObject, Geometries = [geometryWrapper] };
+    // create wrapper - Name, ApplicationId and Properties kept in sync with wrapped DataObject through getters/setters
+    // geometry will inherit DataObject properties through the syncing (hopefully)
+    Value = new SpeckleDataObjectWrapper { Base = dataObject, Geometries = [geometryWrapper] };
 
-      return true;
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return false;
-    }
+    return true;
   }
 
   private bool CastFromIghGeometricGoo(IGH_GeometricGoo geometricGoo)
   {
-    try
+    SpeckleGeometryWrapperGoo geoGoo = new();
+    if (geoGoo.CastFrom(geometricGoo))
     {
-      // reuse existing logic from SpeckleGeometryWrapperGoo
-      GeometryBase gb = geometricGoo.ToGeometryBase();
-      Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
-      string appId = Guid.NewGuid().ToString();
-
-      // create geometry wrapper first
-      var geometryWrapper = new SpeckleGeometryWrapper
-      {
-        GeometryBase = gb,
-        Base = converted,
-        ApplicationId = appId,
-        Name = $"Converted {geometricGoo.TypeName}"
-      };
-
-      // delegate to existing method
-      return CastFromSpeckleGeometryWrapper(geometryWrapper);
+      return CastFromSpeckleGeometryWrapper(geoGoo.Value);
     }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return false;
-    }
+    return false;
   }
 }
