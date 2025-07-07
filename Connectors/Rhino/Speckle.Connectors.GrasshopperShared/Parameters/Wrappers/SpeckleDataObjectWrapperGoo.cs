@@ -1,7 +1,9 @@
 ﻿using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 using DataObject = Speckle.Objects.Data.DataObject;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -9,7 +11,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Goo wrapper for SpeckleDataObjectWrapper.
 /// </summary>
-public class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH_PreviewData
+public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH_PreviewData
 {
   /// <summary>
   /// Creates goo with a DataObject wrapper.
@@ -19,7 +21,12 @@ public class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH
     Value = value;
   }
 
-  // TODO: Do we need a parameterless constructor like other wrappers? Will see when we get to casting. Most probably :(
+  /// <summary>Parameterless constructor</summary>
+  /// <remarks>Should only be used for casting!</remarks>
+  public SpeckleDataObjectWrapperGoo()
+  {
+    Value = new() { Base = new(), Geometries = [] };
+  }
 
   public override bool IsValid => Value?.DataObject is not null && Value.ApplicationId is not null;
   public override string TypeName => "Speckle Data Object";
@@ -48,28 +55,70 @@ public class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH
       // 2 - speckle geometry → data object
       case SpeckleBlockInstanceWrapper:
       case SpeckleBlockInstanceWrapperGoo:
-        // TODO: We need to have a larger discussion around allowing instances within data objects. For simplicity now, we just won't allow instances within data objects
+        // TODO: We need to have a larger discussion around allowing instances within data objects.
+        // We don't allow instances within data objects for now
         return false;
       case SpeckleGeometryWrapper geometryWrapper:
         return CastFromSpeckleGeometryWrapper(geometryWrapper);
-      //case SpeckleGeometryWrapperGoo geometryWrapperGoo:
-      // return CastFromSpeckleGeometryWrapper(geometryWrapperGoo.Value);
+      case SpeckleGeometryWrapperGoo geometryWrapperGoo:
+        return CastFromSpeckleGeometryWrapper(geometryWrapperGoo.Value);
 
       // 3 - gh geometry → data object
-
+      case IGH_GeometricGoo geometricGoo:
+        return CastFromIghGeometricGoo(geometricGoo);
 
       // 4 - model object → data object (Rhino 8+)
+      default:
+        return CastFromModelObject(source); // Try ModelObject casting (will return false on Rhino 7)
     }
-
-    return false;
   }
 
   /// <summary>
   /// Handles casting to other types from DataObject wrapper.
   /// </summary>
-  public override bool CastTo<T>(ref T target) =>
-    // TODO: CNX-2092: Castings form part of this scope
-    false;
+  /// <remarks>
+  /// Only allows geometry casting when DataObject has exactly one geometry.
+  /// </remarks>
+  public override bool CastTo<T>(ref T target)
+  {
+    switch (target)
+    {
+      case DataObject:
+        target = (T)(object)Value.DataObject;
+        return true;
+
+      case SpeckleDataObjectWrapper:
+        target = (T)(object)Value;
+        return true;
+
+      case SpeckleDataObjectWrapperGoo:
+        target = (T)(object)this;
+        return true;
+
+      case Base:
+        target = (T)(object)Value.DataObject;
+        return true;
+
+      // for geometry types, only allow if exactly one geometry
+      default:
+        if (Value.Geometries.Count == 1)
+        {
+          var singleGeometry = Value.Geometries[0];
+          var geometryGoo = new SpeckleGeometryWrapperGoo(singleGeometry);
+
+          // this should handle all IGH_GeometricGoo types and ModelObjects
+          return geometryGoo.CastTo(ref target);
+        }
+
+        return false;
+    }
+  }
+
+#if !RHINO8_OR_GREATER
+  private bool CastFromModelObject(object _) => false;
+
+  private bool CastToModelObject<T>(ref T _) => false;
+#endif
 
   // TODO: CNX-2094
   public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
@@ -102,6 +151,33 @@ public class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapper>, IGH
       Value = new SpeckleDataObjectWrapper { Base = dataObject, Geometries = [geometryWrapper] };
 
       return true;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return false;
+    }
+  }
+
+  private bool CastFromIghGeometricGoo(IGH_GeometricGoo geometricGoo)
+  {
+    try
+    {
+      // reuse existing logic from SpeckleGeometryWrapperGoo
+      GeometryBase gb = geometricGoo.ToGeometryBase();
+      Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
+      string appId = Guid.NewGuid().ToString();
+
+      // create geometry wrapper first
+      var geometryWrapper = new SpeckleGeometryWrapper
+      {
+        GeometryBase = gb,
+        Base = converted,
+        ApplicationId = appId,
+        Name = $"Converted {geometricGoo.TypeName}"
+      };
+
+      // delegate to existing method
+      return CastFromSpeckleGeometryWrapper(geometryWrapper);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
