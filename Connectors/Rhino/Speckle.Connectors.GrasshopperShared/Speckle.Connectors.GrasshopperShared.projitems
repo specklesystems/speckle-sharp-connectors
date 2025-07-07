@@ -39,6 +39,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\VersionMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\WorkspaceMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SpeckleOperationWizard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extras\StateTag.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\KeyWatcher.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperBlockUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
@@ -106,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />
+    <None Include="$(MSBuildThisFileDirectory)Resources\speckle_state_access.png" />
     <None Include="$(MSBuildThisFileDirectory)Resources\speckle_operations_account.png" />
   </ItemGroup>
 </Project>

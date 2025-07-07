@@ -1,7 +1,10 @@
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Speckle.Connectors.GrasshopperShared.Components.Objects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.HostApp.Extras;
+using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -50,6 +53,59 @@ public class SpeckleVariableParam : Param_GenericObject
   }
 
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    // Append list access menu item if this is a create properties node
+    if (Attributes?.Parent.DocObject is CreateSpeckleProperties)
+    {
+      Menu_AppendSeparator(menu);
+
+      var listAccessToggle = Menu_AppendItem(
+        menu,
+        "List Access",
+        (s, e) => SetAccess(Access == GH_ParamAccess.list ? GH_ParamAccess.item : GH_ParamAccess.list),
+        true,
+        Access == GH_ParamAccess.list
+      );
+
+      listAccessToggle.ToolTipText = "Set this parameter as a List. If disabled, defaults to item access.";
+      listAccessToggle.Image = Resources.speckle_state_access;
+    }
+  }
+
+  public override GH_StateTagList StateTags
+  {
+    get
+    {
+      var tags = base.StateTags;
+
+      if (Kind == GH_ParamKind.input)
+      {
+        if (Access == GH_ParamAccess.list)
+        {
+          tags.Add(new ListAccessStateTag());
+        }
+      }
+
+      return tags;
+    }
+  }
+
+  protected void SetAccess(GH_ParamAccess accessType)
+  {
+    Access = accessType;
+    HandleParamStateChange();
+  }
+
+  private void HandleParamStateChange()
+  {
+    OnObjectChanged(GH_ObjectEventType.DataMapping);
+    OnDisplayExpired(true);
+    ExpireSolution(true);
+  }
 
   public override void AddSource(IGH_Param source, int index)
   {
