@@ -128,12 +128,45 @@ public static class GrasshopperHelpers
   }
 
   /// <summary>
+  /// Gets all of the atomic objects inside a collection wrapper.
+  /// </summary>
+  /// <param name="coll"></param>
+  /// <param name="recurse">Will recurse into sub collections to get atomic objects</param>
+  /// <returns></returns>
+  public static IEnumerable<SpeckleWrapper> GetAtomicObjects(this SpeckleCollectionWrapper coll, bool recurse = false)
+  {
+    foreach (var element in coll.Elements)
+    {
+      switch (element)
+      {
+        case SpeckleDataObjectWrapper dataObject:
+          yield return dataObject;
+          break;
+        case SpeckleGeometryWrapper geo: // covers both instances and geo
+          yield return geo;
+          break;
+        case SpeckleCollectionWrapper subColl:
+          if (recurse)
+          {
+            foreach (var subElement in subColl.GetAtomicObjects(recurse))
+            {
+              yield return subElement;
+            }
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  /// <summary>
   /// Attempts to cast an IGH_Goo to a Speckle Object Wrapper
   /// </summary>
   /// <param name="goo"></param>
   /// <returns>A reference to the Speckle Object Wrapper from the goo, if any</returns>
   /// <remarks>This method **does not** deep copy the return value</remarks>
-  public static SpeckleGeometryWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
+  public static SpeckleGeometryWrapper? ToSpeckleGeometryWrapper(this IGH_Goo goo)
   {
     SpeckleBlockInstanceWrapperGoo instanceGoo = new();
     if (instanceGoo.CastFrom(goo))

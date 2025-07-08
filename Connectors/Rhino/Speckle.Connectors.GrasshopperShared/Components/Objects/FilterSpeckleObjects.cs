@@ -86,7 +86,7 @@ public class FilterSpeckleObjects : GH_Component
     }
 
     List<SpeckleGeometryWrapper?> objects = inputObjects
-      .Select(o => o.ToSpeckleObjectWrapper())
+      .Select(o => o.ToSpeckleGeometryWrapper())
       .Where(o => o is not null)
       .ToList();
 

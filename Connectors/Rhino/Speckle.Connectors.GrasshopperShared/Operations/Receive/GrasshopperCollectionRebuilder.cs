@@ -25,7 +25,7 @@ internal sealed class GrasshopperCollectionRebuilder
   }
 
   public void AppendSpeckleGrasshopperObject(
-    SpeckleGeometryWrapper speckleGrasshopperObjectWrapper,
+    ISpeckleCollectionObject speckleGrasshopperObjectWrapper,
     List<Collection> collectionPath,
     GrasshopperColorUnpacker colorUnpacker,
     GrasshopperMaterialUnpacker materialUnpacker
