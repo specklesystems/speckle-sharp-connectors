@@ -85,8 +85,8 @@ public class FilterSpeckleObjects : GH_Component
       return;
     }
 
-    List<SpeckleGeometryWrapper?> objects = inputObjects
-      .Select(o => o.ToSpeckleGeometryWrapper())
+    List<SpeckleWrapper?> objects = inputObjects
+      .Select(o => o.ToSpeckleObjectWrapper())
       .Where(o => o is not null)
       .ToList();
 
@@ -108,11 +108,11 @@ public class FilterSpeckleObjects : GH_Component
     string speckleId = "";
     dataAccess.GetData(5, ref speckleId);
 
-    List<SpeckleGeometryWrapper> matchedObjects = new();
-    List<SpeckleGeometryWrapper> removedObjects = new();
+    List<SpeckleWrapper> matchedObjects = new();
+    List<SpeckleWrapper> removedObjects = new();
     for (int i = 0; i < objects.Count; i++)
     {
-      SpeckleGeometryWrapper wrapper = objects[i]!;
+      SpeckleWrapper wrapper = objects[i]!;
 
       // filter by name
       if (!MatchesSearchPattern(name, wrapper.Name))
@@ -129,12 +129,21 @@ public class FilterSpeckleObjects : GH_Component
       }
       else
       {
-        foreach (string key in wrapper.Properties.Value.Keys)
+        SpecklePropertyGroupGoo? properties = wrapper is SpeckleDataObjectWrapper dataObjPropWrapper
+          ? dataObjPropWrapper.Properties
+          : wrapper is SpeckleGeometryWrapper geoPropWrapper
+            ? geoPropWrapper.Properties
+            : null;
+
+        if (properties is not null)
         {
-          if (MatchesSearchPattern(property, key))
+          foreach (string key in properties.Value.Keys)
           {
-            foundProperty = true;
-            break;
+            if (MatchesSearchPattern(property, key))
+            {
+              foundProperty = true;
+              break;
+            }
           }
         }
       }
@@ -146,10 +155,13 @@ public class FilterSpeckleObjects : GH_Component
       }
 
       // filter by material name
-      if (!MatchesSearchPattern(material, wrapper.Material?.Name ?? ""))
+      if (wrapper is SpeckleGeometryWrapper geoWrapper)
       {
-        removedObjects.Add(wrapper);
-        continue;
+        if (!MatchesSearchPattern(material, geoWrapper.Material?.Name ?? ""))
+        {
+          removedObjects.Add(wrapper);
+          continue;
+        }
       }
 
       // filter by application id

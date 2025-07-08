@@ -161,13 +161,41 @@ public static class GrasshopperHelpers
   }
 
   /// <summary>
-  /// Attempts to cast an IGH_Goo to a Speckle Object Wrapper
+  /// Attempts to cast an IGH_Goo to a Speckle Geometry Wrapper
   /// </summary>
   /// <param name="goo"></param>
-  /// <returns>A reference to the Speckle Object Wrapper from the goo, if any</returns>
+  /// <returns>A reference to the Speckle Geometry Wrapper from the goo, if any</returns>
   /// <remarks>This method **does not** deep copy the return value</remarks>
   public static SpeckleGeometryWrapper? ToSpeckleGeometryWrapper(this IGH_Goo goo)
   {
+    SpeckleBlockInstanceWrapperGoo instanceGoo = new();
+    if (instanceGoo.CastFrom(goo))
+    {
+      return instanceGoo.Value;
+    }
+    else
+    {
+      SpeckleGeometryWrapperGoo objGoo = new();
+      return objGoo.CastFrom(goo) ? objGoo.Value : null;
+    }
+  }
+
+  /// <summary>
+  /// Attempts to cast an IGH_Goo to a Speckle Geometry or DataObject Wrapper
+  /// </summary>
+  /// <param name="goo"></param>
+  /// <returns>A reference to the Speckle Wrapper from the goo, if any</returns>
+  /// <remarks>This method **does not** deep copy the return value</remarks>
+  public static SpeckleWrapper? ToSpeckleObjectWrapper(this IGH_Goo goo)
+  {
+    // first preserve data objects as they are
+    // this is processed first because data objects with 1 display value can be cast to geometry wrappers
+    if (goo is SpeckleDataObjectWrapperGoo dataObject)
+    {
+      return dataObject.Value;
+    }
+
+    // then try to process as geometry
     SpeckleBlockInstanceWrapperGoo instanceGoo = new();
     if (instanceGoo.CastFrom(goo))
     {
