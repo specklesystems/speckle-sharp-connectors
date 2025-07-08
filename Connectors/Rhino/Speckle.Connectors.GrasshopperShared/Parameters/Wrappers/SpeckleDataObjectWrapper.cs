@@ -53,6 +53,36 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </remarks>
   public List<SpeckleGeometryWrapper> Geometries { get; set; } = [];
 
+  private List<string> _path = [];
+
+  /// <summary>
+  /// The list of collection names that forms the full path to this object.
+  /// </summary>
+  public List<string> Path
+  {
+    get => _path;
+    set
+    {
+      _path = value;
+      SyncGeometryPath();
+    }
+  }
+
+  private SpeckleCollectionWrapper? _parent;
+
+  /// <summary>
+  /// Reference to the parent collection wrapper.
+  /// </summary>
+  public SpeckleCollectionWrapper? Parent
+  {
+    get => _parent;
+    set
+    {
+      _parent = value;
+      SyncGeometryParent();
+    }
+  }
+
   /// <summary>
   /// Try to keep DataObject.properties as source of truth.
   /// </summary>
@@ -88,7 +118,9 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Geometries = [.. Geometries],
       Properties = Properties,
       ApplicationId = ApplicationId,
-      Name = Name
+      Name = Name,
+      Path = [.. Path],
+      Parent = Parent
     };
 
   /// <summary>
@@ -110,6 +142,28 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     foreach (var geometry in Geometries)
     {
       geometry.Properties = propertyGoo; // Reuse the passed goo
+    }
+  }
+
+  /// <summary>
+  /// Syncs geometry paths.
+  /// </summary>
+  private void SyncGeometryPath()
+  {
+    foreach (var geometry in Geometries)
+    {
+      geometry.Path = [.. Path];
+    }
+  }
+
+  /// <summary>
+  /// Syncs geometry parents.
+  /// </summary>
+  private void SyncGeometryParent()
+  {
+    foreach (var geometry in Geometries)
+    {
+      geometry.Parent = Parent;
     }
   }
 }
