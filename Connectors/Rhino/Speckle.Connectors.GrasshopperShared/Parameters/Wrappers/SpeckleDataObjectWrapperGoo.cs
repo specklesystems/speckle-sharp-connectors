@@ -127,14 +127,37 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
   private bool CastToModelObject<T>(ref T _) => false;
 #endif
 
-  // TODO: CNX-2094
-  public void DrawViewportWires(GH_PreviewWireArgs args) => throw new NotImplementedException();
+  public void DrawViewportWires(GH_PreviewWireArgs args)
+  {
+    // TODO?
+  }
 
-  // TODO: CNX-2094
-  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => throw new NotImplementedException();
+  /// <summary>
+  /// Draws viewport meshes/surfaces for the data object.
+  /// </summary>
+  public void DrawViewportMeshes(GH_PreviewMeshArgs args) => Value.DrawPreviewRaw(args.Pipeline, args.Material);
 
-  // TODO: CNX-2094
-  public BoundingBox ClippingBox { get; }
+  /// <summary>
+  /// Calculates the bounding box for all geometries in this data object.
+  /// </summary>
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      var clippingBox = new BoundingBox();
+
+      foreach (var geometry in Value.Geometries)
+      {
+        if (geometry.GeometryBase != null)
+        {
+          var box = geometry.GeometryBase.GetBoundingBox(false);
+          clippingBox.Union(box);
+        }
+      }
+
+      return clippingBox;
+    }
+  }
 
   /// <summary>
   /// Creates a single-element DataObject from <see cref="SpeckleGeometryWrapper"/> (one geometry → one display value).
