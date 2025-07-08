@@ -74,6 +74,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.ModelObjects.cs" />

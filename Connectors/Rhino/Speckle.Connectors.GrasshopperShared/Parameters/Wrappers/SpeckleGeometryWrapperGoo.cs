@@ -54,6 +54,10 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       case SpeckleBlockInstanceWrapperGoo instanceWrapperGoo:
         Value = instanceWrapperGoo.Value;
         return true;
+      case SpeckleDataObjectWrapperGoo dataObjectGoo:
+        return CastFromDataObject(dataObjectGoo.Value);
+      case SpeckleDataObjectWrapper dataObjectWrapper:
+        return CastFromDataObject(dataObjectWrapper);
       case IGH_GeometricGoo geometricGoo:
         GeometryBase gb = geometricGoo.ToGeometryBase();
         Base converted = SpeckleConversionContext.ConvertToSpeckle(gb);
@@ -209,6 +213,23 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       return true;
     }
     return false;
+  }
+
+  /// <summary>
+  /// Handles casting from DataObject to SpeckleGeometryWrapper.
+  /// Only works if DataObject has exactly one geometry.
+  /// </summary>
+  private bool CastFromDataObject(SpeckleDataObjectWrapper dataObjectWrapper)
+  {
+    // Apply single-geometry constraint
+    if (dataObjectWrapper.Geometries.Count != 1)
+    {
+      return false;
+    }
+
+    // Extract the single geometry
+    Value = dataObjectWrapper.Geometries[0];
+    return true;
   }
 
   public void DrawViewportWires(GH_PreviewWireArgs args)
