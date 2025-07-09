@@ -9,7 +9,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>, IGH_PreviewData
 {
   public override bool IsValid => Value.Base is not null && Value.ApplicationId is not null;
-  public override string TypeName => "Speckle Object";
+  public override string TypeName => "Speckle Geometry";
   public override string TypeDescription => "Represents a geometry object from Speckle";
 
   public SpeckleGeometryWrapperGoo(SpeckleGeometryWrapper value)
@@ -33,7 +33,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
   public override IGH_Goo Duplicate() => new SpeckleGeometryWrapperGoo(Value.DeepCopy());
 
   public override string ToString() =>
-    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
+    $"Speckle Geometry : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
   /// <summary>
   /// Casts from Speckle objects, geometry base, and model objects.
