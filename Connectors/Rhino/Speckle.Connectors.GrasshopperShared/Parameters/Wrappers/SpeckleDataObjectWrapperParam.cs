@@ -40,16 +40,55 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
   // TODO: CNX-2095
   void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds) { }
 
-  // TODO: CNX-2094
-  public void DrawViewportWires(IGH_PreviewArgs args) => throw new NotImplementedException();
+  /// <summary>
+  /// Draws viewport wires for all data objects in this parameter.
+  /// </summary>
+  public void DrawViewportWires(IGH_PreviewArgs args)
+  {
+    // Following the pattern - most wire drawing is handled in DrawViewportMeshes
+    // Keep this minimal like other parameter types
+  }
 
-  // TODO: CNX-2094
-  public void DrawViewportMeshes(IGH_PreviewArgs args) => throw new NotImplementedException();
+  /// <summary>
+  /// Draws viewport meshes for all data objects in this parameter.
+  /// </summary>
+  public void DrawViewportMeshes(IGH_PreviewArgs args)
+  {
+    var isSelected = args.Document.SelectedObjects().Contains(this) || OwnerSelected();
+
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleDataObjectWrapperGoo goo)
+      {
+        goo.Value.DrawPreview(args, isSelected);
+      }
+    }
+  }
 
   public bool Hidden { get; set; }
 
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  // TODO: CNX-2094
-  public BoundingBox ClippingBox { get; }
+  /// <summary>
+  /// Calculates the clipping box for all data objects in this parameter.
+  /// </summary>
+  public BoundingBox ClippingBox
+  {
+    get
+    {
+      var clippingBox = new BoundingBox();
+
+      foreach (var item in VolatileData.AllData(true))
+      {
+        if (item is SpeckleDataObjectWrapperGoo goo)
+        {
+          clippingBox.Union(goo.ClippingBox);
+        }
+      }
+
+      return clippingBox;
+    }
+  }
+
+  private bool OwnerSelected() => Attributes?.Parent?.Selected ?? false;
 }

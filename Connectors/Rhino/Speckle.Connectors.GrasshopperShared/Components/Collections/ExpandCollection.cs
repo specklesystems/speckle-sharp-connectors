@@ -55,8 +55,8 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     // Separate objects and collections
     // Note: SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper,
     // so it will be included in objects
-    var objects = wrapper.Elements.OfType<SpeckleGeometryWrapper>().ToList();
-    var collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
+    List<SpeckleWrapper> objects = wrapper.GetAtomicObjects().ToList();
+    List<SpeckleCollectionWrapper> collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -66,7 +66,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         Name = "_objects",
         NickName = "_objs",
         Description =
-          "Some collections may contain a mix of objects and other collections. Here we output the atomic objects from within this collection.",
+          "Some collections may contain a mix of objects and other collections. These are the objects directly contained in this collection.",
         Access = GH_ParamAccess.list
       };
 
@@ -113,10 +113,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       else
       {
         // Create appropriate Goo types for child objects
-        List<IGH_Goo> childObjectGoos = childWrapper
-          .Elements.OfType<SpeckleGeometryWrapper>()
-          .Select(obj => obj.CreateGoo())
-          .ToList();
+        List<IGH_Goo> childObjectGoos = childWrapper.GetAtomicObjects().Select(obj => obj.CreateGoo()).ToList();
         outputValue = childObjectGoos;
       }
 
