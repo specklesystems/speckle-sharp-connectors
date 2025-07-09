@@ -29,8 +29,15 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
   {
     var objectPropertyGroups = VolatileData
       .AllData(true)
-      .OfType<SpeckleGeometryWrapperGoo>()
-      .Select(goo => goo.Value.Properties)
+      .Where(goo => goo is SpeckleGeometryWrapperGoo or SpeckleDataObjectWrapperGoo)
+      .Select(goo =>
+        goo switch
+        {
+          SpeckleGeometryWrapperGoo geometryGoo => geometryGoo.Value.Properties,
+          SpeckleDataObjectWrapperGoo dataGoo => dataGoo.Value.Properties,
+          _ => throw new InvalidOperationException("Unexpected goo type")
+        }
+      )
       .ToList();
 
 #if RHINO8_OR_GREATER
