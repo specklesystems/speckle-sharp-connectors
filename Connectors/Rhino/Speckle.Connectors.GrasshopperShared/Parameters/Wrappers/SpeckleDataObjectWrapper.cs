@@ -1,4 +1,6 @@
-﻿using Grasshopper.Kernel.Types;
+﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
+using Rhino.Display;
 using Speckle.Sdk.Models;
 using DataObject = Speckle.Objects.Data.DataObject;
 
@@ -101,9 +103,28 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public override string ToString() =>
     $"Speckle Data Object : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
 
-  // TODO: CNX-2094
-  // public virtual void DrawPreview()
-  // public void DrawPreviewRaw()
+  /// <summary>
+  /// Draws preview for all geometries contained in this data object.
+  /// </summary>
+  public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
+  {
+    // iterate through all geometries and delegate to their existing preview logic
+    foreach (var geometry in Geometries)
+    {
+      geometry.DrawPreview(args, isSelected);
+    }
+  }
+
+  /// <summary>
+  /// Draws raw preview for all geometries using a specific material.
+  /// </summary>
+  public void DrawPreviewRaw(DisplayPipeline display, DisplayMaterial material)
+  {
+    foreach (var geometry in Geometries)
+    {
+      geometry.DrawPreviewRaw(display, material);
+    }
+  }
 
   // TODO: CNX-2095
   // public virtual void Bake()
