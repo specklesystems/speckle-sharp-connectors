@@ -29,8 +29,8 @@ public class SpeckleGeometryWrapperParam : GH_Param<SpeckleGeometryWrapperGoo>, 
     ) { }
 
   public override Guid ComponentGuid => new("22FD5510-D5D3-4101-8727-153FFD329E4F");
-  protected override Bitmap Icon => Resources.speckle_param_object;
-  public override GH_Exposure Exposure => GH_Exposure.primary;
+  protected override Bitmap Icon => Resources.speckle_param_geometry;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   public bool IsBakeCapable =>
     // False if no data

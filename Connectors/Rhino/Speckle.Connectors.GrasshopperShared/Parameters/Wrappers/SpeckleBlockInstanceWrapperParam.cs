@@ -34,7 +34,7 @@ public class SpeckleBlockInstanceParam
   public override Guid ComponentGuid => new("938CCD6E-B202-4A0C-9D68-ABD7683B0EDE");
   protected override Bitmap Icon => Resources.speckle_param_block_instance;
 
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   public override void RegisterRemoteIDs(GH_GuidTable idList)
   {

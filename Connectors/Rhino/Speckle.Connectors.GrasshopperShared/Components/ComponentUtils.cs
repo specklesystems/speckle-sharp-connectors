@@ -8,8 +8,8 @@ public static class ComponentCategories
 
   // categories
   public const string OPERATIONS = "    Models";
-  public const string OBJECTS = "   Objects";
-  public const string COLLECTIONS = "  Collections";
+  public const string OBJECTS = "  Objects";
+  public const string COLLECTIONS = "   Collections";
   public const string PARAMETERS = " Params";
   public const string DEVELOPER = "Dev";
 }

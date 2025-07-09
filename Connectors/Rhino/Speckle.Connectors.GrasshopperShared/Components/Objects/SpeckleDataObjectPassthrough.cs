@@ -19,8 +19,8 @@ public class SpeckleDataObjectPassthrough : GH_Component
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_object;
-  public override GH_Exposure Exposure => GH_Exposure.primary;
+  protected override Bitmap Icon => Resources.speckle_objects_dataobject;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
