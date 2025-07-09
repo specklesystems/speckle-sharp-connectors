@@ -1,4 +1,4 @@
-﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -29,8 +29,8 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
     ) { }
 
   public override Guid ComponentGuid => new("47B930F9-587B-4A88-8CEB-19986E60BA61");
-  protected override Bitmap Icon => Resources.speckle_param_object; // TODO: DataObject icon
-  public override GH_Exposure Exposure => GH_Exposure.primary;
+  protected override Bitmap Icon => Resources.speckle_param_dataobject;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   bool IGH_BakeAwareObject.IsBakeCapable => !VolatileData.IsEmpty;
 
