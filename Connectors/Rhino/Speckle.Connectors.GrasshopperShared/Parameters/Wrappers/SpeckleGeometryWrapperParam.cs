@@ -20,9 +20,9 @@ public class SpeckleGeometryWrapperParam : GH_Param<SpeckleGeometryWrapperGoo>, 
 
   public SpeckleGeometryWrapperParam(GH_ParamAccess access)
     : base(
-      "Speckle Object",
-      "SO",
-      "Represents a Speckle object",
+      "Speckle Geometry",
+      "SG",
+      "Represents a Speckle Geometry",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
       access

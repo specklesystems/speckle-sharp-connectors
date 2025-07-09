@@ -1,4 +1,4 @@
-﻿using Grasshopper.Kernel;
+using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 using Speckle.Sdk.Models;
@@ -117,7 +117,7 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
           return geometryGoo.CastTo(ref target);
         }
 
-        return false;
+        return CastToModelObject(ref target);
     }
   }
 
