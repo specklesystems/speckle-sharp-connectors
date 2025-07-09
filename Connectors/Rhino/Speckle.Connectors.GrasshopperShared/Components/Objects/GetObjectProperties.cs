@@ -25,7 +25,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 
   protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
   {
-    pManager.AddParameter(
+    pManager.AddParameter( // TODO: AddGenericParameter?
       new SpeckleGeometryWrapperParam(),
       "Objects",
       "O",
@@ -60,7 +60,7 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
     }
     else
     {
-      SpeckleGeometryWrapperGoo objectWrapperGoo = new();
+      SpeckleGeometryWrapperGoo objectWrapperGoo = new(); // TODO: How to add DataObject handling?
       da.GetData(0, ref objectWrapperGoo);
 
       // flatten object properties, if any
