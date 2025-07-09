@@ -174,7 +174,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     }
 
     // create a group for all geometries
-    if (geometryIds.Count > 0)
+    if (geometryIds.Count > 1)
     {
       string groupName = CreateGroupName(baseLayerName);
 
