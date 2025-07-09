@@ -1,6 +1,8 @@
 ﻿using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using Rhino;
 using Rhino.Display;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using DataObject = Speckle.Objects.Data.DataObject;
 
@@ -126,8 +128,76 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     }
   }
 
-  // TODO: CNX-2095
-  // public virtual void Bake()
+  /// <summary>
+  /// Bakes the DataObject as a Rhino group containing all the display geometries.
+  /// </summary>
+  /// <param name="doc">Rhino doc to bake into</param>
+  /// <param name="objIds">Collection to store created objects GUIDs</param>
+  /// <param name="bakeLayerIndex">Layer index to bake geometries to (-1 for automatic)</param>
+  /// <param name="layersAlreadyCreated">Indicates whether layers have already been created or not</param>
+  /// <param name="baseLayerName">Base layer name for group naming</param>
+  public virtual void Bake(
+    RhinoDoc doc,
+    List<Guid> objIds,
+    int bakeLayerIndex = -1,
+    bool layersAlreadyCreated = false,
+    string? baseLayerName = null
+  )
+  {
+    // handles layer creation (if needed)
+    if (!layersAlreadyCreated && bakeLayerIndex < 0 && Path.Count > 0 && Parent != null)
+    {
+      bakeLayerIndex = Parent.Bake(doc, objIds, false);
+      if (bakeLayerIndex < 0)
+      {
+        return; // failed to create layers
+      }
+    }
+
+    if (Geometries.Count == 0)
+    {
+      return; // nothing to bake
+    }
+
+    // bake all display geometries as individual objects
+    List<Guid> geometryIds = [];
+
+    foreach (SpeckleGeometryWrapper geometryWrapper in Geometries)
+    {
+      if (geometryWrapper.GeometryBase != null)
+      {
+        // geometry wrappers should already be synced via prop setters, assume we're in a consistent state
+        List<Guid> currentGeometryIds = [];
+        geometryWrapper.Bake(doc, currentGeometryIds, bakeLayerIndex, true);
+        geometryIds.AddRange(currentGeometryIds);
+      }
+    }
+
+    // create a group for all geometries
+    if (geometryIds.Count > 0)
+    {
+      string groupName = CreateGroupName(baseLayerName);
+
+      try
+      {
+        int groupIndex = doc.Groups.Add(groupName, geometryIds);
+
+        if (groupIndex >= 0)
+        {
+          var group = doc.Groups.FindIndex(groupIndex);
+          objIds.Add(group.Id); // add group ID first
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // group creation failed - continue like RhinoGroupBaker pattern
+        // causes: invalid object IDs? duplicate names? doc state issues?
+      }
+
+      // always add individual geometry IDs (whether group creation succeeded or failed)
+      objIds.AddRange(geometryIds);
+    }
+  }
 
   /// <summary>
   /// Creates a deep copy of this wrapper.
@@ -186,5 +256,23 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     {
       geometry.Parent = Parent;
     }
+  }
+
+  /// <summary>
+  /// Creates a descriptive group name
+  /// </summary>
+  private string CreateGroupName(string? baseLayerName)
+  {
+    // Reference: RhinoGroupBaker.BakeGroups pattern:
+    // var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
+
+    string groupName = !string.IsNullOrEmpty(Name) ? Name : "No Name DataObject";
+
+    if (!string.IsNullOrEmpty(baseLayerName))
+    {
+      return $"{groupName} ({baseLayerName})";
+    }
+
+    return groupName;
   }
 }
