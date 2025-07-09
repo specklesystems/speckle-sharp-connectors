@@ -123,7 +123,7 @@ public class SpeckleGeometryPassthrough : GH_Component
     SpeckleGeometryWrapper? result = null;
     if (da.GetData(0, ref inputObject))
     {
-      if (inputObject?.ToSpeckleObjectWrapper() is SpeckleGeometryWrapper gooWrapper)
+      if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper gooWrapper)
       {
         result = gooWrapper.DeepCopy();
       }
@@ -163,7 +163,7 @@ public class SpeckleGeometryPassthrough : GH_Component
     // deep copy so we don't mutate the input geo which may be speckle objects
     if (inputGeometry != null)
     {
-      if (inputGeometry.ToSpeckleObjectWrapper() is SpeckleGeometryWrapper geoWrapper)
+      if (inputGeometry.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
       {
         SpeckleGeometryWrapper mutatingGeo = geoWrapper.DeepCopy();
         if (result is null)
