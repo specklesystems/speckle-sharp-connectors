@@ -34,11 +34,29 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
 
   bool IGH_BakeAwareObject.IsBakeCapable => !VolatileData.IsEmpty;
 
-  // TODO: CNX-2095
-  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, List<Guid> objIds) { }
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, List<Guid> objIds)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleDataObjectWrapperGoo goo)
+      {
+        goo.Value.Bake(doc, objIds);
+      }
+    }
+  }
 
-  // TODO: CNX-2095
-  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds) { }
+  void IGH_BakeAwareObject.BakeGeometry(RhinoDoc doc, ObjectAttributes att, List<Guid> objIds)
+  {
+    foreach (var item in VolatileData.AllData(true))
+    {
+      if (item is SpeckleDataObjectWrapperGoo goo)
+      {
+        int layerIndex = goo.Value.Path.Count == 0 ? att.LayerIndex : -1;
+        bool layerCreated = goo.Value.Path.Count == 0;
+        goo.Value.Bake(doc, objIds, layerIndex, layerCreated);
+      }
+    }
+  }
 
   /// <summary>
   /// Draws viewport wires for all data objects in this parameter.

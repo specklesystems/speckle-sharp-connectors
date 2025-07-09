@@ -20,6 +20,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleDataObjectPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
