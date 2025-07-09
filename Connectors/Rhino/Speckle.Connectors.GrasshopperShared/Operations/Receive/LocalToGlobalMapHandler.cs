@@ -93,6 +93,10 @@ internal sealed class LocalToGlobalMapHandler
         SpecklePropertyGroupGoo propertyGroup = new();
         propertyGroup.CastFrom(dataObject.properties);
 
+        // remove the displayvalue of the original dataobject since these are now processed and stored on the wrapper
+        // to prevent storing of duplicate Base
+        dataObject.displayValue.Clear();
+
         var dataObjectWrapper = new SpeckleDataObjectWrapper()
         {
           Base = dataObject,
