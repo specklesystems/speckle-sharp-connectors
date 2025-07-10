@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
@@ -23,19 +25,18 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
       ComponentCategories.OBJECTS
     ) { }
 
-  protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+  protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleGeometryWrapperParam(),
+    pManager.AddGenericParameter(
       "Objects",
       "O",
-      "Speckle Objects to retrieve properties",
+      "Speckle Objects to retrieve properties. Speckle Geometry and Data Objects are accepted.",
       GH_ParamAccess.item
     );
     pManager.AddTextParameter("Keys", "K", "Property keys to filter by", GH_ParamAccess.list);
   }
 
-  protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager) { }
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -60,12 +61,29 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
     }
     else
     {
-      SpeckleGeometryWrapperGoo objectWrapperGoo = new();
-      da.GetData(0, ref objectWrapperGoo);
+      IGH_Goo? inputObject = null;
+      SpecklePropertyGroupGoo? properties = null;
 
-      // flatten object properties, if any
-      SpecklePropertyGroupGoo properties = objectWrapperGoo.Value.Properties;
-      if (properties.Value.Count == 0)
+      if (da.GetData(0, ref inputObject))
+      {
+        // Handle DataObjects directly first
+        if (inputObject is SpeckleDataObjectWrapperGoo dataObjectGoo)
+        {
+          properties = dataObjectGoo.Value.Properties;
+        }
+        // Handle both Geometry and DataObject wrappers using extension method
+        else if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
+        {
+          properties = geoWrapper.Properties;
+        }
+        else
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Unsupported object type: {inputObject?.TypeName}");
+          return;
+        }
+      }
+
+      if (properties == null || properties.Value.Count == 0)
       {
         return;
       }

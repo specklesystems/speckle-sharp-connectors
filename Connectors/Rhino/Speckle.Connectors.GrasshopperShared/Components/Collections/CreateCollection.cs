@@ -158,8 +158,17 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var obj in objects)
     {
-      // deep copy to avoid mutations
-      if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+      // handle data objects directly (deep copy to avoid mutations)
+      // NOTE: DataObject first, since a DataObject with one geo is castable to speckle geometry
+      if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
+      {
+        var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
+        dataObjectWrapper.Path = childPath;
+        dataObjectWrapper.Parent = parentCollection;
+        parentCollection.Elements.Add(dataObjectWrapper);
+      }
+      // handle geometry objects (deep copy to avoid mutations)
+      else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
       {
         SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
         wrapper.Path = childPath;
