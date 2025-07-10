@@ -66,15 +66,15 @@ public class GetObjectProperties : GH_Component, IGH_VariableParameterComponent
 
       if (da.GetData(0, ref inputObject))
       {
-        // Handle both Geometry and DataObject wrappers using existing extension method
-        if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
-        {
-          properties = geoWrapper.Properties;
-        }
-        // Handle DataObjects directly
-        else if (inputObject is SpeckleDataObjectWrapperGoo dataObjectGoo)
+        // Handle DataObjects directly first
+        if (inputObject is SpeckleDataObjectWrapperGoo dataObjectGoo)
         {
           properties = dataObjectGoo.Value.Properties;
+        }
+        // Handle both Geometry and DataObject wrappers using extension method
+        else if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
+        {
+          properties = geoWrapper.Properties;
         }
         else
         {

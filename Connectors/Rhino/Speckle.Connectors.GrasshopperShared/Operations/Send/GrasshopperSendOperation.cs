@@ -216,13 +216,6 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     // Update the DataObject's displayValue
     dataObject.displayValue = displayValue;
 
-    // Ensure properties are set from wrapper
-    Dictionary<string, object?> props = [];
-    if (wrapper.Properties.CastTo(ref props))
-    {
-      dataObject.properties = props;
-    }
-
     return dataObject;
   }
 
