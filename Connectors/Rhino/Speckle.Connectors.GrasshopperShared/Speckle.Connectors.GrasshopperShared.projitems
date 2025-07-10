@@ -40,6 +40,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\VersionMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\WorkspaceMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SpeckleOperationWizard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extras\StateTag.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\KeyWatcher.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperBlockUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
