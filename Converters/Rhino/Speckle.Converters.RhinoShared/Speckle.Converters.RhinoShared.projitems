@@ -10,5 +10,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)**\*.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Grasshopper\IntervalToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Grasshopper\PlaneToHostTopLevelConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Grasshopper\VectorToHostTopLevelConverter.cs" />
   </ItemGroup>
 </Project>

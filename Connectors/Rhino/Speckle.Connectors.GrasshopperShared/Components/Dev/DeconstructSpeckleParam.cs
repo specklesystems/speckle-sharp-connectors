@@ -208,10 +208,11 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     try
     {
       // convert the base and create a wrapper for each result
-      List<(GeometryBase, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(@base);
+      List<(object, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(@base);
       List<SpeckleObjectWrapperGoo> convertedWrappers = new();
-      foreach ((GeometryBase g, Base b) in convertedBase)
+      foreach ((object o, Base b) in convertedBase)
       {
+        GeometryBase? g = o as GeometryBase;
         SpeckleObjectWrapper convertedWrapper =
           new()
           {

@@ -53,7 +53,7 @@ internal sealed class LocalToGlobalMapHandler
 
     try
     {
-      List<(GeometryBase, Base)> converted = SpeckleConversionContext.ConvertToHost(obj);
+      List<(object, Base)> converted = SpeckleConversionContext.ConvertToHost(obj);
 
       if (converted.Count == 0)
       {
@@ -91,28 +91,31 @@ internal sealed class LocalToGlobalMapHandler
         }
       }
 
-      foreach ((GeometryBase geometryBase, Base original) in converted)
+      foreach ((object convertedObj, Base original) in converted)
       {
-        var wrapper = new SpeckleObjectWrapper()
+        if (convertedObj is GeometryBase geometryBase)
         {
-          Base = original,
-          Path = path.Select(p => p.name).ToList(),
-          Parent = objectCollection,
-          GeometryBase = geometryBase,
-          Properties = propertyGroup,
-          Name = name,
-          Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-            ? cachedObjColor
-            : null,
-          Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-            ? cachedObjMaterial
-            : null,
-          ApplicationId = objId
-        };
+          var wrapper = new SpeckleObjectWrapper()
+          {
+            Base = original,
+            Path = path.Select(p => p.name).ToList(),
+            Parent = objectCollection,
+            GeometryBase = geometryBase,
+            Properties = propertyGroup,
+            Name = name,
+            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+              ? cachedObjColor
+              : null,
+            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+              ? cachedObjMaterial
+              : null,
+            ApplicationId = objId
+          };
 
-        // Always add to both map and collections
-        ConvertedObjectsMap[objId] = wrapper;
-        CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
+          // Always add to both map and collections
+          ConvertedObjectsMap[objId] = wrapper;
+          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
+        }
       }
     }
     catch (Exception ex) when (!ex.IsFatal())

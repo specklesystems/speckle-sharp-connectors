@@ -10,14 +10,11 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Grasshopper;
 public class GeometryBaseConverter : IToSpeckleTopLevelConverter
 {
   private readonly ITypedConverter<RG.Point, SOG.Point> _pointConverter;
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.ArcCurve, Base> _arcCurveConverter;
   private readonly ITypedConverter<RG.Hatch, SOG.Region> _hatchConverter;
   private readonly ITypedConverter<RG.InstanceReferenceGeometry, InstanceProxy> _instanceConverter;
-  private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
   private readonly ITypedConverter<RG.LineCurve, SOG.Line> _lineCurveConverter;
   private readonly ITypedConverter<RG.NurbsCurve, SOG.Curve> _nurbsCurveConverter;
-  private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly ITypedConverter<RG.PointCloud, SOG.Pointcloud> _pointcloudConverter;
   private readonly ITypedConverter<RG.PolyCurve, SOG.Polycurve> _polycurveConverter;
   private readonly ITypedConverter<RG.Polyline, SOG.Polyline> _polylineConverter;
@@ -26,18 +23,14 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<RG.Extrusion, SOG.ExtrusionX> _extrusionConverter;
   private readonly ITypedConverter<RG.SubD, SOG.SubDX> _subdConverter;
   private readonly ITypedConverter<RG.Brep, SOG.BrepX> _brepConverter;
-  private readonly ITypedConverter<RG.Vector3d, SOG.Vector> _vectorConverter;
 
   public GeometryBaseConverter(
     ITypedConverter<RG.Point, SOG.Point> pointConverter,
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
     ITypedConverter<RG.ArcCurve, Base> arcCurveConverter,
     ITypedConverter<RG.Hatch, SOG.Region> hatchConverter,
     ITypedConverter<RG.InstanceReferenceGeometry, InstanceProxy> instanceConverter,
-    ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
     ITypedConverter<RG.LineCurve, SOG.Line> lineCurveConverter,
     ITypedConverter<RG.NurbsCurve, SOG.Curve> nurbsCurveConverter,
-    ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
     ITypedConverter<RG.PointCloud, SOG.Pointcloud> pointcloudConverter,
     ITypedConverter<RG.PolyCurve, SOG.Polycurve> polycurveConverter,
     ITypedConverter<RG.Polyline, SOG.Polyline> polylineConverter,
@@ -45,19 +38,15 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
     ITypedConverter<RG.Brep, SOG.BrepX> brepConverter,
     ITypedConverter<RG.Extrusion, SOG.ExtrusionX> extrusionConverter,
-    ITypedConverter<RG.SubD, SOG.SubDX> subdConverter,
-    ITypedConverter<RG.Vector3d, SOG.Vector> vectorConverter
+    ITypedConverter<RG.SubD, SOG.SubDX> subdConverter
   )
   {
     _pointConverter = pointConverter;
-    _boxConverter = boxConverter;
     _arcCurveConverter = arcCurveConverter;
     _hatchConverter = hatchConverter;
     _instanceConverter = instanceConverter;
-    _intervalConverter = intervalConverter;
     _lineCurveConverter = lineCurveConverter;
     _nurbsCurveConverter = nurbsCurveConverter;
-    _planeConverter = planeConverter;
     _pointcloudConverter = pointcloudConverter;
     _polycurveConverter = polycurveConverter;
     _polylineConverter = polylineConverter;
@@ -66,7 +55,6 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     _brepConverter = brepConverter;
     _extrusionConverter = extrusionConverter;
     _subdConverter = subdConverter;
-    _vectorConverter = vectorConverter;
   }
 
   public Base Convert(object target)
@@ -74,14 +62,11 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
     return target switch
     {
       RG.Point pt => _pointConverter.Convert(pt),
-      RG.Box box => _boxConverter.Convert(box),
       RG.ArcCurve ac => _arcCurveConverter.Convert(ac),
       RG.Hatch hatch => _hatchConverter.Convert(hatch),
       RG.InstanceReferenceGeometry instance => _instanceConverter.Convert(instance),
-      RG.Interval interval => _intervalConverter.Convert(interval),
       RG.LineCurve ln => _lineCurveConverter.Convert(ln),
       RG.NurbsCurve nurbsCurve => _nurbsCurveConverter.Convert(nurbsCurve),
-      RG.Plane plane => _planeConverter.Convert(plane),
       RG.PointCloud pointcloud => _pointcloudConverter.Convert(pointcloud),
       RG.PolyCurve polyCurve => _polycurveConverter.Convert(polyCurve),
       RG.Polyline polyline => _polylineConverter.Convert(polyline),
@@ -91,7 +76,6 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
       RG.Brep brep => _brepConverter.Convert(brep),
       RG.Extrusion ext => _extrusionConverter.Convert(ext),
       RG.SubD subD => _subdConverter.Convert(subD),
-      RG.Vector3d vector => _vectorConverter.Convert(vector),
       _ => throw new ConversionException($"Failed to find a conversion for {target.GetType()}")
     };
   }
