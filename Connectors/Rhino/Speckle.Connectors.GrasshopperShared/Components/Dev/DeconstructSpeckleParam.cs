@@ -49,7 +49,12 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         List<IGH_Goo> children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
         outputParams = ParseSpeckleWrapper(collectionGoo.Value, children);
         break;
-      case SpeckleObjectWrapperGoo objectGoo when objectGoo.Value != null:
+      case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
+        // get geometries from the wrapper to override the displayvalue prop while parsing
+        List<IGH_Goo> display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
+        outputParams = ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
+        break;
+      case SpeckleGeometryWrapperGoo objectGoo when objectGoo.Value != null:
         outputParams = ParseSpeckleWrapper(objectGoo.Value);
         break;
       case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
@@ -119,13 +124,21 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     }
   }
 
-  private List<OutputParamWrapper> ParseSpeckleWrapper(SpeckleWrapper wrapper, List<IGH_Goo>? collElements = null)
+  private List<OutputParamWrapper> ParseSpeckleWrapper(
+    SpeckleWrapper wrapper,
+    List<IGH_Goo>? elements = null,
+    List<IGH_Goo>? displayValue = null
+  )
   {
     Name = string.IsNullOrEmpty(wrapper.Name) ? wrapper.Base.speckle_type : wrapper.Name;
-    return CreateOutputParamsFromBase(wrapper.Base, collElements);
+    return CreateOutputParamsFromBase(wrapper.Base, elements, displayValue);
   }
 
-  private List<OutputParamWrapper> CreateOutputParamsFromBase(Base @base, List<IGH_Goo>? collElements = null)
+  private List<OutputParamWrapper> CreateOutputParamsFromBase(
+    Base @base,
+    List<IGH_Goo>? elements = null,
+    List<IGH_Goo>? displayValue = null
+  )
   {
     List<OutputParamWrapper> result = new();
     if (@base == null)
@@ -148,9 +161,15 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           List<object> nativeObjects = new();
 
           // override list value if base is a collection and this is the elements prop, since this is empty if coming from a collectionwrapper
-          if (@base is Collection && prop.Key == "elements" && collElements != null)
+          if (@base is Collection && prop.Key == "elements" && elements != null)
           {
-            list = collElements;
+            list = elements;
+          }
+
+          // override list value if base is a dataobject and this is the displayvalue prop, since this is empty if coming from a dataobject wrapper
+          if (@base is Speckle.Objects.Data.DataObject && prop.Key == "displayValue" && displayValue != null)
+          {
+            list = displayValue;
           }
 
           foreach (var x in list)
@@ -203,16 +222,16 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     return result;
   }
 
-  private List<SpeckleObjectWrapperGoo> ConvertOrCreateWrapper(Base @base)
+  private List<SpeckleGeometryWrapperGoo> ConvertOrCreateWrapper(Base @base)
   {
     try
     {
       // convert the base and create a wrapper for each result
       List<(GeometryBase, Base)> convertedBase = SpeckleConversionContext.ConvertToHost(@base);
-      List<SpeckleObjectWrapperGoo> convertedWrappers = new();
+      List<SpeckleGeometryWrapperGoo> convertedWrappers = new();
       foreach ((GeometryBase g, Base b) in convertedBase)
       {
-        SpeckleObjectWrapper convertedWrapper =
+        SpeckleGeometryWrapper convertedWrapper =
           new()
           {
             Base = b,
@@ -231,7 +250,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     {
       // some classes, like RawEncoding, have no direct conversion or fallback value.
       // when this is the case, wrap it to allow users to further expand the object.
-      SpeckleObjectWrapper convertedWrapper =
+      SpeckleGeometryWrapper convertedWrapper =
         new()
         {
           Base = @base,
@@ -241,7 +260,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
           Material = null
         };
 
-      return new() { new SpeckleObjectWrapperGoo(convertedWrapper) };
+      return new() { new SpeckleGeometryWrapperGoo(convertedWrapper) };
     }
   }
 

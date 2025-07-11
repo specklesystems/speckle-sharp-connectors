@@ -47,14 +47,14 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
       case GH_Goo<SpeckleBlockInstanceWrapper> goo:
         Value = goo.Value;
         return true;
-      case SpeckleObjectWrapperGoo objWrapperGoo:
+      case SpeckleGeometryWrapperGoo objWrapperGoo:
         if (objWrapperGoo.Value is SpeckleBlockInstanceWrapper objWrapper)
         {
           Value = objWrapper;
           return true;
         }
         break;
-      case GH_Goo<SpeckleObjectWrapper> goo:
+      case GH_Goo<SpeckleGeometryWrapper> goo:
         if (goo.Value is SpeckleBlockInstanceWrapper wrapper)
         {
           Value = wrapper;
@@ -93,7 +93,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
   {
     switch (target)
     {
-      case SpeckleObjectWrapperGoo:
+      case SpeckleGeometryWrapperGoo:
         target = (T)(object)Value;
         return true;
       case Transform:

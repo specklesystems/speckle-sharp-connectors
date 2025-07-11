@@ -18,7 +18,7 @@ using Speckle.Sdk.Models.Instances;
 /// </remarks>
 internal sealed class LocalToGlobalMapHandler
 {
-  public Dictionary<string, SpeckleObjectWrapper> ConvertedObjectsMap { get; } = new();
+  public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = new();
   public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
 
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
@@ -69,50 +69,79 @@ internal sealed class LocalToGlobalMapHandler
         _materialUnpacker
       );
 
-      // Extract name and properties
-      SpecklePropertyGroupGoo propertyGroup = new();
-      string name = "";
-
       if (obj is Speckle.Objects.Data.DataObject dataObject)
       {
+        // get geometries
+        List<SpeckleGeometryWrapper> geometries = new();
+        foreach ((GeometryBase geometryBase, Base original) in converted)
+        {
+          var wrapper = new SpeckleGeometryWrapper()
+          {
+            Base = original,
+            GeometryBase = geometryBase,
+            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+              ? cachedObjColor
+              : null,
+            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+              ? cachedObjMaterial
+              : null,
+          };
+
+          geometries.Add(wrapper);
+        }
+
+        SpecklePropertyGroupGoo propertyGroup = new();
         propertyGroup.CastFrom(dataObject.properties);
-        name = dataObject.name;
+
+        // remove the displayvalue of the original dataobject since these are now processed and stored on the wrapper
+        // to prevent storing of duplicate Base
+        dataObject.displayValue.Clear();
+
+        var dataObjectWrapper = new SpeckleDataObjectWrapper()
+        {
+          Base = dataObject,
+          Geometries = geometries,
+          Path = path.Select(p => p.name).ToList(),
+          Parent = objectCollection,
+          Name = dataObject.name,
+          Properties = propertyGroup,
+          ApplicationId = dataObject.applicationId,
+        };
+
+        // Add to collections (not to map since these won't be definition objects)
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
       }
       else
       {
+        SpecklePropertyGroupGoo propertyGroup = new();
         if (obj[Constants.PROPERTIES_PROP] is Dictionary<string, object?> props)
         {
           propertyGroup.CastFrom(props);
         }
 
-        if (obj[Constants.NAME_PROP] is string objName)
+        foreach ((GeometryBase geometryBase, Base original) in converted)
         {
-          name = objName;
+          var wrapper = new SpeckleGeometryWrapper()
+          {
+            Base = original,
+            Path = path.Select(p => p.name).ToList(),
+            Parent = objectCollection,
+            GeometryBase = geometryBase,
+            Properties = propertyGroup,
+            Name = obj[Constants.NAME_PROP] as string ?? "",
+            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+              ? cachedObjColor
+              : null,
+            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+              ? cachedObjMaterial
+              : null,
+            ApplicationId = objId
+          };
+
+          // Always add to both map and collections
+          ConvertedObjectsMap[objId] = wrapper;
+          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
         }
-      }
-
-      foreach ((GeometryBase geometryBase, Base original) in converted)
-      {
-        var wrapper = new SpeckleObjectWrapper()
-        {
-          Base = original,
-          Path = path.Select(p => p.name).ToList(),
-          Parent = objectCollection,
-          GeometryBase = geometryBase,
-          Properties = propertyGroup,
-          Name = name,
-          Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-            ? cachedObjColor
-            : null,
-          Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-            ? cachedObjMaterial
-            : null,
-          ApplicationId = objId
-        };
-
-        // Always add to both map and collections
-        ConvertedObjectsMap[objId] = wrapper;
-        CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())

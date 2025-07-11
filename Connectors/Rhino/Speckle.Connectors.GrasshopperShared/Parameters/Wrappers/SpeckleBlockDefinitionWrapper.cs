@@ -30,9 +30,9 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  private List<SpeckleObjectWrapper> _objects = new();
+  private List<SpeckleGeometryWrapper> _objects = new();
 
-  public List<SpeckleObjectWrapper> Objects
+  public List<SpeckleGeometryWrapper> Objects
   {
     get => _objects;
     set
@@ -42,10 +42,10 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
     }
   }
 
-  private static void ValidateObjects(List<SpeckleObjectWrapper> objects)
+  private static void ValidateObjects(List<SpeckleGeometryWrapper> objects)
   {
     // SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper, check if it's assignable, not exact type match
-    var invalidObjects = objects.Where(o => !typeof(SpeckleObjectWrapper).IsAssignableFrom(o.GetType())).ToList();
+    var invalidObjects = objects.Where(o => !typeof(SpeckleGeometryWrapper).IsAssignableFrom(o.GetType())).ToList();
 
     if (invalidObjects.Count > 0)
     {
@@ -64,7 +64,7 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
   /// Creates a preview of the block definition by displaying all contained objects
   /// </summary>
   /// <remarks>
-  /// Leveraging already defined preview logic for the objects which make up this block. Refer to <see cref="SpeckleObjectWrapper.DrawPreview"/>.
+  /// Leveraging already defined preview logic for the objects which make up this block. Refer to <see cref="SpeckleGeometryWrapper.DrawPreview"/>.
   /// </remarks>
   public void DrawPreview(IGH_PreviewArgs args, bool isSelected = false) =>
     DrawDepthLimitedPreview(args, isSelected, 0);

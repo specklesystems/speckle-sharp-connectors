@@ -13,10 +13,10 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case InstanceDefinition instanceDefinition:
-        List<SpeckleObjectWrapper> objects = new();
+        List<SpeckleGeometryWrapper> objects = new();
         foreach (var defObj in instanceDefinition.GetObjects())
         {
-          SpeckleObjectWrapperGoo defObjGoo = new();
+          SpeckleGeometryWrapperGoo defObjGoo = new();
           if (defObjGoo.CastFrom(defObj))
           {
             objects.Add(defObjGoo.Value);
