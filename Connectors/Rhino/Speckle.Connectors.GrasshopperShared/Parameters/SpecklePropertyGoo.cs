@@ -54,9 +54,6 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
       case SpecklePropertyGoo speckleProperty:
         Value = speckleProperty.Value;
         return true;
-      case GH_Plane plane:
-        Value = plane.Value;
-        return true;
       case Base @base: // this would capture cases of planes, vectors, and intervals from GH
         try
         {
@@ -67,6 +64,9 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
         {
           return false;
         }
+      case GH_Plane plane:
+        Value = plane.Value;
+        return true;
       case GH_Vector vector:
         Value = vector.Value;
         return true;

@@ -73,21 +73,25 @@ internal sealed class LocalToGlobalMapHandler
       {
         // get geometries
         List<SpeckleGeometryWrapper> geometries = new();
-        foreach ((GeometryBase geometryBase, Base original) in converted)
+        foreach ((object convertedObj, Base original) in converted)
         {
-          var wrapper = new SpeckleGeometryWrapper()
+          if (convertedObj is GeometryBase geometryBase)
           {
-            Base = original,
-            GeometryBase = geometryBase,
-            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-              ? cachedObjColor
-              : null,
-            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-              ? cachedObjMaterial
-              : null,
-          };
+            SpeckleGeometryWrapper wrapper =
+              new()
+              {
+                Base = original,
+                GeometryBase = geometryBase,
+                Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+                  ? cachedObjColor
+                  : null,
+                Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+                  ? cachedObjMaterial
+                  : null,
+              };
 
-          geometries.Add(wrapper);
+            geometries.Add(wrapper);
+          }
         }
 
         SpecklePropertyGroupGoo propertyGroup = new();
@@ -119,32 +123,32 @@ internal sealed class LocalToGlobalMapHandler
           propertyGroup.CastFrom(props);
         }
 
-       foreach ((object convertedObj, Base original) in converted)
-      {
-        if (convertedObj is GeometryBase geometryBase)
+        foreach ((object convertedObj, Base original) in converted)
         {
-          var wrapper = new SpeckleObjectWrapper()
+          if (convertedObj is GeometryBase geometryBase)
           {
-            Base = original,
-            Path = path.Select(p => p.name).ToList(),
-            Parent = objectCollection,
-            GeometryBase = geometryBase,
-            Properties = propertyGroup,
-            Name = name,
-            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-              ? cachedObjColor
-              : null,
-            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-              ? cachedObjMaterial
-              : null,
-            ApplicationId = objId
-          };
+            var wrapper = new SpeckleGeometryWrapper()
+            {
+              Base = original,
+              Path = path.Select(p => p.name).ToList(),
+              Parent = objectCollection,
+              GeometryBase = geometryBase,
+              Properties = propertyGroup,
+              Name = obj[Constants.NAME_PROP] as string ?? "",
+              Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+                ? cachedObjColor
+                : null,
+              Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+                ? cachedObjMaterial
+                : null,
+              ApplicationId = objId
+            };
 
-          // Always add to both map and collections
-          ConvertedObjectsMap[objId] = wrapper;
-          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
+            // Always add to both map and collections
+            ConvertedObjectsMap[objId] = wrapper;
+            CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
+          }
         }
-      }
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
