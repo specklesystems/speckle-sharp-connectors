@@ -186,11 +186,27 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     Dictionary<string, object?> dict = new();
     foreach (var kvp in properties)
     {
-      object? val = kvp.Value is SpecklePropertyGroupGoo propertyGroup
-        ? UnwrapWorker(propertyGroup.Value)
-        : kvp.Value is SpecklePropertyGoo property
-          ? property.Value
-          : null;
+      object? val = null;
+      switch (kvp.Value)
+      {
+        case SpecklePropertyGroupGoo propertyGroup:
+          val = UnwrapWorker(propertyGroup.Value);
+          break;
+        case SpecklePropertyGoo property:
+          switch (property.Value)
+          {
+            case Rhino.Geometry.Plane:
+            case Rhino.Geometry.Vector3d:
+            case Rhino.Geometry.Interval:
+              val = SpeckleConversionContext.ConvertToSpeckle(property.Value);
+              break;
+            default:
+              val = property.Value;
+              break;
+          }
+          break;
+      }
+
       dict.Add(kvp.Key, val);
     }
 
