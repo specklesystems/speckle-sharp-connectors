@@ -14,7 +14,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
     switch (source)
     {
       case InstanceReferenceGeometry instanceRef:
-        SpeckleObjectWrapperGoo objGoo = new();
+        SpeckleGeometryWrapperGoo objGoo = new();
         objGoo.CastFrom(instanceRef);
         if (objGoo.Value is SpeckleBlockInstanceWrapper instanceWrapper)
         {
@@ -33,7 +33,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       case ModelObject modelObject:
         if (modelObject.ObjectType == ObjectType.InstanceReference)
         {
-          SpeckleObjectWrapperGoo modelObjGoo = new();
+          SpeckleGeometryWrapperGoo modelObjGoo = new();
           modelObjGoo.CastFrom(modelObject); // handles all model object casting like geo conversion, model object name and props and color and mat
 
           if (modelObjGoo.Value is SpeckleBlockInstanceWrapper modelInstanceWrapper)

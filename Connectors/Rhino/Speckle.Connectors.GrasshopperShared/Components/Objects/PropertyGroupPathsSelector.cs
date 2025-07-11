@@ -23,14 +23,21 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 
   public override Guid ComponentGuid => new Guid("8882BE3A-81F1-4416-B420-58D69E4CC8F1");
   protected override Bitmap Icon => Resources.speckle_inputs_property;
-  public override GH_Exposure Exposure => GH_Exposure.tertiary;
+  public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
   protected override void LoadVolatileData()
   {
     var objectPropertyGroups = VolatileData
       .AllData(true)
-      .OfType<SpeckleObjectWrapperGoo>()
-      .Select(goo => goo.Value.Properties)
+      .Where(goo => goo is SpeckleGeometryWrapperGoo or SpeckleDataObjectWrapperGoo)
+      .Select(goo =>
+        goo switch
+        {
+          SpeckleGeometryWrapperGoo geometryGoo => geometryGoo.Value.Properties,
+          SpeckleDataObjectWrapperGoo dataGoo => dataGoo.Value.Properties,
+          _ => throw new InvalidOperationException("Unexpected goo type")
+        }
+      )
       .ToList();
 
 #if RHINO8_OR_GREATER
@@ -40,7 +47,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
       var modelObjects = VolatileData
         .AllData(true)
         .OfType<ModelObject>()
-        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties)
+        .Select(mo => new SpeckleGeometryWrapperGoo(mo).Value.Properties)
         .ToList();
       objectPropertyGroups.AddRange(modelObjects);
     }

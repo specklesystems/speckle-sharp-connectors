@@ -21,7 +21,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_def;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -94,10 +94,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     // process geometry
     if (inputObjects.Count > 0)
     {
-      List<SpeckleObjectWrapper> processedObjects = new();
+      List<SpeckleGeometryWrapper> processedObjects = new();
       foreach (IGH_Goo goo in inputObjects)
       {
-        if (goo.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
+        if (goo.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper gooWrapper)
         {
           processedObjects.Add(gooWrapper);
         }
