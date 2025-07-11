@@ -70,7 +70,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   /// </remarks>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<ICsiWrapper> csiObjects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )

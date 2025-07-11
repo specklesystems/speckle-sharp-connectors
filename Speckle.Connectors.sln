@@ -306,6 +306,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converter.Tekla2025
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Revit.Common", "Connectors\Revit\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj", "{60445031-CCEE-4421-83C0-BB10BEF7B7F2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rhino", "Rhino", "{CD0C216A-2A96-4423-956E-3DDFCAEA510C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Rhino", "Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj", "{92F065BE-97E2-4192-B561-88A6A8CFA53F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -769,6 +773,12 @@ Global
 		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Local|Any CPU.Build.0 = Local|Any CPU
 		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60445031-CCEE-4421-83C0-BB10BEF7B7F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Local|Any CPU.Build.0 = Local|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -906,6 +916,8 @@ Global
 		{0454EABF-8252-4421-9E94-EEC6143DC012} = {C79CF5CF-110C-4B8B-B348-27105ACAC2DA}
 		{B42013EB-6180-4FBD-A6F9-ECB7822FDA84} = {C79CF5CF-110C-4B8B-B348-27105ACAC2DA}
 		{60445031-CCEE-4421-83C0-BB10BEF7B7F2} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
+		{CD0C216A-2A96-4423-956E-3DDFCAEA510C} = {336F0341-5C39-40F7-9377-122FED4E4549}
+		{92F065BE-97E2-4192-B561-88A6A8CFA53F} = {CD0C216A-2A96-4423-956E-3DDFCAEA510C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
