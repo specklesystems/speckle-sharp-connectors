@@ -35,7 +35,9 @@ public static class IfcExtensions
   public static string IfcToUnicode(this string input)
   {
     if (!input.Contains('\\'))
+    {
       return input;
+    }
 
     var output = new StringBuilder();
     var i = 0;
@@ -98,9 +100,14 @@ public static class IfcExtensions
         // Handle extended \Xn\...\X0\ escape sequence
         // Skip 'n' until the next '\'
         while (i < length && input[i] != '\\')
+        {
           i++;
+        }
+
         if (i < length)
+        {
           i++; // Move past '\'
+        }
 
         // Collect hex digits until '\X0\'
         var hexDigits = new StringBuilder();
@@ -113,7 +120,9 @@ public static class IfcExtensions
         {
           i += 3; // Move past '\X0'
           if (i < length && input[i] == '\\')
+          {
             i++; // Move past '\'
+          }
 
           var hexStr = hexDigits.ToString();
 
@@ -148,13 +157,12 @@ public static class IfcExtensions
       case StepEntity stepEntity:
       {
         var attr = stepEntity.Attributes;
-        if (attr.Values.Count == 0)
-          return stepEntity.ToString();
-
-        if (attr.Values.Count == 1)
-          return attr.Values[0].ToJsonObject();
-
-        return attr.Values.Select(ToJsonObject).ToList();
+        return attr.Values.Count switch
+        {
+          0 => stepEntity.ToString(),
+          1 => attr.Values[0].ToJsonObject(),
+          _ => attr.Values.Select(ToJsonObject).ToList()
+        };
       }
 
       case StepId stepId:
@@ -174,11 +182,12 @@ public static class IfcExtensions
 
       case StepSymbol stepSymbol:
         var tmp = stepSymbol.Name.AsString();
-        if (tmp == "T")
-          return true;
-        if (tmp == "F")
-          return false;
-        return tmp;
+        return tmp switch
+        {
+          "T" => true,
+          "F" => false,
+          _ => tmp
+        };
 
       case StepUnassigned stepUnassigned:
         return null;

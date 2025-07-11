@@ -12,11 +12,15 @@ public static class NodeExtensions
     {
       var name = p.Name;
       if (string.IsNullOrWhiteSpace(name))
+      {
         name = $"#{p.Id}";
+      }
 
       var dict = ToSpeckleDictionary(p);
       if (dict.Count > 0) //Ignore any empty psets, since they can bloat the data size
+      {
         result[name] = dict;
+      }
     }
 
     return result;
