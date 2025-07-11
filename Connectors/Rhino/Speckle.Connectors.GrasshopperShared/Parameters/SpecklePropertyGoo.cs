@@ -32,6 +32,22 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
   {
     switch (source)
     {
+      case List<object?> list:
+        List<object?> castedItems = new();
+        foreach (var item in list)
+        {
+          SpecklePropertyGoo itemGoo = new();
+          if (itemGoo.CastFrom(item))
+          {
+            castedItems.Add(itemGoo.Value);
+          }
+          else
+          {
+            return false;
+          }
+        }
+        Value = castedItems;
+        return true;
       case SpecklePropertyGoo speckleProperty:
         Value = speckleProperty.Value;
         return true;

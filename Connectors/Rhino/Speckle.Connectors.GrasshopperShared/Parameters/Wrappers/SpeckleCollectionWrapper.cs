@@ -92,7 +92,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     {
       switch (element)
       {
-        case SpeckleObjectWrapper o:
+        case SpeckleGeometryWrapper o:
           o.Path = newPath;
           o.Parent = this;
           break;
@@ -122,7 +122,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
           {
             SpeckleCollectionWrapper c => c.DeepCopy(),
             SpeckleBlockInstanceWrapper b => b.DeepCopy(),
-            SpeckleObjectWrapper o => o.DeepCopy(),
+            SpeckleGeometryWrapper o => o.DeepCopy(),
             _ => e
           }
         )
@@ -156,7 +156,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     // then bake elements in this collection
     foreach (var obj in Elements)
     {
-      if (obj is SpeckleObjectWrapper so)
+      if (obj is SpeckleGeometryWrapper so)
       {
         if (bakeObjects)
         {
