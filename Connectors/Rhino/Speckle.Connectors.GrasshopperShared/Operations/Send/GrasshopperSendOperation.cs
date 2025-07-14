@@ -1,14 +1,26 @@
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using DataObject = Speckle.Objects.Data.DataObject;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
 
-public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollectionWrapperGoo>
+public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollectionWrapperGoo>
 {
+  private readonly IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> _instanceObjectsManager;
+
+  // each Build() call gets a fresh scoped IInstanceObjectsManager
+  public GrasshopperRootObjectBuilder(
+    IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> instanceObjectsManager
+  )
+  {
+    _instanceObjectsManager = instanceObjectsManager;
+  }
+
   // Keeps track of the wrapper applicationId of processed objects for send.
   // This is used to keep track of the following situations:
   // 1 - objects with the same name, properties, and application id are packaged into a data object. this can happen when receiving data objects.
@@ -30,13 +42,15 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     // create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
     GrasshopperMaterialPacker materialPacker = new();
+    GrasshopperBlockPacker blockPacker = new(_instanceObjectsManager);
 
     // unwrap the input collection to remove all wrappers
-    Collection root = Unwrap(inputCollectionGoo.Value, colorPacker, materialPacker);
+    Collection root = Unwrap(inputCollectionGoo.Value, colorPacker, materialPacker, blockPacker);
 
     // add proxies
     root[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
     root[ProxyKeys.RENDER_MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
+    root[ProxyKeys.INSTANCE_DEFINITION] = blockPacker.InstanceDefinitionProxies.Values.ToList();
 
     // TODO: Not getting any conversion results yet
     var result = new RootObjectBuilderResult(root, []);
@@ -44,46 +58,60 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     return Task.FromResult(result);
   }
 
-  // Unwraps collection wrappers and object wrapppers.
-  // Also packs colors and Render Materials into proxies while unwrapping.
+  // Unwraps collection wrappers and object wrappers.
+  // Also packs colors, render materials and block definitions into proxies while unwrapping.
   private Collection Unwrap(
     SpeckleCollectionWrapper wrapper,
     GrasshopperColorPacker colorPacker,
-    GrasshopperMaterialPacker materialPacker
+    GrasshopperMaterialPacker materialPacker,
+    GrasshopperBlockPacker blockPacker
   )
   {
     Collection currentColl = wrapper.Collection;
 
-    // unpack color and render material
+    // unpack color, render material and block definitions
     colorPacker.ProcessColor(wrapper.ApplicationId, wrapper.Color);
     materialPacker.ProcessMaterial(wrapper.ApplicationId, wrapper.Material);
 
     // iterate through this wrapper's elements to unwrap children
     // HashSet<string> collObjectIds = new();
-    foreach (SpeckleWrapper wrapperElement in wrapper.Elements)
+    foreach (ISpeckleCollectionObject element in wrapper.Elements)
     {
-      if (wrapperElement is SpeckleCollectionWrapper collWrapper)
+      switch (element)
       {
-        // create an application id for this collection if none exists. This will be used for color and render material proxies
-        collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
+        case SpeckleCollectionWrapper collWrapper:
+          // create an application id for this collection if none exists. This will be used for color and render material proxies
+          collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
 
-        // add to collection and continue unwrap
-        currentColl.elements.Add(collWrapper.Collection);
-        Unwrap(collWrapper, colorPacker, materialPacker);
-      }
-      else if (wrapperElement is SpeckleObjectWrapper so)
-      {
-        // process the object first. This may result in application id mutations, so this must be done before processing color and materials.
-        //ProcessObjectWrapper(so, ref collObjectIds);
-        DataObject dataObject = ConvertWrappersToDataObject(
-          new List<SpeckleObjectWrapper>() { so },
-          Guid.NewGuid().ToString() // note: we are always generating a new id here, do *not* use the Base appid as this will cause conflicts in viewer for color and material proxy application
-        );
-        currentColl.elements.Add(dataObject);
+          // add to collection and continue unwrap
+          currentColl.elements.Add(collWrapper.Collection);
+          Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
+          break;
 
-        // unpack color and render material
-        colorPacker.ProcessColor(so.ApplicationId, so.Color);
-        materialPacker.ProcessMaterial(so.ApplicationId, so.Material);
+        case SpeckleGeometryWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
+          // convert wrapper to base and add to collection - common for all object wrappers
+          Base objectBase = UnwrapGeometry(so);
+          string applicationId = objectBase.applicationId!;
+          currentColl.elements.Add(objectBase);
+
+          // do block instance specific stuff (if this object wrapper is actually a block instance)
+          if (so is SpeckleBlockInstanceWrapper blockInstance)
+          {
+            ProcessBlockInstanceDefinition(blockInstance, colorPacker, materialPacker, blockPacker, currentColl);
+          }
+
+          // process color and material for all object wrappers (including block instances)
+          colorPacker.ProcessColor(applicationId, so.Color);
+          materialPacker.ProcessMaterial(applicationId, so.Material);
+          break;
+
+        case SpeckleDataObjectWrapper dataObjectWrapper:
+          // convert wrapper to DataObject and add to collection
+          // UnwrapDataObject will unwrap underlying geometry and handle color and material
+          // arguably doing too much, but I'm apprehensive looping twice without good reason
+          DataObject dataObject = UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          currentColl.elements.Add(dataObject);
+          break;
       }
     }
 
@@ -102,21 +130,90 @@ public class GrasshopperRootObjectBuilder() : IRootObjectBuilder<SpeckleCollecti
     return currentColl;
   }
 
-  // creates a data object from the input wrappers.
-  // assumes these wrappers have been processed for similarity, so that the name and props of all wrappers are the same.
-  private DataObject ConvertWrappersToDataObject(List<SpeckleObjectWrapper> wrappers, string appId)
+  /// <summary>
+  /// Converts a <see cref="SpeckleGeometryWrapper"/> to underlying Base object with dynamically attached properties.
+  /// </summary>
+  /// <remarks>
+  /// POC: if we move properties assignment to auto set the wrapped base, we can get rid of this entirely!
+  /// </remarks>
+  private Base UnwrapGeometry(SpeckleGeometryWrapper wrapper)
   {
-    Dictionary<string, object?> props = new();
-
-    wrappers.First().Properties.CastTo<Dictionary<string, object?>>(ref props);
-
-    return new()
+    Dictionary<string, object?> props = [];
+    Base baseObject = wrapper.Base;
+    if (wrapper.Properties.CastTo(ref props))
     {
-      displayValue = wrappers.Select(o => o.Base).ToList(),
-      name = wrappers.First().Name,
-      properties = props,
-      applicationId = appId
-    };
+      baseObject["properties"] = props; // setting props here on base since it's not auto-set, like name and appid
+    }
+
+    return baseObject;
+  }
+
+  /// <summary>
+  /// Processes a block instance's definition and adds the defining objects to the current collection.
+  /// Handles nested block hierarchies and depth calculation via GrasshopperBlockPacker.
+  /// </summary>
+  private void ProcessBlockInstanceDefinition(
+    SpeckleBlockInstanceWrapper blockInstance,
+    GrasshopperColorPacker colorPacker,
+    GrasshopperMaterialPacker materialPacker,
+    GrasshopperBlockPacker blockPacker,
+    Collection currentColl
+  )
+  {
+    // NOTE: Depth calculation handled by GrasshopperBlockPacker.ProcessInstance()
+    // Objects start with maxDepth=0, then updated during processing
+
+    // process block for definition collection and get defining objects
+    var definitionObjects = blockPacker.ProcessInstance(blockInstance);
+
+    if (definitionObjects != null)
+    {
+      foreach (var definitionObject in definitionObjects)
+      {
+        Base defObjectBase = UnwrapGeometry(definitionObject);
+        string applicationId = defObjectBase.applicationId!;
+
+        // just add to current collection for now
+        currentColl.elements.Add(defObjectBase);
+
+        colorPacker.ProcessColor(applicationId, definitionObject.Color);
+        materialPacker.ProcessMaterial(applicationId, definitionObject.Material);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Converts a <see cref="SpeckleDataObjectWrapper"/> to underlying DataObject with properly configured displayValue.
+  /// Processes colors and materials for each individual geometry during conversion.
+  /// </summary>
+  private DataObject UnwrapDataObject(
+    SpeckleDataObjectWrapper wrapper,
+    GrasshopperColorPacker colorPacker,
+    GrasshopperMaterialPacker materialPacker
+  )
+  {
+    DataObject dataObject = wrapper.DataObject;
+
+    // Convert geometries back to Base objects for displayValue
+    var displayValue = new List<Base>();
+    foreach (var geometryWrapper in wrapper.Geometries)
+    {
+      Base geometryBase = UnwrapGeometry(geometryWrapper);
+      displayValue.Add(geometryBase);
+
+      // process color and material for each geometry while we're iterating
+      // this could be in the switch statements (like SpeckleGeometryWrapper) but then we're unnecessarily looping twice
+      if (geometryWrapper.ApplicationId != null)
+      {
+        colorPacker.ProcessColor(geometryWrapper.ApplicationId, geometryWrapper.Color);
+        materialPacker.ProcessMaterial(geometryWrapper.ApplicationId, geometryWrapper.Material);
+      }
+    }
+
+    // Update the DataObject's displayValue
+    dataObject.displayValue = displayValue;
+
+    return dataObject;
   }
 
   /*

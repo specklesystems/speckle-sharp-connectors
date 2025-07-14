@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Common.Threading;
@@ -60,6 +61,10 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddTransient<IRootObjectBuilder<SpeckleCollectionWrapperGoo>, GrasshopperRootObjectBuilder>();
       services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
       services.AddSingleton<IThreadContext>(new DefaultThreadContext());
+      services.AddScoped<
+        IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>>,
+        InstanceObjectsManager<SpeckleGeometryWrapper, List<string>>
+      >(); // each send operation gets its own InstanceObjectsManager instance (scoped = per-operation)
 
       Container = services.BuildServiceProvider();
       return GH_LoadingInstruction.Proceed;

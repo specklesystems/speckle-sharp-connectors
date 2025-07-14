@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 
@@ -27,7 +29,7 @@ public class FilterSpeckleObjects : GH_Component
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddParameter(new SpeckleObjectParam(), "Objects", "O", "Speckle Objects to filter", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Objects", "O", "Speckle Objects to filter", GH_ParamAccess.list);
 
     pManager.AddTextParameter("Name", "N", "Find objects with a matching name", GH_ParamAccess.item);
     Params.Input[1].Optional = true;
@@ -62,16 +64,9 @@ public class FilterSpeckleObjects : GH_Component
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
-      "Objects",
-      "O",
-      "The objects that match the queries",
-      GH_ParamAccess.tree
-    );
+    pManager.AddGenericParameter("Objects", "O", "The objects that match the queries", GH_ParamAccess.tree);
 
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
+    pManager.AddGenericParameter(
       "Culled Objects",
       "co",
       "The objects that did not match the queries",
@@ -81,11 +76,24 @@ public class FilterSpeckleObjects : GH_Component
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    List<SpeckleObjectWrapperGoo?> inputObjects = new();
+    List<IGH_Goo> inputObjects = new();
     dataAccess.GetDataList(0, inputObjects);
 
     if (inputObjects.Count == 0)
     {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Add objects to filter");
+      return;
+    }
+
+    List<SpeckleWrapper?> objects = inputObjects
+      .Select(o => o.ToSpeckleObjectWrapper())
+      .Where(o => o is not null)
+      .ToList();
+
+    int unsupported = inputObjects.Count - objects.Count;
+    if (unsupported > 0)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Input contained {unsupported} unsupported objects.");
       return;
     }
 
@@ -100,21 +108,16 @@ public class FilterSpeckleObjects : GH_Component
     string speckleId = "";
     dataAccess.GetData(5, ref speckleId);
 
-    List<SpeckleObjectWrapper> matchedObjects = new();
-    List<SpeckleObjectWrapper> removedObjects = new();
-    for (int i = 0; i < inputObjects.Count; i++)
+    List<SpeckleWrapper> matchedObjects = new();
+    List<SpeckleWrapper> removedObjects = new();
+    for (int i = 0; i < objects.Count; i++)
     {
-      SpeckleObjectWrapperGoo? inputObject = inputObjects[i];
-      if (inputObject is null)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A null input object was detected.");
-        return;
-      }
+      SpeckleWrapper wrapper = objects[i]!;
 
       // filter by name
-      if (!MatchesSearchPattern(name, inputObject.Value.Name))
+      if (!MatchesSearchPattern(name, wrapper.Name))
       {
-        removedObjects.Add(inputObject.Value);
+        removedObjects.Add(wrapper);
         continue;
       }
 
@@ -126,49 +129,61 @@ public class FilterSpeckleObjects : GH_Component
       }
       else
       {
-        foreach (string key in inputObject.Value.Properties.Value.Keys)
+        SpecklePropertyGroupGoo? properties = wrapper is SpeckleDataObjectWrapper dataObjPropWrapper
+          ? dataObjPropWrapper.Properties
+          : wrapper is SpeckleGeometryWrapper geoPropWrapper
+            ? geoPropWrapper.Properties
+            : null;
+
+        if (properties is not null)
         {
-          if (MatchesSearchPattern(property, key))
+          foreach (string key in properties.Value.Keys)
           {
-            foundProperty = true;
-            break;
+            if (MatchesSearchPattern(property, key))
+            {
+              foundProperty = true;
+              break;
+            }
           }
         }
       }
 
       if (!foundProperty)
       {
-        removedObjects.Add(inputObject.Value);
+        removedObjects.Add(wrapper);
         continue;
       }
 
       // filter by material name
-      if (!MatchesSearchPattern(material, inputObject.Value.Material?.Name ?? ""))
+      if (wrapper is SpeckleGeometryWrapper geoWrapper)
       {
-        removedObjects.Add(inputObject.Value);
-        continue;
+        if (!MatchesSearchPattern(material, geoWrapper.Material?.Name ?? ""))
+        {
+          removedObjects.Add(wrapper);
+          continue;
+        }
       }
 
       // filter by application id
-      if (!MatchesSearchPattern(appId, inputObject.Value.Base.applicationId ?? ""))
+      if (!MatchesSearchPattern(appId, wrapper.Base.applicationId ?? ""))
       {
-        removedObjects.Add(inputObject.Value);
+        removedObjects.Add(wrapper);
         continue;
       }
 
       // filter by speckle id
-      if (!MatchesSearchPattern(speckleId, inputObject.Value.Base.id ?? ""))
+      if (!MatchesSearchPattern(speckleId, wrapper.Base.id ?? ""))
       {
-        removedObjects.Add(inputObject.Value);
+        removedObjects.Add(wrapper);
         continue;
       }
 
-      matchedObjects.Add(inputObject.Value);
+      matchedObjects.Add(wrapper);
     }
 
     // Set output objects
-    dataAccess.SetDataList(0, matchedObjects);
-    dataAccess.SetDataList(1, removedObjects);
+    dataAccess.SetDataList(0, matchedObjects.Select(o => o.CreateGoo()));
+    dataAccess.SetDataList(1, removedObjects.Select(o => o.CreateGoo()));
   }
 
   private bool MatchesSearchPattern(string searchPattern, string target)

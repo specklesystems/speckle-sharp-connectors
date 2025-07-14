@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
 using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -49,8 +50,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddParameter(
-      new SpeckleObjectParam(),
+    pManager.AddGenericParameter(
       "Objects",
       "O",
       "The objects in the input collection that match the queries",
@@ -91,7 +91,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   private List<int>? _outputFilterIndices;
 
   // Caches the list of all objects by geometrybase type
-  private readonly Dictionary<ObjectType, List<SpeckleObjectWrapper>> _filterDict = new();
+  private readonly Dictionary<ObjectType, List<SpeckleGeometryWrapper>> _filterDict = new();
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
@@ -109,7 +109,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // filter by collection path
     // Note: the collection paths selector will omit the target collection from the path of nested collections.
     // the discard ("_objects") will be used to indicate objects found directly in the target collection.
-    List<SpeckleObjectWrapper> filteredObjects;
+    List<SpeckleWrapper> filteredObjects;
     SpeckleCollectionWrapper? targetCollectionWrapper = null;
     if (!string.IsNullOrEmpty(path))
     {
@@ -120,37 +120,40 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
         return;
       }
 
-      filteredObjects = targetCollectionWrapper.Elements.OfType<SpeckleObjectWrapper>().ToList();
+      filteredObjects = targetCollectionWrapper.GetAtomicObjects(true).ToList();
     }
     else
     {
-      filteredObjects = GetAllObjectsFromCollection(collectionWrapperGoo.Value).ToList();
+      filteredObjects = collectionWrapperGoo.Value.GetAtomicObjects(true).ToList();
     }
 
-    // sort objects by filters
+    // sort geometry objects by filters
+    var geometryObjects = filteredObjects.OfType<SpeckleGeometryWrapper>().ToList();
     if (_filterDict.Count == 0)
     {
-      SortObjectsByGeometryBaseType(filteredObjects);
+      SortObjectsByGeometryBaseType(geometryObjects);
     }
 
     // Set output objects
     for (int i = 0; i < Params.Output.Count; i++)
     {
-      List<SpeckleObjectWrapper> outputValues = i == 0 ? filteredObjects : _filterDict[Filters[i - 1]];
+      List<SpeckleWrapper> outputValues =
+        i == 0 ? filteredObjects : _filterDict[Filters[i - 1]].Select(o => (SpeckleWrapper)o).ToList();
+      List<IGH_Goo> outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
       if (targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
-        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputValues);
+        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputGoos);
         dataAccess.SetDataTree(i, tree);
       }
       else
       {
-        dataAccess.SetDataList(i, outputValues);
+        dataAccess.SetDataList(i, outputGoos);
       }
     }
   }
 
   // Sort the input objects by the FilterType enums, based on the type of their geometryBase
-  private void SortObjectsByGeometryBaseType(List<SpeckleObjectWrapper> objs)
+  private void SortObjectsByGeometryBaseType(List<SpeckleGeometryWrapper> objs)
   {
     if (_filterDict.Count > 0)
     {
@@ -167,29 +170,10 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     {
       if (
         wrapper.GeometryBase?.ObjectType is ObjectType objType
-        && _filterDict.TryGetValue(objType, out List<SpeckleObjectWrapper>? value)
+        && _filterDict.TryGetValue(objType, out List<SpeckleGeometryWrapper>? value)
       )
       {
         value.Add(wrapper);
-      }
-    }
-  }
-
-  private IEnumerable<SpeckleObjectWrapper> GetAllObjectsFromCollection(SpeckleCollectionWrapper collectionWrapper)
-  {
-    foreach (SpeckleWrapper element in collectionWrapper.Elements)
-    {
-      switch (element)
-      {
-        case SpeckleCollectionWrapper childCollectionWrapper:
-          foreach (var item in GetAllObjectsFromCollection(childCollectionWrapper))
-          {
-            yield return item;
-          }
-          break;
-        case SpeckleObjectWrapper objectWrapper:
-          yield return objectWrapper;
-          break;
       }
     }
   }

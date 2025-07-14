@@ -14,7 +14,7 @@ public class SpecklePropertiesPassthrough : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_properties;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
   private enum PropertyMode
   {

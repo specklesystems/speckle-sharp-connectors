@@ -151,22 +151,22 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
 
     foreach (NAV.SavedItem item in ((NAV.GroupItem)parentItem).Children)
     {
-      switch (item.IsGroup)
+      switch (item)
       {
-        // THIS IS COMMENTED OUT AS IT IS LEGACY DEFENSIVE BEHAVIOUR - DISCUSSION REQUIRED
-        // case false when item is NAV.SavedViewpoint { ContainsVisibilityOverrides: false }:
-        //   // If the saved view does not contain visibility overrides, this is effectively everything in the model.
-        //   // This will need to be the documented behaviour.
-        //   break;
-        case false:
-          collectedSets.Add((NAV.SavedViewpoint)item);
+        // case NAV.SavedViewpoint { ContainsVisibilityOverrides: false }:
+        // Legacy defensive behaviour: skip viewpoints without visibility overrides.
+        // Essentially, send everything, or whatever the current view state for hidden elements is.
+        // break;
+        case NAV.SavedViewpointAnimationCut:
+          // Skip animation cuts.
           break;
-        default: // handles item.IsGroup == true
-          if (((NAV.GroupItem)item).Children.Count > 0) // Don't add empty groups
-          {
-            CollectSavedViews(item, collectedSets);
-          }
+        case NAV.SavedViewpoint savedViewpoint:
+          collectedSets.Add(savedViewpoint);
           break;
+        case NAV.GroupItem groupItem when groupItem.Children.Count > 0:
+          CollectSavedViews(groupItem, collectedSets);
+          break;
+        // No action for empty groups or unknown types.
       }
     }
   }
