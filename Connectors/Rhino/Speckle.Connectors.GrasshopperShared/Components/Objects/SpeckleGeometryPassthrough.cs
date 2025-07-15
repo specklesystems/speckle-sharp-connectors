@@ -155,10 +155,6 @@ public class SpeckleGeometryPassthrough : GH_Component
     SpeckleMaterialWrapperGoo? inputMaterial = null;
     da.GetData(5, ref inputMaterial);
 
-    // keep track of mutation
-    // poc: we should not mark mutations on color or material, as this shouldn't affect the appId of the object, and will allow original display values to stay intact on send.
-    bool mutated = false;
-
     // process geometry
     // deep copy so we don't mutate the input geo which may be speckle objects
     if (inputGeometry != null)
@@ -189,8 +185,6 @@ public class SpeckleGeometryPassthrough : GH_Component
           result.Base = mutatingGeo.Base;
           result.GeometryBase = mutatingGeo.GeometryBase;
         }
-
-        mutated = true;
       }
       else
       {
@@ -206,14 +200,12 @@ public class SpeckleGeometryPassthrough : GH_Component
     if (inputName != null)
     {
       result!.Name = inputName;
-      mutated = true;
     }
 
     // process properties
     if (inputProperties != null)
     {
       result!.Properties = inputProperties;
-      mutated = true;
     }
 
     // process color (no mutation)
@@ -228,8 +220,8 @@ public class SpeckleGeometryPassthrough : GH_Component
       result!.Material = inputMaterial.Value;
     }
 
-    // process application Id. Use a new appId if mutated, or if this is a new object
-    result!.ApplicationId = mutated ? Guid.NewGuid().ToString() : result!.ApplicationId ?? Guid.NewGuid().ToString();
+    // no need to process application Id.
+    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
 
     // get the path
     string path =
