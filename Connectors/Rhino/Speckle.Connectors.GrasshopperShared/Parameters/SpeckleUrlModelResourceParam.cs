@@ -16,8 +16,8 @@ public class SpeckleUrlModelResourceParam : GH_Param<SpeckleUrlModelResourceGoo>
 
   public SpeckleUrlModelResourceParam(GH_ParamAccess access)
     : base(
-      "Model Link",
-      "SML",
+      "Speckle Model",
+      "SM",
       "A resource link to a Speckle Model",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
