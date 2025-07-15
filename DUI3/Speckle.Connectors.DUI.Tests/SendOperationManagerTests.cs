@@ -81,7 +81,7 @@ public class SendOperationManagerTests : MoqTest
 
     var sendOperationMock = Create<ISendOperation<string>>();
     sendOperationMock
-      .Setup(x => x.Execute(objects, It.IsAny<SendInfo>(), progressHandler.Object, It.IsAny<CancellationToken>()))
+      .Setup(x => x.Execute(objects, It.IsAny<SendInfo>(), progressHandler.Object, It.IsAny<CancellationToken>(), null))
       .ReturnsAsync(
         new SendOperationResult("rootObjId", versionId, new Dictionary<Id, ObjectReference>(), sendResults)
       );

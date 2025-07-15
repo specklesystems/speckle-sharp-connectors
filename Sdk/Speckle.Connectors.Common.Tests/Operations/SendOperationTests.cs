@@ -124,7 +124,9 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
+    sendOperationVersionRecorder
+      .Setup(x => x.RecordVersion(rootId, sendInfo, account, ct, null))
+      .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 

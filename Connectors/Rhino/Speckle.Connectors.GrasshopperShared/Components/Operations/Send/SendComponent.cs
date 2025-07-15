@@ -49,6 +49,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
   public string? Url { get; private set; }
 
+  public string? VersionMessage { get; private set; }
+
   protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
@@ -61,7 +63,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       "The model collection to publish",
       GH_ParamAccess.item
     );
-
+    pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
+    pManager[2].Optional = true;
     pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
@@ -86,8 +89,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
     da.GetData(1, ref rootCollectionWrapper);
 
+    string? versionMessage = null;
+    da.GetData(2, ref versionMessage);
+    VersionMessage = versionMessage;
+
     bool run = false;
-    da.GetData(2, ref run);
+    da.GetData(3, ref run);
 
     return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run);
   }
@@ -177,8 +184,14 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    var result = await sendOperation
-      .Execute(new List<SpeckleCollectionWrapperGoo>() { input.Input }, sendInfo, progress, cancellationToken)
+    await sendOperation
+      .Execute(
+        new List<SpeckleCollectionWrapperGoo>() { input.Input },
+        sendInfo,
+        progress,
+        cancellationToken,
+        VersionMessage
+      )
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components

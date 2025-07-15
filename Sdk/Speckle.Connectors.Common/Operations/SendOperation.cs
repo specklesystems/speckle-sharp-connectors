@@ -28,7 +28,8 @@ public sealed class SendOperation<T>(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct = default,
+    string? versionMessage = null
   )
   {
     ct.ThrowIfCancellationRequested();
@@ -42,7 +43,7 @@ public sealed class SendOperation<T>(
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (results, versionId) = await threadContext.RunOnWorkerAsync(
-      () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct)
+      () => Send(buildResult.RootObject, sendInfo, onOperationProgressed, ct, versionMessage)
     );
     ct.ThrowIfCancellationRequested();
 
@@ -53,7 +54,8 @@ public sealed class SendOperation<T>(
     Base commitObject,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct = default,
+    string? versionMessage = null
   )
   {
     ct.ThrowIfCancellationRequested();
@@ -81,7 +83,13 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    var versionId = await sendOperationVersionRecorder.RecordVersion(sendResult.RootId, sendInfo, account, ct);
+    var versionId = await sendOperationVersionRecorder.RecordVersion(
+      sendResult.RootId,
+      sendInfo,
+      account,
+      ct,
+      versionMessage // DUI3 connectors handle it on UI as post action, GH gets it from component and sets
+    );
     return (sendResult, versionId);
   }
 }

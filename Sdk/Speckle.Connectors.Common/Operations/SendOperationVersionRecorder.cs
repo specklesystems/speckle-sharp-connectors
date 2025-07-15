@@ -8,7 +8,13 @@ namespace Speckle.Connectors.Common.Operations;
 [GenerateAutoInterface]
 public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendOperationVersionRecorder
 {
-  public async Task<string> RecordVersion(string rootId, SendInfo sendInfo, Account account, CancellationToken ct)
+  public async Task<string> RecordVersion(
+    string rootId,
+    SendInfo sendInfo,
+    Account account,
+    CancellationToken ct,
+    string? versionMessage = null
+  )
   {
     using var apiClient = clientFactory.Create(account);
     var x = await apiClient
@@ -17,7 +23,8 @@ public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendO
           rootId,
           sendInfo.ModelId,
           sendInfo.ProjectId,
-          sourceApplication: sendInfo.SourceApplication
+          sourceApplication: sendInfo.SourceApplication,
+          message: versionMessage
         ),
         ct
       )
