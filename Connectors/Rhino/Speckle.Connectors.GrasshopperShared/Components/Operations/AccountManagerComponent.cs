@@ -29,8 +29,8 @@ public class AccountManagerComponent : GH_Component, IDisposable
 
   public AccountManagerComponent()
     : base(
-      "Accounts",
-      "A",
+      "Sign In",
+      "SI",
       "Sign in to a Speckle Account",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
