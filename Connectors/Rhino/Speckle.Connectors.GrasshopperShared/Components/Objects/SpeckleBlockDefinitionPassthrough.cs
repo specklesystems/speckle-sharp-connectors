@@ -35,9 +35,9 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     Params.Input[0].Optional = true;
 
     pManager.AddGenericParameter(
-      "Objects",
-      "O",
-      "Objects to include in the Block Definition. Speckle objects and instances or Model objects and instances are accepted.",
+      "Geometry",
+      "G",
+      "Geometry to include in the Block Definition. Speckle geometry and instances or Model objects and instances are accepted.",
       GH_ParamAccess.list
     );
     Params.Input[1].Optional = true;
@@ -56,7 +56,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       GH_ParamAccess.item
     );
 
-    pManager.AddGenericParameter("Objects", "O", "Objects contained in the Block Definition", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Geometry", "G", "Geometry contained in the Block Definition", GH_ParamAccess.list);
 
     pManager.AddTextParameter("Name", "N", "Name of the Block Definition", GH_ParamAccess.item);
   }
@@ -71,7 +71,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
     if (inputDefinition == null && inputObjects.Count == 0)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Objects.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Geometry.");
       return;
     }
 
@@ -83,9 +83,6 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Name for the definition.");
       return;
     }
-
-    // keep track of mutation
-    bool mutated = false;
 
     // process the definition
     // deep copy so we don't mutate the object
@@ -109,7 +106,6 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
       result.Value.Objects = processedObjects;
       result.Value.InstanceDefinitionProxy.objects = processedObjects.Select(o => o.ApplicationId!).ToList(); // TODO: this could also be set at the same time as `Objects` on the definition wrapper.
-      mutated = true;
     }
 
     // process name
@@ -122,13 +118,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       }
 
       result.Value.Name = inputName;
-      mutated = true;
     }
 
-    // process application Id. Use a new appId if mutated, or if this is a new object
-    result.Value.ApplicationId = mutated
-      ? Guid.NewGuid().ToString()
-      : result.Value.ApplicationId ?? Guid.NewGuid().ToString();
+    // no need to process application Id.
+    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
 
     // set outputs
     da.SetData(0, result);
