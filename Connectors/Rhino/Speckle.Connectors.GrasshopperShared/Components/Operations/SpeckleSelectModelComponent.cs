@@ -36,8 +36,8 @@ public class SpeckleSelectModelComponent : GH_Component
 
   public SpeckleSelectModelComponent()
     : base(
-      "Speckle Model URL",
-      "URL",
+      "Speckle Model",
+      "SM",
       "User selectable model from Speckle",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OPERATIONS
