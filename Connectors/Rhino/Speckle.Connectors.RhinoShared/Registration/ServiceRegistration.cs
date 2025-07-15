@@ -26,9 +26,9 @@ namespace Speckle.Connectors.Rhino.DependencyInjection;
 
 public static class ServiceRegistration
 {
-  public static void AddRhino(this IServiceCollection serviceCollection, bool isPlugin = true)
+  public static void AddRhino(this IServiceCollection serviceCollection, bool isConnector)
   {
-    if (isPlugin)
+    if (isConnector)
     {
       // Register instances initialised by Rhino
       serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);

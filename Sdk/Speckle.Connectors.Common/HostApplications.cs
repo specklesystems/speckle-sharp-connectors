@@ -40,7 +40,7 @@ public static class HostApplications
     Navisworks = new("Navisworks", "navisworks"),
     AdvanceSteel = new("Advance Steel", "advancesteel"),
     Other = new("Other", "other"),
-    RhinoImporter = new("RhinoImporter", "rhino-importer");
+    RhinoImporter = new("RhinoImporter", "rhinoimporter");
 
   /// <summary>
   /// Gets a slug from a host application name and version.
