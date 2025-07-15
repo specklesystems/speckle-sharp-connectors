@@ -60,7 +60,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   )]
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -106,13 +106,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
             root.elements.Add(objectCollection);
           }
 
-          var result = ConvertAutocadEntity(
-            entity,
-            applicationId,
-            objectCollection,
-            instanceProxies,
-            sendInfo.ProjectId
-          );
+          var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
           results.Add(result);
 
           onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));

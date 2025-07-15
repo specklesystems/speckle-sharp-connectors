@@ -30,14 +30,11 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<SpeckleCollectionWrapperGoo> input,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
   {
-    // TODO: Send info is used in other connectors to get the project ID to populate the SendConversionCache
-    Console.WriteLine($"Send Info {sendInfo}");
-
     // deep copy input (to not mutate input) and set the input collection name to "Grasshopper Model"
     var inputCollectionGoo = (SpeckleCollectionWrapperGoo)input[0].Duplicate();
     inputCollectionGoo.Value.Name = "Grasshopper Model";

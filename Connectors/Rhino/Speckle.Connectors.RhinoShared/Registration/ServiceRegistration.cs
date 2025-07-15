@@ -26,14 +26,17 @@ namespace Speckle.Connectors.Rhino.DependencyInjection;
 
 public static class ServiceRegistration
 {
-  public static void AddRhino(this IServiceCollection serviceCollection)
+  public static void AddRhino(this IServiceCollection serviceCollection, bool isConnector)
   {
-    // Register instances initialised by Rhino
-    serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
-    serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
+    if (isConnector)
+    {
+      // Register instances initialised by Rhino
+      serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
+      serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
+      serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
+    }
 
     serviceCollection.AddConnectors();
-    serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
     serviceCollection.AddDUIView();
 
     // Register bindings
