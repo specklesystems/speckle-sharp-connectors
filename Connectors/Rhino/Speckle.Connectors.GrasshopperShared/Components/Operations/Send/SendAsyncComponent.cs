@@ -25,9 +25,6 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 [Guid("52481972-7867-404F-8D9F-E1481183F355")]
 public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 {
-  public GhContextMenuButton ProjectContextMenuButton { get; set; }
-  public GhContextMenuButton ModelContextMenuButton { get; set; }
-
   public SendAsyncComponent()
     : base(
       "Publish",
@@ -57,6 +54,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public SpeckleUrlModelResource? OutputParam { get; set; }
   public bool HasMultipleInputs { get; set; }
 
+  public string? VersionMessage { get; private set; }
+
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
@@ -67,6 +66,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
       "The collection model object to send",
       GH_ParamAccess.item
     );
+    pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
+    pManager[2].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -275,6 +276,10 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
       return;
     }
     RootCollectionWrapper = rootCollectionWrapper;
+
+    string? versionMessage = null;
+    da.GetData(2, ref versionMessage);
+    VersionMessage = versionMessage;
   }
 }
 
@@ -402,7 +407,13 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     SendOperationResult? result = await sendOperation
-      .Execute(new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper }, sendInfo, progress, CancellationToken)
+      .Execute(
+        new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
+        sendInfo,
+        Parent.VersionMessage,
+        progress,
+        CancellationToken
+      )
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components

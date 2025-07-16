@@ -26,6 +26,7 @@ public sealed class SendOperation<T>(
   public async Task<SendOperationResult> Execute(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
+    string? versionMessage,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
@@ -41,6 +42,7 @@ public sealed class SendOperation<T>(
           sendInfo.ProjectId,
           sendInfo.ModelId,
           sendInfo.SourceApplication,
+          versionMessage,
           sendInfo.Account,
           onOperationProgressed,
           ct
@@ -70,6 +72,7 @@ public sealed class SendOperation<T>(
     string projectId,
     string modelId,
     string sourceApplication,
+    string? versionMessage,
     Account account,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
@@ -103,6 +106,7 @@ public sealed class SendOperation<T>(
       modelId,
       projectId,
       sourceApplication,
+      versionMessage,
       account,
       ct
     );
