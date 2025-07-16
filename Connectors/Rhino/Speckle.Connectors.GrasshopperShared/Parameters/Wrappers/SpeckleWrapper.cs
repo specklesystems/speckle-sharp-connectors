@@ -12,7 +12,10 @@ public abstract class SpeckleWrapper
   /// <summary>
   /// The name of the object. When set, this will also update the "name" property of <see cref="Base"/>.
   /// </summary>
-  public string Name
+  /// <remarks>
+  /// Made virtual to allow DataObject to override with custom sync logic.
+  /// </remarks>
+  public virtual string Name
   {
     get => Base[Constants.NAME_PROP] as string ?? "";
     set => Base[Constants.NAME_PROP] = value;

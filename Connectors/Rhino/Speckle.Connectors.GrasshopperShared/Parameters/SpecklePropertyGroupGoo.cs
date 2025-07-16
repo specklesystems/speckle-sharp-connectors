@@ -1,9 +1,6 @@
-using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Rhino.DocObjects;
-using Speckle.Connectors.GrasshopperShared.Components;
 using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Connectors.GrasshopperShared.Properties;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -189,11 +186,27 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     Dictionary<string, object?> dict = new();
     foreach (var kvp in properties)
     {
-      object? val = kvp.Value is SpecklePropertyGroupGoo propertyGroup
-        ? UnwrapWorker(propertyGroup.Value)
-        : kvp.Value is SpecklePropertyGoo property
-          ? property.Value
-          : null;
+      object? val = null;
+      switch (kvp.Value)
+      {
+        case SpecklePropertyGroupGoo propertyGroup:
+          val = UnwrapWorker(propertyGroup.Value);
+          break;
+        case SpecklePropertyGoo property:
+          switch (property.Value)
+          {
+            case Rhino.Geometry.Plane:
+            case Rhino.Geometry.Vector3d:
+            case Rhino.Geometry.Interval:
+              val = SpeckleConversionContext.ConvertToSpeckle(property.Value);
+              break;
+            default:
+              val = property.Value;
+              break;
+          }
+          break;
+      }
+
       dict.Add(kvp.Key, val);
     }
 
@@ -201,30 +214,4 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
   }
 
   public override int GetHashCode() => base.GetHashCode();
-}
-
-public class SpecklePropertyGroupParam : GH_Param<SpecklePropertyGroupGoo>
-{
-  public override Guid ComponentGuid => new("AF4757C3-BA33-4ACD-A92B-C80356043129");
-  protected override Bitmap Icon => Resources.speckle_param_properties;
-  public override GH_Exposure Exposure => GH_Exposure.tertiary;
-
-  public SpecklePropertyGroupParam()
-    : this(GH_ParamAccess.item) { }
-
-  public SpecklePropertyGroupParam(IGH_InstanceDescription tag)
-    : base(tag) { }
-
-  public SpecklePropertyGroupParam(IGH_InstanceDescription tag, GH_ParamAccess access)
-    : base(tag, access) { }
-
-  public SpecklePropertyGroupParam(GH_ParamAccess access)
-    : base(
-      "Speckle Properties",
-      "SP",
-      "Represents a set of Speckle Properties",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.PARAMETERS,
-      access
-    ) { }
 }

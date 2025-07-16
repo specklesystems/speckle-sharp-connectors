@@ -25,32 +25,32 @@
     <File Path="Connectors\Navisworks\Directory.Build.targets" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2020/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2020\Speckle.Connectors.Navisworks2020.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2020\Speckle.Connectors.Navisworks2020.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2020\Speckle.Converters.Navisworks2020.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2021/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2021\Speckle.Connectors.Navisworks2021.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2021\Speckle.Converters.Navisworks2021.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2021\Speckle.Connectors.Navisworks2021.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2021\Speckle.Converters.Navisworks2021.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2022/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2022\Speckle.Converters.Navisworks2022.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2022\Speckle.Connectors.Navisworks2022.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2022\Speckle.Converters.Navisworks2022.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2023/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2023\Speckle.Converters.Navisworks2023.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2023\Speckle.Connectors.Navisworks2023.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2023\Speckle.Converters.Navisworks2023.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2024/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2024\Speckle.Connectors.Navisworks2024.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2024\Speckle.Connectors.Navisworks2024.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2024\Speckle.Converters.Navisworks2024.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2025/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2025\Speckle.Converters.Navisworks2025.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/2026/">
-    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2026\Speckle.Connectors.Navisworks2026.csproj" Type="C#" />
-    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2026\Speckle.Converters.Navisworks2026.csproj" Type="C#" />
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2026\Speckle.Connectors.Navisworks2026.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2026\Speckle.Converters.Navisworks2026.csproj" />
   </Folder>
   <Folder Name="/Connectors/Navisworks/Shared/">
     <Project Path="Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj" />
@@ -61,6 +61,9 @@
     <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />
     <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj" />
     <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
+  </Folder>
+  <Folder Name="/Importers/Rhino/">
+    <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
     <Project Path="DUI3\Speckle.Connectors.DUI.Tests\Speckle.Connectors.DUI.Tests.csproj" />

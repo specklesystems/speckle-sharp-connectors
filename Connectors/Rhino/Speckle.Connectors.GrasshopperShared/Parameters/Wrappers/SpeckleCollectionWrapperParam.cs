@@ -66,7 +66,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
 
   public bool IsPreviewCapable => !VolatileData.IsEmpty;
 
-  private readonly List<SpeckleObjectWrapper> _previewObjects = new();
+  private readonly List<SpeckleGeometryWrapper> _previewObjects = new();
 
   public void DrawViewportMeshes(IGH_PreviewArgs args)
   {
@@ -118,7 +118,7 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
         FlattenForPreview(subCollWrapper);
       }
 
-      if (element is SpeckleObjectWrapper objWrapper)
+      if (element is SpeckleGeometryWrapper objWrapper)
       {
         _previewObjects.Add(objWrapper);
         var box = objWrapper.GeometryBase is null ? new() : objWrapper.GeometryBase.GetBoundingBox(false);

@@ -8,27 +8,27 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class SpeckleObjectPassthrough : GH_Component
+public class SpeckleGeometryPassthrough : GH_Component
 {
-  public SpeckleObjectPassthrough()
+  public SpeckleGeometryPassthrough()
     : base(
-      "Speckle Object",
-      "SO",
-      "Create or modify a Speckle Object",
+      "Speckle Geometry",
+      "SG",
+      "Create or modify a Speckle Geometry",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_object;
-  public override GH_Exposure Exposure => GH_Exposure.primary;
+  protected override Bitmap Icon => Resources.speckle_objects_geometry;
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     int objIndex = pManager.AddGenericParameter(
-      "Object",
-      "O",
-      "Input Object. Speckle Objects and Model Objects are accepted.",
+      "Speckle Geometry",
+      "SG",
+      "Input Speckle Geometry. Model Objects are also accepted.",
       GH_ParamAccess.item
     );
     Params.Input[objIndex].Optional = true;
@@ -36,31 +36,36 @@ public class SpeckleObjectPassthrough : GH_Component
     int geoIndex = pManager.AddGeometryParameter(
       "Geometry",
       "G",
-      "Geometry of the Speckle Object.",
+      "Geometry of the Speckle Geometry.",
       GH_ParamAccess.item
     );
     Params.Input[geoIndex].Optional = true;
 
-    int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
+    int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Geometry", GH_ParamAccess.item);
     Params.Input[nameIndex].Optional = true;
 
     int propIndex = pManager.AddParameter(
       new SpecklePropertyGroupParam(),
       "Properties",
       "P",
-      "The properties of the Speckle Object. Speckle Properties and User Content are accepted.",
+      "The properties of the Speckle Geometry. Speckle Properties and User Content are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[propIndex].Optional = true;
 
-    int colorIndex = pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
+    int colorIndex = pManager.AddColourParameter(
+      "Color",
+      "c",
+      "The color of the Speckle Geometry",
+      GH_ParamAccess.item
+    );
     Params.Input[colorIndex].Optional = true;
 
     int matIndex = pManager.AddParameter(
       new SpeckleMaterialParam(),
       "Material",
       "m",
-      "The material of the Speckle Object. Display Materials, Model Materials, and Speckle Materials are accepted.",
+      "The material of the Speckle Geometry. Display Materials, Model Materials, and Speckle Materials are accepted.",
       GH_ParamAccess.item
     );
     Params.Input[matIndex].Optional = true;
@@ -78,39 +83,34 @@ public class SpeckleObjectPassthrough : GH_Component
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
-    pManager.AddGenericParameter("Object", "O", "Speckle Object", GH_ParamAccess.item);
+    pManager.AddGenericParameter("Speckle Geometry", "SG", "Speckle Geometry", GH_ParamAccess.item);
 
-    pManager.AddGeometryParameter(
-      "Geometry",
-      "G",
-      "Geometry of the Speckle Object. GeometryBase in Grasshopper includes text entities.",
-      GH_ParamAccess.item
-    );
+    pManager.AddGeometryParameter("Geometry", "G", "Geometry of the Speckle Geometry.", GH_ParamAccess.item);
 
-    pManager.AddTextParameter("Name", "N", "Name of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddTextParameter("Name", "N", "Name of the Speckle Geometry", GH_ParamAccess.item);
 
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
       "Properties",
       "P",
-      "The properties of the Speckle Object",
+      "The properties of the Speckle Geometry",
       GH_ParamAccess.item
     );
 
-    pManager.AddColourParameter("Color", "c", "The color of the Speckle Object", GH_ParamAccess.item);
+    pManager.AddColourParameter("Color", "c", "The color of the Speckle Geometry", GH_ParamAccess.item);
 
     pManager.AddParameter(
       new SpeckleMaterialParam(),
       "Material",
       "M",
-      "The material of the Speckle Object.",
+      "The material of the Speckle Geometry.",
       GH_ParamAccess.item
     );
 
     pManager.AddTextParameter(
       "Path",
       "p",
-      $"The Collection Path of the Speckle Object, delimited with `{Constants.LAYER_PATH_DELIMITER}`",
+      $"The Collection Path of the Speckle Geometry, delimited with `{Constants.LAYER_PATH_DELIMITER}`",
       GH_ParamAccess.item
     );
   }
@@ -120,10 +120,10 @@ public class SpeckleObjectPassthrough : GH_Component
     // process the object
     // deep copy so we don't mutate the object
     IGH_Goo? inputObject = null;
-    SpeckleObjectWrapper? result = null;
+    SpeckleGeometryWrapper? result = null;
     if (da.GetData(0, ref inputObject))
     {
-      if (inputObject?.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
+      if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper gooWrapper)
       {
         result = gooWrapper.DeepCopy();
       }
@@ -139,7 +139,7 @@ public class SpeckleObjectPassthrough : GH_Component
 
     if (result == null && inputGeometry == null)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in an Object or Geometry.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Speckle Geometry or Geometry.");
       return;
     }
 
@@ -159,9 +159,9 @@ public class SpeckleObjectPassthrough : GH_Component
     // deep copy so we don't mutate the input geo which may be speckle objects
     if (inputGeometry != null)
     {
-      if (inputGeometry.ToSpeckleObjectWrapper() is SpeckleObjectWrapper geoWrapper)
+      if (inputGeometry.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
       {
-        SpeckleObjectWrapper mutatingGeo = geoWrapper.DeepCopy();
+        SpeckleGeometryWrapper mutatingGeo = geoWrapper.DeepCopy();
         if (result is null)
         {
           result = mutatingGeo;
@@ -190,7 +190,7 @@ public class SpeckleObjectPassthrough : GH_Component
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
-          $"{inputGeometry.TypeName} is not a valid type for Speckle Objects."
+          $"{inputGeometry.TypeName} is not a valid type for Speckle Geometry."
         );
         return;
       }
@@ -240,7 +240,7 @@ public class SpeckleObjectPassthrough : GH_Component
   }
 
   // keeps the geometry and wrapped base the same while assigning all other props from the inut wrapper
-  private void MatchNonGeometryProps(SpeckleObjectWrapper wrapper, SpeckleObjectWrapper wrapperToMatch)
+  private void MatchNonGeometryProps(SpeckleGeometryWrapper wrapper, SpeckleGeometryWrapper wrapperToMatch)
   {
     wrapper.Name = wrapperToMatch.Name;
     wrapper.ApplicationId = wrapperToMatch.ApplicationId;

@@ -21,7 +21,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_inst;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {

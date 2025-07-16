@@ -45,7 +45,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
       var services = new ServiceCollection();
       _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
-      services.AddRhino();
+      services.AddRhino(true);
       services.AddRhinoConverters();
 
       // but the Rhino connector has `.rhp` as it is extension.
