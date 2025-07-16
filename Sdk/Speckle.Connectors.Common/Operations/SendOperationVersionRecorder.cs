@@ -10,24 +10,16 @@ public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendO
 {
   public async Task<string> RecordVersion(
     string rootId,
-    SendInfo sendInfo,
+    string modelId,
+    string projectId,
+    string sourceApplication,
     Account account,
-    CancellationToken ct,
-    string? versionMessage = null
+    CancellationToken ct
   )
   {
     using var apiClient = clientFactory.Create(account);
     var x = await apiClient
-      .Version.Create(
-        new CreateVersionInput(
-          rootId,
-          sendInfo.ModelId,
-          sendInfo.ProjectId,
-          sourceApplication: sendInfo.SourceApplication,
-          message: versionMessage
-        ),
-        ct
-      )
+      .Version.Create(new CreateVersionInput(rootId, modelId, projectId, sourceApplication: sourceApplication), ct)
       .ConfigureAwait(true);
     return x.id;
   }

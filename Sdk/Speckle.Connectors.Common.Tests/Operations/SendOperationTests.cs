@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -41,16 +40,16 @@ public class SendOperationTests : MoqTest
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var ct = new CancellationToken();
     var objects = new List<object>();
-    var sendInfo = new SendInfo(new Account(), string.Empty, string.Empty, string.Empty);
+    var projectId = "projectId";
+    var sendInfo = new SendInfo(new Account(), projectId, string.Empty, string.Empty);
     var progress = Create<IProgress<CardProgress>>();
 
     var conversionResults = new List<SendConversionResult>();
     var rootResult = new RootObjectBuilderResult(new TestBase(), conversionResults);
-    rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
+    rootObjectBuilder.Setup(x => x.Build(objects, projectId, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
     var versionId = "versionId";
@@ -102,12 +101,13 @@ public class SendOperationTests : MoqTest
     var modelId = "modelId";
     var url = new Uri("https://localhost");
     var token = "token";
+    var sourceApplication = "sourceApplication";
     var account = new Account()
     {
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };
-    var sendInfo = new SendInfo(account, projectId, modelId, string.Empty);
+    var sendInfo = new SendInfo(account, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
@@ -125,7 +125,7 @@ public class SendOperationTests : MoqTest
     sendProgress.Setup(x => x.Begin());
 
     sendOperationVersionRecorder
-      .Setup(x => x.RecordVersion(rootId, sendInfo, account, ct, null))
+      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, account, ct))
       .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
@@ -140,7 +140,15 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
+    var (result, version) = await sendOperation.Send(
+      commitObject,
+      projectId,
+      modelId,
+      sourceApplication,
+      account,
+      progress.Object,
+      ct
+    );
     result.Should().Be(serializeProcessResults);
     version.Should().Be("version");
   }
