@@ -188,9 +188,9 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       .Execute(
         new List<SpeckleCollectionWrapperGoo>() { input.Input },
         sendInfo,
+        VersionMessage,
         progress,
-        cancellationToken,
-        VersionMessage
+        cancellationToken
       )
       .ConfigureAwait(false);
 

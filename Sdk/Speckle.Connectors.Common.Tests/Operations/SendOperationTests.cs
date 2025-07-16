@@ -71,7 +71,7 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var result = await sendOperation.Execute(objects, sendInfo, progress.Object, ct);
+    var result = await sendOperation.Execute(objects, sendInfo, null, progress.Object, ct);
     result.Should().NotBeNull();
     rootResult.RootObject["version"].Should().Be(3);
     result.RootObjId.Should().Be(rootId);
@@ -125,7 +125,7 @@ public class SendOperationTests : MoqTest
     sendProgress.Setup(x => x.Begin());
 
     sendOperationVersionRecorder
-      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, account, ct))
+      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, null, account, ct))
       .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
@@ -145,6 +145,7 @@ public class SendOperationTests : MoqTest
       projectId,
       modelId,
       sourceApplication,
+      null,
       account,
       progress.Object,
       ct

@@ -410,9 +410,9 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       .Execute(
         new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
         sendInfo,
+        Parent.VersionMessage,
         progress,
-        CancellationToken,
-        Parent.VersionMessage
+        CancellationToken
       )
       .ConfigureAwait(false);
 

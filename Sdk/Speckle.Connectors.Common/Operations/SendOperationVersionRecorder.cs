@@ -13,13 +13,23 @@ public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendO
     string modelId,
     string projectId,
     string sourceApplication,
+    string? versionMessage,
     Account account,
     CancellationToken ct
   )
   {
     using var apiClient = clientFactory.Create(account);
     var x = await apiClient
-      .Version.Create(new CreateVersionInput(rootId, modelId, projectId, sourceApplication: sourceApplication), ct)
+      .Version.Create(
+        new CreateVersionInput(
+          rootId,
+          modelId,
+          projectId,
+          sourceApplication: sourceApplication,
+          message: versionMessage
+        ),
+        ct
+      )
       .ConfigureAwait(true);
     return x.id;
   }
