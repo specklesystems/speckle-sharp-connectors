@@ -357,7 +357,7 @@
       "speckle.connectors.grasshopper8": {
         "type": "Project",
         "dependencies": {
-          "GrasshopperAsyncComponent": "[2.0.1, )",
+          "GrasshopperAsyncComponent": "[2.0.3, )",
           "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Converters.Rhino8": "[1.0.0, )",
           "System.Resources.Extensions": "[9.0.4, )"
@@ -389,9 +389,9 @@
       },
       "GrasshopperAsyncComponent": {
         "type": "CentralTransitive",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "K/LyJbYscXIdV07tPhsZgyUdwzf7vsXJBraVik6ge35T9lLYrriG5Dy9XF8ox7Q2ko5y5aTzh768+vYCdDkL5g==",
+        "requested": "[2.0.3, )",
+        "resolved": "2.0.3",
+        "contentHash": "AZvHP96WhYZWftVi7J3J65LiZmXO3hGS6W4AntMMb099gkrLqeiBKC2DOYD6YM9cOyQqly3S5knbUL2yr0jc4Q==",
         "dependencies": {
           "PolySharp": "1.14.1"
         }

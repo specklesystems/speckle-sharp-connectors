@@ -152,7 +152,7 @@ public class SpeckleBlockInstancePassthrough : GH_Component
     da.GetData(6, ref inputMaterial);
 
     // process the instance
-    // deep copy so we don't mutate the object
+    // deep copy so we don't mutate the incoming object
     SpeckleBlockInstanceWrapperGoo result =
       inputInstance != null ? new((SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy()) : new();
 
@@ -204,8 +204,8 @@ public class SpeckleBlockInstancePassthrough : GH_Component
       result.Value.Material = inputMaterial.Value;
     }
 
-    // no need to process application Id.
-    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
+    // no need to process application id.
+    // new appids are generated if this is a new object, otherwise the input object appID should be preserved for change tracking.
 
     // Set outputs
     da.SetData(0, result);
