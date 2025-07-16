@@ -29,10 +29,12 @@
     <PackageVersion Include="Grasshopper" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
     <PackageVersion Include="Semver" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Speckle.CSI.API" Version="2.4.0" />
     <PackageVersion Include="Speckle.DoubleNumerics" Version="4.1.0" />
     <PackageVersion Include="Speckle.Triangle" Version="1.0.0" />
     <PackageVersion Include="System.Resources.Extensions" Version="9.0.4" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageVersion Include="Tekla.Structures.Dialog" Version="2024.0.4" PrivateAssets="all" IncludeAssets="compile; build" />
     <PackageVersion Include="Tekla.Structures.Drawing" Version="2024.0.4" />
     <PackageVersion Include="Tekla.Structures.Model" Version="2024.0.4" />
@@ -48,9 +50,9 @@
     <PackageVersion Include="Speckle.Civil3D.API" Version="2022.0.2" />
     <PackageVersion Include="Speckle.Revit.API" Version="2023.0.0" />
     <PackageVersion Include="Speckle.Navisworks.API" Version="2024.0.0" />
-    <PackageVersion Include="Speckle.Objects" Version="3.4.4" />
-    <PackageVersion Include="Speckle.Sdk" Version="3.4.4" />
-    <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.4.4" />
+    <PackageVersion Include="Speckle.Objects" Version="3.4.5" />
+    <PackageVersion Include="Speckle.Sdk" Version="3.4.5" />
+    <PackageVersion Include="Speckle.Sdk.Dependencies" Version="3.4.5" />
     <PackageVersion Include="SimpleExec" Version="12.0.0" />
     <GlobalPackageReference Include="PolySharp" Version="1.14.1" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />

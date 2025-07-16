@@ -11,11 +11,11 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
-public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
+public class SpeckleBlockInstanceWrapper : SpeckleGeometryWrapper
 {
   private InstanceProxy _instanceProxy;
   private Transform _transform = Transform.Identity;
-  private List<SpeckleObjectWrapper>? _cachedTransformedObjects;
+  private List<SpeckleGeometryWrapper>? _cachedTransformedObjects;
   private Transform _lastCachedTransform = Transform.Unset;
   private const int MAX_DISPLAY_DEPTH = 3;
   private SpeckleBlockDefinitionWrapper? _definition;
@@ -194,7 +194,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     }
   }
 
-  public override SpeckleObjectWrapper DeepCopy() =>
+  public override SpeckleGeometryWrapper DeepCopy() =>
     new SpeckleBlockInstanceWrapper()
     {
       Base = InstanceProxy.ShallowCopy(),
@@ -224,7 +224,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
   /// Gets or builds a cached list of transformed objects for displaying.
   /// Only rebuilds the cache when the transform changes, dramatically improving performance.
   /// </summary>
-  private List<SpeckleObjectWrapper> GetTransformedObjectsForDisplay()
+  private List<SpeckleGeometryWrapper> GetTransformedObjectsForDisplay()
   {
     // Check if cache is valid (transform hasn't changed)
     if (_cachedTransformedObjects != null && Transform.Equals(_lastCachedTransform))
@@ -233,7 +233,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleObjectWrapper
     }
 
     // Rebuild cache
-    _cachedTransformedObjects = new List<SpeckleObjectWrapper>();
+    _cachedTransformedObjects = new List<SpeckleGeometryWrapper>();
     _lastCachedTransform = Transform;
 
     if (Definition?.Objects == null)

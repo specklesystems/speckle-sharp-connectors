@@ -14,7 +14,7 @@ public class SpecklePropertiesPassthrough : GH_Component
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_properties;
-  public override GH_Exposure Exposure => GH_Exposure.tertiary;
+  public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
   private enum PropertyMode
   {
@@ -95,10 +95,16 @@ public class SpecklePropertiesPassthrough : GH_Component
       return;
     }
 
-    // validate that keys and values are of same length
-    if (inputKeys.Count != inputValues.Count)
+    // validate that keys and values are of valid length
+    if ((Mode == PropertyMode.Merge || Mode == PropertyMode.Replace) && inputKeys.Count != inputValues.Count)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Keys and values are mismatched in length");
+      return;
+    }
+
+    if (Mode == PropertyMode.Remove && (inputKeys.Count == 0 || inputValues.Count > 0))
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Only input keys to remove");
       return;
     }
 
@@ -126,7 +132,7 @@ public class SpecklePropertiesPassthrough : GH_Component
       for (int i = 0; i < inputKeys.Count; i++)
       {
         string key = inputKeys[i];
-        object? value = inputValues[i];
+        object? value = Mode == PropertyMode.Remove ? null : inputValues[i];
         ISpecklePropertyGoo? convertedValue = null;
         switch (value)
         {
@@ -142,7 +148,7 @@ public class SpecklePropertiesPassthrough : GH_Component
             {
               AddRuntimeMessage(
                 GH_RuntimeMessageLevel.Error,
-                $"Values contain an invalid data type. Only strings, numbers, booleans, and other Speckle properties are supported."
+                $"Values contain an invalid data type. Only strings, numbers, booleans, planes, vectors, intervals, and other Speckle properties are supported."
               );
               return;
             }
@@ -167,13 +173,7 @@ public class SpecklePropertiesPassthrough : GH_Component
             result.Add(key, convertedValue);
             break;
           case PropertyMode.Remove:
-            if (result.TryGetValue(key, out ISpecklePropertyGoo existingValue))
-            {
-              if (existingValue.Equals(convertedValue))
-              {
-                result.Remove(key);
-              }
-            }
+            result.Remove(key);
             break;
         }
       }
@@ -203,8 +203,7 @@ public class SpecklePropertiesPassthrough : GH_Component
           modeItem.ToolTipText = "Existing properties will be cleared and replaced by input keyvalue pairs.";
           break;
         case PropertyMode.Remove:
-          modeItem.ToolTipText =
-            "Existing keyvalue pairs that match the input keyvalue pairs will be removed from properties.";
+          modeItem.ToolTipText = "Existing keyvalue pairs that match the input keys will be removed from properties.";
           break;
       }
     }

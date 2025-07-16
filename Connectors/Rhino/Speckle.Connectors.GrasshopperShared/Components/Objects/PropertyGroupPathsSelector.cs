@@ -4,9 +4,6 @@ using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-#if RHINO8_OR_GREATER
-using Grasshopper.Rhinoceros.Model;
-#endif
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -23,35 +20,28 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 
   public override Guid ComponentGuid => new Guid("8882BE3A-81F1-4416-B420-58D69E4CC8F1");
   protected override Bitmap Icon => Resources.speckle_inputs_property;
-  public override GH_Exposure Exposure => GH_Exposure.tertiary;
+  public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
   protected override void LoadVolatileData()
   {
-    var objectPropertyGroups = VolatileData
+    var propertyGroups = VolatileData
       .AllData(true)
-      .OfType<SpeckleObjectWrapperGoo>()
-      .Select(goo => goo.Value.Properties)
+      .Where(goo => goo is SpecklePropertyGroupGoo)
+      .Select(goo =>
+        goo switch
+        {
+          SpecklePropertyGroupGoo geometryGoo => geometryGoo,
+          _ => throw new InvalidOperationException("Unexpected goo type")
+        }
+      )
       .ToList();
 
-#if RHINO8_OR_GREATER
-    // support model objects direct piping also
-    if (objectPropertyGroups.Count != VolatileData.DataCount)
-    {
-      var modelObjects = VolatileData
-        .AllData(true)
-        .OfType<ModelObject>()
-        .Select(mo => new SpeckleObjectWrapperGoo(mo).Value.Properties)
-        .ToList();
-      objectPropertyGroups.AddRange(modelObjects);
-    }
-#endif
-
-    if (objectPropertyGroups.Count == 0)
+    if (propertyGroups.Count == 0)
     {
       return;
     }
 
-    var paths = GetPropertyPaths(objectPropertyGroups);
+    var paths = GetPropertyPaths(propertyGroups);
     m_data.Clear();
     m_data.AppendRange(paths.Select(s => new GH_String(s)));
   }

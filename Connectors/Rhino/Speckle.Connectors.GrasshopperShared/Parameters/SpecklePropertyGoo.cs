@@ -1,5 +1,8 @@
 using Grasshopper.Documentation;
 using Grasshopper.Kernel.Types;
+using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -32,8 +35,43 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
   {
     switch (source)
     {
+      case List<object?> list:
+        List<object?> castedItems = new();
+        foreach (var item in list)
+        {
+          SpecklePropertyGoo itemGoo = new();
+          if (itemGoo.CastFrom(item))
+          {
+            castedItems.Add(itemGoo.Value);
+          }
+          else
+          {
+            return false;
+          }
+        }
+        Value = castedItems;
+        return true;
       case SpecklePropertyGoo speckleProperty:
         Value = speckleProperty.Value;
+        return true;
+      case Base @base: // this would capture cases of planes, vectors, and intervals from GH
+        try
+        {
+          Value = SpeckleConversionContext.ConvertToHost(@base!).First().Item1;
+          return true;
+        }
+        catch (SpeckleException)
+        {
+          return false;
+        }
+      case GH_Plane plane:
+        Value = plane.Value;
+        return true;
+      case GH_Vector vector:
+        Value = vector.Value;
+        return true;
+      case GH_Interval interval:
+        Value = interval.Value;
         return true;
       case double d:
         Value = d;
@@ -89,6 +127,27 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
       return true;
     }
 
+    if (type.IsAssignableFrom(typeof(GH_Plane)))
+    {
+      object ptr = new GH_Plane((Rhino.Geometry.Plane)Value);
+      target = (T)ptr;
+      return true;
+    }
+
+    if (type.IsAssignableFrom(typeof(GH_Vector)))
+    {
+      object ptr = new GH_Vector((Rhino.Geometry.Vector3d)Value);
+      target = (T)ptr;
+      return true;
+    }
+
+    if (type.IsAssignableFrom(typeof(GH_Interval)))
+    {
+      object ptr = new GH_Interval((Rhino.Geometry.Interval)Value);
+      target = (T)ptr;
+      return true;
+    }
+
     if (type.IsAssignableFrom(typeof(GH_Integer)))
     {
       object ptr = new GH_Integer((int)Value);
@@ -129,6 +188,12 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
 
     switch (Value)
     {
+      case Rhino.Geometry.Plane plane:
+        return prop.Value is Rhino.Geometry.Plane otherPlane && plane.Equals(otherPlane);
+      case Rhino.Geometry.Vector3d vector:
+        return prop.Value is Rhino.Geometry.Vector3d otherVector && vector.Equals(otherVector);
+      case Rhino.Geometry.Interval interval:
+        return prop.Value is Rhino.Geometry.Interval otherInterval && interval.Equals(otherInterval);
       case string s:
         return s == prop.Value.ToString();
       case bool b:

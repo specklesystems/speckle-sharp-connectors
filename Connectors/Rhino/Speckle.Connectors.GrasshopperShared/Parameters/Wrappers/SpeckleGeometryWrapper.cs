@@ -11,7 +11,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// <summary>
 /// Wrapper around a geometry base object and its converted speckle equivalent.
 /// </summary>
-public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
+public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
 {
   public override required Base Base { get; set; }
 
@@ -40,7 +40,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public SpeckleMaterialWrapper? Material { get; set; }
 
   public override string ToString() =>
-    $"Speckle Object : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
+    $"Speckle Geometry : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
 
   public virtual void DrawPreview(IGH_PreviewArgs args, bool isSelected = false)
   {
@@ -145,7 +145,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     objIds.Add(guid);
   }
 
-  public virtual SpeckleObjectWrapper DeepCopy() =>
+  public virtual SpeckleGeometryWrapper DeepCopy() =>
     new()
     {
       Base = Base.ShallowCopy(),
@@ -175,7 +175,7 @@ public class SpeckleObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
     return attributes;
   }
 
-  public override IGH_Goo CreateGoo() => new SpeckleObjectWrapperGoo(this);
+  public override IGH_Goo CreateGoo() => new SpeckleGeometryWrapperGoo(this);
 
   protected virtual void AddPropertiesToAttributes(ObjectAttributes attributes) =>
     Properties?.AssignToObjectAttributes(attributes);

@@ -62,8 +62,8 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
       services.AddSingleton<IThreadContext>(new DefaultThreadContext());
       services.AddScoped<
-        IInstanceObjectsManager<SpeckleObjectWrapper, List<string>>,
-        InstanceObjectsManager<SpeckleObjectWrapper, List<string>>
+        IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>>,
+        InstanceObjectsManager<SpeckleGeometryWrapper, List<string>>
       >(); // each send operation gets its own InstanceObjectsManager instance (scoped = per-operation)
 
       Container = services.BuildServiceProvider();

@@ -21,7 +21,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_def;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -35,9 +35,9 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     Params.Input[0].Optional = true;
 
     pManager.AddGenericParameter(
-      "Objects",
-      "O",
-      "Objects to include in the Block Definition. Speckle objects and instances or Model objects and instances are accepted.",
+      "Geometry",
+      "G",
+      "Geometry to include in the Block Definition. Speckle geometry and instances or Model objects and instances are accepted.",
       GH_ParamAccess.list
     );
     Params.Input[1].Optional = true;
@@ -56,7 +56,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
       GH_ParamAccess.item
     );
 
-    pManager.AddGenericParameter("Objects", "O", "Objects contained in the Block Definition", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Geometry", "G", "Geometry contained in the Block Definition", GH_ParamAccess.list);
 
     pManager.AddTextParameter("Name", "N", "Name of the Block Definition", GH_ParamAccess.item);
   }
@@ -71,7 +71,7 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
 
     if (inputDefinition == null && inputObjects.Count == 0)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Objects.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Definition or Geometry.");
       return;
     }
 
@@ -91,10 +91,10 @@ public class SpeckleBlockDefinitionPassthrough : GH_Component
     // process geometry
     if (inputObjects.Count > 0)
     {
-      List<SpeckleObjectWrapper> processedObjects = new();
+      List<SpeckleGeometryWrapper> processedObjects = new();
       foreach (IGH_Goo goo in inputObjects)
       {
-        if (goo.ToSpeckleObjectWrapper() is SpeckleObjectWrapper gooWrapper)
+        if (goo.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper gooWrapper)
         {
           processedObjects.Add(gooWrapper);
         }

@@ -12,13 +12,13 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp;
 /// </summary>
 public static class SpeckleConversionContext
 {
-  public static Base ConvertToSpeckle(GeometryBase geo)
+  public static Base ConvertToSpeckle(object geo)
   {
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     return scope.ServiceProvider.GetRequiredService<IRootToSpeckleConverter>().Convert(geo);
   }
 
-  public static List<(GeometryBase, Base)> ConvertToHost(Base input)
+  public static List<(object, Base)> ConvertToHost(Base input)
   {
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var result = scope.ServiceProvider.GetRequiredService<IRootToHostConverter>().Convert(input);
@@ -26,9 +26,11 @@ public static class SpeckleConversionContext
     return result switch
     {
       GeometryBase geometry => [(geometry, input)],
-      List<GeometryBase> geometryList => geometryList.Select(o => (o, input)).ToList(),
-      IEnumerable<(GeometryBase, Base)> fallbackConversionResult => fallbackConversionResult.ToList(),
-      _ => throw new SpeckleException("Failed to convert input to rhino")
+      List<GeometryBase> geometryList => geometryList.Select(o => ((object)o, input)).ToList(),
+      IEnumerable<(GeometryBase, Base)> fallbackConversionResult
+        => fallbackConversionResult.Select(o => ((object)o.Item1, o.Item2)).ToList(),
+      object obj => [(obj, input)],
+      _ => throw new SpeckleException("Failed to convert input to grasshopper")
     };
   }
 }

@@ -86,7 +86,7 @@ public sealed class SendOperationManager(
 
       var sendResult = await serviceScope
         .ServiceProvider.GetRequiredService<ISendOperation<T>>()
-        .Execute(objects, sendInfo, progress, cancellationItem.Token);
+        .Execute(objects, sendInfo, null, progress, cancellationItem.Token);
 
       await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
     }
