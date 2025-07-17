@@ -250,4 +250,7 @@ public class SpeckleGeometryPassthrough : GH_Component
     wrapper.Color = wrapperToMatch.Color;
     wrapper.Material = wrapperToMatch.Material;
   }
+
+  protected override void BeforeSolveInstance() => SpeckleConversionContext.SetupCurrent();
+  protected override void AfterSolveInstance() => SpeckleConversionContext.EndCurrent();
 }

@@ -42,7 +42,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       );
     }
 
-    Base converted = SpeckleConversionContext.ConvertToSpeckle(geometryBase);
+    Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(geometryBase);
 
     // get layer, props, color, and mat
     SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(modelObject);

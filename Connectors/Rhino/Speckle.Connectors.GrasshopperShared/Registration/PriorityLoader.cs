@@ -9,6 +9,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.GrasshopperShared.Components;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Operations.Send;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -66,6 +67,7 @@ public class PriorityLoader : GH_AssemblyPriority
         InstanceObjectsManager<SpeckleGeometryWrapper, List<string>>
       >(); // each send operation gets its own InstanceObjectsManager instance (scoped = per-operation)
 
+      services.AddScoped<SpeckleConversionContext>();
       Container = services.BuildServiceProvider();
       return GH_LoadingInstruction.Proceed;
     }

@@ -57,7 +57,7 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
       case Base @base: // this would capture cases of planes, vectors, and intervals from GH
         try
         {
-          Value = SpeckleConversionContext.ConvertToHost(@base!).First().Item1;
+          Value = SpeckleConversionContext.Current.ConvertToHost(@base!).First().Item1;
           return true;
         }
         catch (SpeckleException)
