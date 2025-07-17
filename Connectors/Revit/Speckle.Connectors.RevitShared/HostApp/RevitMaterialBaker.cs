@@ -1,12 +1,12 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -57,7 +57,8 @@ public class RevitMaterialBaker
 
       if (targetRenderMaterialProxy is null)
       {
-        var layerParents = context.GetAscendants().Where(parent => parent is Layer);
+        //var layerParents = context.GetAscendants().Where(parent => parent is Layer);
+        var layerParents = context.GetAscendants();
 
         var layer = layerParents.FirstOrDefault(layer =>
           unpackedRoot.RenderMaterialProxies.Any(rmp => rmp.objects.Contains(layer.applicationId!))
@@ -97,6 +98,48 @@ public class RevitMaterialBaker
           {
             targetRenderMaterialProxy.objects.Add(@base.applicationId);
           }
+        }
+      }
+    }
+  }
+
+  public void MapInstanceRenderMaterials(
+    RootObjectUnpackerResult unpackedRoot,
+    IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps
+  )
+  {
+    if (unpackedRoot.RenderMaterialProxies is null)
+    {
+      return;
+    }
+
+    foreach (var context in unpackedRoot.ObjectsToConvert)
+    {
+      if (context.Current.applicationId is null)
+      {
+        continue;
+      }
+
+      var targetRenderMaterialProxy = unpackedRoot.RenderMaterialProxies.FirstOrDefault(rmp =>
+        rmp.objects.Contains(context.Current.applicationId)
+      );
+
+      if (targetRenderMaterialProxy is null)
+      {
+        var maps = localToGlobalMaps.Where(m => m.AtomicObject.applicationId == context.Current.applicationId).ToList();
+        var map = localToGlobalMaps.FirstOrDefault(m => m.AtomicObject.applicationId == context.Current.applicationId);
+        var instance = map?.InstanceChain.FirstOrDefault(i =>
+          unpackedRoot.RenderMaterialProxies.Any(rmp => rmp.objects.Contains(i))
+        );
+
+        if (instance is not null)
+        {
+          var instanceRenderMaterialProxy = unpackedRoot.RenderMaterialProxies.First(rmp =>
+            rmp.objects.Contains(instance)
+          );
+
+          targetRenderMaterialProxy = instanceRenderMaterialProxy;
+          targetRenderMaterialProxy.objects.Add(context.Current.applicationId!);
         }
       }
     }

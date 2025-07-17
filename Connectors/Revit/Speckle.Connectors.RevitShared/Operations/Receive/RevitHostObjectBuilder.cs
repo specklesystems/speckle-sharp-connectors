@@ -44,7 +44,7 @@ public sealed class RevitHostObjectBuilder(
   IReceiveConversionHandler conversionHandler
 ) : IHostObjectBuilder, IDisposable
 {
-  public Task<HostObjectBuilderResult> Build(
+  /*public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
     string modelName,
@@ -53,7 +53,33 @@ public sealed class RevitHostObjectBuilder(
   ) =>
     threadContext.RunOnMainAsync(
       () => Task.FromResult(BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken))
+    );*/
+
+  public Task<HostObjectBuilderResult> Build(
+    Base rootObject,
+    string projectName,
+    string modelName,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    bool x = false;
+#if REVIT2026
+    x = converterSettings.Current.Document.IsInEditMode();
+#endif
+
+    /*bool mod = converterSettings.Current.Document.IsModified;
+    bool ro = converterSettings.Current.Document.IsReadOnly;
+    bool mof = converterSettings.Current.Document.IsModifiable;*/
+    if (x)
+    {
+      throw new ConversionException($"We are in modify mode!!!!!");
+    }
+
+    return threadContext.RunOnMainAsync(
+      () => Task.FromResult(BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken))
     );
+  }
 
   private HostObjectBuilderResult BuildSync(
     Base rootObject,
@@ -122,7 +148,7 @@ public sealed class RevitHostObjectBuilder(
       )
       {
         var id = localToGlobalMap.AtomicObject.id;
-        var originalAppId = localToGlobalMap.AtomicObject.applicationId ?? id;
+        //var originalAppId = localToGlobalMap.AtomicObject.applicationId ?? id;
 
         // Apply transformations...
         ITransformable? newTransformable = null;
@@ -136,13 +162,13 @@ public sealed class RevitHostObjectBuilder(
         localToGlobalMap.AtomicObject.id = id;
 
         // create modified ID and store mapping <- fixes CNX-1707 but causes us material mapping headache!!!
-        string modifiedAppId = $"{originalAppId}_{Guid.NewGuid().ToString("N")[..8]}";
+        /*string modifiedAppId = $"{originalAppId}_{Guid.NewGuid().ToString("N")[..8]}";
         if (originalAppId != null)
         {
           originalToModifiedIds[originalAppId] = modifiedAppId;
         }
 
-        localToGlobalMap.AtomicObject.applicationId = modifiedAppId;
+        localToGlobalMap.AtomicObject.applicationId = modifiedAppId;*/
         localToGlobalMap.Matrix = new HashSet<Matrix4x4>();
       }
     }
@@ -167,6 +193,7 @@ public sealed class RevitHostObjectBuilder(
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       transactionManager.StartTransaction(true, "Baking materials");
+      materialBaker.MapInstanceRenderMaterials(unpackedRoot, localToGlobalMaps);
       materialBaker.MapLayersRenderMaterials(unpackedRoot);
       var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
       foreach (var kvp in map)
@@ -203,12 +230,12 @@ public sealed class RevitHostObjectBuilder(
     }
 
     // 4 - Paint solids
-    {
+    /*{
       using var _ = activityFactory.Start("Painting solids");
       transactionManager.StartTransaction(true, "Painting solids");
       PostBakePaint(conversionResults.postBakePaintTargets);
       transactionManager.CommitTransaction();
-    }
+    }*/
 
     // 5 - Create group
     {

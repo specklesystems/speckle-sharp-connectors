@@ -1,4 +1,4 @@
-﻿using Speckle.DoubleNumerics;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -19,4 +19,5 @@ public class LocalToGlobalMap
   public TraversalContext TraversalContext { get; set; }
   public Base AtomicObject { get; set; }
   public IReadOnlyCollection<Matrix4x4> Matrix { get; set; }
+  public List<string> InstanceChain { get; set; }
 }

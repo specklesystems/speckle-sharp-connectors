@@ -16,6 +16,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
@@ -116,6 +117,21 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     if (unpackedRoot.ColorProxies != null)
     {
       _colorBaker.ParseColors(unpackedRoot.ColorProxies);
+    }
+
+    foreach (var a in atomicObjectsWithoutInstanceComponentsWithPath)
+    {
+      var id = a.current.applicationId;
+      if (id == null)
+      {
+        continue;
+      }
+
+      if (!_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(id, out int mIndex))
+      {
+        var mati = FindMissingMaterialIndex(id, instanceComponentsWithPath);
+        _materialBaker.ObjectIdAndMaterialIndexMap[id] = mati;
+      }
     }
 
     // 4 - Bake layers
@@ -332,6 +348,63 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
   }
 
+  private int FindMissingMaterialIndex(
+    string? objectId,
+    ICollection<(Collection[] path, IInstanceComponent instance)> instances
+  )
+  {
+    var ids = GetInstanceAscendants(objectId, instances);
+    foreach (var id in ids)
+    {
+      if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(id, out int mIndex))
+      {
+        return mIndex;
+      }
+    }
+    return -1;
+  }
+
+  private List<string> GetInstanceAscendants(
+    string? objectId,
+    ICollection<(Collection[] path, IInstanceComponent instance)> instances
+  )
+  {
+    var ascendants = new List<string>();
+
+    while (objectId != null)
+    {
+      ascendants.Add(objectId);
+      objectId = GetFirstParent(objectId, instances);
+    }
+
+    return ascendants;
+  }
+
+  private string? GetFirstParent(
+    string objectId,
+    ICollection<(Collection[] path, IInstanceComponent instance)> instances
+  )
+  {
+    // Step 1: Find the definition ID for the given objectId
+    string? defId = instances
+      ?.Select(i => i.instance)
+      .OfType<InstanceDefinitionProxy>()
+      .FirstOrDefault(d => d.objects.Contains(objectId))
+      ?.applicationId;
+
+    if (defId == null)
+    {
+      return null;
+    }
+
+    // Step 2: Find the first InstanceProxy with matching definitionId
+    return instances
+      ?.Select(i => i.instance)
+      .OfType<InstanceProxy>()
+      .FirstOrDefault(p => p.definitionId == defId)
+      ?.applicationId;
+  }
+
   private List<Guid> BakeObjectsAsFallbackGroup(
     IEnumerable<(GeometryBase, Base)> fallbackConversionResult,
     Base originatingObject,
@@ -363,5 +436,51 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     return objectIds;
+  }
+
+  //*******************************************************************
+  public void MapLayersRenderMaterials(RootObjectUnpackerResult unpackedRoot)
+  {
+    if (unpackedRoot.RenderMaterialProxies is null)
+    {
+      return;
+    }
+
+    foreach (var context in unpackedRoot.ObjectsToConvert)
+    {
+      if (context.Current.applicationId is null)
+      {
+        continue;
+      }
+
+      var targetRenderMaterialProxy = unpackedRoot.RenderMaterialProxies.FirstOrDefault(rmp =>
+        rmp.objects.Contains(context.Current.applicationId)
+      );
+
+      if (targetRenderMaterialProxy is null)
+      {
+        var layerParents = context.GetAscendants();
+
+        var layer = layerParents.FirstOrDefault(layer =>
+          unpackedRoot.RenderMaterialProxies.Any(rmp => rmp.objects.Contains(layer.applicationId!))
+        );
+
+        if (layer is not null)
+        {
+          var layerRenderMaterialProxy = unpackedRoot.RenderMaterialProxies.First(rmp =>
+            rmp.objects.Contains(layer.applicationId!)
+          );
+
+          targetRenderMaterialProxy = layerRenderMaterialProxy;
+        }
+      }
+
+      if (targetRenderMaterialProxy is null)
+      {
+        continue; // exit fast, no proxy, we can't do much more.
+      }
+      // We mutate the existing proxy list that comes from source application. Because we do not keep track of parent-child relationship of objects in terms of render materials.
+      targetRenderMaterialProxy.objects.Add(context.Current.applicationId!);
+    }
   }
 }

@@ -1,4 +1,4 @@
-﻿using Speckle.DoubleNumerics;
+using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
@@ -80,6 +80,7 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
         objectAtRelative,
         objectAtRelative,
         new HashSet<Matrix4x4>(),
+        new List<string>(),
         localToGlobalMaps
       );
     }
@@ -93,6 +94,7 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     (TraversalContext tc, Base obj) objectAtRelative,
     (TraversalContext tc, Base obj) searchForDefinition,
     HashSet<Matrix4x4> matrices,
+    List<string> instanceChain,
     HashSet<LocalToGlobalMap> localToGlobalMaps
   )
   {
@@ -105,25 +107,29 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
     );
     if (definitionProxy is null)
     {
-      localToGlobalMaps.Add(
-        new LocalToGlobalMap(
-          new TraversalContext(objectAtRelative.obj, objectAtRelative.tc.PropName, objectAtRelative.tc.Parent),
-          objectAtRelative.obj,
-          matrices
-        )
-      );
+      var map = new LocalToGlobalMap(
+        new TraversalContext(objectAtRelative.obj, objectAtRelative.tc.PropName, objectAtRelative.tc.Parent),
+        objectAtRelative.obj,
+        matrices
+      )
+      {
+        InstanceChain = instanceChain
+      };
+      localToGlobalMaps.Add(map);
       return;
     }
     var instances = instanceProxies.Where(ic => ic.instanceProxy.definitionId == definitionProxy.applicationId);
     foreach (var instance in instances)
     {
       HashSet<Matrix4x4> newMatrices = [.. matrices, instance.instanceProxy.transform]; // Do not mutate the list!
+      List<string> newInstanceChain = [.. instanceChain, instance.instanceProxy.applicationId];
       UnpackMatrix(
         instanceDefinitionProxies,
         instanceProxies,
         objectAtRelative,
         instance,
         newMatrices,
+        newInstanceChain,
         localToGlobalMaps
       );
     }

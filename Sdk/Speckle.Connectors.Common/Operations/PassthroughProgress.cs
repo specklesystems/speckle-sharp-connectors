@@ -1,4 +1,4 @@
-﻿using Speckle.Sdk.Transports;
+using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Common.Operations;
 
