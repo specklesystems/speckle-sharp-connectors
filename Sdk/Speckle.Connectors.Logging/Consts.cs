@@ -9,6 +9,7 @@ public static class Consts
   public const string OS_NAME = "os.name";
   public const string OS_TYPE = "os.type";
   public const string OS_SLUG = "os.slug";
+  public const string RUNTIME_SESSION_ID = "runtime.session_id";
   public const string RUNTIME_NAME = "runtime.name";
   public const string USER_ID = "user.id";
   public const string TRACING_SOURCE = "speckle";
