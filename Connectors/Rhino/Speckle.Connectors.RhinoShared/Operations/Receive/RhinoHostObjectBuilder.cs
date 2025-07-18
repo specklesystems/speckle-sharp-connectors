@@ -80,7 +80,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     // we cannot place Block Definitions if we have "/" or "\" in the name
     // https://linear.app/speckle/issue/CNX-2051/cant-create-instances-of-blocks-if-originating-from-speckle-sub-model
-    baseLayerName = RemoveInvalidChars(baseLayerName);
+    baseLayerName = ReplaceInvalidChars(baseLayerName);
 
     // 0 - Clean then Rock n Roll!
     PreReceiveDeepClean(baseLayerName);
@@ -246,7 +246,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
   }
 
-  private string RemoveInvalidChars(string input)
+  private string ReplaceInvalidChars(string input)
   {
     char[] invalidChars = new[] { '/', '\\' };
     foreach (var c in invalidChars)
