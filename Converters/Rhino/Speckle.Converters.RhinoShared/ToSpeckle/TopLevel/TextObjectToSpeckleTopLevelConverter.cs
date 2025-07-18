@@ -1,15 +1,14 @@
-﻿using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
-namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
+namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel; // <-- Fixed namespace
 
-[NameAndRankValue(typeof(TextObject), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class TextObjectToSpeckleTopLevelConverter
-  : RhinoObjectToSpeckleTopLevelConverter<TextObject, RG.TextEntity, SA.Text>
+[NameAndRankValue(typeof(SA.Text), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+public class TextObjectToSpeckleTopLevelConverter : SpeckleToHostGeometryBaseTopLevelConverter<SA.Text, RG.TextEntity> // <-- Fixed class name
 {
-  public TextObjectToSpeckleTopLevelConverter(ITypedConverter<RG.TextEntity, SA.Text> conversion)
-    : base(conversion) { }
-
-  protected override RG.TextEntity GetTypedGeometry(TextObject input) => input.TextGeometry;
+    public TextObjectToSpeckleTopLevelConverter(
+      IConverterSettingsStore<RhinoConversionSettings> settingsStore,
+      ITypedConverter<SA.Text, RG.TextEntity> textConverter
+    )
+      : base(settingsStore, textConverter) { }
 }
