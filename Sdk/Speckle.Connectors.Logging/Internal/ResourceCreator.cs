@@ -5,6 +5,8 @@ namespace Speckle.Connectors.Logging.Internal;
 
 internal static class ResourceCreator
 {
+  private static readonly string s_sessionId = Guid.NewGuid().ToString();
+
   internal static ResourceBuilder Create(string applicationAndVersion, string slug, string connectorVersion) =>
     ResourceBuilder
       .CreateEmpty()
@@ -17,7 +19,8 @@ internal static class ResourceCreator
           new(Consts.OS_NAME, Environment.OSVersion.ToString()),
           new(Consts.OS_TYPE, RuntimeInformation.ProcessArchitecture.ToString()),
           new(Consts.OS_SLUG, DetermineHostOsSlug()),
-          new(Consts.RUNTIME_NAME, RuntimeInformation.FrameworkDescription)
+          new(Consts.RUNTIME_NAME, RuntimeInformation.FrameworkDescription),
+          new(Consts.RUNTIME_SESSION_ID, s_sessionId)
         }
       );
 
