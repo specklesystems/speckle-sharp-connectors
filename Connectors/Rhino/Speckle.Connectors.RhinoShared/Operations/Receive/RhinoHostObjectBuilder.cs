@@ -78,10 +78,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // POC: This is where the top level base-layer name is set. Could be abstracted or injected in the context?
     var baseLayerName = $"Project {projectName}: Model {modelName}";
 
-    // we cannot place Block Definitions if we have "/" or "\" in the name
-    // https://linear.app/speckle/issue/CNX-2051/cant-create-instances-of-blocks-if-originating-from-speckle-sub-model
-    baseLayerName = ReplaceInvalidChars(baseLayerName);
-
     // 0 - Clean then Rock n Roll!
     PreReceiveDeepClean(baseLayerName);
 
@@ -244,16 +240,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     _converterSettings.Current.Document.Views.Redraw();
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));
-  }
-
-  private string ReplaceInvalidChars(string input)
-  {
-    char[] invalidChars = new[] { '/', '\\' };
-    foreach (var c in invalidChars)
-    {
-      input = input.Replace(c, '-');
-    }
-    return input;
   }
 
   private void PreReceiveDeepClean(string baseLayerName)
