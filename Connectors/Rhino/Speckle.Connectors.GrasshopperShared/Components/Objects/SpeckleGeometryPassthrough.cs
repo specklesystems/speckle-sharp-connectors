@@ -8,17 +8,15 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class SpeckleGeometryPassthrough : GH_Component
+public class SpeckleGeometryPassthrough()
+  : SpeckleSolveInstance(
+    "Speckle Geometry",
+    "SG",
+    "Create or modify a Speckle Geometry",
+    ComponentCategories.PRIMARY_RIBBON,
+    ComponentCategories.OBJECTS
+  )
 {
-  public SpeckleGeometryPassthrough()
-    : base(
-      "Speckle Geometry",
-      "SG",
-      "Create or modify a Speckle Geometry",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
-    ) { }
-
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_geometry;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -250,7 +248,4 @@ public class SpeckleGeometryPassthrough : GH_Component
     wrapper.Color = wrapperToMatch.Color;
     wrapper.Material = wrapperToMatch.Material;
   }
-
-  protected override void BeforeSolveInstance() => SpeckleConversionContext.SetupCurrent();
-  protected override void AfterSolveInstance() => SpeckleConversionContext.EndCurrent();
 }

@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp;
 /// <summary>
 /// Handles grasshopper wide converters. We don't need new converters, unless the document changes - this class should handle this (untested).
 /// </summary>
-public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter,IRootToHostConverter hostConverter)
+public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, IRootToHostConverter hostConverter)
 {
   private static IServiceScope? s_scope;
   private static SpeckleConversionContext? s_currentContext;
@@ -34,7 +34,7 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter,I
     {
       return;
     }
-    s_scope  = PriorityLoader.CreateScopeForActiveDocument();
+    s_scope = PriorityLoader.CreateScopeForActiveDocument();
     s_currentContext = s_scope.Get<SpeckleConversionContext>();
   }
 
@@ -48,9 +48,10 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter,I
     s_scope?.Dispose();
     s_scope = null;
   }
+
   public Base ConvertToSpeckle(object geo) => speckleConverter.Convert(geo);
 
-  public  List<(object, Base)> ConvertToHost(Base input)
+  public List<(object, Base)> ConvertToHost(Base input)
   {
     var result = hostConverter.Convert(input);
 

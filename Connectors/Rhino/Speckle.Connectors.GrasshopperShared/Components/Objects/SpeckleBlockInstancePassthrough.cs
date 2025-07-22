@@ -8,17 +8,15 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("2F8A9B1C-3D4E-5F6A-7B8C-9D0E1F2A3B4C")]
-public class SpeckleBlockInstancePassthrough : GH_Component
+public class SpeckleBlockInstancePassthrough()
+  : SpeckleSolveInstance(
+    "Speckle Block Instance",
+    "SBI",
+    "Create or modify a Speckle Block Instance",
+    ComponentCategories.PRIMARY_RIBBON,
+    ComponentCategories.OBJECTS
+  )
 {
-  public SpeckleBlockInstancePassthrough()
-    : base(
-      "Speckle Block Instance",
-      "SBI",
-      "Create or modify a Speckle Block Instance",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
-    ) { }
-
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_inst;
   public override GH_Exposure Exposure => GH_Exposure.tertiary;
