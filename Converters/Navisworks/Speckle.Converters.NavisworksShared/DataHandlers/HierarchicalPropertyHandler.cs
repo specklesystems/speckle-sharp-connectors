@@ -164,7 +164,7 @@ public class HierarchicalPropertyHandler(
       {
         if ((kvS.Value).Count != 1)
         {
-          // continue;
+          continue;
         }
 
         categoryDict[kvS.Key] = kvS.Value.First();
