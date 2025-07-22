@@ -77,14 +77,12 @@ public class HierarchicalPropertyHandler(
 
       if (kvp.Value is not Dictionary<string, object?> properties)
       {
-        // Get or create the pseudoClassProperties category
         if (!propertyCollection.TryGetValue(PseudoClassPropertiesKey, out var pseudoProperties))
         {
           pseudoProperties = [];
           propertyCollection.Add(PseudoClassPropertiesKey, pseudoProperties);
         }
 
-        // Add this non-dictionary value to pseudoClassProperties
         if (!pseudoProperties.TryGetValue(kvp.Key, out var valueSet))
         {
           valueSet = [];
@@ -128,10 +126,8 @@ public class HierarchicalPropertyHandler(
       return;
     }
 
-    // Add each pseudo class property to the main dictionary
     foreach (var prop in pseudoProps.Where(prop => !bannedNamesForProps.Contains(prop.Key)))
     {
-      // if prop value is null, skip it
       if (prop.Value == null)
       {
         continue;
@@ -140,7 +136,6 @@ public class HierarchicalPropertyHandler(
       propertyDict[prop.Key] = prop.Value;
     }
 
-    // Remove the pseudoClassProperties container
     propertyDict.Remove(PseudoClassPropertiesKey);
   }
 
