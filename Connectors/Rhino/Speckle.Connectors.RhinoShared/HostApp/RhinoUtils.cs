@@ -2,15 +2,13 @@ namespace Speckle.Connectors.Rhino.HostApp;
 
 public class RhinoUtils
 {
-  public string CleanBaseLayerName(string str)
+  public string CleanBlockDefinitionName(string str)
   {
-    //return ReplaceChars(str, @"\/[](){}:;?*", "_");
     return ReplaceChars(str, @"\/", "_");
   }
 
   public string CleanLayerName(string str)
   {
-    //return ReplaceChars(str, @"[](){}:;", "");
     str = ReplaceChars(str, @"[](){}", "");
     return ReplaceChars(str, @":;", "-");
   }
