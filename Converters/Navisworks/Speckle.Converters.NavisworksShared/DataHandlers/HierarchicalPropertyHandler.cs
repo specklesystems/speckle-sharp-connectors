@@ -110,9 +110,7 @@ public class HierarchicalPropertyHandler(
 
   private void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
   {
-    List<string> blessedNamesForProps = [];
-
-    HashSet<string> bannedNamesForProps =
+    string[] bannedNamesForProps =
     [
       "ClassName",
       "ClassDisplayName",
@@ -131,11 +129,7 @@ public class HierarchicalPropertyHandler(
     }
 
     // Add each pseudo class property to the main dictionary
-    foreach (
-      var prop in pseudoProps
-        .Where(prop => blessedNamesForProps.Count <= 0 || blessedNamesForProps.Contains(prop.Key))
-        .Where(prop => !bannedNamesForProps.Contains(prop.Key))
-    )
+    foreach (var prop in pseudoProps.Where(prop => !bannedNamesForProps.Contains(prop.Key)))
     {
       // if prop value is null, skip it
       if (prop.Value == null)
