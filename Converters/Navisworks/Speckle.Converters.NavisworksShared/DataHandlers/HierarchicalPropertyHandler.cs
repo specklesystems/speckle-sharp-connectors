@@ -62,6 +62,10 @@ public class HierarchicalPropertyHandler(
   )
   {
     var categoryDictionaries = ProcessPropertySets(item);
+    if (categoryDictionaries.Count == 0)
+    {
+      return;
+    }
 
     foreach (var kvp in categoryDictionaries)
     {
@@ -108,7 +112,7 @@ public class HierarchicalPropertyHandler(
   {
     List<string> blessedNamesForProps = [];
 
-    List<string> bannedNamesForProps =
+    HashSet<string> bannedNamesForProps =
     [
       "ClassName",
       "ClassDisplayName",
