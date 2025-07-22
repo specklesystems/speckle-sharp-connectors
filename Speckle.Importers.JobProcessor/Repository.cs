@@ -95,7 +95,7 @@ public sealed class Repository(ILogger<Repository> logger)
       commandText: COMMAND_TEXT,
       parameters: new
       {
-        status = jobStatus.ToString(),
+        status = jobStatus.ToString().ToLowerInvariant(),
         attempt,
         jobId,
       },

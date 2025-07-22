@@ -50,6 +50,7 @@ public sealed class JobProcessorInstance(
       finally
       {
         await repository.SetJobStatus(connection, transaction, jobId, jobStatus, attempt, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
       }
     }
   }
