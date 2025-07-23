@@ -99,7 +99,6 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       foreach (RhinoObject rhinoObject in atomicObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        using var _2 = _activityFactory.Start("Convert");
 
         // handle layer and store object layer *and all layer parents* to the version layers
         // this is important because we need to unpack colors and materials on intermediate layers that do not have objects as well.
