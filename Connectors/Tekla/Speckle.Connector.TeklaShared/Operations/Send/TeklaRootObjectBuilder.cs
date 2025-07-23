@@ -66,8 +66,6 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       foreach (TSM.ModelObject teklaObject in teklaObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        using var _2 = _activityFactory.Start("Convert");
-
         var result = ConvertTeklaObject(teklaObject, rootObjectCollection, projectId);
         results.Add(result);
 
