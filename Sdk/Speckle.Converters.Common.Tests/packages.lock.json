@@ -384,7 +384,7 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.4.6, )",
+        "requested": "[3.4.8, )",
         "resolved": "3.4.6",
         "contentHash": "UHWMZ8zQt3wF3gXfPpEKe3T8Pxo4ZRN1LOp+vZnsnohO8HKt2gNfAY2to2YRnTXnybEKsgqzIJLe372EoIQJHg=="
       }

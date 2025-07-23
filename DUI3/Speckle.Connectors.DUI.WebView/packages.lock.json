@@ -261,7 +261,7 @@
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Objects": "[3.4.6, )",
           "Speckle.Sdk": "[3.4.6, )",
-          "Speckle.Sdk.Dependencies": "[3.4.6, )"
+          "Speckle.Sdk.Dependencies": "[3.4.8, )"
         }
       },
       "speckle.connectors.dui": {
@@ -335,9 +335,9 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.4.6, )",
-        "resolved": "3.4.6",
-        "contentHash": "UHWMZ8zQt3wF3gXfPpEKe3T8Pxo4ZRN1LOp+vZnsnohO8HKt2gNfAY2to2YRnTXnybEKsgqzIJLe372EoIQJHg=="
+        "requested": "[3.4.8, )",
+        "resolved": "3.4.8",
+        "contentHash": "bNpJc2NBvjtJmdYS3xb6Fv4eqI/xZ2URXfWeXUFaWPMfC1QXLTjlK6iFriQk9ptLwr/dt4UPDPYYHOBynY1f2A=="
       }
     },
     "net8.0-windows7.0": {
@@ -551,7 +551,7 @@
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Objects": "[3.4.6, )",
           "Speckle.Sdk": "[3.4.6, )",
-          "Speckle.Sdk.Dependencies": "[3.4.6, )"
+          "Speckle.Sdk.Dependencies": "[3.4.8, )"
         }
       },
       "speckle.connectors.dui": {
@@ -623,9 +623,9 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "CentralTransitive",
-        "requested": "[3.4.6, )",
-        "resolved": "3.4.6",
-        "contentHash": "UHWMZ8zQt3wF3gXfPpEKe3T8Pxo4ZRN1LOp+vZnsnohO8HKt2gNfAY2to2YRnTXnybEKsgqzIJLe372EoIQJHg=="
+        "requested": "[3.4.8, )",
+        "resolved": "3.4.8",
+        "contentHash": "bNpJc2NBvjtJmdYS3xb6Fv4eqI/xZ2URXfWeXUFaWPMfC1QXLTjlK6iFriQk9ptLwr/dt4UPDPYYHOBynY1f2A=="
       }
     }
   }
