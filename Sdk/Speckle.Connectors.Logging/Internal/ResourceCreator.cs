@@ -10,15 +10,15 @@ internal static class ResourceCreator
       .CreateEmpty()
       .AddService(serviceName: Consts.TRACING_SOURCE, serviceVersion: connectorVersion)
       .AddAttributes(
-        new List<KeyValuePair<string, object>>
-        {
+        [
           new(Consts.SERVICE_NAME, applicationAndVersion),
           new(Consts.SERVICE_SLUG, slug),
           new(Consts.OS_NAME, Environment.OSVersion.ToString()),
           new(Consts.OS_TYPE, RuntimeInformation.ProcessArchitecture.ToString()),
           new(Consts.OS_SLUG, DetermineHostOsSlug()),
-          new(Consts.RUNTIME_NAME, RuntimeInformation.FrameworkDescription)
-        }
+          new(Consts.RUNTIME_NAME, RuntimeInformation.FrameworkDescription),
+          new(Consts.RUNTIME_SESSION_ID, Consts.StaticSessionId),
+        ]
       );
 
   private static string DetermineHostOsSlug()

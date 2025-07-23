@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
@@ -82,6 +83,8 @@ public sealed class SendOperation<T>(
 
     onOperationProgressed.Report(new("Uploading...", null));
 
+    Account account = sendInfo.Account;
+    using var userScope = UserActivityScope.AddUserScope(account);
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();

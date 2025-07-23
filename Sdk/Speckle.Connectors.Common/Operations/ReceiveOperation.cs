@@ -1,4 +1,5 @@
 using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
@@ -32,7 +33,7 @@ public sealed class ReceiveOperation(
     execute?.SetTag("receiveInfo", receiveInfo);
     // 2 - Check account exist
     Account account = receiveInfo.Account;
-    using var userScope = ActivityScope.SetTag(Consts.USER_ID, account.GetHashedEmail());
+    using var userScope = UserActivityScope.AddUserScope(account);
     var version = await receiveVersionRetriever.GetVersion(account, receiveInfo, cancellationToken);
 
     cancellationToken.ThrowIfCancellationRequested();
