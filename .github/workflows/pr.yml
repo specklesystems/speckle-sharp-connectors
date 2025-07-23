@@ -3,7 +3,8 @@ name: .NET Build
 on: pull_request
 
 jobs:
-  build:
+  build: # This job is poised to be removed. The `test` workflow should be doing everything that this one does.
+    # However, I want to let both run side-by-side for a week or two to see how things behave in practice
     runs-on: windows-latest
     steps:
       - name: Checkout
