@@ -11,7 +11,13 @@ public static class Consts
   public const string OS_SLUG = "os.slug";
   public const string RUNTIME_NAME = "runtime.name";
   public const string USER_ID = "user.id";
+  public const string USER_DISTINCT_ID = "user.distinctId";
   public const string TRACING_SOURCE = "speckle";
+
+  /// <summary>
+  /// A random GUID for adding to the logging context to correlate the <c>service.instance.id</c>
+  /// </summary>
+  public static readonly string StaticSessionId = Guid.NewGuid().ToString();
 
   public static string GetPackageVersion(Assembly assembly)
   {
