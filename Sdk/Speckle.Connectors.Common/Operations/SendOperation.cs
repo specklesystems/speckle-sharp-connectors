@@ -83,7 +83,6 @@ public sealed class SendOperation<T>(
 
     onOperationProgressed.Report(new("Uploading...", null));
 
-    Account account = sendInfo.Account;
     using var userScope = UserActivityScope.AddUserScope(account);
     using var activity = activityFactory.Start("SendOperation");
 

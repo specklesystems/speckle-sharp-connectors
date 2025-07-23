@@ -1,7 +1,6 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
-using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
