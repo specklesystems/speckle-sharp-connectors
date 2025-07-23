@@ -104,6 +104,7 @@ public class SendOperationTests : MoqTest
     var sourceApplication = "sourceApplication";
     var account = new Account()
     {
+      userInfo = new UserInfo(),
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };
