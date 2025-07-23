@@ -1,6 +1,5 @@
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Logging;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
