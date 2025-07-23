@@ -17,7 +17,6 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly Dictionary<string, int> _hostLayerCache = new();
-  private readonly RhinoUtils _utils;
 
   private static readonly string s_pathSeparator =
 #if RHINO8_OR_GREATER
@@ -26,11 +25,10 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   Layer.PathSeparator;
 #endif
 
-  public RhinoLayerBaker(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker, RhinoUtils utils)
+  public RhinoLayerBaker(RhinoMaterialBaker materialBaker, RhinoColorBaker colorBaker)
   {
     _materialBaker = materialBaker;
     _colorBaker = colorBaker;
-    _utils = utils;
   }
 
   /// <summary>
@@ -83,7 +81,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   public int GetLayerIndex(Collection[] collectionPath, string baseLayerName)
   {
     var layerPath = collectionPath
-      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : _utils.CleanLayerName(o.name))
+      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : RhinoUtils.CleanLayerName(o.name))
       .Prepend(baseLayerName);
 
     var layerFullName = string.Join(s_pathSeparator, layerPath);
@@ -111,7 +109,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     {
       currentLayerName +=
         s_pathSeparator
-        + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : _utils.CleanLayerName(collection.name));
+        + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : RhinoUtils.CleanLayerName(collection.name));
 
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
@@ -119,7 +117,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
         continue;
       }
 
-      var cleanNewLayerName = _utils.CleanLayerName(collection.name);
+      var cleanNewLayerName = RhinoUtils.CleanLayerName(collection.name);
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
 
       // set material

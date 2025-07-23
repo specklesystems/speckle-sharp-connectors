@@ -21,21 +21,18 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoColorBaker _colorBaker;
-  private readonly RhinoUtils _utils;
   private readonly ILogger<RhinoInstanceBaker> _logger;
 
   public RhinoInstanceBaker(
     RhinoLayerBaker layerBaker,
     RhinoMaterialBaker rhinoMaterialBaker,
     RhinoColorBaker colorBaker,
-    RhinoUtils utils,
     ILogger<RhinoInstanceBaker> logger
   )
   {
     _layerBaker = layerBaker;
     _materialBaker = rhinoMaterialBaker;
     _colorBaker = colorBaker;
-    _utils = utils;
     _logger = logger;
   }
 
@@ -98,7 +95,7 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
           var defName = $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}";
           // we cannot place Block Definitions if we have "/" or "\" in the name
           // https://linear.app/speckle/issue/CNX-2051/cant-create-instances-of-blocks-if-originating-from-speckle-sub-model
-          defName = _utils.CleanBlockDefinitionName(defName);
+          defName = RhinoUtils.CleanBlockDefinitionName(defName);
           var defIndex = doc.InstanceDefinitions.Add(
             defName,
             "No description", // POC: perhaps bring it along from source? We'd need to look at ACAD first

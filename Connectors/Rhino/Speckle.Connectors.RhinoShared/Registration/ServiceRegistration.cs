@@ -87,9 +87,6 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<PropertiesExtractor>();
 
-    // Register utils
-    serviceCollection.AddScoped<RhinoUtils>();
-
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }
