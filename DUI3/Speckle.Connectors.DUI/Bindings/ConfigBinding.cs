@@ -171,7 +171,7 @@ public class ConfigBinding : IBinding
 
   [SuppressMessage("Design", "CA1024:Use properties where appropriate", Justification = "Expose to UI")]
   [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Expose to UI")]
-  public Guid GetSessionId() => Consts.StaticSessionId;
+  public string GetSessionId() => Consts.StaticSessionId;
 }
 
 /// <summary>

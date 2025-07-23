@@ -18,7 +18,7 @@ public static class Consts
   /// <summary>
   /// A random GUID for adding to the logging context to correlate <see cref="RUNTIME_SESSION_ID"/>
   /// </summary>
-  public static readonly Guid StaticSessionId = Guid.NewGuid();
+  public static readonly string StaticSessionId = Guid.NewGuid().ToString();
 
   public static string GetPackageVersion(Assembly assembly)
   {
