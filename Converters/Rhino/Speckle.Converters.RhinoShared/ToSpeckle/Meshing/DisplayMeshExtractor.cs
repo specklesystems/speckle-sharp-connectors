@@ -81,7 +81,7 @@ public static class DisplayMeshExtractor
       throw new ConversionException($"Failed to meshify {geometry.GetType()} (perhaps the brep is too small?)");
     }
 
-    // triangulate these resulting meshes as they may contain ngons
+    // triangulate these resulting meshes as they may contain quads
     // this saves a lot of computing time for our viewer
     foreach (var mesh in renderMeshes)
     {
