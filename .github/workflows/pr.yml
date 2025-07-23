@@ -43,11 +43,8 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run Build on Linux
-        run: ./build.sh build-linux
-
       - name: ⚒️ Run tests
-        run: ./build.sh test-only
+        run: ./build.sh test
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
