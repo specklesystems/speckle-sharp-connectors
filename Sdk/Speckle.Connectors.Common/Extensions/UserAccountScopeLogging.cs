@@ -18,9 +18,11 @@ public static class UserActivityScope
 {
   public static IDisposable AddUserScope(Account account)
   {
-    return new AggregateIDisposable([
-      ActivityScope.SetTag(Consts.USER_ID, account.userInfo.id),
-      ActivityScope.SetTag(Consts.USER_DISTINCT_ID, account.GetHashedEmail()),
-    ]);
+    return new AggregateIDisposable(
+      [
+        ActivityScope.SetTag(Consts.USER_ID, account.userInfo.id),
+        ActivityScope.SetTag(Consts.USER_DISTINCT_ID, account.GetHashedEmail()),
+      ]
+    );
   }
 }

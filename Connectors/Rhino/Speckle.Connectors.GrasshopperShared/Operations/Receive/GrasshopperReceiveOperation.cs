@@ -42,7 +42,7 @@ public class GrasshopperReceiveOperation
     // 2 - Check account exist
     var account = receiveInfo.Account;
     using IClient apiClient = _clientFactory.Create(account);
-    
+
     using var userScope = UserActivityScope.AddUserScope(account);
 
     Speckle.Sdk.Api.GraphQL.Models.Version? version = await apiClient

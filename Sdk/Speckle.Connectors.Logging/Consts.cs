@@ -14,12 +14,12 @@ public static class Consts
   public const string USER_ID = "user.id";
   public const string USER_DISTINCT_ID = "user.distinctId";
   public const string TRACING_SOURCE = "speckle";
-  
+
   /// <summary>
-  /// A random GUID for adding to the logging context to correlate <see cref="RUNTIME_SESSION_ID"/> 
+  /// A random GUID for adding to the logging context to correlate <see cref="RUNTIME_SESSION_ID"/>
   /// </summary>
   public static readonly Guid StaticSessionId = Guid.NewGuid();
-  
+
   public static string GetPackageVersion(Assembly assembly)
   {
     // MinVer https://github.com/adamralph/minver?tab=readme-ov-file#version-numbers
