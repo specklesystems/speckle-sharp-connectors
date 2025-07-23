@@ -3,6 +3,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
@@ -21,10 +22,10 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     {
       if (s_currentContext == null)
       {
-        throw new InvalidOperationException("No current context");
+        SetupCurrent();
       }
 
-      return s_currentContext;
+      return s_currentContext.NotNull();
     }
   }
 
