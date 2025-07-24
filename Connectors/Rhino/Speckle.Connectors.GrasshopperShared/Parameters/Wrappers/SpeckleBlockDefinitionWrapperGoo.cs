@@ -1,4 +1,5 @@
 using Grasshopper.Kernel.Types;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -75,7 +76,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
   public SpeckleBlockDefinitionWrapper DeepCopy() =>
     new()
     {
-      Base = Value.InstanceDefinitionProxy.ShallowCopy(),
+      Base = (Base)Value.InstanceDefinitionProxy.ShallowCopy(),
       Name = Value.Name,
       Objects = Value.Objects.Select(o => o.DeepCopy()).ToList(),
       ApplicationId = Value.ApplicationId

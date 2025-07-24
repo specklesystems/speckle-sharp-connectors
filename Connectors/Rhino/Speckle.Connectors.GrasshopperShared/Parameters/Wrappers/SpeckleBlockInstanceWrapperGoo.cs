@@ -75,7 +75,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
           return false;
         }
 
-        Base converted = SpeckleConversionContext.ConvertToSpeckle(instance);
+        Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(instance);
         Value = new SpeckleBlockInstanceWrapper()
         {
           GeometryBase = instance,
