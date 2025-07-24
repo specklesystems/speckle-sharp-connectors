@@ -6,6 +6,9 @@ namespace Speckle.Converters.AutocadShared.ToSpeckle;
 /// <summary>
 /// Extracts extension dictionaries out from an element. Expects to be scoped per operation.
 /// </summary>
+/// <remarks>
+/// Extension dictionary entry types are designated by their DxfCode: https://help.autodesk.com/view/OARX/2025/ENU/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_DxfCode
+/// </remarks>
 public class ExtensionDictionaryExtractor
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -59,20 +62,6 @@ public class ExtensionDictionaryExtractor
     return extensionDictionaryDict.Count > 0 ? extensionDictionaryDict : null;
   }
 
-  // xrecord values can contain invalid objects like objectIds
-  // https://help.autodesk.com/view/OARX/2025/ENU/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_DxfCode
-  private object? GetValidValue(object val) =>
-    val switch
-    {
-      string s => s,
-      int i => i,
-      short sh => sh,
-      long l => l,
-      float f => f,
-      double d => d,
-      bool b => b,
-      decimal d => d,
-      char c => c,
-      _ => val.ToString()
-    };
+  // xrecord values can contain invalid serialisation types like objectIds
+  private object? GetValidValue(object val) => val.GetType().IsPrimitive ? val : val.ToString();
 }
