@@ -10,11 +10,23 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 /// CreateSpeckleProperties passthrough component by key value pairs
 /// </summary>
 [Guid("FED2298C-0D2B-4868-94B5-B8D17F9385A5")]
-public class SpecklePropertiesPassthrough : GH_Component
+public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_properties_properties;
   public override GH_Exposure Exposure => GH_Exposure.quarternary;
+
+  public SpecklePropertiesPassthrough()
+    : base(
+      "Speckle Properties",
+      "SP",
+      "Creates or modifies a set of properties for Speckle objects by keyvalue",
+      ComponentCategories.PRIMARY_RIBBON,
+      ComponentCategories.OBJECTS
+    )
+  {
+    Message = Mode.ToString();
+  }
 
   private enum PropertyMode
   {
@@ -36,18 +48,6 @@ public class SpecklePropertiesPassthrough : GH_Component
         ExpireSolution(true);
       }
     }
-  }
-
-  public SpecklePropertiesPassthrough()
-    : base(
-      "Speckle Properties",
-      "SP",
-      "Creates or modifies a set of properties for Speckle objects by keyvalue",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
-    )
-  {
-    Message = Mode.ToString();
   }
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)

@@ -3,6 +3,7 @@ using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
@@ -10,18 +11,50 @@ namespace Speckle.Connectors.GrasshopperShared.HostApp;
 /// <summary>
 /// Handles grasshopper wide converters. We don't need new converters, unless the document changes - this class should handle this (untested).
 /// </summary>
-public static class SpeckleConversionContext
+public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, IRootToHostConverter hostConverter)
 {
-  public static Base ConvertToSpeckle(object geo)
+  private static IServiceScope? s_scope;
+  private static SpeckleConversionContext? s_currentContext;
+
+  public static SpeckleConversionContext Current
   {
-    using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    return scope.ServiceProvider.GetRequiredService<IRootToSpeckleConverter>().Convert(geo);
+    get
+    {
+      if (s_currentContext == null)
+      {
+        SetupCurrent();
+      }
+
+      return s_currentContext.NotNull();
+    }
   }
 
-  public static List<(object, Base)> ConvertToHost(Base input)
+  public static void SetupCurrent()
   {
-    using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var result = scope.ServiceProvider.GetRequiredService<IRootToHostConverter>().Convert(input);
+    if (s_currentContext != null)
+    {
+      return;
+    }
+    s_scope = PriorityLoader.CreateScopeForActiveDocument();
+    s_currentContext = s_scope.Get<SpeckleConversionContext>();
+  }
+
+  public static void EndCurrent()
+  {
+    if (s_currentContext == null)
+    {
+      return;
+    }
+    s_currentContext = null;
+    s_scope?.Dispose();
+    s_scope = null;
+  }
+
+  public Base ConvertToSpeckle(object geo) => speckleConverter.Convert(geo);
+
+  public List<(object, Base)> ConvertToHost(Base input)
+  {
+    var result = hostConverter.Convert(input);
 
     return result switch
     {
