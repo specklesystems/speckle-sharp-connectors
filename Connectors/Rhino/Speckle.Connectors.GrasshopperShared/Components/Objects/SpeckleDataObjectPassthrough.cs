@@ -7,17 +7,15 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("5CE8AA40-7706-4893-853D-4C77604548FA")]
-public class SpeckleDataObjectPassthrough : GH_Component
+public class SpeckleDataObjectPassthrough()
+  : SpeckleSolveInstance(
+    "Speckle Data Object",
+    "SDO",
+    "Create or modify a Speckle Data Object",
+    ComponentCategories.PRIMARY_RIBBON,
+    ComponentCategories.OBJECTS
+  )
 {
-  public SpeckleDataObjectPassthrough()
-    : base(
-      "Speckle Data Object",
-      "SDO",
-      "Create or modify a Speckle Data Object",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
-    ) { }
-
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_dataobject;
   public override GH_Exposure Exposure => GH_Exposure.secondary;

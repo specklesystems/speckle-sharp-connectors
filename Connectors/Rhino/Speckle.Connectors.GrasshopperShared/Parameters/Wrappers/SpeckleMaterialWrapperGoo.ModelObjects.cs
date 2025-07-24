@@ -55,8 +55,10 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
 
           return CastFromModelRenderMaterial(matRenderMaterial);
         }
-
-        return false;
+        else
+        {
+          return CastFrom(modelMaterial.ToAttributes().RenderMaterial);
+        }
     }
 
     return false;

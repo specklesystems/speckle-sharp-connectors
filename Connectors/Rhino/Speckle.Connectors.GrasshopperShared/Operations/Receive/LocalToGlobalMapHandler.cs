@@ -53,7 +53,7 @@ internal sealed class LocalToGlobalMapHandler
 
     try
     {
-      List<(object, Base)> converted = SpeckleConversionContext.ConvertToHost(obj);
+      List<(object, Base)> converted = SpeckleConversionContext.Current.ConvertToHost(obj);
 
       if (converted.Count == 0)
       {

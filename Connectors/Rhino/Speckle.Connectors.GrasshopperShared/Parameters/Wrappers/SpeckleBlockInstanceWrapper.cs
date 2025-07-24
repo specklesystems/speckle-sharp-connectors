@@ -197,7 +197,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleGeometryWrapper
   public override SpeckleGeometryWrapper DeepCopy() =>
     new SpeckleBlockInstanceWrapper()
     {
-      Base = InstanceProxy.ShallowCopy(),
+      Base = (Base)InstanceProxy.ShallowCopy(),
       GeometryBase = GeometryBase?.Duplicate(),
       Color = Color,
       Material = Material,
