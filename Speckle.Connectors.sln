@@ -310,6 +310,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rhino", "Rhino", "{CD0C216A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Rhino", "Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj", "{92F065BE-97E2-4192-B561-88A6A8CFA53F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.JobProcessor", "Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj", "{6ADFA42A-4E05-4DD4-A45B-33377147E40E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -779,6 +781,12 @@ Global
 		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Local|Any CPU.Build.0 = Local|Any CPU
 		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{92F065BE-97E2-4192-B561-88A6A8CFA53F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Local|Any CPU.ActiveCfg = Debug|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Local|Any CPU.Build.0 = Debug|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -918,6 +926,7 @@ Global
 		{60445031-CCEE-4421-83C0-BB10BEF7B7F2} = {FC224610-32D3-454E-9BC1-1219FE8ACD5F}
 		{CD0C216A-2A96-4423-956E-3DDFCAEA510C} = {336F0341-5C39-40F7-9377-122FED4E4549}
 		{92F065BE-97E2-4192-B561-88A6A8CFA53F} = {CD0C216A-2A96-4423-956E-3DDFCAEA510C}
+		{6ADFA42A-4E05-4DD4-A45B-33377147E40E} = {CD0C216A-2A96-4423-956E-3DDFCAEA510C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE253116-7070-4E9A-BCE8-2911C251B8C8}
