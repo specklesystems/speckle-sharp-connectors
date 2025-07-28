@@ -23,6 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\AttributeExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Properties\PropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitBuiltInCategoryStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoSelectionFilter.cs" />
