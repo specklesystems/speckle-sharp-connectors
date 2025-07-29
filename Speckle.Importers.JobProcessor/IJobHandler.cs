@@ -1,18 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using Speckle.Importers.JobProcessor.Domain;
+﻿using Speckle.Importers.JobProcessor.Domain;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor;
 
 public interface IJobHandler
 {
-  public Task ProcessJob(FileimportJob job, CancellationToken cancellationToken);
-}
-
-public class FakeJobHandler(ILogger<FakeJobHandler> logger) : IJobHandler
-{
-  public Task ProcessJob(FileimportJob job, CancellationToken cancellationToken)
-  {
-    logger.LogInformation($"Job {job.Id} has fake completed!");
-    return Task.CompletedTask;
-  }
+  public Task<Version> ProcessJob(FileimportJob job, CancellationToken cancellationToken);
 }

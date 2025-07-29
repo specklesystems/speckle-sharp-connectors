@@ -1,23 +1,27 @@
-﻿using System.Diagnostics;
-using Speckle.Importers.JobProcessor.Domain;
+﻿using Speckle.Importers.JobProcessor.Domain;
+using Speckle.Importers.Rhino;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Transports.ServerUtils;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor;
 
-public sealed class RhinoJobHandler : IJobHandler
+public sealed class RhinoJobHandler(Importer importer, IAccountFactory accountFactory, ServerApi serverApi)
+  : IJobHandler
 {
-  public async Task ProcessJob(FileimportJob job, CancellationToken cancellationToken)
+  public async Task<Version> ProcessJob(FileimportJob job, CancellationToken cancellationToken)
   {
-    var process = Process.Start("", []);
+    //todo: download blob
+    serverApi.CancellationToken = cancellationToken;
+    await serverApi.DownloadBlobs(job.Payload.ProjectId, [job.Payload.BlobId], null);
 
-    cancellationToken.Register(() =>
-    {
-      process.Kill();
-    });
+    var filePath = "";
+    var account = await accountFactory.CreateAccount(
+      job.Payload.ServerUrl,
+      job.Payload.Token,
+      cancellationToken: cancellationToken
+    );
 
-    await process.WaitForExitAsync(CancellationToken.None);
-    if (process.ExitCode != 0)
-    {
-      //attempt to read json result, throw an exception with it
-    }
+    return await importer.Import(filePath, job.Payload.ProjectId, job.Payload.ModelId, account, cancellationToken);
   }
 }
