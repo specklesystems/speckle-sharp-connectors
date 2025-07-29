@@ -35,16 +35,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
 
   private bool HandleModelObject(ModelObject modelObject)
   {
-    GeometryBase? geometryBase;
-    if (modelObject.Id is Guid guid)
-    {
-      geometryBase = RhinoDoc.ActiveDoc.Objects.FindId(guid)?.Geometry;
-    }
-    else
-    {
-      modelObject.CastTo<GeometryBase>(out geometryBase);
-    }
-
+    modelObject.CastTo<GeometryBase>(out GeometryBase? geometryBase);
     if (geometryBase is null)
     {
       throw new InvalidOperationException($"Could not retrieve geometry from model object.");
