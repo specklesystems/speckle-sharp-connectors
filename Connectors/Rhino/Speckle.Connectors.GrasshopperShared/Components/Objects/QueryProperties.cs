@@ -79,7 +79,7 @@ public class QueryProperties : GH_Component
     {
       if (current is SpecklePropertyGroupGoo dict)
       {
-        if (dict.Value.TryGetValue(key, out ISpecklePropertyGoo next))
+        if (dict.Value.TryGetValue(key, out ISpecklePropertyGoo? next))
         {
           current = next;
         }
