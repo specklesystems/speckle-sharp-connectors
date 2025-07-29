@@ -148,7 +148,7 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public virtual SpeckleGeometryWrapper DeepCopy() =>
     new()
     {
-      Base = Base.ShallowCopy(),
+      Base = (Base)Base.ShallowCopy(),
       GeometryBase = GeometryBase?.Duplicate(),
       Color = Color,
       Material = Material,

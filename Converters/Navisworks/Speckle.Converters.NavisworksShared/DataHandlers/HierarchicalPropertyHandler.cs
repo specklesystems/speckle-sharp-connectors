@@ -9,6 +9,8 @@ public class HierarchicalPropertyHandler(
   ClassPropertiesExtractor classPropertiesExtractor
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
+  private string PseudoClassPropertiesKey => "_pseudoClassProperties";
+
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? new Dictionary<string, object?>();
@@ -22,6 +24,7 @@ public class HierarchicalPropertyHandler(
     }
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
+    FlattenPseudoClassProperties(propertyDict);
 
     return propertyDict;
   }
@@ -45,6 +48,7 @@ public class HierarchicalPropertyHandler(
       {
         break;
       }
+
       current = current.Parent;
     }
 
@@ -58,6 +62,10 @@ public class HierarchicalPropertyHandler(
   )
   {
     var categoryDictionaries = ProcessPropertySets(item);
+    if (categoryDictionaries.Count == 0)
+    {
+      return;
+    }
 
     foreach (var kvp in categoryDictionaries)
     {
@@ -69,6 +77,19 @@ public class HierarchicalPropertyHandler(
 
       if (kvp.Value is not Dictionary<string, object?> properties)
       {
+        if (!propertyCollection.TryGetValue(PseudoClassPropertiesKey, out var pseudoProperties))
+        {
+          pseudoProperties = [];
+          propertyCollection.Add(PseudoClassPropertiesKey, pseudoProperties);
+        }
+
+        if (!pseudoProperties.TryGetValue(kvp.Key, out var valueSet))
+        {
+          valueSet = [];
+          pseudoProperties.Add(kvp.Key, valueSet);
+        }
+
+        valueSet.Add(kvp.Value);
         continue;
       }
 
@@ -79,9 +100,43 @@ public class HierarchicalPropertyHandler(
           valueSet = [];
           categoryProperties.Add(prop.Key, valueSet);
         }
+
         valueSet.Add(prop.Value);
       }
     }
+  }
+
+  private void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
+  {
+    string[] bannedNamesForProps =
+    [
+      "ClassName",
+      "ClassDisplayName",
+      "DisplayName",
+      "InstanceGuid",
+      "Source",
+      "Source Guid"
+    ];
+
+    if (
+      !propertyDict.TryGetValue(PseudoClassPropertiesKey, out var pseudoPropsObj)
+      || pseudoPropsObj is not Dictionary<string, object> pseudoProps
+    )
+    {
+      return;
+    }
+
+    foreach (var prop in pseudoProps.Where(prop => !bannedNamesForProps.Contains(prop.Key)))
+    {
+      if (prop.Value == null)
+      {
+        continue;
+      }
+
+      propertyDict[prop.Key] = prop.Value;
+    }
+
+    propertyDict.Remove(PseudoClassPropertiesKey);
   }
 
   private static void ApplyFilteredProperties(
