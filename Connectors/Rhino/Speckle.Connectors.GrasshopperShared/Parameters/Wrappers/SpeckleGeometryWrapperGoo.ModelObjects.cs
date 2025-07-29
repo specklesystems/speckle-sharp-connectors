@@ -189,6 +189,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     SpeckleBlockDefinitionWrapper? definition = null
   )
   {
+    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId;
     Value = geometryBase is InstanceReferenceGeometry instance
       ? new SpeckleBlockInstanceWrapper()
       {
@@ -201,7 +202,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = appId
+        ApplicationId = validAppId
       }
       : new SpeckleGeometryWrapper()
       {
@@ -212,7 +213,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = appId
+        ApplicationId = validAppId
       };
 
     return true;

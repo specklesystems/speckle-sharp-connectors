@@ -32,7 +32,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo
         return true;
 
       case ModelInstanceDefinition modelInstanceDef:
-
         List<SpeckleGeometryWrapper> defObjs = new();
         foreach (var defObj in modelInstanceDef.Objects)
         {
@@ -59,6 +58,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
 
   private void SetValueFromDefinitionProps(List<SpeckleGeometryWrapper> objs, string name, string id)
   {
+    string validAppId = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id;
     Value = new SpeckleBlockDefinitionWrapper()
     {
       Base = new InstanceDefinitionProxy
@@ -69,7 +69,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       },
       Name = name,
       Objects = objs,
-      ApplicationId = id
+      ApplicationId = validAppId
     };
   }
 
