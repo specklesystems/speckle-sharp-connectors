@@ -54,6 +54,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\SurfaceToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\Solid3dToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\DBTextToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\XDataExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\IPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
