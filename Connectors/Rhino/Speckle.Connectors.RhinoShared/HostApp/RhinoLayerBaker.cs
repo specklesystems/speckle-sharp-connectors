@@ -16,6 +16,13 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
+
+  /// <summary>
+  /// The layer cache storing the full name of created layers.
+  /// Full names should be stored in all lowercase due to case-agnostic layer name uniqueness requirements in Rhino.
+  /// TryGetValue on this dict should also test for lowercase-only names.
+  /// </summary>
+  /// <remarks>The case-agnostic requirement applies to some models (eg Revit with linked models) that may have multiple collections with the same name but with different capitalizations.</remarks>
   private readonly Dictionary<string, int> _hostLayerCache = new();
 
   private static readonly string s_pathSeparator =
@@ -38,7 +45,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   private void CreateBaseLayer(string baseLayerName)
   {
     var index = RhinoDoc.ActiveDoc.Layers.Add(new Layer { Name = baseLayerName }); // POC: too much effort right now to wrap around the interfaced layers and doc
-    _hostLayerCache[baseLayerName] = index;
+    _hostLayerCache[baseLayerName.ToLower()] = index;
   }
 
   /// <summary>
@@ -86,7 +93,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 
     var layerFullName = string.Join(s_pathSeparator, layerPath);
 
-    if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
+    if (_hostLayerCache.TryGetValue(layerFullName.ToLower(), out int existingLayerIndex))
     {
       return existingLayerIndex;
     }
@@ -111,7 +118,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
         s_pathSeparator
         + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : RhinoUtils.CleanLayerName(collection.name));
 
-      if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
+      if (_hostLayerCache.TryGetValue(currentLayerName.ToLower(), out int value))
       {
         previousLayer = currentDocument.Layers.FindIndex(value);
         continue;
@@ -147,7 +154,8 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       {
         throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
       }
-      _hostLayerCache.Add(currentLayerName, index);
+
+      _hostLayerCache.Add(currentLayerName.ToLower(), index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
 
