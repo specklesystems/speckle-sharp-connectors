@@ -35,11 +35,10 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
 
   private bool HandleModelObject(ModelObject modelObject)
   {
-    if (RhinoDoc.ActiveDoc.Objects.FindId(modelObject.Id ?? Guid.Empty)?.Geometry is not GeometryBase geometryBase)
+    modelObject.CastTo<GeometryBase>(out GeometryBase? geometryBase);
+    if (geometryBase is null)
     {
-      throw new InvalidOperationException(
-        $"Could not retrieve geometry from Model Object {modelObject.ObjectType}. Did you forget to bake these objects in your document?"
-      );
+      throw new InvalidOperationException($"Could not retrieve geometry from model object.");
     }
 
     Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(geometryBase);
@@ -154,7 +153,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
   {
     // we need to retrieve the actual material by the material source (otherwise will return default material for anything other than by object)
     Guid? matId = null;
-    switch (modelObject.Render.Material?.Source)
+    switch (modelObject.Render?.Material?.Source)
     {
       case ObjectMaterialSource.MaterialFromLayer:
         matId = modelObject.Layer.Material.Id;
@@ -181,6 +180,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     SpeckleBlockDefinitionWrapper? definition = null
   )
   {
+    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId;
     Value = geometryBase is InstanceReferenceGeometry instance
       ? new SpeckleBlockInstanceWrapper()
       {
@@ -193,7 +193,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = appId
+        ApplicationId = validAppId
       }
       : new SpeckleGeometryWrapper()
       {
@@ -204,7 +204,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = appId
+        ApplicationId = validAppId
       };
 
     return true;
@@ -272,7 +272,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
   {
     // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
     int? argb = null;
-    switch (modelObject.Display.Color?.Source)
+    switch (modelObject.Display?.Color?.Source)
     {
       case ObjectColorSource.ColorFromLayer:
         argb = modelObject.Layer.DisplayColor?.ToArgb();
