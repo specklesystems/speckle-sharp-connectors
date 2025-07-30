@@ -426,28 +426,28 @@ public class SpeckleOperationWizard
     WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
   }
 
-  private void OnWorkspaceSelected(object sender, WorkspaceSelectedEventArgs e)
+  private void OnWorkspaceSelected(object? sender, WorkspaceSelectedEventArgs e)
   {
     SelectedWorkspace = e.SelectedWorkspace;
     ResetProjects();
     _refreshComponent.Invoke();
   }
 
-  private void OnProjectSelected(object sender, ProjectSelectedEventArgs e)
+  private void OnProjectSelected(object? sender, ProjectSelectedEventArgs e)
   {
     SelectedProject = e.SelectedProject;
     ResetModels();
     _refreshComponent.Invoke();
   }
 
-  private void OnModelSelected(object sender, ModelSelectedEventArgs e)
+  private void OnModelSelected(object? sender, ModelSelectedEventArgs e)
   {
     SelectedModel = e.SelectedModel;
     ResetVersions(true);
     _refreshComponent.Invoke();
   }
 
-  private void OnVersionSelected(object sender, VersionSelectedEventArgs e)
+  private void OnVersionSelected(object? sender, VersionSelectedEventArgs e)
   {
     SelectedVersion = e.SelectedVersion;
     IsLatestVersion = e.IsLatest;

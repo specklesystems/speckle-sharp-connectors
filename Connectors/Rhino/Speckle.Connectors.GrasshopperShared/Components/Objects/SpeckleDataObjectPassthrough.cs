@@ -149,20 +149,18 @@ public class SpeckleDataObjectPassthrough()
     // process name
     if (inputName != null)
     {
-      result!.Name = inputName;
+      result.Name = inputName;
     }
 
     // process properties
     if (inputProperties != null)
     {
-      result!.Properties = inputProperties;
+      result.Properties = inputProperties;
     }
 
     // get the path
-    string path =
-      result!.Path.Count > 1
-        ? string.Join(Constants.LAYER_PATH_DELIMITER, result!.Path)
-        : result!.Path.FirstOrDefault();
+    string? path =
+      result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
 
     // set all the data
     da.SetData(0, result.CreateGoo());
