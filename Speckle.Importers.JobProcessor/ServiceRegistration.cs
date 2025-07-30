@@ -10,12 +10,13 @@ public static class ServiceRegistration
   public static IServiceCollection AddJobProcessor(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddLogging();
+    serviceCollection.AddLoggingConfig();
     serviceCollection.AddTransient<JobProcessorInstance>();
     serviceCollection.AddTransient<Repository>();
     return serviceCollection;
   }
 
-  private static IServiceCollection AddLogging(this IServiceCollection serviceCollection)
+  private static IServiceCollection AddLoggingConfig(this IServiceCollection serviceCollection)
   {
     Log.Logger = new LoggerConfiguration()
       .Enrich.FromLogContext()

@@ -8,7 +8,9 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
-    <PackageReference Include="GrasshopperAsyncComponent" NoWarn="NU1701"/>
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
 
   <ItemGroup>
