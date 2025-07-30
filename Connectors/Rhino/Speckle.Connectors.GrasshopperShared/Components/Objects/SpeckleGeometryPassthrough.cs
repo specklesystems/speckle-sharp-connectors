@@ -4,21 +4,20 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
-public class SpeckleGeometryPassthrough : GH_Component
+public class SpeckleGeometryPassthrough()
+  : SpeckleSolveInstance(
+    "Speckle Geometry",
+    "SG",
+    "Create or modify a Speckle Geometry",
+    ComponentCategories.PRIMARY_RIBBON,
+    ComponentCategories.OBJECTS
+  )
 {
-  public SpeckleGeometryPassthrough()
-    : base(
-      "Speckle Geometry",
-      "SG",
-      "Create or modify a Speckle Geometry",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OBJECTS
-    ) { }
-
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_geometry;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -196,38 +195,37 @@ public class SpeckleGeometryPassthrough : GH_Component
       }
     }
 
+    result.NotNull();
     // process name
     if (inputName != null)
     {
-      result!.Name = inputName;
+      result.Name = inputName;
     }
 
     // process properties
     if (inputProperties != null)
     {
-      result!.Properties = inputProperties;
+      result.Properties = inputProperties;
     }
 
     // process color (no mutation)
     if (inputColor != null)
     {
-      result!.Color = inputColor;
+      result.Color = inputColor;
     }
 
     // process material (no mutation)
     if (inputMaterial != null)
     {
-      result!.Material = inputMaterial.Value;
+      result.Material = inputMaterial.Value;
     }
 
     // no need to process application Id.
     // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
 
     // get the path
-    string path =
-      result!.Path.Count > 1
-        ? string.Join(Constants.LAYER_PATH_DELIMITER, result!.Path)
-        : result!.Path.FirstOrDefault();
+    string? path =
+      result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
 
     // set all the data
     da.SetData(0, result.CreateGoo());

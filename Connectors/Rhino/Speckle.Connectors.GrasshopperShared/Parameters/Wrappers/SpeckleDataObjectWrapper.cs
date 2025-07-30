@@ -205,7 +205,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public SpeckleDataObjectWrapper DeepCopy() =>
     new()
     {
-      Base = DataObject.ShallowCopy(),
+      Base = (Base)DataObject.ShallowCopy(),
       Geometries = [.. Geometries.Select(g => g.DeepCopy())],
       Properties = Properties,
       ApplicationId = ApplicationId,

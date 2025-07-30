@@ -16,7 +16,12 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
-  private readonly Dictionary<string, int> _hostLayerCache = new();
+
+  /// <summary>
+  /// The layer cache storing the full name of created layers.
+  /// </summary>
+  /// <remarks>The case-agnostic requirement applies to some models (eg Revit with linked models) that may have multiple collections with the same name but with different capitalizations.</remarks>
+  private readonly Dictionary<string, int> _hostLayerCache = new(StringComparer.OrdinalIgnoreCase);
 
   private static readonly string s_pathSeparator =
 #if RHINO8_OR_GREATER
@@ -81,10 +86,10 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   public int GetLayerIndex(Collection[] collectionPath, string baseLayerName)
   {
     var layerPath = collectionPath
-      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
+      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : RhinoUtils.CleanLayerName(o.name))
       .Prepend(baseLayerName);
 
-    var layerFullName = CleanLayerName(string.Join(s_pathSeparator, layerPath));
+    var layerFullName = string.Join(s_pathSeparator, layerPath);
 
     if (_hostLayerCache.TryGetValue(layerFullName, out int existingLayerIndex))
     {
@@ -93,22 +98,6 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 
     throw new ConversionException($"Did not find a layer in the cache with the name '{layerFullName}'");
   }
-
-  /// <summary>
-  /// Cleans up layer names to be "rhino" proof. Note this can be improved, as "()[] and {}" are illegal only at the start.
-  /// https://docs.mcneel.com/rhino/6/help/en-us/index.htm#information/namingconventions.htm?Highlight=naming
-  /// </summary>
-  /// <param name="layerName"></param>
-  /// <returns></returns>
-  private string CleanLayerName(string layerName) =>
-    layerName
-      .Replace("{", "")
-      .Replace("}", "")
-      .Replace("(", "")
-      .Replace(")", "")
-      .Replace("[", "")
-      .Replace("]", "")
-      .Replace(":", "");
 
   /// <summary>
   /// Creates a layer based on the given collection path and adds it to the Rhino document.
@@ -123,16 +112,17 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     Layer? previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName += s_pathSeparator + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : collection.name);
+      currentLayerName +=
+        s_pathSeparator
+        + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : RhinoUtils.CleanLayerName(collection.name));
 
-      currentLayerName = CleanLayerName(currentLayerName); //.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
         previousLayer = currentDocument.Layers.FindIndex(value);
         continue;
       }
 
-      var cleanNewLayerName = CleanLayerName(collection.name); //.Replace("{", "").Replace("}", "").Replace("(", "").Replace(")", "");
+      var cleanNewLayerName = RhinoUtils.CleanLayerName(collection.name);
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
 
       // set material
@@ -162,6 +152,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       {
         throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
       }
+
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
