@@ -60,7 +60,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       collection,
       color,
       material,
-      modelObject.Id.ToString(),
+      modelObject.Id?.ToString(),
       definition
     );
   }
@@ -176,11 +176,11 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     SpeckleCollectionWrapper? parent,
     Color? color,
     SpeckleMaterialWrapper? mat,
-    string appId,
+    string? appId,
     SpeckleBlockDefinitionWrapper? definition = null
   )
   {
-    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId;
+    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId!;
     Value = geometryBase is InstanceReferenceGeometry instance
       ? new SpeckleBlockInstanceWrapper()
       {

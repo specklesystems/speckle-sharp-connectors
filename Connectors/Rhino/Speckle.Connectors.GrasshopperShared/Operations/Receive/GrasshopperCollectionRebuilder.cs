@@ -43,7 +43,7 @@ internal sealed class GrasshopperCollectionRebuilder
   {
     // first check if cache already has this collection
     string fullPath = string.Concat(path);
-    if (_cache.TryGetValue(fullPath, out SpeckleCollectionWrapper col))
+    if (_cache.TryGetValue(fullPath, out SpeckleCollectionWrapper? col))
     {
       return col;
     }
@@ -58,7 +58,7 @@ internal sealed class GrasshopperCollectionRebuilder
       string key = string.Concat(currentLayerPath);
 
       // check cache
-      if (_cache.TryGetValue(key, out SpeckleCollectionWrapper currentCol))
+      if (_cache.TryGetValue(key, out SpeckleCollectionWrapper? currentCol))
       {
         previousCollectionWrapper = currentCol;
         continue;

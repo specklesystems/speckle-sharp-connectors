@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+using System.Reflection;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Importers.Rhino;
 
@@ -48,19 +49,23 @@ public static class Resolver
   /// </summary>
   public static bool UseLatest { get; set; }
 
-  private static Assembly? ResolveForRhinoAssemblies(object sender, ResolveEventArgs args)
+  private static Assembly? ResolveForRhinoAssemblies(object? sender, ResolveEventArgs args)
   {
-    var assemblyName = new AssemblyName(args.Name).Name;
+    string? assemblyName = new AssemblyName(args.Name).Name;
     if (RhinoSystemDirectory is null)
     {
       return null;
     }
 
     string path = System.IO.Path.Combine(RhinoSystemDirectory, assemblyName + ".dll");
-    if (assemblyName.StartsWith("Speckle.Connectors.Rhino"))
+    if (assemblyName != null && assemblyName.StartsWith("Speckle.Connectors.Rhino"))
     {
-      path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), assemblyName + ".rhp");
+      path = Path.Combine(
+        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull(),
+        assemblyName + ".rhp"
+      );
     }
+
     if (System.IO.File.Exists(path))
     {
       return Assembly.LoadFrom(path);
@@ -106,7 +111,7 @@ public static class Resolver
         {
           return null;
         }
-        string corePath = (string)installKey.GetValue("CoreDllPath");
+        string? corePath = (string?)installKey.GetValue("CoreDllPath");
         if (System.IO.File.Exists(corePath))
         {
           return System.IO.Path.GetDirectoryName(corePath);

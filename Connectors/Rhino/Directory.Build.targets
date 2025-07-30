@@ -5,7 +5,7 @@
   </ItemGroup>
   <Target AfterTargets="Build" Name="WarnIfPublicReleaseVersionInstalled" Condition="'$(RhinoVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <Warning
-      Text="Conflicting Rhino plugin detected - Do you have a public release installed?"
+      Text="Conflicting Rhino plugin detected - Do you have a public release installed? at '@(PublicReleasePath)'"
       Condition="Exists(@(PublicReleasePath))" />
   </Target>
 
