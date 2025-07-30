@@ -44,9 +44,27 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   public Dictionary<string, object> Convert(DB.Element target)
   {
     Dictionary<string, object> quantities = new();
-    if (target.Category?.HasMaterialQuantities ?? false) //category can be null
+    switch (target)
     {
-      foreach (DB.ElementId? matId in target.GetMaterialIds(false))
+      case DBA.Railing railing:
+        // railings can have subelements including top rails, hand rails, and balusters.
+        // they also do *not* have any materials associated with their category.
+        List<DB.ElementId> railingElementIds = [railing.GetTypeId(), railing.TopRail, .. railing.GetHandRails()];
+        ProcessMaterialsByElementTypes(railingElementIds, quantities);
+        break;
+      default:
+        ProcessMaterialsByCategory(target, quantities);
+        break;
+    }
+
+    return quantities;
+  }
+
+  private void ProcessMaterialsByCategory(DB.Element element, Dictionary<string, object> quantities)
+  {
+    if (element.Category?.HasMaterialQuantities ?? false) //category can be null
+    {
+      foreach (DB.ElementId? matId in element.GetMaterialIds(false))
       {
         if (matId is null)
         {
@@ -56,11 +74,18 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         var materialQuantity = new Dictionary<string, object>();
         var unitSettings = _converterSettings.Current.Document.GetUnits();
 
+        // add material props
+        if (TryAddMaterialPropertiesToQuantitiesDict(matId, materialQuantity, out string matName))
+        {
+          quantities[matName] = materialQuantity;
+        }
+
+        // add area and volume props
         var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
         AddMaterialProperty(
           materialQuantity,
           "area",
-          _scalingService.Scale(target.GetMaterialArea(matId, false), areaUnitType),
+          _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
           areaUnitType
         );
 
@@ -68,57 +93,142 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         AddMaterialProperty(
           materialQuantity,
           "volume",
-          _scalingService.Scale(target.GetMaterialVolume(matId), volumeUnitType),
+          _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
           volumeUnitType
         );
+      }
+    }
+  }
 
-        if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
+  private void ProcessMaterialsByElementTypes(List<DB.ElementId> elementIds, Dictionary<string, object> quantities)
+  {
+    Dictionary<DB.ElementId, double> matLengths = new(); // stores mat id to total length found for mat
+
+    foreach (DB.ElementId elementId in elementIds)
+    {
+      if (
+        _converterSettings.Current.Document.GetElement(elementId) is DB.Element element
+        && _converterSettings.Current.Document.GetElement(element.GetTypeId()) is DB.ElementType elementType
+      )
+      {
+        DB.ElementId elementMatId = DB.ElementId.InvalidElementId;
+
+        foreach (DB.Parameter param in elementType.Parameters)
         {
-          materialQuantity["materialName"] = material.Name;
-          materialQuantity["materialCategory"] = material.MaterialCategory;
-          materialQuantity["materialClass"] = material.MaterialClass;
-
-          // get StructuralAssetId (or try to)
-          DB.ElementId structuralAssetId = material.StructuralAssetId;
-          if (structuralAssetId != DB.ElementId.InvalidElementId)
+          DB.Definition def = param.Definition;
+          if (param.StorageType == DB.StorageType.ElementId && def.GetDataType() == DB.SpecTypeId.Reference.Material)
           {
-            StructuralAssetProperties structuralAssetProperties = _structuralAssetExtractor.TryGetProperties(
-              structuralAssetId
-            );
+            elementMatId = param.AsElementId();
+            break;
+          }
+        }
 
-            materialQuantity["structuralAsset"] = structuralAssetProperties.Name;
-            AddMaterialProperty(
-              materialQuantity,
-              "density",
-              structuralAssetProperties.Density,
-              structuralAssetProperties.DensityUnitId
-            );
-
-            // more reliable way of determining material type (wood/concrete/type) as it uses Revit enum
-            // materialClass, materialCategory etc. are user string inputs
-            materialQuantity["materialType"] = structuralAssetProperties.MaterialType;
-
-            // Only add compressive strength for concrete materials (used by F+E for Automate)
-            if (
-              structuralAssetProperties.MaterialType == "Concrete"
-              && structuralAssetProperties.CompressiveStrength.HasValue
-            )
+        if (elementMatId != DB.ElementId.InvalidElementId)
+        {
+          // try get the length from the element
+          foreach (DB.Parameter eParam in element.Parameters)
+          {
+            DB.Definition eParamDef = eParam.Definition;
+            var forgeTypeId = eParamDef.GetDataType();
+            if (forgeTypeId == DB.SpecTypeId.Length)
             {
-              AddMaterialProperty(
-                materialQuantity,
-                "compressiveStrength",
-                structuralAssetProperties.CompressiveStrength.Value,
-                structuralAssetProperties.CompressiveStrengthUnitId!
-              );
+              double length = eParam.AsDouble();
+              if (matLengths.TryGetValue(elementMatId, out double _))
+              {
+                matLengths[elementMatId] += length;
+              }
+              else
+              {
+                matLengths.Add(elementMatId, length);
+              }
             }
           }
-
-          quantities[material.Name] = materialQuantity;
         }
       }
     }
 
-    return quantities;
+    foreach (var entry in matLengths)
+    {
+      var materialQuantity = new Dictionary<string, object>();
+      var unitSettings = _converterSettings.Current.Document.GetUnits();
+
+      // add material props
+      if (TryAddMaterialPropertiesToQuantitiesDict(entry.Key, materialQuantity, out string matName))
+      {
+        quantities[matName] = materialQuantity;
+
+        // add length prop
+        var lengthUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId();
+        AddMaterialProperty(
+          materialQuantity,
+          "length",
+          _scalingService.Scale(entry.Value, lengthUnitType),
+          lengthUnitType
+        );
+      }
+    }
+  }
+
+  /// <summary>
+  /// Adds the material properties (like name, category, and class) to the material quantity dictionary
+  /// </summary>
+  /// <param name="matId">the material id</param>
+  /// <param name="materialQuantity"></param>
+  /// <param name="matName"></param>
+  /// <returns>true if material is found, false if not</returns>
+  private bool TryAddMaterialPropertiesToQuantitiesDict(
+    DB.ElementId matId,
+    Dictionary<string, object> materialQuantity,
+    out string matName
+  )
+  {
+    matName = "";
+    if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
+    {
+      materialQuantity["materialName"] = material.Name;
+      materialQuantity["materialCategory"] = material.MaterialCategory;
+      materialQuantity["materialClass"] = material.MaterialClass;
+
+      // get StructuralAssetId (or try to)
+      DB.ElementId structuralAssetId = material.StructuralAssetId;
+      if (structuralAssetId != DB.ElementId.InvalidElementId)
+      {
+        StructuralAssetProperties structuralAssetProperties = _structuralAssetExtractor.TryGetProperties(
+          structuralAssetId
+        );
+
+        materialQuantity["structuralAsset"] = structuralAssetProperties.Name;
+        AddMaterialProperty(
+          materialQuantity,
+          "density",
+          structuralAssetProperties.Density,
+          structuralAssetProperties.DensityUnitId
+        );
+
+        // more reliable way of determining material type (wood/concrete/type) as it uses Revit enum
+        // materialClass, materialCategory etc. are user string inputs
+        materialQuantity["materialType"] = structuralAssetProperties.MaterialType;
+
+        // Only add compressive strength for concrete materials (used by F+E for Automate)
+        if (
+          structuralAssetProperties.MaterialType == "Concrete"
+          && structuralAssetProperties.CompressiveStrength.HasValue
+        )
+        {
+          AddMaterialProperty(
+            materialQuantity,
+            "compressiveStrength",
+            structuralAssetProperties.CompressiveStrength.Value,
+            structuralAssetProperties.CompressiveStrengthUnitId!
+          );
+        }
+      }
+
+      matName = material.Name;
+      return true;
+    }
+
+    return false;
   }
 
   /// <summary>
@@ -129,7 +239,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   /// <param name="value">The numeric value of the property</param>
   /// <param name="unitId">The Forge type ID representing the units of the property</param>
   /// <remarks>
-  /// Saves code when used repeatedbly. Etabs implements an extension method to dicts (see utils folder). May be worth exploring.
+  /// Saves code when used repeatedly. Etabs implements an extension method to dicts (see utils folder). May be worth exploring.
   /// </remarks>
   private void AddMaterialProperty(
     Dictionary<string, object> materialQuantity,
