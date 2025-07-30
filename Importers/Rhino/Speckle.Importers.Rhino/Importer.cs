@@ -15,7 +15,7 @@ public class Importer(Sender sender)
     CancellationToken cancellationToken
   )
   {
-    using (new RhinoCore([], WindowStyle.NoWindow))
+    using (new RhinoCore(["/netcore-8"], WindowStyle.NoWindow))
     {
       //doc is often null so dispose the active doc too
       using var doc = RhinoDoc.Open(filePath, out _);

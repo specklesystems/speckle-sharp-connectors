@@ -418,11 +418,12 @@ public class SpeckleOperationWizard
     }
     using IClient client = _clientFactory.Create(SelectedAccount);
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
-    Workspace? selectedWorkspace =
-      SelectedWorkspace
-      ?? activeWorkspace
-      ?? (WorkspaceMenuHandler.Workspaces?.items.Count > 0 ? WorkspaceMenuHandler.Workspaces?.items[0] : null);
-    SelectedWorkspace = selectedWorkspace;
+    //TODO: this is broken currently, we need to fix it now the active workspace may not be right
+    // Workspace? selectedWorkspace =
+    //   SelectedWorkspace
+    //   ?? activeWorkspace
+    //   ?? (WorkspaceMenuHandler.Workspaces?.items.Count > 0 ? WorkspaceMenuHandler.Workspaces?.items[0] : null);
+    // SelectedWorkspace = selectedWorkspace;
     WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
   }
 

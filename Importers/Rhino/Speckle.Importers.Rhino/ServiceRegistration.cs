@@ -15,6 +15,7 @@ public static class ServiceRegistration
     services.AddRhinoConverters();
     services.AddTransient<Importer>();
     services.AddTransient<Progress>();
+    services.AddTransient<Sender>();
 
     // override default thread context
     services.AddSingleton<IThreadContext>(new ImporterThreadContext());

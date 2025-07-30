@@ -23,7 +23,7 @@ public sealed class JobProcessorInstance(
       FileimportJob? job = await repository.GetNextJob(connection, transaction, cancellationToken);
       if (job == null)
       {
-        logger.LogDebug("No job found");
+        logger.LogDebug("No job found, sleeping for {timeout}", s_idleTimeout);
         await Task.Delay(s_idleTimeout, cancellationToken);
         continue;
       }
@@ -34,6 +34,7 @@ public sealed class JobProcessorInstance(
 
       try
       {
+        logger.LogDebug("Job {jobId} found!", job.Id);
         jobStatus = await ExecuteJob(job, cancellationToken);
       }
       catch (Exception ex)

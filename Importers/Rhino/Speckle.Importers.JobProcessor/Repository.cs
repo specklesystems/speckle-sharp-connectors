@@ -52,7 +52,7 @@ public sealed class Repository(ILogger<Repository> logger)
     //lang=postgresql
     const string COMMAND_TEXT = """
       SELECT * FROM background_jobs
-      WHERE payload ->> 'fileType' = 'ifc' AND status = @status AND attempt < "maxAttempt"
+      WHERE payload ->> 'fileType' = 'obj' AND status = @status AND attempt < "maxAttempt"
       ORDER BY "createdAt"
       FOR UPDATE SKIP LOCKED
       LIMIT 1

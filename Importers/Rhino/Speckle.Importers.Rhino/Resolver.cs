@@ -29,7 +29,7 @@ public static class Resolver
   /// Directory used by assembly resolver to attempt load core Rhino assemblies. If not manually set,
   /// this will be determined by inspecting the registry
   /// </summary>
-  public static string? RhinoSystemDirectory
+  private static string? RhinoSystemDirectory
   {
     get
     {
@@ -47,7 +47,7 @@ public static class Resolver
   /// Whether or not to use the newest installation of Rhino on the system. By default the resolver will only use an
   /// installation with a matching major version.
   /// </summary>
-  public static bool UseLatest { get; set; }
+  private static bool UseLatest { get; set; }
 
   private static Assembly? ResolveForRhinoAssemblies(object? sender, ResolveEventArgs args)
   {
