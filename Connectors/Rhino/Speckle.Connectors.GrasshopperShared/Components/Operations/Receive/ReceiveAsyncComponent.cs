@@ -271,7 +271,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     ResetApiClient(UrlModelResource);
   }
 
-  private void ApiClient_OnVersionCreated(object sender, ProjectVersionsUpdatedMessage e)
+  private void ApiClient_OnVersionCreated(object? sender, ProjectVersionsUpdatedMessage e)
   {
     HandleNewCommit();
   }
