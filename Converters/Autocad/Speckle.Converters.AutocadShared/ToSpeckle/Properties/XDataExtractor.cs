@@ -26,9 +26,10 @@ public class XDataExtractor
 
     // Xdata is applied by applications, and are stored under the application name.
     // We're storing the xdata dictionary as a set of subdictionaries per application.
+    // in an app xdata dict, it is possible to have multiple entries of the same typecode
     Dictionary<string, object?> xDataDict = new();
     string? currentAppName = null;
-    Dictionary<string, object?> currentXData = new();
+    Dictionary<string, List<object?>> currentXData = new();
 
     foreach (TypedValue entry in entity.XData)
     {
@@ -43,7 +44,15 @@ public class XDataExtractor
         default:
           if (GetValidValue(entry.Value) is object val)
           {
-            currentXData[entry.TypeCode.ToString()] = val;
+            string key = entry.TypeCode.ToString();
+            if (currentXData.TryGetValue(key, out List<object?>? value))
+            {
+              value.Add(val);
+            }
+            else
+            {
+              currentXData[key] = new() { val };
+            }
           }
           break;
       }
@@ -55,7 +64,7 @@ public class XDataExtractor
 
   private void StoreAndClearCurrentAppXDataDict(
     string? appName,
-    Dictionary<string, object?> appXData,
+    Dictionary<string, List<object?>> appXData,
     Dictionary<string, object?> xDataDict
   )
   {
