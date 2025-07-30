@@ -180,7 +180,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     SpeckleBlockDefinitionWrapper? definition = null
   )
   {
-    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId;
+    string validAppId = string.IsNullOrWhiteSpace(appId) ? Guid.NewGuid().ToString() : appId!;
     Value = geometryBase is InstanceReferenceGeometry instance
       ? new SpeckleBlockInstanceWrapper()
       {
