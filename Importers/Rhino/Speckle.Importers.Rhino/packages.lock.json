@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net8.0-windows7.0": {
+      "Grasshopper": {
+        "type": "Direct",
+        "requested": "[8.21.25188.17001, )",
+        "resolved": "8.21.25188.17001",
+        "contentHash": "qpt9XQWuKLFfzn2cnYf5akfHRwYuffthK5AXsSY1UhjD0eG6bYSTtmAkNVH+Wdg130MZkGqJmPd012Om1kJPBA==",
+        "dependencies": {
+          "RhinoCommon": "[8.21.25188.17001]"
+        }
+      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -26,6 +35,16 @@
         "requested": "[1.14.1, )",
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
+      },
+      "Rhino.Inside": {
+        "type": "Direct",
+        "requested": "[8.0.7-beta, )",
+        "resolved": "8.0.7-beta",
+        "contentHash": "PNZdWysS2zI9vaxJ8HQig3iZA3Xg1yG1hnq09VPStQpceoj94iJ6xk0Ubddaw5oswkYYUIJRmQ8xr+bLTROs/g==",
+        "dependencies": {
+          "Grasshopper": "8.0.23304.9001",
+          "RhinoCommon": "8.0.23304.9001"
+        }
       },
       "RhinoCommon": {
         "type": "Direct",

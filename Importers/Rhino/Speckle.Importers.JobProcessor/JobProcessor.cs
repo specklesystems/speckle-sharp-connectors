@@ -15,7 +15,7 @@ public sealed class JobProcessorInstance(
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
   public async Task StartProcessing(CancellationToken cancellationToken = default)
   {
-    await using var connection = await repository.SetupConnection(cancellationToken);
+    await using var connection = await repository.SetupConnection(cancellationToken).ConfigureAwait(false);
 
     while (true)
     {

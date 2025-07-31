@@ -16,7 +16,7 @@ public sealed class Repository(ILogger<Repository> logger)
 
     string connectionString = ParseConnectionString(new(fileImportQueuePostgresUrl));
     var connection = new NpgsqlConnection(connectionString);
-    await connection.OpenAsync(cancellationToken);
+    await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
     return connection;
   }
 

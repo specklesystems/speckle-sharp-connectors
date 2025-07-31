@@ -28,6 +28,7 @@
     <PackageVersion Include="NUnit3TestAdapter" version="4.6.0" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.9.24194.18121" />
+    <PackageVersion Include="Rhino.Inside" Version="8.0.7-beta" />
     <PackageVersion Include="Grasshopper" Version="8.9.24194.18121" />
     <PackageVersion Include="RhinoWindows" Version="8.9.24194.18121" />
     <PackageVersion Include="Semver" Version="3.0.0" />

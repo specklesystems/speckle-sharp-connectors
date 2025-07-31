@@ -11,9 +11,6 @@ public sealed class RhinoJobHandler(Importer importer, IAccountFactory accountFa
 {
   public async Task<Version> ProcessJob(FileimportJob job, CancellationToken cancellationToken)
   {
-    //todo: download blob
-
-    var filePath = "";
     var account = await accountFactory.CreateAccount(
       new("http://127.0.0.1"), // job.Payload.ServerUrl, //TODO: we should grab serverUrl from the job. But currently it reports the docker network url, which is no bueno
       job.Payload.Token,
@@ -33,7 +30,13 @@ public sealed class RhinoJobHandler(Importer importer, IAccountFactory accountFa
         cancellationToken
       );
 
-      return await importer.Import(filePath, job.Payload.ProjectId, job.Payload.ModelId, account, cancellationToken);
+      return await importer.Import(
+        targetFilePath,
+        job.Payload.ProjectId,
+        job.Payload.ModelId,
+        account,
+        cancellationToken
+      );
     }
     finally
     {

@@ -285,8 +285,18 @@
       "speckle.importers.rhino": {
         "type": "Project",
         "dependencies": {
+          "Rhino.Inside": "[8.0.7-beta, )",
           "Speckle.Connectors.RhinoImporter": "[1.0.0, )",
           "Speckle.Converters.Rhino8": "[1.0.0, )"
+        }
+      },
+      "Grasshopper": {
+        "type": "CentralTransitive",
+        "requested": "[8.9.24194.18121, )",
+        "resolved": "8.0.23304.9001",
+        "contentHash": "L1Cse6nAxryzcZ7jsu3WzBiG9BYtgYsaNbRV+p55N+THKTFGmXx1PdBbiWtuxK9kB4jyuLVpeV8XBiYlSGA1Vw==",
+        "dependencies": {
+          "RhinoCommon": "[8.0.23304.9001]"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {
@@ -323,6 +333,16 @@
         "requested": "[1.0.1938.49, )",
         "resolved": "1.0.1938.49",
         "contentHash": "z8KnFnaTYzhA/ZnyRX0qGfS1NU5ZBJeClAH64F0fVDvdDJTvME7xl6zTJ0Jlfe1BtL3C0NH9xTy64shg2baKdw=="
+      },
+      "Rhino.Inside": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.7-beta, )",
+        "resolved": "8.0.7-beta",
+        "contentHash": "PNZdWysS2zI9vaxJ8HQig3iZA3Xg1yG1hnq09VPStQpceoj94iJ6xk0Ubddaw5oswkYYUIJRmQ8xr+bLTROs/g==",
+        "dependencies": {
+          "Grasshopper": "8.0.23304.9001",
+          "RhinoCommon": "8.0.23304.9001"
+        }
       },
       "Serilog": {
         "type": "CentralTransitive",
