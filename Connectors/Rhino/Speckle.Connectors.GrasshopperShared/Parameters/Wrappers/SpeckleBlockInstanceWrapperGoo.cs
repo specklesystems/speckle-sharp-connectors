@@ -67,7 +67,7 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         if (geometricGoo.IsReferencedGeometry)
         {
           return CurrentDocument.Document?.Objects.FindId(geometricGoo.ReferenceID) is RhinoObject rhinoObj
-                 && CastFromModelObject(rhinoObj);
+            && CastFromModelObject(rhinoObj);
         }
 
         if (geometricGoo is not InstanceReferenceGeometry instance)

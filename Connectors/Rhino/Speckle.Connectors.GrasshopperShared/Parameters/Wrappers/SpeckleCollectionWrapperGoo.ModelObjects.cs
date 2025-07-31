@@ -40,9 +40,9 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
         && materialWrapper.RhinoRenderMaterialId != Guid.Empty
       )
       {
-        Rhino.Render.RenderMaterial renderMaterial = CurrentDocument.Document.NotNull().RenderMaterials.Find(
-          materialWrapper.RhinoRenderMaterialId
-        );
+        Rhino.Render.RenderMaterial renderMaterial = CurrentDocument
+          .Document.NotNull()
+          .RenderMaterials.Find(materialWrapper.RhinoRenderMaterialId);
 
         atts.Material = renderMaterial;
       }

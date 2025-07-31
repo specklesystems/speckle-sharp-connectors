@@ -95,9 +95,9 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
           && materialWrapper.RhinoRenderMaterialId != Guid.Empty
         )
         {
-          Rhino.Render.RenderMaterial renderMaterial = CurrentDocument.Document.NotNull().RenderMaterials.Find(
-            materialWrapper.RhinoRenderMaterialId
-          );
+          Rhino.Render.RenderMaterial renderMaterial = CurrentDocument
+            .Document.NotNull()
+            .RenderMaterials.Find(materialWrapper.RhinoRenderMaterialId);
 
           objectAtts.RenderMaterial = renderMaterial;
           objectAtts.MaterialSource = ObjectMaterialSource.MaterialFromObject;

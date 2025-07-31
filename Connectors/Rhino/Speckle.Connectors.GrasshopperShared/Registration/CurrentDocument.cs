@@ -1,4 +1,3 @@
-
 using Grasshopper;
 using Rhino;
 
@@ -7,7 +6,7 @@ namespace Speckle.Connectors.GrasshopperShared.Registration;
 public static class CurrentDocument
 {
   private static RhinoDoc? s_headlessDoc;
-  
+
   public static void DisposeHeadlessDoc()
   {
 #if RHINO7_OR_GREATER
@@ -35,6 +34,7 @@ public static class CurrentDocument
     );
 #endif
   }
+
   /// <summary>
   /// Get the current document for this Grasshopper instance.
   /// This will correspond to the `ActiveDoc` on normal Rhino usage, while in headless mode it will try to load
@@ -59,7 +59,7 @@ public static class CurrentDocument
 
       return RhinoDoc.ActiveDoc;
 #else
-    return RhinoDoc.ActiveDoc;
+      return RhinoDoc.ActiveDoc;
 #endif
     }
   }

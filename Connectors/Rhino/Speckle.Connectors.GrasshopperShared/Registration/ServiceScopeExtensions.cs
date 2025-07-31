@@ -1,4 +1,3 @@
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Speckle.Connectors.GrasshopperShared.Registration;

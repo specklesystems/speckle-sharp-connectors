@@ -35,7 +35,7 @@ public class PriorityLoader : GH_AssemblyPriority
       .Initialize(rhinoConversionSettingsFactory.Create(CurrentDocument.Document.NotNull()));
     return scope;
   }
-  
+
   private void OnDocumentAdded(GH_DocumentServer sender, GH_Document doc)
   {
     // Add events for solution start and end
@@ -98,7 +98,6 @@ public class PriorityLoader : GH_AssemblyPriority
       return GH_LoadingInstruction.Abort;
     }
   }
-  
 
   private HostAppVersion GetVersion()
   {
