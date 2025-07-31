@@ -13,20 +13,32 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
     _planeConverter = planeConverter;
   }
 
-  public RG.TextEntity Convert(SA.Text target) =>
-    new RG.TextEntity
+  public RG.TextEntity Convert(SA.Text target)
+  {
+    RG.TextEntity result =
+      new()
+      {
+        Plane = _planeConverter.Convert(target.plane),
+        PlainText = target.value,
+        TextHeight = target.height,
+        TextOrientation = target.screenOriented ? TextOrientation.InView : TextOrientation.InPlane,
+        // text class does not have a scale prop.
+        // Scale is built in to the text height on publish, therefore a factor of 1 is always used here.
+        DimensionScale = 1.0,
+        TextHorizontalAlignment = GetTextHorizontalAlignment(target.alignmentH),
+        TextVerticalAlignment = GetTextVerticalAlignment(target.alignmentV),
+      };
+
+    // only set the max width if target has a non-null value.
+    // otherwise this will result in incorrectly wrapped text
+    if (target.maxWidth is double maxWidth)
     {
-      Plane = _planeConverter.Convert(target.plane),
-      PlainText = target.value,
-      TextHeight = target.height,
-      FormatWidth = target.maxWidth ?? 0,
+      result.FormatWidth = maxWidth;
+      result.TextIsWrapped = true;
+    }
 
-      TextOrientation = target.screenOriented ? TextOrientation.InView : TextOrientation.InPlane,
-
-      DimensionScale = 1.0, // Assuming no scaling is applied
-      TextHorizontalAlignment = GetTextHorizontalAlignment(target.alignmentH),
-      TextVerticalAlignment = GetTextVerticalAlignment(target.alignmentV),
-    };
+    return result;
+  }
 
   private TextHorizontalAlignment GetTextHorizontalAlignment(SA.AlignmentHorizontal alignment)
   {
