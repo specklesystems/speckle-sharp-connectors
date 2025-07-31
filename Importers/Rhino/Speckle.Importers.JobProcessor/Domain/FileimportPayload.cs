@@ -3,7 +3,7 @@
 /// <summary>
 /// Payload for the fileimport job
 /// </summary>
-public sealed class FileimportPayload
+internal sealed class FileimportPayload
 {
   public required string JobId { get; init; }
   public required string Token { get; init; }

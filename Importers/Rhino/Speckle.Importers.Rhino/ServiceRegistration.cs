@@ -3,6 +3,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
+using Speckle.Importers.Rhino.Internal;
 
 namespace Speckle.Importers.Rhino;
 
@@ -13,7 +14,6 @@ public static class ServiceRegistration
     services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
     services.AddRhino(false);
     services.AddRhinoConverters();
-    services.AddTransient<Importer>();
     services.AddTransient<Progress>();
     services.AddTransient<Sender>();
 

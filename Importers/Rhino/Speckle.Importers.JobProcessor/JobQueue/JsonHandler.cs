@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Dapper;
 
-namespace Speckle.Importers.JobProcessor;
+namespace Speckle.Importers.JobProcessor.JobQueue;
 
 internal sealed class JsonHandler<T> : SqlMapper.TypeHandler<T>
 {

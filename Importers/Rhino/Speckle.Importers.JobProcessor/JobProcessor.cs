@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Speckle.Importers.JobProcessor.Domain;
+using Speckle.Importers.JobProcessor.JobHandlers;
+using Speckle.Importers.JobProcessor.JobQueue;
 
 namespace Speckle.Importers.JobProcessor;
 
-public sealed class JobProcessorInstance(
+internal sealed class JobProcessorInstance(
   Repository repository,
   ILogger<JobProcessorInstance> logger,
   IJobHandler jobHandler

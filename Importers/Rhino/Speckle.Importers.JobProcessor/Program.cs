@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino.Runtime.InProcess;
 using RhinoInside;
 using Speckle.Importers.JobProcessor.Domain;
-using Speckle.Importers.Rhino;
+using Speckle.Importers.JobProcessor.JobHandlers;
+using Speckle.Importers.JobProcessor.JobQueue;
 
 namespace Speckle.Importers.JobProcessor;
 
@@ -25,8 +26,6 @@ public static class Program
     // DI setup
     var serviceCollection = new ServiceCollection();
     serviceCollection.AddJobProcessor();
-
-    serviceCollection.AddRhinoImporter();
 
     serviceCollection.AddTransient<IJobHandler, RhinoJobHandler>();
 

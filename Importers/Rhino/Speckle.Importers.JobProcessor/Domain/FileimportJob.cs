@@ -3,7 +3,7 @@
 /// <summary>
 ///DB model for the fileimport job.
 /// </summary>
-public sealed class FileimportJob
+internal sealed class FileimportJob
 {
   public required string Id { get; init; }
   public required string JobType { get; init; }

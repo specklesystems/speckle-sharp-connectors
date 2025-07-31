@@ -1,11 +1,16 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Formatting.Compact;
+using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Common;
+using Speckle.Importers.JobProcessor.JobQueue;
+using Speckle.Sdk;
 
 namespace Speckle.Importers.JobProcessor;
 
-public static class ServiceRegistration
+internal static class ServiceRegistration
 {
   public static IServiceCollection AddJobProcessor(this IServiceCollection serviceCollection)
   {
@@ -13,6 +18,11 @@ public static class ServiceRegistration
     serviceCollection.AddLoggingConfig();
     serviceCollection.AddTransient<JobProcessorInstance>();
     serviceCollection.AddTransient<Repository>();
+    serviceCollection.AddSpeckleSdk(
+      new Application(".NET File Import Job Processor", "jobprocessor"),
+      nameof(HostAppVersion.v3),
+      Assembly.GetExecutingAssembly().GetVersion()
+    );
     return serviceCollection;
   }
 

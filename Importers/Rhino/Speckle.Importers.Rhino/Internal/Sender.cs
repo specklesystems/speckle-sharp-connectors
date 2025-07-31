@@ -10,9 +10,9 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
-namespace Speckle.Importers.Rhino;
+namespace Speckle.Importers.Rhino.Internal;
 
-public class Sender(
+internal sealed class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,

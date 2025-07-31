@@ -3,7 +3,7 @@
 /// <summary>
 /// Status enumeration for the job.
 /// </summary>
-public enum JobStatus
+internal enum JobStatus
 {
   QUEUED,
   SUCCEEDED,

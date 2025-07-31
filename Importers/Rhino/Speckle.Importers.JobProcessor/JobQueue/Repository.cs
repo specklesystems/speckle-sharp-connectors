@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Speckle.Importers.JobProcessor.Domain;
 
-namespace Speckle.Importers.JobProcessor;
+namespace Speckle.Importers.JobProcessor.JobQueue;
 
-public sealed class Repository(ILogger<Repository> logger)
+internal sealed class Repository(ILogger<Repository> logger)
 {
   public async Task<NpgsqlConnection> SetupConnection(CancellationToken cancellationToken)
   {
