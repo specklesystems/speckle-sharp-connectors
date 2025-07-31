@@ -41,20 +41,23 @@ public class ClassPropertiesExtractor
     Dictionary<string, object?> elementProperties =
       new()
       {
-        { "elementId", element.Id.ToString()! },
+        { "elementId", element.Id.ToString() },
         { "builtInCategory", element.Category?.GetBuiltInCategory().ToString() },
-        { "worksetId", element.WorksetId.ToString() }
+        { "worksetId", element.WorksetId?.ToString() }
       };
 
-    // get workset name
-    if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
+    if (element.WorksetId is not null)
     {
-      DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
-      worksetName = workset.Name;
-      _worksetCache[element.WorksetId] = worksetName;
-    }
-    elementProperties.Add("worksetName", worksetName);
+      // get workset name
+      if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
+      {
+        DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
+        worksetName = workset.Name;
+        _worksetCache[element.WorksetId] = worksetName;
+      }
 
+      elementProperties.Add("worksetName", worksetName);
+    }
     return elementProperties;
   }
 }
