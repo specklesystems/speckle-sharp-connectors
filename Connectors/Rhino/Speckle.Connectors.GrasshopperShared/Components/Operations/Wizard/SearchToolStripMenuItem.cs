@@ -1,3 +1,5 @@
+using Speckle.Sdk.Common;
+
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
 public class SearchToolStripMenuItem
@@ -124,7 +126,7 @@ public class SearchToolStripMenuItem
     ParentDropDown.ItemClicked += (sender, args) =>
     {
       // we are not closing the dropdown only if user clicked the first item of the dropdown which is TextBox that we use for search
-      if (args.ClickedItem.Name == SearchItemId)
+      if (args.ClickedItem.NotNull().Name == SearchItemId)
       {
         return;
       }

@@ -6,10 +6,12 @@ namespace Speckle.Converters.AutocadShared.ToSpeckle;
 public class PropertiesExtractor : IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly XDataExtractor _xDataExtractor;
 
-  public PropertiesExtractor(ExtensionDictionaryExtractor extensionDictionaryExtractor)
+  public PropertiesExtractor(ExtensionDictionaryExtractor extensionDictionaryExtractor, XDataExtractor xDataExtractor)
   {
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _xDataExtractor = xDataExtractor;
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
@@ -20,6 +22,7 @@ public class PropertiesExtractor : IPropertiesExtractor
       "Extension Dictionary",
       properties
     );
+    AddDictionaryToPropertyDictionary(_xDataExtractor.GetXData(entity), "XData", properties);
 
     return properties;
   }

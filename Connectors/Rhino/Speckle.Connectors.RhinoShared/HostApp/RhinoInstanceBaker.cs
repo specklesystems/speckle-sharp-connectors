@@ -93,6 +93,9 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
 
           // POC: Currently we're relying on the definition name for identification if it's coming from speckle and from which model; could we do something else?
           var defName = $"{definitionProxy.name}-({definitionProxy.applicationId})-{baseLayerName}";
+          // we cannot place Block Definitions if we have "/" or "\" in the name
+          // https://linear.app/speckle/issue/CNX-2051/cant-create-instances-of-blocks-if-originating-from-speckle-sub-model
+          defName = RhinoUtils.CleanBlockDefinitionName(defName);
           var defIndex = doc.InstanceDefinitions.Add(
             defName,
             "No description", // POC: perhaps bring it along from source? We'd need to look at ACAD first

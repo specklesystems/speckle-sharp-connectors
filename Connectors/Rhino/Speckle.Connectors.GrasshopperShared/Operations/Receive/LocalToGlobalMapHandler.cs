@@ -53,7 +53,7 @@ internal sealed class LocalToGlobalMapHandler
 
     try
     {
-      List<(object, Base)> converted = SpeckleConversionContext.ConvertToHost(obj);
+      List<(object, Base)> converted = SpeckleConversionContext.Current.ConvertToHost(obj);
 
       if (converted.Count == 0)
       {
@@ -71,6 +71,21 @@ internal sealed class LocalToGlobalMapHandler
 
       if (obj is Speckle.Objects.Data.DataObject dataObject)
       {
+        // get color and mat on dataobject first
+        Color? dataObjColor = _colorUnpacker.Cache.TryGetValue(
+          dataObject.applicationId ?? "",
+          out var cachedDataObjColor
+        )
+          ? cachedDataObjColor
+          : null;
+
+        SpeckleMaterialWrapper? dataObjMat = _materialUnpacker.Cache.TryGetValue(
+          dataObject.applicationId ?? "",
+          out var cachedDataObjMaterial
+        )
+          ? cachedDataObjMaterial
+          : null;
+
         // get geometries
         List<SpeckleGeometryWrapper> geometries = new();
         foreach ((object convertedObj, Base original) in converted)
@@ -84,10 +99,10 @@ internal sealed class LocalToGlobalMapHandler
                 GeometryBase = geometryBase,
                 Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
                   ? cachedObjColor
-                  : null,
+                  : dataObjColor,
                 Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
                   ? cachedObjMaterial
-                  : null,
+                  : dataObjMat,
               };
 
             geometries.Add(wrapper);
