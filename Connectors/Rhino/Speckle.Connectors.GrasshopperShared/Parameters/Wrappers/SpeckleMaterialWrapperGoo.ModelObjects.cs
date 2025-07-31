@@ -2,9 +2,9 @@
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Render;
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
@@ -47,7 +47,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
           // this id can be the default render material id {defadefa-defa-defa-defa-defadefadefa} which tbh can't test for and will return null on find
           // assuming an id always exists and if failed to find, we'll use default.
           Rhino.Render.RenderMaterial matRenderMaterial =
-            RhinoDoc.ActiveDoc.RenderMaterials.Find(id) ?? Material.DefaultMaterial.RenderMaterial;
+            CurrentDocument.Document?.RenderMaterials.Find(id) ?? Material.DefaultMaterial.RenderMaterial;
           if (matRenderMaterial is null)
           {
             throw new SpeckleException($"Failed to find ModelRenderMaterial with guid: {id}");
@@ -72,7 +72,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
     {
       if (
         Value.RhinoRenderMaterialId is Guid matGuid
-        && RhinoDoc.ActiveDoc.RenderMaterials.Find(matGuid) is RenderMaterial existingMat
+        && CurrentDocument.Document?.RenderMaterials.Find(matGuid) is RenderMaterial existingMat
       )
       {
         target = (T)(object)(new ModelRenderMaterial(existingMat));
@@ -83,7 +83,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
         var atts = new ModelRenderMaterial.Attributes()
         {
           Name = Value.Name,
-          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, RhinoDoc.ActiveDoc)
+          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, CurrentDocument.Document)
         };
 
         target = (T)(object)(new ModelRenderMaterial(atts));

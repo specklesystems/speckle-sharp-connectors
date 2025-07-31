@@ -1,7 +1,6 @@
 using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Instances;
@@ -17,14 +16,10 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.GrasshopperShared.Registration;
-
-public static class ServiceScopeExtensions
-{
-  public static T Get<T>(this IServiceScope scope) => scope.ServiceProvider.GetRequiredService<T>();
-}
 
 public class PriorityLoader : GH_AssemblyPriority
 {
@@ -37,12 +32,38 @@ public class PriorityLoader : GH_AssemblyPriority
     var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(rhinoConversionSettingsFactory.Create(CurrentDocument.Document.NotNull()));
     return scope;
   }
+  
+  private void OnDocumentAdded(GH_DocumentServer sender, GH_Document doc)
+  {
+    // Add events for solution start and end
+    doc.SolutionStart += DocumentOnSolutionStart;
+    doc.SolutionEnd += DocumentOnSolutionEnd;
+  }
+
+  private void OnDocumentRemoved(GH_DocumentServer sender, GH_Document doc)
+  {
+    // Remove events for solution start and end
+    doc.SolutionStart -= DocumentOnSolutionStart;
+    doc.SolutionEnd -= DocumentOnSolutionEnd;
+  }
+
+  private void DocumentOnSolutionStart(object sender, GH_SolutionEventArgs e) => CurrentDocument.SetupHeadlessDoc();
+
+  private void DocumentOnSolutionEnd(object sender, GH_SolutionEventArgs e) => CurrentDocument.DisposeHeadlessDoc();
 
   public override GH_LoadingInstruction PriorityLoad()
   {
+#if RHINO7_OR_GREATER
+    if (Instances.RunningHeadless)
+    {
+      // If GH is running headless, we listen for document added/removed events.
+      Instances.DocumentServer.DocumentAdded += OnDocumentAdded;
+      Instances.DocumentServer.DocumentRemoved += OnDocumentRemoved;
+    }
+#endif
     Instances.ComponentServer.AddCategoryIcon(ComponentCategories.PRIMARY_RIBBON, Resources.speckle_logo);
     Instances.ComponentServer.AddCategorySymbolName(ComponentCategories.PRIMARY_RIBBON, 'S');
 
@@ -77,6 +98,7 @@ public class PriorityLoader : GH_AssemblyPriority
       return GH_LoadingInstruction.Abort;
     }
   }
+  
 
   private HostAppVersion GetVersion()
   {

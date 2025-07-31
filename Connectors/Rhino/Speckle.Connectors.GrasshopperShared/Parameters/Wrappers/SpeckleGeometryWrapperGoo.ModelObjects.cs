@@ -3,10 +3,11 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
 using Grasshopper.Rhinoceros.Render;
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -75,7 +76,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         CastTo(ref modelObjectAtts);
 
         // create model object
-        ModelObject modelObject = new(RhinoDoc.ActiveDoc, modelObjectAtts, Value.GeometryBase);
+        ModelObject modelObject = new(CurrentDocument.Document, modelObjectAtts, Value.GeometryBase);
         target = (T)(object)modelObject;
         return true;
 
@@ -94,7 +95,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
           && materialWrapper.RhinoRenderMaterialId != Guid.Empty
         )
         {
-          Rhino.Render.RenderMaterial renderMaterial = RhinoDoc.ActiveDoc.RenderMaterials.Find(
+          Rhino.Render.RenderMaterial renderMaterial = CurrentDocument.Document.NotNull().RenderMaterials.Find(
             materialWrapper.RhinoRenderMaterialId
           );
 
@@ -165,7 +166,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       default:
         break;
     }
-    return matId is Guid validId ? RhinoDoc.ActiveDoc.RenderMaterials.Find(validId) : null;
+    return matId is Guid validId ? CurrentDocument.Document?.RenderMaterials.Find(validId) : null;
   }
 
   private bool SetValueAsObjectOrInstanceWrapper(
@@ -215,7 +216,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     SpeckleBlockDefinitionWrapper? definition = null;
     if (geometryBase is InstanceReferenceGeometry instance)
     {
-      var instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.FindId(instance.ParentIdefId);
+      var instanceDef = CurrentDocument.Document?.InstanceDefinitions.FindId(instance.ParentIdefId);
       if (instanceDef != null)
       {
         var defGoo = new SpeckleBlockDefinitionWrapperGoo();

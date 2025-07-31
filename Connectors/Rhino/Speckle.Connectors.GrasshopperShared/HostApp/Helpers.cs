@@ -5,6 +5,7 @@ using Grasshopper.Kernel.Types;
 using Rhino;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -70,7 +71,7 @@ public static class GrasshopperHelpers
 
   public static Transform MatrixToTransform(Matrix4x4 matrix, string units)
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+    var currentDoc = CurrentDocument.Document.NotNull(); // POC: too much right now to interface around
     var conversionFactor = Units.GetConversionFactor(units, currentDoc.ModelUnitSystem.ToSpeckleString());
 
     var t = Transform.Identity;
@@ -98,7 +99,7 @@ public static class GrasshopperHelpers
 
   public static Matrix4x4 TransformToMatrix(Transform rhinoTransform, string? units)
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+    var currentDoc = CurrentDocument.Document.NotNull(); // POC: too much right now to interface around
     var conversionFactor = Units.GetConversionFactor(currentDoc.ModelUnitSystem.ToSpeckleString(), units);
 
     var m = new Matrix4x4

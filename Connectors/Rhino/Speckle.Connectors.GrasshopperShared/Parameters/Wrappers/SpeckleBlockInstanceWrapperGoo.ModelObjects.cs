@@ -1,9 +1,9 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros.Model;
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.Registration;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
@@ -105,7 +105,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       return existingModelDef;
     }
 
-    var doc = RhinoDoc.ActiveDoc;
+    var doc = CurrentDocument.Document;
 
     if (doc == null)
     {
@@ -165,7 +165,7 @@ public partial class SpeckleBlockInstanceWrapperGoo
       return false;
     }
 
-    var doc = RhinoDoc.ActiveDoc;
+    var doc = CurrentDocument.Document;
     var instanceDef = doc?.InstanceDefinitions.Find(Value.Definition.Name);
 
     if (instanceDef != null)

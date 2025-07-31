@@ -11,6 +11,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using OS = System.Environment;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -384,11 +385,11 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
 #if RHINO_8
       case Rhinoceros.Params.IGH_ModelContentData contentData:
-        return contentData.IsReferencedData ? Rhino.RhinoDoc.ActiveDoc?.Name ?? "Untitled.3dm" : string.Empty;
+        return contentData.IsReferencedData ? CurrentDocument.Document?.Name ?? "Untitled.3dm" : string.Empty;
 #endif
 
       case IGH_GeometricGoo geom:
-        return geom.IsReferencedGeometry ? Rhino.RhinoDoc.ActiveDoc?.Name ?? "Untitled.3dm" : string.Empty;
+        return geom.IsReferencedGeometry ? CurrentDocument.Document?.Name ?? "Untitled.3dm" : string.Empty;
 
       case IGH_Goo goo:
         return string.Empty;

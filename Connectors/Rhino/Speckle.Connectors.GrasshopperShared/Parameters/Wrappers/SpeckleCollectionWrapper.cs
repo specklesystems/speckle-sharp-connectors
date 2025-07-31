@@ -1,6 +1,8 @@
 using Grasshopper.Kernel.Types;
 using Rhino;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
@@ -80,7 +82,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// Will attempt to retrieve an existing Layer from the <see cref="Path"/>.
   /// </summary>
   /// <returns>Index of existing layer if found, or -1 if not.</returns>
-  public int GetLayerIndex() => RhinoDoc.ActiveDoc.Layers.FindByFullPath(string.Join("::", Path), -1);
+  public int GetLayerIndex() => CurrentDocument.Document.NotNull().Layers.FindByFullPath(string.Join("::", Path), -1);
 
   // updates the elements' paths inside this collection
   private void OnPathChanged()

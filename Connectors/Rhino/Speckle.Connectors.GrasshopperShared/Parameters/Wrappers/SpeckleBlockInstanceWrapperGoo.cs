@@ -1,9 +1,9 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -66,8 +66,8 @@ public partial class SpeckleBlockInstanceWrapperGoo : GH_Goo<SpeckleBlockInstanc
         // need to get the id of the referenced geometry here and pass the retrieved object
         if (geometricGoo.IsReferencedGeometry)
         {
-          return RhinoDoc.ActiveDoc?.Objects.FindId(geometricGoo.ReferenceID) is RhinoObject rhinoObj
-            && CastFromModelObject(rhinoObj);
+          return CurrentDocument.Document?.Objects.FindId(geometricGoo.ReferenceID) is RhinoObject rhinoObj
+                 && CastFromModelObject(rhinoObj);
         }
 
         if (geometricGoo is not InstanceReferenceGeometry instance)

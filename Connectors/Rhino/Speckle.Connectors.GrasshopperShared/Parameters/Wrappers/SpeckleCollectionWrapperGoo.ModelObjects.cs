@@ -2,7 +2,8 @@
 using Grasshopper.Kernel.Types;
 using Grasshopper.Rhinoceros;
 using Grasshopper.Rhinoceros.Model;
-using Rhino;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -39,7 +40,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
         && materialWrapper.RhinoRenderMaterialId != Guid.Empty
       )
       {
-        Rhino.Render.RenderMaterial renderMaterial = RhinoDoc.ActiveDoc.RenderMaterials.Find(
+        Rhino.Render.RenderMaterial renderMaterial = CurrentDocument.Document.NotNull().RenderMaterials.Find(
           materialWrapper.RhinoRenderMaterialId
         );
 
@@ -76,7 +77,7 @@ public partial class SpeckleCollectionWrapperGoo : GH_Goo<SpeckleCollectionWrapp
         SpeckleMaterialWrapper? layerMaterial = null;
         if (modelLayer.Material?.Id is Guid id)
         {
-          var mat = RhinoDoc.ActiveDoc.RenderMaterials.Find(id);
+          var mat = CurrentDocument.Document.NotNull().RenderMaterials.Find(id);
           SpeckleMaterialWrapperGoo materialGoo = new();
           materialGoo.CastFrom(mat);
           layerMaterial = materialGoo.Value;

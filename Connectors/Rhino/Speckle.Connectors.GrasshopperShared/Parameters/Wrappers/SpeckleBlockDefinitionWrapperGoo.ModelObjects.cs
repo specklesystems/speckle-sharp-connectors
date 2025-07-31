@@ -1,7 +1,7 @@
 #if RHINO8_OR_GREATER
 using Grasshopper.Rhinoceros.Model;
-using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -79,7 +79,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo
 
     if (type == typeof(ModelInstanceDefinition))
     {
-      var doc = RhinoDoc.ActiveDoc;
+      var doc = CurrentDocument.Document;
       var instanceDef = doc?.InstanceDefinitions.Find(Value.Name); // POC: this seems dangerous as users can change rhino block names
       if (instanceDef != null)
       {
