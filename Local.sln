@@ -281,6 +281,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc", "Im
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rhino", "Rhino", "{8F2BAB74-BA0A-005A-0FF9-9498950E3ADC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.JobProcessor", "Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj", "{391676A9-0E05-9346-FDB9-4F5296F00509}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Rhino", "Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj", "{A9B240B9-4F3D-DB41-CB33-BD2019BBCCF2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sdk", "Sdk", "{FF13A09E-0E72-1904-124B-A4E979EF28D3}"
@@ -307,11 +309,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Performance", "Sdk\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Testing", "Sdk\Speckle.Testing\Speckle.Testing.csproj", "{02E79865-6261-CDE0-77EA-3DD2E01DACBD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{FBD58ABD-9704-C232-7CF3-D96EC5CFCBE6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Objects", "..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj", "{FBD58ABD-9704-C232-7CF3-D96EC5CFCBE6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{0201A282-BEFA-8897-C535-03EBAC94870B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{0201A282-BEFA-8897-C535-03EBAC94870B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies", "..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj", "{0677CA87-027F-D526-4463-3517F75B76EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk.Dependencies", "..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj", "{0677CA87-027F-D526-4463-3517F75B76EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -710,6 +712,12 @@ Global
 		{9F11639F-3AB6-867F-7968-FFF8BFD8C410}.Local|Any CPU.Build.0 = Local|Any CPU
 		{9F11639F-3AB6-867F-7968-FFF8BFD8C410}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F11639F-3AB6-867F-7968-FFF8BFD8C410}.Release|Any CPU.Build.0 = Release|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Local|Any CPU.Build.0 = Local|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{391676A9-0E05-9346-FDB9-4F5296F00509}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A9B240B9-4F3D-DB41-CB33-BD2019BBCCF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A9B240B9-4F3D-DB41-CB33-BD2019BBCCF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9B240B9-4F3D-DB41-CB33-BD2019BBCCF2}.Local|Any CPU.ActiveCfg = Local|Any CPU
@@ -927,6 +935,7 @@ Global
 		{9DC47E2F-957F-CECC-82C0-1BAD872F8E13} = {88E31408-0177-4235-0BE8-6C9C8103E392}
 		{9F11639F-3AB6-867F-7968-FFF8BFD8C410} = {88E31408-0177-4235-0BE8-6C9C8103E392}
 		{8F2BAB74-BA0A-005A-0FF9-9498950E3ADC} = {0B7587C3-F447-44C0-7126-E1085C8A32F4}
+		{391676A9-0E05-9346-FDB9-4F5296F00509} = {8F2BAB74-BA0A-005A-0FF9-9498950E3ADC}
 		{A9B240B9-4F3D-DB41-CB33-BD2019BBCCF2} = {8F2BAB74-BA0A-005A-0FF9-9498950E3ADC}
 		{9AA81E7A-C9BC-C56B-BE8F-55BC1D85EEBF} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}
 		{1BD0E5FD-D4B8-8018-08FE-E7DD4ABA741F} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}

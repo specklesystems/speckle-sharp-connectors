@@ -4,6 +4,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <OutputType>Exe</OutputType>
+    <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
