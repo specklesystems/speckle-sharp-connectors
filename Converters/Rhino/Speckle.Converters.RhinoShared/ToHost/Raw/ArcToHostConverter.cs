@@ -16,7 +16,7 @@ public class ArcToHostConverter : ITypedConverter<SOG.Arc, RG.Arc>, ITypedConver
   )
   {
     _pointConverter = pointConverter;
-    this._intervalConverter = intervalConverter;
+    _intervalConverter = intervalConverter;
   }
 
   /// <summary>
