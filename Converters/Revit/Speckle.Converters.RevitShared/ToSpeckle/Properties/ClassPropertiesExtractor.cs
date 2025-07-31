@@ -11,7 +11,7 @@ public class ClassPropertiesExtractor
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
-  private readonly Dictionary<DB.WorksetId, string> _worksetCache = new();
+  private readonly Dictionary<int, string> _worksetCache = new();
 
   public ClassPropertiesExtractor(IConverterSettingsStore<RevitConversionSettings> converterSettings)
   {
@@ -46,14 +46,15 @@ public class ClassPropertiesExtractor
         { "worksetId", element.WorksetId?.ToString() }
       };
 
-    if (element.WorksetId is not null)
+    int? worksetId = element.WorksetId?.IntegerValue;
+    if (worksetId is not null)
     {
       // get workset name
-      if (!_worksetCache.TryGetValue(element.WorksetId, out var worksetName))
+      if (!_worksetCache.TryGetValue(worksetId.Value, out var worksetName))
       {
         DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
         worksetName = workset.Name;
-        _worksetCache[element.WorksetId] = worksetName;
+        _worksetCache[worksetId.Value] = worksetName;
       }
 
       elementProperties.Add("worksetName", worksetName);
