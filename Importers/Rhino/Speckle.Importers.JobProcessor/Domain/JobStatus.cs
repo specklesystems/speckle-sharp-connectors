@@ -6,6 +6,7 @@
 internal enum JobStatus
 {
   QUEUED,
+  PROCESSING,
   SUCCEEDED,
   FAILED,
 }

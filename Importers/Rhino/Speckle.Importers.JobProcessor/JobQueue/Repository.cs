@@ -43,25 +43,43 @@ internal sealed class Repository(ILogger<Repository> logger)
     return builder.ConnectionString;
   }
 
-  public async Task<FileimportJob?> GetNextJob(
-    IDbConnection connection,
-    IDbTransaction transaction,
-    CancellationToken cancellationToken
-  )
+  public async Task<FileimportJob?> GetNextJob(IDbConnection connection, CancellationToken cancellationToken)
   {
     //lang=postgresql
     const string COMMAND_TEXT = """
-      SELECT * FROM background_jobs
-      WHERE payload ->> 'fileType' = 'obj' AND status = @status AND attempt < "maxAttempt"
-      ORDER BY "createdAt"
-      FOR UPDATE SKIP LOCKED
-      LIMIT 1
+      WITH next_job AS (
+          UPDATE background_jobs
+          SET
+              "attempt" = "attempt" + 1,
+              "status" = @Status1,
+              "updatedAt" = NOW()
+          WHERE id = (
+              SELECT id FROM background_jobs
+              WHERE ( --queued job
+                  payload ->> 'fileType' = 'obj'
+                  AND status = @Status2
+              )
+              OR ( --timed job left on processing state
+                  payload ->> 'fileType' = 'obj'
+                  AND status = @Status1
+                  AND "updatedAt" < NOW() - ("timeoutMs" * interval '1 millisecond')
+              )
+              ORDER BY "createdAt"
+              FOR UPDATE SKIP LOCKED
+              LIMIT 1
+          )
+          RETURNING *
+      )
+      SELECT * FROM next_job;
       """;
 
     var command = new CommandDefinition(
       commandText: COMMAND_TEXT,
-      parameters: new { Status = nameof(JobStatus.QUEUED).ToLowerInvariant() },
-      transaction: transaction,
+      parameters: new
+      {
+        Status1 = nameof(JobStatus.PROCESSING).ToLowerInvariant(),
+        Status2 = nameof(JobStatus.QUEUED).ToLowerInvariant()
+      },
       cancellationToken: cancellationToken
     );
 
@@ -70,36 +88,23 @@ internal sealed class Repository(ILogger<Repository> logger)
 
   public async Task SetJobStatus(
     IDbConnection connection,
-    IDbTransaction? transaction,
     string jobId,
     JobStatus jobStatus,
-    int attempt,
     CancellationToken cancellationToken
   )
   {
-    logger.LogInformation(
-      "Updating job: {jobId}'s status to {jobStatus}, with attempt: {attempt}",
-      jobId,
-      jobStatus,
-      attempt
-    );
+    logger.LogInformation("Updating job: {jobId}'s status to {jobStatus}", jobId, jobStatus);
 
     //lang=postgresql
     const string COMMAND_TEXT = """
       UPDATE background_jobs
-      SET status = @status, "updatedAt" = NOW(), attempt = @attempt
+      SET status = @status, "updatedAt" = NOW()
       WHERE id = @jobId
       """;
 
     var command = new CommandDefinition(
       commandText: COMMAND_TEXT,
-      parameters: new
-      {
-        status = jobStatus.ToString().ToLowerInvariant(),
-        attempt,
-        jobId,
-      },
-      transaction: transaction,
+      parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
       cancellationToken: cancellationToken
     );
 

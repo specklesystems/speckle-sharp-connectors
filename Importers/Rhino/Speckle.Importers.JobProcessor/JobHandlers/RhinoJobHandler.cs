@@ -1,22 +1,14 @@
 ﻿using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.Rhino;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-internal sealed class RhinoJobHandler(IAccountFactory accountFactory, IClientFactory clientFactory) : IJobHandler
+internal sealed class RhinoJobHandler : IJobHandler
 {
-  public async Task<Version> ProcessJob(FileimportJob job, CancellationToken cancellationToken)
+  public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
-    var account = await accountFactory.CreateAccount(
-      new("http://127.0.0.1"), // job.Payload.ServerUrl, //TODO: we should grab serverUrl from the job. But currently it reports the docker network url, which is no bueno
-      job.Payload.Token,
-      cancellationToken: cancellationToken
-    );
-
-    using var client = clientFactory.Create(account);
     var directory = Directory.CreateTempSubdirectory("speckle-file-import");
     try
     {
@@ -33,7 +25,7 @@ internal sealed class RhinoJobHandler(IAccountFactory accountFactory, IClientFac
         targetFilePath,
         job.Payload.ProjectId,
         job.Payload.ModelId,
-        account,
+        client.Account,
         cancellationToken
       );
     }
