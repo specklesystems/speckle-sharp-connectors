@@ -29,5 +29,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
+    serviceCollection.AddScoped<XDataExtractor>();
   }
 }
