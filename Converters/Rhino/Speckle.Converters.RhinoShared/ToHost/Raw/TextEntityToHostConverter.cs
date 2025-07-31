@@ -1,5 +1,6 @@
 using Rhino.DocObjects;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -34,7 +35,7 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
       SA.AlignmentHorizontal.Left => TextHorizontalAlignment.Left,
       SA.AlignmentHorizontal.Center => TextHorizontalAlignment.Center,
       SA.AlignmentHorizontal.Right => TextHorizontalAlignment.Right,
-      _ => TextHorizontalAlignment.Left // Default to Left if unknown
+      _ => throw new ConversionException($"Unexpected horizontal alignment value found on text: {alignment}")
     };
   }
 
@@ -45,7 +46,7 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
       SA.AlignmentVertical.Top => TextVerticalAlignment.Top,
       SA.AlignmentVertical.Center => TextVerticalAlignment.Middle,
       SA.AlignmentVertical.Bottom => TextVerticalAlignment.Bottom,
-      _ => TextVerticalAlignment.Middle // Default to Middle if unknown
+      _ => throw new ConversionException($"Unexpected vertical alignment value found on text: {alignment}")
     };
   }
 }
