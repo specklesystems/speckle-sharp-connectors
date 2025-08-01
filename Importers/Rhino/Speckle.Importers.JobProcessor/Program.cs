@@ -2,6 +2,7 @@
 
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rhino.Runtime.InProcess;
 using RhinoInside;
 using Speckle.Importers.JobProcessor.Domain;
@@ -32,12 +33,20 @@ public static class Program
     var serviceProvider = serviceCollection.BuildServiceProvider();
 
     var processor = serviceProvider.GetRequiredService<JobProcessorInstance>();
-
-    using (new RhinoCore(["/netcore-8"], WindowStyle.NoWindow))
+    var logger = serviceProvider.GetRequiredService<ILogger<object>>();
+    try
     {
-      //What ever thread RhinoCore is created on it will grab as soon as it's available, and it will hog it forever.
-      //Right now, we're giving it the main STA thread (not 100% if it needs STA or if it could work on any thread)
-      await Task.Run(async () => await processor.StartProcessing()).ConfigureAwait(false);
+      using (new RhinoCore(["/netcore-8"], WindowStyle.NoWindow))
+      {
+        //What ever thread RhinoCore is created on it will grab as soon as it's available, and it will hog it forever.
+        //Right now, we're giving it the main STA thread (not 100% if it needs STA or if it could work on any thread)
+        await Task.Run(async () => await processor.StartProcessing()).ConfigureAwait(false);
+      }
+    }
+    catch (Exception ex)
+    {
+      logger.LogCritical(ex, "Unhandled exception reached entry point");
+      throw;
     }
   }
 }

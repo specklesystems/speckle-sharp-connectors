@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Importers.Rhino.Internal;
+using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
@@ -24,12 +25,28 @@ public static class Importer
     var serviceProvider = serviceCollection.BuildServiceProvider();
 
     //doc is often null so dispose the active doc too
-    using var doc = RhinoDoc.Open(filePath, out _);
-    using var __ = RhinoDoc.ActiveDoc;
 
-    var sender = serviceProvider.GetRequiredService<Sender>();
-    var version = await sender.Send(projectId, modelId, account, cancellationToken);
+    using RhinoDoc open = RhinoDoc.CreateHeadless(null);
+    try
+    {
+      RhinoDoc.ActiveDoc = open;
+      if (!open.Import(filePath))
+      {
+        throw new SpeckleException("Rhino could not import this file");
+      }
 
-    return version;
+      // using RhinoDoc? doc = RhinoDoc.ActiveDoc;
+
+      var sender = serviceProvider.GetRequiredService<Sender>();
+      var version = await sender.Send(projectId, modelId, account, cancellationToken);
+      return version;
+    }
+    finally
+    {
+      //Being a bit extra defensive that we're cleaning up the old doc
+      RhinoDoc.ActiveDoc?.Dispose();
+      RhinoDoc.ActiveDoc = null;
+      GC.Collect();
+    }
   }
 }

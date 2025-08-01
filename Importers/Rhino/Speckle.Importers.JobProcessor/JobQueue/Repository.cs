@@ -20,7 +20,7 @@ internal sealed class Repository(ILogger<Repository> logger)
     return connection;
   }
 
-  private string ParseConnectionString(Uri connectionUrl)
+  private static string ParseConnectionString(Uri connectionUrl)
   {
     if (connectionUrl.Scheme is not "postgres" and not "postgresql")
     {

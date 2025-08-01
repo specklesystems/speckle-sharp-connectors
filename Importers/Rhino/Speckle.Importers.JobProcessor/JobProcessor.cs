@@ -75,11 +75,11 @@ internal sealed class JobProcessorInstance(
     await client.FileImport.FinishFileImportJob(input, cancellationToken);
   }
 
-  private async Task<IClient> SetupClient(string token, CancellationToken cancellationToken)
+  private async Task<IClient> SetupClient(FileimportJob job, CancellationToken cancellationToken)
   {
     var account = await accountFactory.CreateAccount(
-      new("http://127.0.0.1"), // job.Payload.ServerUrl, //TODO: we should grab serverUrl from the job. But currently it reports the docker network url, which is no bueno
-      token,
+      job.Payload.ServerUrl,
+      job.Payload.Token,
       cancellationToken: cancellationToken
     );
 
@@ -89,7 +89,7 @@ internal sealed class JobProcessorInstance(
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
   private async Task<JobStatus> AttemptJob(FileimportJob job, CancellationToken cancellationToken)
   {
-    using IClient speckleClient = await SetupClient(job.Payload.Token, cancellationToken);
+    using IClient speckleClient = await SetupClient(job, cancellationToken);
     try
     {
       if (job.Attempt > job.MaxAttempt)
