@@ -92,6 +92,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.ModelObjects.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Properties\Resources.Designer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Registration\CurrentDocument.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Registration\ServiceScopeExtensions.cs" />
     <Compile Include="..\Speckle.Connectors.GrasshopperShared\HostApp\SpeckleConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />

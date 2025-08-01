@@ -5,6 +5,7 @@ using Rhino;
 using Rhino.Display;
 using Rhino.Geometry;
 using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -32,7 +33,7 @@ public class SpeckleBlockInstanceWrapper : SpeckleGeometryWrapper
     // gross af but override the incoming transform to be identity, since this constructor should be a default constructor
     Transform identity = transform == Transform.Identity ? transform : Transform.Identity;
 
-    var units = RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString();
+    var units = CurrentDocument.Document?.ModelUnitSystem.ToSpeckleString();
     _instanceProxy = new()
     {
       definitionId = "placeholder",
