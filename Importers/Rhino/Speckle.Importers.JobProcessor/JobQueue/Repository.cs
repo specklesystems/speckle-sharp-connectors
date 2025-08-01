@@ -56,11 +56,11 @@ internal sealed class Repository(ILogger<Repository> logger)
           WHERE id = (
               SELECT id FROM background_jobs
               WHERE ( --queued job
-                  payload ->> 'fileType' = 'obj'
+                  (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
               )
               OR ( --timed job left on processing state
-                  payload ->> 'fileType' = 'obj'
+                  (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status1
                   AND "updatedAt" < NOW() - ("timeoutMs" * interval '1 millisecond')
               )
@@ -78,7 +78,8 @@ internal sealed class Repository(ILogger<Repository> logger)
       parameters: new
       {
         Status1 = nameof(JobStatus.PROCESSING).ToLowerInvariant(),
-        Status2 = nameof(JobStatus.QUEUED).ToLowerInvariant()
+        Status2 = nameof(JobStatus.QUEUED).ToLowerInvariant(),
+        FileTypes = SupportedFileTypes.FileTypes,
       },
       cancellationToken: cancellationToken
     );

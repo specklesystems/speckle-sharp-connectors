@@ -89,9 +89,11 @@ internal sealed class JobProcessorInstance(
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
   private async Task<JobStatus> AttemptJob(FileimportJob job, CancellationToken cancellationToken)
   {
-    using IClient speckleClient = await SetupClient(job, cancellationToken);
+    IClient? speckleClient = null;
     try
     {
+      speckleClient = await SetupClient(job, cancellationToken);
+
       if (job.Attempt > job.MaxAttempt)
       {
         //something went wrong, it should have been marked as failed
@@ -122,9 +124,15 @@ internal sealed class JobProcessorInstance(
     {
       logger.LogError(ex, "Attempt {attempt} to process {jobId} failed", job.Attempt, job.Id);
 
-      //TERMINAL ERROR
-      await ReportFailed(job, speckleClient, ex, cancellationToken);
+      if (speckleClient is not null)
+      {
+        await ReportFailed(job, speckleClient, ex, cancellationToken);
+      }
       return JobStatus.FAILED;
+    }
+    finally
+    {
+      speckleClient?.Dispose();
     }
   }
 

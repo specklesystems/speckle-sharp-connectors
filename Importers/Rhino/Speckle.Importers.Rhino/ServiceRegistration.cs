@@ -21,7 +21,9 @@ public static class ServiceRegistration
       Assembly.GetExecutingAssembly().GetVersion(),
       typeof(Point).Assembly
     );
+    //Avoid calling Initialize because logging has many issues
     // services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
+
     services.AddRhino(false);
     services.AddRhinoConverters();
     services.AddTransient<Progress>();
