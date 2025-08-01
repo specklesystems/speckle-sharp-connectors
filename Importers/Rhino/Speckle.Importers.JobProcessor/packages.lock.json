@@ -290,15 +290,6 @@
           "Speckle.Converters.Rhino8": "[1.0.0, )"
         }
       },
-      "Grasshopper": {
-        "type": "CentralTransitive",
-        "requested": "[8.9.24194.18121, )",
-        "resolved": "8.0.23304.9001",
-        "contentHash": "L1Cse6nAxryzcZ7jsu3WzBiG9BYtgYsaNbRV+p55N+THKTFGmXx1PdBbiWtuxK9kB4jyuLVpeV8XBiYlSGA1Vw==",
-        "dependencies": {
-          "RhinoCommon": "[8.0.23304.9001]"
-        }
-      },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",
