@@ -3,9 +3,9 @@ using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Wizard;
 
-public class WorkspaceSelectedEventArgs(Workspace? model) : EventArgs
+public class WorkspaceSelectedEventArgs(LimitedWorkspace? model) : EventArgs
 {
-  public Workspace? SelectedWorkspace { get; } = model;
+  public LimitedWorkspace? SelectedWorkspace { get; } = model;
 }
 
 public class WorkspaceMenuHandler
@@ -15,7 +15,7 @@ public class WorkspaceMenuHandler
   public bool IsPersonalProjects { get; set; }
   private SearchToolStripMenuItem? _searchItem;
   private readonly Func<Task> _createWorkspace;
-  private Workspace? SelectedWorkspace { get; set; }
+  private LimitedWorkspace? SelectedWorkspace { get; set; }
 
   public ResourceCollection<Workspace>? Workspaces { get; set; }
   public Bitmap? Logo { get; private set; }
@@ -103,7 +103,7 @@ public class WorkspaceMenuHandler
     );
   }
 
-  private void OnWorkspaceSelected(Workspace? workspace)
+  private void OnWorkspaceSelected(LimitedWorkspace? workspace)
   {
     IsPersonalProjects = workspace == null;
     _menu?.Close();
@@ -112,7 +112,7 @@ public class WorkspaceMenuHandler
     WorkspaceSelected?.Invoke(this, new WorkspaceSelectedEventArgs(workspace));
   }
 
-  public void RedrawMenuButton(Workspace? workspace)
+  public void RedrawMenuButton(LimitedWorkspace? workspace)
   {
     var suffix = WorkspaceContextMenuButton.Enabled
       ? "Left-click to select another workspace."

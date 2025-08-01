@@ -22,7 +22,7 @@ public class SpeckleOperationWizard
 
   public Account? SelectedAccount { get; private set; }
   public List<Account>? Accounts { get; }
-  public Workspace? SelectedWorkspace { get; private set; }
+  public LimitedWorkspace? SelectedWorkspace { get; private set; }
   public Project? SelectedProject { get; private set; }
   public Model? SelectedModel { get; private set; }
   public Version? SelectedVersion { get; private set; }
@@ -416,13 +416,17 @@ public class SpeckleOperationWizard
     {
       return;
     }
+
     using IClient client = _clientFactory.Create(SelectedAccount);
     var activeWorkspace = client.ActiveUser.GetActiveWorkspace().Result;
-    Workspace? selectedWorkspace =
+
+    LimitedWorkspace? selectedWorkspace =
       SelectedWorkspace
       ?? activeWorkspace
       ?? (WorkspaceMenuHandler.Workspaces?.items.Count > 0 ? WorkspaceMenuHandler.Workspaces?.items[0] : null);
+
     SelectedWorkspace = selectedWorkspace;
+
     WorkspaceMenuHandler.RedrawMenuButton(SelectedWorkspace);
   }
 
