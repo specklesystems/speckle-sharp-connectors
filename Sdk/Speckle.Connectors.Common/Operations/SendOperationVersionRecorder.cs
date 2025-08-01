@@ -2,13 +2,14 @@
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
 public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendOperationVersionRecorder
 {
-  public async Task<string> RecordVersion(
+  public async Task<Version> RecordVersion(
     string rootId,
     string modelId,
     string projectId,
@@ -31,6 +32,6 @@ public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendO
         ct
       )
       .ConfigureAwait(true);
-    return x.id;
+    return x;
   }
 }

@@ -17,6 +17,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Speckle.Testing;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.Common.Tests.Operations;
 
@@ -56,8 +57,8 @@ public class SendOperationTests : MoqTest
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
     threadContext
-      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, string)>>>(), false))
-      .ReturnsAsync((serializeProcessResults, versionId));
+      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, Version)>>>(), false))
+      .ReturnsAsync((serializeProcessResults, new Version() { id = versionId }));
 
     var sp = services.BuildServiceProvider();
 
@@ -124,10 +125,10 @@ public class SendOperationTests : MoqTest
 
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
-
+    const string EXPECTED_ID = "version123";
     sendOperationVersionRecorder
       .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, null, account, ct))
-      .ReturnsAsync("version");
+      .ReturnsAsync(new Version() { id = EXPECTED_ID });
 
     var sp = services.BuildServiceProvider();
 
@@ -152,6 +153,6 @@ public class SendOperationTests : MoqTest
       ct
     );
     result.Should().Be(serializeProcessResults);
-    version.Should().Be("version");
+    version.id.Should().Be(EXPECTED_ID);
   }
 }

@@ -13,8 +13,13 @@ public class PropertiesExtractor
   {
     Dictionary<string, object?> properties = new();
     var userStrings = rhObject.Attributes.GetUserStrings();
-    foreach (var key in userStrings.AllKeys)
+    foreach (string? key in userStrings.AllKeys)
     {
+      if (key == null)
+      {
+        continue;
+      }
+
       try
       {
         if (key == "$block-instance-original-object-id$") // skip: this seems to be an invisible user string that shows up on block instances
@@ -22,7 +27,7 @@ public class PropertiesExtractor
           continue;
         }
 
-        if (userStrings[key].StartsWith("%<"))
+        if (userStrings[key]?.StartsWith("%<") ?? false)
         {
           var value = RhinoApp.ParseTextField(userStrings[key], rhObject, null);
           properties[key] = value;

@@ -1,8 +1,8 @@
 using Speckle.Connectors.Common.Threading;
 
-namespace Speckle.Importers.Rhino;
+namespace Speckle.Importers.Rhino.Internal;
 
-public class ImporterThreadContext : ThreadContext
+internal sealed class ImporterThreadContext : ThreadContext
 {
   protected override Task<T> WorkerToMainAsync<T>(Func<Task<T>> action)
   {

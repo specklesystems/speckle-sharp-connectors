@@ -10,6 +10,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -36,7 +37,7 @@ public sealed class SendOperation<T>(
     var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (results, versionId) = await threadContext.RunOnWorkerAsync(
+    var (results, version) = await threadContext.RunOnWorkerAsync(
       () =>
         Send(
           buildResult.RootObject,
@@ -50,7 +51,7 @@ public sealed class SendOperation<T>(
         )
     );
     ct.ThrowIfCancellationRequested();
-    return new(results.RootId, versionId, results.ConvertedReferences, buildResult.ConversionResults);
+    return new(results.RootId, version.id, results.ConvertedReferences, buildResult.ConversionResults);
   }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -68,7 +69,7 @@ public sealed class SendOperation<T>(
     return buildResult;
   }
 
-  public async Task<(SerializeProcessResults, string)> Send(
+  public async Task<(SerializeProcessResults, Version)> Send(
     Base commitObject,
     string projectId,
     string modelId,
@@ -103,7 +104,7 @@ public sealed class SendOperation<T>(
     onOperationProgressed.Report(new("Linking version to model...", null));
 
     // 8 - Create the version (commit)
-    var versionId = await sendOperationVersionRecorder.RecordVersion(
+    var version = await sendOperationVersionRecorder.RecordVersion(
       sendResult.RootId,
       modelId,
       projectId,
@@ -113,7 +114,7 @@ public sealed class SendOperation<T>(
       ct
     );
 
-    return (sendResult, versionId);
+    return (sendResult, version);
   }
 }
 
