@@ -109,11 +109,11 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 
     return new SOG.Mesh
     {
-      vertices = new(vertexCoordinates),
+      vertices = [.. vertexCoordinates],
       faces = faces,
-      colors = new(colors),
-      textureCoordinates = new(textureCoordinates),
-      vertexNormals = new(vertexNormals),
+      colors = [.. colors],
+      textureCoordinates = [.. textureCoordinates],
+      vertexNormals = [.. vertexNormals],
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
