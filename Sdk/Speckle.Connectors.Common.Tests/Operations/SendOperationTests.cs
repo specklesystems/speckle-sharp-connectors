@@ -57,8 +57,8 @@ public class SendOperationTests : MoqTest
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
     threadContext
-      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, string)>>>(), false))
-      .ReturnsAsync((serializeProcessResults, versionId));
+      .Setup(x => x.RunOnThreadAsync(It.IsAny<Func<Task<(SerializeProcessResults, Version)>>>(), false))
+      .ReturnsAsync((serializeProcessResults, new Version() { id = versionId }));
 
     var sp = services.BuildServiceProvider();
 
