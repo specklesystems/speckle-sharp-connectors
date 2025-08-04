@@ -16,7 +16,12 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
-  private readonly Dictionary<string, int> _hostLayerCache = new();
+
+  /// <summary>
+  /// The layer cache storing the full name of created layers.
+  /// </summary>
+  /// <remarks>The case-agnostic requirement applies to some models (eg Revit with linked models) that may have multiple collections with the same name but with different capitalizations.</remarks>
+  private readonly Dictionary<string, int> _hostLayerCache = new(StringComparer.OrdinalIgnoreCase);
 
   private static readonly string s_pathSeparator =
 #if RHINO8_OR_GREATER
@@ -147,6 +152,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       {
         throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
       }
+
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }

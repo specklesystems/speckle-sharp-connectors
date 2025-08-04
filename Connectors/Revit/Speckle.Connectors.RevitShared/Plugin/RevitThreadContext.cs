@@ -38,6 +38,10 @@ public class RevitThreadContext : ThreadContext
         return default;
       }
     });
+    if (ex is OperationCanceledException operation)
+    {
+      throw operation;
+    }
     if (ex is not null)
     {
       throw new SpeckleRevitTaskException(ex);
@@ -61,6 +65,10 @@ public class RevitThreadContext : ThreadContext
         return default;
       }
     });
+    if (ex is OperationCanceledException operation)
+    {
+      throw operation;
+    }
     if (ex is not null)
     {
       throw new SpeckleRevitTaskException(ex);
@@ -104,6 +112,11 @@ public class RevitThreadContext : ThreadContext
         ex = e;
       }
     });
+
+    if (ex is OperationCanceledException operation)
+    {
+      throw operation;
+    }
     if (ex is not null)
     {
       throw new SpeckleRevitTaskException(ex);

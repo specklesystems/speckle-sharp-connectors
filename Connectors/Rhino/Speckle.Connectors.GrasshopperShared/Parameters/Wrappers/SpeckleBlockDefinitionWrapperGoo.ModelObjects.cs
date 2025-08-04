@@ -28,41 +28,49 @@ public partial class SpeckleBlockDefinitionWrapperGoo
           return false;
         }
 
-        Value = new SpeckleBlockDefinitionWrapper()
-        {
-          Base = new InstanceDefinitionProxy
-          {
-            name = instanceDefinition.Name,
-            objects = objects.Select(o => o.ApplicationId!).ToList(),
-            maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
-          },
-          Name = instanceDefinition.Name,
-          Objects = objects,
-          ApplicationId = instanceDefinition.Id.ToString()
-        };
-
+        SetValueFromDefinitionProps(objects, instanceDefinition.Name, instanceDefinition.Id.ToString());
         return true;
 
       case ModelInstanceDefinition modelInstanceDef:
-        InstanceDefinition? instanceDef = RhinoDoc.ActiveDoc?.InstanceDefinitions.Find(modelInstanceDef.Name);
-        if (instanceDef == null)
+        List<SpeckleGeometryWrapper> defObjs = new();
+        foreach (var defObj in modelInstanceDef.Objects)
         {
-          // Rhino → Model → Model Block Definition passthrough component returns type ModelInstanceDefinition
-          // .Objects of a ModelInstanceDefinition returns ModelObjects
-          // ModelObject.Geometry is internal and cannot be accessed directly.
-          // Only way to get geometry from a ModelObject is through RhinoDoc.Objects.FindId(), which only works for baked objects.
-          // Unbaked Grasshopper geometry cannot be processed through the ModelObject workflow until we get a public geometry accessor 😓
-          // ⚠️ So if user defines a Model Block Definition in Grasshopper with Grasshopper (unbaked) geometry, we're stuck.
-          // That's why we're intercepting this case early → if the instanceDef == null don't go further
+          SpeckleGeometryWrapperGoo geoWrapperGoo = new();
+          if (geoWrapperGoo.CastFrom(defObj))
+          {
+            defObjs.Add(geoWrapperGoo.Value);
+          }
+        }
+
+        if (defObjs.Count == 0)
+        {
           throw new InvalidOperationException(
-            $"Block definition '{modelInstanceDef.Name}' not found in Rhino document. Please bake the definition first or use Speckle Block Definition components instead."
+            $"Block definition '{modelInstanceDef.Name}' did not have any valid geometry."
           );
         }
 
-        return CastFromModelObject(instanceDef);
+        SetValueFromDefinitionProps(defObjs, modelInstanceDef.Name, modelInstanceDef.Id.ToString());
+        return true;
       default:
         return false;
     }
+  }
+
+  private void SetValueFromDefinitionProps(List<SpeckleGeometryWrapper> objs, string name, string id)
+  {
+    string validAppId = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id;
+    Value = new SpeckleBlockDefinitionWrapper()
+    {
+      Base = new InstanceDefinitionProxy
+      {
+        name = name,
+        objects = objs.Select(o => o.ApplicationId!).ToList(),
+        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+      },
+      Name = name,
+      Objects = objs,
+      ApplicationId = validAppId
+    };
   }
 
   private bool CastToModelObject<T>(ref T target)
