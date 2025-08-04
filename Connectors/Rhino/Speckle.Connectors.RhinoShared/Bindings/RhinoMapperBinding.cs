@@ -66,21 +66,14 @@ public class RhinoMapperBinding : IBinding
     // Is this really the best way?
     foreach (var objectIdString in objectIds)
     {
-      if (!Guid.TryParse(objectIdString, out Guid objectId))
+      var rhinoObject = GetRhinoObject(doc, objectIdString);
+      if (rhinoObject is not null)
       {
-        continue;
+        // NOTE: should we be checking if key already exists?
+        // For POC, straightforward set on object
+        rhinoObject.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
+        rhinoObject.CommitChanges();
       }
-
-      var rhinoObject = doc.Objects.FindId(objectId);
-      if (rhinoObject == null)
-      {
-        continue; // be loud about this? This shouldn't happen?
-      }
-
-      // NOTE: should we be checking if key already exists?
-      // For POC, straightforward set on object
-      rhinoObject.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
-      rhinoObject.CommitChanges();
     }
   }
 
@@ -89,7 +82,25 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public async Task ClearCategoryAssignment(string[] objectIds)
   {
-    // TODO
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
+    {
+      return; // or throw here?
+    }
+
+    // Is this really the best way?
+    foreach (var objectIdString in objectIds)
+    {
+      var rhinoObject = GetRhinoObject(doc, objectIdString);
+      if (rhinoObject is not null)
+      {
+        // NOTE: should we be checking if key already exists?
+        // For POC, straightforward delete on object
+        rhinoObject.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
+        rhinoObject.CommitChanges();
+      }
+    }
   }
 
   /// <summary>
@@ -123,6 +134,14 @@ public class RhinoMapperBinding : IBinding
   /// Selects/highlights specific objects in Rhino.
   /// </summary>
   public async Task HighlightObjects(string[] objectIds) => await _basicConnectorBinding.HighlightObjects(objectIds);
+
+  /// <summary>
+  /// Converts a string object ID to a RhinoObject.
+  /// </summary>
+  /// <returns>RhinoObject if found and valid, null otherwise</returns>
+  /// <remarks>Reducing repetitive code.</remarks>
+  private static RhinoObject? GetRhinoObject(RhinoDoc doc, string objectIdString) =>
+    !Guid.TryParse(objectIdString, out Guid objectId) ? null : doc.Objects.FindId(objectId);
 
   #endregion
 
