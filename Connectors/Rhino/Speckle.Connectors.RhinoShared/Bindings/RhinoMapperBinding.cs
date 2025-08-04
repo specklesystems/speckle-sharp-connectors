@@ -56,7 +56,32 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public async Task AssignToCategory(string[] objectIds, string categoryValue)
   {
-    // TODO
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
+    {
+      return; // or throw here?
+    }
+
+    // Is this really the best way?
+    foreach (var objectIdString in objectIds)
+    {
+      if (!Guid.TryParse(objectIdString, out Guid objectId))
+      {
+        continue;
+      }
+
+      var rhinoObject = doc.Objects.FindId(objectId);
+      if (rhinoObject == null)
+      {
+        continue; // be loud about this? This shouldn't happen?
+      }
+
+      // NOTE: should we be checking if key already exists?
+      // For POC, straightforward set on object
+      rhinoObject.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
+      rhinoObject.CommitChanges();
+    }
   }
 
   /// <summary>
