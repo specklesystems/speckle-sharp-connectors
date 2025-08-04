@@ -4,6 +4,7 @@ using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
@@ -194,38 +195,37 @@ public class SpeckleGeometryPassthrough()
       }
     }
 
+    result.NotNull();
     // process name
     if (inputName != null)
     {
-      result!.Name = inputName;
+      result.Name = inputName;
     }
 
     // process properties
     if (inputProperties != null)
     {
-      result!.Properties = inputProperties;
+      result.Properties = inputProperties;
     }
 
     // process color (no mutation)
     if (inputColor != null)
     {
-      result!.Color = inputColor;
+      result.Color = inputColor;
     }
 
     // process material (no mutation)
     if (inputMaterial != null)
     {
-      result!.Material = inputMaterial.Value;
+      result.Material = inputMaterial.Value;
     }
 
     // no need to process application Id.
     // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
 
     // get the path
-    string path =
-      result!.Path.Count > 1
-        ? string.Join(Constants.LAYER_PATH_DELIMITER, result!.Path)
-        : result!.Path.FirstOrDefault();
+    string? path =
+      result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
 
     // set all the data
     da.SetData(0, result.CreateGoo());
