@@ -5,7 +5,6 @@ using Speckle.Connectors.DUI;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
-using Speckle.Sdk.Host;
 using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.Rhino.Plugin;
@@ -22,7 +21,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 {
   private IDisposable? _disposableLogger;
 
-  protected override string LocalPlugInName => "Speckle (Beta)";
+  protected override string LocalPlugInName => "Speckle";
   public ServiceProvider? Container { get; private set; }
 
   public SpeckleConnectorsRhinoPlugin()
@@ -46,7 +45,7 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
       AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleConnectorsRhinoPlugin>;
       var services = new ServiceCollection();
       _disposableLogger = services.Initialize(HostApplications.Rhino, GetVersion());
-      services.AddRhino();
+      services.AddRhino(true);
       services.AddRhinoConverters();
 
       // but the Rhino connector has `.rhp` as it is extension.

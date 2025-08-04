@@ -50,7 +50,8 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
 
   public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
 
-  public DocumentInfo? GetDocumentInfo() => new DocumentInfo("Test", "Test", "Test");
+  public DocumentInfo GetDocumentInfo() =>
+    new(_model.GetInfo().ModelPath, _model.GetInfo().ModelName, _model.GetInfo().GetHashCode().ToString());
 
   public DocumentModelStore GetDocumentState() => _store;
 

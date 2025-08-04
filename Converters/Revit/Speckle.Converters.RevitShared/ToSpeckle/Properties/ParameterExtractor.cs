@@ -34,6 +34,9 @@ public class ParameterExtractor
   private readonly Dictionary<DB.ElementId, Dictionary<string, Dictionary<string, object?>>> _typeParameterCache =
     new();
 
+  private readonly Dictionary<DB.ElementId, Dictionary<string, Dictionary<string, object?>>> _systemTypeParameterCache =
+    new();
+
   /// <summary>
   /// Extracts parameters out from an element and populates the <see cref="ParameterDefinitionHandler"/> cache. Expects to be scoped per operation.
   /// </summary>
@@ -42,12 +45,20 @@ public class ParameterExtractor
   public Dictionary<string, object?> GetParameters(DB.Element element)
   {
     // NOTE: Woe and despair, I'm really abusing dictionaries here. See note at the top of class.
-    var instanceParameterDictionary = ParseParameterSet(element.Parameters);
+    return new Dictionary<string, object?>()
+    {
+      ["Instance Parameters"] = ParseParameterSet(element.Parameters),
+      ["Type Parameters"] = GetTypeParameterDictionary(element),
+      ["System Type Parameters"] = GetSystemTypeParameterDictionary(element)
+    };
+  }
 
+  private Dictionary<string, Dictionary<string, object?>>? GetTypeParameterDictionary(DB.Element element)
+  {
     var typeId = element.GetTypeId();
     if (typeId == DB.ElementId.InvalidElementId)
     {
-      return CreateParameterDictionary(instanceParameterDictionary, null);
+      return null;
     }
 
     if (
@@ -57,12 +68,12 @@ public class ParameterExtractor
       )
     )
     {
-      return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
+      return typeParameterDictionary;
     }
 
     if (_settingsStore.Current.Document.GetElement(typeId) is not DB.ElementType type)
     {
-      return CreateParameterDictionary(instanceParameterDictionary, null);
+      return null;
     }
 
     typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
@@ -93,26 +104,59 @@ public class ParameterExtractor
     }
 
     _typeParameterCache[typeId] = typeParameterDictionary;
-
-    return CreateParameterDictionary(instanceParameterDictionary, typeParameterDictionary);
+    return typeParameterDictionary;
   }
 
-  /// <summary>
-  /// Internal utility to create the default parameter structure we expect all elements to have.
-  /// </summary>
-  /// <param name="instanceParams"></param>
-  /// <param name="typeParams"></param>
-  /// <returns></returns>
-  private Dictionary<string, object?> CreateParameterDictionary(
-    Dictionary<string, Dictionary<string, object?>> instanceParams,
-    Dictionary<string, Dictionary<string, object?>>? typeParams
-  )
+  private Dictionary<string, Dictionary<string, object?>>? GetSystemTypeParameterDictionary(DB.Element element)
   {
-    return new Dictionary<string, object?>()
+    DB.MEPSystem? system = GetMEPSystem(element);
+
+    if (system != null)
     {
-      ["Instance Parameters"] = instanceParams,
-      ["Type Parameters"] = typeParams
-    };
+      DB.ElementId systemTypeId = system.GetTypeId();
+
+      if (
+        _systemTypeParameterCache.TryGetValue(
+          systemTypeId,
+          out Dictionary<string, Dictionary<string, object?>>? systemTypeParameterDictionary
+        )
+      )
+      {
+        return systemTypeParameterDictionary;
+      }
+
+      DB.Element systemType = _settingsStore.Current.Document.GetElement(systemTypeId);
+      systemTypeParameterDictionary = ParseParameterSet(systemType.Parameters);
+      _systemTypeParameterCache[systemTypeId] = systemTypeParameterDictionary;
+      return systemTypeParameterDictionary;
+    }
+
+    return null;
+  }
+
+  private DB.MEPSystem? GetMEPSystem(DB.Element element)
+  {
+    if (element is DB.MEPCurve curve)
+    {
+      return curve.MEPSystem;
+    }
+
+    if (element is DB.FamilyInstance fi)
+    {
+      var cm = fi.MEPModel?.ConnectorManager;
+      if (cm != null)
+      {
+        foreach (DB.Connector conn in cm.Connectors)
+        {
+          if (conn.MEPSystem != null)
+          {
+            return conn.MEPSystem;
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   private Dictionary<string, Dictionary<string, object?>> ParseParameterSet(DB.ParameterSet parameters)
@@ -125,13 +169,18 @@ public class ParameterExtractor
         var (internalDefinitionName, humanReadableName, groupName, units) =
           _parameterDefinitionHandler.HandleDefinition(parameter);
 
-        // NOTE: ids don't really have much meaning; if we discover the opposite, we can bring them back. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        // NOTE: general assumption is that ids don't really have much meaning. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
+        // NOTE: subsequent request resulting in certain IDs being brought back. See [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name) in GetValue() method
+        // "Type ID" (associated with "SYMBOL_ID_PARAM") won't evaluate to true here which is intentional
         if (internalDefinitionName.EndsWith("_ID") || internalDefinitionName.EndsWith("_PARAM_ID"))
         {
           continue;
         }
 
-        var value = GetValue(parameter);
+        // NOTE: excepted behaviour is to use GetValue BUT if we have "SYMBOL_ID_PARAM", we just want id
+        // see above comment and linked linear ticket / issue.
+        object? value =
+          internalDefinitionName == "SYMBOL_ID_PARAM" ? parameter.AsElementId().ToString() : GetValue(parameter);
 
         var isNullOrEmpty = value == null || (value is string s && string.IsNullOrEmpty(s));
 

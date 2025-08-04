@@ -1,10 +1,10 @@
-using Speckle.Sdk.Host;
+using Speckle.Connectors.Common;
 
 namespace Speckle.Connectors.Autocad.Plugin;
 
 public static class AppUtils
 {
-  public static HostApplication App =>
+  public static Speckle.Sdk.Application App =>
 #if CIVIL3D
     HostApplications.Civil3D;
 #elif AUTOCAD

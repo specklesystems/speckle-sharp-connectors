@@ -26,7 +26,9 @@ public static class ServiceRegistration
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     // add other classes
-    // serviceCollection.AddScoped<PropertiesExtractor>(); // NOTE: commented out until we can test in acad
+    serviceCollection.AddScoped<PropertiesExtractor>();
+    serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
+    serviceCollection.AddScoped<XDataExtractor>();
   }
 }

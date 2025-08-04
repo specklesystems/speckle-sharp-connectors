@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -25,7 +26,6 @@ public class ReceiveOperationTests : MoqTest
   public async Task Execute()
   {
     var hostObjectBuilder = Create<IHostObjectBuilder>();
-    var accountService = Create<IAccountService>();
     var receiveProgress = Create<IReceiveProgress>();
     var operations = Create<IOperations>();
     var receiveVersionRetriever = Create<IReceiveVersionRetriever>();
@@ -33,17 +33,14 @@ public class ReceiveOperationTests : MoqTest
     var threadContext = Create<IThreadContext>();
 
     var @base = new TestBase();
-    var account = new Account();
-    var accountId = "accountId";
-    var serverUrl = new Uri("https://localhost");
+    var account = new Account { userInfo = new(), };
     var version = new Speckle.Sdk.Api.GraphQL.Models.Version();
     var projectName = "projectName";
     var modelName = "modelName";
 
     var ct = new CancellationToken();
     var receiveInfo = new ReceiveInfo(
-      accountId,
-      serverUrl,
+      account,
       string.Empty,
       projectName,
       string.Empty,
@@ -55,7 +52,6 @@ public class ReceiveOperationTests : MoqTest
 
     var hostResult = new HostObjectBuilderResult([], []);
 
-    accountService.Setup(x => x.GetAccountWithServerUrlFallback(accountId, serverUrl)).Returns(account);
     receiveVersionRetriever.Setup(x => x.GetVersion(account, receiveInfo, ct)).ReturnsAsync(version);
     receiveVersionRetriever
       .Setup(x => x.VersionReceived(account, version, receiveInfo, ct))
@@ -68,7 +64,6 @@ public class ReceiveOperationTests : MoqTest
     var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(
       sp,
       hostObjectBuilder.Object,
-      accountService.Object,
       receiveProgress.Object,
       activityFactory.Object,
       operations.Object,
@@ -89,6 +84,7 @@ public class ReceiveOperationTests : MoqTest
     var receiveVersionRetriever = Create<IReceiveVersionRetriever>();
     var activityFactory = Create<ISdkActivityFactory>(MockBehavior.Loose);
     var threadContext = Create<IThreadContext>();
+    var mixPanelManager = Create<IMixPanelManager>();
 
     var @base = new TestBase();
     var token = "token";
@@ -104,8 +100,7 @@ public class ReceiveOperationTests : MoqTest
 
     var ct = new CancellationToken();
     var receiveInfo = new ReceiveInfo(
-      string.Empty,
-      serverUrl,
+      account,
       projectId,
       string.Empty,
       string.Empty,
@@ -124,7 +119,6 @@ public class ReceiveOperationTests : MoqTest
     var receiveOperation = ActivatorUtilities.CreateInstance<ReceiveOperation>(
       sp,
       hostObjectBuilder.Object,
-      accountService.Object,
       receiveProgress.Object,
       activityFactory.Object,
       operations.Object,

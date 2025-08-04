@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
@@ -17,16 +18,19 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 {
   private readonly IHostToSpeckleUnitConverter<UnitsValue> _unitsConverter;
   private readonly IInstanceObjectsManager<AutocadRootObject, List<Entity>> _instanceObjectsManager;
+  private readonly IPropertiesExtractor _propertiesExtractor;
   private readonly ILogger<AutocadInstanceUnpacker> _logger;
 
   public AutocadInstanceUnpacker(
     IHostToSpeckleUnitConverter<UnitsValue> unitsConverter,
     IInstanceObjectsManager<AutocadRootObject, List<Entity>> instanceObjectsManager,
+    IPropertiesExtractor propertiesExtractor,
     ILogger<AutocadInstanceUnpacker> logger
   )
   {
     _unitsConverter = unitsConverter;
     _instanceObjectsManager = instanceObjectsManager;
+    _propertiesExtractor = propertiesExtractor;
     _logger = logger;
   }
 
@@ -71,6 +75,13 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           transform = GetMatrix(instance.BlockTransform.ToArray()),
           units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
+
+      var properties = _propertiesExtractor.GetProperties(instance);
+      if (properties?.Count > 0)
+      {
+        instanceProxy["properties"] = properties;
+      }
+
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
       // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
@@ -101,6 +112,23 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
       instanceProxiesWithSameDefinition.Add(_instanceObjectsManager.GetInstanceProxy(instanceId));
 
+      // Add text attributes from Instances as separate atomic objects:
+      // AttributeReferences found on Instances are just a text, not a part of the Instance
+      // They are not actually references and are not linked to AttributeDefinition (as one would expect),
+      // and already have the correct position (no need for transforms).
+      // We don't want to create a new BlockDefinition for every changed text for now, because AutoCAD API doesn't provide one,
+      // e.g. AnonymousBlockTableRecord is provided for each dynamic blocks with geometry changes, but not for Attribute changes.
+      // Docs on AttributeReference usage (used totally independent of AttributeDefinition): https://help.autodesk.com/view/OARX/2025/ENU/?guid=GUID-BA69D85A-2AED-43C2-B5B7-73022B5F28F8
+      // Case of trying to match AttributeDefinition with AttributeReference via Tag value (which is not unique): https://forums.autodesk.com/t5/net-forum/get-the-value-of-an-attribute-in-c/td-p/9060940
+
+      foreach (ObjectId id in instance.AttributeCollection)
+      {
+        var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        string refAppId = reference.GetSpeckleApplicationId();
+        _instanceObjectsManager.AddAtomicObject(refAppId, new(reference, refAppId));
+      }
+
+      // rely on already converted Definition
       if (
         _instanceObjectsManager.TryGetInstanceDefinitionProxy(
           definitionId.ToString(),
@@ -131,12 +159,12 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       {
         Entity obj = (Entity)transaction.GetObject(id, OpenMode.ForRead);
 
-        // In the case of dynamic blocks, this prevents sending objects that are not visibile in its current state.
-        if (!obj.Visible)
+        // In the case of dynamic blocks, this prevents sending objects that are not visible in its current state.
+        // Also skipping AttributeDefinition because it only contains default text values. We convert AttributeReference above instead, as a separate object.
+        if (!obj.Visible || obj is AttributeDefinition)
         {
           continue;
         }
-
         string appId = obj.GetSpeckleApplicationId();
         definitionProxy.objects.Add(appId);
 

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>b6fbb8f4-4e2d-41d9-ac3f-1e30d0c8e87c</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.GrasshopperShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\SpeckleTaskCapableComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\Operator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\ValueSet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\BaseComponents\VariableParameterComponentBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockInstancePassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\IGH_StructureExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleDataObjectPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleGeometryPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpecklePropertiesPassthrough.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QuerySpeckleObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\FilterSpeckleObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\ComponentUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\GhContextMenuButtonAttributes.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\DeconstructSpeckleParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\CreateSpeckleProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\AccountManagerComponentAttributes.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\GrasshopperReceiveInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\GrasshopperSendInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\ModelMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\ProjectMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SearchToolStripMenuItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\VersionMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\WorkspaceMenuHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SpeckleOperationWizard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\SpeckleSolveInstance.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extras\StateTag.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\KeyWatcher.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperBlockUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperMaterialUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\QueryProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\LocalToGlobalMapHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperColorUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveAsyncComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperBlockPacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperMaterialPacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperColorPacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendAsyncComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\SpeckleSelectModelComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\SpeckleSelectModelComponentAttributes.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\BitmapBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extras\DebounceDispatcher.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Globals.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockDefinitionWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockDefinitionWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockDefinitionWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockDefinitionWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Interfaces.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleVariableParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleGeometryWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleDataObjectWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleMaterialWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Properties\Resources.Designer.cs" />
+    <Compile Include="..\Speckle.Connectors.GrasshopperShared\HostApp\SpeckleConversionContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperReceiveOperation.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperSendOperation.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapperGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleCollectionWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.ModelObjects.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceGoo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleUrlModelResourceParam.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Registration\PriorityLoader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Speckle.Connectors.GrasshopperSharedInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <CustomToolNamespace>Speckle.Connectors.GrasshopperShared.Properties</CustomToolNamespace>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\logo.png" />
+  </ItemGroup>
+</Project>

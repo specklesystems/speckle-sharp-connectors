@@ -15,6 +15,7 @@ const string ZIP = "zip";
 const string RESTORE_TOOLS = "restore-tools";
 const string CLEAN_LOCKS = "clean-locks";
 const string CHECK_SOLUTIONS = "check-solutions";
+const string GEN_SOLUTIONS = "generate-solutions";
 const string DEEP_CLEAN = "deep-clean";
 const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 const string DETECT_AFFECTED = "detect-affected";
@@ -27,14 +28,7 @@ if (args.Length > 1)
   args = new[] { arguments.First() };
   //arguments = arguments.Skip(1).ToList();
 }*/
-void Build(string solution, string configuration)
-{
-  Console.WriteLine();
-  Console.WriteLine();
-  Console.WriteLine($"Building solution '{solution}' as '{configuration}'");
-  Console.WriteLine();
-  Run("dotnet", $"build \".\\{solution}\" --configuration {configuration} --no-restore");
-}
+
 void Restore(string solution)
 {
   Console.WriteLine();
@@ -71,30 +65,31 @@ void CleanSolution(string solution, string configuration)
   DeleteDirectories("**/obj");
   DeleteFiles("**/*.lock.json");
   Restore(solution);
-  Build(solution, configuration);
 }
 
 Target(
   CLEAN_LOCKS,
-  () =>
+  Consts.Solutions,
+  s =>
   {
     DeleteFiles("**/*.lock.json");
-    Restore("Speckle.Connectors.sln");
+    Restore(s);
   }
 );
 
 Target(
   DEEP_CLEAN,
-  () =>
+  Consts.Solutions,
+  s =>
   {
-    CleanSolution("Speckle.Connectors.sln", "debug");
+    CleanSolution(s, "debug");
   }
 );
 Target(
   DEEP_CLEAN_LOCAL,
   () =>
   {
-    CleanSolution("Local.sln", "local");
+    CleanSolution("Local.sln", "Local");
   }
 );
 
@@ -183,6 +178,7 @@ Target(
 );
 
 Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
+Target(GEN_SOLUTIONS, Solutions.GenerateSolutions);
 
 Target(
   TEST,
@@ -239,6 +235,7 @@ Target(
   async () =>
   {
     var version = await Versions.ComputeVersion();
+    var fileVersion = await Versions.ComputeFileVersion();
     foreach (var group in await Affected.GetAffectedProjectGroups())
     {
       Console.WriteLine($"Zipping: {group.HostAppSlug} as {version}");
@@ -280,7 +277,8 @@ Target(
 
     string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
     Console.WriteLine($"GITHUB_ENV: {githubEnv}");
-    File.AppendAllText(githubEnv, $"SPECKLE_VERSION={version}{Environment.NewLine}");
+    File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
+    File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
   }
 );
 

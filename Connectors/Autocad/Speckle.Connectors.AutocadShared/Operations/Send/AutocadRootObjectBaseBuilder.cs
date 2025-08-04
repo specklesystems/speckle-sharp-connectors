@@ -60,7 +60,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   )]
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<AutocadRootObject> objects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -95,28 +95,19 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       foreach (var (entity, applicationId) in atomicObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        using (var convertActivity = _activityFactory.Start("Converting object"))
+        // Create and add a collection for this entity if not done so already.
+        (Collection objectCollection, LayerTableRecord? autocadLayer) = CreateObjectCollection(entity, tr);
+
+        if (autocadLayer is not null)
         {
-          // Create and add a collection for this entity if not done so already.
-          (Collection objectCollection, LayerTableRecord? autocadLayer) = CreateObjectCollection(entity, tr);
-
-          if (autocadLayer is not null)
-          {
-            usedAcadLayers.Add(autocadLayer);
-            root.elements.Add(objectCollection);
-          }
-
-          var result = ConvertAutocadEntity(
-            entity,
-            applicationId,
-            objectCollection,
-            instanceProxies,
-            sendInfo.ProjectId
-          );
-          results.Add(result);
-
-          onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
+          usedAcadLayers.Add(autocadLayer);
+          root.elements.Add(objectCollection);
         }
+
+        var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
+        results.Add(result);
+
+        onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
       }
 
       if (results.All(x => x.Status == Status.ERROR))

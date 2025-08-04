@@ -3,6 +3,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models.Collections;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -15,7 +16,12 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 {
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
-  private readonly Dictionary<string, int> _hostLayerCache = new();
+
+  /// <summary>
+  /// The layer cache storing the full name of created layers.
+  /// </summary>
+  /// <remarks>The case-agnostic requirement applies to some models (eg Revit with linked models) that may have multiple collections with the same name but with different capitalizations.</remarks>
+  private readonly Dictionary<string, int> _hostLayerCache = new(StringComparer.OrdinalIgnoreCase);
 
   private static readonly string s_pathSeparator =
 #if RHINO8_OR_GREATER
@@ -48,18 +54,25 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   /// <remarks>Make sure this is executing on the main thread, using e.g RhinoApp.InvokeAndWait.</remarks>
   public void CreateAllLayersForReceive(IEnumerable<Collection[]> paths, string baseLayerName)
   {
-    CreateBaseLayer(baseLayerName);
-    var uniquePaths = new Dictionary<string, Collection[]>();
-    foreach (var path in paths)
+    try
     {
-      var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
-      var key = string.Join(",", names!);
-      uniquePaths[key] = path;
-    }
+      CreateBaseLayer(baseLayerName);
+      var uniquePaths = new Dictionary<string, Collection[]>();
+      foreach (var path in paths)
+      {
+        var names = path.Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name);
+        var key = string.Join(",", names);
+        uniquePaths[key] = path;
+      }
 
-    foreach (var uniquePath in uniquePaths)
+      foreach (var uniquePath in uniquePaths)
+      {
+        CreateLayerFromPath(uniquePath.Value, baseLayerName);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      var layerIndex = CreateLayerFromPath(uniquePath.Value, baseLayerName);
+      throw new SpeckleException("Could not create all layers for receive.", ex);
     }
   }
 
@@ -73,7 +86,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   public int GetLayerIndex(Collection[] collectionPath, string baseLayerName)
   {
     var layerPath = collectionPath
-      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : o.name)
+      .Select(o => string.IsNullOrWhiteSpace(o.name) ? "unnamed" : RhinoUtils.CleanLayerName(o.name))
       .Prepend(baseLayerName);
 
     var layerFullName = string.Join(s_pathSeparator, layerPath);
@@ -83,7 +96,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       return existingLayerIndex;
     }
 
-    throw new SpeckleException($"Did not find a layer in the cache with the name {layerFullName}");
+    throw new ConversionException($"Did not find a layer in the cache with the name '{layerFullName}'");
   }
 
   /// <summary>
@@ -99,16 +112,17 @@ public class RhinoLayerBaker : TraversalContextUnpacker
     Layer? previousLayer = currentDocument.Layers.FindName(currentLayerName);
     foreach (Collection collection in collectionPath)
     {
-      currentLayerName += s_pathSeparator + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : collection.name);
+      currentLayerName +=
+        s_pathSeparator
+        + (string.IsNullOrWhiteSpace(collection.name) ? "unnamed" : RhinoUtils.CleanLayerName(collection.name));
 
-      currentLayerName = currentLayerName.Replace("{", "").Replace("}", ""); // Rhino specific cleanup for gh (see RemoveInvalidRhinoChars)
       if (_hostLayerCache.TryGetValue(currentLayerName, out int value))
       {
         previousLayer = currentDocument.Layers.FindIndex(value);
         continue;
       }
 
-      var cleanNewLayerName = collection.name.Replace("{", "").Replace("}", "");
+      var cleanNewLayerName = RhinoUtils.CleanLayerName(collection.name);
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
 
       // set material
@@ -136,8 +150,9 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       int index = currentDocument.Layers.Add(newLayer);
       if (index == -1)
       {
-        throw new SpeckleException($"Could not create layer {currentLayerName}.");
+        throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
       }
+
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }

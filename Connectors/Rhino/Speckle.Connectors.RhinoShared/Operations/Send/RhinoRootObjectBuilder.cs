@@ -66,7 +66,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -99,14 +99,13 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       foreach (RhinoObject rhinoObject in atomicObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        using var _2 = _activityFactory.Start("Convert");
 
         // handle layer and store object layer *and all layer parents* to the version layers
         // this is important because we need to unpack colors and materials on intermediate layers that do not have objects as well.
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
-        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, sendInfo.ProjectId);
+        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId);
         results.Add(result);
 
         ++count;

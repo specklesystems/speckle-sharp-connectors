@@ -1,5 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Rhino.Extensions;
+using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -31,6 +33,30 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     {
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
+
+    // Extracting Rhino Mesh and converting to Speckle with the most suitable settings (e.g. moving to origin first, if needed)
+    // This is needed because of Rhino using single precision numbers for Mesh vertices: https://wiki.mcneel.com/rhino/farfromorigin
+    RG.Mesh meshToConvert = target;
+    RG.Vector3d? vector = null;
+
+    // 1. If needed, move geometry to origin
+    if (_settingsStore.Current.ModelFarFromOrigin && target.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
+    {
+      meshToConvert = (RG.Mesh)target.Duplicate();
+      meshToConvert.Transform(RG.Transform.Translation(-vectorToGeometry));
+      vector = vectorToGeometry;
+    }
+    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
+    SOG.Mesh convertedMesh = ConvertMesh(meshToConvert);
+
+    // 3. Move Speckle geometry back from origin, if translation was applied
+    DisplayMeshExtractor.MoveSpeckleMeshes([convertedMesh], vector, _settingsStore.Current.SpeckleUnits);
+
+    return convertedMesh;
+  }
+
+  private SOG.Mesh ConvertMesh(RG.Mesh target)
+  {
     var vertexCoordinates = new double[target.Vertices.Count * 3];
     var x = 0;
     for (int i = 0; i < target.Vertices.Count; i++)
@@ -83,11 +109,11 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 
     return new SOG.Mesh
     {
-      vertices = new(vertexCoordinates),
+      vertices = [.. vertexCoordinates],
       faces = faces,
-      colors = new(colors),
-      textureCoordinates = new(textureCoordinates),
-      vertexNormals = new(vertexNormals),
+      colors = [.. colors],
+      textureCoordinates = [.. textureCoordinates],
+      vertexNormals = [.. vertexNormals],
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox

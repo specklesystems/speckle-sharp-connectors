@@ -1,6 +1,7 @@
 using System.Reflection;
 using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -42,7 +43,7 @@ public class ClassPropertiesExtractor
   /// </summary>
   /// <param name="entity"></param>
   /// <returns></returns>
-  public Dictionary<string, object?> GetClassProperties(CDB.Entity entity)
+  public Dictionary<string, object?> GetClassProperties(ADB.Entity entity)
   {
     switch (entity)
     {
@@ -419,12 +420,8 @@ public class ClassPropertiesExtractor
             ["isBreak"] = point.IsBreak
           };
 
-        // not all points have offsets. Accessing the offset property in this case will throw.
-        try
-        {
-          pointPropertiesDict["offset"] = point.Offset;
-        }
-        catch (ArgumentException) { } // do nothing - offset property will not be included
+        PropertyHandler propHandler = new();
+        propHandler.TryAddToDictionary(pointPropertiesDict, "offset", () => point.Offset); // not all points have offsets, will throw
 
         pointsDict[pointCount.ToString()] = pointPropertiesDict;
         pointCount++;
@@ -576,20 +573,19 @@ public class ClassPropertiesExtractor
     // get offset alignment props
     if (alignment.IsOffsetAlignment)
     {
-      try
+      // accessing "OffsetAlignmentInfo" on offset alignments will sometimes throw /shrug.
+      // this happens when an offset alignment is unlinked from the parent and the CreateMode is still set to "ManuallyCreation"
+      // https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=2ecbe421-4c08-cbde-d078-56a9f03b93f9
+      PropertyHandler propHandler = new();
+      if (propHandler.TryGetValue(() => alignment.OffsetAlignmentInfo, out CDB.OffsetAlignmentInfo? offsetInfo))
       {
-        // accessing "OffsetAlignmentInfo" on offset alignments will sometimes throw /shrug.
-        // this happens when an offset alignment is unlinked from the parent and the CreateMode is still set to "ManuallyCreation"
-        // https://help.autodesk.com/view/CIV3D/2024/ENU/?guid=2ecbe421-4c08-cbde-d078-56a9f03b93f9
-        var offsetInfo = alignment.OffsetAlignmentInfo;
         properties["Offset Parameters"] = new Dictionary<string, object?>
         {
-          ["side"] = offsetInfo.Side.ToString(),
-          ["parentAlignmentId"] = offsetInfo.ParentAlignmentId.GetSpeckleApplicationId(),
-          ["nominalOffset"] = offsetInfo.NominalOffset
+          ["side"] = offsetInfo?.Side.ToString(),
+          ["parentAlignmentId"] = offsetInfo?.ParentAlignmentId.GetSpeckleApplicationId(),
+          ["nominalOffset"] = offsetInfo?.NominalOffset
         };
       }
-      catch (InvalidOperationException) { } // do nothing
     }
 
     return properties;

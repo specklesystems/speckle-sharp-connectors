@@ -14,7 +14,7 @@ public class SendCollectionManager
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
-  private readonly Dictionary<ElementId, (string name, Dictionary<string, object?> props)> _levelCache = new(); // stores level id and its properties
+  private readonly Dictionary<ElementId, string> _levelCache = new(); // stores level id and its properties
   private readonly Dictionary<string, Collection> _linkedModelCollections = new(); // cache for linked model collections
   private Collection? _mainModelCollection; // collection for main model elements
 
@@ -91,13 +91,11 @@ public class SendCollectionManager
 
     // get the level and its properties
     string levelName = "No Level";
-    Dictionary<string, object?> levelProperties = new();
     if (element.LevelId != ElementId.InvalidElementId)
     {
       if (_levelCache.TryGetValue(element.LevelId, out var cachedLevel))
       {
-        levelName = cachedLevel.name;
-        levelProperties = cachedLevel.props;
+        levelName = cachedLevel;
       }
       else
       {
@@ -105,9 +103,7 @@ public class SendCollectionManager
         {
           var level = (Level)doc.GetElement(element.LevelId);
           levelName = level.Name;
-          levelProperties.Add("elevation", level.Elevation);
-          levelProperties.Add("units", _converterSettings.Current.SpeckleUnits);
-          _levelCache.Add(element.LevelId, (levelName, levelProperties));
+          _levelCache.Add(element.LevelId, levelName);
         }
         // the exception is swallowed since if an exception occurs, we fall back to "No Level" for the element
         catch (Exception e) when (!e.IsFatal()) { }
@@ -157,12 +153,6 @@ public class SendCollectionManager
       else
       {
         childCollection = new Collection(pathItem);
-        // add properties to level collection
-        if (i == 0 && levelProperties.Count > 0)
-        {
-          childCollection["properties"] = levelProperties;
-        }
-
         previousCollection.elements.Add(childCollection);
         _collectionCache[flatPathName] = childCollection;
       }

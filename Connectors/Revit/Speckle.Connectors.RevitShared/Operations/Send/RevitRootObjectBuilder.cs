@@ -23,6 +23,7 @@ public class RevitRootObjectBuilder(
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
+  LevelUnpacker levelUnpacker,
   IThreadContext threadContext,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
@@ -32,17 +33,17 @@ public class RevitRootObjectBuilder(
 {
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   ) =>
     threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, sendInfo, onOperationProgressed, ct))
+      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
     );
 
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -182,10 +183,7 @@ public class RevitRootObjectBuilder(
             // non-transformed elements can safely rely on cache
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
-            if (
-              !hasTransform
-              && sendConversionCache.TryGetValue(sendInfo.ProjectId, applicationId, out ObjectReference? value)
-            )
+            if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
             {
               converted = value;
               cacheHitCount++;
@@ -232,14 +230,24 @@ public class RevitRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(
-      atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList()
-    );
+    var flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
+    var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
+
     var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
 
+    var levelProxies = levelUnpacker.Unpack(flatElements);
+    rootObject[ProxyKeys.LEVEL] = levelProxies;
+
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
+
+    // we want to store transform data for chosen reference point setting
+    if (converterSettings.Current.ReferencePointTransform is Transform transform)
+    {
+      var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
+      rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+    }
 
     return new RootObjectBuilderResult(rootObject, results);
   }

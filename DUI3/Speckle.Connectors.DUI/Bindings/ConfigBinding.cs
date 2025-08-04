@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
 
@@ -166,6 +168,10 @@ public class ConfigBinding : IBinding
       return null;
     }
   }
+
+  [SuppressMessage("Design", "CA1024:Use properties where appropriate", Justification = "Expose to UI")]
+  [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Expose to UI")]
+  public string GetSessionId() => Consts.StaticSessionId;
 }
 
 /// <summary>

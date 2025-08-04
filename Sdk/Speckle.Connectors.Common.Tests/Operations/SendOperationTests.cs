@@ -10,8 +10,8 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
-using Speckle.Sdk.Host;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
@@ -32,11 +32,9 @@ public class SendOperationTests : MoqTest
 #pragma warning restore CA1506
   {
     var services = new ServiceCollection();
-    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
-    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
+    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
-    var accountService = Create<IAccountService>();
     var sendProgress = Create<ISendProgress>();
     var operations = Create<IOperations>();
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
@@ -45,12 +43,13 @@ public class SendOperationTests : MoqTest
 
     var ct = new CancellationToken();
     var objects = new List<object>();
-    var sendInfo = new SendInfo(string.Empty, new Uri("https://localhost"), string.Empty, string.Empty, string.Empty);
+    var projectId = "projectId";
+    var sendInfo = new SendInfo(new Account(), projectId, string.Empty, string.Empty);
     var progress = Create<IProgress<CardProgress>>();
 
     var conversionResults = new List<SendConversionResult>();
     var rootResult = new RootObjectBuilderResult(new TestBase(), conversionResults);
-    rootObjectBuilder.Setup(x => x.Build(objects, sendInfo, progress.Object, ct)).ReturnsAsync(rootResult);
+    rootObjectBuilder.Setup(x => x.Build(objects, projectId, progress.Object, ct)).ReturnsAsync(rootResult);
 
     var rootId = "rootId";
     var versionId = "versionId";
@@ -66,14 +65,13 @@ public class SendOperationTests : MoqTest
       sp,
       rootObjectBuilder.Object,
       sendConversionCache.Object,
-      accountService.Object,
       sendProgress.Object,
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
       threadContext.Object
     );
-    var result = await sendOperation.Execute(objects, sendInfo, progress.Object, ct);
+    var result = await sendOperation.Execute(objects, sendInfo, null, progress.Object, ct);
     result.Should().NotBeNull();
     rootResult.RootObject["version"].Should().Be(3);
     result.RootObjId.Should().Be(rootId);
@@ -88,12 +86,10 @@ public class SendOperationTests : MoqTest
 #pragma warning restore CA1506
   {
     var services = new ServiceCollection();
-    TypeLoader.Initialize([typeof(Base).Assembly, Assembly.GetExecutingAssembly()]);
-    services.AddSpeckleSdk(HostApplications.Navisworks, HostAppVersion.v3, "test");
+    services.AddSpeckleSdk(new("Tests", "tests"), "test", Assembly.GetExecutingAssembly());
 
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
-    var accountService = Create<IAccountService>();
     var sendProgress = Create<ISendProgress>();
     var operations = Create<IOperations>();
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
@@ -103,19 +99,23 @@ public class SendOperationTests : MoqTest
     var commitObject = new TestBase();
     var projectId = "projectId";
     var modelId = "modelId";
-    var accountId = "accountId";
     var url = new Uri("https://localhost");
-    var sendInfo = new SendInfo(accountId, url, projectId, modelId, string.Empty);
+    var token = "token";
+    var sourceApplication = "sourceApplication";
+    var account = new Account()
+    {
+      userInfo = new UserInfo(),
+      serverInfo = new ServerInfo() { url = url.ToString() },
+      token = token
+    };
+    var sendInfo = new SendInfo(account, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
 
-    var token = "token";
-    var account = new Account() { token = token };
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
-    accountService.Setup(x => x.GetAccountWithServerUrlFallback(accountId, url)).Returns(account);
     activityFactory.Setup(x => x.Start("SendOperation", "Send")).Returns((ISdkActivity?)null);
 
     operations
@@ -125,7 +125,9 @@ public class SendOperationTests : MoqTest
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
 
-    sendOperationVersionRecorder.Setup(x => x.RecordVersion(rootId, sendInfo, account, ct)).ReturnsAsync("version");
+    sendOperationVersionRecorder
+      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, null, account, ct))
+      .ReturnsAsync("version");
 
     var sp = services.BuildServiceProvider();
 
@@ -133,14 +135,22 @@ public class SendOperationTests : MoqTest
       sp,
       rootObjectBuilder.Object,
       sendConversionCache.Object,
-      accountService.Object,
       sendProgress.Object,
       operations.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
       threadContext.Object
     );
-    var (result, version) = await sendOperation.Send(commitObject, sendInfo, progress.Object, ct);
+    var (result, version) = await sendOperation.Send(
+      commitObject,
+      projectId,
+      modelId,
+      sourceApplication,
+      null,
+      account,
+      progress.Object,
+      ct
+    );
     result.Should().Be(serializeProcessResults);
     version.Should().Be("version");
   }

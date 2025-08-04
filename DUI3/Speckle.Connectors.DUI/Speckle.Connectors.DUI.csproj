@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
@@ -15,13 +15,5 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
-  </ItemGroup> 
-  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
-    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
-    <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj" />
-  </ItemGroup> 
-  <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
-    <PackageReference Include="Speckle.Sdk" />
-    <PackageReference Include="Speckle.Sdk.Dependencies" />
   </ItemGroup> 
 </Project>

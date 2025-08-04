@@ -4,10 +4,18 @@
     <UseWpf>true</UseWpf>
     <RevitVersion>2022</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2022;REVIT2022_OR_GREATER</DefineConstants>
-    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
-    <Prefer32bit>false</Prefer32bit>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
+  <PropertyGroup Label="Things needed to get ancient cef buildling with modern msbuild">
+    <!--There is a weird bug or misconfiguration in cef 65.0.1 nuget that makes it pick x86 dlls if asked to build x64.-->
+    <!--Asking it to build AnyCPU appaers to work, but generates MSB3270 warnings, which we are ignoring here-->
+    <!--Official docs suggest setting the entire solution to x64, which we can't do, and we don't want to create a new SLN just for Revit 2022-->
+    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
+    <Prefer32bit>false</Prefer32bit>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+  
 
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
 
@@ -27,12 +35,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1" />
-    <PackageReference Include="Revit.Async" />
   </ItemGroup>
 
   <ItemGroup>

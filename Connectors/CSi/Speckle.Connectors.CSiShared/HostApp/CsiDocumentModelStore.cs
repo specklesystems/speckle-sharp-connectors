@@ -5,7 +5,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Sdk;
-using Speckle.Sdk.Helpers;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Timer = System.Timers.Timer;
 
@@ -26,6 +26,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
   private string ModelPathHash { get; set; }
 
   public CsiDocumentModelStore(
+    ILogger<DocumentModelStore> baseLogger,
     IJsonSerializer jsonSerializer,
     ISpeckleApplication speckleApplication,
     ILogger<CsiDocumentModelStore> logger,
@@ -33,7 +34,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IThreadContext threadContext
   )
-    : base(jsonSerializer)
+    : base(baseLogger, jsonSerializer)
   {
     _threadContext = threadContext;
     _speckleApplication = speckleApplication;
@@ -81,7 +82,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
   {
     try
     {
-      ModelPathHash = Crypt.Md5(_csiApplicationService.SapModel.GetModelFilename(), length: 32);
+      ModelPathHash = Md5.GetString(_csiApplicationService.SapModel.GetModelFilename());
       HostAppUserDataPath = Path.Combine(
         SpecklePathProvider.UserSpeckleFolderPath,
         "ConnectorsFileData",

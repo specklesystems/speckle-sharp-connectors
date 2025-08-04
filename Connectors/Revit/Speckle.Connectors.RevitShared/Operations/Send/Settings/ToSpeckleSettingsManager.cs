@@ -22,6 +22,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly Dictionary<string, Transform?> _referencePointCache = new();
   private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
+  private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = new();
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
@@ -56,7 +57,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
   }
 
-  public Transform? GetReferencePointSetting(SenderModelCard modelCard)
+  public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
     if (
@@ -74,9 +75,9 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       if (_referencePointCache.TryGetValue(modelCard.ModelCardId.NotNull(), out Transform? previousTransform))
       {
         // invalidate conversion cache if the transform has changed
-        if (previousTransform != currentTransform)
+        if (modelCard is SenderModelCard senderModelCard && previousTransform != currentTransform)
         {
-          EvictCacheForModelCard(modelCard);
+          EvictCacheForModelCard(senderModelCard);
         }
       }
 
@@ -118,6 +119,21 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       }
     }
     _sendLinkedModelsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "sendRebarsAsVolumetric").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+    if (_sendRebarsAsVolumetricCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+    _sendRebarsAsVolumetricCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 
@@ -173,9 +189,6 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
           break;
 
         case ReferencePointType.InternalOrigin:
-          break;
-
-        default:
           break;
       }
 

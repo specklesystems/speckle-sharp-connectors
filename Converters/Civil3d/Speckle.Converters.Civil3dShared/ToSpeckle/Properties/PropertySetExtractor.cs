@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 
@@ -81,7 +82,7 @@ public class PropertySetExtractor
       propertyDefinitionNames = _propertySetDefinitionHandler.HandleDefinition(setDefinition);
 
       // get all property values in the propertyset
-      Dictionary<string, object?> properties = new();
+      Dictionary<string, object?> propertySetData = new();
       foreach (AAECPDB.PropertySetData data in propertySet.PropertySetData)
       {
         string dataName =
@@ -92,28 +93,14 @@ public class PropertySetExtractor
 
         var value = GetValue(data);
 
-        var propertyValueDict = new Dictionary<string, object?>() { ["value"] = value, ["name"] = dataName };
+        Dictionary<string, object?> propertyValueDict = new() { ["value"] = value, ["name"] = dataName };
+        PropertyHandler propHandler = new();
+        propHandler.TryAddToDictionary(propertyValueDict, "units", () => data.UnitType.GetTypeDisplayName(true)); // units not always applicable to def, will throw
 
-        try
-        {
-          // accessing unit type prop can be expected to throw if it's not applicable to the definition
-          propertyValueDict["units"] = data.UnitType.GetTypeDisplayName(true);
-        }
-        catch (Exception e) when (!e.IsFatal()) { }
-
-        properties[dataName] = propertyValueDict;
+        propertySetData[dataName] = propertyValueDict;
       }
 
-      // add property set to dict
-      Dictionary<string, object?> propertySetDict =
-        new()
-        {
-          ["name"] = name,
-          ["properties"] = properties,
-          ["definitionName"] = name
-        };
-
-      return (name, propertySetDict);
+      return (name, propertySetData);
     }
     catch (Exception e) when (!e.IsFatal())
     {

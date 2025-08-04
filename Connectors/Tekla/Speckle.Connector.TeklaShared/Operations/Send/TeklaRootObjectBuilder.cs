@@ -45,7 +45,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
-    SendInfo sendInfo,
+    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -66,9 +66,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       foreach (TSM.ModelObject teklaObject in teklaObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        using var _2 = _activityFactory.Start("Convert");
-
-        var result = ConvertTeklaObject(teklaObject, rootObjectCollection, sendInfo.ProjectId);
+        var result = ConvertTeklaObject(teklaObject, rootObjectCollection, projectId);
         results.Add(result);
 
         ++count;

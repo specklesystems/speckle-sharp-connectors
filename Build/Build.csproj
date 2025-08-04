@@ -10,6 +10,7 @@
     <PackageReference Include="Bullseye" />
     <PackageReference Include="Glob" />
     <PackageReference Include="Microsoft.Build" />
+    <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
     <PackageReference Include="Semver" />
     <PackageReference Include="SimpleExec" />
   </ItemGroup>

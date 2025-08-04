@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target AfterTargets="Clean" Name="CleanAddinAutocad" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Clean" Name="CleanAddinAutocad" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion);" />
   </Target>
 
-  <Target AfterTargets="Build"  Name="AfterBuildAutoCAD" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Build"  Name="AfterBuildAutoCAD" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <ItemGroup>
       <AutoCADDLLs Include="$(TargetDir)\**\*.*" />
     </ItemGroup>
@@ -12,11 +12,11 @@
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
   </Target>
 
-  <Target AfterTargets="Clean" Name="CleanAddinCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Clean" Name="CleanAddinCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion);" />
   </Target>
 
-  <Target AfterTargets="Build"  Name="AfterBuildCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
+  <Target AfterTargets="Build"  Name="AfterBuildCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <ItemGroup>
       <Civil3DDLLs Include="$(TargetDir)\**\*.*" />
     </ItemGroup>
@@ -24,13 +24,11 @@
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
   </Target>
 
-  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(AutoCADVersion)\acad.exe</StartProgram>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true'">
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  <PropertyGroup Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
     <StartArguments>/product C3D</StartArguments>

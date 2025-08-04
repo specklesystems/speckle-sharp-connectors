@@ -1,146 +1,84 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<RhinoUI major_ver="3" minor_ver="0" guid="e229f0f5-9c65-41e4-abd2-62423a284cb2" localize="False" default_language_id="1033" dpi_scale="125">
-  <extend_rhino_menus />
+<RhinoUI major_ver="3" minor_ver="0" guid="6cd58fb8-f3c4-4f84-92e7-fb8446880d3c" localize="False" default_language_id="1033" dpi_scale="125">
+  <extend_rhino_menus>
+    <menu guid="d58ceae7-fdb0-4104-80da-274b94ad44a9">
+      <text>
+        <locale_1033>Extend Rhino Menus</locale_1033>
+      </text>
+    </menu>
+  </extend_rhino_menus>
   <menus />
   <tool_bar_groups>
-    <tool_bar_group guid="5f6ad164-78bd-4114-b29f-e9066a676b02" dock_bar_guid32="00000000-0000-0000-0000-000000000000" dock_bar_guid64="13f3b878-ee25-45a7-8e82-4204663c5120" active_tool_bar_group="00813814-f9b4-4271-8b13-886976b6d3b2" single_file="False" hide_single_tab="False" point_floating="684,402">
+    <tool_bar_group guid="06e65a1e-8f21-4cae-97b5-4449673f4012" dock_bar_guid32="00000000-0000-0000-0000-000000000000" dock_bar_guid64="44ef88fa-e6b1-4f09-a0e9-8e23185a3ce0" active_tool_bar_group="e9887c05-b5fa-49a0-a39f-2f9319ddd1cc" single_file="False" hide_single_tab="False" point_floating="1073,382">
       <text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </text>
-      <tool_bar_group_item guid="00813814-f9b4-4271-8b13-886976b6d3b2" major_version="1" minor_version="1">
+      <tool_bar_group_item guid="e9887c05-b5fa-49a0-a39f-2f9319ddd1cc" major_version="1" minor_version="1">
         <text>
-          <locale_1033>Toolbar 00</locale_1033>
+          <locale_1033>Speckle</locale_1033>
         </text>
-        <tool_bar_id>a0d74d7e-bd20-499e-9984-fca521394029</tool_bar_id>
+        <tool_bar_id>9582a9c2-6997-4aa9-ab4c-4547d108a3f0</tool_bar_id>
       </tool_bar_group_item>
-      <dock_bar_info dpi_scale="125" dock_bar="False" docking="True" horz="False" visible="False" floating="True" mru_float_style="8192" bar_id="59472" mru_width="32767" point_pos="-2,-2" float_point="684,402" rect_mru_dock_pos="0,0,0,0" dock_location_u="59420" dock_location="left" float_size="271,65" />
+      <dock_bar_info dpi_scale="125" dock_bar="False" docking="True" horz="False" visible="True" floating="True" mru_float_style="8192" bar_id="59461" mru_width="868" point_pos="-2,-2" float_point="1073,382" rect_mru_dock_pos="0,0,0,0" dock_location_u="59419" dock_location="top" float_size="196,65" />
     </tool_bar_group>
   </tool_bar_groups>
   <tool_bars>
-    <tool_bar guid="a0d74d7e-bd20-499e-9984-fca521394029" bitmap_id="51e103c3-0e8e-4cf4-a32d-69d7fa5baa8e" item_display_style="control_and_text">
+    <tool_bar guid="9582a9c2-6997-4aa9-ab4c-4547d108a3f0" bitmap_id="a76107bd-4760-4067-a997-699b0bc66446" item_display_style="control_and_text">
       <text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </text>
-      <tool_bar_item guid="9c871acc-1ed0-4b29-9c90-c576cf0c9874" button_display_mode="control_and_text" display_style_from_parent="False">
+      <tool_bar_item guid="d5bcbc1d-0d03-44c8-940b-a999af7fa830" button_display_mode="control_and_text" display_style_from_parent="False">
         <text>
           <locale_1033>Toolbar item</locale_1033>
         </text>
-        <left_macro_id>5937e6d4-d2f5-4831-abdb-2c54f5903731</left_macro_id>
-      </tool_bar_item>
-      <tool_bar_item guid="f31da9e3-4ded-4f52-bf08-4f5c49bbd1cc" button_style="spacer" />
-      <tool_bar_item guid="af61c39b-a8b7-4cf9-b221-f63c2dcb0cf2" button_display_mode="control_and_text" display_style_from_parent="False">
-        <left_macro_id>7c8cd3c6-87fb-4047-9c5a-cb38defaa5c1</left_macro_id>
+        <left_macro_id>8a43d1c4-19a5-4f5a-925d-bedbc8bd8cc6</left_macro_id>
       </tool_bar_item>
     </tool_bar>
   </tool_bars>
   <macros>
-    <macro_item guid="5937e6d4-d2f5-4831-abdb-2c54f5903731" bitmap_id="26fce8b0-6f57-4acd-a04d-67515a58a367">
+    <macro_item guid="8a43d1c4-19a5-4f5a-925d-bedbc8bd8cc6" bitmap_id="53ef7a7f-a700-44ae-976d-f518759811c6">
       <text>
         <locale_1033>Macro</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>The Next Gen Speckle Connector (Beta) for Rhino</locale_1033>
+        <locale_1033>The Speckle Connector for Rhino</locale_1033>
       </tooltip>
-      <help_text>
-        <locale_1033 />
-      </help_text>
       <button_text>
-        <locale_1033>Speckle (Beta)</locale_1033>
+        <locale_1033>Speckle</locale_1033>
       </button_text>
-      <menu_text>
-        <locale_1033 />
-      </menu_text>
-      <script>SpeckleBeta</script>
-    </macro_item>
-    <macro_item guid="7c8cd3c6-87fb-4047-9c5a-cb38defaa5c1" bitmap_id="998b7353-c03c-4284-aa62-5b46327731e0">
-      <text>
-        <locale_1033>Macro 00</locale_1033>
-      </text>
-      <tooltip>
-        <locale_1033>Opens the Speckle Community Help Page in your browser</locale_1033>
-      </tooltip>
-      <help_text>
-        <locale_1033 />
-      </help_text>
-      <button_text>
-        <locale_1033>Get Help</locale_1033>
-      </button_text>
-      <menu_text>
-        <locale_1033 />
-      </menu_text>
-      <script>_-WebBrowser Navigate "https://speckle.community/c/help" _EnterEnd</script>
+      <script>Speckle</script>
     </macro_item>
   </macros>
   <bitmaps>
     <small_bitmap item_width="16" item_height="16">
-      <bitmap_item guid="51e103c3-0e8e-4cf4-a32d-69d7fa5baa8e" index="0" />
-      <bitmap_item guid="26fce8b0-6f57-4acd-a04d-67515a58a367" index="1" />
-      <bitmap_item guid="998b7353-c03c-4284-aa62-5b46327731e0" index="2" />
-      <bitmap>iVBORw0KGgoAAAANSUhEUgAAABAAAAAwCAYAAAAYX/pXAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
-jwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAH8SURBVEhL7ZRfSFNRHMdHZWaPZShUMA2yFwlf
-esgHR2kvQRT5EiTYe/RU2BztzmihCGNEZUJORKIeKgz6M9jCIqG/tJwPmqUZsXLadtcM2r3bPZ+4
-d2yQuw3q+X7gy/n3Ox/OOQ/HZltF1yPsRkI4usJ0OkN4zgY1vyukDTvD2nh3KPfJFQa9xtjQ1BxB
-n/ifOMMcNgRmktNBOPlA0HFHcOiG4MCIoGVIo+lqjnpfjs0X8ykK7O0LrHNn/zmmgmpvCiXWURzz
-dYiqnnxfXTxFXd9iecG+gUlWJlup9X5n8P5dQObh40E2ehR+Rts5MvC0vEDPekmlsX8WId8CUvBj
-jJoLy1R5Mn/UlQiWnh0k96EbEfODfBPEFyAOxGDlHmLpOnzuQx7fby6o642TmvOhqS9BTAEzwCzw
-HpgGLUp6vp89vhlzgZ4Kd5Zvbzvh123IBUEL5VtljPTU0fJXqPQoVEoKm3pSZD+2IRLHEfIJRPIY
-2flW2vwTxrpeVyGpJgIp/0iXLp9BfbGTTKSB9JsGlOgu1Nf1BEfzJyjUlQgKiV/bSjJQzXSg0Ri/
-CjSTHN1CYqS2/BWKgis17PU+N/rKO4fR7jg/x/LwthKBx0xQyAYpQyKwHUfvRMmaIdDZ3RKx/01g
-GldGXntOXVjjzjxZ9RtYWFhYWFhYWNh+AwX3pT9YtYnUAAAAAElFTkSuQmCC</bitmap>
-    </small_bitmap>
-    <normal_bitmap item_width="24" item_height="24">
-      <bitmap_item guid="51e103c3-0e8e-4cf4-a32d-69d7fa5baa8e" index="0" />
-      <bitmap_item guid="26fce8b0-6f57-4acd-a04d-67515a58a367" index="1" />
-      <bitmap_item guid="998b7353-c03c-4284-aa62-5b46327731e0" index="2" />
-      <bitmap>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
-RU5ErkJggg==</bitmap>
-    </normal_bitmap>
-    <large_bitmap item_width="32" item_height="32">
-      <bitmap_item guid="51e103c3-0e8e-4cf4-a32d-69d7fa5baa8e" index="0" />
-      <bitmap_item guid="26fce8b0-6f57-4acd-a04d-67515a58a367" index="1" />
-      <bitmap_item guid="998b7353-c03c-4284-aa62-5b46327731e0" index="2" />
-      <bitmap>iVBORw0KGgoAAAANSUhEUgAAACAAAABgCAYAAAB8InCYAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
-jwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAAiSURBVGhD7cEBAQAAAIIg/69uSEABAAAAAAAA
-AAAAAADvBjBgAAExh6+sAAAAAElFTkSuQmCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      <bitmap_item guid="53ef7a7f-a700-44ae-976d-f518759811c6" index="0" />
+      <bitmap_item guid="a76107bd-4760-4067-a997-699b0bc66446" index="1" />
+      <bitmap>iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
+jwv8YQUAAAAJcEhZcwAAEnEAABJxAfPceo4AAAAYSURBVEhLY2AYBaNgFIyCUTAKRsEoQAUACCAA
+AV75BEgAAAAASUVORK5CYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==</bitmap>
+    </small_bitmap>
+    <normal_bitmap item_width="24" item_height="24">
+      <bitmap_item guid="53ef7a7f-a700-44ae-976d-f518759811c6" index="0" />
+      <bitmap_item guid="a76107bd-4760-4067-a997-699b0bc66446" index="1" />
+      <bitmap>iVBORw0KGgoAAAANSUhEUgAAABgAAAAwCAYAAAALiLqjAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
+jwv8YQUAAAAJcEhZcwAAEnEAABJxAfPceo4AAAAbSURBVFhH7cExAQAAAMKg9U/taQmgAAAAAOAG
+EjAAAY8sF9IAAAAASUVORK5CYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==</bitmap>
+    </normal_bitmap>
+    <large_bitmap item_width="32" item_height="32">
+      <bitmap_item guid="53ef7a7f-a700-44ae-976d-f518759811c6" index="0" />
+      <bitmap_item guid="a76107bd-4760-4067-a997-699b0bc66446" index="1" />
+      <bitmap>iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
+jwv8YQUAAAAJcEhZcwAAEnEAABJxAfPceo4AAAFUSURBVGhD7ZixSsNgFEbzAII2nZVMDi66OLhI
+wVnHBERIBkE0hQacdNAKDg5C3bqZyp/O+gb6BvoGCrV0EMSltEnTXrl/bDSpqJRiRb4DZwnc3LOl
+vYoC/jumS1PpZ9/CQ6bb0qSilZN6viUVbccUfpG1ROBKPf/S8vxrqxrcWiK4l1YD6muKppPe8TlG
+Q1s4eIkHR6rXPkyvG8RoaIpRp7m958EXjMC1cqeUXpnkLYCdKTzResWnjYuA9POOdLUcuVKKXD7t
+0NJJSIvHXZo/ipzdj5ze7cVm8xQ7uUVaeu07HwLYic1mYngUIgABCEAAAhCAAAR8HcDoj2fjDWCM
+enG8AYxec5IB4QOrbod3qk03Gbt7ldmhitSmIqvaPUfNk8VmbcqxvFBaGOL/wVBDAIC/Bu4DsbgP
+/OhjNPbfAwhAAAIQgAAEIAABDO4DfXAfAL/EK0EZhuBXWIwTAAAAAElFTkSuQmCC</bitmap>
     </large_bitmap>
   </bitmaps>
   <scripts />

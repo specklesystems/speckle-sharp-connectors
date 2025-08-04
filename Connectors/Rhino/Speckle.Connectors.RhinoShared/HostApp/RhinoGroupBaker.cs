@@ -35,8 +35,10 @@ public class RhinoGroupBaker
     {
       try
       {
-        var appIds = groupProxy.objects.SelectMany(oldObjId => applicationIdMap[oldObjId]).Select(id => new Guid(id));
         var groupName = (groupProxy.name ?? "No Name Group") + $" ({baseLayerName})";
+        var appIds = groupProxy
+          .objects.SelectMany(oldObjId => LookupApplicationIds(groupName, oldObjId, applicationIdMap))
+          .Select(id => new Guid(id));
         _converterSettings.Current.Document.Groups.Add(groupName, appIds);
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -44,6 +46,20 @@ public class RhinoGroupBaker
         _logger.LogError(ex, "Failed to bake Rhino Group");
       }
     }
+  }
+
+  private IEnumerable<string> LookupApplicationIds(
+    string name,
+    string oldObjId,
+    Dictionary<string, IReadOnlyCollection<string>> applicationIdMap
+  )
+  {
+    if (applicationIdMap.TryGetValue(oldObjId, out IReadOnlyCollection<string> value))
+    {
+      return value;
+    }
+    _logger.LogWarning("Group {group} references an application Id {appId} that cannot be mapped", name, oldObjId);
+    return [];
   }
 
   public void PurgeGroups(string baseLayerName)

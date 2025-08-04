@@ -1,5 +1,5 @@
+using System.Reflection;
 using Autodesk.Revit.DB;
-using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Builders;
@@ -11,11 +11,18 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.Revit.Bindings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Receive;
+using Speckle.Connectors.Revit.Operations.Receive.Settings;
 using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
+#if REVIT2026_OR_GREATER
+using Speckle.Connectors.Revit2026.Plugin;
+#else
+using CefSharp;
+#endif
 
 namespace Speckle.Connectors.Revit.DependencyInjection;
 
@@ -27,6 +34,7 @@ public static class ServiceRegistration
     serviceCollection.AddConnectors();
     serviceCollection.AddDUI<RevitThreadContext, RevitDocumentStore>();
     RegisterUiDependencies(serviceCollection);
+    serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     // Storage Schema
     serviceCollection.AddScoped<DocumentModelStorageSchema>();
@@ -50,10 +58,12 @@ public static class ServiceRegistration
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<DocumentToConvert>>();
     serviceCollection.AddScoped<ElementUnpacker>();
+    serviceCollection.AddScoped<LevelUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
+    serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies
@@ -80,7 +90,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<CefSharpPanel>();
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(sp => sp.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
-#else
+#elif !REVIT2026_OR_GREATER
     // different versions for different versions of CEF
     serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
 
@@ -90,6 +100,11 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton(panel);
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
+#else
+    serviceCollection.AddSingleton<IRevitPlugin, RevitWebViewPlugin>();
+    serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<RevitControlWebView>());
+    serviceCollection.AddSingleton<RevitControlWebView>();
+    serviceCollection.AddSingleton<RevitControlWebViewDockable>();
 #endif
   }
 }

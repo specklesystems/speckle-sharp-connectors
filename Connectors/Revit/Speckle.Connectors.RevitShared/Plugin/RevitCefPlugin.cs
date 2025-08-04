@@ -1,3 +1,4 @@
+#if !REVIT2026_OR_GREATER
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -6,10 +7,10 @@ using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Revit.Async;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Revit.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
@@ -93,7 +94,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
       $"Speckle.Connectors.Revit{_speckleApplication.HostApplicationVersion}.Assets.logo32.png",
       path
     );
-    dui3Button.ToolTip = "Speckle (Beta) for Revit";
+    dui3Button.ToolTip = "Speckle for Revit";
     //dui3Button.AvailabilityClassName = typeof(CmdAvailabilityViews).FullName;
     dui3Button.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://speckle.systems"));
   }
@@ -104,7 +105,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     _revitContext.UIApplication = uiApplication;
 
     // POC: might be worth to interface this out, we shall see...
-    RevitTask.Initialize(uiApplication);
+    RevitAsync.Initialize(uiApplication);
 
     PostApplicationInit(); // for double-click file open
   }
@@ -158,7 +159,7 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     // Otherwise pane cannot be registered for double-click file open.
     _uIControlledApplication.RegisterDockablePane(
       RevitExternalApplication.DockablePanelId,
-      "Speckle (Beta) for Revit",
+      "Speckle for Revit",
       _cefSharpPanel
     );
   }
@@ -181,3 +182,4 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     return null;
   }
 }
+#endif

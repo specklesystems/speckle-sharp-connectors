@@ -15,6 +15,9 @@ public sealed class DummySendCacheManager(Dictionary<string, string> objects) : 
   public void SaveObject(string id, string json) => throw new NotImplementedException();
 
   public bool HasObject(string objectId) => false;
+#pragma warning disable CA1065
+  public string Path => throw new NotImplementedException();
+#pragma warning restore CA1065
 
   public void SaveObjects(IEnumerable<(string id, string json)> items)
   {
