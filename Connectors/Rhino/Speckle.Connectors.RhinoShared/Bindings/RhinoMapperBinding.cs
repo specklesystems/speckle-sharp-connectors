@@ -108,7 +108,23 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public async Task ClearAllCategoryAssignments()
   {
-    // TODO
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
+    {
+      return;
+    }
+
+    // Or should we rather be getting a flattened list of objectIds from mappings table?
+    foreach (var rhinoObject in doc.Objects)
+    {
+      var categoryValue = rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY);
+      if (!string.IsNullOrEmpty(categoryValue))
+      {
+        rhinoObject.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
+        rhinoObject.CommitChanges();
+      }
+    }
   }
 
   /// <summary>
