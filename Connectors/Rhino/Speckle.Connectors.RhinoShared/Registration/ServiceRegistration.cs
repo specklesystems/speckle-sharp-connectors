@@ -50,6 +50,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoSendBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
+    serviceCollection.AddSingleton<IBinding, RhinoMapperBinding>();
 
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
