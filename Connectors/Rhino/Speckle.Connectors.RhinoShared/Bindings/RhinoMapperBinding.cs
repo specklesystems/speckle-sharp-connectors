@@ -164,8 +164,19 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public async Task<string[]> GetObjectsByCategory(string categoryValue)
   {
-    // TODO
-    return Array.Empty<string>();
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
+    {
+      return [];
+    }
+
+    var objectIds = doc
+      .Objects.Where(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY) == categoryValue)
+      .Select(obj => obj.Id.ToString())
+      .ToArray();
+
+    return objectIds;
   }
 
   /// <summary>
