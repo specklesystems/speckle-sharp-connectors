@@ -13,7 +13,12 @@ namespace Speckle.Connectors.Rhino.Bindings;
 /// <param name="CategoryLabel">Human-readable category name</param>
 /// <param name="ObjectIds">Array of Rhino object IDs assigned to this category</param>
 /// <param name="ObjectCount">Number of objects (for convenience)</param>
-public record CategoryMapping(string CategoryValue, string CategoryLabel, string[] ObjectIds, int ObjectCount);
+public record CategoryMapping(
+  string CategoryValue,
+  string CategoryLabel,
+  IReadOnlyList<string> ObjectIds,
+  int ObjectCount
+);
 
 /// <summary>
 /// Binding for managing Rhino object mappings to Revit categories.
@@ -41,7 +46,7 @@ public class RhinoMapperBinding : IBinding
     // Events fire on delete, undo delete and modify objects
     RhinoDoc.DeleteRhinoObject += OnObjectChanged;
     RhinoDoc.UndeleteRhinoObject += OnObjectChanged;
-    RhinoDoc.ModifyObjectAttributes += OnObjectChanged;
+    RhinoDoc.ModifyObjectAttributes += OnObjectAttributesChanged;
   }
 
   #region UI-Callable Methods
@@ -49,12 +54,12 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Gets list of available Revit categories for the UI dropdown
   /// </summary>
-  public async Task<CategoryOption[]> GetAvailableCategories() => RevitBuiltInCategoryStore.Categories;
+  public CategoryOption[] GetAvailableCategories() => RevitBuiltInCategoryStore.Categories;
 
   /// <summary>
   /// Assigns selected objects to a specific Revit category
   /// </summary>
-  public async Task AssignToCategory(string[] objectIds, string categoryValue)
+  public void AssignToCategory(string[] objectIds, string categoryValue)
   {
     var doc = RhinoDoc.ActiveDoc;
 
@@ -80,7 +85,7 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Removes category assignments from specific objects.
   /// </summary>
-  public async Task ClearCategoryAssignment(string[] objectIds)
+  public void ClearCategoryAssignment(string[] objectIds)
   {
     var doc = RhinoDoc.ActiveDoc;
 
@@ -106,7 +111,7 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Removes all category assignments in the doc.
   /// </summary>
-  public async Task ClearAllCategoryAssignments()
+  public void ClearAllCategoryAssignments()
   {
     var doc = RhinoDoc.ActiveDoc;
 
@@ -131,7 +136,7 @@ public class RhinoMapperBinding : IBinding
   /// Gets all current mappings to show in the UI table.
   /// </summary>
   /// <returns></returns>
-  public async Task<CategoryMapping[]> GetCurrentMappings()
+  public CategoryMapping[] GetCurrentMappings()
   {
     var doc = RhinoDoc.ActiveDoc;
 
@@ -162,7 +167,7 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Get all objects assigned to a specific category
   /// </summary>
-  public async Task<string[]> GetObjectsByCategory(string categoryValue)
+  public string[] GetObjectsByCategory(string categoryValue)
   {
     var doc = RhinoDoc.ActiveDoc;
 
@@ -197,17 +202,25 @@ public class RhinoMapperBinding : IBinding
   #region Event Handling
 
   /// <summary>
-  /// Called when objects are changed in Rhino.
+  /// Called when objects are deleted or undeleted in Rhino.
   /// </summary>
   private void OnObjectChanged(object? sender, RhinoObjectEventArgs e)
   {
-    // Changed object
     var rhinoObject = e.TheObject;
-
-    // Does the object have a mapping?
     if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
     {
-      // Notify UI
+      _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
+    }
+  }
+
+  /// <summary>
+  /// Called when object attributes are modified in Rhino.
+  /// </summary>
+  private void OnObjectAttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e) // Fixed: Correct event signature
+  {
+    var rhinoObject = e.RhinoObject;
+    if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+    {
       _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
     }
   }
@@ -217,7 +230,7 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   private void NotifyMappingsChanged()
   {
-    var currentMappings = GetCurrentMappings().Result;
+    var currentMappings = GetCurrentMappings();
     Parent.Send(MAPPINGS_CHANGED_EVENT, currentMappings);
   }
 
