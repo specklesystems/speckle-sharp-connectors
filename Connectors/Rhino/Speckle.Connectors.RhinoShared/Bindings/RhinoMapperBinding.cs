@@ -2,15 +2,9 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Bindings;
-
-/// <summary>
-/// Represents a category option for the dropdown in the UI.
-/// </summary>
-/// <param name="Value">The Revit category enum name (e.g., "OST_Walls")</param>
-/// <param name="Label">Human-readable name for the UI (e.g., "Walls")</param>
-public record CategoryOption(string Value, string Label);
 
 /// <summary>
 /// Represents a group of objects that are all assigned to the same category.
@@ -55,11 +49,7 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Gets list of available Revit categories for the UI dropdown
   /// </summary>
-  public async Task<CategoryOption[]> GetAvailableCategories()
-  {
-    // TODO
-    return Array.Empty<CategoryOption>();
-  }
+  public async Task<CategoryOption[]> GetAvailableCategories() => RevitBuiltInCategoryStore.Categories;
 
   /// <summary>
   /// Assigns selected objects to a specific Revit category

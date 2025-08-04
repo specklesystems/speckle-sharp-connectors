@@ -1,6 +1,13 @@
 namespace Speckle.Connectors.Rhino.HostApp;
 
 /// <summary>
+/// Represents a category option for the dropdown in the UI.
+/// </summary>
+/// <param name="Value">The Revit category enum name (e.g., "OST_Walls")</param>
+/// <param name="Label">Human-readable name for the UI (e.g., "Walls")</param>
+public record CategoryOption(string Value, string Label);
+
+/// <summary>
 /// Currently hardcoded Revit BuiltInCategories for the Interop Lite mapper.
 /// This provides a select list of commonly used categories for object mapping
 /// from Rhino to Revit.
@@ -13,50 +20,51 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public static class RevitBuiltInCategoryStore
 {
   /// <summary>
-  /// Curated list of Revit BuiltInCategory enum names for the lite interop mapper.
-  /// These are the exact enum names as they appear in the Revit API.
+  /// Dictionary mapping Revit BuiltInCategory enum names to human-readable labels.
+  /// Key: BuiltInCategory enum name (e.g., "OST_Walls")
+  /// Value: Human-readable label (e.g., "Walls")
   /// </summary>
-  public static readonly List<string> Categories =
+  public static readonly CategoryOption[] Categories =
   [
-    "OST_Ceilings",
-    "OST_Columns",
-    "OST_CurtainGrids",
-    "OST_CurtainGridsCurtaSystem",
-    "OST_CurtainGridsRoof",
-    "OST_CurtainGridsSystem",
-    "OST_CurtainGridsWall",
-    "OST_Curtain_Systems",
-    "OST_CurtainWallMullions",
-    "OST_CurtainWallPanels",
-    "OST_Floors",
-    "OST_Furniture",
-    "OST_FurnitureSystems",
-    "OST_Roofs",
-    "OST_StackedWalls",
-    "OST_Walls",
+    new("OST_Ceilings", "Ceilings"),
+    new("OST_Columns", "Columns"),
+    new("OST_CurtainGrids", "Curtain Grids"),
+    new("OST_CurtainGridsCurtaSystem", "Curtain Grids - Curtain System"),
+    new("OST_CurtainGridsRoof", "Curtain Grids - Roof"),
+    new("OST_CurtainGridsSystem", "Curtain Grids - System"),
+    new("OST_CurtainGridsWall", "Curtain Grids - Wall"),
+    new("OST_Curtain_Systems", "Curtain Systems"),
+    new("OST_CurtainWallMullions", "Curtain Wall Mullions"),
+    new("OST_CurtainWallPanels", "Curtain Wall Panels"),
+    new("OST_Floors", "Floors"),
+    new("OST_Furniture", "Furniture"),
+    new("OST_FurnitureSystems", "Furniture Systems"),
+    new("OST_Roofs", "Roofs"),
+    new("OST_StackedWalls", "Stacked Walls"),
+    new("OST_Walls", "Walls"),
     // STRUCTURAL
-    "OST_StructuralColumns",
-    "OST_StructuralFoundation",
-    "OST_StructuralFraming",
-    "OST_StructuralFramingSystem",
-    "OST_StructuralTruss",
+    new("OST_StructuralColumns", "Structural Columns"),
+    new("OST_StructuralFoundation", "Structural Foundation"),
+    new("OST_StructuralFraming", "Structural Framing"),
+    new("OST_StructuralFramingSystem", "Structural Framing System"),
+    new("OST_StructuralTruss", "Structural Truss"),
     // MISC
-    "OST_Levels",
-    "OST_Grids",
-    "OST_Rooms",
-    "OST_Areas",
+    new("OST_Levels", "Levels"),
+    new("OST_Grids", "Grids"),
+    new("OST_Rooms", "Rooms"),
+    new("OST_Areas", "Areas"),
     // MEP
-    "OST_DuctCurves",
-    "OST_DuctSystem",
-    "OST_DuctFitting",
-    "OST_PipeCurves",
-    "OST_PipeCurvesCenterLine",
-    "OST_PipeSegments",
-    "OST_PipeFitting",
-    "OST_Conduit",
-    "OST_ConduitFitting",
-    "OST_Cable",
-    "OST_CableTray",
-    "OST_CableTrayFitting"
+    new("OST_DuctCurves", "Duct Curves"),
+    new("OST_DuctSystem", "Duct System"),
+    new("OST_DuctFitting", "Duct Fitting"),
+    new("OST_PipeCurves", "Pipe Curves"),
+    new("OST_PipeCurvesCenterLine", "Pipe Curves - Center Line"),
+    new("OST_PipeSegments", "Pipe Segments"),
+    new("OST_PipeFitting", "Pipe Fitting"),
+    new("OST_Conduit", "Conduit"),
+    new("OST_ConduitFitting", "Conduit Fitting"),
+    new("OST_Cable", "Cable"),
+    new("OST_CableTray", "Cable Tray"),
+    new("OST_CableTrayFitting", "Cable Tray Fitting")
   ];
 }
