@@ -16,7 +16,6 @@ public static class Importer
     string projectId,
     string modelId,
     Account account,
-    ISdkActivityFactory activityFactory,
     CancellationToken cancellationToken
   )
   {
@@ -25,8 +24,6 @@ public static class Importer
     // So every import creates a new container for its processing
     var serviceCollection = new ServiceCollection();
     serviceCollection.AddRhinoImporter();
-    serviceCollection.AddSingleton<ISdkActivityFactory>(_ => activityFactory);
-
     using var serviceProvider = serviceCollection.BuildServiceProvider();
     var instance = serviceProvider.GetRequiredService<ImporterInstance>();
     return await instance.RunRhinoImport(filePath, projectId, modelId, account, cancellationToken);

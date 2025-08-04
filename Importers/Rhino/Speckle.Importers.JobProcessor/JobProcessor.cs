@@ -33,7 +33,7 @@ internal sealed class JobProcessorInstance(
       FileimportJob? job = await repository.GetNextJob(connection, cancellationToken);
       if (job == null)
       {
-        logger.LogInformation("No job found, sleeping for {timeout}", s_idleTimeout);
+        logger.LogDebug("No job found, sleeping for {timeout}", s_idleTimeout);
         await Task.Delay(s_idleTimeout, cancellationToken);
         continue;
       }
