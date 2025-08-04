@@ -1,11 +1,12 @@
 ﻿using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.Rhino;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Logging;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-internal sealed class RhinoJobHandler : IJobHandler
+internal sealed class RhinoJobHandler(ISdkActivityFactory activityFactory) : IJobHandler
 {
   public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
@@ -26,6 +27,7 @@ internal sealed class RhinoJobHandler : IJobHandler
         job.Payload.ProjectId,
         job.Payload.ModelId,
         client.Account,
+        activityFactory,
         cancellationToken
       );
     }

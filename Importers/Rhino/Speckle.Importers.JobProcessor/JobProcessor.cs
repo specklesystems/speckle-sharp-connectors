@@ -1,11 +1,14 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Logging;
 using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.JobProcessor.JobHandlers;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Logging;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor;
@@ -15,7 +18,8 @@ internal sealed class JobProcessorInstance(
   ILogger<JobProcessorInstance> logger,
   IJobHandler jobHandler,
   IAccountFactory accountFactory,
-  IClientFactory clientFactory
+  IClientFactory clientFactory,
+  ISdkActivityFactory activityFactory
 )
 {
   private static readonly TimeSpan s_idleTimeout = TimeSpan.FromSeconds(1);
@@ -35,8 +39,27 @@ internal sealed class JobProcessorInstance(
       }
       logger.LogInformation("Starting {jobId}", job.Id);
 
-      JobStatus jobStatus = await AttemptJob(job, cancellationToken);
-      await repository.SetJobStatus(connection, job.Id, jobStatus, cancellationToken);
+      using var activity = activityFactory.Start();
+      ActivityScope.SetTag("jobId", job.Id);
+      ActivityScope.SetTag("jobType", job.Payload.JobType);
+      ActivityScope.SetTag("job.attempt", job.Attempt.ToString());
+      ActivityScope.SetTag("serverUrl", job.Payload.ServerUrl.ToString());
+      ActivityScope.SetTag("projectId", job.Payload.ProjectId);
+      ActivityScope.SetTag("modelId", job.Payload.ModelId);
+      ActivityScope.SetTag("blobId", job.Payload.BlobId);
+
+      try
+      {
+        JobStatus jobStatus = await AttemptJob(job, cancellationToken);
+        await repository.SetJobStatus(connection, job.Id, jobStatus, cancellationToken);
+        activity?.SetStatus(SdkActivityStatusCode.Ok);
+      }
+      catch (Exception ex)
+      {
+        activity?.RecordException(ex);
+        activity?.SetStatus(SdkActivityStatusCode.Error);
+        throw;
+      }
     }
   }
 
@@ -89,10 +112,13 @@ internal sealed class JobProcessorInstance(
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
   private async Task<JobStatus> AttemptJob(FileimportJob job, CancellationToken cancellationToken)
   {
+    using var activity = activityFactory.Start();
+
     IClient? speckleClient = null;
     try
     {
       speckleClient = await SetupClient(job, cancellationToken);
+      UserActivityScope.AddUserScope(speckleClient.Account);
 
       if (job.Attempt > job.MaxAttempt)
       {
@@ -106,6 +132,7 @@ internal sealed class JobProcessorInstance(
         await ReportSuccess(job, version, speckleClient, cancellationToken);
         logger.LogInformation("Job {jobId} has succeeded creating {versionId}", job.Id, version.id);
 
+        activity?.SetStatus(SdkActivityStatusCode.Ok);
         return JobStatus.SUCCEEDED;
       }
       catch (JobTimeoutException ex)
@@ -117,6 +144,8 @@ internal sealed class JobProcessorInstance(
           throw new MaxAttemptsExceededException("The final attempt to process the job failed", ex);
         }
 
+        activity?.RecordException(ex);
+        activity?.SetStatus(SdkActivityStatusCode.Error);
         return JobStatus.QUEUED;
       }
     }
@@ -128,6 +157,9 @@ internal sealed class JobProcessorInstance(
       {
         await ReportFailed(job, speckleClient, ex, cancellationToken);
       }
+
+      activity?.RecordException(ex);
+      activity?.SetStatus(SdkActivityStatusCode.Error);
       return JobStatus.FAILED;
     }
     finally
@@ -157,12 +189,7 @@ internal sealed class JobProcessorInstance(
     );
     try
     {
-      logger.LogInformation("Starting job");
-
-      Version version = await jobHandler.ProcessJob(job, client, linkedSource.Token);
-      logger.LogInformation("Finished Job");
-
-      return version;
+      return await jobHandler.ProcessJob(job, client, linkedSource.Token);
     }
     catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
     {

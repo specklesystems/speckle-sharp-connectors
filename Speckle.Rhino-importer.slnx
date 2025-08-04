@@ -21,6 +21,14 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Connectors/" />
+  <Folder Name="/Connectors/Rhino/">
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="Classic C#" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/Converter/">
+    <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" Type="Classic C#" />
+    <Project Path="Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.shproj" />
+  </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Ifc/">
     <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />

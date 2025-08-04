@@ -34,7 +34,7 @@ public static class Connector
       Assembly.GetExecutingAssembly().GetVersion(),
 #if DEBUG || LOCAL
       new(
-        new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
+        new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Verbose),
         new SpeckleTracing(Console: false),
         new SpeckleMetrics(Console: false)
       )
@@ -50,7 +50,7 @@ public static class Connector
               Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
             )
           ],
-          MinimumLevel: SpeckleLogLevel.Warning
+          MinimumLevel: SpeckleLogLevel.Information
         ),
         new SpeckleTracing(
           Console: false,
