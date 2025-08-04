@@ -201,7 +201,15 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   private void OnObjectChanged(object? sender, RhinoObjectEventArgs e)
   {
-    // TODO
+    // Changed object
+    var rhinoObject = e.TheObject;
+
+    // Does the object have a mapping?
+    if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+    {
+      // Notify UI
+      _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
+    }
   }
 
   /// <summary>
@@ -209,7 +217,8 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   private void NotifyMappingsChanged()
   {
-    // TODO
+    var currentMappings = GetCurrentMappings().Result;
+    Parent.Send(MAPPINGS_CHANGED_EVENT, currentMappings);
   }
 
   #endregion
