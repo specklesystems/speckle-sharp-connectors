@@ -67,4 +67,15 @@ public static class RevitBuiltInCategoryStore
     new("OST_CableTray", "Cable Tray"),
     new("OST_CableTrayFitting", "Cable Tray Fitting")
   ];
+
+  /// <summary>
+  /// Gets the human-readable label for a category value.
+  /// </summary>
+  /// <param name="categoryValue">The category enum name (e.g., "OST_Walls")</param>
+  /// <returns>Human-readable label (e.g., "Walls") or the original value if not found</returns>
+  public static string GetLabel(string categoryValue)
+  {
+    var category = Categories.FirstOrDefault(c => c.Value == categoryValue);
+    return category?.Label ?? categoryValue;
+  }
 }

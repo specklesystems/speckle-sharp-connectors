@@ -133,8 +133,30 @@ public class RhinoMapperBinding : IBinding
   /// <returns></returns>
   public async Task<CategoryMapping[]> GetCurrentMappings()
   {
-    // TODO
-    return Array.Empty<CategoryMapping>();
+    var doc = RhinoDoc.ActiveDoc;
+
+    if (doc == null)
+    {
+      return [];
+    }
+
+    // Step 1: Find objects with mappings
+    var mappedObjects = doc
+      .Objects.Where(obj => !string.IsNullOrEmpty(obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+      .ToList();
+
+    // Step 2: Group by category value and create CategoryMappings
+    var categoryMappings = mappedObjects
+      .GroupBy(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY))
+      .Select(group => new CategoryMapping(
+        group.Key, // categoryValue
+        RevitBuiltInCategoryStore.GetLabel(group.Key), // categoryLabel
+        group.Select(obj => obj.Id.ToString()).ToArray(), // objectIds
+        group.Count() // objectCount
+      ))
+      .ToArray();
+
+    return categoryMappings;
   }
 
   /// <summary>
