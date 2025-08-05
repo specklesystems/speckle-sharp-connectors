@@ -36,6 +36,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\LoadCaseCombinationSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ResultTypeSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\LoadCaseHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
   </ItemGroup>
   <ItemGroup>

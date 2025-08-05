@@ -49,7 +49,11 @@ public sealed class CsiSharedSendBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [new LoadCaseCombinationSetting([]), new ResultTypeSetting([])];
+  public List<ICardSetting> GetSendSettings() => 
+  [
+    new LoadCaseCombinationSetting([], _csiApplicationService.SapModel), 
+    new ResultTypeSetting([])
+  ];
 
   public async Task Send(string modelCardId)
   {
