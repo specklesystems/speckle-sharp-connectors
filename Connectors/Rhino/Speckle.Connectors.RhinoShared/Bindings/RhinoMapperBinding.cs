@@ -58,24 +58,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void AssignToCategory(string[] objectIds, string categoryValue)
   {
-    var doc = RhinoDoc.ActiveDoc;
-
-    if (doc == null)
-    {
-      return; // or throw here?
-    }
-
-    // Is this really the best way?
     foreach (var objectIdString in objectIds)
     {
-      var rhinoObject = GetRhinoObject(doc, objectIdString);
-      if (rhinoObject is not null)
-      {
-        // NOTE: should we be checking if key already exists?
-        // For POC, straightforward set on object
-        rhinoObject.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
-        rhinoObject.CommitChanges();
-      }
+      // NOTE: should we be checking if key already exists?
+      // For POC, straightforward set on object
+      var rhinoObject = GetRhinoObject(objectIdString);
+      rhinoObject?.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
+      rhinoObject?.CommitChanges();
     }
 
     // Trigger single update after all changes
@@ -87,24 +76,13 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void ClearCategoryAssignment(string[] objectIds)
   {
-    var doc = RhinoDoc.ActiveDoc;
-
-    if (doc == null)
-    {
-      return; // or throw here?
-    }
-
-    // Is this really the best way?
     foreach (var objectIdString in objectIds)
     {
-      var rhinoObject = GetRhinoObject(doc, objectIdString);
-      if (rhinoObject is not null)
-      {
-        // NOTE: should we be checking if key already exists?
-        // For POC, straightforward delete on object
-        rhinoObject.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
-        rhinoObject.CommitChanges();
-      }
+      // NOTE: should we be checking if key already exists?
+      // For POC, straightforward delete on object
+      var rhinoObject = GetRhinoObject(objectIdString);
+      rhinoObject?.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
+      rhinoObject?.CommitChanges();
     }
 
     // Trigger single update after all changes
@@ -116,18 +94,9 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public void ClearAllCategoryAssignments()
   {
-    var doc = RhinoDoc.ActiveDoc;
-
-    if (doc == null)
+    foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
     {
-      return;
-    }
-
-    // Or should we rather be getting a flattened list of objectIds from mappings table?
-    foreach (var rhinoObject in doc.Objects)
-    {
-      var categoryValue = rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY);
-      if (!string.IsNullOrEmpty(categoryValue))
+      if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
       {
         rhinoObject.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
         rhinoObject.CommitChanges();
@@ -144,51 +113,28 @@ public class RhinoMapperBinding : IBinding
   /// <returns></returns>
   public CategoryMapping[] GetCurrentMappings()
   {
-    var doc = RhinoDoc.ActiveDoc;
-
-    if (doc == null)
-    {
-      return [];
-    }
-
-    // Step 1: Find objects with mappings
-    var mappedObjects = doc
-      .Objects.Where(obj => !string.IsNullOrEmpty(obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
-      .ToList();
-
-    // Step 2: Group by category value and create CategoryMappings
-    var categoryMappings = mappedObjects
+    var mappedObjects = RhinoDoc
+      .ActiveDoc.Objects.Where(obj => !string.IsNullOrEmpty(obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
       .GroupBy(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY))
       .Select(group => new CategoryMapping(
-        group.Key, // categoryValue
-        RevitBuiltInCategoryStore.GetLabel(group.Key), // categoryLabel
-        group.Select(obj => obj.Id.ToString()).ToArray(), // objectIds
-        group.Count() // objectCount
+        group.Key,
+        RevitBuiltInCategoryStore.GetLabel(group.Key),
+        group.Select(obj => obj.Id.ToString()).ToArray(),
+        group.Count()
       ))
       .ToArray();
 
-    return categoryMappings;
+    return mappedObjects;
   }
 
   /// <summary>
-  /// Get all objects assigned to a specific category
+  /// Get all objects assigned to a specific category.
   /// </summary>
-  public string[] GetObjectsByCategory(string categoryValue)
-  {
-    var doc = RhinoDoc.ActiveDoc;
-
-    if (doc == null)
-    {
-      return [];
-    }
-
-    var objectIds = doc
-      .Objects.Where(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY) == categoryValue)
+  public string[] GetObjectsByCategory(string categoryValue) =>
+    RhinoDoc
+      .ActiveDoc.Objects.Where(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY) == categoryValue)
       .Select(obj => obj.Id.ToString())
       .ToArray();
-
-    return objectIds;
-  }
 
   /// <summary>
   /// Selects/highlights specific objects in Rhino.
@@ -200,8 +146,8 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   /// <returns>RhinoObject if found and valid, null otherwise</returns>
   /// <remarks>Reducing repetitive code.</remarks>
-  private static RhinoObject? GetRhinoObject(RhinoDoc doc, string objectIdString) =>
-    !Guid.TryParse(objectIdString, out Guid objectId) ? null : doc.Objects.FindId(objectId);
+  private static RhinoObject? GetRhinoObject(string objectIdString) =>
+    Guid.TryParse(objectIdString, out var objectId) ? RhinoDoc.ActiveDoc.Objects.FindId(objectId) : null;
 
   #endregion
 
