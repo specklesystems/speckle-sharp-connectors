@@ -2,7 +2,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
-using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -35,12 +34,13 @@ public class LocalToGlobalToDirectShapeConverter
     // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
     string? category = null;
 
-    if (target.atomicObject is DataObject dataObject)
+    // NOTE: no longer limited to DataObject since the introduction of mapper
+    if (
+      target.atomicObject["properties"] is Dictionary<string, object?> properties
+      && properties.TryGetValue("builtInCategory", out var builtInCategory)
+    )
     {
-      if (dataObject.properties.TryGetValue("builtInCategory", out var builtInCategory))
-      {
-        category = builtInCategory?.ToString();
-      }
+      category = builtInCategory?.ToString();
     }
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
