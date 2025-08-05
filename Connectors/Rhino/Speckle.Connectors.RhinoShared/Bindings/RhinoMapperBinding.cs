@@ -128,15 +128,6 @@ public class RhinoMapperBinding : IBinding
   }
 
   /// <summary>
-  /// Get all objects assigned to a specific category.
-  /// </summary>
-  public string[] GetObjectsByCategory(string categoryValue) =>
-    RhinoDoc
-      .ActiveDoc.Objects.Where(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY) == categoryValue)
-      .Select(obj => obj.Id.ToString())
-      .ToArray();
-
-  /// <summary>
   /// Selects/highlights specific objects in Rhino.
   /// </summary>
   public async Task HighlightObjects(string[] objectIds) => await _basicConnectorBinding.HighlightObjects(objectIds);
