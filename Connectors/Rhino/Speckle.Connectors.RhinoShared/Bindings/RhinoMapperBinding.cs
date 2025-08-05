@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -22,6 +22,7 @@ public record CategoryMapping(
 /// </summary>
 public class RhinoMapperBinding : IBinding
 {
+  private readonly DocumentModelStore _store;
   private readonly IAppIdleManager _idleManager;
   private readonly IBasicConnectorBinding _basicConnectorBinding;
   private const string CATEGORY_USER_STRING_KEY = "builtInCategory";
@@ -30,11 +31,13 @@ public class RhinoMapperBinding : IBinding
   public IBrowserBridge Parent { get; }
 
   public RhinoMapperBinding(
+    DocumentModelStore store,
     IAppIdleManager idleManager,
     IBrowserBridge parent,
     IBasicConnectorBinding basicConnectorBinding
   )
   {
+    _store = store;
     _idleManager = idleManager;
     Parent = parent;
     _basicConnectorBinding = basicConnectorBinding;
@@ -149,6 +152,11 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   private void OnObjectChanged(object? sender, RhinoObjectEventArgs e)
   {
+    if (!_store.IsDocumentInit)
+    {
+      return;
+    }
+
     var rhinoObject = e.TheObject;
     if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
     {
