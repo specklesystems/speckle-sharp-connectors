@@ -1,6 +1,6 @@
 // TODO: Where should this live? Speckle.Connectors.Common.Interop??
 
-namespace Speckle.Connectors.Rhino.HostApp;
+namespace Speckle.Connectors.Rhino.Mapper.Revit;
 
 /// <summary>
 /// Represents a category option for the dropdown in the UI.

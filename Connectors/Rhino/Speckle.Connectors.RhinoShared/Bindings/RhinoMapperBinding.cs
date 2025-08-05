@@ -3,7 +3,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
-using Speckle.Connectors.Rhino.HostApp;
+using Speckle.Connectors.Rhino.Mapper.Revit;
 
 namespace Speckle.Connectors.Rhino.Bindings;
 
