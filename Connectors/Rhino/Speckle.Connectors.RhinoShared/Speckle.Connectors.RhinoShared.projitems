@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoMapperBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
