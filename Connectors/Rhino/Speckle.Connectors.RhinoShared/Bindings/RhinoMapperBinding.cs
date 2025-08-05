@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Bindings;
@@ -9,10 +10,6 @@ namespace Speckle.Connectors.Rhino.Bindings;
 /// <summary>
 /// Represents a group of objects that are all assigned to the same category.
 /// </summary>
-/// <param name="CategoryValue">The Revit category enum name</param>
-/// <param name="CategoryLabel">Human-readable category name</param>
-/// <param name="ObjectIds">Array of Rhino object IDs assigned to this category</param>
-/// <param name="ObjectCount">Number of objects (for convenience)</param>
 public record CategoryMapping(
   string CategoryValue,
   string CategoryLabel,
@@ -49,15 +46,15 @@ public class RhinoMapperBinding : IBinding
     RhinoDoc.ModifyObjectAttributes += OnObjectAttributesChanged;
   }
 
-  #region UI-Callable Methods
+  #region UI Methods
 
   /// <summary>
-  /// Gets list of available Revit categories for the UI dropdown
+  /// Gets list of available Revit categories for the UI dropdown.
   /// </summary>
   public CategoryOption[] GetAvailableCategories() => RevitBuiltInCategoryStore.Categories;
 
   /// <summary>
-  /// Assigns selected objects to a specific Revit category
+  /// Assigns selected objects to a specific Revit category.
   /// </summary>
   public void AssignToCategory(string[] objectIds, string categoryValue)
   {
@@ -80,6 +77,9 @@ public class RhinoMapperBinding : IBinding
         rhinoObject.CommitChanges();
       }
     }
+
+    // Trigger single update after all changes
+    _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 
   /// <summary>
@@ -106,6 +106,9 @@ public class RhinoMapperBinding : IBinding
         rhinoObject.CommitChanges();
       }
     }
+
+    // Trigger single update after all changes
+    _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 
   /// <summary>
@@ -130,6 +133,9 @@ public class RhinoMapperBinding : IBinding
         rhinoObject.CommitChanges();
       }
     }
+
+    // Trigger single update
+    _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 
   /// <summary>
