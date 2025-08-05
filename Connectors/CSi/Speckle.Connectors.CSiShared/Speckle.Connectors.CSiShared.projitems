@@ -27,12 +27,15 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\CsiPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleFormBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\CsiDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\LoadCaseCombinationSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\ResultTypeSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
   </ItemGroup>
   <ItemGroup>
