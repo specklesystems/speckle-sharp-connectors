@@ -25,12 +25,12 @@ public record CategoryMapping(
 /// </summary>
 public class RhinoMapperBinding : IBinding
 {
-  private readonly IAppIdleManager _idleManager; // updates happen safely without crashing rhino
-  private readonly IBasicConnectorBinding _basicConnectorBinding; // object highlight functionality
-  private const string CATEGORY_USER_STRING_KEY = "revitMapping"; // appear as key on rhino objects with mapped category
-  private const string MAPPINGS_CHANGED_EVENT = "mappingsChanged"; // event name sent on change
-  public string Name => "revitMapperBinding"; // unique id that ui calls
-  public IBrowserBridge Parent { get; } // communication channel
+  private readonly IAppIdleManager _idleManager;
+  private readonly IBasicConnectorBinding _basicConnectorBinding;
+  private const string CATEGORY_USER_STRING_KEY = "builtInCategory";
+  private const string MAPPINGS_CHANGED_EVENT = "mappingsChanged";
+  public string Name => "revitMapperBinding";
+  public IBrowserBridge Parent { get; }
 
   public RhinoMapperBinding(
     IAppIdleManager idleManager,

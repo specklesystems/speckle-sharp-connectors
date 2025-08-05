@@ -1,3 +1,5 @@
+// TODO: Where should this live? Speckle.Connectors.Common.Interop??
+
 namespace Speckle.Connectors.Rhino.HostApp;
 
 /// <summary>
