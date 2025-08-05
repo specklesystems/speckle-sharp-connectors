@@ -2,6 +2,10 @@
 
 public static class SupportedFileTypes
 {
+  /// <summary>
+  /// This is the full list of file extensions that this job processor will look for jobs with that extension
+  /// This also happens to be the full list of file types that Rhino 8 supports.,
+  /// </summary>
   public static readonly string[] FileTypes =
   [
     "3dm", // Rhino 3D Model (except ver 1.x save)

@@ -1,4 +1,5 @@
 ﻿using Rhino;
+using Speckle.Importers.Rhino.Internal.FileTypeConfig;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -18,11 +19,15 @@ internal sealed class ImporterInstance(Sender sender)
     using RhinoDoc open = RhinoDoc.CreateHeadless(null);
     try
     {
+      var config = GetConfig(Path.GetExtension(filePath));
+
       RhinoDoc.ActiveDoc = open;
-      if (!open.Import(filePath))
+      if (!open.Import(filePath, config.ImportOptions))
       {
         throw new SpeckleException("Rhino could not import this file");
       }
+
+      config.PreProcessDocument(open);
 
       var version = await sender.Send(projectId, modelId, account, cancellationToken);
       return version;
@@ -35,4 +40,11 @@ internal sealed class ImporterInstance(Sender sender)
       GC.Collect();
     }
   }
+
+  private static IFileTypeConfig GetConfig(string extension) =>
+    extension.ToLowerInvariant() switch
+    {
+      ".skp" => new SketchupConfig(),
+      _ => new DefaultConfig(),
+    };
 }
