@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
@@ -38,6 +39,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly LoadCaseManager _loadCaseManager;
   private readonly EtabsColumnElementForcesExtractor _etabsColumnElementForcesExtractor; // NO! Naughty Bjorn (just poc'ing for now 👀)
 
   public CsiRootObjectBuilder(
@@ -49,6 +51,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService,
+    LoadCaseManager loadCaseManager,
     EtabsColumnElementForcesExtractor etabsColumnElementForcesExtractor
   )
   {
@@ -60,6 +63,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
+    _loadCaseManager = loadCaseManager;
     _etabsColumnElementForcesExtractor = etabsColumnElementForcesExtractor;
   }
 
@@ -116,11 +120,9 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
-    // TODO: Linking up to UI settings about whether or not to send, maybe some validation etc. Just going to send for now
     // TODO: Inject correct "extractor" according to which analysis results send settings
-    // TODO: Conversion settings: which load combinations / load cases etc.?
-    bool sendAnalysisResults = true; // TODO: replace with UI setting
-    if (sendAnalysisResults)
+    var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
+    if (selectedCasesAndCombinations != null && selectedCasesAndCombinations.Count > 0)
     {
       if (!_csiApplicationService.SapModel.GetModelIsLocked()) // Don't know if there's a better way to ensure analysis is run
       {
@@ -128,6 +130,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       }
       else
       {
+        _loadCaseManager.ConfigureSelectedLoadCases(selectedCasesAndCombinations);
         Base analysisResults = new() { ["columnForces"] = _etabsColumnElementForcesExtractor.GetColumnsForces() };
         rootObjectCollection["analysisResults"] = analysisResults;
       }
