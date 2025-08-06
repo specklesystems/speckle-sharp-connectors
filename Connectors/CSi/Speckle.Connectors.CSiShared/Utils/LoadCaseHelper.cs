@@ -41,7 +41,7 @@ public static class LoadCaseHelper
       }
 
       // Get Load Combinations
-      numberItems = 0; 
+      numberItems = 0;
       names = null;
       ret = sapModel.RespCombo.GetNameList(ref numberItems, ref names);
       if (ret == 0 && names != null)
