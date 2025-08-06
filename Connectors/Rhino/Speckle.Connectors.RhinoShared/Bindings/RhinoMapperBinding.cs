@@ -47,6 +47,9 @@ public class RhinoMapperBinding : IBinding
     RhinoDoc.DeleteRhinoObject += OnObjectChanged;
     RhinoDoc.UndeleteRhinoObject += OnObjectChanged;
     RhinoDoc.ModifyObjectAttributes += OnObjectAttributesChanged;
+
+    // Subscribe to document changes to refresh mappings when switching documents
+    _store.DocumentChanged += OnDocumentChanged;
   }
 
   #region UI Methods
@@ -175,6 +178,21 @@ public class RhinoMapperBinding : IBinding
     {
       _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
     }
+  }
+
+  /// <summary>
+  /// Called when the document changes (e.g., switching to a different Rhino model).
+  /// Refreshes the mappings table to reflect the new document's state.
+  /// </summary>
+  private void OnDocumentChanged(object? sender, EventArgs e)
+  {
+    if (!_store.IsDocumentInit)
+    {
+      return;
+    }
+
+    // Refresh mappings for the new document
+    _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 
   /// <summary>
