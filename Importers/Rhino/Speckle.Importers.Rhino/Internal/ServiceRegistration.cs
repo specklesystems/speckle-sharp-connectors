@@ -10,7 +10,6 @@ internal static class ServiceRegistration
 {
   public static IServiceCollection AddRhinoImporter(this IServiceCollection services)
   {
-
     services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
 
     services.AddRhino(false);
