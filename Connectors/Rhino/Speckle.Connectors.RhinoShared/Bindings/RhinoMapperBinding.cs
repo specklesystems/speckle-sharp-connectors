@@ -171,7 +171,7 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Called when object attributes are modified in Rhino.
   /// </summary>
-  private void OnObjectAttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e) // Fixed: Correct event signature
+  private void OnObjectAttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e)
   {
     var rhinoObject = e.RhinoObject;
     if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
