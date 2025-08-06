@@ -103,12 +103,12 @@ public static class Program
       try
       {
         var sender = ActivatorUtilities.CreateInstance<Sender>(container);
-        var versionId = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
+        var version = await sender.Send(projectId, modelId, new Uri(serverUrl), token);
 
         var result =
-          versionId == null
+          version == null
             ? new RhinoImportResult() { Success = false, ErrorMessage = "Failed to create version!" }
-            : new RhinoImportResult() { Success = true, CommitId = versionId };
+            : new RhinoImportResult() { Success = true, CommitId = version.id };
 
         File.WriteAllText(resultsPath, JsonConvert.SerializeObject(result));
       }
