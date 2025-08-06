@@ -54,7 +54,8 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Gets list of available Revit categories for the UI dropdown.
   /// </summary>
-  public CategoryOption[] GetAvailableCategories() => RevitBuiltInCategoryStore.Categories;
+  public CategoryOption[] GetAvailableCategories() =>
+    RevitBuiltInCategoryStore.Categories.OrderBy(category => category.Label).ToArray();
 
   /// <summary>
   /// Assigns selected objects to a specific Revit category.
