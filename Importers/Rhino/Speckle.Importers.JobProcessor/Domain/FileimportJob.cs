@@ -1,7 +1,7 @@
 ﻿namespace Speckle.Importers.JobProcessor.Domain;
 
 /// <summary>
-///DB model for the fileimport job.
+/// DB model for the fileimport job.
 /// </summary>
 internal sealed class FileimportJob
 {
