@@ -63,10 +63,6 @@ public static class LoadCaseHelper
       return new List<string>();
     }
 
-    return loadCasesAndCombos
-      .Where(x => !x.StartsWith('~')) // Filter out auto-generated cases that start with ~
-      .Distinct()
-      .OrderBy(x => x)
-      .ToList();
+    return loadCasesAndCombos.Distinct().OrderBy(x => x).ToList();
   }
 }
