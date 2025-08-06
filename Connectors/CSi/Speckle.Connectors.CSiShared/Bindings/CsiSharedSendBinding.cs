@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.CSiShared.HostApp;
+using Speckle.Connectors.CSiShared.Operations.Send.Settings;
+using Speckle.Connectors.CSiShared.Settings;
 using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -23,6 +25,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
   private readonly ICsiApplicationService _csiApplicationService;
   private readonly ICsiConversionSettingsFactory _csiConversionSettingsFactory;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
 
   public CsiSharedSendBinding(
     IBrowserBridge parent,
@@ -30,7 +33,8 @@ public sealed class CsiSharedSendBinding : ISendBinding
     ICancellationManager cancellationManager,
     ICsiConversionSettingsFactory csiConversionSettingsFactory,
     ICsiApplicationService csiApplicationService,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    ToSpeckleSettingsManager toSpeckleSettingsManager
   )
   {
     _sendFilters = sendFilters.ToList();
@@ -40,11 +44,13 @@ public sealed class CsiSharedSendBinding : ISendBinding
     _csiConversionSettingsFactory = csiConversionSettingsFactory;
     _csiApplicationService = csiApplicationService;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() =>
+    [new LoadCaseCombinationSetting([], _csiApplicationService.SapModel), new ResultTypeSetting([])];
 
   public async Task Send(string modelCardId)
   {
@@ -52,7 +58,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
     await manager.Process(
       Commands,
       modelCardId,
-      (sp, _) =>
+      (sp, card) =>
         sp.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
           .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel)),
       card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList()
