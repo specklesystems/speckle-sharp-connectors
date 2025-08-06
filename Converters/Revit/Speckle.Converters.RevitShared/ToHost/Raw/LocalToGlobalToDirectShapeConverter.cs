@@ -35,6 +35,8 @@ public class LocalToGlobalToDirectShapeConverter
     string? category = null;
 
     // NOTE: no longer limited to DataObject since the introduction of mapper
+    // The change from `if (target.atomicObject is DataObject dataObject)` is very hacky, but nothing else to do for now
+    // TODO: better define prop interfaces for different applications
     if (
       target.atomicObject["properties"] is Dictionary<string, object?> properties
       && properties.TryGetValue("builtInCategory", out var builtInCategory)
