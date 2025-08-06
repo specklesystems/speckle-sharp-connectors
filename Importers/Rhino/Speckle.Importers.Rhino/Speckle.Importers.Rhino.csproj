@@ -4,6 +4,7 @@
         <TargetFramework>net48</TargetFramework>
         <PlatformTarget>x64</PlatformTarget>
         <Configurations>Debug;Release;Local</Configurations>
+        <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
         <OutputType>Exe</OutputType>
     </PropertyGroup>
 
