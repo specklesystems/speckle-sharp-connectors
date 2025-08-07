@@ -13,8 +13,7 @@ public class HierarchicalPropertyHandler(
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
-    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? new Dictionary<string, object?>();
-
+    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
     var hierarchy = GetObjectHierarchy(modelItem);
     var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
 
