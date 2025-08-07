@@ -26,7 +26,7 @@ public class Sender(
     using var scope = serviceProvider.CreateScope();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
     try
     {
       List<RhinoObject> rhinoObjects = RhinoDoc
