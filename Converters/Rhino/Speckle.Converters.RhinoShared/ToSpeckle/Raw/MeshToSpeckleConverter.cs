@@ -80,6 +80,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
+    // TODO: Should sendVertexNormals be extended to textureCoordinates, too?
     var textureCoordinates = new double[target.TextureCoordinates.Count * 2];
     x = 0;
     foreach (var textureCoord in target.TextureCoordinates)
@@ -95,13 +96,18 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       colors[x++] = c.ToArgb();
     }
 
-    var vertexNormals = new double[target.Normals.Count * 3];
-    x = 0;
-    foreach (var n in target.Normals)
+    // NOTE: vertexNormals will be empty array when setting is false
+    double[] vertexNormals = [];
+    if (_settingsStore.Current.SendVertexNormals)
     {
-      vertexNormals[x++] = n.X;
-      vertexNormals[x++] = n.Y;
-      vertexNormals[x++] = n.Z;
+      vertexNormals = new double[target.Normals.Count * 3];
+      x = 0;
+      foreach (var n in target.Normals)
+      {
+        vertexNormals[x++] = n.X;
+        vertexNormals[x++] = n.Y;
+        vertexNormals[x++] = n.Z;
+      }
     }
 
     double volume = target.IsClosed ? target.Volume() : 0;
@@ -113,7 +119,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       faces = faces,
       colors = [.. colors],
       textureCoordinates = [.. textureCoordinates],
-      vertexNormals = [.. vertexNormals],
+      vertexNormals = [.. vertexNormals], // This will be empty array when setting is false
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
