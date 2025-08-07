@@ -31,7 +31,7 @@ public class RhinoReceiveBinding(
       (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
       },
       async (modelName, processor) =>
       {
