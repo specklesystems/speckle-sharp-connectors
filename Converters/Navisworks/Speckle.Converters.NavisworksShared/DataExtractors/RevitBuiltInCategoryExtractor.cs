@@ -1,4 +1,4 @@
-using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
+﻿using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -78,6 +78,10 @@ public static class RevitBuiltInCategoryExtractor
       "Curtain Wall Mullions" => "OST_CurtainWallMullions",
       "Roofs" => "OST_Roofs",
       "Air Terminals" => "OST_DuctTerminal",
+      "Structural Connections" => "OST_StructConnections",
+      "Structural Foundations" => "OST_StructuralFoundation",
+      "Structural Columns" => "OST_StructuralColumns",
+      "Structural Framing" => "OST_StructuralFraming",
       _ => displayName
     };
 }
