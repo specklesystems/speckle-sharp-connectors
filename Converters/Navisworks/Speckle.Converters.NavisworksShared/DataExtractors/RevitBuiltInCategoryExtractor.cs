@@ -1,4 +1,4 @@
-﻿using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
+using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
@@ -21,6 +21,13 @@ public static class RevitBuiltInCategoryExtractor
     }
     var convertedValue = ConvertPropertyValue(categoryValue, "")?.ToString() ?? string.Empty;
     var builtInCategory = DisplayNameToRevitBuiltInCategory(convertedValue);
+
+    if (builtInCategory == convertedValue)
+    {
+      // If the category is not mapped, we don't add it to the dictionary
+      // return;
+    }
+
     AddPropertyIfNotNullOrEmpty(propertyDictionary, "builtInCategory", builtInCategory);
   }
 
