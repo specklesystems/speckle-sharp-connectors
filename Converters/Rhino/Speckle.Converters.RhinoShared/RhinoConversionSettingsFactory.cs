@@ -12,8 +12,8 @@ public class RhinoConversionSettingsFactory(
 {
   public RhinoConversionSettings Current => settingsStore.Current;
 
-  public RhinoConversionSettings Create(RhinoDoc document) =>
-    new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem), ModelFarFromOrigin());
+  public RhinoConversionSettings Create(RhinoDoc document, bool sendVertexNormals) =>
+    new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem), ModelFarFromOrigin(), sendVertexNormals);
 
   /// <summary>
   /// Quick check whether any of the objects in the scene might be located too far from origin and cause precision issues during meshing.
