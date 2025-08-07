@@ -14,17 +14,11 @@ public static class RevitBuiltInCategoryExtractor
     Dictionary<string, object?> propertyDictionary
   )
   {
-    var categoryValue = GetHierarchyItems(modelItem)
-      .Select(item =>
-        item?.PropertyCategories.FindPropertyByName("LcRevitData_Element", "LcRevitPropertyElementCategory")?.Value
-      )
-      .FirstOrDefault(value => value != null);
-
+    var categoryValue = FindRevitCategoryInHierarchy(modelItem);
     if (categoryValue == null)
     {
       return;
     }
-
     var convertedValue = ConvertPropertyValue(categoryValue, "")?.ToString() ?? string.Empty;
     var builtInCategory = DisplayNameToRevitBuiltInCategory(convertedValue);
     AddPropertyIfNotNullOrEmpty(propertyDictionary, "builtInCategory", builtInCategory);
@@ -38,6 +32,26 @@ public static class RevitBuiltInCategoryExtractor
     {
       yield return current;
     }
+  }
+
+  /// <summary>
+  /// Finds the Revit category in the hierarchy of modelItem.
+  /// Early exit if the category is found.
+  /// </summary>
+  private static NAV.VariantData? FindRevitCategoryInHierarchy(NAV.ModelItem modelItem)
+  {
+    var current = modelItem;
+    for (int i = 0; i < ANCESTOR_AND_SELF_COUNT && current != null; i++, current = current.Parent)
+    {
+      var categoryValue = current
+        .PropertyCategories.FindPropertyByName("LcRevitData_Element", "LcRevitPropertyElementCategory")
+        ?.Value;
+      if (categoryValue != null)
+      {
+        return categoryValue;
+      }
+    }
+    return null;
   }
 
   // Maps Navisworks display names to Revit OST constants
