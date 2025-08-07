@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Local Docker DB": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "FILEIMPORT_QUEUE_POSTGRES_URL": "postgresql://speckle:speckle@127.0.0.1:5432/speckle"
+      }
+    }
+  }
+}

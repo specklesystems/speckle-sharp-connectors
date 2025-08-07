@@ -3,18 +3,21 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <OutputType>Exe</OutputType>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.21.25188.17001"/>
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.21.25188.17001"/>
     <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.21.25188.17001"/>
-    <PackageReference Include="Rhino.Inside" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" />
-    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </ItemGroup>
 </Project>
