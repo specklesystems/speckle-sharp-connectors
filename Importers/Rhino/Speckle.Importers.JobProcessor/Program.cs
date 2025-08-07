@@ -47,6 +47,7 @@ public static class Program
         //Right now, we're giving it the main STA thread (not 100% if it needs STA or if it could work on any thread)
         await Task.Run(async () =>
           {
+            logger.LogInformation("Job processor has started!");
             try
             {
               await processor.StartProcessing();

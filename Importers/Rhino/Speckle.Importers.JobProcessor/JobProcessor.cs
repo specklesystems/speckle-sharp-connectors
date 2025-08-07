@@ -30,6 +30,8 @@ internal sealed class JobProcessorInstance(
 
     while (true)
     {
+      logger.LogInformation("Listening for jobs...");
+
       FileimportJob? job = await repository.GetNextJob(connection, cancellationToken);
       if (job == null)
       {
