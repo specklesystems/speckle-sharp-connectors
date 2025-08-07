@@ -1,10 +1,11 @@
-﻿using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
+using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 public static class RevitBuiltInCategoryExtractor
 {
   private const int ANCESTOR_AND_SELF_COUNT = 4;
+  private const string? UNSUPPORTED_ON_LOAD = null;
 
   /// <summary>
   /// Searches modelItem hierarchy for Revit category and adds mapped built-in category to the dictionary
@@ -82,6 +83,7 @@ public static class RevitBuiltInCategoryExtractor
       "Structural Foundations" => "OST_StructuralFoundation",
       "Structural Columns" => "OST_StructuralColumns",
       "Structural Framing" => "OST_StructuralFraming",
+      "Electrical Analytical Loads" => UNSUPPORTED_ON_LOAD,
       _ => displayName
     };
 }
