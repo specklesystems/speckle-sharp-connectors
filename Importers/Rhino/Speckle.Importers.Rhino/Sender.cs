@@ -22,11 +22,12 @@ public class Sender(
 {
   public async Task<Version?> Send(string projectId, string modelId, Uri serverUrl, string token)
   {
+    // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
     try
     {
       List<RhinoObject> rhinoObjects = RhinoDoc
