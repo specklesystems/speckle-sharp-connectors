@@ -277,7 +277,7 @@ public sealed class RhinoSendBinding : ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter()];
 
-  public List<ICardSetting> GetSendSettings() => [new SendVertexNormals(false)];
+  public List<ICardSetting> GetSendSettings() => [new SendVertexNormals(false), new SendTextureCoordinates(false)];
 
   public async Task Send(string modelCardId)
   {
@@ -291,7 +291,8 @@ public sealed class RhinoSendBinding : ISendBinding
           .Initialize(
             _rhinoConversionSettingsFactory.Create(
               RhinoDoc.ActiveDoc,
-              _toSpeckleSettingsManager.GetSendVertexNormalsSetting(card)
+              _toSpeckleSettingsManager.GetSendVertexNormalsSetting(card),
+              _toSpeckleSettingsManager.GetSendTextureCoordinatesSetting(card)
             )
           ),
       card =>

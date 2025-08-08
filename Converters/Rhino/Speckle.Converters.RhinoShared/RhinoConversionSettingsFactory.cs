@@ -12,12 +12,13 @@ public class RhinoConversionSettingsFactory(
 {
   public RhinoConversionSettings Current => settingsStore.Current;
 
-  public RhinoConversionSettings Create(RhinoDoc document, bool sendVertexNormals) =>
+  public RhinoConversionSettings Create(RhinoDoc document, bool sendVertexNormals, bool sendTextureCoordinates) =>
     new(
       document,
       unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem),
       ModelFarFromOrigin(),
-      sendVertexNormals
+      sendVertexNormals,
+      sendTextureCoordinates
     );
 
   /// <summary>

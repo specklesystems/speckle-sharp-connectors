@@ -80,13 +80,17 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
-    // TODO: Should sendVertexNormals be extended to textureCoordinates, too?
-    var textureCoordinates = new double[target.TextureCoordinates.Count * 2];
-    x = 0;
-    foreach (var textureCoord in target.TextureCoordinates)
+    // NOTE: textureCoordinates will be empty array when setting is false
+    double[] textureCoordinates = [];
+    if (_settingsStore.Current.SendTextureCoordinates)
     {
-      textureCoordinates[x++] = textureCoord.X;
-      textureCoordinates[x++] = textureCoord.Y;
+      textureCoordinates = new double[target.TextureCoordinates.Count * 2];
+      x = 0;
+      foreach (var textureCoord in target.TextureCoordinates)
+      {
+        textureCoordinates[x++] = textureCoord.X;
+        textureCoordinates[x++] = textureCoord.Y;
+      }
     }
 
     var colors = new int[target.VertexColors.Count];
@@ -118,8 +122,8 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       vertices = [.. vertexCoordinates],
       faces = faces,
       colors = [.. colors],
-      textureCoordinates = [.. textureCoordinates],
-      vertexNormals = [.. vertexNormals], // This will be empty array when setting is false
+      textureCoordinates = [.. textureCoordinates], // this will be empty array when setting is false
+      vertexNormals = [.. vertexNormals], // this will be empty array when setting is false
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox

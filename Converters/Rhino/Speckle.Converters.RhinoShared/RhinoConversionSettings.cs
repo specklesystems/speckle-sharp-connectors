@@ -9,5 +9,6 @@ public record RhinoConversionSettings(
   RhinoDoc Document,
   string SpeckleUnits,
   bool ModelFarFromOrigin,
-  bool SendVertexNormals
+  bool SendVertexNormals,
+  bool SendTextureCoordinates
 );

@@ -8,6 +8,7 @@ public class ToSpeckleSettingsManager
 {
   private readonly ISendConversionCache _sendConversionCache;
   private readonly Dictionary<string, bool?> _sendVertexNormalsCache = [];
+  private readonly Dictionary<string, bool?> _sendTextureCoordinatesCache = [];
 
   public ToSpeckleSettingsManager(ISendConversionCache sendConversionCache)
   {
@@ -27,6 +28,22 @@ public class ToSpeckleSettingsManager
     }
 
     _sendVertexNormalsCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
+  }
+
+  public bool GetSendTextureCoordinatesSetting(SenderModelCard modelCard)
+  {
+    var value = modelCard.Settings?.First(s => s.Id == "sendTextureCoordinates").Value as bool?;
+    var returnValue = value != null && value.NotNull();
+    if (_sendTextureCoordinatesCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    _sendTextureCoordinatesCache[modelCard.ModelCardId] = returnValue;
     return returnValue;
   }
 
