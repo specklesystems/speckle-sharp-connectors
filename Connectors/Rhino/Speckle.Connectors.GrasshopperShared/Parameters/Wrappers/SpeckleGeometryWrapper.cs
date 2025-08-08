@@ -4,6 +4,8 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -195,7 +197,7 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
     {
       // Only handle the baking scenario here
       // Existing baking logic from BakingHelpers (works in all Rhino versions)
-      int matIndex = materialWrapper.Bake(RhinoDoc.ActiveDoc, materialWrapper.Name);
+      int matIndex = materialWrapper.Bake(CurrentDocument.Document.NotNull(), materialWrapper.Name);
       if (matIndex >= 0)
       {
         attributes.MaterialIndex = matIndex;
