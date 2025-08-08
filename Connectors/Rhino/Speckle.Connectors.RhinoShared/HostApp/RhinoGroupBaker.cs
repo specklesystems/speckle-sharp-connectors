@@ -54,7 +54,7 @@ public class RhinoGroupBaker
     Dictionary<string, IReadOnlyCollection<string>> applicationIdMap
   )
   {
-    if (applicationIdMap.TryGetValue(oldObjId, out IReadOnlyCollection<string> value))
+    if (applicationIdMap.TryGetValue(oldObjId, out IReadOnlyCollection<string>? value))
     {
       return value;
     }

@@ -7,6 +7,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
+using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Rhino;
 
@@ -19,7 +20,7 @@ public class Sender(
   ILogger<Sender> logger
 )
 {
-  public async Task<string?> Send(string projectId, string modelId, Uri serverUrl, string token)
+  public async Task<Version?> Send(string projectId, string modelId, Uri serverUrl, string token)
   {
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
@@ -41,7 +42,7 @@ public class Sender(
       var account = await accountFactory.CreateAccount(serverUrl, token);
       var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
       var buildResults = await operation.Build(rhinoObjects, projectId, progress, CancellationToken.None);
-      var (results, versionId) = await operation.Send(
+      var (results, version) = await operation.Send(
         buildResults.RootObject,
         projectId,
         modelId,
@@ -54,7 +55,7 @@ public class Sender(
 
       logger.LogInformation($"Root: {results.RootId}");
 
-      return versionId;
+      return version;
     }
 #pragma warning disable CA1031
     catch (Exception ex)
