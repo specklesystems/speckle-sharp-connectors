@@ -24,7 +24,7 @@ public class RhinoReceiveBinding(
 
   public async Task Receive(string modelCardId)
   {
-    // NOTE: introduction of sendVertexNormals and sendTextureCoordinates in Rhino not accounted for in receive pipeline, hence hardcoded as true (i.e. "as before")
+    // NOTE: introduction of AddVisualizationProperties setting not accounted for in receive pipeline, hence hardcoded as true (i.e. "as before")
     using var manager = receiveOperationManagerFactory.Create();
     await manager.Process(
       Commands,
@@ -32,7 +32,7 @@ public class RhinoReceiveBinding(
       (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true, true));
+          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
       },
       async (modelName, processor) =>
       {

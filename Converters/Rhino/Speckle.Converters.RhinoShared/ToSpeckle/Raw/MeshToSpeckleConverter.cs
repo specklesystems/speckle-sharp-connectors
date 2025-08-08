@@ -80,9 +80,17 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
-    // NOTE: textureCoordinates will be empty array when setting is false
+    var colors = new int[target.VertexColors.Count];
+    x = 0;
+    foreach (var c in target.VertexColors)
+    {
+      colors[x++] = c.ToArgb();
+    }
+
+    // NOTE: textureCoordinates and vertexNormals will be empty array when setting is false
     double[] textureCoordinates = [];
-    if (_settingsStore.Current.SendTextureCoordinates)
+    double[] vertexNormals = [];
+    if (_settingsStore.Current.AddVisualizationProperties)
     {
       textureCoordinates = new double[target.TextureCoordinates.Count * 2];
       x = 0;
@@ -91,19 +99,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
         textureCoordinates[x++] = textureCoord.X;
         textureCoordinates[x++] = textureCoord.Y;
       }
-    }
 
-    var colors = new int[target.VertexColors.Count];
-    x = 0;
-    foreach (var c in target.VertexColors)
-    {
-      colors[x++] = c.ToArgb();
-    }
-
-    // NOTE: vertexNormals will be empty array when setting is false
-    double[] vertexNormals = [];
-    if (_settingsStore.Current.SendVertexNormals)
-    {
       vertexNormals = new double[target.Normals.Count * 3];
       x = 0;
       foreach (var n in target.Normals)
