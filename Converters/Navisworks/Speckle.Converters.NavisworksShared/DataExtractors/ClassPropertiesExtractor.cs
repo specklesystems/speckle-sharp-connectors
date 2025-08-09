@@ -6,7 +6,6 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 public class ClassPropertiesExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
 {
-
   public Dictionary<string, object?> GetClassProperties(NAV.ModelItem modelItem) =>
     modelItem == null ? throw new ArgumentNullException(nameof(modelItem)) : ExtractClassProperties(modelItem);
 
