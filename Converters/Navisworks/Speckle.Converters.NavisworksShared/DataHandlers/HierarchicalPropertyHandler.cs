@@ -1,4 +1,8 @@
-﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+﻿using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converters.Common;
+
+namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Handles property assignment with hierarchy merging for objects that require ancestor properties.
@@ -6,14 +10,27 @@
 public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor,
-  ClassPropertiesExtractor classPropertiesExtractor
+  ClassPropertiesExtractor classPropertiesExtractor,
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
-  private string PseudoClassPropertiesKey => "_pseudoClassProperties";
+  private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
+  private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
+
+    // Interop-lite mapping for Revit built-in categories
+    if (_mapRevit && RevitBuiltInCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
+    {
+      PropertyHelpers.AddPropertyIfNotNullOrEmpty(
+        propertyDict,
+        RevitBuiltInCategoryExtractor.DEFAULT_DICT_KEY,
+        builtInCategory
+      );
+    }
+
     var hierarchy = GetObjectHierarchy(modelItem);
     var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
 

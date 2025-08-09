@@ -1,10 +1,8 @@
-﻿using Speckle.Converter.Navisworks.Settings;
-using Speckle.Converters.Common;
-using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
+﻿using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class ClassPropertiesExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
+public class ClassPropertiesExtractor
 {
   public Dictionary<string, object?> GetClassProperties(NAV.ModelItem modelItem) =>
     modelItem == null ? throw new ArgumentNullException(nameof(modelItem)) : ExtractClassProperties(modelItem);
@@ -33,14 +31,6 @@ public class ClassPropertiesExtractor(IConverterSettingsStore<NavisworksConversi
     foreach ((string key, object? value) in properties)
     {
       AddPropertyIfNotNullOrEmpty(propertyDictionary, key, value);
-    }
-
-    if (
-      settingsStore.Current.User.RevitCategoryMapping
-      && RevitBuiltInCategoryExtractor.TryGetBuiltInCategory(modelItem, out var bic)
-    )
-    {
-      AddPropertyIfNotNullOrEmpty(propertyDictionary, RevitBuiltInCategoryExtractor.DEFAULT_DICT_KEY, bic);
     }
 
     return propertyDictionary;
