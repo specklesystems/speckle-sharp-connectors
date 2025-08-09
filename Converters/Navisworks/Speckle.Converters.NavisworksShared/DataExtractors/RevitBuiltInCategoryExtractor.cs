@@ -23,10 +23,11 @@ public static class RevitBuiltInCategoryExtractor
     var convertedValue = ConvertPropertyValue(categoryValue, "")?.ToString() ?? string.Empty;
     var builtInCategory = DisplayNameToRevitBuiltInCategory(convertedValue);
 
+    // Skip adding if no mapping found (builtInCategory == convertedValue).
+    // Doubles as a debug point for identifying unmapped categories to add to s_revitCatMap.
     if (builtInCategory == convertedValue)
     {
-      // If the category is not mapped, we don't add it to the dictionary
-      // return;
+      return;
     }
 
     AddPropertyIfNotNullOrEmpty(propertyDictionary, "builtInCategory", builtInCategory);
