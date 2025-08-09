@@ -33,15 +33,7 @@ public static class RevitBuiltInCategoryExtractor
     AddPropertyIfNotNullOrEmpty(propertyDictionary, "builtInCategory", builtInCategory);
   }
 
-  // Traverses up to 4 levels of model hierarchy because, god dammit, Navisworks explodes those Revit elements.
-  private static IEnumerable<NAV.ModelItem> GetHierarchyItems(NAV.ModelItem modelItem)
-  {
-    var current = modelItem;
-    for (int i = 0; i < ANCESTOR_AND_SELF_COUNT && current != null; i++, current = current.Parent)
-    {
-      yield return current;
-    }
-  }
+
 
   /// <summary>
   /// Finds the Revit category in the hierarchy of modelItem.
