@@ -1,4 +1,3 @@
-using System.Text;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
@@ -55,15 +54,10 @@ public static class RevitBuiltInCategoryExtractor
     return null;
   }
 
-  // Mapping of Navisworks/Revit display category names (as reported by the Navisworks Revit importer)
-  // to Revit BuiltInCategory constants. Keys are matched case-insensitively.
-  //
-  // This list is intended to reflect what Navisworks reports, not necessarily what the Revit
-  // DirectShape API can assign on receipt. Revit receipt will ignore some categories
-  // due to DirectShape limitations, in which case the receiver will handle fallback internally.
-  //
-  // Note: This is not const because Dictionary<T, U> is mutable; `static readonly` ensures
-  // the reference cannot be replaced, but entries can be extended at runtime if needed.
+  // Mapping of Navisworks/Revit display category names (from the importer)
+  // to Revit BuiltInCategory constants. Case-insensitive.
+  // Note: Some mapped categories are not assignable via Revit DirectShape;
+  // the receiver will ignore them and apply its own fallback.
   private static readonly Dictionary<string, string> s_revitCatMap =
     new(StringComparer.OrdinalIgnoreCase)
     {
@@ -160,95 +154,14 @@ public static class RevitBuiltInCategoryExtractor
     };
 
   /// <summary>
-  /// Attempts to map a Navisworks/Revit display category name to a Revit BuiltInCategory constant.
-  /// Performs a fast lookup on the raw string first (case-insensitive),
-  /// only normalizing and re-checking if leading/trailing or double whitespace is detected.
+  /// Maps a Navisworks/Revit display category name to a Revit BuiltInCategory.
+  /// Assumes importer emits canonical names. Case-insensitive lookup.
+  /// Returns the original name when no mapping exists.
   /// </summary>
-  private static string DisplayNameToRevitBuiltInCategory(string displayName)
-  {
-    if (string.IsNullOrWhiteSpace(displayName))
-    {
-      return displayName;
-    }
-
-    // Try raw key first — dictionary is OrdinalIgnoreCase.
-    if (s_revitCatMap.TryGetValue(displayName, out var cat))
-    {
-      return cat;
-    }
-
-    // Normalize only if we detect issues; avoid allocations on clean strings.
-    var norm = NormalizeKeyIfNeeded(displayName, out bool changed);
-    return changed && s_revitCatMap.TryGetValue(norm, out cat) ? cat : displayName;
-  }
-
-  /// <summary>
-  /// Returns the original string if it is already normalized.
-  /// Normalization trims leading/trailing whitespace and collapses multiple
-  /// consecutive whitespace characters into a single space.
-  /// </summary>
-  /// <param name="s">The input string to normalize.</param>
-  /// <param name="changed">True if normalization modified the input; otherwise false.</param>
-  private static string NormalizeKeyIfNeeded(string s, out bool changed)
-  {
-    changed = false;
-    if (string.IsNullOrEmpty(s))
-    {
-      return string.Empty;
-    }
-
-    int len = s.Length;
-    bool hasLeading = char.IsWhiteSpace(s[0]);
-    bool hasTrailing = len > 1 && char.IsWhiteSpace(s[len - 1]);
-
-    // Detect double/multiple whitespace without allocating
-    bool lastWs = false;
-    for (int i = 0; i < len; i++)
-    {
-      char c = s[i];
-      bool ws = char.IsWhiteSpace(c);
-      if (ws && lastWs)
-      {
-        changed = true;
-        break;
-      }
-
-      lastWs = ws;
-    }
-
-    if (!changed && !hasLeading && !hasTrailing)
-    {
-      return s; // already normalized
-    }
-
-    // Perform normalization
-    var sb = new StringBuilder(len);
-    lastWs = true; // treat leading whitespace as already written
-    for (int i = 0; i < len; i++)
-    {
-      char c = s[i];
-      if (char.IsWhiteSpace(c))
-      {
-        if (!lastWs)
-        {
-          sb.Append(' ');
-          lastWs = true;
-        }
-      }
-      else
-      {
-        sb.Append(c);
-        lastWs = false;
-      }
-    }
-
-    // Remove a trailing space if we ended on whitespace
-    if (lastWs && sb.Length > 0 && sb[^1] == ' ')
-    {
-      sb.Length--;
-    }
-
-    changed = true;
-    return sb.ToString();
-  }
+  private static string DisplayNameToRevitBuiltInCategory(string displayName) =>
+    string.IsNullOrEmpty(displayName)
+      ? displayName
+      : s_revitCatMap.TryGetValue(displayName, out var bic)
+        ? bic
+        : displayName;
 }
