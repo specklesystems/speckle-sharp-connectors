@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\RevitBuiltInCategoryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataHandlers\BasePropertyHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataHandlers\HierarchicalPropertyHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataHandlers\IPropertyHandler.cs" />

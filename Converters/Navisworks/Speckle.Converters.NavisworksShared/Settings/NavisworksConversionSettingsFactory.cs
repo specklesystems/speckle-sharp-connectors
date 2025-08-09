@@ -45,7 +45,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
     RepresentationMode visualRepresentationMode,
     bool convertHiddenElements,
     bool includeInternalProperties,
-    bool preserveModelHierarchy
+    bool preserveModelHierarchy,
+    bool mappingToRevitCategories
   )
   {
     _convertHiddenElements = convertHiddenElements;
@@ -86,7 +87,8 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
         VisualRepresentationMode: visualRepresentationMode,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
         ExcludeProperties: false, // Not yet exposed in the UI
-        PreserveModelHierarchy: preserveModelHierarchy
+        PreserveModelHierarchy: preserveModelHierarchy,
+        RevitCategoryMapping: mappingToRevitCategories
       )
     );
   }
