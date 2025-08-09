@@ -5,52 +5,71 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 public static class RevitBuiltInCategoryExtractor
 {
   private const int ANCESTOR_AND_SELF_COUNT = 4;
+  private const string REVIT_CAT_GROUP = "LcRevitData_Element";
+  private const string REVIT_CAT_NAME = "LcRevitPropertyElementCategory";
+  internal const string DEFAULT_DICT_KEY = "builtInCategory";
 
   /// <summary>
   /// Searches modelItem hierarchy for Revit category and adds mapped built-in category to the dictionary
   /// </summary>
-  internal static void AddRevitCategoryFromHierarchy(
+  internal static bool AddRevitCategoryFromHierarchy(
     NAV.ModelItem modelItem,
-    Dictionary<string, object?> propertyDictionary
+    Dictionary<string, object?> propertyDictionary,
+    string dictKey = DEFAULT_DICT_KEY,
+    int maxDepth = ANCESTOR_AND_SELF_COUNT
   )
   {
-    var categoryValue = FindRevitCategoryInHierarchy(modelItem);
-    if (categoryValue == null)
+    if (!TryGetBuiltInCategory(modelItem, out var builtInCategory, maxDepth))
     {
-      return;
+      return false;
     }
 
-    var convertedValue = ConvertPropertyValue(categoryValue, "")?.ToString() ?? string.Empty;
-    var builtInCategory = DisplayNameToRevitBuiltInCategory(convertedValue);
-
-    // Skip adding if no mapping found (builtInCategory == convertedValue).
-    // Doubles as a debug point for identifying unmapped categories to add to s_revitCatMap.
-    if (builtInCategory == convertedValue)
-    {
-      return;
-    }
-
-    AddPropertyIfNotNullOrEmpty(propertyDictionary, "builtInCategory", builtInCategory);
+    AddPropertyIfNotNullOrEmpty(propertyDictionary, dictKey, builtInCategory);
+    return true;
   }
 
-  /// <summary>
-  /// Finds the Revit category in the hierarchy of modelItem.
-  /// Early exit if the category is found.
-  /// </summary>
-  private static NAV.VariantData? FindRevitCategoryInHierarchy(NAV.ModelItem modelItem)
+  internal static bool TryGetBuiltInCategory(
+    NAV.ModelItem item,
+    out string mapped,
+    int maxDepth = ANCESTOR_AND_SELF_COUNT
+  )
   {
-    var current = modelItem;
-    for (int i = 0; i < ANCESTOR_AND_SELF_COUNT && current != null; i++, current = current.Parent)
+    mapped = string.Empty;
+    var v = FindRevitCategoryInHierarchy(item, maxDepth);
+    if (v == null)
     {
-      var categoryValue = current
-        .PropertyCategories.FindPropertyByName("LcRevitData_Element", "LcRevitPropertyElementCategory")
-        ?.Value;
-      if (categoryValue != null)
-      {
-        return categoryValue;
-      }
+      return false;
     }
 
+    var name = ConvertPropertyValue(v, "")?.ToString();
+    if (string.IsNullOrWhiteSpace(name))
+    {
+      return false;
+    }
+
+    name = name?.Trim();
+    var bic = DisplayNameToRevitBuiltInCategory(name);
+    if (string.Equals(bic, name, StringComparison.OrdinalIgnoreCase))
+    {
+      return false; // no mapping
+    }
+
+    mapped = bic;
+    return true;
+  }
+
+  private static NAV.VariantData? FindRevitCategoryInHierarchy(NAV.ModelItem modelItem, int maxDepth)
+  {
+    var current = modelItem;
+    for (int i = 0; i < maxDepth && current != null; i++, current = current.Parent)
+    {
+      var val = current.PropertyCategories.FindPropertyByName(REVIT_CAT_GROUP, REVIT_CAT_NAME)?.Value;
+
+      if (val != null)
+      {
+        return val;
+      }
+    }
     return null;
   }
 
@@ -161,7 +180,7 @@ public static class RevitBuiltInCategoryExtractor
   private static string DisplayNameToRevitBuiltInCategory(string displayName) =>
     string.IsNullOrEmpty(displayName)
       ? displayName
-      : s_revitCatMap.TryGetValue(displayName, out var bic)
-        ? bic
+      : s_revitCatMap.TryGetValue(displayName, out var builtInCategory)
+        ? builtInCategory
         : displayName;
 }

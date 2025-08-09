@@ -35,9 +35,12 @@ public class ClassPropertiesExtractor(IConverterSettingsStore<NavisworksConversi
       AddPropertyIfNotNullOrEmpty(propertyDictionary, key, value);
     }
 
-    if (settingsStore.Current.User.RevitCategoryMapping)
+    if (
+      settingsStore.Current.User.RevitCategoryMapping
+      && RevitBuiltInCategoryExtractor.TryGetBuiltInCategory(modelItem, out var bic)
+    )
     {
-      RevitBuiltInCategoryExtractor.AddRevitCategoryFromHierarchy(modelItem, propertyDictionary);
+      AddPropertyIfNotNullOrEmpty(propertyDictionary, RevitBuiltInCategoryExtractor.DEFAULT_DICT_KEY, bic);
     }
 
     return propertyDictionary;
