@@ -29,6 +29,7 @@ public class ClassPropertiesExtractor
     // Define properties and their values to be added to the dictionary
     var propertiesToAdd = new (string PropertyName, object? Value)[]
     {
+      ("ClassName", modelItem.ClassName),
       ("ClassDisplayName", modelItem.ClassDisplayName),
       ("DisplayName", modelItem.DisplayName),
       ("InstanceGuid", modelItem.InstanceGuid != Guid.Empty ? modelItem.InstanceGuid : null),
