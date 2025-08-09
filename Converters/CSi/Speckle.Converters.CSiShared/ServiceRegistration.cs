@@ -18,6 +18,7 @@ public static class ServiceRegistration
 
     // Register property extractors
     serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
+    serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
     serviceCollection.AddScoped<DatabaseTableExtractor>();
