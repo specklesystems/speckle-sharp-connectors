@@ -2,32 +2,17 @@ using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public static class RevitBuiltInCategoryExtractor
+public sealed class RevitBuiltInCategoryExtractor
 {
-  private const int ANCESTOR_AND_SELF_COUNT = 4;
+  private const int ANCESTOR_AND_SELF_COUNT = 4; // It seems like this is the maximum depth found needed in practice
   private const string REVIT_CAT_GROUP = "LcRevitData_Element";
   private const string REVIT_CAT_NAME = "LcRevitPropertyElementCategory";
   internal const string DEFAULT_DICT_KEY = "builtInCategory";
 
   /// <summary>
-  /// Searches modelItem hierarchy for Revit category and adds mapped built-in category to the dictionary
+  /// Attempts to map a Navisworks/Revit display category from the given model item or its ancestors
+  /// to a known Revit built-in category constant (e.g., "OST_Walls").
   /// </summary>
-  internal static bool AddRevitCategoryFromHierarchy(
-    NAV.ModelItem modelItem,
-    Dictionary<string, object?> propertyDictionary,
-    string dictKey = DEFAULT_DICT_KEY,
-    int maxDepth = ANCESTOR_AND_SELF_COUNT
-  )
-  {
-    if (!TryGetBuiltInCategory(modelItem, out var builtInCategory, maxDepth))
-    {
-      return false;
-    }
-
-    AddPropertyIfNotNullOrEmpty(propertyDictionary, dictKey, builtInCategory);
-    return true;
-  }
-
   internal static bool TryGetBuiltInCategory(
     NAV.ModelItem item,
     out string mapped,
@@ -35,6 +20,8 @@ public static class RevitBuiltInCategoryExtractor
   )
   {
     mapped = string.Empty;
+
+    // Look up the category value, starting at this item and walking up to maxDepth ancestors
     var v = FindRevitCategoryInHierarchy(item, maxDepth);
     if (v == null)
     {
@@ -48,19 +35,26 @@ public static class RevitBuiltInCategoryExtractor
     }
 
     name = name?.Trim();
-    var bic = DisplayNameToRevitBuiltInCategory(name);
-    if (string.Equals(bic, name, StringComparison.OrdinalIgnoreCase))
+
+    // Map display name to OST_* built-in category constant
+    var builtInCategory = DisplayNameToRevitBuiltInCategory(name);
+    if (string.Equals(builtInCategory, name, StringComparison.OrdinalIgnoreCase))
     {
       return false; // no mapping
     }
 
-    mapped = bic;
+    mapped = builtInCategory;
     return true;
   }
 
+  /// <summary>
+  /// Walks up the model item hierarchy to find the first Revit element category property.
+  /// </summary>
   private static NAV.VariantData? FindRevitCategoryInHierarchy(NAV.ModelItem modelItem, int maxDepth)
   {
     var current = modelItem;
+
+    // Walk up the model item hierarchy to find the first matching Revit category property
     for (int i = 0; i < maxDepth && current != null; i++, current = current.Parent)
     {
       var val = current.PropertyCategories.FindPropertyByName(REVIT_CAT_GROUP, REVIT_CAT_NAME)?.Value;
@@ -70,6 +64,8 @@ public static class RevitBuiltInCategoryExtractor
         return val;
       }
     }
+
+    // No category property found in self or ancestors
     return null;
   }
 
