@@ -19,7 +19,7 @@ public class HierarchicalPropertyHandler(
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
-    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
+    var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? [];
 
     // Interop-lite mapping for Revit built-in categories
     if (_mapRevit && RevitBuiltInCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
