@@ -60,4 +60,8 @@ public static class ResultsKey
 {
   public const string BASE_REACT = "Base Reactions";
   public const string FRAME_FORCES = "Frame Forces";
+  public const string PIER_FORCES = "Pier Forces";
+
+  // Used by ResultTypeSetting to get all defined result keys
+  public static readonly string[] All = [BASE_REACT, FRAME_FORCES, PIER_FORCES];
 }

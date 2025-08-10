@@ -23,7 +23,6 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
   }
 
   // NOTE: since these are global reactions, they're independent of the user selection, therefore discarded
-  // it's
   public Dictionary<string, object> GetResults(IEnumerable<string>? _)
   {
     // Step 1: define api variables
@@ -58,7 +57,7 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
       ref gz
     );
 
-    if (success != 0)
+    if (success != 0 || numberResults == 0)
     {
       throw new InvalidOperationException("Base reaction extraction failed."); // shouldn't fail silently
     }
