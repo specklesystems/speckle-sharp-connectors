@@ -60,7 +60,7 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
 
     if (success != 0)
     {
-      throw new InvalidOperationException($"Base reaction extraction failed."); // shouldn't fail silently
+      throw new InvalidOperationException("Base reaction extraction failed."); // shouldn't fail silently
     }
 
     // Step 3: organise arrays for dictionary processor
@@ -79,7 +79,7 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
     // Step 4: return sorted and processed dictionary
     var resultsDictionary = _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);
 
-    // Step 5: add the extra centroidal information
+    // Step 5: add the extra centroid information
     resultsDictionary["GX"] = gx;
     resultsDictionary["GY"] = gy;
     resultsDictionary["GZ"] = gz;

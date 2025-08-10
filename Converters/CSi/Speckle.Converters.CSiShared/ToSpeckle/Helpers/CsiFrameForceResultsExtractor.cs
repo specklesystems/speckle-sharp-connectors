@@ -91,9 +91,9 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
       }
 
       // accumulate results
-      allArrays["Elm"].AddRange(elm);
+      allArrays["Elm"].AddRange(elm.Cast<object>());
       allArrays["ElmSta"].AddRange(elmSta.Cast<object>());
-      allArrays["LoadCase"].AddRange(loadCase);
+      allArrays["LoadCase"].AddRange(loadCase.Cast<object>());
       allArrays["StepNum"].AddRange(stepNum.Cast<object>());
       allArrays["P"].AddRange(p.Cast<object>());
       allArrays["V2"].AddRange(v2.Cast<object>());
@@ -104,7 +104,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
     }
 
     // Step 5: organise arrays for dictionary processor
-    var rawArrays = allArrays.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
+    var rawArrays = allArrays.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToArray());
 
     // Step 6: return sorted and processed dictionary
     return _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);
