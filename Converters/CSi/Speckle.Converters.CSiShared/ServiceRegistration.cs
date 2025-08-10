@@ -29,6 +29,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiPierForceResultsExtractor>();
     serviceCollection.AddScoped<CsiSpandrelForceResultsExtractor>();
+    serviceCollection.AddScoped<CsiStoryDriftsResultsExtractor>();
     serviceCollection.AddScoped<ResultsArrayProcessor>();
 
     // Register connector caches
