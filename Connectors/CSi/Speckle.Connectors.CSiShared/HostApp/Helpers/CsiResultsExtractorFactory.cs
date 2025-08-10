@@ -19,6 +19,7 @@ public class CsiResultsExtractorFactory
       ResultsKey.BASE_REACT => _serviceProvider.GetRequiredService<CsiBaseReactResultsExtractor>(),
       ResultsKey.FRAME_FORCES => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
       ResultsKey.PIER_FORCES => _serviceProvider.GetRequiredService<CsiPierForceResultsExtractor>(),
+      ResultsKey.SPANDREL_FORCES => _serviceProvider.GetRequiredService<CsiSpandrelForceResultsExtractor>(),
       _ => throw new InvalidOperationException($"{resultsKey} not accounted for in CsiResultsExtractorFactory")
     };
 }
