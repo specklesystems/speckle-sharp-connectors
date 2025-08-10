@@ -8,7 +8,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
-  public string ResultsKey { get; } = "FrameForces";
+  public string ResultsKey => "FrameForces";
 
   public ResultsConfiguration Configuration { get; } =
     new(["Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum"], ["P", "V2", "V3", "T", "M2", "M3"]);
