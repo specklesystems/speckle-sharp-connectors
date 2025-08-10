@@ -18,10 +18,15 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiBaseReactResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFrameForceResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointReactResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiPierForceResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiShellPropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiSpandrelForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiStoryDriftsResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiToSpeckleCacheSingleton.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\DatabaseTableExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\IApplicationResultsExtractor.cs" />

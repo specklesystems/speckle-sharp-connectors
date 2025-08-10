@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
+using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 
@@ -15,7 +16,12 @@ public class CsiResultsExtractorFactory
   public IApplicationResultsExtractor GetExtractor(string resultsKey) =>
     resultsKey switch
     {
-      "FrameForces" => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
+      ResultsKey.BASE_REACT => _serviceProvider.GetRequiredService<CsiBaseReactResultsExtractor>(),
+      ResultsKey.FRAME_FORCES => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
+      ResultsKey.JOINT_REACT => _serviceProvider.GetRequiredService<CsiJointReactResultsExtractor>(),
+      ResultsKey.PIER_FORCES => _serviceProvider.GetRequiredService<CsiPierForceResultsExtractor>(),
+      ResultsKey.SPANDREL_FORCES => _serviceProvider.GetRequiredService<CsiSpandrelForceResultsExtractor>(),
+      ResultsKey.STORY_DRIFTS => _serviceProvider.GetRequiredService<CsiStoryDriftsResultsExtractor>(),
       _ => throw new InvalidOperationException($"{resultsKey} not accounted for in CsiResultsExtractorFactory")
     };
 }
