@@ -29,19 +29,19 @@ public class ResultsArrayProcessor
     var indices = Enumerable.Range(0, arrayLength);
 
     // build the hierarchy recursively
-    return BuildHierarchy(indices, rawArrays, config.GroupingKeys.ToArray(), config.ResultKeys.ToArray(), 0);
+    return BuildHierarchy(indices, rawArrays, config.GroupingKeys, config.ResultKeys, 0);
   }
 
   private Dictionary<string, object> BuildHierarchy(
     IEnumerable<int> indices,
     Dictionary<string, object> rawArrays,
-    string[] groupingKeys,
-    string[] resultKeys,
+    IReadOnlyList<string> groupingKeys,
+    IReadOnlyList<string> resultKeys,
     int level
   )
   {
     // Base case: we've processed all grouping levels, create result values
-    if (level >= groupingKeys.Length)
+    if (level >= groupingKeys.Count)
     {
       var results = new Dictionary<string, object>();
       var firstIndex = indices.First();

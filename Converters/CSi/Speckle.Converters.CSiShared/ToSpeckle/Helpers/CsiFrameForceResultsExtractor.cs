@@ -24,44 +24,46 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
 
   public Dictionary<string, object> GetResults(IEnumerable<string>? objectNames = null)
   {
-    // Step 1: define arrays that the results processor will work on
-    var allElm = new List<string>();
-    var allElmSta = new List<double>();
-    var allLoadCase = new List<string>();
-    var allStepNum = new List<double>();
-    var allP = new List<double>();
-    var allV2 = new List<double>();
-    var allV3 = new List<double>();
-    var allT = new List<double>();
-    var allM2 = new List<double>();
-    var allM3 = new List<double>();
-
-    // Step 2: define variables for api calls to populate
-    int numberResults = 0;
-    string[] obj = [];
-    double[] objSta = [];
-    string[] elm = [];
-    double[] elmSta = [];
-    string[] loadCase = [];
-    string[] stepType = [];
-    double[] stepNum = [];
-    double[] p = [];
-    double[] v2 = [];
-    double[] v3 = [];
-    double[] t = [];
-    double[] m2 = [];
-    double[] m3 = [];
-
-    // Step 3: this extractor (and method) MUST have objectNames argument
-    if (objectNames is null)
+    // Step 1: validate input
+    var frameNames = objectNames?.ToList();
+    if (frameNames is null || frameNames.Count == 0)
     {
-      throw new InvalidOperationException(
-        "This operation relies on objectNames to extract results for selected frames only."
-      );
+      throw new InvalidOperationException("Frame names are required for force extraction");
     }
 
+    // Step 2: single dictionary to accumulate all results
+    var allArrays = new Dictionary<string, List<object>>
+    {
+      ["Elm"] = new(),
+      ["ElmSta"] = new(),
+      ["LoadCase"] = new(),
+      ["StepNum"] = new(),
+      ["P"] = new(),
+      ["V2"] = new(),
+      ["V3"] = new(),
+      ["T"] = new(),
+      ["M2"] = new(),
+      ["M3"] = new()
+    };
+
+    // Step 3: define api variables
+    int numberResults = 0;
+    string[] obj = [],
+      elm = [],
+      loadCase = [],
+      stepType = [];
+    double[] objSta = [],
+      elmSta = [],
+      stepNum = [],
+      p = [],
+      v2 = [],
+      v3 = [],
+      t = [],
+      m2 = [],
+      m3 = [];
+
     // Step 4: iterate through objectNames and get frame results for those
-    foreach (string frameName in objectNames)
+    foreach (string frameName in frameNames)
     {
       int success = _settingsStore.Current.SapModel.Results.FrameForce(
         frameName,
@@ -87,33 +89,21 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
         throw new InvalidOperationException($"Frame force extraction failed for frame {frameName}."); // shouldn't fail silently
       }
 
-      // frame arrays to be added to the "bigger" arrays
-      allElm.AddRange(elm);
-      allElmSta.AddRange(elmSta);
-      allLoadCase.AddRange(loadCase);
-      allStepNum.AddRange(stepNum);
-      allP.AddRange(p);
-      allV2.AddRange(v2);
-      allV3.AddRange(v3);
-      allT.AddRange(t);
-      allM2.AddRange(m2);
-      allM3.AddRange(m3);
+      // accumulate results
+      allArrays["Elm"].AddRange(elm.Cast<object>());
+      allArrays["ElmSta"].AddRange(elmSta.Cast<object>());
+      allArrays["LoadCase"].AddRange(loadCase.Cast<object>());
+      allArrays["StepNum"].AddRange(stepNum.Cast<object>());
+      allArrays["P"].AddRange(p.Cast<object>());
+      allArrays["V2"].AddRange(v2.Cast<object>());
+      allArrays["V3"].AddRange(v3.Cast<object>());
+      allArrays["T"].AddRange(t.Cast<object>());
+      allArrays["M2"].AddRange(m2.Cast<object>());
+      allArrays["M3"].AddRange(m3.Cast<object>());
     }
 
     // Step 5: organise arrays for dictionary processor
-    var rawArrays = new Dictionary<string, object>
-    {
-      ["Elm"] = allElm.ToArray(),
-      ["ElmSta"] = allElmSta.ToArray(),
-      ["LoadCase"] = allLoadCase.ToArray(),
-      ["StepNum"] = allStepNum.ToArray(),
-      ["P"] = allP.ToArray(),
-      ["V2"] = allV2.ToArray(),
-      ["V3"] = allV3.ToArray(),
-      ["T"] = allT.ToArray(),
-      ["M2"] = allM2.ToArray(),
-      ["M3"] = allM3.ToArray()
-    };
+    var rawArrays = allArrays.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToArray());
 
     // Step 6: return sorted and processed dictionary
     return _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);
