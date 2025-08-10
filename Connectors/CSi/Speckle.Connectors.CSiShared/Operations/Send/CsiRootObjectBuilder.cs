@@ -146,7 +146,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         foreach (var resultType in requestedResultTypes)
         {
           var extractor = _resultsExtractorFactory.GetExtractor(resultType);
-          var objectNames = objectSelectionSummary[extractor.TargetObjectType];
+          objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
           analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
         }
         rootObjectCollection["analysisResults"] = analysisResults;

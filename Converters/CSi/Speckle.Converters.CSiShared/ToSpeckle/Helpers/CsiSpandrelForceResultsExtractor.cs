@@ -8,7 +8,7 @@ public class CsiSpandrelForceResultsExtractor : IApplicationResultsExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
   public string ResultsKey => "spandrelForces";
-  public ModelObjectType TargetObjectType => ModelObjectType.SHELL;
+  public ModelObjectType TargetObjectType => ModelObjectType.NONE;
 
   public ResultsConfiguration Configuration { get; } =
     new(["SpandrelName", "StoryName", "LoadCase", "Wrap:Location"], ["P", "V2", "V3", "T", "M2", "M3"]);

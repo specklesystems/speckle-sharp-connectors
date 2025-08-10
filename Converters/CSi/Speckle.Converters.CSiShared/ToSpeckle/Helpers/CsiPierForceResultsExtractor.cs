@@ -8,7 +8,7 @@ public class CsiPierForceResultsExtractor : IApplicationResultsExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
   public string ResultsKey => "pierForces";
-  public ModelObjectType TargetObjectType => ModelObjectType.SHELL;
+  public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
     new(["PierName", "StoryName", "LoadCase", "Wrap:Location"], ["P", "V2", "V3", "T", "M2", "M3"]);
 
