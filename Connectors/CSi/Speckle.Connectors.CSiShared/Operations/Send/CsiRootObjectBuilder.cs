@@ -120,6 +120,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
+    // Extract analysis results (if applicable)
     // NOTE: used in the results extraction to extract results for objects being published only
     var objectSelectionSummary = GetObjectSummary(csiObjects);
     var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;

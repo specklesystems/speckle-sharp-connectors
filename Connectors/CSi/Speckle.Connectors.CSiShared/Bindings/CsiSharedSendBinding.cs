@@ -64,7 +64,8 @@ public sealed class CsiSharedSendBinding : ISendBinding
           .Initialize(
             _csiConversionSettingsFactory.Create(
               _csiApplicationService.SapModel,
-              _toSpeckleSettingsManager.GetLoadCasesAndCombinations(card)
+              _toSpeckleSettingsManager.GetLoadCasesAndCombinations(card),
+              _toSpeckleSettingsManager.GetResultTypes(card)
             )
           );
       },
