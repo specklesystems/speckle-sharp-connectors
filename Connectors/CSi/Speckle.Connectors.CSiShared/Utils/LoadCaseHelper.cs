@@ -15,23 +15,11 @@ public static class LoadCaseHelper
         return loadCasesAndCombos; // Return empty list if no model
       }
 
-      // Get Load Patterns
+      // Get Load Cases
       int numberItems = 0;
       string[]? names = null;
 
-      int ret = sapModel.LoadPatterns.GetNameList(ref numberItems, ref names);
-      if (ret == 0 && names != null)
-      {
-        for (int i = 0; i < numberItems; i++)
-        {
-          loadCasesAndCombos.Add(names[i]);
-        }
-      }
-
-      // Get Load Cases
-      numberItems = 0;
-      names = null;
-      ret = sapModel.LoadCases.GetNameList(ref numberItems, ref names);
+      int ret = sapModel.LoadCases.GetNameList(ref numberItems, ref names);
       if (ret == 0 && names != null)
       {
         for (int i = 0; i < numberItems; i++)

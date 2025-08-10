@@ -18,7 +18,6 @@ public static class ServiceRegistration
     services.AddScoped<EtabsShellSectionResolver>();
     services.AddScoped<CsiSendCollectionManager, EtabsSendCollectionManager>();
     services.AddScoped<ISectionUnpacker, EtabsSectionUnpacker>();
-    services.AddScoped<EtabsColumnElementForcesExtractor>();
 
     return services;
   }

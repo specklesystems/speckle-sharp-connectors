@@ -4,10 +4,12 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
-using Speckle.Connectors.ETABSShared.HostApp.Helpers;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Extensions;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -38,7 +40,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
-  private readonly EtabsColumnElementForcesExtractor _etabsColumnElementForcesExtractor; // NO! Naughty Bjorn (just poc'ing for now 👀)
+  private readonly LoadCaseManager _loadCaseManager;
+  private readonly CsiFrameForceResultsExtractor _frameForceResultsExtractor;
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -49,7 +52,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService,
-    EtabsColumnElementForcesExtractor etabsColumnElementForcesExtractor
+    LoadCaseManager loadCaseManager,
+    CsiFrameForceResultsExtractor frameForceResultsExtractor
   )
   {
     _converterSettings = converterSettings;
@@ -60,7 +64,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
-    _etabsColumnElementForcesExtractor = etabsColumnElementForcesExtractor;
+    _loadCaseManager = loadCaseManager;
+    _frameForceResultsExtractor = frameForceResultsExtractor;
   }
 
   /// <summary>
@@ -116,11 +121,11 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
-    // TODO: Linking up to UI settings about whether or not to send, maybe some validation etc. Just going to send for now
+    var objectSelectionSummary = GetObjectSummary(csiObjects);
+
     // TODO: Inject correct "extractor" according to which analysis results send settings
-    // TODO: Conversion settings: which load combinations / load cases etc.?
-    bool sendAnalysisResults = true; // TODO: replace with UI setting
-    if (sendAnalysisResults)
+    var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
+    if (selectedCasesAndCombinations != null && selectedCasesAndCombinations.Count > 0)
     {
       if (!_csiApplicationService.SapModel.GetModelIsLocked()) // Don't know if there's a better way to ensure analysis is run
       {
@@ -128,7 +133,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       }
       else
       {
-        Base analysisResults = new() { ["columnForces"] = _etabsColumnElementForcesExtractor.GetColumnsForces() };
+        _loadCaseManager.ConfigureSelectedLoadCases(selectedCasesAndCombinations);
+        Base analysisResults =
+          new()
+          {
+            ["columnForces"] = _frameForceResultsExtractor.GetResults(objectSelectionSummary[ModelObjectType.FRAME])
+          };
         rootObjectCollection["analysisResults"] = analysisResults;
       }
     }
@@ -179,4 +189,22 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }
+
+  /// <summary>
+  /// Generates a summary of object types and their associated names from the collection of CSI wrappers.
+  /// </summary>
+  /// <remarks>
+  /// A summary of object names for each object type is needed for getting analysis results of the selected objects only.
+  /// During object conversion, however, we lose the selection (like a clear selection)(presumably because of other api calls).
+  /// This has to be recreated since GetSelection() return type is bound by the interface.
+  /// The LINQ-based implementation is computationally inexpensive as it operates on an already-loaded collection without additional API calls.
+  /// Also, we don't want to rely on user selection remaining active, what if someone re-publishes using model card cache?
+  /// </remarks>
+  private Dictionary<ModelObjectType, List<string>> GetObjectSummary(IReadOnlyList<ICsiWrapper> csiObjects) =>
+    csiObjects
+      .GroupBy(csiObject => csiObject.ObjectType)
+      .ToDictionary(
+        group => group.Key, // ModelObjectType (FRAME, JOINT, etc.)
+        group => group.Select(obj => obj.Name).ToList() // Extract Name from each ICsiWrapper and convert to List<string>
+      );
 }

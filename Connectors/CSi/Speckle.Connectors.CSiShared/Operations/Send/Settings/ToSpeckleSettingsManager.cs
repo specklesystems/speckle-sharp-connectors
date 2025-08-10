@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
+using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.CSiShared.Operations.Send.Settings;
@@ -19,8 +20,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public List<string> GetLoadCasesAndCombinations(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "loadCasesAndCombinations")?.Value as List<string>;
-    var returnValue = value ?? [];
+    var setting = modelCard.Settings?.FirstOrDefault(s => s.Id == "loadCasesAndCombinations");
+    var returnValue = (setting?.Value as JArray)?.Select(x => x.ToString()).ToList() ?? [];
 
     if (_loadCaseCombinationCache.TryGetValue(modelCard.ModelCardId.NotNull(), out List<string>? previousValue))
     {
@@ -35,8 +36,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public List<string> GetResultTypes(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "resultTypes")?.Value as List<string>;
-    var returnValue = value ?? [];
+    var setting = modelCard.Settings?.FirstOrDefault(s => s.Id == "resultTypes");
+    var returnValue = (setting?.Value as JArray)?.Select(x => x.ToString()).ToList() ?? [];
 
     if (_resultTypeCache.TryGetValue(modelCard.ModelCardId.NotNull(), out List<string>? previousValue))
     {

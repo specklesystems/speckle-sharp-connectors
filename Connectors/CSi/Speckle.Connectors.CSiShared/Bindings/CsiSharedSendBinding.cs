@@ -59,8 +59,15 @@ public sealed class CsiSharedSendBinding : ISendBinding
       Commands,
       modelCardId,
       (sp, card) =>
+      {
         sp.GetRequiredService<IConverterSettingsStore<CsiConversionSettings>>()
-          .Initialize(_csiConversionSettingsFactory.Create(_csiApplicationService.SapModel)),
+          .Initialize(
+            _csiConversionSettingsFactory.Create(
+              _csiApplicationService.SapModel,
+              _toSpeckleSettingsManager.GetLoadCasesAndCombinations(card)
+            )
+          );
+      },
       card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList()
     );
   }

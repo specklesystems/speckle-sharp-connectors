@@ -18,10 +18,12 @@ public static class ServiceRegistration
 
     // Register property extractors
     serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
+    serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
     serviceCollection.AddScoped<DatabaseTableExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<ResultsArrayProcessor>();
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
 
     // Register connector caches
