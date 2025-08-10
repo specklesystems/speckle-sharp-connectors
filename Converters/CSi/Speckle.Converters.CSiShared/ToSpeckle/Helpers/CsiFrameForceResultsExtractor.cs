@@ -9,6 +9,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
   public string ResultsKey => "FrameForces";
+  public ModelObjectType TargetObjectType => ModelObjectType.FRAME;
 
   public ResultsConfiguration Configuration { get; } =
     new(["Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum"], ["P", "V2", "V3", "T", "M2", "M3"]);

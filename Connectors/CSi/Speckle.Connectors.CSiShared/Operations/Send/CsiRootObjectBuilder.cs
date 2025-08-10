@@ -8,7 +8,6 @@ using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Extensions;
-using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -41,7 +40,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
   private readonly LoadCaseManager _loadCaseManager;
-  private readonly CsiFrameForceResultsExtractor _frameForceResultsExtractor;
+  private readonly CsiResultsExtractorFactory _resultsExtractorFactory;
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -53,7 +52,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService,
     LoadCaseManager loadCaseManager,
-    CsiFrameForceResultsExtractor frameForceResultsExtractor
+    CsiResultsExtractorFactory resultsExtractorFactory
   )
   {
     _converterSettings = converterSettings;
@@ -65,7 +64,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
     _loadCaseManager = loadCaseManager;
-    _frameForceResultsExtractor = frameForceResultsExtractor;
+    _resultsExtractorFactory = resultsExtractorFactory;
   }
 
   /// <summary>
@@ -121,12 +120,20 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
+    // NOTE: used in the results extraction to extract results for objects being published only
     var objectSelectionSummary = GetObjectSummary(csiObjects);
-
-    // TODO: Inject correct "extractor" according to which analysis results send settings
     var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
+    var requestedResultTypes = _converterSettings.Current.SelectedResultTypes;
+
     if (selectedCasesAndCombinations != null && selectedCasesAndCombinations.Count > 0)
     {
+      if (requestedResultTypes == null || requestedResultTypes.Count == 0)
+      {
+        throw new SpeckleException(
+          "No result types stipulated for the requested load cases and combinations. Adjust publish settings."
+        );
+      }
+
       if (!_csiApplicationService.SapModel.GetModelIsLocked()) // Don't know if there's a better way to ensure analysis is run
       {
         _logger.LogError("Model unlocked. No access to analysis results.");
@@ -134,11 +141,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       else
       {
         _loadCaseManager.ConfigureSelectedLoadCases(selectedCasesAndCombinations);
-        Base analysisResults =
-          new()
-          {
-            ["columnForces"] = _frameForceResultsExtractor.GetResults(objectSelectionSummary[ModelObjectType.FRAME])
-          };
+        Base analysisResults = new();
+        foreach (var resultType in requestedResultTypes)
+        {
+          var extractor = _resultsExtractorFactory.GetExtractor(resultType);
+          var objectNames = objectSelectionSummary[extractor.TargetObjectType];
+          analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+        }
         rootObjectCollection["analysisResults"] = analysisResults;
       }
     }
