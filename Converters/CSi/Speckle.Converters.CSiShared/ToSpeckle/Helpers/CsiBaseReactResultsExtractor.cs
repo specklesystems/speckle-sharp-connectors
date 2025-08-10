@@ -8,7 +8,7 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
-  public string ResultsKey => "baseReactions";
+  public string ResultsKey => "baseReact";
   public ModelObjectType TargetObjectType => ModelObjectType.JOINT;
   public ResultsConfiguration Configuration { get; } =
     new(["LoadCase", "Wrap:StepNum"], ["FX", "FY", "FZ", "MX", "ParamMy", "MZ"]);

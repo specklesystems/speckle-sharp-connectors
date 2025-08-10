@@ -3,18 +3,17 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
-public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
+public class CsiJointReactResultsExtractor : IApplicationResultsExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
-  public string ResultsKey => "frameForces";
-  public ModelObjectType TargetObjectType => ModelObjectType.FRAME;
-
+  public string ResultsKey => "jointReact";
+  public ModelObjectType TargetObjectType => ModelObjectType.JOINT;
   public ResultsConfiguration Configuration { get; } =
-    new(["Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum"], ["P", "V2", "V3", "T", "M2", "M3"]);
+    new(["Elm", "LoadCase", "Wrap:StepNum"], ["F1", "F2", "F3", "M1", "M2", "M3"]);
 
-  public CsiFrameForceResultsExtractor(
+  public CsiJointReactResultsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     ResultsArrayProcessor resultsArrayProcessor
   )
@@ -26,23 +25,22 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
   public Dictionary<string, object> GetResults(IEnumerable<string>? objectNames = null)
   {
     // Step 1: validate input
-    var frameNames = objectNames?.ToList();
-    if (frameNames is null || frameNames.Count == 0)
+    var jointNames = objectNames?.ToList();
+    if (jointNames is null || jointNames.Count == 0)
     {
-      throw new InvalidOperationException("Frame(s) are required in the selection for results extraction");
+      throw new InvalidOperationException("Joint(s) are required in the selection for results extraction");
     }
 
     // Step 2: single dictionary to accumulate all results
     var allArrays = new Dictionary<string, List<object>>
     {
       ["Elm"] = [],
-      ["ElmSta"] = [],
       ["LoadCase"] = [],
       ["StepNum"] = [],
-      ["P"] = [],
-      ["V2"] = [],
-      ["V3"] = [],
-      ["T"] = [],
+      ["F1"] = [],
+      ["F2"] = [],
+      ["F3"] = [],
+      ["M1"] = [],
       ["M2"] = [],
       ["M3"] = []
     };
@@ -53,52 +51,57 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
       elm = [],
       loadCase = [],
       stepType = [];
-    double[] objSta = [],
-      elmSta = [],
-      stepNum = [],
-      p = [],
-      v2 = [],
-      v3 = [],
-      t = [],
+    double[] stepNum = [],
+      f1 = [],
+      f2 = [],
+      f3 = [],
+      m1 = [],
       m2 = [],
       m3 = [];
 
-    // Step 4: iterate through objectNames and get frame results for those
-    foreach (string frameName in frameNames)
+    // Step 4: iterate through objectNames and get joint reaction results for those that are assigned restraints / springs and grounded
+    foreach (string jointName in jointNames)
     {
-      int success = _settingsStore.Current.SapModel.Results.FrameForce(
-        frameName,
+      // this only works if the joint has restraints or springs assignments, so check if it's a valid query first
+      bool[] restraints = [];
+      string springAssignment = string.Empty;
+      _settingsStore.Current.SapModel.PointObj.GetRestraint(jointName, ref restraints);
+      _settingsStore.Current.SapModel.PointObj.GetSpringAssignment(jointName, ref springAssignment);
+      if (restraints.All(r => !r) && string.IsNullOrEmpty(springAssignment))
+      {
+        continue; // skip this joint - it has neither restraints nor springs
+      }
+
+      int success = _settingsStore.Current.SapModel.Results.JointReact(
+        jointName,
         eItemTypeElm.ObjectElm,
         ref numberResults,
         ref obj,
-        ref objSta,
         ref elm,
-        ref elmSta,
         ref loadCase,
         ref stepType,
         ref stepNum,
-        ref p,
-        ref v2,
-        ref v3,
-        ref t,
+        ref f1,
+        ref f2,
+        ref f3,
+        ref m1,
         ref m2,
         ref m3
       );
 
       if (success != 0)
       {
-        throw new InvalidOperationException($"Frame force extraction failed for frame {frameName}."); // shouldn't fail silently
+        throw new InvalidOperationException($"Joint force extraction failed for frame {jointName}."); // shouldn't fail silently
       }
 
       // accumulate results
       allArrays["Elm"].AddRange(elm.Cast<object>());
-      allArrays["ElmSta"].AddRange(elmSta.Cast<object>());
       allArrays["LoadCase"].AddRange(loadCase.Cast<object>());
       allArrays["StepNum"].AddRange(stepNum.Cast<object>());
-      allArrays["P"].AddRange(p.Cast<object>());
-      allArrays["V2"].AddRange(v2.Cast<object>());
-      allArrays["V3"].AddRange(v3.Cast<object>());
-      allArrays["T"].AddRange(t.Cast<object>());
+      allArrays["F1"].AddRange(f1.Cast<object>());
+      allArrays["F2"].AddRange(f2.Cast<object>());
+      allArrays["F3"].AddRange(f3.Cast<object>());
+      allArrays["M1"].AddRange(m1.Cast<object>());
       allArrays["M2"].AddRange(m2.Cast<object>());
       allArrays["M3"].AddRange(m3.Cast<object>());
     }
