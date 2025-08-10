@@ -52,3 +52,12 @@ public static class CommonObjectProperty
   public const string ADVANCED = "Advanced";
   public const string DESIGN_ORIENTATION = "Design Orientation";
 }
+
+/// <summary>
+/// These strings are repeated when defining UI dropdown list `ResultTypeSetting.cs` as well as `CsiResultsExtractorFactory.cs`/>
+/// </summary>
+public static class ResultsKey
+{
+  public const string BASE_REACT = "Base Reactions";
+  public const string FRAME_FORCES = "Frame Forces";
+}
