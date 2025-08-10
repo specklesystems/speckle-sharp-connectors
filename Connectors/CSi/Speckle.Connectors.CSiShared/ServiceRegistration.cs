@@ -46,6 +46,7 @@ public static class ServiceRegistration
     services.AddScoped<SendOperation<ICsiWrapper>>();
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
+    services.AddScoped<CsiResultsExtractorFactory>();
     services.AddScoped<MaterialUnpacker>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();

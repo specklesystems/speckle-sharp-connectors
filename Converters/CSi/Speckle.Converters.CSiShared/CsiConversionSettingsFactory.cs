@@ -11,6 +11,15 @@ public class CsiConversionSettingsFactory(
 {
   public CsiConversionSettings Current => settingsStore.Current;
 
-  public CsiConversionSettings Create(cSapModel document, List<string>? selectedLoadCasesAndCombinations = null) =>
-    new(document, unitsConverter.ConvertOrThrow(document.GetPresentUnits()), selectedLoadCasesAndCombinations ?? []);
+  public CsiConversionSettings Create(
+    cSapModel document,
+    List<string>? selectedLoadCasesAndCombinations = null,
+    List<string>? selectedResultTypes = null
+  ) =>
+    new(
+      document,
+      unitsConverter.ConvertOrThrow(document.GetPresentUnits()),
+      selectedLoadCasesAndCombinations ?? [],
+      selectedResultTypes ?? []
+    );
 }

@@ -15,6 +15,12 @@ public interface IApplicationResultsExtractor
   string ResultsKey { get; }
 
   /// <summary>
+  /// Gets the type of CSI model objects that this extractor operates on.
+  /// Used to automatically resolve the correct object names from the selection summary.
+  /// </summary>
+  ModelObjectType TargetObjectType { get; }
+
+  /// <summary>
   /// Gets the configuration defining how to process raw API arrays into hierarchical structure.
   /// Specifies grouping hierarchy and result value keys.
   /// </summary>
