@@ -18,13 +18,16 @@ public static class ServiceRegistration
 
     // Register property extractors
     serviceCollection.AddScoped<CsiFramePropertiesExtractor>();
-    serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiJointPropertiesExtractor>();
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
     serviceCollection.AddScoped<DatabaseTableExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<ResultsArrayProcessor>();
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
+
+    // Register results extractors
+    serviceCollection.AddScoped<CsiBaseReactResultsExtractor>();
+    serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
+    serviceCollection.AddScoped<ResultsArrayProcessor>();
 
     // Register connector caches
     serviceCollection.AddScoped<CsiToSpeckleCacheSingleton>();

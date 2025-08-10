@@ -8,7 +8,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
-  public string ResultsKey => "FrameForces";
+  public string ResultsKey => "frameForces";
   public ModelObjectType TargetObjectType => ModelObjectType.FRAME;
 
   public ResultsConfiguration Configuration { get; } =
@@ -91,9 +91,9 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
       }
 
       // accumulate results
-      allArrays["Elm"].AddRange(elm.Cast<object>());
+      allArrays["Elm"].AddRange(elm);
       allArrays["ElmSta"].AddRange(elmSta.Cast<object>());
-      allArrays["LoadCase"].AddRange(loadCase.Cast<object>());
+      allArrays["LoadCase"].AddRange(loadCase);
       allArrays["StepNum"].AddRange(stepNum.Cast<object>());
       allArrays["P"].AddRange(p.Cast<object>());
       allArrays["V2"].AddRange(v2.Cast<object>());
@@ -104,7 +104,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
     }
 
     // Step 5: organise arrays for dictionary processor
-    var rawArrays = allArrays.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToArray());
+    var rawArrays = allArrays.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
 
     // Step 6: return sorted and processed dictionary
     return _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);

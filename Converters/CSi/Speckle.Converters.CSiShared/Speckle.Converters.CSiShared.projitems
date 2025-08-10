@@ -18,6 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiBaseReactResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFrameForceResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiFramePropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Helpers\CsiJointPropertiesExtractor.cs" />

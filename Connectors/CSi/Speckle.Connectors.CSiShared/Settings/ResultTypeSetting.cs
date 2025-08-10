@@ -8,5 +8,8 @@ public class ResultTypeSetting(List<string> values) : ICardSetting
   public string? Title { get; set; } = "Result Type";
   public string? Type { get; set; } = "array";
   public object? Value { get; set; } = values;
-  public List<string>? Enum { get; set; } = ["FrameForces"];
+  public List<string>? Enum { get; set; } =
+    new List<string> { "Base Reactions", "Frame Forces" }
+      .OrderBy(x => x)
+      .ToList();
 }

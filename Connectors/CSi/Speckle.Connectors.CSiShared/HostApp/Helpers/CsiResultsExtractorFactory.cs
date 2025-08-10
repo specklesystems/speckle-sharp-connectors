@@ -15,7 +15,8 @@ public class CsiResultsExtractorFactory
   public IApplicationResultsExtractor GetExtractor(string resultsKey) =>
     resultsKey switch
     {
-      "FrameForces" => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
+      "Base Reactions" => _serviceProvider.GetRequiredService<CsiBaseReactResultsExtractor>(),
+      "Frame Forces" => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
       _ => throw new InvalidOperationException($"{resultsKey} not accounted for in CsiResultsExtractorFactory")
     };
 }
