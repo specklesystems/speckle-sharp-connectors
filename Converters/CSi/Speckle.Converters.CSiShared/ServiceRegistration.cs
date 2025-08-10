@@ -23,6 +23,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiShellPropertiesExtractor>();
     serviceCollection.AddScoped<DatabaseTableExtractor>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
+    serviceCollection.AddScoped<ResultsArrayProcessor>();
     serviceCollection.AddScoped<SharedPropertiesExtractor>();
 
     // Register connector caches

@@ -134,7 +134,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       else
       {
         _loadCaseManager.ConfigureSelectedLoadCases(selectedCasesAndCombinations);
-        _frameForceResultsExtractor.GetResults(objectSelectionSummary[ModelObjectType.FRAME]);
+        Base analysisResults =
+          new()
+          {
+            ["columnForces"] = _frameForceResultsExtractor.GetResults(objectSelectionSummary[ModelObjectType.FRAME])
+          };
+        rootObjectCollection["analysisResults"] = analysisResults;
       }
     }
 

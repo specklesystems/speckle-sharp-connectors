@@ -11,7 +11,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsColumnElementForcesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsFrameSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionPropertyExtractor.cs" />
