@@ -50,7 +50,7 @@ public static class Connector
               Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
             )
           ],
-          MinimumLevel: SpeckleLogLevel.Warning
+          MinimumLevel: SpeckleLogLevel.Information
         ),
         new SpeckleTracing(
           Console: false,

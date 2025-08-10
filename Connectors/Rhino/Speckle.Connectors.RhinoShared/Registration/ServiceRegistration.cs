@@ -19,6 +19,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
+using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Connectors.Rhino.Plugin;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -34,10 +35,10 @@ public static class ServiceRegistration
       serviceCollection.AddSingleton<PlugIn>(SpeckleConnectorsRhinoPlugin.Instance);
       serviceCollection.AddSingleton<Command>(SpeckleConnectorsRhinoCommand.Instance);
       serviceCollection.AddDUI<DefaultThreadContext, RhinoDocumentStore>();
+      serviceCollection.AddDUIView();
     }
 
     serviceCollection.AddConnectors();
-    serviceCollection.AddDUIView();
 
     // Register bindings
     serviceCollection.AddSingleton<IBinding, TestBinding>();
@@ -50,10 +51,14 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoSelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoSendBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
+    serviceCollection.AddSingleton<IBinding, RhinoMapperBinding>();
 
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
     serviceCollection.AddScoped<IHostObjectBuilder, RhinoHostObjectBuilder>();
+
+    // register send settings
+    serviceCollection.AddScoped<ToSpeckleSettingsManager>();
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
