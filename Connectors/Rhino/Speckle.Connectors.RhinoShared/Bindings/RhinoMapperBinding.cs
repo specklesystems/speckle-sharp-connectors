@@ -34,12 +34,11 @@ public record LayerCategoryMapping(
 /// </summary>
 public class RhinoMapperBinding : IBinding
 {
+  private const string MAPPINGS_CHANGED_EVENT = "mappingsChanged";
   private readonly DocumentModelStore _store;
   private readonly IAppIdleManager _idleManager;
   private readonly IBasicConnectorBinding _basicConnectorBinding;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private const string CATEGORY_USER_STRING_KEY = "builtInCategory";
-  private const string MAPPINGS_CHANGED_EVENT = "mappingsChanged";
   public string Name => "revitMapperBinding";
   public IBrowserBridge Parent { get; }
 
@@ -97,7 +96,7 @@ public class RhinoMapperBinding : IBinding
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward set on object
       var rhinoObject = GetRhinoObject(objectIdString);
-      rhinoObject?.Attributes.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
+      rhinoObject?.Attributes.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
       rhinoObject?.CommitChanges();
     }
 
@@ -115,7 +114,7 @@ public class RhinoMapperBinding : IBinding
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward delete on object
       var rhinoObject = GetRhinoObject(objectIdString);
-      rhinoObject?.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
+      rhinoObject?.Attributes.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
       rhinoObject?.CommitChanges();
     }
 
@@ -130,9 +129,9 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var rhinoObject in RhinoDoc.ActiveDoc.Objects)
     {
-      if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+      if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
       {
-        rhinoObject.Attributes.DeleteUserString(CATEGORY_USER_STRING_KEY);
+        rhinoObject.Attributes.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
         rhinoObject.CommitChanges();
       }
     }
@@ -148,8 +147,10 @@ public class RhinoMapperBinding : IBinding
   public CategoryMapping[] GetCurrentObjectsMappings()
   {
     var mappedObjects = RhinoDoc
-      .ActiveDoc.Objects.Where(obj => !string.IsNullOrEmpty(obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
-      .GroupBy(obj => obj.Attributes.GetUserString(CATEGORY_USER_STRING_KEY))
+      .ActiveDoc.Objects.Where(obj =>
+        !string.IsNullOrEmpty(obj.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
+      )
+      .GroupBy(obj => obj.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       .Select(group => new CategoryMapping(
         group.Key,
         RevitBuiltInCategoryStore.GetLabel(group.Key),
@@ -175,7 +176,7 @@ public class RhinoMapperBinding : IBinding
       var layer = GetLayer(layerId);
       if (layer != null)
       {
-        layer.SetUserString(CATEGORY_USER_STRING_KEY, categoryValue);
+        layer.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
       }
     }
 
@@ -194,7 +195,7 @@ public class RhinoMapperBinding : IBinding
       if (layer != null)
       {
         // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
-        layer.SetUserString(CATEGORY_USER_STRING_KEY, null);
+        layer.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
       }
     }
 
@@ -209,10 +210,10 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var layer in RhinoDoc.ActiveDoc.Layers)
     {
-      if (!string.IsNullOrEmpty(layer.GetUserString(CATEGORY_USER_STRING_KEY)))
+      if (!string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
       {
         // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
-        layer.SetUserString(CATEGORY_USER_STRING_KEY, null);
+        layer.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
       }
     }
 
@@ -227,8 +228,10 @@ public class RhinoMapperBinding : IBinding
   public LayerCategoryMapping[] GetCurrentLayerMappings()
   {
     var mappedLayers = RhinoDoc
-      .ActiveDoc.Layers.Where(layer => !string.IsNullOrEmpty(layer.GetUserString(CATEGORY_USER_STRING_KEY)))
-      .GroupBy(layer => layer.GetUserString(CATEGORY_USER_STRING_KEY))
+      .ActiveDoc.Layers.Where(layer =>
+        !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
+      )
+      .GroupBy(layer => layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       .Select(group => new LayerCategoryMapping(
         group.Key,
         RevitBuiltInCategoryStore.GetLabel(group.Key),
@@ -256,7 +259,7 @@ public class RhinoMapperBinding : IBinding
     }
 
     var rhinoObject = e.TheObject;
-    if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+    if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
     {
       _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
     }
@@ -278,7 +281,9 @@ public class RhinoMapperBinding : IBinding
     var rhinoObject = e.RhinoObject;
 
     // Check if object has direct mapping or if old/new layers have mappings
-    bool hasObjectMapping = !string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY));
+    bool hasObjectMapping = !string.IsNullOrEmpty(
+      rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)
+    );
     bool hasOldLayerMapping = HasLayerMapping(e.OldAttributes.LayerIndex);
     bool hasNewLayerMapping = HasLayerMapping(rhinoObject.Attributes.LayerIndex);
 
@@ -328,7 +333,7 @@ public class RhinoMapperBinding : IBinding
 
       var layer = RhinoDoc.ActiveDoc.Layers[e.LayerIndex];
       // Only refresh if this layer has a mapping or if we're modifying layer properties
-      if (!string.IsNullOrEmpty(layer.GetUserString(CATEGORY_USER_STRING_KEY)))
+      if (!string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
       {
         _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
       }
@@ -395,7 +400,71 @@ public class RhinoMapperBinding : IBinding
     }
 
     var layer = RhinoDoc.ActiveDoc.Layers[layerIndex];
-    return !string.IsNullOrEmpty(layer.GetUserString(CATEGORY_USER_STRING_KEY));
+    return !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY));
+  }
+
+  /// <summary>
+  /// Resolves the category mapping for a given Rhino object.
+  /// Implements a hierarchical resolution strategy:
+  /// <list type="bullet">
+  /// <item><description>Object-level mappings have the highest precedence</description></item>
+  /// <item><description>Layer-level mappings are fallback when no object mapping exists</description></item>
+  /// <item><description>Traverses layer hierarchy and stops at first mapping found</description></item>
+  /// </list>
+  /// </summary>
+  public string? ResolveMappingForObject(RhinoObject rhinoObject)
+  {
+    // 1. Check object user string first (highest precedence)
+    var objectMapping = rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+    if (!string.IsNullOrEmpty(objectMapping))
+    {
+      return objectMapping;
+    }
+
+    // 2. If not found, traverse layer hierarchy
+    var layer = GetLayerByIndex(rhinoObject.Attributes.LayerIndex);
+    while (layer != null)
+    {
+      var layerMapping = layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+      if (!string.IsNullOrEmpty(layerMapping))
+      {
+        return layerMapping; // Return first mapping found
+      }
+
+      // Move to parent layer
+      layer = GetParentLayer(layer);
+    }
+
+    // 3. No mapping found at any level
+    return null;
+  }
+
+  /// <summary>
+  /// Gets a layer by its index from the active document.
+  /// </summary>
+  private static Layer? GetLayerByIndex(int layerIndex)
+  {
+    var doc = RhinoDoc.ActiveDoc;
+    if (doc?.Layers == null || layerIndex < 0 || layerIndex >= doc.Layers.Count)
+    {
+      return null;
+    }
+
+    return doc.Layers[layerIndex];
+  }
+
+  /// <summary>
+  /// Gets the parent layer of the given layer.
+  /// </summary>
+  private static Layer? GetParentLayer(Layer layer)
+  {
+    if (layer.ParentLayerId == Guid.Empty)
+    {
+      return null; // No parent layer
+    }
+
+    var doc = RhinoDoc.ActiveDoc;
+    return doc?.Layers?.FindId(layer.ParentLayerId);
   }
 
   #endregion
