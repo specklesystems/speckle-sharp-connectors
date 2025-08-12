@@ -40,6 +40,7 @@ public record LayerOption(string Id, string Name);
 public class RhinoMapperBinding : IBinding
 {
   private const string MAPPINGS_CHANGED_EVENT = "mappingsChanged";
+  private const string LAYERS_CHANGED_EVENT = "layersChanged";
   private readonly DocumentModelStore _store;
   private readonly IAppIdleManager _idleManager;
   private readonly IBasicConnectorBinding _basicConnectorBinding;
@@ -337,15 +338,17 @@ public class RhinoMapperBinding : IBinding
 
     var rhinoObject = e.RhinoObject;
 
-    // Check if object has direct mapping or if old/new layers have mappings
-    bool hasObjectMapping = !string.IsNullOrEmpty(
-      rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)
-    );
+    // check if mapping user string changed (added, removed, or modified)
+    var oldMapping = e.OldAttributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+    var newMapping = rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+    bool mappingChanged = !string.Equals(oldMapping, newMapping, StringComparison.Ordinal);
+
+    // check if layer change affects mappings
     bool hasOldLayerMapping = HasLayerMapping(e.OldAttributes.LayerIndex);
     bool hasNewLayerMapping = HasLayerMapping(rhinoObject.Attributes.LayerIndex);
 
-    // Refresh if object has mapping or if layer change affects mapped layers
-    if (hasObjectMapping || hasOldLayerMapping || hasNewLayerMapping)
+    // refresh if mapping changed OR layer change affects mapped layers
+    if (mappingChanged || hasOldLayerMapping || hasNewLayerMapping)
     {
       _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
     }
@@ -353,7 +356,7 @@ public class RhinoMapperBinding : IBinding
 
   /// <summary>
   /// Called when the document changes (e.g., switching to a different Rhino model).
-  /// Refreshes the mappings table to reflect the new document's state.
+  /// Refreshes the mappings table and defined layers to reflect the new document's state.
   /// </summary>
   private void OnDocumentChanged(object? sender, EventArgs e)
   {
@@ -364,12 +367,18 @@ public class RhinoMapperBinding : IBinding
 
     // Refresh mappings for the new document
     _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
+
+    // Refresh layer list for the new document
+    _idleManager.SubscribeToIdle(nameof(NotifyLayersChanged), NotifyLayersChanged);
   }
 
   /// <summary>
   /// Called when layer table events occur in Rhino.
-  /// Follows same pattern as RhinoSendBinding for layer events.
+  /// Refreshes layer list when layer structure changes.
   /// </summary>
+  /// <remarks>
+  /// Layer mapping changes are handled by OnObjectAttributesChanged
+  /// </remarks>
   private void OnLayerTableEvent(object? sender, LayerTableEventArgs e) =>
     _topLevelExceptionHandler.CatchUnhandled(() =>
     {
@@ -378,21 +387,14 @@ public class RhinoMapperBinding : IBinding
         return;
       }
 
-      // Skip certain event types (same as RhinoSendBinding)
+      // Refresh layer list for structural changes
       if (
-        e.EventType == LayerTableEventType.Deleted
-        || e.EventType == LayerTableEventType.Current
-        || e.EventType == LayerTableEventType.Added
+        e.EventType == LayerTableEventType.Added
+        || e.EventType == LayerTableEventType.Deleted
+        || e.EventType == LayerTableEventType.Modified
       )
       {
-        return;
-      }
-
-      var layer = RhinoDoc.ActiveDoc.Layers[e.LayerIndex];
-      // Only refresh if this layer has a mapping or if we're modifying layer properties
-      if (!string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
-      {
-        _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
+        _idleManager.SubscribeToIdle(nameof(NotifyLayersChanged), NotifyLayersChanged);
       }
     });
 
@@ -403,6 +405,15 @@ public class RhinoMapperBinding : IBinding
   {
     var currentMappings = GetCurrentObjectsMappings();
     Parent.Send(MAPPINGS_CHANGED_EVENT, currentMappings);
+  }
+
+  /// <summary>
+  /// Sends updated layer list to the frontend.
+  /// </summary>
+  private void NotifyLayersChanged()
+  {
+    var availableLayers = GetAvailableLayers();
+    Parent.Send(LAYERS_CHANGED_EVENT, availableLayers);
   }
 
   #endregion
