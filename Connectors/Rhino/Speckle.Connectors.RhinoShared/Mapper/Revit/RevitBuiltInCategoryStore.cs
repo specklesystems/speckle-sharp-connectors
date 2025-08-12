@@ -28,6 +28,7 @@ public static class RevitBuiltInCategoryStore
   /// </summary>
   public static readonly CategoryOption[] Categories =
   [
+    // ARCHITECTURAL
     new("OST_Ceilings", "Ceilings"),
     new("OST_Columns", "Columns"),
     new("OST_CurtainGrids", "Curtain Grids"),
@@ -51,6 +52,7 @@ public static class RevitBuiltInCategoryStore
     new("OST_StructuralFramingSystem", "Structural Framing System"),
     new("OST_StructuralTruss", "Structural Truss"),
     // MISC
+    new("OST_GenericModel", "Generic Model"),
     new("OST_Levels", "Levels"),
     new("OST_Grids", "Grids"),
     new("OST_Rooms", "Rooms"),
