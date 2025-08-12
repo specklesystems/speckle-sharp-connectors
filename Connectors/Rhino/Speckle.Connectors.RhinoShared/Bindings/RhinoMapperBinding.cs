@@ -243,47 +243,6 @@ public class RhinoMapperBinding : IBinding
 
   #endregion
 
-  #region Helper Methods
-
-  /// <summary>
-  /// Converts a string object ID to a RhinoObject.
-  /// </summary>
-  /// <returns>RhinoObject if found and valid, null otherwise</returns>
-  /// <remarks>Reducing repetitive code.</remarks>
-  private static RhinoObject? GetRhinoObject(string objectIdString) =>
-    Guid.TryParse(objectIdString, out var objectId) ? RhinoDoc.ActiveDoc.Objects.FindId(objectId) : null;
-
-  /// <summary>
-  /// Converts a string layer ID to a Layer.
-  /// </summary>
-  /// <returns>Layer if found and valid, null otherwise</returns>
-  private static Layer? GetLayer(string layerIdString) =>
-    Guid.TryParse(layerIdString, out var layerId) ? RhinoDoc.ActiveDoc.Layers.FindId(layerId) : null;
-
-  /// <summary>
-  /// Gets the full layer path with / delimiter (matching send workflow).
-  /// Reuses the exact same logic as RhinoLayersFilter.GetFullLayerPath().
-  /// </summary>
-  private static string GetFullLayerPath(Layer layer)
-  {
-    string fullPath = layer.Name;
-    Guid parentIndex = layer.ParentLayerId;
-    while (parentIndex != Guid.Empty)
-    {
-      Layer? parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentIndex);
-      if (parentLayer == null)
-      {
-        break;
-      }
-
-      fullPath = parentLayer.Name + "/" + fullPath; // use "/" delimiter like send workflow
-      parentIndex = parentLayer.ParentLayerId;
-    }
-    return fullPath;
-  }
-
-  #endregion
-
   #region Event Handling
 
   /// <summary>
@@ -306,10 +265,25 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Called when object attributes are modified in Rhino.
   /// </summary>
+  /// <remarks>
+  /// Includes detection for when objects move between layers with mappings.
+  /// </remarks>
   private void OnObjectAttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e)
   {
+    if (!_store.IsDocumentInit)
+    {
+      return;
+    }
+
     var rhinoObject = e.RhinoObject;
-    if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY)))
+
+    // Check if object has direct mapping or if old/new layers have mappings
+    bool hasObjectMapping = !string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(CATEGORY_USER_STRING_KEY));
+    bool hasOldLayerMapping = HasLayerMapping(e.OldAttributes.LayerIndex);
+    bool hasNewLayerMapping = HasLayerMapping(rhinoObject.Attributes.LayerIndex);
+
+    // Refresh if object has mapping or if layer change affects mapped layers
+    if (hasObjectMapping || hasOldLayerMapping || hasNewLayerMapping)
     {
       _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
     }
@@ -367,6 +341,61 @@ public class RhinoMapperBinding : IBinding
   {
     var currentMappings = GetCurrentObjectsMappings();
     Parent.Send(MAPPINGS_CHANGED_EVENT, currentMappings);
+  }
+
+  #endregion
+
+  #region Helper Methods
+
+  /// <summary>
+  /// Converts a string object ID to a RhinoObject.
+  /// </summary>
+  /// <returns>RhinoObject if found and valid, null otherwise</returns>
+  /// <remarks>Reducing repetitive code.</remarks>
+  private static RhinoObject? GetRhinoObject(string objectIdString) =>
+    Guid.TryParse(objectIdString, out var objectId) ? RhinoDoc.ActiveDoc.Objects.FindId(objectId) : null;
+
+  /// <summary>
+  /// Converts a string layer ID to a Layer.
+  /// </summary>
+  /// <returns>Layer if found and valid, null otherwise</returns>
+  private static Layer? GetLayer(string layerIdString) =>
+    Guid.TryParse(layerIdString, out var layerId) ? RhinoDoc.ActiveDoc.Layers.FindId(layerId) : null;
+
+  /// <summary>
+  /// Gets the full layer path with / delimiter (matching send workflow).
+  /// Reuses the exact same logic as RhinoLayersFilter.GetFullLayerPath().
+  /// </summary>
+  private static string GetFullLayerPath(Layer layer)
+  {
+    string fullPath = layer.Name;
+    Guid parentIndex = layer.ParentLayerId;
+    while (parentIndex != Guid.Empty)
+    {
+      Layer? parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentIndex);
+      if (parentLayer == null)
+      {
+        break;
+      }
+
+      fullPath = parentLayer.Name + "/" + fullPath; // use "/" delimiter like send workflow
+      parentIndex = parentLayer.ParentLayerId;
+    }
+    return fullPath;
+  }
+
+  /// <summary>
+  /// Helper to check if a layer (by index) has a category mapping.
+  /// </summary>
+  private static bool HasLayerMapping(int layerIndex)
+  {
+    if (layerIndex < 0 || layerIndex >= RhinoDoc.ActiveDoc.Layers.Count)
+    {
+      return false;
+    }
+
+    var layer = RhinoDoc.ActiveDoc.Layers[layerIndex];
+    return !string.IsNullOrEmpty(layer.GetUserString(CATEGORY_USER_STRING_KEY));
   }
 
   #endregion
