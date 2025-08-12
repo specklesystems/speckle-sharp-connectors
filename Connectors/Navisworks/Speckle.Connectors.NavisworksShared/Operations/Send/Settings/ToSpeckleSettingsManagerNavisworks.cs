@@ -18,6 +18,7 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
   private readonly Dictionary<string, bool?> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool?> _includeInternalPropertiesCache = [];
   private readonly Dictionary<string, bool?> _preserveModelHierarchyCache = [];
+  private readonly Dictionary<string, bool?> _revitCategoryMappingCache = [];
 
   public ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConversionCache)
   {
@@ -76,6 +77,28 @@ public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavis
 
     _originModeCache[modelCard.ModelCardId.NotNull()] = origin;
     return origin;
+  }
+
+  public bool GetMappingToRevitCategories(SenderModelCard modelCard)
+  {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "mappingToRevitCategories")?.Value as bool?;
+
+    var returnValue = value != null && value.NotNull();
+    if (_revitCategoryMappingCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
+    {
+      if (previousValue != returnValue)
+      {
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    _revitCategoryMappingCache[modelCard.ModelCardId] = returnValue;
+    return returnValue;
   }
 
   public bool GetConvertHiddenElements(SenderModelCard modelCard)
