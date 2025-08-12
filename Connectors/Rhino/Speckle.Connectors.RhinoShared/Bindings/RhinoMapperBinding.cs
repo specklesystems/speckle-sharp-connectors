@@ -44,6 +44,7 @@ public class RhinoMapperBinding : IBinding
   private readonly IAppIdleManager _idleManager;
   private readonly IBasicConnectorBinding _basicConnectorBinding;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly RevitMappingResolver _revitMappingResolver;
   public string Name => "revitMapperBinding";
   public IBrowserBridge Parent { get; }
 
@@ -52,7 +53,8 @@ public class RhinoMapperBinding : IBinding
     IAppIdleManager idleManager,
     IBrowserBridge parent,
     IBasicConnectorBinding basicConnectorBinding,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    RevitMappingResolver revitMappingResolver
   )
   {
     _store = store;
@@ -60,6 +62,7 @@ public class RhinoMapperBinding : IBinding
     Parent = parent;
     _basicConnectorBinding = basicConnectorBinding;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _revitMappingResolver = revitMappingResolver;
 
     // Subscribe to Rhino events so we know about changes
     // Events fire on delete, undo delete and modify objects
@@ -261,6 +264,43 @@ public class RhinoMapperBinding : IBinding
     return mappedLayers;
   }
 
+  /// <summary>
+  /// Gets all objects that would effectively receive the specified layer mapping during send.
+  /// Takes into account hierarchical resolution - only returns objects that would actually
+  /// resolve to this specific category value through the layer hierarchy.
+  /// </summary>
+  public string[] GetEffectiveObjectsForLayerMapping(string[] layerIds, string categoryValue)
+  {
+    var effectiveObjects = new List<string>();
+
+    foreach (var layerId in layerIds)
+    {
+      var layer = GetLayer(layerId);
+      if (layer == null)
+      {
+        continue;
+      }
+
+      // Get all objects in this layer and its child layers
+      var allObjectsInHierarchy = GetObjectsInLayerHierarchy(layer);
+
+      foreach (var obj in allObjectsInHierarchy)
+      {
+        // Since we're in Layer mode, objects don't have direct mappings
+        // Check what category this object would actually resolve to through layer hierarchy
+        var resolvedCategory = _revitMappingResolver.SearchLayerHierarchyForMapping(obj);
+
+        // Only include if it resolves to THIS specific category
+        if (resolvedCategory == categoryValue)
+        {
+          effectiveObjects.Add(obj.Id.ToString());
+        }
+      }
+    }
+
+    return effectiveObjects.ToArray();
+  }
+
   #endregion
 
   #region Event Handling
@@ -418,6 +458,65 @@ public class RhinoMapperBinding : IBinding
 
     var layer = RhinoDoc.ActiveDoc.Layers[layerIndex];
     return !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY));
+  }
+
+  /// <summary>
+  /// Gets all RhinoObjects in the specified layer and all its child layers recursively.
+  /// </summary>
+  private static IEnumerable<RhinoObject> GetObjectsInLayerHierarchy(Layer rootLayer)
+  {
+    var allObjects = new List<RhinoObject>();
+    var layersToSearch = GetLayerAndAllChildren(rootLayer).ToList();
+
+    foreach (var layer in layersToSearch)
+    {
+      var objectsOnLayer = RhinoDoc.ActiveDoc.Objects.FindByLayer(layer);
+      allObjects.AddRange(objectsOnLayer);
+    }
+
+    return allObjects;
+  }
+
+  /// <summary>
+  /// Gets the specified layer and all its child layers recursively.
+  /// </summary>
+  private static IEnumerable<Layer> GetLayerAndAllChildren(Layer rootLayer)
+  {
+    // Return the root layer itself
+    yield return rootLayer;
+
+    // Get all child layers recursively
+    foreach (var childLayer in GetAllChildLayers(rootLayer))
+    {
+      yield return childLayer;
+    }
+  }
+
+  /// <summary>
+  /// Recursively gets all child layers of the specified parent layer.
+  /// </summary>
+  private static IEnumerable<Layer> GetAllChildLayers(Layer parentLayer)
+  {
+    var doc = RhinoDoc.ActiveDoc;
+    if (doc?.Layers == null)
+    {
+      yield break;
+    }
+
+    // Find all direct child layers
+    var directChildren = doc.Layers.Where(layer => layer.ParentLayerId == parentLayer.Id);
+
+    foreach (var childLayer in directChildren)
+    {
+      // Return the direct child
+      yield return childLayer;
+
+      // Recursively get grandchildren
+      foreach (var grandChild in GetAllChildLayers(childLayer))
+      {
+        yield return grandChild;
+      }
+    }
   }
 
   #endregion
