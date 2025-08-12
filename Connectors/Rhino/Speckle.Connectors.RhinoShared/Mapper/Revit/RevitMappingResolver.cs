@@ -12,6 +12,9 @@ namespace Speckle.Connectors.Rhino.Mapper.Revit;
 /// </remarks>
 public class RevitMappingResolver
 {
+  /// <summary>
+  /// Traverses layer hierarchy, returns first mapping found or null
+  /// </summary>
   public string? SearchLayerHierarchyForMapping(RhinoObject rhinoObject)
   {
     // NOTE: we agreed on a hierarchical resolution strategy:

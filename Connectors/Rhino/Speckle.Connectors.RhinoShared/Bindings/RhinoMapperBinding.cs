@@ -30,6 +30,11 @@ public record LayerCategoryMapping(
 );
 
 /// <summary>
+/// Represents a layer option for the UI dropdown.
+/// </summary>
+public record LayerOption(string Id, string Name);
+
+/// <summary>
 /// Binding for managing Rhino object mappings to Revit categories.
 /// </summary>
 public class RhinoMapperBinding : IBinding
@@ -76,6 +81,24 @@ public class RhinoMapperBinding : IBinding
   /// </summary>
   public CategoryOption[] GetAvailableCategories() =>
     RevitBuiltInCategoryStore.Categories.OrderBy(category => category.Label).ToArray();
+
+  /// <summary>
+  /// Gets list of available layers for the UI dropdown.
+  /// </summary>
+  public LayerOption[] GetAvailableLayers()
+  {
+    var doc = RhinoDoc.ActiveDoc;
+    if (doc == null)
+    {
+      return Array.Empty<LayerOption>();
+    }
+
+    return doc
+      .Layers.Where(layer => !layer.IsDeleted)
+      .Select(layer => new LayerOption(layer.Id.ToString(), GetFullLayerPath(layer)))
+      .OrderBy(layer => layer.Name)
+      .ToArray();
+  }
 
   /// <summary>
   /// Selects/highlights specific objects in Rhino.
@@ -174,10 +197,7 @@ public class RhinoMapperBinding : IBinding
     foreach (var layerId in layerIds)
     {
       var layer = GetLayer(layerId);
-      if (layer != null)
-      {
-        layer.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
-      }
+      layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
     }
 
     // Trigger single update
@@ -191,12 +211,9 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var layerId in layerIds)
     {
+      // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
       var layer = GetLayer(layerId);
-      if (layer != null)
-      {
-        // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
-        layer.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
-      }
+      layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
     }
 
     // Trigger single update
