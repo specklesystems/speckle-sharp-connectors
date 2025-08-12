@@ -73,6 +73,7 @@ public class NavisworksSendBinding : ISendBinding
       new IncludeInternalPropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
+      new RevitCategoryMappingSetting(false)
     ];
 
   public async Task Send(string modelCardId) =>
@@ -93,7 +94,8 @@ public class NavisworksSendBinding : ISendBinding
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
           includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
-          preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard)
+          preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard),
+          mappingToRevitCategories: _toSpeckleSettingsManagerNavisworks.GetMappingToRevitCategories(modelCard)
         )
       );
 
