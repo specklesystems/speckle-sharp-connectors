@@ -2,6 +2,7 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Rhino.HostApp;
 
 namespace Speckle.Connectors.Rhino.Operations.Send.Filters;
 
@@ -32,14 +33,11 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
 
     foreach (var item in SelectedItems)
     {
-      if (Guid.TryParse(item.Id, out Guid layerId))
+      Layer? layer = RhinoLayerHelper.GetLayer(item.Id);
+      if (layer != null)
       {
-        Layer layer = doc.Layers.FindId(layerId);
-        if (layer != null)
-        {
-          var objectIds = doc.Objects.FindByLayer(layer).Select(obj => obj.Id.ToString());
-          SelectedObjectIds.AddRange(objectIds);
-        }
+        var objectIds = doc.Objects.FindByLayer(layer).Select(obj => obj.Id.ToString());
+        SelectedObjectIds.AddRange(objectIds);
       }
     }
 
@@ -59,28 +57,10 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
     {
       if (!layer.IsDeleted)
       {
-        filterItems.Add(new SendFilterSelectItem(layer.Id.ToString(), GetFullLayerPath(layer)));
+        filterItems.Add(new SendFilterSelectItem(layer.Id.ToString(), RhinoLayerHelper.GetFullLayerPath(layer)));
       }
     }
 
     return filterItems;
-  }
-
-  private string GetFullLayerPath(Layer layer)
-  {
-    string fullPath = layer.Name;
-    Guid parentIndex = layer.ParentLayerId;
-    while (parentIndex != Guid.Empty)
-    {
-      Layer parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentIndex);
-      if (parentLayer == null)
-      {
-        break;
-      }
-
-      fullPath = parentLayer.Name + "/" + fullPath;
-      parentIndex = parentLayer.ParentLayerId;
-    }
-    return fullPath;
   }
 }

@@ -4,6 +4,7 @@ using Rhino.DocObjects.Tables;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
+using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.Mapper.Revit;
 
 namespace Speckle.Connectors.Rhino.Bindings;
@@ -73,7 +74,7 @@ public class RhinoMapperBinding : IBinding
 
     return doc
       .Layers.Where(layer => !layer.IsDeleted)
-      .Select(layer => new LayerOption(layer.Id.ToString(), GetFullLayerPath(layer)))
+      .Select(layer => new LayerOption(layer.Id.ToString(), RhinoLayerHelper.GetFullLayerPath(layer)))
       .OrderBy(layer => layer.Name)
       .ToArray();
   }
@@ -96,7 +97,7 @@ public class RhinoMapperBinding : IBinding
     {
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward set on object
-      var rhinoObject = GetRhinoObject(objectIdString);
+      var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
       rhinoObject?.Attributes.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
       rhinoObject?.CommitChanges();
     }
@@ -114,7 +115,7 @@ public class RhinoMapperBinding : IBinding
     {
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward delete on object
-      var rhinoObject = GetRhinoObject(objectIdString);
+      var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
       rhinoObject?.Attributes.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
       rhinoObject?.CommitChanges();
     }
@@ -174,7 +175,7 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var layerId in layerIds)
     {
-      var layer = GetLayer(layerId);
+      var layer = RhinoLayerHelper.GetLayer(layerId);
       layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
     }
 
@@ -190,7 +191,7 @@ public class RhinoMapperBinding : IBinding
     foreach (var layerId in layerIds)
     {
       // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
-      var layer = GetLayer(layerId);
+      var layer = RhinoLayerHelper.GetLayer(layerId);
       layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
     }
 
@@ -231,7 +232,7 @@ public class RhinoMapperBinding : IBinding
         group.Key,
         RevitBuiltInCategoryStore.GetLabel(group.Key),
         group.Select(layer => layer.Id.ToString()).ToArray(),
-        group.Select(layer => GetFullLayerPath(layer)).ToArray(),
+        group.Select(layer => RhinoLayerHelper.GetFullLayerPath(layer)).ToArray(),
         group.Count()
       ))
       .ToArray();
@@ -250,14 +251,14 @@ public class RhinoMapperBinding : IBinding
 
     foreach (var layerId in layerIds)
     {
-      var layer = GetLayer(layerId);
+      var layer = RhinoLayerHelper.GetLayer(layerId);
       if (layer == null)
       {
         continue;
       }
 
       // Get all objects in this layer and its child layers
-      var allObjectsInHierarchy = GetObjectsInLayerHierarchy(layer);
+      var allObjectsInHierarchy = RhinoLayerHelper.GetObjectsInLayerHierarchy(layer);
 
       foreach (var obj in allObjectsInHierarchy)
       {
@@ -318,8 +319,8 @@ public class RhinoMapperBinding : IBinding
     bool mappingChanged = !string.Equals(oldMapping, newMapping, StringComparison.Ordinal);
 
     // check if layer change affects mappings
-    bool hasOldLayerMapping = HasLayerMapping(e.OldAttributes.LayerIndex);
-    bool hasNewLayerMapping = HasLayerMapping(rhinoObject.Attributes.LayerIndex);
+    bool hasOldLayerMapping = RhinoLayerHelper.HasLayerMapping(e.OldAttributes.LayerIndex);
+    bool hasNewLayerMapping = RhinoLayerHelper.HasLayerMapping(rhinoObject.Attributes.LayerIndex);
 
     // refresh if mapping changed OR layer change affects mapped layers
     if (mappingChanged || hasOldLayerMapping || hasNewLayerMapping)
@@ -388,120 +389,6 @@ public class RhinoMapperBinding : IBinding
   {
     var availableLayers = GetAvailableLayers();
     Parent.Send(LAYERS_CHANGED_EVENT, availableLayers);
-  }
-
-  #endregion
-
-  #region Helper Methods
-
-  /// <summary>
-  /// Converts a string object ID to a RhinoObject.
-  /// </summary>
-  /// <returns>RhinoObject if found and valid, null otherwise</returns>
-  /// <remarks>Reducing repetitive code.</remarks>
-  private static RhinoObject? GetRhinoObject(string objectIdString) =>
-    Guid.TryParse(objectIdString, out var objectId) ? RhinoDoc.ActiveDoc.Objects.FindId(objectId) : null;
-
-  /// <summary>
-  /// Converts a string layer ID to a Layer.
-  /// </summary>
-  /// <returns>Layer if found and valid, null otherwise</returns>
-  private static Layer? GetLayer(string layerIdString) =>
-    Guid.TryParse(layerIdString, out var layerId) ? RhinoDoc.ActiveDoc.Layers.FindId(layerId) : null;
-
-  /// <summary>
-  /// Gets the full layer path with / delimiter (matching send workflow).
-  /// Reuses the exact same logic as RhinoLayersFilter.GetFullLayerPath().
-  /// </summary>
-  private static string GetFullLayerPath(Layer layer)
-  {
-    string fullPath = layer.Name;
-    Guid parentIndex = layer.ParentLayerId;
-    while (parentIndex != Guid.Empty)
-    {
-      Layer? parentLayer = RhinoDoc.ActiveDoc.Layers.FindId(parentIndex);
-      if (parentLayer == null)
-      {
-        break;
-      }
-
-      fullPath = parentLayer.Name + "/" + fullPath; // use "/" delimiter like send workflow
-      parentIndex = parentLayer.ParentLayerId;
-    }
-    return fullPath;
-  }
-
-  /// <summary>
-  /// Helper to check if a layer (by index) has a category mapping.
-  /// </summary>
-  private static bool HasLayerMapping(int layerIndex)
-  {
-    if (layerIndex < 0 || layerIndex >= RhinoDoc.ActiveDoc.Layers.Count)
-    {
-      return false;
-    }
-
-    var layer = RhinoDoc.ActiveDoc.Layers[layerIndex];
-    return !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY));
-  }
-
-  /// <summary>
-  /// Gets all RhinoObjects in the specified layer and all its child layers recursively.
-  /// </summary>
-  private static IEnumerable<RhinoObject> GetObjectsInLayerHierarchy(Layer rootLayer)
-  {
-    var allObjects = new List<RhinoObject>();
-    var layersToSearch = GetLayerAndAllChildren(rootLayer).ToList();
-
-    foreach (var layer in layersToSearch)
-    {
-      var objectsOnLayer = RhinoDoc.ActiveDoc.Objects.FindByLayer(layer);
-      allObjects.AddRange(objectsOnLayer);
-    }
-
-    return allObjects;
-  }
-
-  /// <summary>
-  /// Gets the specified layer and all its child layers recursively.
-  /// </summary>
-  private static IEnumerable<Layer> GetLayerAndAllChildren(Layer rootLayer)
-  {
-    // Return the root layer itself
-    yield return rootLayer;
-
-    // Get all child layers recursively
-    foreach (var childLayer in GetAllChildLayers(rootLayer))
-    {
-      yield return childLayer;
-    }
-  }
-
-  /// <summary>
-  /// Recursively gets all child layers of the specified parent layer.
-  /// </summary>
-  private static IEnumerable<Layer> GetAllChildLayers(Layer parentLayer)
-  {
-    var doc = RhinoDoc.ActiveDoc;
-    if (doc?.Layers == null)
-    {
-      yield break;
-    }
-
-    // Find all direct child layers
-    var directChildren = doc.Layers.Where(layer => layer.ParentLayerId == parentLayer.Id);
-
-    foreach (var childLayer in directChildren)
-    {
-      // Return the direct child
-      yield return childLayer;
-
-      // Recursively get grandchildren
-      foreach (var grandChild in GetAllChildLayers(childLayer))
-      {
-        yield return grandChild;
-      }
-    }
   }
 
   #endregion

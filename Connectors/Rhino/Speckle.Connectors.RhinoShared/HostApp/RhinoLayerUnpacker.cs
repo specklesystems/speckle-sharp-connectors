@@ -31,20 +31,16 @@ public class RhinoLayerUnpacker
   /// <exception cref="SpeckleException">Throws when a layer could not be retrieved from a stored collection application id</exception>
   public IEnumerable<Layer> GetUsedLayers()
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-
     foreach (string layerId in _layerCollectionCache.Values.Select(o => o.applicationId ?? string.Empty).ToList())
     {
-      if (Guid.TryParse(layerId, out Guid layerGuid))
+      var layer = RhinoLayerHelper.GetLayer(layerId);
+      if (layer != null)
       {
-        if (currentDoc.Layers.FindId(layerGuid) is Layer layer)
-        {
-          yield return layer;
-        }
-        else
-        {
-          throw new SpeckleException($"Could not retrieve layer with guid: {layerId}.");
-        }
+        yield return layer;
+      }
+      else if (Guid.TryParse(layerId, out _))
+      {
+        throw new SpeckleException($"Could not retrieve layer with guid: {layerId}.");
       }
       else
       {
