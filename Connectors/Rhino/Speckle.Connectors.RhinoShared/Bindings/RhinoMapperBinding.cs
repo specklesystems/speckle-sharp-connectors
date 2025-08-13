@@ -98,8 +98,9 @@ public class RhinoMapperBinding : IBinding
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward set on object
       var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
-      rhinoObject?.Attributes.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
-      rhinoObject?.CommitChanges();
+      var attrs = rhinoObject?.Attributes.Duplicate();
+      attrs?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
+      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
     }
 
     // Trigger single update after all changes
@@ -113,11 +114,10 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var objectIdString in objectIds)
     {
-      // NOTE: should we be checking if key already exists?
-      // For POC, straightforward delete on object
       var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
-      rhinoObject?.Attributes.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
-      rhinoObject?.CommitChanges();
+      var attrs = rhinoObject?.Attributes.Duplicate();
+      attrs?.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
     }
 
     // Trigger single update after all changes
@@ -133,8 +133,9 @@ public class RhinoMapperBinding : IBinding
     {
       if (!string.IsNullOrEmpty(rhinoObject.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)))
       {
-        rhinoObject.Attributes.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
-        rhinoObject.CommitChanges();
+        var attrs = rhinoObject.Attributes.Duplicate();
+        attrs.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+        RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
       }
     }
 
