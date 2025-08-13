@@ -9,32 +9,6 @@ using Speckle.Connectors.Rhino.Mapper.Revit;
 namespace Speckle.Connectors.Rhino.Bindings;
 
 /// <summary>
-/// Represents a group of objects that are all assigned to the same category.
-/// </summary>
-public record CategoryMapping(
-  string CategoryValue,
-  string CategoryLabel,
-  IReadOnlyList<string> ObjectIds,
-  int ObjectCount
-);
-
-/// <summary>
-/// Represents layers that are all assigned to the same category.
-/// </summary>
-public record LayerCategoryMapping(
-  string CategoryValue,
-  string CategoryLabel,
-  IReadOnlyList<string> LayerIds,
-  IReadOnlyList<string> LayerNames,
-  int LayerCount
-);
-
-/// <summary>
-/// Represents a layer option for the UI dropdown.
-/// </summary>
-public record LayerOption(string Id, string Name);
-
-/// <summary>
 /// Binding for managing Rhino object mappings to Revit categories.
 /// </summary>
 public class RhinoMapperBinding : IBinding

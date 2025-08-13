@@ -26,7 +26,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\LayerCategoryMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\LayerOption.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitBuiltInCategoryStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\CategoryMapping.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitMappingConstants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitMappingResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoSelectionFilter.cs" />
