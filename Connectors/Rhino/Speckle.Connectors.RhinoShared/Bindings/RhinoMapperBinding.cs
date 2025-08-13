@@ -240,42 +240,8 @@ public class RhinoMapperBinding : IBinding
     return mappedLayers;
   }
 
-  /// <summary>
-  /// Gets all objects that would effectively receive the specified layer mapping during send.
-  /// Takes into account hierarchical resolution - only returns objects that would actually
-  /// resolve to this specific category value through the layer hierarchy.
-  /// </summary>
-  public string[] GetEffectiveObjectsForLayerMapping(string[] layerIds, string categoryValue)
-  {
-    var effectiveObjects = new List<string>();
-
-    foreach (var layerId in layerIds)
-    {
-      var layer = RhinoLayerHelper.GetLayer(layerId);
-      if (layer == null)
-      {
-        continue;
-      }
-
-      // Get all objects in this layer and its child layers
-      var allObjectsInHierarchy = RhinoLayerHelper.GetObjectsInLayerHierarchy(layer);
-
-      foreach (var obj in allObjectsInHierarchy)
-      {
-        // Since we're in Layer mode, objects don't have direct mappings
-        // Check what category this object would actually resolve to through layer hierarchy
-        var resolvedCategory = _revitMappingResolver.SearchLayerHierarchyForMapping(obj);
-
-        // Only include if it resolves to THIS specific category
-        if (resolvedCategory == categoryValue)
-        {
-          effectiveObjects.Add(obj.Id.ToString());
-        }
-      }
-    }
-
-    return effectiveObjects.ToArray();
-  }
+  public string[] GetEffectiveObjectsForLayerMapping(string[] layerIds, string categoryValue) =>
+    _revitMappingResolver.GetEffectiveObjectsForLayerMapping(layerIds, categoryValue);
 
   #endregion
 
