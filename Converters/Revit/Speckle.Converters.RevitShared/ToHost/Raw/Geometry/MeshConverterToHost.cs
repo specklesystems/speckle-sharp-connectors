@@ -1,95 +1,183 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.RevitShared.ToHost.TopLevel;
 
-public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObject>>
+public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject>>
 {
   private readonly RevitToHostCacheSingleton _revitToHostCacheSingleton;
   private readonly ScalingServiceToHost _scalingServiceToHost;
   private readonly IReferencePointConverter _referencePointConverter;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private const double PLANAR_TOLERANCE = 1e-9; // tune if needed, added to avoid numeric noise
+  private const bool ALLOW_VERTEX_COLOR_OVERRIDE = true; // flip to true if colors should win
+  private Document? _lastDoc; // if this converter instance is used across open documents, we'll want to invalidate the material cache
 
   public MeshConverterToHost(
     RevitToHostCacheSingleton revitToHostCacheSingleton,
     ScalingServiceToHost scalingServiceToHost,
-    IReferencePointConverter referencePointConverter
+    IReferencePointConverter referencePointConverter,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings
   )
   {
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
     _scalingServiceToHost = scalingServiceToHost;
     _referencePointConverter = referencePointConverter;
+    _converterSettings = converterSettings;
   }
 
-  public List<DB.GeometryObject> Convert(SOG.Mesh mesh)
+  public List<GeometryObject> Convert(SOG.Mesh mesh)
   {
-    TessellatedShapeBuilderTarget target = TessellatedShapeBuilderTarget.Mesh;
-    TessellatedShapeBuilderFallback fallback = TessellatedShapeBuilderFallback.Salvage;
+    const TessellatedShapeBuilderTarget TARGET = TessellatedShapeBuilderTarget.Mesh;
+    const TessellatedShapeBuilderFallback FALLBACK = TessellatedShapeBuilderFallback.Salvage;
 
-    using var tsb = new TessellatedShapeBuilder()
-    {
-      Fallback = fallback,
-      Target = target,
-      GraphicsStyleId = ElementId.InvalidElementId
-    };
-
+    using var tsb = new TessellatedShapeBuilder();
+    tsb.Fallback = FALLBACK;
+    tsb.Target = TARGET;
+    tsb.GraphicsStyleId = ElementId.InvalidElementId;
     tsb.OpenConnectedFaceSet(false);
-    var vertices = ArrayToPoints(mesh.vertices, mesh.units);
 
-    ElementId materialId = ElementId.InvalidElementId;
+    var vertices = ArrayToPoints(mesh.vertices, mesh.units);
+    var vertColors = DecodeVertexColors(mesh.colors);
+
+    // optional default material from cache
+    ElementId defaultMat = ElementId.InvalidElementId;
     if (
       _revitToHostCacheSingleton.MaterialsByObjectId.TryGetValue(
         mesh.applicationId ?? mesh.id.NotNull(),
-        out var mappedElementId
+        out var mapped
       )
     )
     {
-      materialId = mappedElementId;
+      defaultMat = mapped;
     }
+
+    bool hasExplicitMat = defaultMat != ElementId.InvalidElementId;
 
     int i = 0;
     while (i < mesh.faces.Count)
     {
-      int n = mesh.faces[i];
-      if (n < 3)
+      int faceVertexCount = mesh.faces[i];
+      if (faceVertexCount < 3)
       {
-        n += 3; // 0 -> 3, 1 -> 4 to preserve backwards compatibility
+        faceVertexCount += 3;
       }
 
-      var points = mesh.faces.GetRange(i + 1, n).Select(x => vertices[x]).ToArray();
-
-      if (IsNonPlanarQuad(points))
+      var faceIdx = mesh.faces.GetRange(i + 1, faceVertexCount);
+      var points = new XYZ[faceVertexCount];
+      for (int k = 0; k < faceVertexCount; k++)
       {
-        // Non-planar quads will be triangulated as it's more desirable than `TessellatedShapeBuilder.Build`'s attempt to make them planar.
-        // TODO consider triangulating all n > 3 polygons that are non-planar
-        var triPoints = new List<XYZ> { points[0], points[1], points[3] };
-        var face1 = new TessellatedFace(triPoints, materialId);
-        tsb.AddFace(face1);
-
-        triPoints = new List<XYZ> { points[1], points[2], points[3] };
-
-        var face2 = new TessellatedFace(triPoints, materialId);
-        tsb.AddFace(face2);
-      }
-      else
-      {
-        var face = new TessellatedFace(points, materialId);
-        tsb.AddFace(face);
+        points[k] = vertices[faceIdx[k]];
       }
 
-      i += n + 1;
+      switch (faceVertexCount)
+      {
+        case 4 when IsNonPlanarQuad(points):
+        {
+          // Non-planar quads will be triangulated as it's more desirable than TessellatedShapeBuilder.Build's attempt to make them planar.
+          var material = FaceMat(faceIdx);
+          var face1 = new TessellatedFace(new List<XYZ> { points[0], points[1], points[3] }, material);
+          var face2 = new TessellatedFace(new List<XYZ> { points[1], points[2], points[3] }, material);
+
+          tsb.AddFace(face1);
+          tsb.AddFace(face2);
+          break;
+        }
+        case > 4 when !IsPlanarNgon(points):
+        {
+          // Non-planar n-gon → triangulate (fan) and reuse one material for consistency
+          var material = FaceMat(faceIdx);
+          for (int k = 1; k < faceVertexCount - 1; k++)
+          {
+            var triPts = new List<XYZ> { points[0], points[k], points[k + 1] };
+            var tri = new TessellatedFace(triPts, material);
+            if (tri.IsValidObject)
+            {
+              tsb.AddFace(tri);
+            }
+          }
+
+          break;
+        }
+        default:
+        {
+          var m = FaceMat(faceIdx);
+          tsb.AddFace(new TessellatedFace(points, m));
+          break;
+        }
+      }
+
+      i += faceVertexCount + 1;
     }
 
     tsb.CloseConnectedFaceSet();
 
     tsb.Build();
+    
     var result = tsb.GetBuildResult();
+    var objs = result.GetGeometricalObjects().ToList();
+    var matIds = new HashSet<ElementId>();
+    foreach (var go in objs)
+    {
+      if (go is Mesh m)
+      {
+        matIds.Add(m.MaterialElementId);
+      }
+    }
 
-    return result.GetGeometricalObjects().ToList();
+    Console.WriteLine(
+      $"MeshConverterToHost: {objs.Count} geometrical objects created, {matIds.Count} unique materials used."
+    );
+    
+    return objs;
+
+    // local helper to pick a face material from vertex colors
+    [SuppressMessage("ReSharper", "RedundantLogicalConditionalExpressionOperand")]
+    ElementId FaceMat(IList<int> idx)
+    {
+      int vCount = vertColors.Length;
+      var hasColors = vCount > 0;
+
+      if (!hasColors || (hasExplicitMat && !ALLOW_VERTEX_COLOR_OVERRIDE))
+      {
+        return defaultMat;
+      }
+
+      int sr = 0,
+        sg = 0,
+        sb = 0,
+        c = 0;
+      foreach (var v in idx)
+      {
+        if ((uint)v >= (uint)vCount)
+        {
+          continue;
+        }
+
+        var vc = vertColors[v];
+        sr += vc.Red;
+        sg += vc.Green;
+        sb += vc.Blue;
+        c++;
+      }
+      if (c == 0)
+      {
+        return defaultMat;
+      }
+
+      byte r = Quant((byte)(sr / c));
+      byte g = Quant((byte)(sg / c));
+      byte b = Quant((byte)(sb / c));
+      return GetOrCreateMaterial(_converterSettings.Current.Document, r, g, b);
+    }
   }
 
   private static bool IsNonPlanarQuad(IList<XYZ> points)
@@ -117,7 +205,57 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
       1,
       1
     );
-    return matrix.GetDeterminant() != 0;
+
+    return Math.Abs(matrix.GetDeterminant()) > PLANAR_TOLERANCE;
+  }
+
+  private static bool IsPlanarNgon(IList<XYZ> vertices)
+  {
+    int n = vertices.Count;
+    if (n < 4)
+    {
+      return true; // 3 points always define a plane
+    }
+
+    // Newell’s method for robust best-fit plane =>
+    // https://www.realtimerendering.com/resources/GraphicsGems/gemsiii/newell.c
+    double normalX = 0,
+      normalY = 0,
+      normalZ = 0;
+    for (int i = 0, j = n - 1; i < n; j = i, i++)
+    {
+      var u = vertices[i];
+      var v = vertices[j];
+      normalX += (v.Y - u.Y) * (v.Z + u.Z);
+      normalY += (v.Z - u.Z) * (v.X + u.X);
+      normalZ += (v.X - u.X) * (v.Y + u.Y);
+    }
+    var length = Math.Sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+    if (length < 1e-12)
+    {
+      return true; // degenerate polygon; treat as planar
+    }
+
+    normalX /= length;
+    normalY /= length;
+    normalZ /= length;
+
+    var pointOnPlane = vertices[0];
+    double normalisedPlane = -(normalX * pointOnPlane.X + normalY * pointOnPlane.Y + normalZ * pointOnPlane.Z);
+
+    // max signed distance of all vertices to plane
+    double maxSignedDistance = 0;
+    for (int i = 1; i < n; i++)
+    {
+      var p = vertices[i];
+      double distance = normalX * p.X + normalY * p.Y + normalZ * p.Z + normalisedPlane;
+      maxSignedDistance = Math.Max(maxSignedDistance, Math.Abs(distance));
+      if (maxSignedDistance > PLANAR_TOLERANCE)
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   private XYZ[] ArrayToPoints(IList<double> arr, string units)
@@ -128,7 +266,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     }
 
     XYZ[] points = new XYZ[arr.Count / 3];
-    var fTypeId = _scalingServiceToHost.UnitsToNative(units) ?? UnitTypeId.Meters;
+    var fTypeId = _scalingServiceToHost.UnitsToNative(units);
 
     for (int i = 2, k = 0; i < arr.Count; i += 3)
     {
@@ -145,5 +283,87 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     }
 
     return points;
+  }
+
+  private readonly Dictionary<int, ElementId> _matCache = new();
+
+  private static Color[] DecodeVertexColors(IList<int>? argb)
+  {
+    if (argb == null)
+    {
+      return [];
+    }
+
+    var outArr = new Color[argb.Count];
+    for (int i = 0; i < argb.Count; i++)
+    {
+      uint v = unchecked((uint)argb[i]); // Speckle stores ARGB in a signed int
+      byte r = (byte)((v >> 16) & 0xFF);
+      byte g = (byte)((v >> 8) & 0xFF);
+      byte b = (byte)(v & 0xFF);
+
+      outArr[i] = new Color(r, g, b);
+    }
+    return outArr;
+  }
+
+  private static byte Quant(byte v, int step = 17)
+  {
+    int q = (int)Math.Round(v / (double)step) * step;
+    return (byte)Math.Max(0, Math.Min(255, q));
+  }
+
+  private ElementId GetOrCreateMaterial(Document doc, byte r, byte g, byte b)
+  {
+    if (!ReferenceEquals(doc, _lastDoc)) // essentially a document change check hack
+    {
+      _matCache.Clear();
+      _lastDoc = doc;
+    }
+
+    int key = (r << 16) | (g << 8) | b;
+    if (_matCache.TryGetValue(key, out var id))
+    {
+      return id;
+    }
+
+    string name = $"Speckle_DS_{r}_{g}_{b}";
+
+    Material? existing;
+    using (var filteredElementCollector = new FilteredElementCollector(doc))
+    {
+      filteredElementCollector.OfClass(typeof(Material)); // add the filter on the same instance
+      existing = filteredElementCollector
+        .Cast<Material>() // enumerate inside the using
+        .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+    if (existing != null)
+    {
+      return _matCache[key] = existing.Id;
+    }
+
+    ElementId mid;
+    if (doc.IsModifiable)
+    {
+      using var st = new SubTransaction(doc);
+      st.Start();
+      mid = CreateMaterialWithColor(doc, name, r, g, b);
+      st.Commit();
+    }
+    else
+    {
+      using var t = new Transaction(doc, "Create DS Material");
+      t.Start();
+      mid = CreateMaterialWithColor(doc, name, r, g, b);
+      t.Commit();
+    }
+    return _matCache[key] = mid;
+
+    static ElementId CreateMaterialWithColor(Document doc, string name, byte r, byte g, byte b)
+    {
+      var materialId = Material.Create(doc, name);
+      ((Material)doc.GetElement(materialId)).Color = new Color(r, g, b);
+      return materialId;
+    }
   }
 }
