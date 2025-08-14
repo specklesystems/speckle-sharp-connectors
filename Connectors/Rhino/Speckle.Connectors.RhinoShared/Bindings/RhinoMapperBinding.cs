@@ -62,12 +62,6 @@ public class RhinoMapperBinding : IBinding
   #region UI Methods - General
 
   /// <summary>
-  /// Gets list of available Revit categories for the UI dropdown.
-  /// </summary>
-  public CategoryOption[] GetAvailableCategories() =>
-    RevitBuiltInCategoryStore.Categories.OrderBy(category => category.Label).ToArray();
-
-  /// <summary>
   /// Gets list of available layers for the UI dropdown.
   /// </summary>
   public LayerOption[] GetAvailableLayers()
@@ -162,7 +156,7 @@ public class RhinoMapperBinding : IBinding
       .GroupBy(obj => obj.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       .Select(group => new CategoryMapping(
         group.Key,
-        RevitBuiltInCategoryStore.GetLabel(group.Key),
+        group.Key,
         group.Select(obj => obj.Id.ToString()).ToArray(),
         group.Count()
       ))
@@ -237,7 +231,7 @@ public class RhinoMapperBinding : IBinding
       .GroupBy(layer => layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       .Select(group => new LayerCategoryMapping(
         group.Key,
-        RevitBuiltInCategoryStore.GetLabel(group.Key),
+        group.Key,
         group.Select(layer => layer.Id.ToString()).ToArray(),
         group.Select(layer => _rhinoLayerHelper.GetFullLayerPath(layer)).ToArray(),
         group.Count()
