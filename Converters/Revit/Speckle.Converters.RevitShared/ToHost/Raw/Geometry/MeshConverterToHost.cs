@@ -19,6 +19,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private const double PLANAR_TOLERANCE = 1e-9; // tune if needed, added to avoid numeric noise
   private const bool ALLOW_VERTEX_COLOR_OVERRIDE = true; // flip to true if colors should win
+
   private Document? _lastDoc; // if this converter instance is used across open documents, we'll want to invalidate the material cache
 
   public MeshConverterToHost(
@@ -43,7 +44,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
     tsb.Fallback = FALLBACK;
     tsb.Target = TARGET;
     tsb.GraphicsStyleId = ElementId.InvalidElementId;
-    tsb.OpenConnectedFaceSet(false);
+    // tsb.OpenConnectedFaceSet(false);
 
     var vertices = ArrayToPoints(mesh.vertices, mesh.units);
     var vertColors = DecodeVertexColors(mesh.colors);
@@ -62,6 +63,8 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
 
     bool hasExplicitMat = defaultMat != ElementId.InvalidElementId;
 
+    var facesByMat = new Dictionary<ElementId, List<IList<XYZ>>>();
+
     int i = 0;
     while (i < mesh.faces.Count)
     {
@@ -78,39 +81,28 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
         points[k] = vertices[faceIdx[k]];
       }
 
+      var faceMaterial = FaceMat(faceIdx);
       switch (faceVertexCount)
       {
         case 4 when IsNonPlanarQuad(points):
         {
-          // Non-planar quads will be triangulated as it's more desirable than TessellatedShapeBuilder.Build's attempt to make them planar.
-          var material = FaceMat(faceIdx);
-          var face1 = new TessellatedFace(new List<XYZ> { points[0], points[1], points[3] }, material);
-          var face2 = new TessellatedFace(new List<XYZ> { points[1], points[2], points[3] }, material);
-
-          tsb.AddFace(face1);
-          tsb.AddFace(face2);
+          // Non-planar quads will be triangulated as it's more desirable than
+          // TessellatedShapeBuilder.Build's attempt to make them planar.
+          AddFace([points[0], points[1], points[3]], faceMaterial);
+          AddFace([points[1], points[2], points[3]], faceMaterial);
           break;
         }
         case > 4 when !IsPlanarNgon(points):
         {
-          // Non-planar n-gon → triangulate (fan) and reuse one material for consistency
-          var material = FaceMat(faceIdx);
           for (int k = 1; k < faceVertexCount - 1; k++)
           {
-            var triPts = new List<XYZ> { points[0], points[k], points[k + 1] };
-            var tri = new TessellatedFace(triPts, material);
-            if (tri.IsValidObject)
-            {
-              tsb.AddFace(tri);
-            }
+            AddFace([points[0], points[k], points[k + 1]], faceMaterial);
           }
-
           break;
         }
         default:
         {
-          var m = FaceMat(faceIdx);
-          tsb.AddFace(new TessellatedFace(points, m));
+          AddFace(points, faceMaterial);
           break;
         }
       }
@@ -118,26 +110,38 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
       i += faceVertexCount + 1;
     }
 
-    tsb.CloseConnectedFaceSet();
+    var all = new List<GeometryObject>();
 
-    tsb.Build();
-    
-    var result = tsb.GetBuildResult();
-    var objs = result.GetGeometricalObjects().ToList();
-    var matIds = new HashSet<ElementId>();
-    foreach (var go in objs)
+    foreach (var kv in facesByMat)
     {
-      if (go is Mesh m)
+      using var perMat = new TessellatedShapeBuilder();
+      perMat.Fallback = FALLBACK;
+      perMat.Target = TARGET;
+      perMat.GraphicsStyleId = ElementId.InvalidElementId;
+
+      perMat.OpenConnectedFaceSet(true);
+      foreach (var tf in kv.Value.Select(pts => new TessellatedFace(pts, kv.Key)).Where(tf => tf.IsValidObject))
       {
-        matIds.Add(m.MaterialElementId);
+        perMat.AddFace(tf);
       }
+
+      perMat.CloseConnectedFaceSet();
+      perMat.Build();
+
+      all.AddRange(perMat.GetBuildResult().GetGeometricalObjects());
     }
 
-    Console.WriteLine(
-      $"MeshConverterToHost: {objs.Count} geometrical objects created, {matIds.Count} unique materials used."
-    );
-    
-    return objs;
+    return all;
+
+    void AddFace(IList<XYZ> pts, ElementId mat)
+    {
+      if (!facesByMat.TryGetValue(mat, out var list))
+      {
+        facesByMat[mat] = list = [];
+      }
+
+      list.Add(pts);
+    }
 
     // local helper to pick a face material from vertex colors
     [SuppressMessage("ReSharper", "RedundantLogicalConditionalExpressionOperand")]
@@ -146,7 +150,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
       int vCount = vertColors.Length;
       var hasColors = vCount > 0;
 
-      if (!hasColors || (hasExplicitMat && !ALLOW_VERTEX_COLOR_OVERRIDE))
+      if (!hasColors || hasExplicitMat && !ALLOW_VERTEX_COLOR_OVERRIDE)
       {
         return defaultMat;
       }
@@ -168,6 +172,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
         sb += vc.Blue;
         c++;
       }
+
       if (c == 0)
       {
         return defaultMat;
@@ -230,6 +235,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
       normalY += (v.Z - u.Z) * (v.X + u.X);
       normalZ += (v.X - u.X) * (v.Y + u.Y);
     }
+
     var length = Math.Sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
     if (length < 1e-12)
     {
@@ -255,6 +261,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
         return false;
       }
     }
+
     return true;
   }
 
@@ -304,6 +311,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
 
       outArr[i] = new Color(r, g, b);
     }
+
     return outArr;
   }
 
@@ -337,6 +345,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
         .Cast<Material>() // enumerate inside the using
         .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
     }
+
     if (existing != null)
     {
       return _matCache[key] = existing.Id;
@@ -357,6 +366,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<GeometryObject
       mid = CreateMaterialWithColor(doc, name, r, g, b);
       t.Commit();
     }
+
     return _matCache[key] = mid;
 
     static ElementId CreateMaterialWithColor(Document doc, string name, byte r, byte g, byte b)
