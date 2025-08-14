@@ -8,6 +8,8 @@ namespace Speckle.Connectors.Rhino.Operations.Send.Filters;
 
 public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
 {
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
+
   public string Id { get; set; } = "rhinoLayers";
   public string Name { get; set; } = "Layers";
   public string Type { get; set; } = "Select";
@@ -20,7 +22,10 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
   public List<SendFilterSelectItem> SelectedItems { get; set; }
   public List<SendFilterSelectItem> Items => GetFilterItems();
 
-  public RhinoLayersFilter() { }
+  public RhinoLayersFilter(RhinoLayerHelper rhinoLayerHelper)
+  {
+    _rhinoLayerHelper = rhinoLayerHelper;
+  }
 
   public List<string> RefreshObjectIds()
   {
@@ -33,7 +38,7 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
 
     foreach (var item in SelectedItems)
     {
-      Layer? layer = RhinoLayerHelper.GetLayer(item.Id);
+      Layer? layer = _rhinoLayerHelper.GetLayer(item.Id);
       if (layer != null)
       {
         var objectIds = doc.Objects.FindByLayer(layer).Select(obj => obj.Id.ToString());
@@ -57,7 +62,7 @@ public class RhinoLayersFilter : DiscriminatedObject, ISendFilter
     {
       if (!layer.IsDeleted)
       {
-        filterItems.Add(new SendFilterSelectItem(layer.Id.ToString(), RhinoLayerHelper.GetFullLayerPath(layer)));
+        filterItems.Add(new SendFilterSelectItem(layer.Id.ToString(), _rhinoLayerHelper.GetFullLayerPath(layer)));
       }
     }
 

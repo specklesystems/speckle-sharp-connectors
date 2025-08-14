@@ -14,6 +14,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoLayerUnpacker
 {
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
   private readonly Dictionary<int, Collection> _layerCollectionCache = new();
 
   private static readonly string s_pathSeparator =
@@ -24,6 +25,11 @@ public class RhinoLayerUnpacker
 #endif
   private static readonly string[] s_pathSeparatorSplit = [s_pathSeparator];
 
+  public RhinoLayerUnpacker(RhinoLayerHelper rhinoLayerHelper)
+  {
+    _rhinoLayerHelper = rhinoLayerHelper;
+  }
+
   /// <summary>
   /// Use this method to get all of the layers that correspond to collection created in the root collection.
   /// </summary>
@@ -33,7 +39,7 @@ public class RhinoLayerUnpacker
   {
     foreach (string layerId in _layerCollectionCache.Values.Select(o => o.applicationId ?? string.Empty).ToList())
     {
-      var layer = RhinoLayerHelper.GetLayer(layerId);
+      var layer = _rhinoLayerHelper.GetLayer(layerId);
       if (layer != null)
       {
         yield return layer;

@@ -94,6 +94,10 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<RevitMappingResolver>();
 
+    // register helpers
+    serviceCollection.AddScoped<RhinoLayerHelper>();
+    serviceCollection.AddScoped<RhinoObjectHelper>();
+
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
   }

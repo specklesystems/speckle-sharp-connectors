@@ -13,6 +13,13 @@ namespace Speckle.Connectors.Rhino.Mapper.Revit;
 /// </remarks>
 public class RevitMappingResolver
 {
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
+
+  public RevitMappingResolver(RhinoLayerHelper rhinoLayerHelper)
+  {
+    _rhinoLayerHelper = rhinoLayerHelper;
+  }
+
   /// <summary>
   /// Gets all objects that would effectively receive the specified layer mapping during send.
   /// Takes into account hierarchical resolution - only returns objects that would actually
@@ -24,14 +31,14 @@ public class RevitMappingResolver
 
     foreach (var layerId in layerIds)
     {
-      var layer = RhinoLayerHelper.GetLayer(layerId);
+      var layer = _rhinoLayerHelper.GetLayer(layerId);
       if (layer == null)
       {
         continue;
       }
 
       // Get all objects in this layer and its child layers
-      var allObjectsInHierarchy = RhinoLayerHelper.GetObjectsInLayerHierarchy(layer);
+      var allObjectsInHierarchy = _rhinoLayerHelper.GetObjectsInLayerHierarchy(layer);
 
       foreach (var obj in allObjectsInHierarchy)
       {

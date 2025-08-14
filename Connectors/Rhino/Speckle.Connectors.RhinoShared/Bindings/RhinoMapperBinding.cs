@@ -21,6 +21,8 @@ public class RhinoMapperBinding : IBinding
   private readonly IBasicConnectorBinding _basicConnectorBinding;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly RevitMappingResolver _revitMappingResolver;
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
+  private readonly RhinoObjectHelper _rhinoObjectHelper;
   public string Name => "revitMapperBinding";
   public IBrowserBridge Parent { get; }
 
@@ -30,7 +32,9 @@ public class RhinoMapperBinding : IBinding
     IBrowserBridge parent,
     IBasicConnectorBinding basicConnectorBinding,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    RevitMappingResolver revitMappingResolver
+    RevitMappingResolver revitMappingResolver,
+    RhinoLayerHelper rhinoLayerHelper,
+    RhinoObjectHelper rhinoObjectHelper
   )
   {
     _store = store;
@@ -39,6 +43,8 @@ public class RhinoMapperBinding : IBinding
     _basicConnectorBinding = basicConnectorBinding;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _revitMappingResolver = revitMappingResolver;
+    _rhinoLayerHelper = rhinoLayerHelper;
+    _rhinoObjectHelper = rhinoObjectHelper;
 
     // Subscribe to Rhino events so we know about changes
     // Events fire on delete, undo delete and modify objects
@@ -74,7 +80,7 @@ public class RhinoMapperBinding : IBinding
 
     return doc
       .Layers.Where(layer => !layer.IsDeleted)
-      .Select(layer => new LayerOption(layer.Id.ToString(), RhinoLayerHelper.GetFullLayerPath(layer)))
+      .Select(layer => new LayerOption(layer.Id.ToString(), _rhinoLayerHelper.GetFullLayerPath(layer)))
       .OrderBy(layer => layer.Name)
       .ToArray();
   }
@@ -97,7 +103,7 @@ public class RhinoMapperBinding : IBinding
     {
       // NOTE: should we be checking if key already exists?
       // For POC, straightforward set on object
-      var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
+      var rhinoObject = _rhinoObjectHelper.GetRhinoObject(objectIdString);
       var attrs = rhinoObject?.Attributes.Duplicate();
       attrs?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
       RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
@@ -114,7 +120,7 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var objectIdString in objectIds)
     {
-      var rhinoObject = RhinoObjectHelper.GetRhinoObject(objectIdString);
+      var rhinoObject = _rhinoObjectHelper.GetRhinoObject(objectIdString);
       var attrs = rhinoObject?.Attributes.Duplicate();
       attrs?.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
       RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
@@ -176,7 +182,7 @@ public class RhinoMapperBinding : IBinding
   {
     foreach (var layerId in layerIds)
     {
-      var layer = RhinoLayerHelper.GetLayer(layerId);
+      var layer = _rhinoLayerHelper.GetLayer(layerId);
       layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
     }
 
@@ -192,7 +198,7 @@ public class RhinoMapperBinding : IBinding
     foreach (var layerId in layerIds)
     {
       // NOTE: clear user string by setting to null. Layer has not DeleteUserString() method 🙄
-      var layer = RhinoLayerHelper.GetLayer(layerId);
+      var layer = _rhinoLayerHelper.GetLayer(layerId);
       layer?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, null);
     }
 
@@ -233,7 +239,7 @@ public class RhinoMapperBinding : IBinding
         group.Key,
         RevitBuiltInCategoryStore.GetLabel(group.Key),
         group.Select(layer => layer.Id.ToString()).ToArray(),
-        group.Select(layer => RhinoLayerHelper.GetFullLayerPath(layer)).ToArray(),
+        group.Select(layer => _rhinoLayerHelper.GetFullLayerPath(layer)).ToArray(),
         group.Count()
       ))
       .ToArray();
@@ -286,8 +292,8 @@ public class RhinoMapperBinding : IBinding
     bool mappingChanged = !string.Equals(oldMapping, newMapping, StringComparison.Ordinal);
 
     // check if layer change affects mappings
-    bool hasOldLayerMapping = RhinoLayerHelper.HasLayerMapping(e.OldAttributes.LayerIndex);
-    bool hasNewLayerMapping = RhinoLayerHelper.HasLayerMapping(rhinoObject.Attributes.LayerIndex);
+    bool hasOldLayerMapping = _rhinoLayerHelper.HasLayerMapping(e.OldAttributes.LayerIndex);
+    bool hasNewLayerMapping = _rhinoLayerHelper.HasLayerMapping(rhinoObject.Attributes.LayerIndex);
 
     // refresh if mapping changed OR layer change affects mapped layers
     if (mappingChanged || hasOldLayerMapping || hasNewLayerMapping)

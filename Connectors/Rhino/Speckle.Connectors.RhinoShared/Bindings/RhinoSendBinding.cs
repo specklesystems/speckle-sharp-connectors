@@ -13,6 +13,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.Operations.Send.Filters;
 using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Converters.Common;
@@ -36,6 +37,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
@@ -65,7 +67,8 @@ public sealed class RhinoSendBinding : ISendBinding
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    RhinoLayerHelper rhinoLayerHelper
   )
   {
     _store = store;
@@ -78,6 +81,7 @@ public sealed class RhinoSendBinding : ISendBinding
     Parent = parent;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _rhinoLayerHelper = rhinoLayerHelper;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
@@ -275,7 +279,7 @@ public sealed class RhinoSendBinding : ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() =>
-    [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter()];
+    [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter(_rhinoLayerHelper)];
 
   public List<ICardSetting> GetSendSettings() => [new AddVisualizationProperties(false)];
 

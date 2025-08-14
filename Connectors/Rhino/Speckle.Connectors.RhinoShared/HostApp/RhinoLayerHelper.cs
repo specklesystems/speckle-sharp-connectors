@@ -8,12 +8,12 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// Helper class for common Rhino layer and object operations.
 /// Consolidates layer utilities to eliminate duplication across the codebase.
 /// </summary>
-public static class RhinoLayerHelper
+public class RhinoLayerHelper
 {
   /// <summary>
   /// Gets list of available layers for UI dropdowns.
   /// </summary>
-  public static LayerOption[] GetAvailableLayers()
+  public LayerOption[] GetAvailableLayers()
   {
     var doc = RhinoDoc.ActiveDoc;
     if (doc == null)
@@ -31,7 +31,7 @@ public static class RhinoLayerHelper
   /// <summary>
   /// Gets the full layer path with / delimiter
   /// </summary>
-  public static string GetFullLayerPath(Layer layer)
+  public string GetFullLayerPath(Layer layer)
   {
     string fullPath = layer.Name;
     Guid parentIndex = layer.ParentLayerId;
@@ -53,7 +53,7 @@ public static class RhinoLayerHelper
   /// Converts a string layer ID to a Layer.
   /// </summary>
   /// <returns>Layer if found and valid, null otherwise</returns>
-  public static Layer? GetLayer(string layerIdString) =>
+  public Layer? GetLayer(string layerIdString) =>
     Guid.TryParse(layerIdString, out var layerId) ? RhinoDoc.ActiveDoc.Layers.FindId(layerId) : null;
 
   /// <summary>
@@ -62,7 +62,7 @@ public static class RhinoLayerHelper
   /// <remarks>
   /// This is arguably a very specific method pertaining to mapper and maybe shouldn't be in this class?
   /// </remarks>
-  public static bool HasLayerMapping(int layerIndex)
+  public bool HasLayerMapping(int layerIndex)
   {
     if (layerIndex < 0 || layerIndex >= RhinoDoc.ActiveDoc.Layers.Count)
     {
@@ -76,7 +76,7 @@ public static class RhinoLayerHelper
   /// <summary>
   /// Gets all RhinoObjects in the specified layer and all its child layers recursively.
   /// </summary>
-  public static IEnumerable<RhinoObject> GetObjectsInLayerHierarchy(Layer rootLayer)
+  public IEnumerable<RhinoObject> GetObjectsInLayerHierarchy(Layer rootLayer)
   {
     var allObjects = new List<RhinoObject>();
     var layersToSearch = GetLayerAndAllChildren(rootLayer);
@@ -93,7 +93,7 @@ public static class RhinoLayerHelper
   /// <summary>
   /// Gets the specified layer and all its child layers recursively.
   /// </summary>
-  public static IEnumerable<Layer> GetLayerAndAllChildren(Layer rootLayer)
+  public IEnumerable<Layer> GetLayerAndAllChildren(Layer rootLayer)
   {
     // Return the root layer itself
     yield return rootLayer;
