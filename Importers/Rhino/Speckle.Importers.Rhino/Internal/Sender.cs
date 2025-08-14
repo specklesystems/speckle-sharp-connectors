@@ -27,11 +27,12 @@ internal sealed class Sender(
     CancellationToken cancellationToken
   )
   {
+    // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc));
+      .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
 
     List<RhinoObject> rhinoObjects = RhinoDoc
       .ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject)
