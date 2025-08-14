@@ -79,7 +79,7 @@ public class RevitMappingResolver
   /// <summary>
   /// Gets a layer by its index from the active doc.
   /// </summary>
-  private static Layer? GetLayerByIndex(int layerIndex)
+  private Layer? GetLayerByIndex(int layerIndex)
   {
     var doc = RhinoDoc.ActiveDoc;
     if (doc?.Layers == null || layerIndex < 0 || layerIndex >= doc.Layers.Count)
@@ -93,7 +93,7 @@ public class RevitMappingResolver
   /// <summary>
   /// Gets the parent layer of the given layer.
   /// </summary>
-  private static Layer? GetParentLayer(Layer layer)
+  private Layer? GetParentLayer(Layer layer)
   {
     if (layer.ParentLayerId == Guid.Empty)
     {
