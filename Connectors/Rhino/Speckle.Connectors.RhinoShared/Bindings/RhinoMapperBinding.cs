@@ -47,9 +47,10 @@ public class RhinoMapperBinding : IBinding
     _rhinoObjectHelper = rhinoObjectHelper;
 
     // Subscribe to Rhino events so we know about changes
-    // Events fire on delete, undo delete and modify objects
+    // Events fire on delete, undo delete, add and modify objects
     RhinoDoc.DeleteRhinoObject += OnObjectChanged;
     RhinoDoc.UndeleteRhinoObject += OnObjectChanged;
+    RhinoDoc.AddRhinoObject += OnObjectChanged;
     RhinoDoc.ModifyObjectAttributes += OnObjectAttributesChanged;
 
     // Subscribe to layer events so we know about layer changes
@@ -69,7 +70,7 @@ public class RhinoMapperBinding : IBinding
     var doc = RhinoDoc.ActiveDoc;
     if (doc == null)
     {
-      return Array.Empty<LayerOption>();
+      return [];
     }
 
     return doc
@@ -249,7 +250,7 @@ public class RhinoMapperBinding : IBinding
   #region Event Handling
 
   /// <summary>
-  /// Called when objects are deleted or undeleted in Rhino.
+  /// Called when objects are added, deleted, or undeleted in Rhino.
   /// </summary>
   private void OnObjectChanged(object? sender, RhinoObjectEventArgs e)
   {
