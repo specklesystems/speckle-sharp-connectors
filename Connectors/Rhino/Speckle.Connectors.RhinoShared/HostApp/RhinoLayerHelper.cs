@@ -108,7 +108,7 @@ public class RhinoLayerHelper
   /// <summary>
   /// Recursively gets all child layers of the specified parent layer.
   /// </summary>
-  public static IEnumerable<Layer> GetAllChildLayers(Layer parentLayer)
+  public IEnumerable<Layer> GetAllChildLayers(Layer parentLayer)
   {
     var doc = RhinoDoc.ActiveDoc;
     if (doc?.Layers == null)
