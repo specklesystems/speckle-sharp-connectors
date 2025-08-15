@@ -166,6 +166,19 @@ public class RhinoMapperBinding : IBinding
     return mappedObjects;
   }
 
+  /// <summary>
+  /// Gets category mappings for specific object IDs.
+  /// </summary>
+  public string[] GetCategoryMappingsForObjects(string[] objectIds) =>
+    objectIds
+      .Select(id =>
+        _rhinoObjectHelper.GetRhinoObject(id)?.Attributes.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY)
+      )
+      .Where(category => category != null)
+      .Cast<string>()
+      .Distinct()
+      .ToArray();
+
   #endregion
 
   #region UI Methods - Layer Mapping Methods
@@ -241,6 +254,17 @@ public class RhinoMapperBinding : IBinding
 
     return mappedLayers;
   }
+
+  /// <summary>
+  /// Gets category mappings for specific layer IDs.
+  /// </summary>
+  public string[] GetCategoryMappingsForLayers(string[] layerIds) =>
+    layerIds
+      .Select(id => _rhinoLayerHelper.GetLayer(id)?.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
+      .Where(category => !string.IsNullOrEmpty(category))
+      .Cast<string>()
+      .Distinct()
+      .ToArray();
 
   public string[] GetEffectiveObjectsForLayerMapping(string[] layerIds, string categoryValue) =>
     _revitMappingResolver.GetEffectiveObjectsForLayerMapping(layerIds, categoryValue);
