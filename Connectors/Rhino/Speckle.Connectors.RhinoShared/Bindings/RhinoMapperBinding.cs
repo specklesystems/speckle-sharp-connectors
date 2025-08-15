@@ -226,7 +226,7 @@ public class RhinoMapperBinding : IBinding
   {
     var mappedLayers = RhinoDoc
       .ActiveDoc.Layers.Where(layer =>
-        !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
+        !layer.IsDeleted && !string.IsNullOrEmpty(layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       )
       .GroupBy(layer => layer.GetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
       .Select(group => new LayerCategoryMapping(
@@ -337,6 +337,13 @@ public class RhinoMapperBinding : IBinding
       )
       {
         _idleManager.SubscribeToIdle(nameof(NotifyLayersChanged), NotifyLayersChanged);
+      }
+
+      // Refresh mappings when layers are deleted or modified
+      // This ensures that mappings table updates when mapped layers are removed
+      if (e.EventType == LayerTableEventType.Deleted || e.EventType == LayerTableEventType.Modified)
+      {
+        _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
       }
     });
 
