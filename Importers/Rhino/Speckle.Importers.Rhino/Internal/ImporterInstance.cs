@@ -1,4 +1,4 @@
-﻿using Rhino;
+using Rhino;
 using Speckle.Importers.Rhino.Internal.FileTypeConfig;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
@@ -34,10 +34,9 @@ internal sealed class ImporterInstance(Sender sender)
     }
     finally
     {
-      //Being a bit extra defensive that we're cleaning up the old doc
+      //Being a bit extra defensive to ensure we're cleaning up the old doc
       RhinoDoc.ActiveDoc?.Dispose();
       RhinoDoc.ActiveDoc = null;
-      GC.Collect();
     }
   }
 
