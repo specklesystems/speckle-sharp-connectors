@@ -46,8 +46,8 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     // get layer, props, color, and mat
     SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(modelObject);
     SpecklePropertyGroupGoo? props = GetPropsFromModelObjectAndAssignToBase(modelObject, converted);
-    Color? color = GetColorFromModelObject(modelObject);
     SpeckleMaterialWrapper? material = GetMaterialFromModelObject(modelObject);
+    Color? color = GetColorFromModelObject(modelObject, material);
 
     // get the definition if this is an instance
     SpeckleBlockDefinitionWrapper? definition = GetBlockDefinition(geometryBase);
@@ -270,7 +270,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     return null;
   }
 
-  private Color? GetColorFromModelObject(ModelObject modelObject)
+  private Color? GetColorFromModelObject(ModelObject modelObject, SpeckleMaterialWrapper? material)
   {
     // we need to retrieve the actual color by the color source (otherwise will return default color for anything other than by object)
     int? argb = null;
@@ -283,8 +283,10 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         argb = modelObject.Display.Color?.Color.ToArgb();
         break;
       case ObjectColorSource.ColorFromMaterial:
-        Rhino.Render.RenderMaterial? mat = GetRenderMaterial(modelObject);
-        argb = mat?.ToMaterial(Rhino.Render.RenderTexture.TextureGeneration.Skip)?.DiffuseColor.ToArgb();
+        if (material is not null)
+        {
+          argb = material.Material.diffuse;
+        }
         break;
       default:
         break;
