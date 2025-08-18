@@ -3,7 +3,7 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
-using Speckle.Sdk.Serialisation.V2;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.Importers.Rhino.Internal;
 
@@ -23,7 +23,7 @@ internal static class ServiceRegistration
     services.AddSingleton<IThreadContext>(new ImporterThreadContext());
 
     // override sqlite cache, since we don't want to persist to disk any object data
-    services.AddTransient<IDeserializeProcessFactory, DeserializeProcessFactoryNoCache>();
+    services.AddTransient<ISqLiteJsonCacheManagerFactory, DummySqliteJsonCacheManagerFactory>();
 
     return services;
   }
