@@ -35,12 +35,13 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
 
   private bool HandleModelObject(ModelObject modelObject)
   {
-    modelObject.CastTo<GeometryBase>(out GeometryBase? geometryBase);
-    if (geometryBase is null)
+    modelObject.CastTo<IGH_GeometricGoo>(out IGH_GeometricGoo? geometryGoo);
+    if (geometryGoo is null)
     {
       throw new InvalidOperationException($"Could not retrieve geometry from model object.");
     }
 
+    GeometryBase geometryBase = geometryGoo.ToGeometryBase();
     Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(geometryBase);
 
     // get layer, props, color, and mat
