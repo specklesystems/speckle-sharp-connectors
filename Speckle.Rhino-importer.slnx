@@ -22,22 +22,11 @@
   </Folder>
   <Folder Name="/Connectors/" />
   <Folder Name="/Connectors/Rhino/">
-    <File Path="Connectors\Rhino\Directory.Build.targets" />
-  </Folder>
-  <Folder Name="/Connectors/Rhino/7/">
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper7\Speckle.Connectors.Grasshopper7.csproj" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino7\Speckle.Connectors.Rhino7.csproj" />
-    <Project Path="Converters\Rhino\Speckle.Converters.Rhino7\Speckle.Converters.Rhino7.csproj" />
-  </Folder>
-  <Folder Name="/Connectors/Rhino/8/">
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="C#" />
-    <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
-  </Folder>
-  <Folder Name="/Connectors/Rhino/Shared/">
-    <Project Path="Connectors\Rhino\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.shproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="Classic C#" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/Rhino/Converter/">
+    <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" Type="Classic C#" />
     <Project Path="Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.shproj" />
   </Folder>
   <Folder Name="/Importers/" />

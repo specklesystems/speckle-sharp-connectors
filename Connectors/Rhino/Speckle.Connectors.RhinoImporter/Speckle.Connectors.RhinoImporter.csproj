@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!--This csproj is NOT designed to be run as a rhino plugin-->
+  <!--This csproj is NOT the rhino importer-->
+  <!--This csproj is the connector code used by the Speckle.Importers.Rhino project-->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <RhinoVersion>8</RhinoVersion>
+    <DefineConstants>$(DefineConstants);RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
+    <TargetExt>.dll</TargetExt>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWpf>true</UseWpf>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+
+    <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!--This is needed for managed dependencies-->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies> <!--This is needed for the rest-->
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.21.25188.17001"/>
+    <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.21.25188.17001"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedResources\**\*" />
+    <EmbeddedResource Include="Resources\**\*.ico" />
+  </ItemGroup>
+  
+  <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <None Include="..\Toolbars\Speckle.Connectors.Rhino.rui" Link="$(AssemblyName).rui" CopyToOutputDirectory="PreserveNewest"/>
+  </ItemGroup>
+</Project>
