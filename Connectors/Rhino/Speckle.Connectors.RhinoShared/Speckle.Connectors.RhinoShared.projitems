@@ -18,15 +18,25 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoMapperBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoReceiveBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\AttributeExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoObjectHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\LayerCategoryMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\LayerOption.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\CategoryMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitMappingConstants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitMappingResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoLayersFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\AddVisualizationProperties.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RhinoEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registration\ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\BoundingBox.cs" />

@@ -13,7 +13,9 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.Operations.Send.Filters;
+using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk.Common;
@@ -29,11 +31,13 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+  private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ILogger<RhinoSendBinding> _logger;
   private readonly IRhinoConversionSettingsFactory _rhinoConversionSettingsFactory;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
@@ -59,21 +63,25 @@ public sealed class RhinoSendBinding : ISendBinding
     IBrowserBridge parent,
     ICancellationManager cancellationManager,
     ISendConversionCache sendConversionCache,
+    ToSpeckleSettingsManager toSpeckleSettingsManager,
     ILogger<RhinoSendBinding> logger,
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    RhinoLayerHelper rhinoLayerHelper
   )
   {
     _store = store;
     _idleManager = idleManager;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
+    _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _logger = logger;
     _rhinoConversionSettingsFactory = rhinoConversionSettingsFactory;
     Parent = parent;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _rhinoLayerHelper = rhinoLayerHelper;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
     SubscribeToRhinoEvents();
@@ -271,9 +279,9 @@ public sealed class RhinoSendBinding : ISendBinding
   }
 
   public List<ISendFilter> GetSendFilters() =>
-    [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter()];
+    [new RhinoSelectionFilter() { IsDefault = true }, new RhinoLayersFilter(_rhinoLayerHelper)];
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public List<ICardSetting> GetSendSettings() => [new AddVisualizationProperties(false)];
 
   public async Task Send(string modelCardId)
   {
@@ -282,9 +290,14 @@ public sealed class RhinoSendBinding : ISendBinding
     await manager.Process(
       Commands,
       modelCardId,
-      (sp, _) =>
+      (sp, card) =>
         sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-          .Initialize(_rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc)),
+          .Initialize(
+            _rhinoConversionSettingsFactory.Create(
+              RhinoDoc.ActiveDoc,
+              _toSpeckleSettingsManager.GetAddVisualizationPropertiesSetting(card)
+            )
+          ),
       card =>
       {
         return Task.FromResult<IReadOnlyList<RhinoObject>>(
