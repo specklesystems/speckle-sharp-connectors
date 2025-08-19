@@ -110,10 +110,12 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     switch (data)
     {
       case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
+        // get children elements from the wrapper to override the elements prop while parsing
         var children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
         return ParseSpeckleWrapper(collectionGoo.Value, children);
 
       case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
+        // get geometries from the wrapper to override the displayvalue prop while parsing
         var display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
         return ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
 
