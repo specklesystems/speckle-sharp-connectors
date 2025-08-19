@@ -37,14 +37,13 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     return convertedMesh;
   }
 
-  // By default, Rhino meshes store vertices with single precision.
-  // For geometry very far away from the origin, this will result in jagged meshes: https://wiki.mcneel.com/rhino/farfromorigin
-  // Although the .ToPoint3dArray creates extra memory alloc, it's more important to prevent bad geometry for eg infrastructure models.
-  // An alternative would be to move the geometry back to the origin before conversion and move it back after (since transforms are double precision), but this creates complications for grasshopper since this would have to be evaluated per geometry and not once per model (therefore also expensive).
+  // Rhino common is casting mesh vertex coords from doubles to float: by default the api returns `Vertices` as float instead of double precision
+  // https://github.com/mcneel/rhino3dm/blob/71c63a8c1c87782a13a1b76c825e4b792b36fd09/src/dotnet/opennurbs/opennurbs_mesh.cs#L6990-L7000
+  // We need to use double precision or else meshes far from origin will come out distorted: do *not* access `Vertices` directly - use `ToPoint3dArray`
   private double[] ConvertDoublePrecisionVertices(RG.Mesh target)
   {
     var vertexCoordinates = new double[target.Vertices.Count * 3];
-    target.Vertices.UseDoublePrecisionVertices = true;
+    // target.Vertices.UseDoublePrecisionVertices = true;
     RG.Point3d[] vertices = target.Vertices.ToPoint3dArray();
     var x = 0;
     for (int i = 0; i < vertices.Length; i++)

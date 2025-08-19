@@ -1,7 +1,5 @@
 using Rhino.DocObjects;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Rhino.Extensions;
-using Speckle.DoubleNumerics;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Meshing;
@@ -108,46 +106,16 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Extracting Rhino Mesh and converting to Speckle with the most suitable settings (e.g. moving to origin first, if needed)
-  /// This is needed because of Rhino using single precision numbers for Mesh vertices: https://wiki.mcneel.com/rhino/farfromorigin
+  /// Extracting Rhino Mesh and converting to Speckle with the most suitable settings
   /// </summary>
   /// <returns>List of converted Speckle meshes</returns>
   public static List<SOG.Mesh> GetSpeckleMeshes(
     RG.GeometryBase geometry,
-    bool modelFarFromOrigin,
-    string units,
     ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter
   )
   {
-    RG.GeometryBase geometryToMesh = geometry;
-    RG.Vector3d? vector = null;
-
-    // 1.1. If needed, move geometry to origin
-    if (modelFarFromOrigin && geometry.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
-    {
-      geometryToMesh = geometry.Duplicate();
-      geometryToMesh.Transform(RG.Transform.Translation(-vectorToGeometry));
-      vector = vectorToGeometry;
-    }
-    // 1.2. Extract Rhino Mesh
-    RG.Mesh movedDisplayMesh = GetGeometryDisplayMesh(geometryToMesh, true);
-
-    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
-    List<SOG.Mesh> displayValue = new() { meshConverter.Convert(movedDisplayMesh) };
-
-    // 3. Move Speckle geometry back from origin, if translation was applied
-    MoveSpeckleMeshes(displayValue, vector, units);
-
+    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometry, true);
+    List<SOG.Mesh> displayValue = new() { meshConverter.Convert(displayMesh) };
     return displayValue;
-  }
-
-  public static void MoveSpeckleMeshes(List<SOG.Mesh> displayValue, RG.Vector3d? vectorToGeometry, string units)
-  {
-    if (vectorToGeometry is RG.Vector3d vector)
-    {
-      Matrix4x4 matrix = new(1, 0, 0, vector.X, 0, 1, 0, vector.Y, 0, 0, 1, vector.Z, 0, 0, 0, 1);
-      SO.Transform transform = new() { matrix = matrix, units = units };
-      displayValue.ForEach(x => x.Transform(transform));
-    }
   }
 }
