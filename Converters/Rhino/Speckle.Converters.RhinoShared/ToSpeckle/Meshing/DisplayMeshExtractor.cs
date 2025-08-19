@@ -1,3 +1,4 @@
+using Rhino;
 using Rhino.DocObjects;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
@@ -6,7 +7,7 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Meshing;
 
 public static class DisplayMeshExtractor
 {
-  public static RG.Mesh GetDisplayMesh(RhinoObject obj)
+  public static RG.Mesh GetDisplayMesh(RhinoObject obj, RhinoDoc doc)
   {
     // note: unsure this is nice, we get bigger meshes - we should to benchmark (conversion time vs size tradeoffs)
     var joinedMesh = new RG.Mesh();
@@ -21,15 +22,15 @@ public static class DisplayMeshExtractor
       switch (obj)
       {
         case BrepObject brep:
-          joinedMesh.Append(GetGeometryDisplayMesh(brep.BrepGeometry));
+          joinedMesh.Append(GetGeometryDisplayMesh(brep.BrepGeometry, doc));
           break;
         case ExtrusionObject extrusion:
-          joinedMesh.Append(GetGeometryDisplayMesh(extrusion.ExtrusionGeometry.ToBrep()));
+          joinedMesh.Append(GetGeometryDisplayMesh(extrusion.ExtrusionGeometry.ToBrep(), doc));
           break;
         case SubDObject subDObject:
           if (subDObject.Geometry is RG.SubD subdGeometry)
           {
-            joinedMesh.Append(GetGeometryDisplayMesh(subdGeometry));
+            joinedMesh.Append(GetGeometryDisplayMesh(subdGeometry, doc));
           }
           else
           {
@@ -47,17 +48,16 @@ public static class DisplayMeshExtractor
   /// <summary>
   /// Extracting Rhino Mesh from Rhino GeometryBase using specified MeshingParameters settings, e.g. minimumEdgeLength.
   /// </summary>
-  public static RG.Mesh GetGeometryDisplayMesh(RG.GeometryBase geometry, bool highPrecision = false)
+  public static RG.Mesh GetGeometryDisplayMesh(RG.GeometryBase geometry, RhinoDoc doc)
   {
-    double minEdgeLength = highPrecision ? GetAccurateMinEdgeLegth(geometry) : 0.05;
-
     // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
     RG.Mesh[] renderMeshes;
     var joinedMesh = new RG.Mesh();
+    RG.MeshingParameters meshParams = RG.MeshingParameters.DocumentCurrentSetting(doc);
     switch (geometry)
     {
       case RG.Brep brep:
-        renderMeshes = RG.Mesh.CreateFromBrep(brep, new(0.05, minEdgeLength));
+        renderMeshes = RG.Mesh.CreateFromBrep(brep, meshParams);
         break;
       case RG.SubD subd:
 #pragma warning disable CA2000
@@ -66,7 +66,7 @@ public static class DisplayMeshExtractor
         renderMeshes = [subdMesh];
         break;
       case RG.Extrusion extrusion:
-        renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ToBrep(), new(0.05, minEdgeLength));
+        renderMeshes = RG.Mesh.CreateFromBrep(extrusion.ToBrep(), meshParams);
         break;
       default:
         throw new ConversionException($"Unsupported object for display mesh generation {geometry.GetType().FullName}");
@@ -90,30 +90,16 @@ public static class DisplayMeshExtractor
   }
 
   /// <summary>
-  /// Calculating optimal meshing parameter 'minimumEdgeLength' for the given geometry.
-  /// </summary>
-  private static double GetAccurateMinEdgeLegth(RG.GeometryBase geometry)
-  {
-    // adjust meshing parameters if Brep edges are too close to the document tolerance
-    double minEdgeLength = 0.05;
-    if (geometry is RG.Brep brep && brep.Edges.Any(x => x.GetLength() < minEdgeLength))
-    {
-      return 0;
-    }
-
-    return minEdgeLength;
-  }
-
-  /// <summary>
   /// Extracting Rhino Mesh and converting to Speckle with the most suitable settings
   /// </summary>
   /// <returns>List of converted Speckle meshes</returns>
   public static List<SOG.Mesh> GetSpeckleMeshes(
     RG.GeometryBase geometry,
-    ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter
+    ITypedConverter<RG.Mesh, SOG.Mesh> meshConverter,
+    RhinoDoc doc
   )
   {
-    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometry, true);
+    RG.Mesh displayMesh = GetGeometryDisplayMesh(geometry, doc);
     List<SOG.Mesh> displayValue = new() { meshConverter.Convert(displayMesh) };
     return displayValue;
   }
