@@ -30,7 +30,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param to deconstruct", GH_ParamAccess.item);
+    pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param(s) to deconstruct", GH_ParamAccess.list);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
