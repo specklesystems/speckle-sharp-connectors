@@ -35,6 +35,9 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
+  /// <summary>
+  /// Processes multiple objects and creates unified output parameters containing all unique fields from all input objects.
+  /// </summary>
   protected override void SolveInstance(IGH_DataAccess da)
   {
     List<object> inputData = new();
@@ -44,96 +47,142 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       return;
     }
 
-    List<OutputParamWrapper> outputParams = new();
+    // collect all unique field names from all objects
+    HashSet<string> allFieldNames = new();
+    List<List<OutputParamWrapper>> allObjectOutputs = new();
 
-    // Process each input object to collect all unique fields
+    // process each input object to collect its fields
     foreach (object data in inputData)
     {
-      switch (data)
+      List<OutputParamWrapper>? objectOutputs = DeconstructObject(data);
+      if (objectOutputs == null)
       {
-        case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
-          // get children elements from the wrapper to override the elements prop while parsing
-          List<IGH_Goo> children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
-          outputParams = ParseSpeckleWrapper(collectionGoo.Value, children);
-          break;
-        case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
-          // get geometries from the wrapper to override the displayvalue prop while parsing
-          List<IGH_Goo> display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
-          outputParams = ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
-          break;
-        case SpeckleGeometryWrapperGoo objectGoo when objectGoo.Value != null:
-          outputParams = ParseSpeckleWrapper(objectGoo.Value);
-          break;
-        case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
-          outputParams = ParseSpeckleWrapper(blockInstanceGoo.Value);
-          break;
-        case SpeckleBlockDefinitionWrapperGoo blockDef:
-          outputParams = ParseSpeckleWrapper(blockDef.Value);
-          break;
-        case SpeckleMaterialWrapperGoo materialGoo when materialGoo.Value != null:
-          outputParams = ParseSpeckleWrapper(materialGoo.Value);
-          break;
-
-        case SpecklePropertyGroupGoo propGoo:
-          Name = $"properties ({propGoo.Value.Count})";
-          outputParams = new();
-          foreach (var key in propGoo.Value.Keys)
-          {
-            ISpecklePropertyGoo value = propGoo.Value[key];
-            object? outputValue = value is SpecklePropertyGoo prop
-              ? prop.Value
-              : value is SpecklePropertyGroupGoo propGroup
-                ? propGroup
-                : value;
-
-            OutputParamWrapper output =
-              outputValue is IList
-                ? CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.list)
-                : CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item);
-            outputParams.Add(output);
-          }
-          break;
-
-        default:
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Type cannot be deconstructed: {data.GetType().Name}");
-          return;
+        return;
       }
 
-      // For now, we're still only processing the first object
-      // In the next step, we'll collect fields from ALL objects
-      break;
+      allObjectOutputs.Add(objectOutputs);
+      foreach (var output in objectOutputs)
+      {
+        allFieldNames.Add(output.Param.Name);
+      }
     }
 
+    // create unified output parameters from all unique fields
+    List<OutputParamWrapper> finalOutputParams = CreateUnifiedOutputs(allFieldNames, allObjectOutputs);
+
+    // update component name depending on input
+    Name = inputData.Count == 1 ? Name : $"Multiple Objects ({inputData.Count})";
     NickName = Name;
 
-    if (da.Iteration == 0 && OutputMismatch(outputParams))
+    if (OutputMismatch(finalOutputParams))
     {
       OnPingDocument()
         .ScheduleSolution(
           5,
           _ =>
           {
-            CreateOutputs(outputParams);
+            CreateOutputs(finalOutputParams);
           }
         );
     }
     else
     {
-      for (int i = 0; i < outputParams.Count; i++)
+      for (int i = 0; i < finalOutputParams.Count; i++)
       {
-        var outParam = Params.Output[i];
-        var outParamWrapper = outputParams[i];
-        switch (outParam.Access)
+        var outParamWrapper = finalOutputParams[i];
+        if (outParamWrapper.Value is IList list)
         {
-          case GH_ParamAccess.item:
-            da.SetData(i, outParamWrapper.Value);
-            break;
-          case GH_ParamAccess.list:
-            da.SetDataList(i, outParamWrapper.Value as IList);
-            break;
+          da.SetDataList(i, list);
+        }
+        else
+        {
+          da.SetDataList(i, new List<object?> { outParamWrapper.Value });
         }
       }
     }
+  }
+
+  /// <summary>
+  /// Deconstructs a single object into its constituent fields/properties.
+  /// </summary>
+  private List<OutputParamWrapper>? DeconstructObject(object data)
+  {
+    switch (data)
+    {
+      case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
+        var children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
+        return ParseSpeckleWrapper(collectionGoo.Value, children);
+
+      case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
+        var display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
+        return ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
+
+      case SpeckleGeometryWrapperGoo objectGoo when objectGoo.Value != null:
+        return ParseSpeckleWrapper(objectGoo.Value);
+
+      case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
+        return ParseSpeckleWrapper(blockInstanceGoo.Value);
+
+      case SpeckleBlockDefinitionWrapperGoo blockDef:
+        return ParseSpeckleWrapper(blockDef.Value);
+
+      case SpeckleMaterialWrapperGoo materialGoo when materialGoo.Value != null:
+        return ParseSpeckleWrapper(materialGoo.Value);
+
+      case SpecklePropertyGroupGoo propGoo:
+        Name = $"properties ({propGoo.Value.Count})";
+        List<OutputParamWrapper> objectOutputs = new();
+        foreach (var key in propGoo.Value.Keys)
+        {
+          ISpecklePropertyGoo value = propGoo.Value[key];
+          object? outputValue = value is SpecklePropertyGoo prop
+            ? prop.Value
+            : value is SpecklePropertyGroupGoo propGroup
+              ? propGroup
+              : value;
+          objectOutputs.Add(CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item));
+        }
+        return objectOutputs;
+
+      default:
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Type cannot be deconstructed: {data.GetType().Name}");
+        return null;
+    }
+  }
+
+  /// <summary>
+  /// Creates unified output parameters by collecting all unique field names from all input objects and creating
+  /// list-based outputs where missing fields are represented as null values.
+  /// </summary>
+  private List<OutputParamWrapper> CreateUnifiedOutputs(
+    HashSet<string> allFieldNames,
+    List<List<OutputParamWrapper>> allObjectOutputs
+  )
+  {
+    List<OutputParamWrapper> finalOutputParams = new();
+
+    foreach (string fieldName in allFieldNames.OrderBy(x => x))
+    {
+      List<object?> fieldValues = new();
+
+      foreach (var objectOutputs in allObjectOutputs)
+      {
+        var fieldOutput = objectOutputs.FirstOrDefault(o => o.Param.Name == fieldName);
+
+        if (fieldOutput?.Value is IList existingList && fieldOutput.Param.Access == GH_ParamAccess.list)
+        {
+          fieldValues.Add(existingList);
+        }
+        else
+        {
+          fieldValues.Add(fieldOutput?.Value);
+        }
+      }
+
+      finalOutputParams.Add(CreateOutputParamByKeyValue(fieldName, fieldValues, GH_ParamAccess.list));
+    }
+
+    return finalOutputParams;
   }
 
   private List<OutputParamWrapper> ParseSpeckleWrapper(
