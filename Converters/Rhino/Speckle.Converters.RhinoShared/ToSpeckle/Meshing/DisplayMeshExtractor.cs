@@ -54,7 +54,6 @@ public static class DisplayMeshExtractor
     // declare "renderMeshes" as a separate var, because it needs to be checked for null after each Mesh.Create method
     RG.Mesh[] renderMeshes;
     var joinedMesh = new RG.Mesh();
-
     switch (geometry)
     {
       case RG.Brep brep:
