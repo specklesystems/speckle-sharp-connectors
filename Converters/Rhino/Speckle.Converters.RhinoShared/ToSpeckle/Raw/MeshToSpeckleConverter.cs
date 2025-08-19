@@ -43,7 +43,6 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
   private double[] ConvertDoublePrecisionVertices(RG.Mesh target)
   {
     var vertexCoordinates = new double[target.Vertices.Count * 3];
-    // target.Vertices.UseDoublePrecisionVertices = true;
     RG.Point3d[] vertices = target.Vertices.ToPoint3dArray();
     var x = 0;
     for (int i = 0; i < vertices.Length; i++)
