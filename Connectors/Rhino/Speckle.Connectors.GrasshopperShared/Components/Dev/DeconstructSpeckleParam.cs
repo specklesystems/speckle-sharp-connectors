@@ -37,59 +37,71 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    object data = new();
-    da.GetData(0, ref data);
+    List<object> inputData = new();
+    if (!da.GetDataList(0, inputData) || inputData.Count == 0)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No objects provided to deconstruct.");
+      return;
+    }
 
     List<OutputParamWrapper> outputParams = new();
 
-    switch (data)
+    // Process each input object to collect all unique fields
+    foreach (object data in inputData)
     {
-      case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
-        // get children elements from the wrapper to override the elements prop while parsing
-        List<IGH_Goo> children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
-        outputParams = ParseSpeckleWrapper(collectionGoo.Value, children);
-        break;
-      case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
-        // get geometries from the wrapper to override the displayvalue prop while parsing
-        List<IGH_Goo> display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
-        outputParams = ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
-        break;
-      case SpeckleGeometryWrapperGoo objectGoo when objectGoo.Value != null:
-        outputParams = ParseSpeckleWrapper(objectGoo.Value);
-        break;
-      case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
-        outputParams = ParseSpeckleWrapper(blockInstanceGoo.Value);
-        break;
-      case SpeckleBlockDefinitionWrapperGoo blockDef:
-        outputParams = ParseSpeckleWrapper(blockDef.Value);
-        break;
-      case SpeckleMaterialWrapperGoo materialGoo when materialGoo.Value != null:
-        outputParams = ParseSpeckleWrapper(materialGoo.Value);
-        break;
+      switch (data)
+      {
+        case SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null:
+          // get children elements from the wrapper to override the elements prop while parsing
+          List<IGH_Goo> children = collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList();
+          outputParams = ParseSpeckleWrapper(collectionGoo.Value, children);
+          break;
+        case SpeckleDataObjectWrapperGoo dataObjectGoo when dataObjectGoo.Value != null:
+          // get geometries from the wrapper to override the displayvalue prop while parsing
+          List<IGH_Goo> display = dataObjectGoo.Value.Geometries.Select(o => o.CreateGoo()).ToList();
+          outputParams = ParseSpeckleWrapper(dataObjectGoo.Value, null, display);
+          break;
+        case SpeckleGeometryWrapperGoo objectGoo when objectGoo.Value != null:
+          outputParams = ParseSpeckleWrapper(objectGoo.Value);
+          break;
+        case SpeckleBlockInstanceWrapperGoo blockInstanceGoo when blockInstanceGoo.Value != null:
+          outputParams = ParseSpeckleWrapper(blockInstanceGoo.Value);
+          break;
+        case SpeckleBlockDefinitionWrapperGoo blockDef:
+          outputParams = ParseSpeckleWrapper(blockDef.Value);
+          break;
+        case SpeckleMaterialWrapperGoo materialGoo when materialGoo.Value != null:
+          outputParams = ParseSpeckleWrapper(materialGoo.Value);
+          break;
 
-      case SpecklePropertyGroupGoo propGoo:
-        Name = $"properties ({propGoo.Value.Count})";
-        outputParams = new();
-        foreach (var key in propGoo.Value.Keys)
-        {
-          ISpecklePropertyGoo value = propGoo.Value[key];
-          object? outputValue = value is SpecklePropertyGoo prop
-            ? prop.Value
-            : value is SpecklePropertyGroupGoo propGroup
-              ? propGroup
-              : value;
+        case SpecklePropertyGroupGoo propGoo:
+          Name = $"properties ({propGoo.Value.Count})";
+          outputParams = new();
+          foreach (var key in propGoo.Value.Keys)
+          {
+            ISpecklePropertyGoo value = propGoo.Value[key];
+            object? outputValue = value is SpecklePropertyGoo prop
+              ? prop.Value
+              : value is SpecklePropertyGroupGoo propGroup
+                ? propGroup
+                : value;
 
-          OutputParamWrapper output =
-            outputValue is IList
-              ? CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.list)
-              : CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item);
-          outputParams.Add(output);
-        }
-        break;
+            OutputParamWrapper output =
+              outputValue is IList
+                ? CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.list)
+                : CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item);
+            outputParams.Add(output);
+          }
+          break;
 
-      default:
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Type cannot be deconstructed: {data.GetType().Name}");
-        return;
+        default:
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Type cannot be deconstructed: {data.GetType().Name}");
+          return;
+      }
+
+      // For now, we're still only processing the first object
+      // In the next step, we'll collect fields from ALL objects
+      break;
     }
 
     NickName = Name;
