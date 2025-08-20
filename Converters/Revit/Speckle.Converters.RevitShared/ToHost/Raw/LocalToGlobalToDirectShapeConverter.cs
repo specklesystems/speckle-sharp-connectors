@@ -79,7 +79,7 @@ public class LocalToGlobalToDirectShapeConverter
         .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id.NotNull());
       result.SetShape(def);
 
-      // add snapping references for valid geometry
+      // add snapping references for meshes and curves
       foreach (var shape in def)
       {
         switch (shape)
@@ -92,9 +92,6 @@ public class LocalToGlobalToDirectShapeConverter
             break;
           case DB.Curve c:
             result.AddReferenceCurve(c);
-            break;
-          case DB.Point p:
-            result.AddReferencePoint(p.Coord);
             break;
         }
       }
