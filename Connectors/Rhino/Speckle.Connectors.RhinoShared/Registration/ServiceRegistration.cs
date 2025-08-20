@@ -17,8 +17,10 @@ using Speckle.Connectors.Rhino.Bindings;
 using Speckle.Connectors.Rhino.Filters;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
+using Speckle.Connectors.Rhino.Mapper.Revit;
 using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
+using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Connectors.Rhino.Plugin;
 using Speckle.Sdk.Models.GraphTraversal;
 
@@ -56,6 +58,9 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
     serviceCollection.AddScoped<IHostObjectBuilder, RhinoHostObjectBuilder>();
 
+    // register send settings
+    serviceCollection.AddScoped<ToSpeckleSettingsManager>();
+
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<IAppIdleManager, RhinoIdleManager>();
@@ -87,6 +92,11 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 
     serviceCollection.AddScoped<PropertiesExtractor>();
+    serviceCollection.AddScoped<RevitMappingResolver>();
+
+    // register helpers
+    serviceCollection.AddScoped<RhinoLayerHelper>();
+    serviceCollection.AddScoped<RhinoObjectHelper>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

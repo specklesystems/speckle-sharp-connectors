@@ -347,7 +347,6 @@
       "speckle.converters.rhino8": {
         "type": "Project",
         "dependencies": {
-          "RhinoCommon": "[8.9.24194.18121, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },

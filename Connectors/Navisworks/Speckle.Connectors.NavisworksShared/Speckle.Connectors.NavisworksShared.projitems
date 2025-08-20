@@ -25,10 +25,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GeometryNodeMerger.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksHierarchyBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs"/>
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenEleementsSetting.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenElementsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\IncludeInternalPropertiesSetting.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\PreserveModelHierarchySetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\RevitCategoryMapping.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManagerNavisworks.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSelectionFilter.cs"/>
