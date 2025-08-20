@@ -78,6 +78,27 @@ public class LocalToGlobalToDirectShapeConverter
         .DirectShapeLibrary.GetDirectShapeLibrary(_converterSettings.Current.Document)
         .FindDefinition(target.atomicObject.applicationId ?? target.atomicObject.id.NotNull());
       result.SetShape(def);
+
+      // add snapping references for valid geometry
+      foreach (var shape in def)
+      {
+        switch (shape)
+        {
+          case DB.Mesh m:
+            foreach (var v in m.Vertices)
+            {
+              result.AddReferencePoint(v);
+            }
+            break;
+          case DB.Curve c:
+            result.AddReferenceCurve(c);
+            break;
+          case DB.Point p:
+            result.AddReferencePoint(p.Coord);
+            break;
+        }
+      }
+
       return result; // note fast exit here
     }
 
