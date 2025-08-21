@@ -24,13 +24,17 @@ public class ClassPropertiesExtractor
 
     // add type specific props not included in parameters.
     // so far, no extra props are needed
-    /*
+    
     switch (element)
     {
+      case DB.Area area:
+        elementPropertiesDict.Add("Area Scheme", area.AreaScheme?.Name ?? "");
+        break;
+      
       default:
         break;
     }
-    */
+   
 
     return elementPropertiesDict;
   }
