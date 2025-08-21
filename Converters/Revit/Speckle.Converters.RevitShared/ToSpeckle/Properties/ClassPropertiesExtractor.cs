@@ -35,6 +35,26 @@ public class ClassPropertiesExtractor
     return elementPropertiesDict;
   }
 
+  public string GetCategoryName(DB.Element element)
+  {
+    string category = element.Category?.Name ?? "none";
+
+    // special case for direct shapes: use builtin category instead
+    if (element is DB.DirectShape ds)
+    {
+      // Clean up built-in name by removing "OST" prefixes
+      category = ds
+        .Category.GetBuiltInCategory()
+        .ToString()
+        .Replace("OST_IOS", "") //for OST_IOSModelGroups
+        .Replace("OST_MEP", "") //for OST_MEPSpaces
+        .Replace("OST_", "") //for any other OST_blablabla
+        .Replace("_", " ");
+    }
+
+    return category;
+  }
+
   // gets the properties on the db.element class
   private Dictionary<string, object?> ExtractElementProperties(DB.Element element)
   {
@@ -42,6 +62,7 @@ public class ClassPropertiesExtractor
       new()
       {
         { "elementId", element.Id.ToString() },
+        { "category", GetCategoryName(element) },
         { "builtInCategory", element.Category?.GetBuiltInCategory().ToString() },
         { "worksetId", element.WorksetId?.ToString() }
       };

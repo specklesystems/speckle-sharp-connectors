@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
@@ -15,6 +14,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 {
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
+  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
   private readonly LevelExtractor _levelExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -22,6 +22,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     PropertiesExtractor propertiesExtractor,
+    ClassPropertiesExtractor classPropertiesExtractor,
     LevelExtractor levelExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings
@@ -29,6 +30,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   {
     _displayValueExtractor = displayValueExtractor;
     _propertiesExtractor = propertiesExtractor;
+    _classPropertiesExtractor = classPropertiesExtractor;
     _levelExtractor = levelExtractor;
     _locationConverter = locationConverter;
     _converterSettings = converterSettings;
@@ -38,20 +40,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public RevitObject Convert(DB.Element target)
   {
-    string category = target.Category?.Name ?? "none";
-
-    // special case for direct shapes: use builtin category instead
-    if (target is DB.DirectShape ds)
-    {
-      // Clean up built-in name by removing "OST" prefixes
-      category = ds
-        .Category.GetBuiltInCategory()
-        .ToString()
-        .Replace("OST_IOS", "") //for OST_IOSModelGroups
-        .Replace("OST_MEP", "") //for OST_MEPSpaces
-        .Replace("OST_", "") //for any other OST_blablabla
-        .Replace("_", " ");
-    }
+    string category = _classPropertiesExtractor.GetCategoryName(target);
 
     string name = $"{category} - {target.Name}"; // Note: I find this looks better in the frontend.
     string familyName = "none";
