@@ -16,6 +16,9 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 [Guid("C491D26C-84CB-4684-8BD2-AA78D0F2FE53")]
 public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterComponent
 {
+  // Store all unique field names discovered across all iterations
+  private readonly HashSet<string> _allDiscoveredFields = new();
+
   public DeconstructSpeckleParam()
     : base(
       "Deconstruct",
@@ -30,81 +33,45 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
-    pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param(s) to deconstruct", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param to deconstruct", GH_ParamAccess.item);
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
-  /// <summary>
-  /// Processes multiple objects and creates unified output parameters containing all unique fields from all input objects.
-  /// </summary>
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    List<object> inputData = new();
-    if (!da.GetDataList(0, inputData) || inputData.Count == 0)
+    object data = new();
+    da.GetData(0, ref data);
+
+    List<OutputParamWrapper>? outputParams = DeconstructObject(data);
+    if (outputParams == null)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No objects provided to deconstruct.");
       return;
     }
 
-    // collect all unique field names from all objects
-    HashSet<string> allFieldNames = new();
-    List<List<OutputParamWrapper>> allObjectOutputs = new();
+    // update our discovered fields set
+    var currentFields = outputParams.Select(p => p.Param.Name).ToHashSet();
+    bool fieldsChanged = UpdateDiscoveredFields(currentFields);
 
-    // process each input object to collect its fields
-    foreach (object data in inputData)
-    {
-      List<OutputParamWrapper>? objectOutputs = DeconstructObject(data);
-      if (objectOutputs == null)
-      {
-        return;
-      }
-
-      allObjectOutputs.Add(objectOutputs);
-      foreach (var output in objectOutputs)
-      {
-        allFieldNames.Add(output.Param.Name);
-      }
-    }
-
-    // create unified output parameters from all unique fields
-    List<OutputParamWrapper> finalOutputParams = CreateUnifiedOutputs(allFieldNames, allObjectOutputs);
-
-    // update component name depending on input
-    Name = inputData.Count == 1 ? Name : $"Multiple Objects ({inputData.Count})";
+    // set component name based on the current object
     NickName = Name;
 
-    if (OutputMismatch(finalOutputParams))
+    // if this is the first iteration OR field set has changed, check if we need to update outputs
+    if (da.Iteration == 0 || fieldsChanged)
     {
-      OnPingDocument()
-        .ScheduleSolution(
-          5,
-          _ =>
-          {
-            CreateOutputs(finalOutputParams);
-          }
-        );
-    }
-    else
-    {
-      for (int i = 0; i < finalOutputParams.Count; i++)
+      var requiredOutputs = CreateOutputsFromAllFields();
+
+      if (OutputMismatch(requiredOutputs))
       {
-        var outParamWrapper = finalOutputParams[i];
-        if (outParamWrapper.Value is IList list)
-        {
-          da.SetDataList(i, list);
-        }
-        else
-        {
-          da.SetDataList(i, new List<object?> { outParamWrapper.Value });
-        }
+        OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(requiredOutputs));
+        return;
       }
     }
+
+    // set output data - fill missing fields with nulls
+    SetOutputData(da, outputParams);
   }
 
-  /// <summary>
-  /// Deconstructs a single object into its constituent fields/properties.
-  /// </summary>
   private List<OutputParamWrapper>? DeconstructObject(object data)
   {
     switch (data)
@@ -152,39 +119,49 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     }
   }
 
-  /// <summary>
-  /// Creates unified output parameters by collecting all unique field names from all input objects and creating
-  /// list-based outputs where missing fields are represented as null values.
-  /// </summary>
-  private List<OutputParamWrapper> CreateUnifiedOutputs(
-    HashSet<string> allFieldNames,
-    List<List<OutputParamWrapper>> allObjectOutputs
-  )
+  private bool UpdateDiscoveredFields(HashSet<string> currentFields)
   {
-    List<OutputParamWrapper> finalOutputParams = new();
-
-    foreach (string fieldName in allFieldNames.OrderBy(x => x))
+    bool changed = false;
+    foreach (string field in currentFields)
     {
-      List<object?> fieldValues = new();
-
-      foreach (var objectOutputs in allObjectOutputs)
+      if (_allDiscoveredFields.Add(field))
       {
-        var fieldOutput = objectOutputs.FirstOrDefault(o => o.Param.Name == fieldName);
-
-        if (fieldOutput?.Value is IList existingList && fieldOutput.Param.Access == GH_ParamAccess.list)
-        {
-          fieldValues.Add(existingList);
-        }
-        else
-        {
-          fieldValues.Add(fieldOutput?.Value);
-        }
+        changed = true;
       }
-
-      finalOutputParams.Add(CreateOutputParamByKeyValue(fieldName, fieldValues, GH_ParamAccess.list));
     }
+    return changed;
+  }
 
-    return finalOutputParams;
+  private List<OutputParamWrapper> CreateOutputsFromAllFields() =>
+    _allDiscoveredFields
+      .OrderBy(name => name)
+      .Select(fieldName => CreateOutputParamByKeyValue(fieldName, null, GH_ParamAccess.item))
+      .ToList();
+
+  private void SetOutputData(IGH_DataAccess da, List<OutputParamWrapper> currentOutputs)
+  {
+    // create a lookup for current outputs by field name
+    var outputLookup = currentOutputs.ToDictionary(o => o.Param.Name, o => o.Value);
+
+    // set data for each output parameter
+    for (int i = 0; i < Params.Output.Count; i++)
+    {
+      var outputParam = Params.Output[i];
+      string fieldName = outputParam.Name;
+
+      // set the value if it exists, otherwise set null
+      object? value = outputLookup.TryGetValue(fieldName, out var fieldValue) ? fieldValue : null;
+
+      switch (outputParam.Access)
+      {
+        case GH_ParamAccess.item:
+          da.SetData(i, value);
+          break;
+        case GH_ParamAccess.list:
+          da.SetDataList(i, value as IList ?? new List<object?>());
+          break;
+      }
+    }
   }
 
   private List<OutputParamWrapper> ParseSpeckleWrapper(
@@ -212,7 +189,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     // cycle through base props
     foreach (var prop in @base.GetMembers(DynamicBaseMemberType.Instance | DynamicBaseMemberType.Dynamic))
     {
-      // Convert and add to corresponding output structure
+      // convert and add to corresponding output structure
       var value = prop.Value;
       switch (value)
       {
@@ -223,13 +200,13 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         case IList list:
           List<object> nativeObjects = new();
 
-          // override list value if base is a collection and this is the elements prop, since this is empty if coming from a collectionwrapper
+          // override list value if base is a collection and this is the elements prop
           if (@base is Collection && prop.Key == "elements" && elements != null)
           {
             list = elements;
           }
 
-          // override list value if base is a dataobject and this is the displayvalue prop, since this is empty if coming from a dataobject wrapper
+          // override list value if base is a dataobject and this is the displayvalue prop
           if (@base is Speckle.Objects.Data.DataObject && prop.Key == "displayValue" && displayValue != null)
           {
             list = displayValue;
@@ -360,19 +337,17 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     return myParam;
   }
 
-  public bool DestroyParameter(GH_ParameterSide side, int index)
-  {
-    return side == GH_ParameterSide.Output;
-  }
+  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output;
 
   private void CreateOutputs(List<OutputParamWrapper> outputParams)
   {
-    // TODO: better, nicer handling of creation/removal
+    // clear existing outputs
     while (Params.Output.Count > 0)
     {
       Params.UnregisterOutputParameter(Params.Output[^1]);
     }
 
+    // create new outputs
     foreach (var newParam in outputParams)
     {
       var param = new Param_GenericObject
@@ -397,10 +372,10 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       return true;
     }
 
-    var count = 0;
-    foreach (var newParam in outputParams)
+    for (int i = 0; i < outputParams.Count; i++)
     {
-      var oldParam = Params.Output[count];
+      var newParam = outputParams[i];
+      var oldParam = Params.Output[i];
       if (
         oldParam.NickName != newParam.Param.NickName
         || oldParam.Name != newParam.Param.Name
@@ -409,10 +384,19 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       {
         return true;
       }
-      count++;
     }
 
     return false;
+  }
+
+  // NOTE: Override ExpirePreview to reset discovered fields when component is expired
+  public override void ExpirePreview(bool recompute)
+  {
+    if (recompute)
+    {
+      _allDiscoveredFields.Clear();
+    }
+    base.ExpirePreview(recompute);
   }
 }
 
