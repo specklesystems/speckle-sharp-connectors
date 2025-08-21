@@ -1,4 +1,5 @@
 using Rhino;
+using Rhino.DocObjects;
 using Rhino.FileIO;
 using Speckle.Sdk.Common.Exceptions;
 
@@ -42,8 +43,19 @@ internal static class RawEncodingCreator
     file.Settings.ModelAbsoluteTolerance = doc.ModelAbsoluteTolerance;
     file.Settings.ModelAngleToleranceRadians = doc.ModelAngleToleranceRadians;
 
-    var fb = file.ToByteArray(new File3dmWriteOptions() { SaveUserData = false, Version = 7 });
-    var fbString = System.Convert.ToBase64String(fb);
+    file.AllLayers.Clear();
+    file.AllMaterials.Clear();
+    file.Views.Clear();
+    file.NamedViews.Clear();
+    file.AllDimStyles.Clear();
+    file.AllGroups.Clear();
+    file.AllHatchPatterns.Clear();
+
+    File3dmWriteOptions options = new() { SaveUserData = false, Version = 7 };
+    options.EnableRenderMeshes(ObjectType.Brep, false);
+    options.EnableRenderMeshes(ObjectType.Extrusion, false);
+    var fb = file.ToByteArray(options);
+    var fbString = Convert.ToBase64String(fb);
     var bxe = new SO.RawEncoding() { contents = fbString, format = SO.RawEncodingFormats.RHINO_3DM };
     return bxe;
   }
