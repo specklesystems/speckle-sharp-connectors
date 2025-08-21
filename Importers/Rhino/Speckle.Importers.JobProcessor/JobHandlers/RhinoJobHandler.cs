@@ -1,11 +1,12 @@
-﻿using Speckle.Importers.JobProcessor.Domain;
+﻿using Microsoft.Extensions.Logging;
+using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.Rhino;
 using Speckle.Sdk.Api;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-internal sealed class RhinoJobHandler : IJobHandler
+internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger) : IJobHandler
 {
   public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
@@ -31,7 +32,23 @@ internal sealed class RhinoJobHandler : IJobHandler
     }
     finally
     {
-      Directory.Delete(directory.FullName, true);
+      try
+      {
+        await Cleanup(directory.FullName);
+      }
+      catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+      {
+        logger.LogError(ex, "Failed to cleanup file");
+      }
     }
+  }
+
+  private static async Task Cleanup(string path)
+  {
+    //Some weird cases where *something* is keeping a lock on the file, this *may* fix things...
+    await Task.Delay(100);
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    Directory.Delete(path, true);
   }
 }

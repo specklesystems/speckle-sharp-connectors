@@ -28,10 +28,10 @@ internal sealed class JobProcessorInstance(
   {
     await using var connection = await repository.SetupConnection(cancellationToken).ConfigureAwait(false);
 
+    logger.LogInformation("Listening for jobs...");
+
     while (true)
     {
-      logger.LogInformation("Listening for jobs...");
-
       FileimportJob? job = await repository.GetNextJob(connection, cancellationToken);
       if (job == null)
       {
@@ -94,7 +94,7 @@ internal sealed class JobProcessorInstance(
       projectId = job.Payload.ProjectId,
       jobId = job.Payload.BlobId,
       warnings = [],
-      reason = ex.ToString(),
+      reason = string.IsNullOrEmpty(ex.Message) ? ex.GetType().ToString() : ex.Message,
       result = new FileImportResult(0, 0, 0, "Rhino Importer", versionId: null)
     };
     await client.FileImport.FinishFileImportJob(input, cancellationToken);
