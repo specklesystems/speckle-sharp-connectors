@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.Rhino.Mapper.Revit;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Rhino.HostApp.Properties;
@@ -9,6 +10,13 @@ namespace Speckle.Connectors.Rhino.HostApp.Properties;
 /// </summary>
 public class PropertiesExtractor
 {
+  private readonly RevitMappingResolver _revitMappingResolver;
+
+  public PropertiesExtractor(RevitMappingResolver revitMappingResolver)
+  {
+    _revitMappingResolver = revitMappingResolver;
+  }
+
   public Dictionary<string, object?> GetProperties(RhinoObject rhObject)
   {
     Dictionary<string, object?> properties = new();
@@ -40,6 +48,16 @@ public class PropertiesExtractor
       }
 
       properties[key] = userStrings[key];
+    }
+
+    // NOTE: if no mapping was found on the object, check layer(s) recursively
+    if (!properties.ContainsKey(RevitMappingConstants.CATEGORY_USER_STRING_KEY))
+    {
+      var layerMapping = _revitMappingResolver.SearchLayerHierarchyForMapping(rhObject);
+      if (!string.IsNullOrEmpty(layerMapping))
+      {
+        properties[RevitMappingConstants.CATEGORY_USER_STRING_KEY] = layerMapping;
+      }
     }
 
     return properties;

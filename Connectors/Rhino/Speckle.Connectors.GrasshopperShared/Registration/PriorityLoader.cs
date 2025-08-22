@@ -28,6 +28,7 @@ public class PriorityLoader : GH_AssemblyPriority
 
   public static IServiceScope CreateScopeForActiveDocument()
   {
+    // NOTE: introduction of AddVisualizationProperties setting not accounted for in GH, hence hardcoded as true (i.e. "as before")
     var scope = Container.CreateScope();
     var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
     scope

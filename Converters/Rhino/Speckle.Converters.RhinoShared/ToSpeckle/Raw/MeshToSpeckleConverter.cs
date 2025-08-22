@@ -80,14 +80,6 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
-    var textureCoordinates = new double[target.TextureCoordinates.Count * 2];
-    x = 0;
-    foreach (var textureCoord in target.TextureCoordinates)
-    {
-      textureCoordinates[x++] = textureCoord.X;
-      textureCoordinates[x++] = textureCoord.Y;
-    }
-
     var colors = new int[target.VertexColors.Count];
     x = 0;
     foreach (var c in target.VertexColors)
@@ -95,13 +87,27 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       colors[x++] = c.ToArgb();
     }
 
-    var vertexNormals = new double[target.Normals.Count * 3];
-    x = 0;
-    foreach (var n in target.Normals)
+    // NOTE: textureCoordinates and vertexNormals will be empty array when setting is false
+    double[] textureCoordinates = [];
+    double[] vertexNormals = [];
+    if (_settingsStore.Current.AddVisualizationProperties)
     {
-      vertexNormals[x++] = n.X;
-      vertexNormals[x++] = n.Y;
-      vertexNormals[x++] = n.Z;
+      textureCoordinates = new double[target.TextureCoordinates.Count * 2];
+      x = 0;
+      foreach (var textureCoord in target.TextureCoordinates)
+      {
+        textureCoordinates[x++] = textureCoord.X;
+        textureCoordinates[x++] = textureCoord.Y;
+      }
+
+      vertexNormals = new double[target.Normals.Count * 3];
+      x = 0;
+      foreach (var n in target.Normals)
+      {
+        vertexNormals[x++] = n.X;
+        vertexNormals[x++] = n.Y;
+        vertexNormals[x++] = n.Z;
+      }
     }
 
     double volume = target.IsClosed ? target.Volume() : 0;
@@ -112,8 +118,8 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       vertices = [.. vertexCoordinates],
       faces = faces,
       colors = [.. colors],
-      textureCoordinates = [.. textureCoordinates],
-      vertexNormals = [.. vertexNormals],
+      textureCoordinates = [.. textureCoordinates], // this will be empty array when setting is false
+      vertexNormals = [.. vertexNormals], // this will be empty array when setting is false
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
       bbox = bbox
