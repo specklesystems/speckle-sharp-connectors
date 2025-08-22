@@ -79,19 +79,19 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     }
 
     IEnumerable<Element> elementsInView;
-    
-    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
 
     if (view.PartsVisibility == PartsVisibility.ShowPartsOnly)
     {
-      
-      var allElements = viewCollector.ToElements();
+      using var initialCollector = new FilteredElementCollector(_doc, view.Id);
+      var allElements = initialCollector.ToElements();
       var idsToExclude = GetSourceElementIdsToExclude(allElements);
       
+      using var viewCollector = new FilteredElementCollector(_doc, view.Id);
       elementsInView = viewCollector.Excluding(idsToExclude).ToElements();
     }
     else
     {
+      using var viewCollector = new FilteredElementCollector(_doc, view.Id);
       elementsInView = viewCollector.ToElements();
     }
 
