@@ -86,8 +86,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       var allElements = initialCollector.ToElements();
       var idsToExclude = GetSourceElementIdsToExclude(allElements);
       
-      using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-      elementsInView = viewCollector.Excluding(idsToExclude).ToElements();
+      elementsInView = allElements.Where(e => !idsToExclude.Contains(e.Id));
     }
     else
     {
