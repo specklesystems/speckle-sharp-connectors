@@ -33,7 +33,7 @@ public class PriorityLoader : GH_AssemblyPriority
     var rhinoConversionSettingsFactory = scope.ServiceProvider.GetRequiredService<IRhinoConversionSettingsFactory>();
     scope
       .ServiceProvider.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-      .Initialize(rhinoConversionSettingsFactory.Create(CurrentDocument.Document.NotNull()));
+      .Initialize(rhinoConversionSettingsFactory.Create(CurrentDocument.Document.NotNull(), true));
     return scope;
   }
 
