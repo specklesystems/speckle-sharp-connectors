@@ -22,7 +22,6 @@ public class ClassPropertiesExtractor
   {
     Dictionary<string, object?> elementPropertiesDict = ExtractElementProperties(element);
 
-
     // type specific properties
     switch (element)
     {
@@ -31,7 +30,6 @@ public class ClassPropertiesExtractor
         elementPropertiesDict.Add("areaScheme", area.AreaScheme?.Name);
         break;
     }
-   
 
     return elementPropertiesDict;
   }
