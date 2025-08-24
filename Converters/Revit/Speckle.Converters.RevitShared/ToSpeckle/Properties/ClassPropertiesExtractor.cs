@@ -22,16 +22,13 @@ public class ClassPropertiesExtractor
   {
     Dictionary<string, object?> elementPropertiesDict = ExtractElementProperties(element);
 
-    // add type specific props not included in parameters.
-    // so far, no extra props are needed
-    
+
+    // type specific properties
     switch (element)
     {
+      // area scheme for area elements
       case DB.Area area:
-        elementPropertiesDict.Add("Area Scheme", area.AreaScheme?.Name ?? "");
-        break;
-      
-      default:
+        elementPropertiesDict.Add("areaScheme", area.AreaScheme?.Name);
         break;
     }
    
