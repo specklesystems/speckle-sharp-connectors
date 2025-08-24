@@ -78,21 +78,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       return [];
     }
 
-    IEnumerable<Element> elementsInView;
-
-    if (view.PartsVisibility == PartsVisibility.ShowPartsOnly)
-    {
-      using var initialCollector = new FilteredElementCollector(_doc, view.Id);
-      var allElements = initialCollector.ToElements();
-      var idsToExclude = GetSourceElementIdsToExclude(allElements);
-      
-      elementsInView = allElements.Where(e => !idsToExclude.Contains(e.Id));
-    }
-    else
-    {
-      using var viewCollector = new FilteredElementCollector(_doc, view.Id);
-      elementsInView = viewCollector.ToElements();
-    }
+    IEnumerable<Element> elementsInView = GetFilteredElementsForView(view);
 
     // NOTE: FilteredElementCollector() includes sweeps and reveals from a wall family's definition and includes them as additional objects
     // on this return. displayValue for Wall already includes these, therefore we end up with duplicate elements on wall sweeps
@@ -141,7 +127,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     _revitContext = revitContext;
     _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
   }
-  
+
   // NOTE: Element collector returns parts and source elements even when Parts Visibility is set as "Show Parts" only.
   // Below function collects list of ids to exclude from final list.
   private HashSet<ElementId> GetSourceElementIdsToExclude(IEnumerable<Element> elements)
@@ -173,5 +159,20 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       }
     }
     return elementsToExclude;
+  }
+
+  private IEnumerable<Element> GetFilteredElementsForView(View view)
+  {
+    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
+    var allElements = viewCollector.ToElements();
+
+    // parts filtering when view is set to show Parts only (and overwrites allElements)
+    if (view.PartsVisibility == PartsVisibility.ShowPartsOnly)
+    {
+      var idsToExclude = GetSourceElementIdsToExclude(allElements);
+      return allElements.Where(e => !idsToExclude.Contains(e.Id));
+    }
+
+    return allElements;
   }
 }
