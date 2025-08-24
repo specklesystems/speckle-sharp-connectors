@@ -968,6 +968,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{4459f2b1-a340-488e-a856-eb2ae9c72ad4}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{4d40a101-07e6-4ff2-8934-83434932591d}*SharedItemsImports = 5
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{52666479-5401-47d6-b7ba-d554784439ea}*SharedItemsImports = 13
+		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{5422f2c8-1e00-4dae-bb01-65a17be8cd68}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{5505b953-d434-49ce-8ebd-efd7b3c378f7}*SharedItemsImports = 5
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{56680ea7-3599-4d88-83a5-b43ba93ac046}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{56a909ae-6e99-4d4d-a22e-38bdc5528b8e}*SharedItemsImports = 5
