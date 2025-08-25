@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Runtime.InteropServices;
 using GH_IO.Serialization;
 using Grasshopper.Kernel;
@@ -71,7 +72,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
   {
     pManager.AddParameter(new SpecklePropertyGroupParam(), "Properties", "P", "Properties", GH_ParamAccess.item);
     pManager.AddTextParameter("Keys", "k", "Keys of all properties", GH_ParamAccess.list);
-    pManager.AddGenericParameter("Values", "v", "Values of all properties", GH_ParamAccess.list);
+    pManager.AddGenericParameter("Values", "v", "Values of all properties (normalized as lists)", GH_ParamAccess.list);
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
@@ -91,7 +92,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
       SpecklePropertyGroupGoo emptyProps = new();
       da.SetData(0, emptyProps);
       da.SetDataList(1, emptyProps.Value.Keys);
-      da.SetDataList(2, emptyProps.Value.Values);
+      da.SetDataList(2, NormalizeToLists(emptyProps.Value.Values) as IList);
       return;
     }
 
@@ -182,7 +183,51 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     var groupGoo = new SpecklePropertyGroupGoo(result);
     da.SetData(0, groupGoo);
     da.SetDataList(1, result.Keys);
-    da.SetDataList(2, result.Values);
+    da.SetDataList(2, NormalizeToLists(result.Values));
+  }
+
+  /// <summary>
+  /// Normalizes all property values to lists for type uniformity.
+  /// Single values become one-item lists, list values remain as lists.
+  /// Returns the collection cast to IList for proper Grasshopper list handling.
+  /// </summary>
+  private IList NormalizeToLists(ICollection<ISpecklePropertyGoo> propertyValues)
+  {
+    var normalizedValues = new List<object>();
+
+    foreach (var propertyGoo in propertyValues)
+    {
+      var unwrappedValue = UnwrapPropertyValue(propertyGoo);
+
+      if (unwrappedValue is IList list && unwrappedValue is not string)
+      {
+        // Already a list: keep as-is
+        normalizedValues.Add(list);
+      }
+      else
+      {
+        // Single value: wrap in a list
+        if (unwrappedValue != null)
+        {
+          normalizedValues.Add(new List<object> { unwrappedValue });
+        }
+      }
+    }
+
+    return normalizedValues;
+  }
+
+  /// <summary>
+  /// Unwraps a property value from its wrapper to expose the raw value.
+  /// </summary>
+  private static object? UnwrapPropertyValue(ISpecklePropertyGoo propertyGoo)
+  {
+    return propertyGoo switch
+    {
+      SpecklePropertyGoo prop => prop.Value,
+      SpecklePropertyGroupGoo propGroup => propGroup,
+      _ => propertyGoo
+    };
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
