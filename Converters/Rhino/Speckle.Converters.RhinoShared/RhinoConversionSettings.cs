@@ -1,13 +1,8 @@
-﻿using Rhino;
+using Rhino;
 
 namespace Speckle.Converters.Rhino;
 
 /// <summary>
 /// Represents the settings used for Rhino and Grasshopper conversions.
 /// </summary>
-public record RhinoConversionSettings(
-  RhinoDoc Document,
-  string SpeckleUnits,
-  bool ModelFarFromOrigin,
-  bool AddVisualizationProperties
-);
+public record RhinoConversionSettings(RhinoDoc Document, string SpeckleUnits, bool AddVisualizationProperties);

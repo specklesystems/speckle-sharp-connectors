@@ -1,7 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Rhino.Extensions;
-using Speckle.Converters.Rhino.ToSpeckle.Meshing;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
@@ -34,38 +32,33 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       throw new ValidationException("Cannot convert a mesh with 0 vertices/faces");
     }
 
-    // Extracting Rhino Mesh and converting to Speckle with the most suitable settings (e.g. moving to origin first, if needed)
-    // This is needed because of Rhino using single precision numbers for Mesh vertices: https://wiki.mcneel.com/rhino/farfromorigin
-    RG.Mesh meshToConvert = target;
-    RG.Vector3d? vector = null;
-
-    // 1. If needed, move geometry to origin
-    if (_settingsStore.Current.ModelFarFromOrigin && target.IsFarFromOrigin(out RG.Vector3d vectorToGeometry))
-    {
-      meshToConvert = (RG.Mesh)target.Duplicate();
-      meshToConvert.Transform(RG.Transform.Translation(-vectorToGeometry));
-      vector = vectorToGeometry;
-    }
-    // 2. Convert extracted Mesh to Speckle. We don't move geometry back yet, because 'far from origin' geometry is causing Speckle conversion issues too
-    SOG.Mesh convertedMesh = ConvertMesh(meshToConvert);
-
-    // 3. Move Speckle geometry back from origin, if translation was applied
-    DisplayMeshExtractor.MoveSpeckleMeshes([convertedMesh], vector, _settingsStore.Current.SpeckleUnits);
+    SOG.Mesh convertedMesh = ConvertMesh(target);
 
     return convertedMesh;
   }
 
-  private SOG.Mesh ConvertMesh(RG.Mesh target)
+  // Rhino common is casting mesh vertex coords from doubles to float: by default the api returns `Vertices` as float instead of double precision
+  // https://github.com/mcneel/rhino3dm/blob/71c63a8c1c87782a13a1b76c825e4b792b36fd09/src/dotnet/opennurbs/opennurbs_mesh.cs#L6990-L7000
+  // We need to use double precision or else meshes far from origin will come out distorted: do *not* access `Vertices` directly - use `ToPoint3dArray`
+  private double[] ConvertDoublePrecisionVertices(RG.Mesh target)
   {
     var vertexCoordinates = new double[target.Vertices.Count * 3];
+    RG.Point3d[] vertices = target.Vertices.ToPoint3dArray();
     var x = 0;
-    for (int i = 0; i < target.Vertices.Count; i++)
+    for (int i = 0; i < vertices.Length; i++)
     {
-      var v = target.Vertices[i];
+      var v = vertices[i];
       vertexCoordinates[x++] = v.X;
       vertexCoordinates[x++] = v.Y;
       vertexCoordinates[x++] = v.Z;
     }
+
+    return vertexCoordinates;
+  }
+
+  private SOG.Mesh ConvertMesh(RG.Mesh target)
+  {
+    var vertexCoordinates = ConvertDoublePrecisionVertices(target);
 
     List<int> faces = new();
 
@@ -81,7 +74,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     }
 
     var colors = new int[target.VertexColors.Count];
-    x = 0;
+    int x = 0;
     foreach (var c in target.VertexColors)
     {
       colors[x++] = c.ToArgb();

@@ -22,19 +22,49 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
         return CastFromModelObject(modelObject.UserText);
 
       case ModelUserText userText:
-        Dictionary<string, ISpecklePropertyGoo> dictionary = new();
-        foreach (KeyValuePair<string, string> entry in userText)
-        {
-          SpecklePropertyGoo value = new() { Value = entry.Value };
-          dictionary.Add(entry.Key, value);
-        }
-
-        Value = dictionary;
-        return true;
+        var processedDictionary = ConvertToNested(userText.ToDictionary(o => o.Key, o => (object)o.Value));
+        return CastFrom(processedDictionary);
 
       default:
         return false;
     }
+  }
+
+  // Property keys may already be concatenated with the `.` char, eg if baked from grasshopper.
+  public Dictionary<string, object> ConvertToNested(Dictionary<string, object> flatDict)
+  {
+    var nestedDict = new Dictionary<string, object>();
+
+    foreach (string keyPath in flatDict.Keys)
+    {
+      var keys = keyPath.Split('.');
+      var current = nestedDict;
+
+      for (int i = 0; i < keys.Length; i++)
+      {
+        var key = keys[i];
+
+        if (i == keys.Length - 1)
+        {
+          current[key] = flatDict[keyPath];
+        }
+        else
+        {
+          if (!current.TryGetValue(key, out var next))
+          {
+            var newDict = new Dictionary<string, object>();
+            current[key] = newDict;
+            current = newDict;
+          }
+          else
+          {
+            current = (Dictionary<string, object>)next;
+          }
+        }
+      }
+    }
+
+    return nestedDict;
   }
 
   private bool CastToModelObject<T>(ref T target)
