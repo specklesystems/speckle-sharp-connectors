@@ -25,7 +25,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
 
   public RevitDocumentStore(
-    ILogger<DocumentModelStore> logger,
     IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
@@ -33,7 +32,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
     ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
-    ILogger<RevitDocumentStore> logger1
+    ILogger<RevitDocumentStore> logger
   )
     : base(logger, jsonSerializer)
   {
@@ -42,7 +41,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _revitContext = revitContext;
     _documentModelStorageSchema = documentModelStorageSchema;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    _logger = logger1;
+    _logger = logger;
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
