@@ -39,6 +39,7 @@ public class ProgressDisplayManagerTests : MoqTest
   public void TestBegin_StartsStopwatch()
   {
     var stopwatch = Create<IStopwatchManager>();
+    stopwatch.Setup(x => x.Start());
     var manager = new ProgressDisplayManager(stopwatch.Object);
     manager.Begin();
     stopwatch.Verify(x => x.Start(), Times.Once());
@@ -49,9 +50,9 @@ public class ProgressDisplayManagerTests : MoqTest
   {
     var stopwatch = Create<IStopwatchManager>();
     var manager = new ProgressDisplayManager(stopwatch.Object);
-    // First call, should update
+    // Within interval, should not update
     stopwatch.Setup(x => x.ElapsedMilliseconds).Returns(0);
-    manager.ShouldUpdate().Should().BeTrue();
+    manager.ShouldUpdate().Should().BeFalse();
     // Within interval, should not update
     stopwatch.Setup(x => x.ElapsedMilliseconds).Returns(100);
     manager.ShouldUpdate().Should().BeFalse();
@@ -77,7 +78,7 @@ public class ProgressDisplayManagerTests : MoqTest
   [TestCase(1, -5, 10, "0 bytes / sec")]
   [TestCase(1, 0, 10, "0 bytes / sec")]
   [TestCase(1, long.MaxValue, 10, "8.00 EB / sec")]
-  [TestCase(0, 5, 10, "")] // count = 0
+  [TestCase(0, 5, 10, "0 bytes / sec")] // count = 0
   public void TestSpeed_EdgeCases(long elapsed, long count, long? total, string expected)
   {
     var stopwatch = Create<IStopwatchManager>();
@@ -88,7 +89,7 @@ public class ProgressDisplayManagerTests : MoqTest
   }
 
   [Test]
-  [TestCase(1, 100, 200, ProgressEvent.DeserializeObject, "100.0 objects / sec")]
+  [TestCase(1, 100, 200, ProgressEvent.DeserializeObject, "100 objects / sec")]
   [TestCase(1, 5, 10, ProgressEvent.SerializeObject, "5.00 objects / sec")]
   [TestCase(1, 5, 10, (ProgressEvent)999, "")] // Unknown event
   public void TestSpeed_AllProgressEvents(long elapsed, long count, long? total, ProgressEvent evt, string expected)

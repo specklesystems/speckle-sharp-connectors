@@ -34,10 +34,6 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   public string CalculateSpeed(ProgressArgs args)
   {
-    if (args.Count == 0)
-    {
-      return string.Empty;
-    }
     var countPerSecond = args.Count / stopwatch.ElapsedSeconds;
 
     switch (args.ProgressEvent)
@@ -74,7 +70,7 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   private static string ThreeNonZeroDigits(double value)
   {
-    if (value < 0 || double.IsPositiveInfinity(value))
+    if (value <= 0 || double.IsPositiveInfinity(value))
     {
       return "0";
     }
