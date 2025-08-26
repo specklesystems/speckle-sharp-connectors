@@ -138,26 +138,24 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
       if (!_csiApplicationService.SapModel.GetModelIsLocked())
       {
-        _logger.LogError("Model unlocked. No access to analysis results.");
+        throw new SpeckleException("Model unlocked. No access to analysis results.");
       }
       else
       {
         var validationResult = _loadCaseManager.ConfigureAndValidateSelectedLoadCases(selectedCasesAndCombinations);
         if (!validationResult.IsValid)
         {
-          _logger.LogError(validationResult.ErrorMessage);
+          throw new SpeckleException(validationResult.ErrorMessage);
         }
-        else
+
+        Base analysisResults = new();
+        foreach (var resultType in requestedResultTypes)
         {
-          Base analysisResults = new();
-          foreach (var resultType in requestedResultTypes)
-          {
-            var extractor = _resultsExtractorFactory.GetExtractor(resultType);
-            objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
-            analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
-          }
-          rootObjectCollection["analysisResults"] = analysisResults;
+          var extractor = _resultsExtractorFactory.GetExtractor(resultType);
+          objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
+          analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
         }
+        rootObjectCollection["analysisResults"] = analysisResults;
       }
     }
 

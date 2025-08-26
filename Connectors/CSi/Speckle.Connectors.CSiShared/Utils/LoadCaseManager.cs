@@ -27,7 +27,7 @@ public class LoadCaseManager
       ConfigureSelectedLoadCases(selectedLoadCases);
 
       // step 2: validate they are complete
-      return ValidateLoadCasesAreComplete(selectedLoadCases);
+      return ValidateSelectedCasesAreComplete(selectedLoadCases);
     }
     catch (Exception ex) when (ex.IsFatal())
     {
@@ -63,9 +63,9 @@ public class LoadCaseManager
     }
   }
 
-  private AnalysisResultsValidation ValidateLoadCasesAreComplete(List<string> selectedLoadCases)
+  private AnalysisResultsValidation ValidateSelectedCasesAreComplete(List<string> selectedCasesAndCombinations)
   {
-    // get status for all cases
+    // get status for all load cases (combinations not included in this API call)
     int numberItems = 0;
     string[] caseNames = [];
     int[] statuses = [];
@@ -81,32 +81,36 @@ public class LoadCaseManager
       return new AnalysisResultsValidation(false, "Failed to retrieve load case status from model.");
     }
 
-    // build lookup dictionary used to check the specific cases / combinations from user selection in ui
-    var statusLookup = caseNames.Zip(statuses).ToDictionary(x => x.First, x => x.Second);
+    // build lookup dictionary for load cases only
+    var caseStatusLookup = caseNames.Zip(statuses).ToDictionary(x => x.First, x => x.Second);
 
-    // check that each selected case is finished
-    var notFinished = new List<string>();
-    foreach (var selectedCase in selectedLoadCases)
+    // separate selected items into cases and combinations
+    var selectedCases = selectedCasesAndCombinations.Where(item => caseStatusLookup.ContainsKey(item)).ToList();
+    var selectedCombinations = selectedCasesAndCombinations.Except(selectedCases).ToList();
+
+    // validate load cases status
+    var notFinishedCases = new List<string>();
+    foreach (var caseName in selectedCases)
     {
-      if (statusLookup.TryGetValue(selectedCase, out int status))
+      int status = caseStatusLookup[caseName];
+      if (status != 4) // 1 = Not run, 2 = Could not start, 3 = Not finished, 4 = Finished
       {
-        if (status != 4) // 1 = Not run, 2 = Could not start, 3 = Not finished, 4 = Finished
-        {
-          notFinished.Add($"{selectedCase}");
-        }
-      }
-      else // NOTE: this should never happen
-      {
-        throw new InvalidOperationException(
-          $"{selectedCase} is not present in the model. Indicates stale cases and / or combinations."
-        );
+        notFinishedCases.Add($"{caseName}");
       }
     }
 
-    if (notFinished.Count != 0)
+    // TODO: Validate load combinations status
+    // for now, assume combinations are valid if we can't validate them
+    if (selectedCombinations.Count != 0)
+    {
+      // combinations validation not implemented - assuming they're valid for now
+      // it'll get complicated, we can't get the status of a combination, so we need to check the constituent cases
+    }
+
+    if (notFinishedCases.Count != 0)
     {
       string errorMessage =
-        $"Analysis not complete for requested cases/combinations: {string.Join(", ", notFinished)}. Run analysis first.";
+        $"Analysis not complete for load cases: {string.Join(", ", notFinishedCases)}. Run analysis first.";
       return new AnalysisResultsValidation(false, errorMessage);
     }
 
