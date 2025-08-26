@@ -4,8 +4,6 @@ using Speckle.Sdk;
 
 namespace Speckle.Connectors.CSiShared.Utils;
 
-public record AnalysisResultsValidation(bool IsValid, string? ErrorMessage = null);
-
 public class LoadCaseManager
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettingsStore;
@@ -19,20 +17,13 @@ public class LoadCaseManager
   /// Responsible for two things. Firstly, we need to setup the results so that only the requested cases and combinations
   /// are published. Secondly, we need to ensure that the requested cases and combinations are actually run.
   /// </summary>
-  public AnalysisResultsValidation ConfigureAndValidateSelectedLoadCases(List<string> selectedLoadCases)
+  public void ConfigureAndValidateSelectedLoadCases(List<string> selectedLoadCases)
   {
-    try
-    {
-      // step 1: configure load cases for output
-      ConfigureSelectedLoadCases(selectedLoadCases);
+    // step 1: configure load cases for output
+    ConfigureSelectedLoadCases(selectedLoadCases);
 
-      // step 2: validate they are complete
-      return ValidateSelectedCasesAreComplete(selectedLoadCases);
-    }
-    catch (Exception ex) when (ex.IsFatal())
-    {
-      return new AnalysisResultsValidation(false, ex.Message);
-    }
+    // step 2: validate they are complete (throws on failure)
+    ValidateSelectedCasesAreComplete(selectedLoadCases);
   }
 
   private void ConfigureSelectedLoadCases(List<string> selectedLoadCases)
@@ -63,7 +54,7 @@ public class LoadCaseManager
     }
   }
 
-  private AnalysisResultsValidation ValidateSelectedCasesAreComplete(List<string> selectedCasesAndCombinations)
+  private void ValidateSelectedCasesAreComplete(List<string> selectedCasesAndCombinations)
   {
     // get status for all load cases (combinations not included in this API call)
     int numberItems = 0;
@@ -78,7 +69,7 @@ public class LoadCaseManager
 
     if (result != 0)
     {
-      return new AnalysisResultsValidation(false, "Failed to retrieve load case status from model.");
+      throw new SpeckleException("Failed to retrieve load case status from model.");
     }
 
     // build lookup dictionary for load cases only
@@ -113,9 +104,7 @@ public class LoadCaseManager
     {
       string errorMessage =
         $"Analysis not complete for load cases: {string.Join(", ", notFinishedCases)}. Run analysis first.";
-      return new AnalysisResultsValidation(false, errorMessage);
+      throw new SpeckleException(errorMessage);
     }
-
-    return new AnalysisResultsValidation(true);
   }
 }
