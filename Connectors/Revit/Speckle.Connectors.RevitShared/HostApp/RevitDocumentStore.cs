@@ -32,7 +32,9 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     DocumentModelStorageSchema documentModelStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
-    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory, ILogger<RevitDocumentStore> logger1)
+    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
+    ILogger<RevitDocumentStore> logger1
+  )
     : base(logger, jsonSerializer)
   {
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
@@ -107,7 +109,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       _logger.LogError(ex.Message);
     }
   }
-  
+
   protected override void LoadState()
   {
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
