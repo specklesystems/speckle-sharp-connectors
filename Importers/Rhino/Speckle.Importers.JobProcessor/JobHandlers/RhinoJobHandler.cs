@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Importers.JobProcessor.Blobs;
@@ -6,6 +7,7 @@ using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
@@ -55,10 +57,10 @@ internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJob
   private static Process StartProcess(string serializedArgs)
   {
     List<string> argList = [serializedArgs];
-
+    string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).NotNull();
     var processStart = new ProcessStartInfo()
     {
-      FileName = "./Speckle.Importers.Rhino.exe",
+      FileName = $"{path}/Speckle.Importers.Rhino.exe",
       Environment = { },
       RedirectStandardError = true,
       RedirectStandardOutput = true,
