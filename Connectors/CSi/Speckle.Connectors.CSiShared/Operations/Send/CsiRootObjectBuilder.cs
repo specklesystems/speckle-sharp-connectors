@@ -121,7 +121,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     }
 
     // Extract analysis results (if applicable)
-    // NOTE: used in the results extraction to extract results for objects being published only
+    // NOTE: objectSelectionSummary used to extract results for objects being published ONLY
+    // NOTE: etabs is complicated and we can't get specifics from original selection
     var objectSelectionSummary = GetObjectSummary(csiObjects);
     var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
     var requestedResultTypes = _converterSettings.Current.SelectedResultTypes;
@@ -135,21 +136,28 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         );
       }
 
-      if (!_csiApplicationService.SapModel.GetModelIsLocked()) // Don't know if there's a better way to ensure analysis is run
+      if (!_csiApplicationService.SapModel.GetModelIsLocked())
       {
         _logger.LogError("Model unlocked. No access to analysis results.");
       }
       else
       {
-        _loadCaseManager.ConfigureSelectedLoadCases(selectedCasesAndCombinations);
-        Base analysisResults = new();
-        foreach (var resultType in requestedResultTypes)
+        var validationResult = _loadCaseManager.ConfigureAndValidateSelectedLoadCases(selectedCasesAndCombinations);
+        if (!validationResult.IsValid)
         {
-          var extractor = _resultsExtractorFactory.GetExtractor(resultType);
-          objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
-          analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+          _logger.LogError(validationResult.ErrorMessage);
         }
-        rootObjectCollection["analysisResults"] = analysisResults;
+        else
+        {
+          Base analysisResults = new();
+          foreach (var resultType in requestedResultTypes)
+          {
+            var extractor = _resultsExtractorFactory.GetExtractor(resultType);
+            objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
+            analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+          }
+          rootObjectCollection["analysisResults"] = analysisResults;
+        }
       }
     }
 

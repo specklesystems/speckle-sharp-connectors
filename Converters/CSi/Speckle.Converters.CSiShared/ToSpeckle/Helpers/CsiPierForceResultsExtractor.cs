@@ -54,7 +54,7 @@ public class CsiPierForceResultsExtractor : IApplicationResultsExtractor
 
     if (success != 0 || numberResults == 0)
     {
-      throw new InvalidOperationException("Pier force extraction failed."); // shouldn't fail silently
+      throw new InvalidOperationException("Pier force extraction failed.");
     }
 
     // Step 3: organise arrays for dictionary processor
