@@ -19,7 +19,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
     _revitUtils = revitUtils;
   }
 
-  private readonly List<ElementId> _elementIdsForTopLevelGroup = new();
+  private readonly List<ElementId> _elementIdsForTopLevelGroup = [];
 
   public void AddToTopLevelGroup(Element revitElement) => _elementIdsForTopLevelGroup.Add(revitElement.Id);
 
@@ -43,7 +43,7 @@ public class RevitGroupBaker : TraversalContextUnpacker
 
     foreach (var group in groups)
     {
-      var subgroupTypeIds = new List<ElementId>() { group.GroupType.Id };
+      var subgroupTypeIds = new List<ElementId> { group.GroupType.Id };
       CollectSubGroupTypeIds(document, group, subgroupTypeIds);
       document.Delete(subgroupTypeIds);
     }
