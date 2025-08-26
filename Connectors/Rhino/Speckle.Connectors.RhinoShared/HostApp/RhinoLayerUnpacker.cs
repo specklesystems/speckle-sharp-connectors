@@ -14,6 +14,7 @@ namespace Speckle.Connectors.Rhino.HostApp;
 /// </summary>
 public class RhinoLayerUnpacker
 {
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
   private readonly Dictionary<int, Collection> _layerCollectionCache = new();
 
   private static readonly string s_pathSeparator =
@@ -24,6 +25,11 @@ public class RhinoLayerUnpacker
 #endif
   private static readonly string[] s_pathSeparatorSplit = [s_pathSeparator];
 
+  public RhinoLayerUnpacker(RhinoLayerHelper rhinoLayerHelper)
+  {
+    _rhinoLayerHelper = rhinoLayerHelper;
+  }
+
   /// <summary>
   /// Use this method to get all of the layers that correspond to collection created in the root collection.
   /// </summary>
@@ -31,20 +37,16 @@ public class RhinoLayerUnpacker
   /// <exception cref="SpeckleException">Throws when a layer could not be retrieved from a stored collection application id</exception>
   public IEnumerable<Layer> GetUsedLayers()
   {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-
     foreach (string layerId in _layerCollectionCache.Values.Select(o => o.applicationId ?? string.Empty).ToList())
     {
-      if (Guid.TryParse(layerId, out Guid layerGuid))
+      var layer = _rhinoLayerHelper.GetLayer(layerId);
+      if (layer != null)
       {
-        if (currentDoc.Layers.FindId(layerGuid) is Layer layer)
-        {
-          yield return layer;
-        }
-        else
-        {
-          throw new SpeckleException($"Could not retrieve layer with guid: {layerId}.");
-        }
+        yield return layer;
+      }
+      else if (Guid.TryParse(layerId, out _))
+      {
+        throw new SpeckleException($"Could not retrieve layer with guid: {layerId}.");
       }
       else
       {

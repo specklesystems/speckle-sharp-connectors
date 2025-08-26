@@ -151,6 +151,7 @@
   <Folder Name="/Connectors/Rhino/8/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="C#" />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/Shared/">
@@ -184,6 +185,9 @@
     <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
   </Folder>
   <Folder Name="/Importers/Rhino/">
+    <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj" Type="C#">
+      <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />
+    </Project>
     <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />
   </Folder>
   <Folder Name="/Sdk/">
@@ -199,7 +203,7 @@
     <Project Path="Sdk\Speckle.Performance\Speckle.Performance.csproj" />
     <Project Path="Sdk\Speckle.Testing\Speckle.Testing.csproj" />
   </Folder>
-  <Project Path="..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
-  <Project Path="..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj" />
-  <Project Path="..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj" />
+  <Project Path="../speckle-sharp-sdk/src/Speckle.Objects/Speckle.Objects.csproj" />
+  <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk.Dependencies/Speckle.Sdk.Dependencies.csproj" />
+  <Project Path="../speckle-sharp-sdk/src/Speckle.Sdk/Speckle.Sdk.csproj" />
 </Solution>

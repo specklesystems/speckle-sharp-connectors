@@ -35,8 +35,13 @@ public static class PropertyHelpers
       }
     };
 
-  internal static dynamic? ConvertPropertyValue(NAV.VariantData value, string units)
+  internal static dynamic? ConvertPropertyValue(NAV.VariantData? value, string units)
   {
+    if (value == null)
+    {
+      return null;
+    }
+
     if (s_typeHandlers.TryGetValue(value.DataType, out var handler))
     {
       return handler(value, units);
@@ -54,10 +59,12 @@ public static class PropertyHelpers
   /// <param name="baseObject">The object to which the property is to be added. Can be either a Base object or a Dictionary.</param>
   /// <param name="propertyName">The name of the property to add.</param>
   /// <param name="value">The value of the property.</param>
-  internal static void AddPropertyIfNotNullOrEmpty(object baseObject, string propertyName, object value)
+  internal static void AddPropertyIfNotNullOrEmpty(object baseObject, string propertyName, object? value)
   {
     switch (value)
     {
+      case null:
+        break; // Do not add null values
       case string stringValue:
       {
         if (!string.IsNullOrEmpty(stringValue))
