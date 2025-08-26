@@ -311,7 +311,7 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+    DB.GraphicsStyle? bjk; // ask ogu why this variable is named like this
 
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
@@ -324,12 +324,40 @@ public sealed class DisplayValueExtractor
     }
 
 #if REVIT2023_OR_GREATER
-    if (bjk?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
+    var builtInCategory = bjk?.GraphicsStyleCategory.BuiltInCategory;
+
+    if (builtInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
+
+    // [CNX-2255] - Skip sketch-related geometry that shouldn't be visible
+    // Addresses the issue where sketch lines from in-place masses, stair railings, etc. appear on publish
+    // Seems to only occur with grouped in-places masses etc. but not sure. This is most robust way
+
+    if (
+      builtInCategory == DB.BuiltInCategory.OST_SketchLines
+      || builtInCategory == DB.BuiltInCategory.OST_CLines
+      || builtInCategory == DB.BuiltInCategory.OST_WeakDims
+    )
+    {
+      return true;
+    }
+
 #else
-    if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    var builtInCategoryId = bjk?.GraphicsStyleCategory.Id.IntegerValue;
+
+    if (builtInCategoryId == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+    {
+      return true;
+    }
+
+    // [CNX-2255] - Skip sketch-related geometry for legacy versions
+    if (
+      builtInCategoryId == (int)DB.BuiltInCategory.OST_SketchLines
+      || builtInCategoryId == (int)DB.BuiltInCategory.OST_CLines
+      || builtInCategoryId == (int)DB.BuiltInCategory.OST_WeakDims
+    )
     {
       return true;
     }
