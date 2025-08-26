@@ -34,9 +34,9 @@ public class PropertiesExtractor
   private Dictionary<string, object?> GetUserDict(RhinoObject rhObject)
   {
     Dictionary<string, object?> userDict = new();
-    if (rhObject.UserDictionary != null && rhObject.UserDictionary.Count > 0)
+    if (rhObject.Attributes.UserDictionary != null && rhObject.Attributes.UserDictionary.Count > 0)
     {
-      ParseArchivableToDictionary(userDict, rhObject.UserDictionary);
+      ParseArchivableToDictionary(userDict, rhObject.Attributes.UserDictionary);
     }
 
     return userDict;
@@ -72,6 +72,7 @@ public class PropertiesExtractor
           continue;
 
         default:
+          target[key] = obj.ToString();
           continue;
       }
     }
