@@ -26,11 +26,11 @@ public static class Program
       TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
         logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
 
-      var importer = serviceProvider.GetRequiredService<ImportRunner>();
+      var importer = serviceProvider.GetRequiredService<ImporterInstance>();
 
       await Task.Run(async () =>
         {
-          await importer.Run(args);
+          await importer.Run(args, CancellationToken.None);
         })
         .ConfigureAwait(false);
     }

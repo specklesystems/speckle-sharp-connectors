@@ -12,6 +12,7 @@ public sealed class SketchupConfig : IFileTypeConfig
   /// <summary>
   /// Clean up step to strip imported meshes of their NGon data, leaving only the triangle/quad data behind.
   /// This works around a bug in the sketchup importer creating invalid ngons.
+  /// https://discourse.mcneel.com/t/meshes-imported-from-skp-file-have-invalid-non-cww-ngons/208028
   /// </summary>
   /// <remarks>
   /// Without this cleanup step, skp imports send incorrect meshes to speckle
