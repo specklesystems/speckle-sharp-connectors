@@ -51,7 +51,7 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
 
         if (args.Count >= args.Total)
         {
-          onOperationProgressed.Report(new("Finalizing cache...", null));
+          onOperationProgressed.Report(new("Finalizing cache.  May take a while for large models...", null));
         }
         else
         {
