@@ -1,6 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using Dapper;
+﻿using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Importers.JobProcessor.Domain;
@@ -11,7 +9,6 @@ namespace Speckle.Importers.JobProcessor;
 
 public static class Program
 {
-  [STAThread]
   public static async Task Main()
   {
     ILogger? logger = null;

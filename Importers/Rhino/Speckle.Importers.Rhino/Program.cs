@@ -15,7 +15,6 @@ public static class Program
 
   public static async Task Main(string[] args)
   {
-    Thread.Sleep(2000);
     ILogger? logger = null;
     try
     {
