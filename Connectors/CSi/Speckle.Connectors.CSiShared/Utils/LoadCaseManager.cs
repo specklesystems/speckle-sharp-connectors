@@ -82,7 +82,9 @@ public class LoadCaseManager
     }
 
     // build lookup dictionary for load cases only
-    var caseStatusLookup = caseNames.Zip(statuses).ToDictionary(x => x.First, x => x.Second);
+    var caseStatusLookup = caseNames
+      .Zip(statuses, (name, status) => new { name, status })
+      .ToDictionary(x => x.name, x => x.status);
 
     // separate selected items into cases and combinations
     var selectedCases = selectedCasesAndCombinations.Where(item => caseStatusLookup.ContainsKey(item)).ToList();
