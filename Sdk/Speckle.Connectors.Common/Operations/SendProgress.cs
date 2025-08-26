@@ -48,9 +48,18 @@ public class SendProgress(IProgressDisplayManager progressDisplayManager, ISendP
         {
           return;
         }
-        onOperationProgressed.Report(
-          new($"Caching... ({args.Count} objects)", progressDisplayManager.CalculatePercentage(args))
-        );
+
+        if (args.Count >= args.Total)
+        {
+          onOperationProgressed.Report(new("Finalizing cache...", null));
+        }
+        else
+        {
+          onOperationProgressed.Report(
+            new($"Caching... ({args.Count} objects)", progressDisplayManager.CalculatePercentage(args))
+          );
+        }
+
         break;
       case ProgressEvent.UploadingObjects:
       case ProgressEvent.UploadBytes:
