@@ -225,7 +225,17 @@ public class RevitRootObjectBuilder(
       }
     }
 
-    if (results.All(x => x.Status == Status.ERROR) || skippedObjectCount == atomicObjectCount)
+    // if we ended up skipping everything, there is a reason for this, so we shouldn't hit users with a
+    // "failed to convert all" message. at least this way, they can check their inputs
+    // this can occur if a published view contains only unsupported objects or if user trying to ONLY send linked
+    // model docs but the setting is disabled
+    if (skippedObjectCount == atomicObjectCount)
+    {
+      throw new SpeckleException("No supported objects visible. Update publish filter or check publish settings.");
+    }
+
+    // this is, I suppose, fully on us?
+    if (results.All(x => x.Status == Status.ERROR))
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
