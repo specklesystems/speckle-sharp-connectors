@@ -217,11 +217,23 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
 
       // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      await Commands.SetFilterObjectIds(
-        modelCard.ModelCardId.NotNull(),
-        modelCard.SendFilter.IdMap,
-        newSelectedObjectIds
-      );
+      // EVERYBODY RELAX, IM JUST TRYING SOMETHING
+      if (modelCard.SendFilter is RevitSelectionFilter)
+      {
+        await Commands.SetFilterObjectIds(
+          modelCard.ModelCardId.NotNull(),
+          modelCard.SendFilter.IdMap,
+          modelCard.SendFilter.SelectedObjectIds
+        );
+      }
+      else
+      {
+        await Commands.SetFilterObjectIds(
+          modelCard.ModelCardId.NotNull(),
+          modelCard.SendFilter.IdMap,
+          newSelectedObjectIds
+        );
+      }
     }
 
     return documentElementContexts;
