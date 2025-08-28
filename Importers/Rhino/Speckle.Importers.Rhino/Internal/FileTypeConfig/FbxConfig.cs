@@ -10,7 +10,7 @@ public sealed class FbxConfig : IFileTypeConfig
     new()
     {
       MapFbxYtoRhinoZ = true,
-      ImportLights = true, // untested, perhaps they come through as points...
+      ImportLights = false, // Speckle doesn't support LightObject s
       ImportCameras = true,
     };
 
