@@ -4,8 +4,9 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Runtime.InProcess;
+using Speckle.Connectors.Common.Extensions;
+using Speckle.Connectors.Logging;
 using Speckle.Importers.Rhino.Internal.FileTypeConfig;
-using Speckle.Sdk;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Rhino.Internal;
@@ -16,11 +17,21 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
   private readonly RhinoCore _rhinoInstance = new(["/netcore-8"], WindowStyle.NoWindow);
   private static readonly JsonSerializerOptions s_serializerOptions =
     new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, };
-  private readonly RhinoDoc _rhinoDoc = RhinoDoc.CreateHeadless(null);
+
+  private RhinoDoc? _rhinoDoc;
 
   public async Task Run(string[] args, CancellationToken cancellationToken)
   {
     var a = JsonSerializer.Deserialize<ImporterArgs>(args[0], s_serializerOptions);
+    using var scopeJobId = ActivityScope.SetTag("jobId", a.JobId);
+    // using var scopeJobType = ActivityScope.SetTag("jobType", a.JobType);
+    using var scopeAttempt = ActivityScope.SetTag("job.attempt", a.Attempt.ToString());
+    using var scopeServerUrl = ActivityScope.SetTag("serverUrl", a.Account.serverInfo.url);
+    using var scopeProjectId = ActivityScope.SetTag("projectId", a.ProjectId);
+    using var scopeModelId = ActivityScope.SetTag("modelId", a.ModelId);
+    using var scopeBlobId = ActivityScope.SetTag("blobId", a.BlobId);
+    UserActivityScope.AddUserScope(a.Account);
+
     var result = await TryImport(a, cancellationToken);
     var serializedResult = JsonSerializer.Serialize(result, s_serializerOptions);
     File.WriteAllLines(a.ResultsPath, [serializedResult]);
@@ -45,15 +56,9 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
   {
     try
     {
-      var config = GetConfig(Path.GetExtension(args.FilePath));
-
+      using var config = GetConfig(Path.GetExtension(args.FilePath));
+      _rhinoDoc = config.OpenInHeadlessDocument(args.FilePath);
       RhinoDoc.ActiveDoc = _rhinoDoc;
-      if (!_rhinoDoc.Import(args.FilePath, config.ImportOptions))
-      {
-        throw new SpeckleException("Rhino could not import this file");
-      }
-
-      config.PreProcessDocument(_rhinoDoc);
 
       var version = await sender.Send(args.ProjectId, args.ModelId, args.Account, cancellationToken);
       return version;
@@ -68,6 +73,8 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
     extension.ToLowerInvariant() switch
     {
       ".skp" => new SketchupConfig(),
+      ".obj" => new ObjConfig(),
+      ".3dm" => new Rhino3dmConfig(),
       _ => new DefaultConfig(),
     };
 
@@ -76,7 +83,7 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
     //There is a bug in Rhino.Inside (>=8.x)
     //that will cause an unmanaged crash when disposing 3dm documents
     // https://discourse.mcneel.com/t/rhino-inside-fatal-app-crashes-when-disposing-headless-documents/208673
-    _rhinoDoc.Dispose();
+    _rhinoDoc?.Dispose();
     _rhinoInstance.Dispose();
   }
 }

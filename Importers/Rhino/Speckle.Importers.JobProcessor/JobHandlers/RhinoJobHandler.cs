@@ -22,13 +22,16 @@ internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJob
   public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
     using var file = await fileDownloader.DownloadFile(job, client, cancellationToken);
-    var importerArgs = new ImporterArgs()
+    var importerArgs = new ImporterArgs
     {
       FilePath = file.FileInfo.FullName,
       ResultsPath = $"{file.FileInfo.DirectoryName}/results.json",
       Account = client.Account,
       ModelId = job.Payload.ModelId,
-      ProjectId = job.Payload.ProjectId
+      ProjectId = job.Payload.ProjectId,
+      JobId = job.Id,
+      BlobId = job.Payload.BlobId,
+      Attempt = job.Attempt,
     };
     await RunSubProcess(importerArgs, cancellationToken);
     var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);

@@ -6,11 +6,14 @@ namespace Speckle.Importers.JobProcessor.JobHandlers;
 //Needs to be aligned between JobProcess and Rhino Importer
 internal readonly struct ImporterArgs
 {
-  public string FilePath { get; init; }
-  public string ResultsPath { get; init; }
-  public string ProjectId { get; init; }
-  public string ModelId { get; init; }
-  public Account Account { get; init; }
+  public required string FilePath { get; init; }
+  public required string JobId { get; init; }
+  public required string BlobId { get; init; }
+  public required int Attempt { get; init; }
+  public required string ResultsPath { get; init; }
+  public required string ProjectId { get; init; }
+  public required string ModelId { get; init; }
+  public required Account Account { get; init; }
 }
 
 public readonly struct ImporterResponse
