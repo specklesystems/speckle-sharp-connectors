@@ -216,24 +216,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         newSelectedObjectIds.Add(element.UniqueId);
       }
 
-      // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      // EVERYBODY RELAX, IM JUST TRYING SOMETHING
-      if (modelCard.SendFilter is RevitSelectionFilter)
-      {
-        await Commands.SetFilterObjectIds(
-          modelCard.ModelCardId.NotNull(),
-          modelCard.SendFilter.IdMap,
-          modelCard.SendFilter.SelectedObjectIds
-        );
-      }
-      else
-      {
-        await Commands.SetFilterObjectIds(
-          modelCard.ModelCardId.NotNull(),
-          modelCard.SendFilter.IdMap,
-          newSelectedObjectIds
-        );
-      }
+      // For selection filters: preserve original selection intent even when elements are deleted/restored
+      // For categories/views filters: SelectedObjectIds already updated by RefreshObjectIds(), so this maintains consistency
+      // IdMap still gets updated for proper change tracking and expiry detection
+      await Commands.SetFilterObjectIds(
+        modelCard.ModelCardId.NotNull(),
+        modelCard.SendFilter.IdMap,
+        modelCard.SendFilter.SelectedObjectIds
+      );
     }
 
     return documentElementContexts;
