@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 
@@ -51,13 +52,27 @@ public class ClassPropertiesExtractor
       // get workset name
       if (!_worksetCache.TryGetValue(worksetId.Value, out var worksetName))
       {
-        DB.Workset workset = _converterSettings.Current.Document.GetWorksetTable().GetWorkset(element.WorksetId);
-        worksetName = workset.Name;
-        _worksetCache[worksetId.Value] = worksetName;
+        // FIX: [CNX-2414] use the element's own document instead of the converter settings document, preventing
+        // null reference exceptions when processing elements from linked models where workset exists in linked
+        // document but not in the main document
+        try
+        {
+          DB.Workset workset = element.Document.GetWorksetTable().GetWorkset(element.WorksetId);
+          worksetName = workset?.Name ?? "Unknown Workset";
+          _worksetCache[worksetId.Value] = worksetName;
+        }
+        catch (Exception ex) when (ex.IsFatal())
+        {
+          // fallback: if we can't get the workset for any reason (e.g., workset doesn't exist),
+          // provide a safe default instead of crashing (I don't think a workset name prop is cause for a fail!)
+          worksetName = "Unknown Workset";
+          _worksetCache[worksetId.Value] = worksetName;
+        }
       }
 
       elementProperties.Add("worksetName", worksetName);
     }
+
     return elementProperties;
   }
 }

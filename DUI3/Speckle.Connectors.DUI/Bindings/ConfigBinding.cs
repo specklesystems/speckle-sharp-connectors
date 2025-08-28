@@ -208,7 +208,7 @@ public class ConnectorConfig
 
 public class GlobalConfig
 {
-  public bool IsUpdateNotificationEnabled { get; set; } = true;
+  public bool IsUpdateNotificationDisabled { get; set; }
 }
 
 public class AccountsConfig

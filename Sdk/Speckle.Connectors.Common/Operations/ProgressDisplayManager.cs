@@ -11,13 +11,6 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   public void Begin() => stopwatch.Start();
 
-  private long _lastCount;
-  public long LastCount
-  {
-    get => _lastCount;
-    set => _lastCount = value;
-  }
-
   public bool ShouldUpdate()
   {
     if (stopwatch.ElapsedMilliseconds < _lastMs + UPDATE_INTERVAL)
@@ -41,12 +34,7 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   public string CalculateSpeed(ProgressArgs args)
   {
-    if (args.Count == 0)
-    {
-      return string.Empty;
-    }
-    var countPerSecond = (args.Count - _lastCount) / stopwatch.ElapsedSeconds;
-    Interlocked.Exchange(ref _lastCount, args.Count);
+    var countPerSecond = args.Count / stopwatch.ElapsedSeconds;
 
     switch (args.ProgressEvent)
     {
@@ -82,7 +70,7 @@ public class ProgressDisplayManager(IStopwatchManager stopwatch) : IProgressDisp
 
   private static string ThreeNonZeroDigits(double value)
   {
-    if (value < 0 || double.IsPositiveInfinity(value))
+    if (value <= 0 || double.IsPositiveInfinity(value))
     {
       return "0";
     }
