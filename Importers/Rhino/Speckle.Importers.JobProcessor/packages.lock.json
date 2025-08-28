@@ -42,24 +42,6 @@
         "resolved": "1.14.1",
         "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
-      "RhinoCommon": {
-        "type": "Direct",
-        "requested": "[8.21.25188.17001, )",
-        "resolved": "8.21.25188.17001",
-        "contentHash": "Wo6JXheyDBvilyIwDY6xZCQJC4170jzAlTSlMgh8yokUY+vYyCl4KJVXZofIOynNt/xx5wLqb2On5gZZekXR6w==",
-        "dependencies": {
-          "System.Drawing.Common": "7.0.0"
-        }
-      },
-      "RhinoWindows": {
-        "type": "Direct",
-        "requested": "[8.21.25188.17001, )",
-        "resolved": "8.21.25188.17001",
-        "contentHash": "9zqCorcLRBeiW/j1RTwUS4E7bnZetAdA9WDdtd/AQccjOpxdtw76wdN+ciyQ6qslseWkwZ9qSBeh7QaM800Ntw==",
-        "dependencies": {
-          "RhinoCommon": "[8.21.25188.17001]"
-        }
-      },
       "Serilog.Extensions.Logging": {
         "type": "Direct",
         "requested": "[8.0.0, )",
@@ -176,11 +158,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "Microsoft.Win32.SystemEvents": {
-        "type": "Transitive",
-        "resolved": "7.0.0",
-        "contentHash": "2nXPrhdAyAzir0gLl8Yy8S5Mnm/uBSQQA7jEsILOS1MTyS7DbmV1NgViMtvV1sfCD1ebITpNwb1NIinKeJgUVQ=="
-      },
       "Speckle.Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.2",
@@ -214,14 +191,6 @@
         "contentHash": "CSlb5dUp1FMIkez9Iv5EXzpeq7rHryVNqwJMWnpq87j9zWZexaEMdisDktMsnnrzKM6ahNrsTkjqNodTBPBxtQ==",
         "dependencies": {
           "SQLitePCLRaw.core": "2.1.4"
-        }
-      },
-      "System.Drawing.Common": {
-        "type": "Transitive",
-        "resolved": "7.0.0",
-        "contentHash": "KIX+oBU38pxkKPxvLcLfIkOV5Ien8ReN78wro7OF5/erwcmortzeFx+iBswlh2Vz6gVne0khocQudGwaO1Ey6A==",
-        "dependencies": {
-          "Microsoft.Win32.SystemEvents": "7.0.0"
         }
       },
       "System.Memory": {
@@ -288,6 +257,15 @@
           "Rhino.Inside": "[8.0.7-beta, )",
           "Speckle.Connectors.RhinoImporter": "[1.0.0, )",
           "Speckle.Converters.Rhino8": "[1.0.0, )"
+        }
+      },
+      "Grasshopper": {
+        "type": "CentralTransitive",
+        "requested": "[8.9.24194.18121, )",
+        "resolved": "8.0.23304.9001",
+        "contentHash": "L1Cse6nAxryzcZ7jsu3WzBiG9BYtgYsaNbRV+p55N+THKTFGmXx1PdBbiWtuxK9kB4jyuLVpeV8XBiYlSGA1Vw==",
+        "dependencies": {
+          "RhinoCommon": "[8.0.23304.9001]"
         }
       },
       "Microsoft.Extensions.DependencyInjection": {

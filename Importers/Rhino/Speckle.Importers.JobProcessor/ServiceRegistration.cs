@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Importers.JobProcessor.Blobs;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Sdk;
 
@@ -14,6 +15,7 @@ internal static class ServiceRegistration
     serviceCollection.AddLoggingConfig();
     serviceCollection.AddTransient<JobProcessorInstance>();
     serviceCollection.AddTransient<Repository>();
+    serviceCollection.AddTransient<ImportJobFileDownloader>();
     return serviceCollection;
   }
 

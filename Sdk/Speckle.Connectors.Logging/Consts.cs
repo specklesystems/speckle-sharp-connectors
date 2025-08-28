@@ -12,6 +12,7 @@ public static class Consts
   public const string RUNTIME_NAME = "runtime.name";
   public const string USER_ID = "user.id";
   public const string USER_DISTINCT_ID = "user.distinctId";
+  public const string USER_SERVER_URL = "user.server_url";
   public const string TRACING_SOURCE = "speckle";
 
   /// <summary>
