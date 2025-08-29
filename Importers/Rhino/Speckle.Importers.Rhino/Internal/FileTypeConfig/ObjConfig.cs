@@ -14,7 +14,6 @@ public sealed class ObjConfig : IFileTypeConfig
       UseObjObjectsAs = FileObjReadOptions.UseObjOsAs.ObjObjectsAsObjects,
       IgnoreTextures = true, //We don't support MTL uploads, so no point trying to find a MTL file...
     };
-  private readonly DefaultConfig _defaultConfig = new();
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
@@ -35,5 +34,5 @@ public sealed class ObjConfig : IFileTypeConfig
     }
   }
 
-  public void Dispose() => _defaultConfig.Dispose();
+  public void Dispose() { }
 }
