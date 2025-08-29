@@ -33,7 +33,11 @@ public class ReceiveOperationTests : MoqTest
     var threadContext = Create<IThreadContext>();
 
     var @base = new TestBase();
-    var account = new Account { userInfo = new(), };
+    var account = new Account
+    {
+      userInfo = new(),
+      serverInfo = new ServerInfo() { url = "https://myserver.example.com" }
+    };
     var version = new Speckle.Sdk.Api.GraphQL.Models.Version();
     var projectName = "projectName";
     var modelName = "modelName";
