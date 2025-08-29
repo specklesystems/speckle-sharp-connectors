@@ -89,11 +89,7 @@ internal sealed class Repository(ILogger<Repository> logger)
     return await connection.QueryFirstOrDefaultAsync<FileimportJob?>(command);
   }
 
-  public async Task ReturnJobToQueued(
-    IDbConnection connection,
-    string jobId,
-    CancellationToken cancellationToken
-  )
+  public async Task ReturnJobToQueued(IDbConnection connection, string jobId, CancellationToken cancellationToken)
   {
     await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
