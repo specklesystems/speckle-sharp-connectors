@@ -26,7 +26,6 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
   private static readonly string[] s_releaseKeys =
