@@ -59,6 +59,7 @@ internal sealed class Repository(ILogger<Repository> logger)
               WHERE ( --queued job
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
+                  AND "attempt" < "maxAttempt"
               )
               OR ( --timed job left on processing state
                   (payload ->> 'fileType') = ANY(@FileTypes)
@@ -86,6 +87,11 @@ internal sealed class Repository(ILogger<Repository> logger)
     );
 
     return await connection.QueryFirstOrDefaultAsync<FileimportJob?>(command);
+  }
+
+  public async Task ReturnJobToQueued(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
 
   public async Task SetJobStatus(
