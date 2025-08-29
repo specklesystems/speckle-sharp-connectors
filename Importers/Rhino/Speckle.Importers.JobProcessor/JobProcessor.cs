@@ -53,7 +53,10 @@ internal sealed class JobProcessorInstance(
       try
       {
         JobStatus jobStatus = await AttemptJob(job, cancellationToken);
-        await repository.SetJobStatus(connection, job.Id, jobStatus, cancellationToken);
+        if (jobStatus == jobStatus.QUEUED)
+        {
+          await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
+        }
         activity?.SetStatus(SdkActivityStatusCode.Ok);
       }
       catch (Exception ex)
