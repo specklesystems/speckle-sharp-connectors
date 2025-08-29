@@ -215,13 +215,6 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         modelCard.SendFilter.IdMap[element.Id.ToString()] = element.UniqueId;
         newSelectedObjectIds.Add(element.UniqueId);
       }
-
-      // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      await Commands.SetFilterObjectIds(
-        modelCard.ModelCardId.NotNull(),
-        modelCard.SendFilter.IdMap,
-        newSelectedObjectIds
-      );
     }
 
     return documentElementContexts;
