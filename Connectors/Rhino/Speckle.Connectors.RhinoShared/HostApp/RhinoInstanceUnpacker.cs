@@ -13,14 +13,17 @@ namespace Speckle.Connectors.Rhino.HostApp;
 public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
 {
   private readonly IInstanceObjectsManager<RhinoObject, List<string>> _instanceObjectsManager;
+  private readonly RhinoLayerHelper _rhinoLayerHelper;
   private readonly ILogger<RhinoInstanceUnpacker> _logger;
 
   public RhinoInstanceUnpacker(
     IInstanceObjectsManager<RhinoObject, List<string>> instanceObjectsManager,
+    RhinoLayerHelper rhinoLayerHelper,
     ILogger<RhinoInstanceUnpacker> logger
   )
   {
     _instanceObjectsManager = instanceObjectsManager;
+    _rhinoLayerHelper = rhinoLayerHelper;
     _logger = logger;
   }
 
@@ -109,7 +112,12 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
 
       _instanceObjectsManager.AddDefinitionProxy(instance.InstanceDefinition.Id.ToString(), definition);
 
-      foreach (var obj in instance.InstanceDefinition.GetObjects())
+      // NOTE: InstanceDefinition.GetObjects() returns all constituent objects of a block, but those constituent
+      // objects can be on layers, that are not visible. The publish should respect that.
+      // See request: [CNX-2254](https://linear.app/speckle/issue/CNX-2254/rhino-publish-blocks-with-hidden-objects)
+      var allDefinitionObjects = instance.InstanceDefinition.GetObjects();
+      var visibleDefinitionObjects = _rhinoLayerHelper.FilterByLayerVisibility(allDefinitionObjects);
+      foreach (var obj in visibleDefinitionObjects)
       {
         definition.objects.Add(obj.Id.ToString());
         if (obj is InstanceObject localInstance)
