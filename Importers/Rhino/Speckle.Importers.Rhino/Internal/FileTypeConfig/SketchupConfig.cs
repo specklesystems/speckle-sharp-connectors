@@ -1,17 +1,37 @@
 using Rhino;
-using Rhino.Collections;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 public sealed class SketchupConfig : IFileTypeConfig
 {
-  public ArchivableDictionary? ImportOptions => null;
+  private readonly DefaultConfig _defaultConfig = new();
+
+  public RhinoDoc OpenInHeadlessDocument(string filePath)
+  {
+    var doc = RhinoDoc.CreateHeadless(null);
+    try
+    {
+      if (!doc.Import(filePath, null))
+      {
+        throw new SpeckleException("Rhino could not import this file");
+      }
+      PreProcessDocument(doc);
+      return doc;
+    }
+    catch
+    {
+      doc.Dispose();
+      throw;
+    }
+  }
 
   /// <summary>
   /// Clean up step to strip imported meshes of their NGon data, leaving only the triangle/quad data behind.
   /// This works around a bug in the sketchup importer creating invalid ngons.
+  /// https://discourse.mcneel.com/t/meshes-imported-from-skp-file-have-invalid-non-cww-ngons/208028
   /// </summary>
   /// <remarks>
   /// Without this cleanup step, skp imports send incorrect meshes to speckle
@@ -22,7 +42,7 @@ public sealed class SketchupConfig : IFileTypeConfig
   /// would be invalid without this step
   /// </remarks>
   /// <param name="doc"></param>
-  public void PreProcessDocument(RhinoDoc doc)
+  private static void PreProcessDocument(RhinoDoc doc)
   {
     // Process regular meshes in the document
     foreach (var obj in doc.Objects.GetObjectList(ObjectType.Mesh))
@@ -43,4 +63,6 @@ public sealed class SketchupConfig : IFileTypeConfig
 
     //TODO: same for meshes inside blocks
   }
+
+  public void Dispose() => _defaultConfig.Dispose();
 }
