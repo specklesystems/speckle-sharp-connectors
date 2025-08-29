@@ -177,7 +177,7 @@ public class RhinoMaterialUnpacker
   }
 
   // converts a rhino material to a rhino render material
-  private RenderMaterial? ConvertMaterialToRenderMaterial(Material material)
+  private static RenderMaterial? ConvertMaterialToRenderMaterial(Material material)
   {
     // get physically based render material
     Material pbMaterial = material;
@@ -188,7 +188,18 @@ public class RhinoMaterialUnpacker
       pbMaterial.ToPhysicallyBased();
     }
 
-    return RenderMaterial.FromMaterial(pbMaterial, null);
+    var result = RenderMaterial.FromMaterial(pbMaterial, null);
+
+    if (result is null)
+    {
+      // We're seeing some weird behaviour running in the File Importer
+      // where RenderMaterial.FromMaterial returns null.
+      // Could be related to headless RhinoDoc or windowless RhinoCore (unsure the cause)
+      // CreateBasicMaterial appears to work, so we'll use it as fall back
+      result = RenderMaterial.CreateBasicMaterial(pbMaterial, null);
+    }
+
+    return result;
   }
 
   private SpeckleRenderMaterial ConvertRenderMaterialToSpeckle(RenderMaterial renderMaterial)
