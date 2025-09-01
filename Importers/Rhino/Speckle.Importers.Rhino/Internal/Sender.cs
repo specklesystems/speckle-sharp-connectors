@@ -16,6 +16,7 @@ internal sealed class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+  Application application,
   Progress progress,
   ILogger<Sender> logger
 )
@@ -50,7 +51,7 @@ internal sealed class Sender(
       buildResults.RootObject,
       projectId,
       modelId,
-      "Rhino File Importer",
+      application.Name,
       null,
       account,
       progress,
