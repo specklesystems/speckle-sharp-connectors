@@ -38,7 +38,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\LoadCaseCombinationSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ResultTypeSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\LoadCaseHelper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Utils\LoadCaseManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\AnalysisResultsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils\ObjectIdentifiers.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -50,7 +50,7 @@ public static class ServiceRegistration
     services.AddScoped<MaterialUnpacker>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();
-    services.AddScoped<LoadCaseManager>();
+    services.AddScoped<AnalysisResultsExtractor>();
 
     // add converter caches
     services.AddScoped<CsiToSpeckleCacheSingleton>();

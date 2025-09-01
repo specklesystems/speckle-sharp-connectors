@@ -1,23 +1,97 @@
+using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.CSiShared.Utils;
 
-public class LoadCaseManager
+public class AnalysisResultsExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettingsStore;
+  private readonly CsiResultsExtractorFactory _resultsExtractorFactory;
 
-  public LoadCaseManager(IConverterSettingsStore<CsiConversionSettings> converterSettingsStore)
+  public AnalysisResultsExtractor(
+    IConverterSettingsStore<CsiConversionSettings> converterSettingsStore,
+    CsiResultsExtractorFactory resultsExtractorFactory
+  )
   {
     _converterSettingsStore = converterSettingsStore;
+    _resultsExtractorFactory = resultsExtractorFactory;
+  }
+
+  /// <summary>
+  /// Extracts complete analysis results including units retrieval, load case configuration, and results extraction.
+  /// Assumes inputs have been validated by caller.
+  /// </summary>
+  public Base ExtractAnalysisResults(
+    List<string> selectedCasesAndCombinations,
+    List<string> requestedResultTypes,
+    Dictionary<ModelObjectType, List<string>> objectSelectionSummary
+  )
+  {
+    // Step 1: get analysis units
+    var analysisResults = CreateAnalysisResultsWithUnits();
+
+    // Step 2: configure and validate load cases
+    ConfigureAndValidateSelectedLoadCases(selectedCasesAndCombinations);
+
+    // Step 3: extract results using clean factory pattern
+    ExtractResults(requestedResultTypes, objectSelectionSummary, analysisResults);
+
+    return analysisResults;
+  }
+
+  /// <summary>
+  /// Instantiates a Base object and pre-populates it with the models defined force units.
+  /// </summary>
+  /// <returns></returns>
+  /// <exception cref="SpeckleException"></exception>
+  private Base CreateAnalysisResultsWithUnits()
+  {
+    var forceUnit = eForce.NotApplicable;
+    var lengthUnit = eLength.NotApplicable;
+    var temperatureUnit = eTemperature.NotApplicable;
+
+    int success = _converterSettingsStore.Current.SapModel.GetDatabaseUnits_2(
+      ref forceUnit,
+      ref lengthUnit,
+      ref temperatureUnit
+    );
+
+    if (success != 0)
+    {
+      throw new SpeckleException("Failed to retrieve units for analysis results");
+    }
+
+    return new Base
+    {
+      ["forceUnit"] = forceUnit.ToString(),
+      ["lengthUnit"] = lengthUnit.ToString(),
+      ["temperatureUnit"] = temperatureUnit.ToString()
+    };
+  }
+
+  private void ExtractResults(
+    List<string> requestedResultTypes,
+    Dictionary<ModelObjectType, List<string>> objectSelectionSummary,
+    Base analysisResults
+  )
+  {
+    foreach (var resultType in requestedResultTypes)
+    {
+      var extractor = _resultsExtractorFactory.GetExtractor(resultType);
+      objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
+      analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+    }
   }
 
   /// <summary>
   /// Responsible for two things. Firstly, we need to setup the results so that only the requested cases and combinations
   /// are published. Secondly, we need to ensure that the requested cases and combinations are actually run.
   /// </summary>
-  public void ConfigureAndValidateSelectedLoadCases(List<string> selectedLoadCases)
+  private void ConfigureAndValidateSelectedLoadCases(List<string> selectedLoadCases)
   {
     // step 1: configure load cases for output
     ConfigureSelectedLoadCases(selectedLoadCases);
@@ -46,7 +120,7 @@ public class LoadCaseManager
         : _converterSettingsStore.Current.SapModel.Results.Setup.SetComboSelectedForOutput(selectedLoadCase);
 
       // ui should only present valid options
-      // `LoadCaseManager` only fetches load cases and load combinations (not patterns), so this should never throw
+      // `AnalysisResultsExtractor` only fetches load cases and load combinations (not patterns), so this should never throw
       if (success != 0)
       {
         throw new InvalidOperationException($"Failed to set {selectedLoadCase} for output.");

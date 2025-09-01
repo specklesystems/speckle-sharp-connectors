@@ -39,8 +39,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
-  private readonly LoadCaseManager _loadCaseManager;
-  private readonly CsiResultsExtractorFactory _resultsExtractorFactory;
+  private readonly AnalysisResultsExtractor _analysisResultsExtractor;
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -51,8 +50,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
     ICsiApplicationService csiApplicationService,
-    LoadCaseManager loadCaseManager,
-    CsiResultsExtractorFactory resultsExtractorFactory
+    AnalysisResultsExtractor analysisResultsExtractor
   )
   {
     _converterSettings = converterSettings;
@@ -63,8 +61,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
-    _loadCaseManager = loadCaseManager;
-    _resultsExtractorFactory = resultsExtractorFactory;
+    _analysisResultsExtractor = analysisResultsExtractor;
   }
 
   /// <summary>
@@ -127,12 +124,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
     var requestedResultTypes = _converterSettings.Current.SelectedResultTypes;
 
-    if (selectedCasesAndCombinations != null && selectedCasesAndCombinations.Count > 0)
+    if (selectedCasesAndCombinations?.Count > 0)
     {
       if (requestedResultTypes == null || requestedResultTypes.Count == 0)
       {
         throw new SpeckleException(
-          "No result types stipulated for the requested load cases and combinations. Adjust publish settings."
+          "No result type input for the requested load cases and combinations. Adjust publish settings."
         );
       }
 
@@ -141,17 +138,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         throw new SpeckleException("Model unlocked. No access to analysis results.");
       }
 
-      _loadCaseManager.ConfigureAndValidateSelectedLoadCases(selectedCasesAndCombinations);
-      Base analysisResults = new();
-      foreach (var resultType in requestedResultTypes)
-      {
-        var extractor = _resultsExtractorFactory.GetExtractor(resultType);
-        objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
-        analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
-      }
+      var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
+        selectedCasesAndCombinations,
+        requestedResultTypes,
+        objectSelectionSummary
+      );
       rootObjectCollection["analysisResults"] = analysisResults;
     }
-
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
