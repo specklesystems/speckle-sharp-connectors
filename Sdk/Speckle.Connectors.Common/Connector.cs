@@ -66,13 +66,17 @@ public static class Connector
 #endif
     );
 
-    serviceCollection.AddLogging(x => x.AddProvider(new SpeckleLogProvider(logging)));
     serviceCollection.AddSpeckleSdk(
       application,
       HostApplications.GetVersion(version),
       Assembly.GetExecutingAssembly().GetVersion(),
       typeof(Point).Assembly
     );
+    //do this after the AddSpeckleSdk so that the logging system gets values from here.
+    serviceCollection.AddLogging(x =>
+    {
+      x.AddProvider(new SpeckleLogProvider(logging));
+    });
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return new LoggingDisposable(tracing, metrics);
   }
