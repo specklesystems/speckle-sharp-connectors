@@ -10,9 +10,10 @@ internal sealed class Repository(ILogger<Repository> logger)
 {
   public async Task<NpgsqlConnection> SetupConnection(CancellationToken cancellationToken)
   {
+    const string ENV_VAR = "FILEIMPORT_QUEUE_POSTGRES_URL";
     string fileImportQueuePostgresUrl =
-      Environment.GetEnvironmentVariable("FILEIMPORT_QUEUE_POSTGRES_URL")
-      ?? throw new ArgumentException("Expected FILEIMPORT_QUEUE_POSTGRES_URL environment variable to be set");
+      Environment.GetEnvironmentVariable(ENV_VAR)
+      ?? throw new ArgumentException($"Expected {ENV_VAR} environment variable to be set");
 
     string connectionString = ParseConnectionString(new(fileImportQueuePostgresUrl));
     var connection = new NpgsqlConnection(connectionString);
@@ -58,6 +59,7 @@ internal sealed class Repository(ILogger<Repository> logger)
               WHERE ( --queued job
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
+                  AND "attempt" < "maxAttempt"
               )
               OR ( --timed job left on processing state
                   (payload ->> 'fileType') = ANY(@FileTypes)
@@ -85,6 +87,11 @@ internal sealed class Repository(ILogger<Repository> logger)
     );
 
     return await connection.QueryFirstOrDefaultAsync<FileimportJob?>(command);
+  }
+
+  public async Task ReturnJobToQueued(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
 
   public async Task SetJobStatus(

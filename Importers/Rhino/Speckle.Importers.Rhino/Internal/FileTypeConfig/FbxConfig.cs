@@ -1,23 +1,25 @@
 using Rhino;
+using Rhino.FileIO;
 using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
-/// <summary>
-/// Creates a headless doc and imports the file
-/// </summary>
-/// <remarks>
-/// Note: imported geometry will be converted to the default <c>mm</c> units
-/// If we need to preserve the file units, a custom config needs to be created
-/// </remarks>
-public sealed class DefaultConfig : IFileTypeConfig
+public sealed class FbxConfig : IFileTypeConfig
 {
+  private readonly FileFbxReadOptions _readOptions =
+    new()
+    {
+      MapFbxYtoRhinoZ = true,
+      ImportLights = false, // Speckle doesn't support LightObject s
+      ImportCameras = true,
+    };
+
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
     var doc = RhinoDoc.CreateHeadless(null);
     try
     {
-      if (!doc.Import(filePath, null))
+      if (!doc.Import(filePath, _readOptions.ToDictionary()))
       {
         throw new SpeckleException("Rhino could not import this file");
       }
