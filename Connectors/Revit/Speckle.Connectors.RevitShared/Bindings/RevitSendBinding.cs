@@ -216,8 +216,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         newSelectedObjectIds.Add(element.UniqueId);
       }
 
-      // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      // EVERYBODY RELAX, IM JUST TRYING SOMETHING
+      // For selection filters: preserve original user selection intent even when elements are deleted/restored
+      // This prevents the filter from "forgetting" about temporarily deleted elements that may be undone
+      // implemented during [CNX-2400](https://linear.app/speckle/issue/CNX-2400/object-dont-update-on-publish)
       if (modelCard.SendFilter is RevitSelectionFilter)
       {
         await Commands.SetFilterObjectIds(
@@ -226,6 +227,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
           modelCard.SendFilter.SelectedObjectIds
         );
       }
+      // For categories/views filters: update with current document reality since these represent dynamic queries
+      // These filters already self-update their SelectedObjectIds in RefreshObjectIds(), so this maintains consistency
       else
       {
         await Commands.SetFilterObjectIds(
