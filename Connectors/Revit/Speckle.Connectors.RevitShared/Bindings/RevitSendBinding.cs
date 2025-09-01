@@ -216,27 +216,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         newSelectedObjectIds.Add(element.UniqueId);
       }
 
-      // For selection filters: preserve original user selection intent even when elements are deleted/restored
-      // This prevents the filter from "forgetting" about temporarily deleted elements that may be undone
-      // implemented during [CNX-2400](https://linear.app/speckle/issue/CNX-2400/object-dont-update-on-publish)
-      if (modelCard.SendFilter is RevitSelectionFilter)
-      {
-        await Commands.SetFilterObjectIds(
-          modelCard.ModelCardId.NotNull(),
-          modelCard.SendFilter.IdMap,
-          modelCard.SendFilter.SelectedObjectIds
-        );
-      }
-      // For categories/views filters: update with current document reality since these represent dynamic queries
-      // These filters already self-update their SelectedObjectIds in RefreshObjectIds(), so this maintains consistency
-      else
-      {
-        await Commands.SetFilterObjectIds(
-          modelCard.ModelCardId.NotNull(),
-          modelCard.SendFilter.IdMap,
-          newSelectedObjectIds
-        );
-      }
+      // NOTE: preserve & persist original user selection for selection filter implemented during
+      // [CNX-2400](https://linear.app/speckle/issue/CNX-2400/object-dont-update-on-publish)
+      // NOTE: update with current document for views and categories filter since these represent dynamic queries
+      // View & categories filters self-update their SelectedObjectIds in RefreshObjectIds(), maintaining consistency
+      var objectIds =
+        modelCard.SendFilter is RevitSelectionFilter ? modelCard.SendFilter.SelectedObjectIds : newSelectedObjectIds;
+      await Commands.SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap, objectIds);
     }
 
     return documentElementContexts;
