@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
@@ -16,7 +17,6 @@ internal sealed class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-  Application application,
   Progress progress,
   ILogger<Sender> logger
 )
@@ -51,7 +51,7 @@ internal sealed class Sender(
       buildResults.RootObject,
       projectId,
       modelId,
-      application.Name,
+      HostApplications.RhinoImporter.Name,
       null,
       account,
       progress,
