@@ -8,6 +8,8 @@ using Speckle.Connectors.CSiShared.Builders;
 using Speckle.Connectors.CSiShared.Filters;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.CSiShared.Operations.Send.Settings;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
@@ -44,12 +46,17 @@ public static class ServiceRegistration
     services.AddScoped<SendOperation<ICsiWrapper>>();
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
+    services.AddScoped<CsiResultsExtractorFactory>();
     services.AddScoped<MaterialUnpacker>();
     services.AddScoped<IFrameSectionPropertyExtractor, CsiFrameSectionPropertyExtractor>();
     services.AddScoped<IShellSectionPropertyExtractor, CsiShellSectionPropertyExtractor>();
+    services.AddScoped<AnalysisResultsExtractor>();
 
     // add converter caches
     services.AddScoped<CsiToSpeckleCacheSingleton>();
+
+    // add settings manager
+    services.AddScoped<ToSpeckleSettingsManager>();
 
     return services;
   }
