@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Runtime.InProcess;
@@ -15,26 +13,22 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
 {
   private readonly ILogger _logger = logger;
   private readonly RhinoCore _rhinoInstance = new(["/netcore-8"], WindowStyle.NoWindow);
-  private static readonly JsonSerializerOptions s_serializerOptions =
-    new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, };
 
   private RhinoDoc? _rhinoDoc;
 
-  public async Task Run(string[] args, CancellationToken cancellationToken)
+  public async Task<ImporterResponse> Run(ImporterArgs args, CancellationToken cancellationToken)
   {
-    var a = JsonSerializer.Deserialize<ImporterArgs>(args[0], s_serializerOptions);
-    using var scopeJobId = ActivityScope.SetTag("jobId", a.JobId);
+    using var scopeJobId = ActivityScope.SetTag("jobId", args.JobId);
     // using var scopeJobType = ActivityScope.SetTag("jobType", a.JobType);
-    using var scopeAttempt = ActivityScope.SetTag("job.attempt", a.Attempt.ToString());
-    using var scopeServerUrl = ActivityScope.SetTag("serverUrl", a.Account.serverInfo.url);
-    using var scopeProjectId = ActivityScope.SetTag("projectId", a.ProjectId);
-    using var scopeModelId = ActivityScope.SetTag("modelId", a.ModelId);
-    using var scopeBlobId = ActivityScope.SetTag("blobId", a.BlobId);
-    UserActivityScope.AddUserScope(a.Account);
+    using var scopeAttempt = ActivityScope.SetTag("job.attempt", args.Attempt.ToString());
+    using var scopeServerUrl = ActivityScope.SetTag("serverUrl", args.Account.serverInfo.url);
+    using var scopeProjectId = ActivityScope.SetTag("projectId", args.Project.id);
+    using var scopeModelId = ActivityScope.SetTag("modelId", args.ModelId);
+    using var scopeBlobId = ActivityScope.SetTag("blobId", args.BlobId);
+    UserActivityScope.AddUserScope(args.Account);
 
-    var result = await TryImport(a, cancellationToken);
-    var serializedResult = JsonSerializer.Serialize(result, s_serializerOptions);
-    File.WriteAllLines(a.ResultsPath, [serializedResult]);
+    var result = await TryImport(args, cancellationToken);
+    return result;
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "IPC")]
@@ -60,7 +54,7 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
       _rhinoDoc = config.OpenInHeadlessDocument(args.FilePath);
       RhinoDoc.ActiveDoc = _rhinoDoc;
 
-      var version = await sender.Send(args.ProjectId, args.ModelId, args.Account, cancellationToken);
+      var version = await sender.Send(args.Project, args.ModelId, args.Account, cancellationToken);
       return version;
     }
     finally
