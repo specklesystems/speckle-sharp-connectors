@@ -19,6 +19,9 @@ public static class Connector
       Metrics.Dispose();
     }
   }
+  
+  public static readonly string TabName = "Speckle";
+  public static readonly string TabTitle = "Speckle";
 
   public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
