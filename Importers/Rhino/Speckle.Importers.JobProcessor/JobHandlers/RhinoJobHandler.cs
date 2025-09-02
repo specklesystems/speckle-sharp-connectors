@@ -7,6 +7,7 @@ using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -22,16 +23,20 @@ internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJob
   public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
     using var file = await fileDownloader.DownloadFile(job, client, cancellationToken);
+
+    Project project = await client.Project.Get(job.Payload.ProjectId, cancellationToken);
+    string fileType = file.FileInfo.Extension.TrimStart('.');
     var importerArgs = new ImporterArgs
     {
       FilePath = file.FileInfo.FullName,
       ResultsPath = $"{file.FileInfo.DirectoryName}/results.json",
       Account = client.Account,
+      Project = project,
       ModelId = job.Payload.ModelId,
-      ProjectId = job.Payload.ProjectId,
       JobId = job.Id,
       BlobId = job.Payload.BlobId,
       Attempt = job.Attempt,
+      HostApplication = new Application($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer")
     };
     await RunSubProcess(importerArgs, cancellationToken);
     var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);
