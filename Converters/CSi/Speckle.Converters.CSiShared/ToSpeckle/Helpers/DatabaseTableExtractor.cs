@@ -24,42 +24,48 @@ public class DatabaseTableExtractor
 
   /// <summary>
   /// Uses the cDatabaseTables.GetTableForDisplayArray() to request data for a specified table name.
-  /// Processes the one-dimensional array return with the <see cref="Speckle.Converters.CSiShared.Extensions.TableData"/>
-  /// extension for improved workability/reliability.
   /// </summary>
-  /// <param name="tableName">String identifying the table to fetch. This typically matches the UI.</param>
-  /// <param name="indexingColumn">Key used to organize and (later) lookup specific rows of data. Optional argument, default is "UniqueName"</param>
-  /// <param name="requestedColumns">Optional list of specific fields to fetch. If null or empty, all fields will be returned. Ask Björn about how to determine these strings.</param>
+  /// <param name="tableName">String identifying the table to fetch</param>
+  /// <param name="indexingColumn">Primary column to use as row identifier (default "UniqueName")</param>
+  /// <param name="requestedColumns">Optional specific fields to fetch</param>
+  /// <param name="additionalKeyColumns">Optional additional columns to form compound keys for tables with non-unique primary keys</param>
   /// <returns>TableData containing the requested fields and records</returns>
-  public TableData GetTableData(string tableName, string? indexingColumn = null, string[]? requestedColumns = null)
+  public TableData GetTableData(
+    string tableName,
+    string? indexingColumn = null,
+    string[]? requestedColumns = null,
+    string[]? additionalKeyColumns = null
+  )
   {
+    // Create a cache key that includes additionalKeyColumns if provided
     string tableKeyField = indexingColumn ?? DEFAULT_KEY_FIELD; // most queries will use "UniqueName"
-    string cacheKey = $"{tableName}_{tableKeyField}";
+    string additionalKeysString = additionalKeyColumns != null ? string.Join(",", additionalKeyColumns) : "";
+    string cacheKey = $"{tableName}_{tableKeyField}_{additionalKeysString}";
+
     if (_tableCache.TryGetValue(cacheKey, out var cachedData))
     {
       return cachedData;
     }
 
-    var tableData = FetchTableData(tableName, tableKeyField, requestedColumns);
+    var tableData = FetchTableData(tableName, tableKeyField, requestedColumns, additionalKeyColumns);
     _tableCache[cacheKey] = tableData;
     return tableData;
   }
 
-  public void RefreshTable(string tableKey, string? keyField = null) =>
-    _tableCache.Remove($"{tableKey}_{keyField ?? DEFAULT_KEY_FIELD}");
-
-  public void ClearCache() => _tableCache.Clear();
-
-  private TableData FetchTableData(string tableName, string indexingColumn, string[]? requestedColumns = null)
+  private TableData FetchTableData(
+    string tableName,
+    string indexingColumn,
+    string[]? requestedColumns = null,
+    string[]? additionalKeyColumns = null
+  )
   {
-    string[] requestedFields = requestedColumns ?? []; // only fetch the keys needed (memory reduction potential)
+    string[] requestedFields = requestedColumns ?? []; // only fetch the keys needed
     string[] fieldsKeysIncluded = [];
-    string[] tableData = []; // one-dimensional gross mess
+    string[] tableData = []; // one-dimensional array
     int tableVersion = 0;
     int numberOfRecords = 0;
 
-    // ensure indexingColumn is included in the requested fields
-    // if user forgets to include indexingColumn in requestedColumns => problem when it comes to creating dictionaries!
+    // Ensure indexingColumn is included
     if (requestedFields != Array.Empty<string>() && !requestedFields.Contains(indexingColumn))
     {
       requestedFields = [.. requestedFields, indexingColumn];
@@ -68,7 +74,7 @@ public class DatabaseTableExtractor
     var result = _settingsStore.Current.SapModel.DatabaseTables.GetTableForDisplayArray(
       tableName,
       ref requestedFields,
-      string.Empty, // empty means all objects (not group-specific)
+      string.Empty, // empty means all objects
       ref tableVersion,
       ref fieldsKeysIncluded,
       ref numberOfRecords,
@@ -82,6 +88,6 @@ public class DatabaseTableExtractor
       );
     }
 
-    return new TableData(fieldsKeysIncluded, tableData, numberOfRecords, indexingColumn);
+    return new TableData(fieldsKeysIncluded, tableData, numberOfRecords, indexingColumn, additionalKeyColumns);
   }
 }

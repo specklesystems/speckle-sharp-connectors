@@ -131,4 +131,24 @@ public class RhinoLayerHelper
       }
     }
   }
+
+  /// <summary>
+  /// Checks if a layer is visible by its index.
+  /// </summary>
+  public bool IsLayerVisible(int layerIndex)
+  {
+    if (layerIndex < 0 || layerIndex >= RhinoDoc.ActiveDoc.Layers.Count)
+    {
+      return true; // default to visible for invalid indices (safe fallback)
+    }
+
+    var layer = RhinoDoc.ActiveDoc.Layers[layerIndex];
+    return layer != null && !layer.IsDeleted && layer.IsVisible;
+  }
+
+  /// <summary>
+  /// Filters a collection of objects to only include those on visible layers.
+  /// </summary>
+  public IEnumerable<T> FilterByLayerVisibility<T>(IEnumerable<T> objects)
+    where T : RhinoObject => objects.Where(obj => IsLayerVisible(obj.Attributes.LayerIndex));
 }
