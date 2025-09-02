@@ -96,7 +96,7 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
       var typeKey = (ModelObjectType)objectType[i];
       var typeName = typeKey.ToString();
       encodedIds.Add(ObjectIdentifier.Encode(objectType[i], objectName[i]));
-      typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1; // NOTE: Cross-framework compatibility (net 48 and net8)
+      typeCounts[typeName] = (typeCounts.TryGetValue(typeName, out var count) ? count : 0) + 1;
     }
     var summary =
       encodedIds.Count == 0
