@@ -10,17 +10,15 @@ namespace Speckle.Connectors.Common;
 
 public static class Connector
 {
-  private sealed record LoggingDisposable(IDisposable Tracing, IDisposable Metrics) : IDisposable
+  private sealed record LoggingDisposable(IDisposable Logging, IDisposable Tracing, IDisposable Metrics) : IDisposable
   {
     public void Dispose()
     {
+      Logging.Dispose();
       Tracing.Dispose();
       Metrics.Dispose();
     }
   }
-
-  public static readonly string TabName = "Speckle";
-  public static readonly string TabTitle = "Speckle";
 
   public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
@@ -28,13 +26,26 @@ public static class Connector
     HostAppVersion version
   )
   {
+    var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
+    serviceCollection.AddSpeckleSdk(
+      application,
+      HostApplications.GetVersion(version),
+      assemblyVersion,
+      typeof(Point).Assembly
+    );
+
+#if DEBUG || LOCAL
+    var minimumLevel = SpeckleLogLevel.Debug;
+#else
+    var minimumLevel = SpeckleLogLevel.Information;
+#endif
     var (logging, tracing, metrics) = Observability.Initialize(
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
-      Assembly.GetExecutingAssembly().GetVersion(),
+      assemblyVersion,
 #if DEBUG || LOCAL
       new(
-        new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
+        new SpeckleLogging(Console: true, File: new(), MinimumLevel: minimumLevel),
         new SpeckleTracing(Console: false),
         new SpeckleMetrics(Console: false)
       )
@@ -50,7 +61,7 @@ public static class Connector
               Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
             )
           ],
-          MinimumLevel: SpeckleLogLevel.Information
+          MinimumLevel: minimumLevel
         ),
         new SpeckleTracing(
           Console: false,
@@ -65,19 +76,26 @@ public static class Connector
       )
 #endif
     );
-
-    serviceCollection.AddSpeckleSdk(
-      application,
-      HostApplications.GetVersion(version),
-      Assembly.GetExecutingAssembly().GetVersion(),
-      typeof(Point).Assembly
-    );
     //do this after the AddSpeckleSdk so that the logging system gets values from here.
     serviceCollection.AddLogging(x =>
     {
+      x.ClearProviders();
       x.AddProvider(new SpeckleLogProvider(logging));
+      x.SetMinimumLevel(GetMicrosoftLevel(minimumLevel));
     });
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
-    return new LoggingDisposable(tracing, metrics);
+    return new LoggingDisposable(logging, tracing, metrics);
   }
+
+  private static LogLevel GetMicrosoftLevel(SpeckleLogLevel speckleLogLevel) =>
+    speckleLogLevel switch
+    {
+      SpeckleLogLevel.Debug => LogLevel.Debug,
+      SpeckleLogLevel.Verbose => LogLevel.Trace,
+      SpeckleLogLevel.Information => LogLevel.Information,
+      SpeckleLogLevel.Warning => LogLevel.Warning,
+      SpeckleLogLevel.Error => LogLevel.Error,
+      SpeckleLogLevel.Fatal => LogLevel.Critical,
+      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null)
+    };
 }
