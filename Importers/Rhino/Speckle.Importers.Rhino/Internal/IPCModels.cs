@@ -1,4 +1,6 @@
-﻿using Speckle.Sdk.Credentials;
+﻿using Speckle.Sdk;
+using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Credentials;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Rhino.Internal;
@@ -11,9 +13,10 @@ internal readonly struct ImporterArgs
   public required string BlobId { get; init; }
   public required int Attempt { get; init; }
   public required string ResultsPath { get; init; }
-  public required string ProjectId { get; init; }
+  public required Project Project { get; init; }
   public required string ModelId { get; init; }
   public required Account Account { get; init; }
+  public required Application HostApplication { get; init; }
 }
 
 public readonly struct ImporterResponse
