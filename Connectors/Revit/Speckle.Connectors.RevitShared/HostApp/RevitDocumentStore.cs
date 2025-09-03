@@ -100,14 +100,23 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     try
     {
-      var key = document.CreationGUID.ToString();
+      var key = GetKeyForDocument(document);
       _jsonCacheManager.UpdateObject(key, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      var key = document.CreationGUID.ToString();
+      var key = GetKeyForDocument(document);
       _logger.LogError(ex, "Failed to save model card state for document {DocumentId}", key);
     }
+  }
+
+  private string GetKeyForDocument(Document doc)
+  {
+#if REVIT2024_OR_GREATER
+    return doc.CreationGUID.ToString();
+#else
+    return doc.GetHashCode().ToString();
+#endif
   }
 
   protected override void LoadState()
@@ -126,7 +135,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    var key = document.CreationGUID.ToString();
+    var key = GetKeyForDocument(document);
     var state = _jsonCacheManager.GetObject(key);
     LoadFromString(state);
   }
