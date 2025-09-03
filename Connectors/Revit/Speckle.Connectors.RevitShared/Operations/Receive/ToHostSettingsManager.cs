@@ -19,7 +19,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
-    var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
+    var referencePointString = modelCard.Settings?.FirstOrDefault(s => s.Id == "referencePoint")?.Value as string;
     if (
       referencePointString is not null
       && ReferencePointSetting.ReferencePointMap.TryGetValue(
