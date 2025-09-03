@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.FileIO;
 using Rhino.Geometry;
 using Speckle.Sdk;
 
@@ -7,14 +8,23 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 public sealed class SketchupConfig : IFileTypeConfig
 {
-  private readonly DefaultConfig _defaultConfig = new();
+  private readonly FileSkpReadOptions _options =
+    new()
+    {
+      JoinEdges = true,
+      JoinFaces = true,
+      Weld = false,
+      AddObjectsToGroups = true,
+      ImportCurves = true,
+      ImportFacesAsMeshes = true,
+    };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
     var doc = RhinoDoc.CreateHeadless(null);
     try
     {
-      if (!doc.Import(filePath, null))
+      if (!doc.Import(filePath, _options.ToDictionary()))
       {
         throw new SpeckleException("Rhino could not import this file");
       }
@@ -64,5 +74,5 @@ public sealed class SketchupConfig : IFileTypeConfig
     //TODO: same for meshes inside blocks
   }
 
-  public void Dispose() => _defaultConfig.Dispose();
+  public void Dispose() { }
 }

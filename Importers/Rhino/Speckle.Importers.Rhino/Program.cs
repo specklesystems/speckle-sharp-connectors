@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RhinoInside;
 using Speckle.Importers.Rhino.Internal;
@@ -7,6 +9,9 @@ namespace Speckle.Importers.Rhino;
 
 public static class Program
 {
+  private static readonly JsonSerializerOptions s_serializerOptions =
+    new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, };
+
   static Program()
   {
     Resolver.Initialize();
@@ -18,8 +23,10 @@ public static class Program
     ILogger? logger = null;
     try
     {
+      var importerArgs = JsonSerializer.Deserialize<ImporterArgs>(args[0], s_serializerOptions);
+
       var serviceCollection = new ServiceCollection();
-      serviceCollection.AddRhinoImporter();
+      serviceCollection.AddRhinoImporter(importerArgs.HostApplication);
       using var serviceProvider = serviceCollection.BuildServiceProvider();
       logger = serviceProvider.GetRequiredService<ILogger<object>>();
       TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
@@ -29,7 +36,9 @@ public static class Program
 
       await Task.Run(async () =>
         {
-          await importer.Run(args, CancellationToken.None);
+          var result = await importer.Run(importerArgs, CancellationToken.None);
+          var serializedResult = JsonSerializer.Serialize(result, s_serializerOptions);
+          File.WriteAllLines(importerArgs.ResultsPath, [serializedResult]);
         })
         .ConfigureAwait(false);
     }

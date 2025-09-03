@@ -39,14 +39,13 @@ public static class HostApplications
     NET = new(".NET", "net"),
     Navisworks = new("Navisworks", "navisworks"),
     AdvanceSteel = new("Advance Steel", "advancesteel"),
-    Other = new("Other", "other"),
-    RhinoImporter = new("File Import", "fileImport");
+    Other = new("Other", "other");
 
   /// <summary>
   /// Gets a slug from a host application name and version.
   /// </summary>
   /// <param name="appName">Application name with its version, e.g., "Rhino 7", "Revit 2024".</param>
-  /// <remarks>I hate that this function needs to exist</remarks>
+  /// <remarks>This function is soon to be needed only for backwards compatibility</remarks>
   /// <returns>Slug string.</returns>
   public static string GetSlugFromHostAppNameAndVersion(string appName)
   {
