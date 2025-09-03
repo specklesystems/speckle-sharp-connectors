@@ -1,24 +1,21 @@
 using Rhino;
-using Rhino.Collections;
+using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 /// <summary>
 /// Represents configuration for a specific file type (e.g. <c>.skp</c>) to customise the import behaviour
 /// </summary>
-internal interface IFileTypeConfig
+internal interface IFileTypeConfig : IDisposable
 {
   /// <summary>
-  /// Options to pass to the <see cref="RhinoDoc.Import(string, ArchivableDictionary?)"/> command
-  /// </summary>
-  public ArchivableDictionary? ImportOptions { get; }
-
-  /// <summary>
-  /// Run any operations on objects in the rhino document to clean up the export before converting to speckle
+  /// Import the file at the provided <paramref name="filePath"/> into a new headless document
   /// </summary>
   /// <remarks>
-  /// Ran on the document after importing, but before any Speckle conversion
+  /// Implementors may apply additional cleanup and import options
   /// </remarks>
-  /// <param name="doc"></param>
-  public void PreProcessDocument(RhinoDoc doc);
+  /// <param name="filePath"></param>
+  /// <returns></returns>
+  /// <exception cref="SpeckleException">Rhino could not import the file</exception>
+  public RhinoDoc OpenInHeadlessDocument(string filePath);
 }

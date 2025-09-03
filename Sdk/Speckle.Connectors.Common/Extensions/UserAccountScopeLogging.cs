@@ -22,6 +22,7 @@ public static class UserActivityScope
       [
         ActivityScope.SetTag(Consts.USER_ID, account.userInfo.id),
         ActivityScope.SetTag(Consts.USER_DISTINCT_ID, account.GetHashedEmail()),
+        ActivityScope.SetTag(Consts.USER_SERVER_URL, new Uri(account.serverInfo.url).ToString()),
       ]
     );
   }
