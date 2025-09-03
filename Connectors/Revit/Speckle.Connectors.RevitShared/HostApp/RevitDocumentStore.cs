@@ -100,12 +100,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     try
     {
-      var key = document.ProjectInformation?.UniqueId ?? "unknown";
+      var key = document.CreationGUID.ToString();
       _jsonCacheManager.UpdateObject(key, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      var key = document.ProjectInformation?.UniqueId ?? "unknown";
+      var key = document.CreationGUID.ToString();
       _logger.LogError(ex, "Failed to save model card state for document {DocumentId}", key);
     }
   }
@@ -125,7 +125,8 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       ClearAndSave();
       return;
     }
-    var key = document.ProjectInformation?.UniqueId ?? "unknown";
+
+    var key = document.CreationGUID.ToString();
     var state = _jsonCacheManager.GetObject(key);
     LoadFromString(state);
   }
