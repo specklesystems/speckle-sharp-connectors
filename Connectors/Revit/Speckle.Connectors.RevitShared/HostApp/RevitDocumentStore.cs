@@ -105,7 +105,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      var key = document.ProjectInformation.UniqueId.NotNull();
+      var key = document.ProjectInformation?.UniqueId ?? "unknown";
       _logger.LogError(ex, "Failed to save model card state for document {DocumentId}", key);
     }
   }
