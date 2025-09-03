@@ -216,12 +216,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         newSelectedObjectIds.Add(element.UniqueId);
       }
 
-      // We update the state on the UI SenderModelCard to prevent potential inconsistencies between hostApp IdMap in sendfilters.
-      await Commands.SetFilterObjectIds(
-        modelCard.ModelCardId.NotNull(),
-        modelCard.SendFilter.IdMap,
-        newSelectedObjectIds
-      );
+      // NOTE: preserve & persist original user selection for selection filter implemented during
+      // [CNX-2400](https://linear.app/speckle/issue/CNX-2400/object-dont-update-on-publish)
+      // NOTE: update with current document for views and categories filter since these represent dynamic queries
+      // View & categories filters self-update their SelectedObjectIds in RefreshObjectIds(), maintaining consistency
+      var objectIds =
+        modelCard.SendFilter is RevitSelectionFilter ? modelCard.SendFilter.SelectedObjectIds : newSelectedObjectIds;
+      await Commands.SetFilterObjectIds(modelCard.ModelCardId.NotNull(), modelCard.SendFilter.IdMap, objectIds);
     }
 
     return documentElementContexts;

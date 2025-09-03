@@ -3,15 +3,17 @@ using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
+using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
 
 namespace Speckle.Importers.Rhino.Internal;
 
 internal static class ServiceRegistration
 {
-  public static IServiceCollection AddRhinoImporter(this IServiceCollection services)
+  public static IServiceCollection AddRhinoImporter(this IServiceCollection services, Application applicationInfo)
   {
-    services.Initialize(HostApplications.RhinoImporter, HostAppVersion.v8);
+    services.Initialize(applicationInfo, HostAppVersion.v8);
+    services.AddSingleton(applicationInfo);
 
     services.AddRhino(false);
     services.AddRhinoConverters();

@@ -100,14 +100,26 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
     try
     {
-      var key = document.ProjectInformation.UniqueId.NotNull();
-      _jsonCacheManager.UpdateObject(key, modelCardState);
+      var key = GetKeyForDocument(document);
+      if (key != null)
+      {
+        _jsonCacheManager.UpdateObject(key, modelCardState);
+      }
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      var key = document.ProjectInformation.UniqueId.NotNull();
+      var key = GetKeyForDocument(document);
       _logger.LogError(ex, "Failed to save model card state for document {DocumentId}", key);
     }
+  }
+
+  private string? GetKeyForDocument(Document doc)
+  {
+    string? id = doc?.ProjectInformation?.UniqueId; //ProjectInformation Should only be null for family docs
+#if REVIT_2024_OR_GREATER
+    id ??= doc.CreationGUID.ToString(); //fallback for family docs
+#endif
+    return id;
   }
 
   protected override void LoadState()
@@ -125,9 +137,13 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       ClearAndSave();
       return;
     }
-    var key = document.ProjectInformation.UniqueId.NotNull();
-    var state = _jsonCacheManager.GetObject(key);
-    LoadFromString(state);
+
+    var key = GetKeyForDocument(document);
+    if (key != null)
+    {
+      var state = _jsonCacheManager.GetObject(key);
+      LoadFromString(state);
+    }
   }
 
   private Entity? GetSpeckleEntity(Document? doc)

@@ -4,9 +4,11 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Extensions;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -37,6 +39,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ICsiApplicationService _csiApplicationService;
+  private readonly AnalysisResultsExtractor _analysisResultsExtractor;
 
   public CsiRootObjectBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
@@ -46,7 +49,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     ISectionUnpacker sectionUnpacker,
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
-    ICsiApplicationService csiApplicationService
+    ICsiApplicationService csiApplicationService,
+    AnalysisResultsExtractor analysisResultsExtractor
   )
   {
     _converterSettings = converterSettings;
@@ -57,6 +61,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     _logger = logger;
     _activityFactory = activityFactory;
     _csiApplicationService = csiApplicationService;
+    _analysisResultsExtractor = analysisResultsExtractor;
   }
 
   /// <summary>
@@ -112,6 +117,34 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       rootObjectCollection[ProxyKeys.SECTION] = _sectionUnpacker.UnpackSections().ToList();
     }
 
+    // Extract analysis results (if applicable)
+    // NOTE: objectSelectionSummary used to extract results for objects being published ONLY
+    // NOTE: etabs is complicated and we can't get specifics from original selection
+    var objectSelectionSummary = GetObjectSummary(csiObjects);
+    var selectedCasesAndCombinations = _converterSettings.Current.SelectedLoadCasesAndCombinations;
+    var requestedResultTypes = _converterSettings.Current.SelectedResultTypes;
+
+    if (selectedCasesAndCombinations?.Count > 0)
+    {
+      if (requestedResultTypes == null || requestedResultTypes.Count == 0)
+      {
+        throw new SpeckleException(
+          "No result type input for the requested load cases and combinations. Adjust publish settings."
+        );
+      }
+
+      if (!_csiApplicationService.SapModel.GetModelIsLocked())
+      {
+        throw new SpeckleException("Model unlocked. No access to analysis results.");
+      }
+
+      var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
+        selectedCasesAndCombinations,
+        requestedResultTypes,
+        objectSelectionSummary
+      );
+      rootObjectCollection["analysisResults"] = analysisResults;
+    }
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
@@ -158,4 +191,22 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }
+
+  /// <summary>
+  /// Generates a summary of object types and their associated names from the collection of CSI wrappers.
+  /// </summary>
+  /// <remarks>
+  /// A summary of object names for each object type is needed for getting analysis results of the selected objects only.
+  /// During object conversion, however, we lose the selection (like a clear selection)(presumably because of other api calls).
+  /// This has to be recreated since GetSelection() return type is bound by the interface.
+  /// The LINQ-based implementation is computationally inexpensive as it operates on an already-loaded collection without additional API calls.
+  /// Also, we don't want to rely on user selection remaining active, what if someone re-publishes using model card cache?
+  /// </remarks>
+  private Dictionary<ModelObjectType, List<string>> GetObjectSummary(IReadOnlyList<ICsiWrapper> csiObjects) =>
+    csiObjects
+      .GroupBy(csiObject => csiObject.ObjectType)
+      .ToDictionary(
+        group => group.Key, // ModelObjectType (FRAME, JOINT, etc.)
+        group => group.Select(obj => obj.Name).ToList() // Extract Name from each ICsiWrapper and convert to List<string>
+      );
 }

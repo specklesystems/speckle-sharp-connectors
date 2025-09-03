@@ -42,18 +42,21 @@ internal sealed class JobProcessorInstance(
       logger.LogInformation("Starting {jobId}", job.Id);
 
       using var activity = activityFactory.Start();
-      ActivityScope.SetTag("jobId", job.Id);
-      ActivityScope.SetTag("jobType", job.Payload.JobType);
-      ActivityScope.SetTag("job.attempt", job.Attempt.ToString());
-      ActivityScope.SetTag("serverUrl", job.Payload.ServerUrl.ToString());
-      ActivityScope.SetTag("projectId", job.Payload.ProjectId);
-      ActivityScope.SetTag("modelId", job.Payload.ModelId);
-      ActivityScope.SetTag("blobId", job.Payload.BlobId);
+      using var scopeJobId = ActivityScope.SetTag("jobId", job.Id);
+      using var scopeJobType = ActivityScope.SetTag("jobType", job.Payload.JobType);
+      using var scopeAttempt = ActivityScope.SetTag("job.attempt", job.Attempt.ToString());
+      using var scopeServerUrl = ActivityScope.SetTag("serverUrl", job.Payload.ServerUrl.ToString());
+      using var scopeProjectId = ActivityScope.SetTag("projectId", job.Payload.ProjectId);
+      using var scopeModelId = ActivityScope.SetTag("modelId", job.Payload.ModelId);
+      using var scopeBlobId = ActivityScope.SetTag("blobId", job.Payload.BlobId);
 
       try
       {
         JobStatus jobStatus = await AttemptJob(job, cancellationToken);
-        await repository.SetJobStatus(connection, job.Id, jobStatus, cancellationToken);
+        if (jobStatus == JobStatus.QUEUED)
+        {
+          await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
+        }
         activity?.SetStatus(SdkActivityStatusCode.Ok);
       }
       catch (Exception ex)
@@ -120,7 +123,7 @@ internal sealed class JobProcessorInstance(
     try
     {
       speckleClient = await SetupClient(job, cancellationToken);
-      UserActivityScope.AddUserScope(speckleClient.Account);
+      using var userScope = UserActivityScope.AddUserScope(speckleClient.Account);
 
       if (job.Attempt > job.MaxAttempt)
       {

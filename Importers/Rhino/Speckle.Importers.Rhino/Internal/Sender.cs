@@ -2,10 +2,12 @@
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
+using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -16,16 +18,13 @@ internal sealed class Sender(
   ISdkActivityFactory activityFactory,
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
+  IMixPanelManager mixpanel,
   Progress progress,
+  Application applicationInfo,
   ILogger<Sender> logger
 )
 {
-  public async Task<Version> Send(
-    string projectId,
-    string modelId,
-    Account account,
-    CancellationToken cancellationToken
-  )
+  public async Task<Version> Send(Project project, string modelId, Account account, CancellationToken cancellationToken)
   {
     // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
     using var activity = activityFactory.Start();
@@ -45,18 +44,26 @@ internal sealed class Sender(
     }
 
     var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-    var buildResults = await operation.Build(rhinoObjects, projectId, progress, cancellationToken);
+    var buildResults = await operation.Build(rhinoObjects, project.id, progress, cancellationToken);
     var (results, version) = await operation.Send(
       buildResults.RootObject,
-      projectId,
+      project.id,
       modelId,
-      "Rhino File Importer",
+      applicationInfo.Slug,
       null,
       account,
       progress,
       cancellationToken
     );
 
+    Dictionary<string, object> customProperties = [];
+    customProperties.Add("actionSource", "import");
+    if (project.workspaceId != null)
+    {
+      customProperties.Add("workspace_id", project.workspaceId);
+    }
+
+    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
     logger.LogInformation($"Root: {results.RootId}");
 
     return version;
