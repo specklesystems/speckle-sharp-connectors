@@ -40,8 +40,8 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     pManager.AddTextParameter(
       "Path",
-      "C",
-      "Get the Speckle objects in the subcollection indicated by this path",
+      "P",
+      "Get the Speckle objects in the sub-collection indicated by this path",
       GH_ParamAccess.item
     );
 
