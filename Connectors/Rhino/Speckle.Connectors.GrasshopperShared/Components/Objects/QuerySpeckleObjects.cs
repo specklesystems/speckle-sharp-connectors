@@ -136,10 +136,19 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // Set output objects
     for (int i = 0; i < Params.Output.Count; i++)
     {
+      // determine output values based on parameter type
       List<SpeckleWrapper> outputValues =
-        i == 0 ? filteredObjects : _filterDict[Filters[i - 1]].Select(o => (SpeckleWrapper)o).ToList();
-      List<IGH_Goo> outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
-      if (targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
+        i == 0
+          ? filteredObjects
+          : Enum.TryParse(Params.Output[i].Name, out ObjectType filterType)
+          && _filterDict.TryGetValue(filterType, out var filteredList)
+            ? filteredList.Cast<SpeckleWrapper>().ToList()
+            : new List<SpeckleWrapper>();
+
+      var outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
+
+      // only use topology for the first output when we have a path
+      if (i == 0 && targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
         var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputGoos);
         dataAccess.SetDataTree(i, tree);
@@ -272,10 +281,8 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     base.RemovedFromDocument(document);
   }
 
-  private void OnParameterSourceChanged(object sender, GH_ParamServerEventArgs args)
-  {
+  private void OnParameterSourceChanged(object sender, GH_ParamServerEventArgs args) =>
     // an empty filter dict will trigger the SortObjectsByGeometryBaseType method.
     // we only want to re-sort objects if an input has changed, not on every trigger of solve instance.
     _filterDict.Clear();
-  }
 }
