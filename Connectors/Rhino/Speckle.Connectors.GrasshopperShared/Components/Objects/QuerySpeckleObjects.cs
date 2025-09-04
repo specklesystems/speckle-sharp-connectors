@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -40,8 +39,8 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     pManager.AddTextParameter(
       "Path",
-      "C",
-      "Get the Speckle objects in the subcollection indicated by this path",
+      "P",
+      "Get the Speckle objects in the sub-collection indicated by this path",
       GH_ParamAccess.item
     );
 
@@ -244,7 +243,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     _outputFilterIndices = null;
 
     ObjectType filter = previousFilterIndex is null ? Filters.First() : Filters[(int)previousFilterIndex + 1];
-    return new Param_GenericObject
+    return new SpeckleOutputParam
     {
       Name = filter.ToString(),
       NickName = GetFilterNickName(filter),
