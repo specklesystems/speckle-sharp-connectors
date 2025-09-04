@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -61,7 +60,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
     {
-      var param = new Param_GenericObject()
+      var param = new SpeckleOutputParam
       {
         Name = "_objects",
         NickName = "_objs",
@@ -94,7 +93,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         nickName += "..." + childWrapper.Name[^6..];
       }
 
-      var param = new Param_GenericObject()
+      var param = new SpeckleOutputParam
       {
         Name = childWrapper.Name,
         NickName = nickName,
@@ -191,7 +190,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
     foreach (var newParam in outputParams)
     {
-      var param = new Param_GenericObject
+      var param = new SpeckleOutputParam
       {
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,
@@ -214,7 +213,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
   public IGH_Param CreateParameter(GH_ParameterSide side, int index)
   {
-    var myParam = new Param_GenericObject
+    var myParam = new SpeckleOutputParam
     {
       Name = GH_ComponentParamServer.InventUniqueNickname("ABCD", Params.Input),
       MutableNickName = true,
@@ -227,4 +226,4 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
   public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Output;
 }
 
-public record OutputParamWrapper(Param_GenericObject Param, object Values, string? Topology);
+public record OutputParamWrapper(SpeckleOutputParam Param, object Values, string? Topology);
