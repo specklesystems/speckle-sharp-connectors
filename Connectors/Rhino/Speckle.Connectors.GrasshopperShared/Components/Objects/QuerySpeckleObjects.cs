@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
 using Rhino.DocObjects;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
