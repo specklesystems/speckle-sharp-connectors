@@ -1,25 +1,14 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
-using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
 /// Class that unpacks a given set of selection elements into atomic objects.
 /// </summary>
-public class ElementUnpacker
+public class ElementUnpacker(RevitContext revitContext)
 {
-  private readonly RevitContext _revitContext;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-
-  public ElementUnpacker(RevitContext revitContext, IConverterSettingsStore<RevitConversionSettings> converterSettings)
-  {
-    _revitContext = revitContext;
-    _converterSettings = converterSettings;
-  }
-
   /// <summary>
   /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recurisvely, nested families into atomic family instances.
   /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
@@ -52,8 +41,12 @@ public class ElementUnpacker
   /// </remarks>
   public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
-    var docElements = doc.GetElements(objectIds);
+    var doc = revitContext.UIApplication?.ActiveUIDocument.Document;
+    var docElements = doc?.GetElements(objectIds);
+    if (docElements == null)
+    {
+      return [];
+    }
     return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
   }
 
@@ -65,9 +58,12 @@ public class ElementUnpacker
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
     if (doc == null)
     {
-      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+      doc = revitContext.UIApplication?.ActiveUIDocument.Document;
     }
-
+    if (doc == null)
+    {
+      return [];
+    }
     foreach (var element in elements)
     {
       // UNPACK: Groups
@@ -127,11 +123,17 @@ public class ElementUnpacker
   // 2- Evicting the cache while introducing the settings
   private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document? doc = null)
   {
-    var ids = elements.Select(el => el.Id).ToArray();
+    var ids = elements.Select(el => el.Id).ToHashSet();
     if (doc == null)
     {
-      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
+      doc = revitContext.UIApplication?.ActiveUIDocument.Document;
     }
+
+    if (doc == null)
+    {
+      return [];
+    }
+
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
       || (
