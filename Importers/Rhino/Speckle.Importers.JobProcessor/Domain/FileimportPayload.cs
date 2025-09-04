@@ -18,4 +18,5 @@ internal sealed class FileimportPayload
   public required Uri ServerUrl { get; init; }
   public required int PayloadVersion { get; init; }
   public required int TimeOutSeconds { get; init; }
+  public required int RemainingComputeBudgetSeconds { get; init; }
 }

@@ -1,4 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Data;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Timers;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Logging;
@@ -52,7 +55,22 @@ internal sealed class JobProcessorInstance(
 
       try
       {
-        JobStatus jobStatus = await AttemptJob(job, cancellationToken);
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        JobStatus jobStatus;
+        try
+        {
+          jobStatus = await AttemptJob(job, cancellationToken);
+        }
+        finally
+        {
+          await repository.DeductFromComputeBudget(
+            connection,
+            job.Id,
+            (long)stopwatch.Elapsed.TotalSeconds,
+            cancellationToken
+          );
+        }
+
         if (jobStatus == JobStatus.QUEUED)
         {
           await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
@@ -72,6 +90,7 @@ internal sealed class JobProcessorInstance(
     FileimportJob job,
     Version version,
     IClient client,
+    double elapsedSeconds,
     CancellationToken cancellationToken
   )
   {
@@ -80,7 +99,7 @@ internal sealed class JobProcessorInstance(
       projectId = job.Payload.ProjectId,
       jobId = job.Payload.BlobId,
       warnings = [],
-      result = new FileImportResult(0, 0, 0, "Rhino Importer", versionId: version.id)
+      result = new FileImportResult(elapsedSeconds, 0, 0, "Rhino Importer", versionId: version.id)
     };
     await client.FileImport.FinishFileImportJob(input, cancellationToken);
   }
@@ -122,6 +141,7 @@ internal sealed class JobProcessorInstance(
     IClient? speckleClient = null;
     try
     {
+      Stopwatch stopwatch = Stopwatch.StartNew();
       speckleClient = await SetupClient(job, cancellationToken);
       using var userScope = UserActivityScope.AddUserScope(speckleClient.Account);
 
@@ -134,7 +154,7 @@ internal sealed class JobProcessorInstance(
       try
       {
         Version version = await ExecuteJobWithTimeout(job, speckleClient, cancellationToken);
-        await ReportSuccess(job, version, speckleClient, cancellationToken);
+        await ReportSuccess(job, version, speckleClient, stopwatch.Elapsed.TotalSeconds, cancellationToken);
         logger.LogInformation("Job {jobId} has succeeded creating {versionId}", job.Id, version.id);
 
         activity?.SetStatus(SdkActivityStatusCode.Ok);
@@ -186,8 +206,15 @@ internal sealed class JobProcessorInstance(
     CancellationToken cancellationToken
   )
   {
+    var jobTimeout = job.Payload.TimeOutSeconds;
+    if (job.Payload.RemainingComputeBudgetSeconds > 0)
+    {
+      //respect the remaining compute budget
+      jobTimeout = Math.Min(jobTimeout, job.Payload.RemainingComputeBudgetSeconds);
+    }
+
     using CancellationTokenSource timeout = new();
-    timeout.CancelAfter(TimeSpan.FromSeconds(job.Payload.TimeOutSeconds));
+    timeout.CancelAfter(TimeSpan.FromSeconds(jobTimeout));
     using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(
       timeout.Token,
       cancellationToken

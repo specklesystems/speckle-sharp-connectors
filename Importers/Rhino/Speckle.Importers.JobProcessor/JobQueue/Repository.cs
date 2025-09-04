@@ -56,15 +56,27 @@ internal sealed class Repository(ILogger<Repository> logger)
               "updatedAt" = NOW()
           WHERE id = (
               SELECT id FROM background_jobs
-              WHERE ( --queued job
+              WHERE ( --v1 queued job which has not yet exceeded maximum attempts and not yet timed out
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
+                  AND payload ->> 'payloadVersion' = '1'
                   AND "attempt" < "maxAttempt"
+                  AND "createdAt" > NOW() - ("timeoutMs" * interval '1 millisecond')
               )
-              OR ( --timed job left on processing state
+              OR ( --any job left in a PROCESSING state which has timed out
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status1
-                  AND "updatedAt" < NOW() - ("timeoutMs" * interval '1 millisecond')
+                  AND (payload ->> 'payloadVersion' = '2'
+                        AND "updatedAt" < NOW() - ((payload ->> 'timeOutSeconds')::int * interval '1 second')
+                      OR "createdAt" < NOW() - ("timeoutMs" * interval '1 millisecond'))
+              )
+              OR ( --v2 queued job which has not yet exceeded maximum attempts, has not timed out, and has remaining compute budget
+                  (payload ->> 'fileType') = ANY(@FileTypes)
+                  AND payload ->> 'payloadVersion' = '2'
+                  AND status = @Status2
+                  AND "attempt" < "maxAttempt"
+                  AND (payload ->> 'remainingComputeBudgetSeconds')::int > 0
+                  AND "createdAt" > NOW() - ("timeoutMs" * interval '1 millisecond')
               )
               ORDER BY "createdAt"
               FOR UPDATE SKIP LOCKED
@@ -113,6 +125,40 @@ internal sealed class Repository(ILogger<Repository> logger)
     var command = new CommandDefinition(
       commandText: COMMAND_TEXT,
       parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
+      cancellationToken: cancellationToken
+    );
+
+    await connection.ExecuteAsync(command);
+  }
+
+  public async Task DeductFromComputeBudget(
+    IDbConnection connection,
+    string jobId,
+    long usedComputeTimeSeconds,
+    CancellationToken cancellationToken
+  )
+  {
+    logger.LogInformation(
+      "updating job: {jobId}'s remaining compute budget by deducting {usedComputeTimeSeconds} seconds",
+      jobId,
+      usedComputeTimeSeconds
+    );
+
+    //lang=postgresql
+    const string COMMAND_TEXT = """
+      UPDATE background_jobs
+      SET payload = jsonb_set(
+          payload,
+          '{remainingComputeBudgetSeconds}',
+          ((payload ->> 'remainingComputeBudgetSeconds')::int - @usedComputeTimeSeconds)::text::jsonb
+      ), "updatedAt" = NOW()
+      WHERE id = @jobId
+      AND payload ->> 'payloadVersion' = '2'
+      """;
+
+    var command = new CommandDefinition(
+      commandText: COMMAND_TEXT,
+      parameters: new { usedComputeTimeSeconds, jobId },
       cancellationToken: cancellationToken
     );
 
