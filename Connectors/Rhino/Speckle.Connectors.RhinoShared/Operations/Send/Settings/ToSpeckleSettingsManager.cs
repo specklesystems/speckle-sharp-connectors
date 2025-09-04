@@ -16,7 +16,7 @@ public class ToSpeckleSettingsManager
 
   public bool GetAddVisualizationPropertiesSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "addVisualizationProperties").Value as bool?;
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "addVisualizationProperties")?.Value as bool?;
     var returnValue = value != null && value.NotNull();
     if (_addVisualizationPropertiesCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
     {
