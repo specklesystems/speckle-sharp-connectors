@@ -243,6 +243,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     if (modifiedElementIds.Count == 1)
     {
       var doc = e.GetDocument();
+      if (doc == null)
+      {
+        return;
+      }
       if (modifiedElementIds.All(el => doc.GetElement(el) is DataStorage))
       {
         return;
@@ -348,9 +352,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // {
     //    await Commands.RefreshSendFilters();
     // }
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (doc == null)
+    {
+      return;
+    }
 
     if (
-      ChangedObjectIds.Any(e => _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View)
+      ChangedObjectIds.Any(e => doc.GetElement(e) is View)
     )
     {
       await Commands.RefreshSendFilters();
@@ -361,7 +370,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = _revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
 
     if (doc == null)
     {
