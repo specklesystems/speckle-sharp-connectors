@@ -58,6 +58,7 @@ internal sealed class JobProcessorInstance(
       using var scopeProjectId = ActivityScope.SetTag("projectId", job.Payload.ProjectId);
       using var scopeModelId = ActivityScope.SetTag("modelId", job.Payload.ModelId);
       using var scopeBlobId = ActivityScope.SetTag("blobId", job.Payload.BlobId);
+      using var scopeFileType = ActivityScope.SetTag("fileType", job.Payload.FileType);
 
       try
       {
