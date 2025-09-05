@@ -9,6 +9,7 @@ using Speckle.Importers.JobProcessor.JobHandlers;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -163,15 +164,20 @@ internal sealed class JobProcessorInstance(
     }
     catch (Exception ex)
     {
-      totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-
-      if (speckleClient is not null)
-      {
-        await ReportFailed(job, speckleClient, ex, totalElapsedSeconds, cancellationToken);
-      }
-
       activity?.RecordException(ex);
       activity?.SetStatus(SdkActivityStatusCode.Error);
+
+      totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+
+      try
+      {
+        await ReportFailed(job, speckleClient.NotNull(), ex, totalElapsedSeconds, cancellationToken);
+      }
+      catch (Exception ex2)
+      {
+        logger.LogError(ex2, "Failed to report failure status");
+        await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
+      }
     }
     finally
     {

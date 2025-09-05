@@ -91,6 +91,36 @@ internal sealed class Repository(ILogger<Repository> logger)
     return await connection.QueryFirstOrDefaultAsync<FileimportJob?>(command);
   }
 
+  public async Task ReturnJobToQueued(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
+  }
+
+  private async Task SetJobStatus(
+    IDbConnection connection,
+    string jobId,
+    JobStatus jobStatus,
+    CancellationToken cancellationToken
+  )
+  {
+    logger.LogInformation("Updating job: {jobId}'s status to {jobStatus}", jobId, jobStatus);
+
+    //lang=postgresql
+    const string COMMAND_TEXT = """
+      UPDATE background_jobs
+      SET status = @status, "updatedAt" = NOW()
+      WHERE id = @jobId
+      """;
+
+    var command = new CommandDefinition(
+      commandText: COMMAND_TEXT,
+      parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
+      cancellationToken: cancellationToken
+    );
+
+    await connection.ExecuteAsync(command);
+  }
+
   public async Task DeductFromComputeBudget(
     IDbConnection connection,
     string jobId,
