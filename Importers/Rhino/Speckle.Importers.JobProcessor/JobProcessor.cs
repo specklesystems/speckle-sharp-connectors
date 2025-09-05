@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Timers;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Logging;
@@ -42,7 +41,13 @@ internal sealed class JobProcessorInstance(
         await Task.Delay(s_idleTimeout, cancellationToken);
         continue;
       }
-      logger.LogInformation("Starting {jobId}", job.Id);
+      logger.LogInformation(
+        "Starting {jobId}, attempt {attempt} / {maxAttempts} - it has {computeBudgetSeconds}s remaining",
+        job.Id,
+        job.Attempt,
+        job.MaxAttempt,
+        job.RemainingComputeBudgetSeconds
+      );
 
       using var activity = activityFactory.Start();
       using var scopeJobId = ActivityScope.SetTag("jobId", job.Id);
@@ -55,30 +60,12 @@ internal sealed class JobProcessorInstance(
 
       try
       {
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        JobStatus jobStatus;
-        try
-        {
-          jobStatus = await AttemptJob(job, cancellationToken);
-        }
-        finally
-        {
-          await repository.DeductFromComputeBudget(
-            connection,
-            job.Id,
-            (long)stopwatch.Elapsed.TotalSeconds,
-            cancellationToken
-          );
-        }
-
-        if (jobStatus == JobStatus.QUEUED)
-        {
-          await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
-        }
+        await AttemptJob(job, connection, cancellationToken);
         activity?.SetStatus(SdkActivityStatusCode.Ok);
       }
       catch (Exception ex)
       {
+        // This is a very exceptional case, something is wrong with our infra
         activity?.RecordException(ex);
         activity?.SetStatus(SdkActivityStatusCode.Error);
         throw;
@@ -86,7 +73,7 @@ internal sealed class JobProcessorInstance(
     }
   }
 
-  private static async Task ReportSuccess(
+  private async Task ReportSuccess(
     FileimportJob job,
     Version version,
     IClient client,
@@ -94,6 +81,13 @@ internal sealed class JobProcessorInstance(
     CancellationToken cancellationToken
   )
   {
+    logger.LogInformation(
+      "Job {jobId} has succeeded creating {versionId} after {elapsedSeconds}",
+      job.Id,
+      version.id,
+      elapsedSeconds
+    );
+
     var input = new FileImportSuccessInput
     {
       projectId = job.Payload.ProjectId,
@@ -104,20 +98,29 @@ internal sealed class JobProcessorInstance(
     await client.FileImport.FinishFileImportJob(input, cancellationToken);
   }
 
-  private static async Task ReportFailed(
+  private async Task ReportFailed(
     FileimportJob job,
     IClient client,
     Exception ex,
+    double elapsedSeconds,
     CancellationToken cancellationToken
   )
   {
+    logger.LogError(
+      ex,
+      "Attempt {attempt} to process {jobId} failed after {elapsedSeconds}",
+      job.Attempt,
+      job.Id,
+      elapsedSeconds
+    );
+
     var input = new FileImportErrorInput()
     {
       projectId = job.Payload.ProjectId,
       jobId = job.Payload.BlobId,
       warnings = [],
       reason = string.IsNullOrEmpty(ex.Message) ? ex.GetType().ToString() : ex.Message,
-      result = new FileImportResult(0, 0, 0, "Rhino Importer", versionId: null)
+      result = new FileImportResult(elapsedSeconds, 0, 0, "Rhino Importer", versionId: null)
     };
     await client.FileImport.FinishFileImportJob(input, cancellationToken);
   }
@@ -134,14 +137,14 @@ internal sealed class JobProcessorInstance(
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
-  private async Task<JobStatus> AttemptJob(FileimportJob job, CancellationToken cancellationToken)
+  private async Task AttemptJob(FileimportJob job, IDbConnection connection, CancellationToken cancellationToken)
   {
     using var activity = activityFactory.Start();
-
     IClient? speckleClient = null;
+    Stopwatch stopwatch = Stopwatch.StartNew();
+    double totalElapsedSeconds = 0;
     try
     {
-      Stopwatch stopwatch = Stopwatch.StartNew();
       speckleClient = await SetupClient(job, cancellationToken);
       using var userScope = UserActivityScope.AddUserScope(speckleClient.Account);
 
@@ -151,45 +154,34 @@ internal sealed class JobProcessorInstance(
         throw new MaxAttemptsExceededException("Unhandled error silently failed the job multiple times");
       }
 
-      try
-      {
-        Version version = await ExecuteJobWithTimeout(job, speckleClient, cancellationToken);
-        await ReportSuccess(job, version, speckleClient, stopwatch.Elapsed.TotalSeconds, cancellationToken);
-        logger.LogInformation("Job {jobId} has succeeded creating {versionId}", job.Id, version.id);
+      Version version = await ExecuteJobWithTimeout(job, speckleClient, cancellationToken);
+      totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
 
-        activity?.SetStatus(SdkActivityStatusCode.Ok);
-        return JobStatus.SUCCEEDED;
-      }
-      catch (JobTimeoutException ex)
-      {
-        logger.LogInformation(ex, "Executing job timed out");
+      await ReportSuccess(job, version, speckleClient, totalElapsedSeconds, cancellationToken);
 
-        if (job.Attempt >= job.MaxAttempt)
-        {
-          throw new MaxAttemptsExceededException("The final attempt to process the job failed", ex);
-        }
-
-        activity?.RecordException(ex);
-        activity?.SetStatus(SdkActivityStatusCode.Error);
-        return JobStatus.QUEUED;
-      }
+      activity?.SetStatus(SdkActivityStatusCode.Ok);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Attempt {attempt} to process {jobId} failed", job.Attempt, job.Id);
+      totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
 
       if (speckleClient is not null)
       {
-        await ReportFailed(job, speckleClient, ex, cancellationToken);
+        await ReportFailed(job, speckleClient, ex, totalElapsedSeconds, cancellationToken);
       }
 
       activity?.RecordException(ex);
       activity?.SetStatus(SdkActivityStatusCode.Error);
-      return JobStatus.FAILED;
     }
     finally
     {
       speckleClient?.Dispose();
+
+      if (totalElapsedSeconds <= 0)
+      {
+        totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+      }
+      await repository.DeductFromComputeBudget(connection, job.Id, (long)totalElapsedSeconds, cancellationToken);
     }
   }
 
@@ -206,12 +198,8 @@ internal sealed class JobProcessorInstance(
     CancellationToken cancellationToken
   )
   {
-    var jobTimeout = job.Payload.TimeOutSeconds;
-    if (job.Payload.RemainingComputeBudgetSeconds > 0)
-    {
-      //respect the remaining compute budget
-      jobTimeout = Math.Min(jobTimeout, job.Payload.RemainingComputeBudgetSeconds);
-    }
+    //respect the remaining compute budget
+    int jobTimeout = Math.Max(0, Math.Min(job.Payload.TimeOutSeconds, job.RemainingComputeBudgetSeconds));
 
     using CancellationTokenSource timeout = new();
     timeout.CancelAfter(TimeSpan.FromSeconds(jobTimeout));
@@ -225,10 +213,7 @@ internal sealed class JobProcessorInstance(
     }
     catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
     {
-      throw new JobTimeoutException(
-        $"Job was cancelled due to reaching the {job.Payload.TimeOutSeconds} second timeout",
-        ex
-      );
+      throw new JobTimeoutException($"Job was cancelled due to reaching the {jobTimeout} second timeout", ex);
     }
   }
 }

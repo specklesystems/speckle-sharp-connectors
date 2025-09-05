@@ -56,27 +56,17 @@ internal sealed class Repository(ILogger<Repository> logger)
               "updatedAt" = NOW()
           WHERE id = (
               SELECT id FROM background_jobs
-              WHERE ( --v1 queued job which has not yet exceeded maximum attempts and not yet timed out
+              WHERE ( -- job in a QUEUED state which has not yet exceeded maximum attempts and has a positive remaining compute budget
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
-                  AND payload ->> 'payloadVersion' = '1'
                   AND "attempt" < "maxAttempt"
-                  AND "createdAt" > NOW() - ("timeoutMs" * interval '1 millisecond')
+                  AND "remainingComputeBudgetSeconds"::int > 0
               )
-              OR ( --any job left in a PROCESSING state which has timed out
+              OR ( -- any job left in a PROCESSING state for more than its timeout period
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status1
-                  AND (payload ->> 'payloadVersion' = '2'
-                        AND "updatedAt" < NOW() - ((payload ->> 'timeOutSeconds')::int * interval '1 second')
-                      OR "createdAt" < NOW() - ("timeoutMs" * interval '1 millisecond'))
-              )
-              OR ( --v2 queued job which has not yet exceeded maximum attempts, has not timed out, and has remaining compute budget
-                  (payload ->> 'fileType') = ANY(@FileTypes)
-                  AND payload ->> 'payloadVersion' = '2'
-                  AND status = @Status2
-                  AND "attempt" < "maxAttempt"
-                  AND (payload ->> 'remainingComputeBudgetSeconds')::int > 0
-                  AND "createdAt" > NOW() - ("timeoutMs" * interval '1 millisecond')
+                  AND "attempt" <= "maxAttempt"
+                  AND "updatedAt" < NOW() - (payload ->> 'timeOutSeconds')::int * interval '1 second'
               )
               ORDER BY "createdAt"
               FOR UPDATE SKIP LOCKED
@@ -101,36 +91,6 @@ internal sealed class Repository(ILogger<Repository> logger)
     return await connection.QueryFirstOrDefaultAsync<FileimportJob?>(command);
   }
 
-  public async Task ReturnJobToQueued(IDbConnection connection, string jobId, CancellationToken cancellationToken)
-  {
-    await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
-  }
-
-  public async Task SetJobStatus(
-    IDbConnection connection,
-    string jobId,
-    JobStatus jobStatus,
-    CancellationToken cancellationToken
-  )
-  {
-    logger.LogInformation("Updating job: {jobId}'s status to {jobStatus}", jobId, jobStatus);
-
-    //lang=postgresql
-    const string COMMAND_TEXT = """
-      UPDATE background_jobs
-      SET status = @status, "updatedAt" = NOW()
-      WHERE id = @jobId
-      """;
-
-    var command = new CommandDefinition(
-      commandText: COMMAND_TEXT,
-      parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
-      cancellationToken: cancellationToken
-    );
-
-    await connection.ExecuteAsync(command);
-  }
-
   public async Task DeductFromComputeBudget(
     IDbConnection connection,
     string jobId,
@@ -147,13 +107,9 @@ internal sealed class Repository(ILogger<Repository> logger)
     //lang=postgresql
     const string COMMAND_TEXT = """
       UPDATE background_jobs
-      SET payload = jsonb_set(
-          payload,
-          '{remainingComputeBudgetSeconds}',
-          ((payload ->> 'remainingComputeBudgetSeconds')::int - @usedComputeTimeSeconds)::text::jsonb
-      ), "updatedAt" = NOW()
+      SET "remainingComputeBudgetSeconds" = "remainingComputeBudgetSeconds"::int - @usedComputeTimeSeconds,
+          "updatedAt" = NOW()
       WHERE id = @jobId
-      AND payload ->> 'payloadVersion' = '2'
       """;
 
     var command = new CommandDefinition(
