@@ -37,7 +37,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
-    var fidelityString = modelCard.Settings?.First(s => s.Id == "detailLevel").Value as string;
+    var fidelityString = modelCard.Settings?.FirstOrDefault(s => s.Id == "detailLevel")?.Value as string;
     if (
       fidelityString is not null
       && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
@@ -59,7 +59,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
-    var referencePointString = modelCard.Settings?.First(s => s.Id == "referencePoint").Value as string;
+    var referencePointString = modelCard.Settings?.FirstOrDefault(s => s.Id == "referencePoint")?.Value as string;
     if (
       referencePointString is not null
       && ReferencePointSetting.ReferencePointMap.TryGetValue(
@@ -90,7 +90,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "nullemptyparams").Value as bool?;
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "nullemptyparams")?.Value as bool?;
     var returnValue = value != null && value.NotNull();
     if (_sendNullParamsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
     {
@@ -108,7 +108,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "includeLinkedModels").Value as bool?;
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "includeLinkedModels")?.Value as bool?;
     var returnValue = value != null && value.NotNull();
 
     if (_sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
@@ -124,7 +124,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.First(s => s.Id == "sendRebarsAsVolumetric").Value as bool?;
+    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "sendRebarsAsVolumetric")?.Value as bool?;
     var returnValue = value != null && value.NotNull();
     if (_sendRebarsAsVolumetricCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
     {
