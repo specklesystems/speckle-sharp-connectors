@@ -83,7 +83,8 @@ internal sealed class JobProcessorInstance(
   )
   {
     logger.LogInformation(
-      "Job {jobId} has succeeded creating {versionId} after {elapsedSeconds}",
+      "Attempt {attempt} of {jobId} has succeeded creating {versionId} after {elapsedSeconds}",
+      job.Attempt,
       job.Id,
       version.id,
       elapsedSeconds
