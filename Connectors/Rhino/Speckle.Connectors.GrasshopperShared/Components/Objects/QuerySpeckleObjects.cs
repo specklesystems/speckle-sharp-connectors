@@ -136,13 +136,22 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     for (int i = 0; i < Params.Output.Count; i++)
     {
       // determine output values based on parameter type
-      List<SpeckleWrapper> outputValues =
-        i == 0
-          ? filteredObjects
-          : Enum.TryParse(Params.Output[i].Name, out ObjectType filterType)
-          && _filterDict.TryGetValue(filterType, out var filteredList)
-            ? filteredList.Cast<SpeckleWrapper>().ToList()
-            : new List<SpeckleWrapper>();
+      List<SpeckleWrapper> outputValues;
+      if (i == 0)
+      {
+        outputValues = filteredObjects;
+      }
+      else if (
+        Enum.TryParse(Params.Output[i].Name, out ObjectType filterType)
+        && _filterDict.TryGetValue(filterType, out var filteredList)
+      )
+      {
+        outputValues = filteredList.Cast<SpeckleWrapper>().ToList();
+      }
+      else
+      {
+        outputValues = [];
+      }
 
       var outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
 
