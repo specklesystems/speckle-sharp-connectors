@@ -25,6 +25,7 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
     using var scopeProjectId = ActivityScope.SetTag("projectId", args.Project.id);
     using var scopeModelId = ActivityScope.SetTag("modelId", args.ModelId);
     using var scopeBlobId = ActivityScope.SetTag("blobId", args.BlobId);
+    using var scopeFileType = ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.'));
     UserActivityScope.AddUserScope(args.Account);
 
     var result = await TryImport(args, cancellationToken);
