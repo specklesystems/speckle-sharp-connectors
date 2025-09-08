@@ -65,7 +65,7 @@ public class RootObjectUnpacker
         atomicObjects.Add(tc);
       }
     }
-    return (atomicObjects.ToArray(), instanceComponents.ToArray());
+    return (atomicObjects, instanceComponents);
   }
 
   private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>
