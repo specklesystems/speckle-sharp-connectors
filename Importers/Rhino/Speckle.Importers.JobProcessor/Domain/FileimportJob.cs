@@ -13,4 +13,5 @@ internal sealed class FileimportJob
   public required int MaxAttempt { get; init; }
   public required DateTime CreatedAt { get; init; }
   public required DateTime UpdatedAt { get; init; }
+  public int RemainingComputeBudgetSeconds { get; init; } = 1800;
 }
