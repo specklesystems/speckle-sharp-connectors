@@ -30,7 +30,7 @@ public class RootObjectUnpacker
     );
 
   public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
-    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).Reverse().ToArray();
+    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).ToArray();
 
   public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
     TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
