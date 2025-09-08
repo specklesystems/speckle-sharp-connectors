@@ -28,10 +28,8 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_deconstruct;
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
-  {
+  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
     pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param to deconstruct", GH_ParamAccess.item);
-  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
@@ -40,11 +38,11 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     // on first iteration, discover all fields from all objects to create stable output structure
     if (da.Iteration == 0)
     {
-      var fieldAccessTypes = DiscoverAllFieldsFromInput();
+      var allFields = DiscoverAllFieldsFromInput();
 
-      if (fieldAccessTypes.Count > 0)
+      if (allFields.Count > 0)
       {
-        var requiredOutputs = CreateOutputParamsFromFieldNames(fieldAccessTypes);
+        var requiredOutputs = CreateOutputParamsFromFieldNames(allFields);
 
         if (OutputMismatch(requiredOutputs))
         {
@@ -80,7 +78,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
   /// <returns>A dictionary mapping field names to their required parameter access types.</returns>
   private IReadOnlyDictionary<string, GH_ParamAccess> DiscoverAllFieldsFromInput()
   {
-    Dictionary<string, GH_ParamAccess> fieldAccessTypes = new();
+    Dictionary<string, GH_ParamAccess> allFields = [];
 
     foreach (var item in Params.Input[0].VolatileData.AllData(true))
     {
@@ -90,12 +88,12 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         foreach (var output in objectOutputs)
         {
           string fieldName = output.Param.Name;
-          fieldAccessTypes[fieldName] = output.Param.Access;
+          allFields[fieldName] = output.Param.Access;
         }
       }
     }
 
-    return fieldAccessTypes;
+    return allFields;
   }
 
   /// <summary>
