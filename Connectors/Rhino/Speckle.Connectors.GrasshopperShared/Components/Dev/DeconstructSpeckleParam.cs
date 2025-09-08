@@ -370,7 +370,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
   private OutputParamWrapper CreateOutputParamByKeyValue(string key, object? value, GH_ParamAccess access)
   {
-    Param_GenericObject param =
+    SpeckleOutputParam param =
       new()
       {
         Name = key,
@@ -413,7 +413,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     // add new output parameters
     foreach (var newParam in outputParams)
     {
-      var param = new Param_GenericObject
+      var param = new SpeckleOutputParam
       {
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,

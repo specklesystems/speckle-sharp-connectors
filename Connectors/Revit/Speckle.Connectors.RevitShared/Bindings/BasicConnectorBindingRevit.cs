@@ -72,6 +72,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
       return new DocumentInfo("", "", "") { Message = "Family environment files not supported by Speckle." };
     }
 
+    //should this use the Hashcode of the document instead of something like CreationGUID?
     var info = new DocumentInfo(doc.PathName, doc.Title, doc.GetHashCode().ToString());
 
     return info;
