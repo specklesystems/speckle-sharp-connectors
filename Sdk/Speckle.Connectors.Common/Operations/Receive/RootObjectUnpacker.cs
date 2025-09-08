@@ -52,8 +52,8 @@ public class RootObjectUnpacker
     IReadOnlyCollection<TraversalContext> instanceComponents
   ) SplitAtomicObjectsAndInstances(IEnumerable<TraversalContext> objectsToSplit)
   {
-    HashSet<TraversalContext> atomicObjects = [];
-    HashSet<TraversalContext> instanceComponents = [];
+    List<TraversalContext> atomicObjects = [];
+    List<TraversalContext> instanceComponents = [];
     foreach (TraversalContext tc in objectsToSplit)
     {
       if (tc.Current is IInstanceComponent)
