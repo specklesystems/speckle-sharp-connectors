@@ -48,7 +48,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       return;
     }
 
-    Name = $"properties ({properties.Value.Count})";
+    Name = $"Properties ({properties.Value.Count})";
     NickName = Name;
 
     var outputParams = new List<OutputParamWrapper>();
