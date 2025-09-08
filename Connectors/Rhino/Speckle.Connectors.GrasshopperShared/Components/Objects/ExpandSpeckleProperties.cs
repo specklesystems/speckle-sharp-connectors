@@ -24,7 +24,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_properties_properties; // TODO
+  protected override Bitmap Icon => Resources.speckle_properties_expand;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
