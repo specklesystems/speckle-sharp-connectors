@@ -137,7 +137,10 @@ public class FilterSpeckleObjects : GH_Component
 
         if (properties is not null)
         {
-          foreach (string key in properties.Value.Keys)
+          // use flattened properties to search ALL nested property keys
+          // fix for [CNX-2512](https://linear.app/speckle/issue/CNX-2512/filter-objects-material-and-property-key-inputs-dont-work-as-expected)
+          Dictionary<string, SpecklePropertyGoo> flattenedProps = properties.Flatten();
+          foreach (string key in flattenedProps.Keys)
           {
             if (MatchesSearchPattern(property, key))
             {
@@ -155,13 +158,29 @@ public class FilterSpeckleObjects : GH_Component
       }
 
       // filter by material name
-      if (wrapper is SpeckleGeometryWrapper geoWrapper)
+      bool materialMatches = true;
+      if (!string.IsNullOrEmpty(material))
       {
-        if (!MatchesSearchPattern(material, geoWrapper.Material?.Name ?? ""))
+        materialMatches = false;
+
+        if (wrapper is SpeckleGeometryWrapper geoWrapper)
         {
-          removedObjects.Add(wrapper);
-          continue;
+          materialMatches = MatchesSearchPattern(material, geoWrapper.Material?.Name ?? "");
         }
+        else if (wrapper is SpeckleDataObjectWrapper dataObjWrapper)
+        {
+          // check if ANY geometry in the data object has a matching material (not sure about this...)
+          // fix for [CNX-2512](https://linear.app/speckle/issue/CNX-2512/filter-objects-material-and-property-key-inputs-dont-work-as-expected)
+          materialMatches = dataObjWrapper.Geometries.Any(geo =>
+            MatchesSearchPattern(material, geo.Material?.Name ?? "")
+          );
+        }
+      }
+
+      if (!materialMatches)
+      {
+        removedObjects.Add(wrapper);
+        continue;
       }
 
       // filter by application id
