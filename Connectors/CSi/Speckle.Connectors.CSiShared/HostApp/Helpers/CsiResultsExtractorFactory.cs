@@ -19,6 +19,8 @@ public class CsiResultsExtractorFactory
       ResultsKey.BASE_REACT => _serviceProvider.GetRequiredService<CsiBaseReactResultsExtractor>(),
       ResultsKey.FRAME_FORCES => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
       ResultsKey.JOINT_REACT => _serviceProvider.GetRequiredService<CsiJointReactResultsExtractor>(),
+      ResultsKey.MODAL_PARTICIPATING_MASS_RATIOS
+        => _serviceProvider.GetRequiredService<CsiModalParticipatingMassRatios>(),
       ResultsKey.PIER_FORCES => _serviceProvider.GetRequiredService<CsiPierForceResultsExtractor>(),
       ResultsKey.SPANDREL_FORCES => _serviceProvider.GetRequiredService<CsiSpandrelForceResultsExtractor>(),
       ResultsKey.STORY_DRIFTS => _serviceProvider.GetRequiredService<CsiStoryDriftsResultsExtractor>(),
