@@ -3,20 +3,16 @@ using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 
-public class CsiModalParticipatingMassRatios : IApplicationResultsExtractor
+public class CsiModalParticipationFactorsExtractor : IApplicationResultsExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
-
-  public string ResultsKey => "modalParticipatingMassRatios";
+  public string ResultsKey => "modalParticipationFactors";
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
-    new(
-      ["LoadCase", "Wrap:StepNum"],
-      ["Period", "UX", "UY", "UZ", "SumUX", "SumUY", "SumUZ", "RX", "RY", "RZ", "SumRX", "SumRY", "SumRZ"]
-    );
+    new(["LoadCase", "Wrap:StepNum"], ["Period", "UX", "UY", "UZ", "RX", "RY", "RZ", "ModalMass", "ModalStiff"]);
 
-  public CsiModalParticipatingMassRatios(
+  public CsiModalParticipationFactorsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
     ResultsArrayProcessor resultsArrayProcessor
   )
@@ -37,18 +33,14 @@ public class CsiModalParticipatingMassRatios : IApplicationResultsExtractor
       ux = [],
       uy = [],
       uz = [],
-      sumUx = [],
-      sumUy = [],
-      sumUz = [],
       rx = [],
       ry = [],
       rz = [],
-      sumRx = [],
-      sumRy = [],
-      sumRz = [];
+      modalMass = [],
+      modalStiff = [];
 
     // Step 2: api call
-    int success = _settingsStore.Current.SapModel.Results.ModalParticipatingMassRatios(
+    int success = _settingsStore.Current.SapModel.Results.ModalParticipationFactors(
       ref numberResults,
       ref loadCase,
       ref stepType,
@@ -57,20 +49,16 @@ public class CsiModalParticipatingMassRatios : IApplicationResultsExtractor
       ref ux,
       ref uy,
       ref uz,
-      ref sumUx,
-      ref sumUy,
-      ref sumUz,
       ref rx,
       ref ry,
       ref rz,
-      ref sumRx,
-      ref sumRy,
-      ref sumRz
+      ref modalMass,
+      ref modalStiff
     );
 
     if (success != 0 || numberResults == 0)
     {
-      throw new InvalidOperationException("Modal participating mass ratios extraction failed."); // shouldn't fail silently
+      throw new InvalidOperationException("Modal participation factors extraction failed."); // shouldn't fail silently
     }
 
     // Step 3: organise array for dictionary processor
@@ -82,15 +70,11 @@ public class CsiModalParticipatingMassRatios : IApplicationResultsExtractor
       ["UX"] = ux,
       ["UY"] = uy,
       ["UZ"] = uz,
-      ["SumUX"] = sumUx,
-      ["SumUY"] = sumUy,
-      ["SumUZ"] = sumUz,
       ["RX"] = rx,
       ["RY"] = ry,
       ["RZ"] = rz,
-      ["SumRX"] = sumRx,
-      ["SumRY"] = sumRy,
-      ["SumRZ"] = sumRz
+      ["ModalMass"] = modalMass,
+      ["ModalStiff"] = modalStiff,
     };
 
     // Step 4: return sorted and processed dictionary
