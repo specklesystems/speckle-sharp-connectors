@@ -73,6 +73,16 @@ public class ClassPropertiesExtractor
       elementProperties.Add("worksetName", worksetName);
     }
 
+    // get group name if applicable
+    var groupId = element.GroupId;
+    if (groupId is not null)
+    {
+      if (element.Document.GetElement(groupId) is DB.Group group)
+      {
+        elementProperties.Add("groupName", group.GroupType.Name);
+      }
+    }
+
     return elementProperties;
   }
 }
