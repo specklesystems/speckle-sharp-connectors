@@ -23,6 +23,7 @@ public class CsiResultsExtractorFactory
         => _serviceProvider.GetRequiredService<CsiModalParticipationFactorsExtractor>(),
       ResultsKey.MODAL_PARTICIPATING_MASS_RATIOS
         => _serviceProvider.GetRequiredService<CsiModalParticipatingMassRatiosExtractor>(),
+      ResultsKey.MODAL_PERIOD => _serviceProvider.GetRequiredService<CsiModalPeriodExtractor>(),
       ResultsKey.PIER_FORCES => _serviceProvider.GetRequiredService<CsiPierForceResultsExtractor>(),
       ResultsKey.SPANDREL_FORCES => _serviceProvider.GetRequiredService<CsiSpandrelForceResultsExtractor>(),
       ResultsKey.STORY_DRIFTS => _serviceProvider.GetRequiredService<CsiStoryDriftsResultsExtractor>(),

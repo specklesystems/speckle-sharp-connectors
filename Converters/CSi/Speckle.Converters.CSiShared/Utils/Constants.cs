@@ -63,6 +63,7 @@ public static class ResultsKey
   public const string JOINT_REACT = "Joint Reactions";
   public const string MODAL_PARTICIPATION_FACTORS = "Modal Participation Factors";
   public const string MODAL_PARTICIPATING_MASS_RATIOS = "Modal Participating Mass Ratios";
+  public const string MODAL_PERIOD = "Modal Period";
   public const string PIER_FORCES = "Pier Forces";
   public const string SPANDREL_FORCES = "Spandrel Forces";
   public const string STORY_DRIFTS = "Story Drifts";
