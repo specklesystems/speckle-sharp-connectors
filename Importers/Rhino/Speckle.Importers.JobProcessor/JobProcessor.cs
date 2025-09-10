@@ -177,7 +177,7 @@ internal sealed class JobProcessorInstance(
       }
       catch (Exception ex2)
       {
-        logger.LogError(ex2, "Failed to report failure status");
+        logger.LogError(new AggregateException(ex, ex2), "Failed to report failure status");
         await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
       }
     }
