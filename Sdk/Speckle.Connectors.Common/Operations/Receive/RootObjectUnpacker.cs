@@ -1,5 +1,4 @@
 ﻿using Speckle.Objects.Other;
-using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -31,7 +30,7 @@ public class RootObjectUnpacker
     );
 
   public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
-    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).Freeze();
+    _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).ToArray();
 
   public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
     TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
@@ -53,8 +52,8 @@ public class RootObjectUnpacker
     IReadOnlyCollection<TraversalContext> instanceComponents
   ) SplitAtomicObjectsAndInstances(IEnumerable<TraversalContext> objectsToSplit)
   {
-    HashSet<TraversalContext> atomicObjects = new();
-    HashSet<TraversalContext> instanceComponents = new();
+    List<TraversalContext> atomicObjects = [];
+    List<TraversalContext> instanceComponents = [];
     foreach (TraversalContext tc in objectsToSplit)
     {
       if (tc.Current is IInstanceComponent)
@@ -66,7 +65,7 @@ public class RootObjectUnpacker
         atomicObjects.Add(tc);
       }
     }
-    return (atomicObjects.Freeze(), instanceComponents.Freeze());
+    return (atomicObjects, instanceComponents);
   }
 
   private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>

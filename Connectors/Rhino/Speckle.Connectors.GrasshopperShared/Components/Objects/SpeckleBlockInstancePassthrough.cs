@@ -151,8 +151,12 @@ public class SpeckleBlockInstancePassthrough()
 
     // process the instance
     // deep copy so we don't mutate the incoming object
-    SpeckleBlockInstanceWrapperGoo result =
-      inputInstance != null ? new((SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy()) : new();
+    SpeckleBlockInstanceWrapperGoo result = new();
+    if (inputInstance != null)
+    {
+      result = new SpeckleBlockInstanceWrapperGoo((SpeckleBlockInstanceWrapper)inputInstance.Value.DeepCopy());
+      result.Value.Base.id = null; // ⚠️ TODO: Co-ordinate with SDK. We're having to do this otherwise the serializer won't recompute mutated objects
+    }
 
     // process definition
     if (inputDefinition != null)
