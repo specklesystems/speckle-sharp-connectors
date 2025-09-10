@@ -7,10 +7,10 @@ public class CsiModalPeriodExtractor : IApplicationResultsExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
-  public string ResultsKey => "modalPeriodExtractor";
+  public string ResultsKey => "modalPeriodsAndFrequencies";
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
-    new(["LoadCase", "Wrap:StepNum"], ["Period", "Frequency", "CircFreq", "Eigenvalue"]);
+    new(["LoadCase", "Wrap:Mode"], ["Period", "Frequency", "CircFreq", "Eigenvalue"]);
 
   public CsiModalPeriodExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
@@ -26,8 +26,8 @@ public class CsiModalPeriodExtractor : IApplicationResultsExtractor
     // Step 1: define api variables
     int numberResults = 0;
     string[] loadCase = [],
-      stepType = [];
-    double[] stepNum = [],
+      mode = [];
+    double[] modeNum = [],
       period = [],
       frequency = [],
       circFreq = [],
@@ -37,8 +37,8 @@ public class CsiModalPeriodExtractor : IApplicationResultsExtractor
     int success = _settingsStore.Current.SapModel.Results.ModalPeriod(
       ref numberResults,
       ref loadCase,
-      ref stepType,
-      ref stepNum,
+      ref mode,
+      ref modeNum,
       ref period,
       ref frequency,
       ref circFreq,
@@ -54,7 +54,7 @@ public class CsiModalPeriodExtractor : IApplicationResultsExtractor
     var rawArrays = new Dictionary<string, object>
     {
       ["LoadCase"] = loadCase,
-      ["StepNum"] = stepNum,
+      ["Mode"] = modeNum,
       ["Period"] = period,
       ["Frequency"] = frequency,
       ["CircFreq"] = circFreq,

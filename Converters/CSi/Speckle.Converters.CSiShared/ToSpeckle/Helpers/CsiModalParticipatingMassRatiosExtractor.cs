@@ -12,7 +12,7 @@ public class CsiModalParticipatingMassRatiosExtractor : IApplicationResultsExtra
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
     new(
-      ["LoadCase", "Wrap:StepNum"],
+      ["LoadCase", "Wrap:Mode"],
       ["Period", "UX", "UY", "UZ", "SumUX", "SumUY", "SumUZ", "RX", "RY", "RZ", "SumRX", "SumRY", "SumRZ"]
     );
 
@@ -31,8 +31,8 @@ public class CsiModalParticipatingMassRatiosExtractor : IApplicationResultsExtra
     // Step 1: define api variables
     int numberResults = 0;
     string[] loadCase = [],
-      stepType = [];
-    double[] stepNum = [],
+      mode = [];
+    double[] modeNum = [],
       period = [],
       ux = [],
       uy = [],
@@ -51,8 +51,8 @@ public class CsiModalParticipatingMassRatiosExtractor : IApplicationResultsExtra
     int success = _settingsStore.Current.SapModel.Results.ModalParticipatingMassRatios(
       ref numberResults,
       ref loadCase,
-      ref stepType,
-      ref stepNum,
+      ref mode,
+      ref modeNum,
       ref period,
       ref ux,
       ref uy,
@@ -77,7 +77,7 @@ public class CsiModalParticipatingMassRatiosExtractor : IApplicationResultsExtra
     var rawArrays = new Dictionary<string, object>
     {
       ["LoadCase"] = loadCase,
-      ["StepNum"] = stepNum,
+      ["Mode"] = modeNum,
       ["Period"] = period,
       ["UX"] = ux,
       ["UY"] = uy,

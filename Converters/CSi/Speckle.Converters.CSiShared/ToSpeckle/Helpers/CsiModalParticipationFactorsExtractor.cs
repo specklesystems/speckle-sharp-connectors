@@ -10,7 +10,7 @@ public class CsiModalParticipationFactorsExtractor : IApplicationResultsExtracto
   public string ResultsKey => "modalParticipationFactors";
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
-    new(["LoadCase", "Wrap:StepNum"], ["Period", "UX", "UY", "UZ", "RX", "RY", "RZ", "ModalMass", "ModalStiff"]);
+    new(["LoadCase", "Wrap:Mode"], ["Period", "UX", "UY", "UZ", "RX", "RY", "RZ", "ModalMass", "ModalStiff"]);
 
   public CsiModalParticipationFactorsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
@@ -27,8 +27,8 @@ public class CsiModalParticipationFactorsExtractor : IApplicationResultsExtracto
     // Step 1: define api variables
     int numberResults = 0;
     string[] loadCase = [],
-      stepType = [];
-    double[] stepNum = [],
+      mode = [];
+    double[] modeNum = [],
       period = [],
       ux = [],
       uy = [],
@@ -43,8 +43,8 @@ public class CsiModalParticipationFactorsExtractor : IApplicationResultsExtracto
     int success = _settingsStore.Current.SapModel.Results.ModalParticipationFactors(
       ref numberResults,
       ref loadCase,
-      ref stepType,
-      ref stepNum,
+      ref mode,
+      ref modeNum,
       ref period,
       ref ux,
       ref uy,
@@ -65,7 +65,7 @@ public class CsiModalParticipationFactorsExtractor : IApplicationResultsExtracto
     var rawArrays = new Dictionary<string, object>
     {
       ["LoadCase"] = loadCase,
-      ["StepNum"] = stepNum,
+      ["Mode"] = modeNum,
       ["Period"] = period,
       ["UX"] = ux,
       ["UY"] = uy,
