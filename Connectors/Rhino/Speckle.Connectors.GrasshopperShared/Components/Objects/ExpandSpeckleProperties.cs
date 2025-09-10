@@ -77,8 +77,10 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
     if (da.Iteration == 0 && OutputMismatch(outputParams))
     {
       OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(outputParams));
+      return; // exit early
     }
-    else
+    // only set data if we have the correct parameter structure
+    if (Params.Output.Count == outputParams.Count)
     {
       for (int i = 0; i < outputParams.Count; i++)
       {

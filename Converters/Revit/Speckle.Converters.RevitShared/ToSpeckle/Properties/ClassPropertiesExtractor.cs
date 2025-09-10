@@ -61,7 +61,7 @@ public class ClassPropertiesExtractor
           worksetName = workset?.Name ?? "Unknown Workset";
           _worksetCache[worksetId.Value] = worksetName;
         }
-        catch (Exception ex) when (ex.IsFatal())
+        catch (Exception ex) when (!ex.IsFatal())
         {
           // fallback: if we can't get the workset for any reason (e.g., workset doesn't exist),
           // provide a safe default instead of crashing (I don't think a workset name prop is cause for a fail!)
