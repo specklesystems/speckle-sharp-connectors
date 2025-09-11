@@ -28,8 +28,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiBaseReactResultsExtractor>();
     serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiJointReactResultsExtractor>();
-    serviceCollection.AddScoped<CsiModalParticipationFactorsExtractor>();
-    serviceCollection.AddScoped<CsiModalParticipatingMassRatiosExtractor>();
     serviceCollection.AddScoped<CsiModalPeriodExtractor>();
     serviceCollection.AddScoped<CsiPierForceResultsExtractor>();
     serviceCollection.AddScoped<CsiSpandrelForceResultsExtractor>();

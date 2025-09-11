@@ -61,8 +61,6 @@ public static class ResultsKey
   public const string BASE_REACT = "Base Reactions";
   public const string FRAME_FORCES = "Frame Forces";
   public const string JOINT_REACT = "Joint Reactions";
-  public const string MODAL_PARTICIPATION_FACTORS = "Modal Participation Factors";
-  public const string MODAL_PARTICIPATING_MASS_RATIOS = "Modal Participating Mass Ratios";
   public const string MODAL_PERIOD = "Modal Period";
   public const string PIER_FORCES = "Pier Forces";
   public const string SPANDREL_FORCES = "Spandrel Forces";
@@ -74,8 +72,6 @@ public static class ResultsKey
     BASE_REACT,
     FRAME_FORCES,
     JOINT_REACT,
-    MODAL_PARTICIPATION_FACTORS,
-    MODAL_PARTICIPATING_MASS_RATIOS,
     MODAL_PERIOD,
     PIER_FORCES,
     SPANDREL_FORCES,
