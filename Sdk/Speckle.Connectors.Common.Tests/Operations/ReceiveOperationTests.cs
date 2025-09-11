@@ -35,8 +35,8 @@ public class ReceiveOperationTests : MoqTest
     var @base = new TestBase();
     var account = new Account
     {
-      userInfo = new(),
-      serverInfo = new ServerInfo() { url = "https://myserver.example.com" }
+      userInfo = new UserInfo() { email = "test_user@example.com" },
+      serverInfo = new ServerInfo() { url = "https://myserver.example.com" },
     };
     var version = new Speckle.Sdk.Api.GraphQL.Models.Version();
     var projectName = "projectName";
