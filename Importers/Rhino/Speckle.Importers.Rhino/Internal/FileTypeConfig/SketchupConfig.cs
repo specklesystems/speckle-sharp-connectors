@@ -15,6 +15,7 @@ public sealed class SketchupConfig : IFileTypeConfig
       AddObjectsToGroups = true,
       ImportCurves = true,
       ImportFacesAsMeshes = true,
+      UseGroupLayers = true,
     };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
