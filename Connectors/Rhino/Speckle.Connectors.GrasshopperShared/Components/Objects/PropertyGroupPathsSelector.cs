@@ -13,7 +13,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     : base(
       "Property Selector",
       "pSelect",
-      "Allows you to select a set of property keys for querying",
+      "Allows you to select a set of property keys for querying. Right-click for 'Always select all' option.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }

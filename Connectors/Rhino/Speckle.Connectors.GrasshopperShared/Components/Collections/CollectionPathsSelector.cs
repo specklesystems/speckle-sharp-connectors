@@ -12,7 +12,7 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     : base(
       "Collection Selector",
       "cSelect",
-      "Allows you to select a set of collection paths for querying",
+      "Allows you to select a set of collection paths for querying. Right-click for 'Always select all' option.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.COLLECTIONS
     ) { }
