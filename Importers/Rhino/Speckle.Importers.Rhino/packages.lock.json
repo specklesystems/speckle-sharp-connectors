@@ -4,11 +4,11 @@
     "net8.0-windows7.0": {
       "Grasshopper": {
         "type": "Direct",
-        "requested": "[8.21.25188.17001, )",
-        "resolved": "8.21.25188.17001",
-        "contentHash": "qpt9XQWuKLFfzn2cnYf5akfHRwYuffthK5AXsSY1UhjD0eG6bYSTtmAkNVH+Wdg130MZkGqJmPd012Om1kJPBA==",
+        "requested": "[8.23.25251.13001, )",
+        "resolved": "8.23.25251.13001",
+        "contentHash": "AoswT4QQlD21t/ywsUy2cZRuSQDg39WGIVoyc0jOPv7973WwMrGO891ZIQ0vRZ23s4NGa5lqPU53ZgoGZqSpGA==",
         "dependencies": {
-          "RhinoCommon": "[8.21.25188.17001]"
+          "RhinoCommon": "[8.23.25251.13001]"
         }
       },
       "Microsoft.NETFramework.ReferenceAssemblies": {
@@ -48,20 +48,20 @@
       },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[8.21.25188.17001, )",
-        "resolved": "8.21.25188.17001",
-        "contentHash": "Wo6JXheyDBvilyIwDY6xZCQJC4170jzAlTSlMgh8yokUY+vYyCl4KJVXZofIOynNt/xx5wLqb2On5gZZekXR6w==",
+        "requested": "[8.23.25251.13001, )",
+        "resolved": "8.23.25251.13001",
+        "contentHash": "FKkGghsK0lG7nrjweP3W009lbqMn9tAPF27gw8wognZfZ4hYkTZygOpF99p2Vl7gn+faGKEmh11LgDj6PU/YNw==",
         "dependencies": {
           "System.Drawing.Common": "7.0.0"
         }
       },
       "RhinoWindows": {
         "type": "Direct",
-        "requested": "[8.21.25188.17001, )",
-        "resolved": "8.21.25188.17001",
-        "contentHash": "9zqCorcLRBeiW/j1RTwUS4E7bnZetAdA9WDdtd/AQccjOpxdtw76wdN+ciyQ6qslseWkwZ9qSBeh7QaM800Ntw==",
+        "requested": "[8.23.25251.13001, )",
+        "resolved": "8.23.25251.13001",
+        "contentHash": "xq30IuvvjlensoVROEIenPotvV9o7ynXlROWuZsLfWJp4NwSHc1F/cLn2Rqd0xHCZGhxlwhIYjrdU5WMtDPlxQ==",
         "dependencies": {
-          "RhinoCommon": "[8.21.25188.17001]"
+          "RhinoCommon": "[8.23.25251.13001]"
         }
       },
       "Speckle.InterfaceGenerator": {
