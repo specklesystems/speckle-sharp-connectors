@@ -399,27 +399,27 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   public string SearchPattern { get; set; } = string.Empty;
 
-  private bool _alwaysSelectAll;
+  private bool _autoSelectAllItemsItems;
 
   /// <summary>
   /// When enabled, all available items will be selected automatically and persistently.
   /// </summary>
-  public bool AlwaysSelectAll
+  public bool AutoSelectAllItems
   {
-    get => _alwaysSelectAll;
+    get => _autoSelectAllItemsItems;
     set
     {
-      if (_alwaysSelectAll == value)
+      if (_autoSelectAllItemsItems == value)
       {
         return;
       }
 
-      _alwaysSelectAll = value;
+      _autoSelectAllItemsItems = value;
 
       if (value && _listItems.Count > 0)
       {
         SelectAllItems();
-        ResetPersistentData(_listItems.Select(x => x.Value), "Enable Always Select All");
+        ResetPersistentData(_listItems.Select(x => x.Value), "Enable auto-select all items");
       }
 
       OnDisplayExpired(false);
@@ -603,12 +603,12 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
     var alwaysSelectAllItem = Menu_AppendItem(
       menu,
-      "Always select all",
+      "Auto-select all items",
       Menu_AlwaysSelectAllClicked,
       true,
-      _alwaysSelectAll
+      _autoSelectAllItemsItems
     );
-    alwaysSelectAllItem.ToolTipText = _alwaysSelectAll
+    alwaysSelectAllItem.ToolTipText = _autoSelectAllItemsItems
       ? "Currently auto-selecting all available items. Click to disable."
       : "Enable automatic selection of all available items. Will persist when new data is input.";
 
@@ -667,9 +667,10 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
   }
 
   /// <summary>
-  /// Event handler for "Always select all" menu item
+  /// Event handler for auto-select all items menu item
   /// </summary>
-  private void Menu_AlwaysSelectAllClicked(object sender, EventArgs e) => AlwaysSelectAll = !_alwaysSelectAll;
+  private void Menu_AlwaysSelectAllClicked(object sender, EventArgs e) =>
+    AutoSelectAllItems = !_autoSelectAllItemsItems;
 
   sealed class ResizableAttributes : GH_ResizableAttributes<ValueSet<T>>
   {
@@ -1447,9 +1448,9 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     LayoutLevel = Rhino.RhinoMath.Clamp(layoutLevel, 1, 2);
 
     bool alwaysSelectAll = false;
-    if (reader.TryGetBoolean("AlwaysSelectAll", ref alwaysSelectAll))
+    if (reader.TryGetBoolean("AutoSelectAllItems", ref alwaysSelectAll))
     {
-      _alwaysSelectAll = alwaysSelectAll;
+      _autoSelectAllItemsItems = alwaysSelectAll;
     }
 
     return true;
@@ -1477,7 +1478,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       writer.SetInt32("LayoutLevel", LayoutLevel);
     }
 
-    writer.SetBoolean("AlwaysSelectAll", _alwaysSelectAll);
+    writer.SetBoolean("AutoSelectAllItems", _autoSelectAllItemsItems);
 
     return true;
   }
@@ -1756,16 +1757,10 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     PostProcessVolatileData();
 
     // auto-select if enabled
-    if (_alwaysSelectAll && _listItems.Count > 0 && _listItems.Any(item => !item.Selected))
+    if (_autoSelectAllItemsItems && _listItems.Count > 0 && _listItems.Any(item => !item.Selected))
     {
       SelectAllItems();
       ResetPersistentData(_listItems.Select(x => x.Value), null);
-    }
-
-    // let user know that if using regex strings and enabled auto-select, this applies to filtered list not entire coll.
-    if (_alwaysSelectAll && !string.IsNullOrEmpty(SearchPattern))
-    {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Auto-selection applies only to filtered items");
     }
   }
 
