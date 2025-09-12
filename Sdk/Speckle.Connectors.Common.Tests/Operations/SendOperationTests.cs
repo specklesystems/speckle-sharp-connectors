@@ -105,7 +105,7 @@ public class SendOperationTests : MoqTest
     var sourceApplication = "sourceApplication";
     var account = new Account()
     {
-      userInfo = new UserInfo(),
+      userInfo = new UserInfo() { email = "test_user@example.com" },
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };

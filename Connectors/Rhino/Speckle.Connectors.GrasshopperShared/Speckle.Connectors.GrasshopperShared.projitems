@@ -16,6 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CollectionPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\CreateCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Collections\ExpandCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\ExpandSpeckleProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockInstancePassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\SpeckleBlockDefinitionPassthrough.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Dev\TokenUrlComponent.cs" />
@@ -65,6 +66,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResource.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleResourceBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpeckleOutputParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\SpecklePropertyGroupParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapperParam.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Parameters\Wrappers\SpeckleBlockInstanceWrapperGoo.cs" />

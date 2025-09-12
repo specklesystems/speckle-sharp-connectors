@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -44,14 +45,14 @@ public class QueryProperties : GH_Component
     SpecklePropertyGroupGoo? properties = null;
     if (!da.GetData(0, ref properties))
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Input a Speckle Properties item");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Input a Speckle Properties item");
       return;
     }
 
-    List<string> keys = new();
+    List<string> keys = [];
     if (!da.GetDataList(1, keys))
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Input a key");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Input a key");
       return;
     }
 
@@ -60,11 +61,21 @@ public class QueryProperties : GH_Component
       return;
     }
 
-    List<object?> values = new();
+    List<object?> values = [];
     foreach (string key in keys)
     {
-      ISpecklePropertyGoo? value = GetValueByPath(properties, key);
-      values.Add(value);
+      var value = GetValueByPath(properties, key);
+      var extractedValue = (value as SpecklePropertyGoo)?.Value ?? value;
+
+      // NOTE: if property is a list, flatten into individual items for native gh list access
+      if (extractedValue is IList itemList)
+      {
+        values.AddRange(itemList.Cast<object?>());
+      }
+      else
+      {
+        values.Add(extractedValue);
+      }
     }
 
     da.SetDataList(0, values);

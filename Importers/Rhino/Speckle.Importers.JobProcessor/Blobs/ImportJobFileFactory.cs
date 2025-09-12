@@ -9,7 +9,7 @@ internal sealed class ImportJobFileDownloader(ILogger<ImportJobFile> logger)
   public async Task<ImportJobFile> DownloadFile(FileimportJob job, IClient client, CancellationToken cancellationToken)
   {
     var directory = Directory.CreateTempSubdirectory("speckle-file-import");
-    string targetFilePath = $"{directory.FullName}/{job.Payload.JobId}.{job.Payload.FileType}";
+    string targetFilePath = $"{directory.FullName}/{job.Payload.BlobId}.{job.Payload.FileType}";
     await client.FileImport.DownloadFile(
       job.Payload.ProjectId,
       job.Payload.BlobId,
