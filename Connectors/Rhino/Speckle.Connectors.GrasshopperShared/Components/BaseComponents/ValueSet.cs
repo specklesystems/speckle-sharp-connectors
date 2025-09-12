@@ -446,7 +446,10 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     {
       Menu_AppendDestroyPersistent(menu);
 
-      if (Exposure != GH_Exposure.hidden) { }
+      if (Exposure != GH_Exposure.hidden && _listItems.Count > 0)
+      {
+        Menu_AppendInternaliseData(menu);
+      }
     }
   }
 
