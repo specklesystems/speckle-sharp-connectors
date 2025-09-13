@@ -74,6 +74,11 @@ public class ClassPropertiesExtractor
     }
 
     // get group name if applicable
+    // TODO: in in group proxies separate issue. Below comments from PR #1081
+    // We're using group proxies in Rhino etc. Groups should be handled similarly in Revit, unless there's a good
+    // reason to deviate. We should prioritize consistency here esp as we shift focus to our dashboarding
+    // We've decided to add group proxies as a separate issue, once we are more opinionated on the proxy vs properties
+    // consumability in dashboards vs powerbi
     var groupId = element.GroupId;
     if (groupId is not null)
     {
