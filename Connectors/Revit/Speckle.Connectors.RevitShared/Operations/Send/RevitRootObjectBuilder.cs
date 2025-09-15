@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
@@ -12,9 +13,9 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -127,6 +128,9 @@ public class RevitRootObjectBuilder(
     var skippedObjectCount = 0;
     var totalElementCount = 0;
 
+    // track linked model conversion results for proxy creation
+    var linkedModelConversionResults = new List<LinkedModelConversionResult>();
+
     // calculate total elements for progress reporting
     totalElementCount += mainModel.Elements.Count;
     foreach (var group in linkedModelGroups.Values)
@@ -148,6 +152,7 @@ public class RevitRootObjectBuilder(
       ref countProgress,
       ref skippedObjectCount,
       totalElementCount,
+      null,
       cancellationToken
     );
 
@@ -158,6 +163,10 @@ public class RevitRootObjectBuilder(
       {
         string documentPath = linkedModelGroup.Key;
         var instances = linkedModelGroup.Value;
+
+        // create result tracking object
+        var conversionResult = new LinkedModelConversionResult(documentPath, instances);
+        linkedModelConversionResults.Add(conversionResult);
 
         // convert only the FIRST instance of each unique linked model (without its transform)
         var firstInstance = instances.First();
@@ -175,9 +184,13 @@ public class RevitRootObjectBuilder(
           ref countProgress,
           ref skippedObjectCount,
           totalElementCount,
+          conversionResult,
           cancellationToken
         );
       }
+
+      // create instance definition proxies
+      CreateInstanceDefinitionProxies(linkedModelConversionResults, rootObject);
     }
 
     // validation
@@ -306,6 +319,7 @@ public class RevitRootObjectBuilder(
     ref int countProgress,
     ref int skippedObjectCount,
     int totalElementCount,
+    LinkedModelConversionResult? trackingResult,
     CancellationToken cancellationToken
   )
   {
@@ -374,6 +388,11 @@ public class RevitRootObjectBuilder(
           );
           collection.elements.Add(converted);
           results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+
+          if (trackingResult != null && converted.applicationId != null)
+          {
+            trackingResult.ConvertedElementIds.Add(converted.applicationId);
+          }
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -384,5 +403,89 @@ public class RevitRootObjectBuilder(
         onOperationProgressed.Report(new("Converting", (double)++countProgress / totalElementCount));
       }
     }
+  }
+
+  private void CreateInstanceDefinitionProxies(
+    List<LinkedModelConversionResult> linkedModelConversionResults,
+    Collection rootObject
+  )
+  {
+    var instanceDefinitionProxies = new List<InstanceDefinitionProxy>();
+
+    foreach (var conversionResult in linkedModelConversionResults)
+    {
+      if (conversionResult.ConvertedElementIds.Count == 0)
+      {
+        // Skip linked models with no converted elements
+        continue;
+      }
+
+      // Create a unique definition ID for this linked model
+      string definitionId = GenerateDefinitionId(conversionResult.DocumentPath);
+      string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
+
+      logger.LogInformation(
+        "Creating InstanceDefinitionProxy '{DefinitionId}' for linked model '{ModelName}' with {ElementCount} elements",
+        definitionId,
+        modelName,
+        conversionResult.ConvertedElementIds.Count
+      );
+
+      var instanceDefinitionProxy = new InstanceDefinitionProxy
+      {
+        applicationId = definitionId,
+        objects = conversionResult.ConvertedElementIds.ToList(), // Copy the list
+        maxDepth = 0, // Linked models are at depth 0 for now (no nested instances)
+        name = modelName
+      };
+
+      instanceDefinitionProxies.Add(instanceDefinitionProxy);
+    }
+
+    // Store the instance definition proxies on the root object
+    if (instanceDefinitionProxies.Count > 0)
+    {
+      rootObject[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
+      logger.LogInformation("Created {ProxyCount} InstanceDefinitionProxies", instanceDefinitionProxies.Count);
+    }
+  }
+
+  // Helper method to generate a unique definition ID for a linked model
+  private string GenerateDefinitionId(string documentPath)
+  {
+    // Create a consistent ID based on the document path
+    // This ensures the same linked model always gets the same definition ID
+    string fileName = Path.GetFileNameWithoutExtension(documentPath);
+    string hash = ComputeSimpleHash(documentPath);
+    return $"LinkedModel_{fileName}_{hash}";
+  }
+
+  // Simple hash function for generating consistent definition IDs
+  private string ComputeSimpleHash(string input)
+  {
+    byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+
+#pragma warning disable CA1850
+    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+    {
+      byte[] hashBytes = sha256.ComputeHash(inputBytes);
+      // Take first 8 characters for a shorter but still unique hash
+      return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
+    }
+#pragma warning restore CA1850
+  }
+}
+
+public class LinkedModelConversionResult
+{
+  public string DocumentPath { get; set; }
+  public List<DocumentToConvert> Instances { get; set; }
+  public List<string> ConvertedElementIds { get; set; }
+
+  public LinkedModelConversionResult(string documentPath, List<DocumentToConvert> instances)
+  {
+    DocumentPath = documentPath;
+    Instances = instances;
+    ConvertedElementIds = new List<string>();
   }
 }
