@@ -24,17 +24,16 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 
   protected override void LoadVolatileData()
   {
-    var propertyGroups = VolatileData
+    List<SpecklePropertyGroupGoo> propertyGroups = VolatileData
       .AllData(true)
-      .Where(goo => goo is SpecklePropertyGroupGoo)
-      .Select(goo =>
-        goo switch
-        {
-          SpecklePropertyGroupGoo geometryGoo => geometryGoo,
-          _ => throw new InvalidOperationException("Unexpected goo type")
-        }
-      )
+      .OfType<SpecklePropertyGroupGoo>()
       .ToList();
+
+    if (VolatileDataCount > propertyGroups.Count)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Only Speckle Properties are accepted as inputs.");
+      return;
+    }
 
     if (propertyGroups.Count == 0)
     {
