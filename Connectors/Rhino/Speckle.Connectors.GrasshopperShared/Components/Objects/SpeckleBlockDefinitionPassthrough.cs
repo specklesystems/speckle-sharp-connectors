@@ -88,7 +88,6 @@ public class SpeckleBlockDefinitionPassthrough()
     if (inputDefinition != null)
     {
       result = new SpeckleBlockDefinitionWrapperGoo(inputDefinition.Value.DeepCopy());
-      result.Value.Base.id = null; // ⚠️ TODO: Co-ordinate with SDK. We're having to do this otherwise the serializer won't recompute mutated objects
     }
 
     // process geometry
