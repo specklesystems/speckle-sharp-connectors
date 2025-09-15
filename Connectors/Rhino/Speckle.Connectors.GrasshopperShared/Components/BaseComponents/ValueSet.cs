@@ -399,6 +399,33 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   public string SearchPattern { get; set; } = string.Empty;
 
+  private bool _autoSelectAllItemsItems;
+
+  /// <summary>
+  /// When enabled, all available items will be selected automatically and persistently.
+  /// </summary>
+  public bool AutoSelectAllItems
+  {
+    get => _autoSelectAllItemsItems;
+    set
+    {
+      if (_autoSelectAllItemsItems == value)
+      {
+        return;
+      }
+
+      _autoSelectAllItemsItems = value;
+
+      if (value && _listItems.Count > 0)
+      {
+        SelectAllItems();
+        ResetPersistentData(_listItems.Select(x => x.Value), "Enable auto-select all items");
+      }
+
+      OnDisplayExpired(false);
+    }
+  }
+
   protected internal int LayoutLevel { get; set; } = 1;
 
   sealed class ListItem
@@ -437,16 +464,14 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     public RectangleF BoxName;
   }
 
-  private List<ListItem> _listItems = new List<ListItem>();
+  private List<ListItem> _listItems = [];
   IEnumerable<ListItem> SelectedItems => _listItems.Where(x => x.Selected);
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
     if (Kind == GH_ParamKind.floating || Kind == GH_ParamKind.input)
     {
-      Menu_AppendDestroyPersistent(menu);
-
-      if (Exposure != GH_Exposure.hidden) { }
+      Menu_AppendInternaliseData(menu);
     }
   }
 
@@ -549,6 +574,8 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   protected override GH_GetterResult Prompt_Singular(ref T value) => GH_GetterResult.cancel;
 
+  // NOTE: removed from AppendAdditionalMenuItems as clearing selection simple enough. Keeping here just in case
+  // we want to bring it back
   protected override void Menu_AppendDestroyPersistent(ToolStripDropDown menu) =>
     Menu_AppendItem(menu, "Clear selection", Menu_DestroyPersistentData, PersistentDataCount > 0);
 
@@ -569,9 +596,34 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   protected override void Menu_AppendInternaliseData(ToolStripDropDown menu)
   {
-    Menu_AppendItem(menu, "Invert selection", Menu_InvertSelectionClicked, _listItems.Count != PersistentDataCount);
-    Menu_AppendItem(menu, "Select all", Menu_SelectAllClicked, _listItems.Count != PersistentDataCount);
+    // Disabled Invert selection and one-off select all according to Discord chat. These are easy enough
+    // Select all also enabled through ctrl+a
+    //Menu_AppendItem(menu, "Invert selection", Menu_InvertSelectionClicked, _listItems.Count != PersistentDataCount);
+    //Menu_AppendItem(menu, "Select all", Menu_SelectAllClicked, _listItems.Count != PersistentDataCount);
+
+    var alwaysSelectAllItem = Menu_AppendItem(
+      menu,
+      "Auto-select all items",
+      Menu_AlwaysSelectAllClicked,
+      true,
+      _autoSelectAllItemsItems
+    );
+    alwaysSelectAllItem.ToolTipText = _autoSelectAllItemsItems
+      ? "Currently auto-selecting all available items. Click to disable."
+      : "Enable automatic selection of all available items. Will persist when new data is input.";
+
     Menu_AppendItem(menu, "Internalise selection", Menu_InternaliseDataClicked, SourceCount > 0);
+  }
+
+  /// <summary>
+  /// Helper method that reduces code duplication to select all items
+  /// </summary>
+  private void SelectAllItems()
+  {
+    foreach (var item in _listItems)
+    {
+      item.Selected = true;
+    }
   }
 
   private void Menu_InternaliseDataClicked(object sender, EventArgs e)
@@ -610,13 +662,15 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
 
   protected void Menu_SelectAllClicked(object sender, EventArgs e)
   {
-    foreach (var item in _listItems)
-    {
-      item.Selected = true;
-    }
-
+    SelectAllItems();
     ResetPersistentData(_listItems.Select(x => x.Value), "Select all");
   }
+
+  /// <summary>
+  /// Event handler for auto-select all items menu item
+  /// </summary>
+  private void Menu_AlwaysSelectAllClicked(object sender, EventArgs e) =>
+    AutoSelectAllItems = !_autoSelectAllItemsItems;
 
   sealed class ResizableAttributes : GH_ResizableAttributes<ValueSet<T>>
   {
@@ -1336,11 +1390,6 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
       return GH_ObjectResponse.Ignore;
     }
 
-    public override GH_ObjectResponse RespondToKeyDown(GH_Canvas sender, KeyEventArgs e)
-    {
-      return base.RespondToKeyDown(sender, e);
-    }
-
     private sealed class SearchInputBox : Grasshopper.GUI.Base.GH_TextBoxInputBase
     {
       private readonly ResizableAttributes _parentAttributes;
@@ -1398,6 +1447,12 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     reader.TryGetInt32("LayoutLevel", ref layoutLevel);
     LayoutLevel = Rhino.RhinoMath.Clamp(layoutLevel, 1, 2);
 
+    bool alwaysSelectAll = false;
+    if (reader.TryGetBoolean("AutoSelectAllItems", ref alwaysSelectAll))
+    {
+      _autoSelectAllItemsItems = alwaysSelectAll;
+    }
+
     return true;
   }
 
@@ -1422,6 +1477,8 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     {
       writer.SetInt32("LayoutLevel", LayoutLevel);
     }
+
+    writer.SetBoolean("AutoSelectAllItems", _autoSelectAllItemsItems);
 
     return true;
   }
@@ -1684,11 +1741,8 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
   public sealed override void PostProcessData()
   {
     LoadVolatileData();
-
     PreProcessVolatileData();
-
     ProcessVolatileData();
-
     SortItems();
 
     // Order by fuzzy token if suits.
@@ -1701,6 +1755,13 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     }
 
     PostProcessVolatileData();
+
+    // auto-select if enabled
+    if (_autoSelectAllItemsItems && _listItems.Count > 0 && _listItems.Any(item => !item.Selected))
+    {
+      SelectAllItems();
+      ResetPersistentData(_listItems.Select(x => x.Value), null);
+    }
   }
 
   public override void RegisterRemoteIDs(GH_GuidTable id_list)
