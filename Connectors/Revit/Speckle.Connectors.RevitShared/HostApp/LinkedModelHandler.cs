@@ -160,6 +160,41 @@ public class LinkedModelHandler
   }
 
   /// <summary>
+  /// Groups documents by their unique linked models, separating main models from linked models.
+  /// This helps identify which linked models are the same (same file) but in different positions.
+  /// </summary>
+  public (
+    DocumentToConvert? MainModel,
+    Dictionary<string, List<DocumentToConvert>> LinkedModelInstances
+  ) GroupDocumentsByUniqueModels(IReadOnlyList<DocumentToConvert?> documents)
+  {
+    DocumentToConvert? mainModel = null;
+    var linkedModelInstances = new Dictionary<string, List<DocumentToConvert>>();
+
+    foreach (var document in documents)
+    {
+      if (document != null && document.Doc.IsLinked)
+      {
+        // group linked models by their document path (same model file, different transforms)
+        string documentPathName = document.Doc.PathName;
+
+        if (!linkedModelInstances.TryGetValue(documentPathName, out List<DocumentToConvert>? instances))
+        {
+          instances = [];
+          linkedModelInstances[documentPathName] = instances;
+        }
+        instances.Add(document);
+      }
+      else if (document != null && !document.Doc.IsLinked)
+      {
+        mainModel = document;
+      }
+    }
+
+    return (mainModel, linkedModelInstances);
+  }
+
+  /// <summary>
   /// Retrieves all elements from the linked document when using selection filters.
   /// When a linked model is selected in the main document, we include all elements
   /// from that linked model since the selection is of the entire linked instance.

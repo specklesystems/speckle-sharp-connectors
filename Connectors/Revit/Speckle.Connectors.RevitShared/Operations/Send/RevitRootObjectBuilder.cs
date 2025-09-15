@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
@@ -48,6 +49,7 @@ public class RevitRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
+    // this should be the main model doc
     var doc = converterSettings.Current.Document;
 
     if (doc.IsFamilyDocument)
@@ -57,81 +59,87 @@ public class RevitRootObjectBuilder(
 
     // init the root
     Collection rootObject =
-      new() { name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
-    rootObject["units"] = converterSettings.Current.SpeckleUnits;
+      new()
+      {
+        name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First(),
+        ["units"] = converterSettings.Current.SpeckleUnits
+      };
 
-    var filteredDocumentsToConvert = new List<DocumentToConvert>();
+    // instantiating some needed variables
     bool sendWithLinkedModels = converterSettings.Current.SendLinkedModels;
-    List<SendConversionResult> results = new();
+    List<SendConversionResult> results = [];
 
-    // Prepare linked model display names if needed
-    if (sendWithLinkedModels)
+    // sorting documents and preparing names for collection (if necessary)
+    var (mainModel, linkedModelDocs) = linkedModelHandler.GroupDocumentsByUniqueModels(documentElementContexts);
+    if (mainModel == null)
+    {
+      throw new SpeckleException("Main Model not found.");
+    }
+
+    if (linkedModelDocs.Count != 0 && sendWithLinkedModels)
     {
       linkedModelHandler.PrepareLinkedModelNames(documentElementContexts);
     }
 
-    foreach (var documentElementContext in documentElementContexts)
-    {
-      // add appropriate warnings for linked documents
-      if (documentElementContext.Doc.IsLinked && !sendWithLinkedModels)
-      {
-        results.Add(
-          new(
-            Status.WARNING,
-            documentElementContext.Doc.PathName,
-            typeof(RevitLinkInstance).ToString(),
-            null,
-            new SpeckleException("Enable linked model support from the settings to send this object")
-          )
-        );
-        continue;
-      }
-
-      // filter for valid elements
-      // if send linked models setting is disabled List<Elements> will be empty, and we won't enter foreach loop
-      var elementsInTransform = new List<Element>();
-      foreach (var el in documentElementContext.Elements)
-      {
-        if (el == null || el.Category == null)
-        {
-          continue;
-        }
-        elementsInTransform.Add(el);
-      }
-
-      // only add contexts with elements
-      if (elementsInTransform.Count > 0)
-      {
-        filteredDocumentsToConvert.Add(documentElementContext with { Elements = elementsInTransform });
-      }
-    }
-
-    // TODO: check the exception!!!!
-    if (filteredDocumentsToConvert.Count == 0)
+    // filter and validate documents
+    var validDocumentsToConvert = FilterValidDocuments(mainModel, linkedModelDocs, sendWithLinkedModels, results);
+    if (validDocumentsToConvert.Count == 0)
     {
       throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
     }
 
-    // Unpack groups (& other complex data structures)
+    var atomicObjectsByDocumentAndTransform = UnpackDocuments(validDocumentsToConvert);
+
+    // convert objects
+    ConvertObjects(
+      atomicObjectsByDocumentAndTransform,
+      projectId,
+      rootObject,
+      sendWithLinkedModels,
+      onOperationProgressed,
+      results,
+      out var flatElements,
+      cancellationToken
+    );
+
+    // add proxies to root
+    AddProxiesToRoot(rootObject, flatElements);
+
+    return new RootObjectBuilderResult(rootObject, results);
+  }
+
+  private List<DocumentToConvert> UnpackDocuments(List<DocumentToConvert> documentsToConvert)
+  {
     var atomicObjectsByDocumentAndTransform = new List<DocumentToConvert>();
-    var atomicObjectCount = 0;
-    foreach (var filteredDocumentToConvert in filteredDocumentsToConvert)
+
+    foreach (var documentToConvert in documentsToConvert)
     {
-      using (
-        converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
-      )
+      using (converterSettings.Push(currentSettings => currentSettings with { Document = documentToConvert.Doc }))
       {
         var atomicObjects = elementUnpacker
-          .UnpackSelectionForConversion(filteredDocumentToConvert.Elements, filteredDocumentToConvert.Doc)
+          .UnpackSelectionForConversion(documentToConvert.Elements, documentToConvert.Doc)
           .ToList();
-        atomicObjectsByDocumentAndTransform.Add(filteredDocumentToConvert with { Elements = atomicObjects });
-        atomicObjectCount += atomicObjects.Count;
+        atomicObjectsByDocumentAndTransform.Add(documentToConvert with { Elements = atomicObjects });
       }
     }
 
+    return atomicObjectsByDocumentAndTransform;
+  }
+
+  private void ConvertObjects(
+    List<DocumentToConvert> atomicObjectsByDocumentAndTransform,
+    string projectId,
+    Collection rootObject,
+    bool sendWithLinkedModels,
+    IProgress<CardProgress> onOperationProgressed,
+    List<SendConversionResult> results,
+    out List<Element> flatElements,
+    CancellationToken cancellationToken
+  )
+  {
     var countProgress = 0;
-    var cacheHitCount = 0;
     var skippedObjectCount = 0;
+    var atomicObjectCount = atomicObjectsByDocumentAndTransform.Sum(d => d.Elements.Count);
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
@@ -142,7 +150,6 @@ public class RevitRootObjectBuilder(
         linkedModelHandler.LinkedModelDisplayNames.TryGetValue(id, out modelDisplayName);
       }
 
-      // here we do magic for changing the transform and the related document according to model. first one is always the main model.
       using (
         converterSettings.Push(currentSettings =>
           currentSettings with
@@ -159,6 +166,7 @@ public class RevitRootObjectBuilder(
           cancellationToken.ThrowIfCancellationRequested();
           string applicationId = revitElement.UniqueId;
           string sourceType = revitElement.GetType().Name;
+
           try
           {
             if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
@@ -180,18 +188,14 @@ public class RevitRootObjectBuilder(
             Base converted;
             bool hasTransform = atomicObjectByDocumentAndTransform.Transform != null;
 
-            // non-transformed elements can safely rely on cache
-            // TODO: Potential here to transform cached objects and NOT reconvert,
-            // TODO: we wont do !hasTransform here, and re-set application id before this
+            // Cache lookup for non-transformed elements
             if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
             {
               converted = value;
-              cacheHitCount++;
             }
-            // not in cache means we convert
             else
             {
-              // if it has a transform we append transform hash to the applicationId to distinguish the elements from other instances
+              // Apply transform hash for transformed elements
               if (hasTransform)
               {
                 string transformHash = linkedModelHandler.GetTransformHash(
@@ -199,7 +203,7 @@ public class RevitRootObjectBuilder(
                 );
                 applicationId = $"{applicationId}_t{transformHash}";
               }
-              // normal conversions
+
               converted = converter.Convert(revitElement);
               converted.applicationId = applicationId;
             }
@@ -210,7 +214,6 @@ public class RevitRootObjectBuilder(
               sendWithLinkedModels,
               modelDisplayName
             );
-
             collection.elements.Add(converted);
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
           }
@@ -225,21 +228,85 @@ public class RevitRootObjectBuilder(
       }
     }
 
-    // if we ended up skipping everything, there is a reason for this, that users can diagnose themselves
-    // this can occur if a published view contains only unsupported objects or if user trying to ONLY send linked model
-    // docs but the setting is disabled
+    // Validation
     if (skippedObjectCount == atomicObjectCount)
     {
       throw new SpeckleException("No supported objects visible. Update publish filter or check publish settings.");
     }
 
-    // this is, I suppose, fully on us?
     if (results.All(x => x.Status == Status.ERROR))
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    var flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
+    flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
+  }
+
+  // Helper method to filter and validate documents
+  private List<DocumentToConvert> FilterValidDocuments(
+    DocumentToConvert mainModel,
+    Dictionary<string, List<DocumentToConvert>> linkedModelDocs,
+    bool sendWithLinkedModels,
+    List<SendConversionResult> results
+  )
+  {
+    var validDocuments = new List<DocumentToConvert>();
+
+    // Add main models (always included)
+    var validMainDocElements = FilterValidElements(mainModel.Elements);
+    if (validMainDocElements.Count > 0)
+    {
+      validDocuments.Add(mainModel with { Elements = validMainDocElements });
+    }
+
+    // Add linked models based on settings
+    foreach (var linkedModelDoc in linkedModelDocs)
+    {
+      foreach (var linkedModelInstance in linkedModelDoc.Value)
+      {
+        // Add warnings for disabled linked models
+        if (!sendWithLinkedModels)
+        {
+          results.Add(
+            new(
+              Status.WARNING,
+              linkedModelInstance.Doc.PathName,
+              typeof(RevitLinkInstance).ToString(),
+              null,
+              new SpeckleException("Enable linked model support from the settings to send this object")
+            )
+          );
+          continue;
+        }
+
+        var validElements = FilterValidElements(linkedModelInstance.Elements);
+        if (validElements.Count > 0)
+        {
+          validDocuments.Add(linkedModelInstance with { Elements = validElements });
+        }
+      }
+    }
+
+    return validDocuments;
+  }
+
+  // Helper method to filter valid elements
+  private List<Element> FilterValidElements(List<Element> elements)
+  {
+    var validElements = new List<Element>();
+    foreach (var element in elements)
+    {
+      if (element != null && element.Category != null)
+      {
+        validElements.Add(element);
+      }
+    }
+    return validElements;
+  }
+
+  // Extract proxy logic
+  private void AddProxiesToRoot(Collection rootObject, List<Element> flatElements)
+  {
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
 
     var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
@@ -248,16 +315,11 @@ public class RevitRootObjectBuilder(
     var levelProxies = levelUnpacker.Unpack(flatElements);
     rootObject[ProxyKeys.LEVEL] = levelProxies;
 
-    // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
-    // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
-
-    // we want to store transform data for chosen reference point setting
+    // Store reference point transform if available
     if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
       rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
     }
-
-    return new RootObjectBuilderResult(rootObject, results);
   }
 }
