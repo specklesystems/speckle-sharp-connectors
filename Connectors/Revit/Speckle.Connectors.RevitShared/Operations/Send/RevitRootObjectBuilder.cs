@@ -12,6 +12,7 @@ using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -416,11 +417,10 @@ public class RevitRootObjectBuilder(
     {
       if (conversionResult.ConvertedElementIds.Count == 0)
       {
-        // Skip linked models with no converted elements
         continue;
       }
 
-      // Create a unique definition ID for this linked model
+      // create definition ID and name
       string definitionId = GenerateDefinitionId(conversionResult.DocumentPath);
       string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
@@ -431,18 +431,21 @@ public class RevitRootObjectBuilder(
         conversionResult.ConvertedElementIds.Count
       );
 
+      // create the InstanceDefinitionProxy
       var instanceDefinitionProxy = new InstanceDefinitionProxy
       {
         applicationId = definitionId,
-        objects = conversionResult.ConvertedElementIds.ToList(), // Copy the list
-        maxDepth = 0, // Linked models are at depth 0 for now (no nested instances)
+        objects = conversionResult.ConvertedElementIds.ToList(),
+        maxDepth = 0, // Linked models are at depth 0 for now
         name = modelName
       };
-
       instanceDefinitionProxies.Add(instanceDefinitionProxy);
+
+      // create InstanceProxy objects for each instance of this linked model
+      CreateInstanceProxiesForLinkedModel(conversionResult, definitionId, rootObject, modelName);
     }
 
-    // Store the instance definition proxies on the root object
+    // store the instance definition proxies on the root object
     if (instanceDefinitionProxies.Count > 0)
     {
       rootObject[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
@@ -450,17 +453,129 @@ public class RevitRootObjectBuilder(
     }
   }
 
-  // Helper method to generate a unique definition ID for a linked model
+  private void CreateInstanceProxiesForLinkedModel(
+    LinkedModelConversionResult conversionResult,
+    string definitionId,
+    Collection rootObject,
+    string modelName
+  )
+  {
+    var instanceProxies = new List<InstanceProxy>();
+    int instanceIndex = 0;
+
+    foreach (var instance in conversionResult.Instances)
+    {
+      instanceIndex++;
+
+      if (instance.Transform == null)
+      {
+        logger.LogWarning(
+          "Skipping instance {InstanceIndex} of '{ModelName}' - no transform available",
+          instanceIndex,
+          modelName
+        );
+        continue;
+      }
+
+      // create a unique instance ID
+      string instanceId = $"{definitionId}_instance_{instanceIndex}";
+
+      // convert Revit Transform to Matrix4x4
+      Matrix4x4 transformMatrix = RevitTransformToMatrix4x4(instance.Transform);
+
+      logger.LogDebug(
+        "Creating InstanceProxy '{InstanceId}' for linked model '{ModelName}' at transform [{Origin}]",
+        instanceId,
+        modelName,
+        $"{instance.Transform.Origin.X:F2}, {instance.Transform.Origin.Y:F2}, {instance.Transform.Origin.Z:F2}"
+      );
+
+      var instanceProxy = new InstanceProxy
+      {
+        applicationId = instanceId,
+        definitionId = definitionId,
+        transform = transformMatrix,
+        units = converterSettings.Current.SpeckleUnits,
+        maxDepth = 0 // Linked models are at depth 0 for now
+      };
+
+      instanceProxies.Add(instanceProxy);
+    }
+
+    // create a collection for the instances
+    if (instanceProxies.Count > 0)
+    {
+      CreateInstanceProxyCollection(rootObject, modelName, instanceProxies);
+
+      logger.LogInformation(
+        "Created {InstanceCount} InstanceProxies for linked model '{ModelName}'",
+        instanceProxies.Count,
+        modelName
+      );
+    }
+  }
+
+  private void CreateInstanceProxyCollection(
+    Collection rootObject,
+    string modelName,
+    List<InstanceProxy> instanceProxies
+  )
+  {
+    // first, find or create the linked model collection
+    Collection? linkedModelCollection = null;
+
+    // look for existing linked model collection
+    foreach (var element in rootObject.elements)
+    {
+      if (element is Collection collection && collection.name == modelName)
+      {
+        linkedModelCollection = collection;
+        break;
+      }
+    }
+
+    // this shouldn't happen since SendCollectionManager should have created it
+    if (linkedModelCollection == null)
+    {
+      logger.LogWarning("Linked model collection '{ModelName}' not found, creating it", modelName);
+      linkedModelCollection = new Collection(modelName);
+      rootObject.elements.Add(linkedModelCollection);
+    }
+
+    // create or find the "instances" subcollection
+    Collection? instancesCollection = null;
+
+    foreach (var element in linkedModelCollection.elements)
+    {
+      if (element is Collection collection && collection.name == "instances")
+      {
+        instancesCollection = collection;
+        break;
+      }
+    }
+
+    if (instancesCollection == null)
+    {
+      instancesCollection = new Collection("instances");
+      linkedModelCollection.elements.Add(instancesCollection);
+    }
+
+    // add all instance proxies to the instances collection
+    foreach (var instanceProxy in instanceProxies)
+    {
+      instancesCollection.elements.Add(instanceProxy);
+    }
+  }
+
   private string GenerateDefinitionId(string documentPath)
   {
-    // Create a consistent ID based on the document path
-    // This ensures the same linked model always gets the same definition ID
+    // create a consistent ID based on the document path
     string fileName = Path.GetFileNameWithoutExtension(documentPath);
     string hash = ComputeSimpleHash(documentPath);
     return $"LinkedModel_{fileName}_{hash}";
   }
 
-  // Simple hash function for generating consistent definition IDs
+  // simple hash function for generating consistent definition IDs
   private string ComputeSimpleHash(string input)
   {
     byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
@@ -474,6 +589,29 @@ public class RevitRootObjectBuilder(
     }
 #pragma warning restore CA1850
   }
+
+  // Add this helper method to convert Revit Transform to Matrix4x4
+  private Matrix4x4 RevitTransformToMatrix4x4(Transform transform) =>
+    // Convert Revit Transform to Matrix4x4 using the same layout as ReferencePointHelper
+    // This is a column-major 4x4 matrix representation
+    new(
+      (float)transform.BasisX.X,
+      (float)transform.BasisX.Y,
+      (float)transform.BasisX.Z,
+      0,
+      (float)transform.BasisY.X,
+      (float)transform.BasisY.Y,
+      (float)transform.BasisY.Z,
+      0,
+      (float)transform.BasisZ.X,
+      (float)transform.BasisZ.Y,
+      (float)transform.BasisZ.Z,
+      0,
+      (float)transform.Origin.X,
+      (float)transform.Origin.Y,
+      (float)transform.Origin.Z,
+      1
+    );
 }
 
 public class LinkedModelConversionResult
