@@ -1,3 +1,4 @@
+using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -22,11 +23,18 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
 
   protected override void LoadVolatileData()
   {
-    var collections = VolatileData
+    List<SpeckleCollectionWrapper> collections = VolatileData
       .AllData(true)
       .OfType<SpeckleCollectionWrapperGoo>()
       .Select(goo => goo.Value)
       .ToList();
+
+    if (VolatileDataCount > collections.Count)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Only Speckle Collections are accepted as inputs.");
+      return;
+    }
+
     if (collections.Count == 0)
     {
       return;

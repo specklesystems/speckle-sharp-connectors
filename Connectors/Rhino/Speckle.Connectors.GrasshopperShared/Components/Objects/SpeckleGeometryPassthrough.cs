@@ -125,7 +125,6 @@ public class SpeckleGeometryPassthrough()
       if (inputObject?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper gooWrapper)
       {
         result = gooWrapper.DeepCopy();
-        result.Base.id = null; // ⚠️ TODO: Co-ordinate with SDK. We're having to do this otherwise the serializer won't recompute mutated objects
       }
       else
       {
