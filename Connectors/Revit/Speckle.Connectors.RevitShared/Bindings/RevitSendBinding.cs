@@ -135,7 +135,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      _revitContext.UIApplication.NotNull().ActiveUIDocument
+      _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
@@ -349,9 +349,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     //    await Commands.RefreshSendFilters();
     // }
 
-    if (
-      ChangedObjectIds.Any(e => _revitContext.UIApplication?.ActiveUIDocument?.Document?.GetElement(e) is View)
-    )
+    if (ChangedObjectIds.Any(e => _revitContext.UIApplication?.ActiveUIDocument?.Document?.GetElement(e) is View))
     {
       await Commands.RefreshSendFilters();
     }
@@ -361,7 +359,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = _revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
 
     if (doc == null)
     {
