@@ -33,7 +33,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly LinkedModelDocumentHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
 
@@ -56,7 +56,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    LinkedModelHandler linkedModelHandler,
+    LinkedModelDocumentHandler linkedModelHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory

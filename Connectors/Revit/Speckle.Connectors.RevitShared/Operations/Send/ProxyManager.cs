@@ -1,0 +1,359 @@
+using System.IO;
+using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Revit.HostApp;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
+
+namespace Speckle.Connectors.Revit.Operations.Send;
+
+/// <summary>
+/// Manages the creation and organization of all proxy objects (instances, materials, levels, etc.).
+/// Centralizes proxy logic to keep it separate from conversion and document processing.
+/// </summary>
+public class ProxyManager
+{
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly ElementUnpacker _elementUnpacker;
+  private readonly LevelUnpacker _levelUnpacker;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
+  private readonly LinkedModelDocumentHandler _linkedModelHandler;
+  private readonly ILogger<ProxyManager> _logger;
+
+  public ProxyManager(
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    ElementUnpacker elementUnpacker,
+    LevelUnpacker levelUnpacker,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
+    LinkedModelDocumentHandler linkedModelHandler,
+    ILogger<ProxyManager> logger
+  )
+  {
+    _converterSettings = converterSettings;
+    _elementUnpacker = elementUnpacker;
+    _levelUnpacker = levelUnpacker;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
+    _linkedModelHandler = linkedModelHandler;
+    _logger = logger;
+  }
+
+  /// <summary>
+  /// Adds all types of proxies to the root object based on conversion results.
+  /// This is the main entry point for proxy creation.
+  /// </summary>
+  public void AddAllProxies(Collection rootObject, DocumentConversionResults conversionResults)
+  {
+    // Add instance proxies (definitions and instances)
+    if (conversionResults.LinkedModelResults?.LinkedModelConversions.Count > 0)
+    {
+      AddInstanceProxies(rootObject, conversionResults.LinkedModelResults);
+    }
+
+    // Add material and level proxies
+    AddMaterialProxies(rootObject, conversionResults.AllElements);
+    AddLevelProxies(rootObject, conversionResults.AllElements);
+
+    // Add reference point transform if available
+    AddReferencePointTransform(rootObject);
+  }
+
+  /// <summary>
+  /// Creates and adds instance definition proxies and instance proxies for linked models.
+  /// </summary>
+  private void AddInstanceProxies(Collection rootObject, LinkedModelConversionResults linkedResults)
+  {
+    var instanceDefinitionProxies = CreateInstanceDefinitionProxies(linkedResults);
+    var instanceProxyCollections = CreateInstanceProxyCollections(rootObject, linkedResults);
+
+    if (instanceDefinitionProxies.Count > 0)
+    {
+      rootObject[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
+      _logger.LogInformation("Created {ProxyCount} InstanceDefinitionProxies", instanceDefinitionProxies.Count);
+    }
+
+    if (instanceProxyCollections.Count > 0)
+    {
+      _logger.LogInformation(
+        "Created instance proxy collections for {ModelCount} linked models",
+        instanceProxyCollections.Count
+      );
+    }
+  }
+
+  /// <summary>
+  /// Creates instance definition proxies for each unique linked model.
+  /// </summary>
+  private List<InstanceDefinitionProxy> CreateInstanceDefinitionProxies(LinkedModelConversionResults linkedResults)
+  {
+    var instanceDefinitionProxies = new List<InstanceDefinitionProxy>();
+
+    foreach (var conversionResult in linkedResults.LinkedModelConversions)
+    {
+      if (conversionResult.ConvertedElementIds.Count == 0)
+      {
+        _logger.LogWarning(
+          "Skipping InstanceDefinitionProxy for '{DocumentPath}' - no elements were converted",
+          Path.GetFileName(conversionResult.DocumentPath)
+        );
+        continue;
+      }
+
+      try
+      {
+        string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+        string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
+
+        _logger.LogInformation(
+          "Creating InstanceDefinitionProxy '{DefinitionId}' for linked model '{ModelName}' with {ElementCount} elements",
+          definitionId,
+          modelName,
+          conversionResult.ConvertedElementIds.Count
+        );
+
+        var instanceDefinitionProxy = new InstanceDefinitionProxy
+        {
+          applicationId = definitionId,
+          objects = conversionResult.ConvertedElementIds.ToList(),
+          maxDepth = 0, // Linked models are at depth 0 for now
+          name = modelName
+        };
+
+        instanceDefinitionProxies.Add(instanceDefinitionProxy);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(
+          ex,
+          "Failed to create InstanceDefinitionProxy for linked model '{DocumentPath}'",
+          Path.GetFileName(conversionResult.DocumentPath)
+        );
+      }
+    }
+
+    return instanceDefinitionProxies;
+  }
+
+  /// <summary>
+  /// Creates instance proxy collections and adds them to the appropriate model collections.
+  /// </summary>
+  private List<string> CreateInstanceProxyCollections(Collection rootObject, LinkedModelConversionResults linkedResults)
+  {
+    var createdCollections = new List<string>();
+
+    foreach (var conversionResult in linkedResults.LinkedModelConversions)
+    {
+      if (conversionResult.ConvertedElementIds.Count == 0)
+      {
+        continue;
+      }
+
+      try
+      {
+        string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+        string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
+
+        var instanceProxies = CreateInstanceProxiesForLinkedModel(conversionResult, definitionId, modelName);
+
+        if (instanceProxies.Count > 0)
+        {
+          AddInstanceProxiesToCollection(rootObject, modelName, instanceProxies);
+          createdCollections.Add(modelName);
+
+          _logger.LogInformation(
+            "Created {InstanceCount} InstanceProxies for linked model '{ModelName}'",
+            instanceProxies.Count,
+            modelName
+          );
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(
+          ex,
+          "Failed to create instance proxies for linked model '{DocumentPath}'",
+          Path.GetFileName(conversionResult.DocumentPath)
+        );
+      }
+    }
+
+    return createdCollections;
+  }
+
+  /// <summary>
+  /// Creates instance proxies for each instance of a linked model.
+  /// </summary>
+  private List<InstanceProxy> CreateInstanceProxiesForLinkedModel(
+    LinkedModelConversionResult conversionResult,
+    string definitionId,
+    string modelName
+  )
+  {
+    var instanceProxies = new List<InstanceProxy>();
+    int instanceIndex = 0;
+    int skippedInstances = 0;
+
+    foreach (var instance in conversionResult.Instances)
+    {
+      instanceIndex++;
+
+      if (instance.Transform == null)
+      {
+        _logger.LogWarning(
+          "Skipping instance {InstanceIndex} of '{ModelName}' - no transform available",
+          instanceIndex,
+          modelName
+        );
+        skippedInstances++;
+        continue;
+      }
+
+      try
+      {
+        string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
+        var transformMatrix = TransformUtils.ToMatrix4x4(instance.Transform);
+
+        _logger.LogDebug(
+          "Creating InstanceProxy '{InstanceId}' for linked model '{ModelName}' at position [{Origin}]",
+          instanceId,
+          modelName,
+          $"{instance.Transform.Origin.X:F2}, {instance.Transform.Origin.Y:F2}, {instance.Transform.Origin.Z:F2}"
+        );
+
+        var instanceProxy = new InstanceProxy
+        {
+          applicationId = instanceId,
+          definitionId = definitionId,
+          transform = transformMatrix,
+          units = _converterSettings.Current.SpeckleUnits,
+          maxDepth = 0 // Linked models are at depth 0 for now
+        };
+
+        instanceProxies.Add(instanceProxy);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(
+          ex,
+          "Failed to create InstanceProxy for instance {InstanceIndex} of '{ModelName}'",
+          instanceIndex,
+          modelName
+        );
+        skippedInstances++;
+      }
+    }
+
+    if (skippedInstances > 0)
+    {
+      _logger.LogWarning("Skipped {SkippedCount} instances due to errors", skippedInstances);
+    }
+
+    return instanceProxies;
+  }
+
+  /// <summary>
+  /// Adds instance proxies to the appropriate collection structure.
+  /// </summary>
+  private void AddInstanceProxiesToCollection(
+    Collection rootObject,
+    string modelName,
+    List<InstanceProxy> instanceProxies
+  )
+  {
+    // Find or create the linked model collection
+    var linkedModelCollection = FindOrCreateLinkedModelCollection(rootObject, modelName);
+
+    // Find or create the "instances" subcollection
+    var instancesCollection = FindOrCreateInstancesCollection(linkedModelCollection);
+
+    // Add all instance proxies to the instances collection
+    foreach (var instanceProxy in instanceProxies)
+    {
+      instancesCollection.elements.Add(instanceProxy);
+    }
+  }
+
+  /// <summary>
+  /// Finds or creates a collection for a linked model.
+  /// </summary>
+  private Collection FindOrCreateLinkedModelCollection(Collection rootObject, string modelName)
+  {
+    // Look for existing linked model collection
+    foreach (var element in rootObject.elements)
+    {
+      if (element is Collection collection && collection.name == modelName)
+      {
+        return collection;
+      }
+    }
+
+    // Create new collection if not found
+    _logger.LogWarning("Linked model collection '{ModelName}' not found, creating it", modelName);
+    var linkedModelCollection = new Collection(modelName);
+    rootObject.elements.Add(linkedModelCollection);
+    return linkedModelCollection;
+  }
+
+  /// <summary>
+  /// Finds or creates an "instances" subcollection within a linked model collection.
+  /// </summary>
+  private Collection FindOrCreateInstancesCollection(Collection linkedModelCollection)
+  {
+    // Look for existing instances collection
+    foreach (var element in linkedModelCollection.elements)
+    {
+      if (element is Collection collection && collection.name == "instances")
+      {
+        return collection;
+      }
+    }
+
+    // Create new instances collection
+    var instancesCollection = new Collection("instances");
+    linkedModelCollection.elements.Add(instancesCollection);
+    return instancesCollection;
+  }
+
+  /// <summary>
+  /// Adds material proxies to the root object.
+  /// </summary>
+  private void AddMaterialProxies(Collection rootObject, List<Element> allElements)
+  {
+    var idsAndSubElementIds = _elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(allElements);
+    var renderMaterialProxies = _revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
+
+    if (renderMaterialProxies.Count > 0)
+    {
+      rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
+    }
+  }
+
+  /// <summary>
+  /// Adds level proxies to the root object.
+  /// </summary>
+  private void AddLevelProxies(Collection rootObject, List<Element> allElements)
+  {
+    var levelProxies = _levelUnpacker.Unpack(allElements);
+
+    if (levelProxies.Count > 0)
+    {
+      rootObject[ProxyKeys.LEVEL] = levelProxies;
+    }
+  }
+
+  /// <summary>
+  /// Adds reference point transform information to the root object if available.
+  /// </summary>
+  private void AddReferencePointTransform(Collection rootObject)
+  {
+    if (_converterSettings.Current.ReferencePointTransform is Transform transform)
+    {
+      var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
+      rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+    }
+  }
+}

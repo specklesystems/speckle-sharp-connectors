@@ -27,6 +27,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TransformUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\HideWarningsFailuresPreprocessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IdStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IStorageSchema.cs" />
@@ -41,11 +42,15 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ToHostSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\DocumentProcessor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\ElementConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\IRevitSendFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitCategoriesFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitViewsFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\ProxyManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\SendContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\LinkedModelsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />
