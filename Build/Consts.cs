@@ -70,7 +70,7 @@ public static class Consts
         new("Connectors/CSi/Speckle.Connectors.ETABS22", "net8.0-windows"),
       ]
     ),
-    new("rhino-importer", [new("Importers/Rhino/Speckle.Importers.Rhino", "net8.0-windows")]),
+    new("rhino-importer", [new("Importers/Rhino/Speckle.Importers.JobProcessor", "net8.0-windows")]),
   };
 }
 

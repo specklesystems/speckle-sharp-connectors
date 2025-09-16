@@ -31,6 +31,11 @@ public static class Program
     builder.Services.AddWindowsService();
     builder.Services.AddTransient<IJobHandler, RhinoJobHandler>();
 
+    builder.Logging.AddEventLog(settings =>
+    {
+      settings.SourceName = "Speckle Rhino File Import Job Processor";
+    });
+
     return builder.Build();
   }
 
