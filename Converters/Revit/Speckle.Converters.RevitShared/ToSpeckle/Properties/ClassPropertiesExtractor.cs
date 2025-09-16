@@ -61,7 +61,7 @@ public class ClassPropertiesExtractor
           worksetName = workset?.Name ?? "Unknown Workset";
           _worksetCache[worksetId.Value] = worksetName;
         }
-        catch (Exception ex) when (ex.IsFatal())
+        catch (Exception ex) when (!ex.IsFatal())
         {
           // fallback: if we can't get the workset for any reason (e.g., workset doesn't exist),
           // provide a safe default instead of crashing (I don't think a workset name prop is cause for a fail!)
@@ -71,6 +71,21 @@ public class ClassPropertiesExtractor
       }
 
       elementProperties.Add("worksetName", worksetName);
+    }
+
+    // get group name if applicable
+    // TODO: in in group proxies separate issue. Below comments from PR #1081
+    // We're using group proxies in Rhino etc. Groups should be handled similarly in Revit, unless there's a good
+    // reason to deviate. We should prioritize consistency here esp as we shift focus to our dashboarding
+    // We've decided to add group proxies as a separate issue, once we are more opinionated on the proxy vs properties
+    // consumability in dashboards vs powerbi
+    var groupId = element.GroupId;
+    if (groupId is not null)
+    {
+      if (element.Document.GetElement(groupId) is DB.Group group)
+      {
+        elementProperties.Add("groupName", group.GroupType.Name);
+      }
     }
 
     return elementProperties;

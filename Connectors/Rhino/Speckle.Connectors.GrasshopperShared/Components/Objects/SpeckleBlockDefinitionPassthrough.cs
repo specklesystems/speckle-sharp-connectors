@@ -84,7 +84,11 @@ public class SpeckleBlockDefinitionPassthrough()
 
     // process the definition
     // deep copy so we don't mutate the object
-    SpeckleBlockDefinitionWrapperGoo result = inputDefinition != null ? new(inputDefinition.Value.DeepCopy()) : new();
+    SpeckleBlockDefinitionWrapperGoo result = new();
+    if (inputDefinition != null)
+    {
+      result = new SpeckleBlockDefinitionWrapperGoo(inputDefinition.Value.DeepCopy());
+    }
 
     // process geometry
     if (inputObjects.Count > 0)

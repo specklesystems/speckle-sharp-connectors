@@ -98,13 +98,13 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     // validate that keys and values are of valid length
     if ((Mode == PropertyMode.Merge || Mode == PropertyMode.Replace) && inputKeys.Count != inputValues.Count)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Keys and values are mismatched in length");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Keys and values are mismatched in length");
       return;
     }
 
     if (Mode == PropertyMode.Remove && (inputKeys.Count == 0 || inputValues.Count > 0))
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Only input keys to remove");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Only input keys to remove");
       return;
     }
 
