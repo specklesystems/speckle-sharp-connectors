@@ -2,38 +2,11 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Autodesk.Revit.DB;
-using Speckle.DoubleNumerics;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
 public static class TransformUtils
 {
-  /// <summary>
-  /// Converts a Revit Transform to a Speckle Matrix4x4.
-  /// Uses column-major 4x4 matrix representation to match Speckle conventions.
-  /// </summary>
-  /// <param name="transform">The Revit transform to convert</param>
-  /// <returns>A Matrix4x4 representing the same transformation</returns>
-  public static Matrix4x4 ToMatrix4x4(Transform transform) =>
-    new(
-      transform.BasisX.X,
-      transform.BasisX.Y,
-      transform.BasisX.Z,
-      0,
-      transform.BasisY.X,
-      transform.BasisY.Y,
-      transform.BasisY.Z,
-      0,
-      transform.BasisZ.X,
-      transform.BasisZ.Y,
-      transform.BasisZ.Z,
-      0,
-      transform.Origin.X,
-      transform.Origin.Y,
-      transform.Origin.Z,
-      1
-    );
-
   /// <summary>
   /// Generates a consistent hash for a transform to identify unique transformations.
   /// Used for distinguishing different instances of the same linked model.

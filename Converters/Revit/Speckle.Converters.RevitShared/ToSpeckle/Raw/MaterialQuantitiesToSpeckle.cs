@@ -1,8 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.ToSpeckle.Properties;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 

@@ -1,13 +1,16 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
+using Speckle.Converters.ToSpeckle.Properties;
+using Speckle.Converters.ToSpeckle.Raw.Geometry;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared;
@@ -34,6 +37,7 @@ public static class ServiceRegistration
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     serviceCollection.AddScoped<ScalingServiceToSpeckle>();
     serviceCollection.AddScoped<ScalingServiceToHost>();
+    serviceCollection.AddSingleton<ITypedConverter<(DB.Transform, string), Matrix4x4>, TransformConverterToSpeckle>();
 
     // POC: the concrete type can come out if we remove all the reference to it
     serviceCollection.AddScoped<

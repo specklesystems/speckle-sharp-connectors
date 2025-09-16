@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
@@ -19,6 +21,7 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 public class ProxyManager
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly ITypedConverter<(Transform transform, string units), Matrix4x4> _transformConverter;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly LevelUnpacker _levelUnpacker;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
@@ -26,6 +29,7 @@ public class ProxyManager
 
   public ProxyManager(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    ITypedConverter<(Transform transform, string units), Matrix4x4> transformConverter,
     ElementUnpacker elementUnpacker,
     LevelUnpacker levelUnpacker,
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
@@ -33,6 +37,7 @@ public class ProxyManager
   )
   {
     _converterSettings = converterSettings;
+    _transformConverter = transformConverter;
     _elementUnpacker = elementUnpacker;
     _levelUnpacker = levelUnpacker;
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
@@ -185,7 +190,9 @@ public class ProxyManager
       try
       {
         string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
-        var transformMatrix = TransformUtils.ToMatrix4x4(instance.Transform);
+        var transformMatrix = _transformConverter.Convert(
+          (instance.Transform, _converterSettings.Current.SpeckleUnits)
+        );
         var instanceProxy = new InstanceProxy
         {
           applicationId = instanceId,
