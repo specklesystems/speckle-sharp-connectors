@@ -16,21 +16,21 @@ public static class TransformUtils
   /// <returns>A Matrix4x4 representing the same transformation</returns>
   public static Matrix4x4 ToMatrix4x4(Transform transform) =>
     new(
-      (float)transform.BasisX.X,
-      (float)transform.BasisX.Y,
-      (float)transform.BasisX.Z,
+      transform.BasisX.X,
+      transform.BasisX.Y,
+      transform.BasisX.Z,
       0,
-      (float)transform.BasisY.X,
-      (float)transform.BasisY.Y,
-      (float)transform.BasisY.Z,
+      transform.BasisY.X,
+      transform.BasisY.Y,
+      transform.BasisY.Z,
       0,
-      (float)transform.BasisZ.X,
-      (float)transform.BasisZ.Y,
-      (float)transform.BasisZ.Z,
+      transform.BasisZ.X,
+      transform.BasisZ.Y,
+      transform.BasisZ.Z,
       0,
-      (float)transform.Origin.X,
-      (float)transform.Origin.Y,
-      (float)transform.Origin.Z,
+      transform.Origin.X,
+      transform.Origin.Y,
+      transform.Origin.Z,
       1
     );
 
@@ -100,26 +100,4 @@ public static class TransformUtils
   /// <returns>A unique instance ID</returns>
   public static string GenerateInstanceId(string definitionId, int instanceIndex) =>
     $"{definitionId}_instance_{instanceIndex}";
-
-  /// <summary>
-  /// Checks if two transforms are approximately equal within a tolerance.
-  /// Useful for comparing transforms that might have minor floating-point differences.
-  /// </summary>
-  /// <param name="transform1">First transform to compare</param>
-  /// <param name="transform2">Second transform to compare</param>
-  /// <param name="tolerance">Tolerance for comparison (default: 1e-6)</param>
-  /// <returns>True if transforms are approximately equal</returns>
-  public static bool AreTransformsEqual(Transform transform1, Transform transform2, double tolerance = 1e-6) =>
-    AreXYZEqual(transform1.Origin, transform2.Origin, tolerance)
-    && AreXYZEqual(transform1.BasisX, transform2.BasisX, tolerance)
-    && AreXYZEqual(transform1.BasisY, transform2.BasisY, tolerance)
-    && AreXYZEqual(transform1.BasisZ, transform2.BasisZ, tolerance);
-
-  /// <summary>
-  /// Checks if two XYZ points/vectors are approximately equal within a tolerance.
-  /// </summary>
-  private static bool AreXYZEqual(XYZ xyz1, XYZ xyz2, double tolerance) =>
-    Math.Abs(xyz1.X - xyz2.X) < tolerance
-    && Math.Abs(xyz1.Y - xyz2.Y) < tolerance
-    && Math.Abs(xyz1.Z - xyz2.Z) < tolerance;
 }

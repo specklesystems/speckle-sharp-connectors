@@ -50,7 +50,7 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<DocumentToConvert>
 
   /// <summary>
   /// Synchronous implementation of the build process.
-  /// Pure orchestration - delegates all work to specialized components.
+  /// Pure orchestration - delegates all work to components.
   /// </summary>
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
@@ -61,25 +61,34 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<DocumentToConvert>
   {
     try
     {
-      // 1. Validate environment and setup
-      ValidateEnvironment();
+      // validate environment and setup
+      var document = _converterSettings.Current.Document;
+      if (document.IsFamilyDocument)
+      {
+        throw new SpeckleException("Family Environment documents are not supported.");
+      }
 
-      // 2. Create root collection
-      var rootObject = CreateRootCollection();
+      // create root collection
+      var documentName = document.PathName.Split('\\').Last().Split('.').First();
+      var rootObject = new Collection(documentName) { ["units"] = _converterSettings.Current.SpeckleUnits };
 
-      // 3. Create conversion context
-      var context = CreateConversionContext(projectId, rootObject, onOperationProgressed, cancellationToken);
+      // create conversion context
+      bool sendWithLinkedModels = _converterSettings.Current.SendLinkedModels;
+      var context = new ConversionContext(
+        projectId,
+        rootObject,
+        sendWithLinkedModels,
+        onOperationProgressed,
+        cancellationToken
+      );
 
-      // 4. Process all documents (main + linked models)
-      _logger.LogInformation("Starting document processing for project {ProjectId}", projectId);
+      // process all documents (main + linked models)
       var conversionResults = _documentProcessor.ProcessDocuments(documentElementContexts, context);
 
-      // 5. Add all proxy objects to root
-      _logger.LogInformation("Adding proxies to root object");
+      // add all proxy objects to root
       _proxyManager.AddAllProxies(rootObject, conversionResults);
 
-      // 6. Return final result
-      _logger.LogInformation("Root object building completed successfully");
+      // return final result
       return new RootObjectBuilderResult(rootObject, conversionResults.AllResults);
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -87,44 +96,5 @@ public class RevitRootObjectBuilder : IRootObjectBuilder<DocumentToConvert>
       _logger.LogError(ex, "Failed to build root object");
       throw;
     }
-  }
-
-  /// <summary>
-  /// Validates that the Revit environment is suitable for conversion.
-  /// </summary>
-  private void ValidateEnvironment()
-  {
-    var document = _converterSettings.Current.Document;
-
-    if (document.IsFamilyDocument)
-    {
-      throw new SpeckleException("Family Environment documents are not supported.");
-    }
-  }
-
-  /// <summary>
-  /// Creates the root collection with basic metadata.
-  /// </summary>
-  private Collection CreateRootCollection()
-  {
-    var document = _converterSettings.Current.Document;
-    var documentName = document.PathName.Split('\\').Last().Split('.').First();
-
-    return new Collection(documentName) { ["units"] = _converterSettings.Current.SpeckleUnits };
-  }
-
-  /// <summary>
-  /// Creates the conversion context with all necessary parameters.
-  /// </summary>
-  private ConversionContext CreateConversionContext(
-    string projectId,
-    Collection rootObject,
-    IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
-  )
-  {
-    bool sendWithLinkedModels = _converterSettings.Current.SendLinkedModels;
-
-    return new ConversionContext(projectId, rootObject, sendWithLinkedModels, onOperationProgressed, cancellationToken);
   }
 }

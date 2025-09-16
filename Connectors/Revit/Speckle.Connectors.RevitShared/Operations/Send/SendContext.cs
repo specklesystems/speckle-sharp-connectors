@@ -55,7 +55,7 @@ public record MainModelConversionResult(List<SendConversionResult> ConversionRes
 /// Aggregates all conversion results from main model and linked models.
 /// </summary>
 public record DocumentConversionResults(
-  MainModelConversionResult MainModelResult,
+  MainModelConversionResult? MainModelResult,
   LinkedModelConversionResults? LinkedModelResults
 )
 {
@@ -66,7 +66,11 @@ public record DocumentConversionResults(
   {
     get
     {
-      var results = new List<SendConversionResult>(MainModelResult.ConversionResults);
+      var results = new List<SendConversionResult>();
+      if (MainModelResult != null)
+      {
+        results.AddRange(MainModelResult.ConversionResults);
+      }
       if (LinkedModelResults != null)
       {
         results.AddRange(LinkedModelResults.ConversionResults);
@@ -82,7 +86,11 @@ public record DocumentConversionResults(
   {
     get
     {
-      var elements = new List<Element>(MainModelResult.ConvertedElements);
+      var elements = new List<Element>();
+      if (MainModelResult != null)
+      {
+        elements.AddRange(MainModelResult.ConvertedElements);
+      }
       if (LinkedModelResults != null)
       {
         elements.AddRange(LinkedModelResults.ConvertedElements);

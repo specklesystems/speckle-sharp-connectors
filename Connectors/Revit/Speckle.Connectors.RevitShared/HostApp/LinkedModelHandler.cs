@@ -64,12 +64,12 @@ public class LinkedModelDocumentHandler
 
       if (document.Doc.IsLinked)
       {
-        // Group linked models by their document path (same model file, different transforms)
+        // group linked models by their document path (same model file, different transforms)
         string documentPathName = document.Doc.PathName;
 
         if (!linkedModelInstances.TryGetValue(documentPathName, out List<DocumentToConvert>? instances))
         {
-          instances = new List<DocumentToConvert>();
+          instances = [];
           linkedModelInstances[documentPathName] = instances;
         }
         instances.Add(document);
@@ -116,13 +116,13 @@ public class LinkedModelDocumentHandler
   {
     LinkedModelDisplayNames.Clear();
 
-    // Group linked models by filename
+    // group linked models by filename
     var linkedModels = documentElementContexts
       .Where(ctx => ctx?.Doc.IsLinked == true)
       .GroupBy(ctx => Path.GetFileNameWithoutExtension(ctx!.Doc.PathName))
       .ToDictionary(g => g.Key, g => g.ToList()!);
 
-    // Create unique display names for each instance
+    // create unique display names for each instance
     foreach (var group in linkedModels)
     {
       string baseName = group.Key;
@@ -130,13 +130,13 @@ public class LinkedModelDocumentHandler
 
       if (instances.Count == 1)
       {
-        // Single instance - just use the base name
+        // single instance - just use the base name
         string id = GetIdFromDocumentToConvert(instances[0]);
         LinkedModelDisplayNames[id] = baseName;
       }
       else
       {
-        // Multiple instances - add numbering
+        // multiple instances - add numbering
         for (int i = 0; i < instances.Count; i++)
         {
           string id = GetIdFromDocumentToConvert(instances[i]);
@@ -226,14 +226,14 @@ public class LinkedModelDocumentHandler
       .Where(link => link.GetLinkDocument()?.PathName == linkedDocumentPath)
       .ToList();
 
-    // If no transform or only one instance, return the first
+    // if no transform or only one instance, return the first
     if (transform == null || linkInstances.Count <= 1)
     {
       return linkInstances.FirstOrDefault()
         ?? throw new SpeckleException($"No link instance found for {linkedDocumentPath}");
     }
 
-    // Find matching instance by transform hash
+    // find matching instance by transform hash
     string targetHash = TransformUtils.ComputeTransformHash(transform);
     var matchingInstance = linkInstances.FirstOrDefault(link =>
       TransformUtils.ComputeTransformHash(link.GetTotalTransform().Inverse) == targetHash

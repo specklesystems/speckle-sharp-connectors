@@ -22,7 +22,6 @@ public class ProxyManager
   private readonly ElementUnpacker _elementUnpacker;
   private readonly LevelUnpacker _levelUnpacker;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
-  private readonly LinkedModelDocumentHandler _linkedModelHandler;
   private readonly ILogger<ProxyManager> _logger;
 
   public ProxyManager(
@@ -30,7 +29,6 @@ public class ProxyManager
     ElementUnpacker elementUnpacker,
     LevelUnpacker levelUnpacker,
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
-    LinkedModelDocumentHandler linkedModelHandler,
     ILogger<ProxyManager> logger
   )
   {
@@ -38,7 +36,6 @@ public class ProxyManager
     _elementUnpacker = elementUnpacker;
     _levelUnpacker = levelUnpacker;
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
-    _linkedModelHandler = linkedModelHandler;
     _logger = logger;
   }
 
@@ -48,17 +45,17 @@ public class ProxyManager
   /// </summary>
   public void AddAllProxies(Collection rootObject, DocumentConversionResults conversionResults)
   {
-    // Add instance proxies (definitions and instances)
+    // add instance proxies (definitions and instances)
     if (conversionResults.LinkedModelResults?.LinkedModelConversions.Count > 0)
     {
       AddInstanceProxies(rootObject, conversionResults.LinkedModelResults);
     }
 
-    // Add material and level proxies
+    // add material and level proxies
     AddMaterialProxies(rootObject, conversionResults.AllElements);
     AddLevelProxies(rootObject, conversionResults.AllElements);
 
-    // Add reference point transform if available
+    // add reference point transform if available
     AddReferencePointTransform(rootObject);
   }
 
@@ -68,20 +65,11 @@ public class ProxyManager
   private void AddInstanceProxies(Collection rootObject, LinkedModelConversionResults linkedResults)
   {
     var instanceDefinitionProxies = CreateInstanceDefinitionProxies(linkedResults);
-    var instanceProxyCollections = CreateInstanceProxyCollections(rootObject, linkedResults);
+    _ = CreateInstanceProxyCollections(rootObject, linkedResults);
 
     if (instanceDefinitionProxies.Count > 0)
     {
       rootObject[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
-      _logger.LogInformation("Created {ProxyCount} InstanceDefinitionProxies", instanceDefinitionProxies.Count);
-    }
-
-    if (instanceProxyCollections.Count > 0)
-    {
-      _logger.LogInformation(
-        "Created instance proxy collections for {ModelCount} linked models",
-        instanceProxyCollections.Count
-      );
     }
   }
 
@@ -108,18 +96,11 @@ public class ProxyManager
         string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
         string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
-        _logger.LogInformation(
-          "Creating InstanceDefinitionProxy '{DefinitionId}' for linked model '{ModelName}' with {ElementCount} elements",
-          definitionId,
-          modelName,
-          conversionResult.ConvertedElementIds.Count
-        );
-
         var instanceDefinitionProxy = new InstanceDefinitionProxy
         {
           applicationId = definitionId,
           objects = conversionResult.ConvertedElementIds.ToList(),
-          maxDepth = 0, // Linked models are at depth 0 for now
+          maxDepth = 0, // linked models are at depth 0 for now
           name = modelName
         };
 
@@ -163,12 +144,6 @@ public class ProxyManager
         {
           AddInstanceProxiesToCollection(rootObject, modelName, instanceProxies);
           createdCollections.Add(modelName);
-
-          _logger.LogInformation(
-            "Created {InstanceCount} InstanceProxies for linked model '{ModelName}'",
-            instanceProxies.Count,
-            modelName
-          );
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -203,11 +178,6 @@ public class ProxyManager
 
       if (instance.Transform == null)
       {
-        _logger.LogWarning(
-          "Skipping instance {InstanceIndex} of '{ModelName}' - no transform available",
-          instanceIndex,
-          modelName
-        );
         skippedInstances++;
         continue;
       }
@@ -216,21 +186,13 @@ public class ProxyManager
       {
         string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
         var transformMatrix = TransformUtils.ToMatrix4x4(instance.Transform);
-
-        _logger.LogDebug(
-          "Creating InstanceProxy '{InstanceId}' for linked model '{ModelName}' at position [{Origin}]",
-          instanceId,
-          modelName,
-          $"{instance.Transform.Origin.X:F2}, {instance.Transform.Origin.Y:F2}, {instance.Transform.Origin.Z:F2}"
-        );
-
         var instanceProxy = new InstanceProxy
         {
           applicationId = instanceId,
           definitionId = definitionId,
           transform = transformMatrix,
           units = _converterSettings.Current.SpeckleUnits,
-          maxDepth = 0 // Linked models are at depth 0 for now
+          maxDepth = 0 // linked models are at depth 0 for now
         };
 
         instanceProxies.Add(instanceProxy);
@@ -264,13 +226,13 @@ public class ProxyManager
     List<InstanceProxy> instanceProxies
   )
   {
-    // Find or create the linked model collection
+    // find or create the linked model collection
     var linkedModelCollection = FindOrCreateLinkedModelCollection(rootObject, modelName);
 
-    // Find or create the "instances" subcollection
+    // find or create the "instances" subcollection
     var instancesCollection = FindOrCreateInstancesCollection(linkedModelCollection);
 
-    // Add all instance proxies to the instances collection
+    // add all instance proxies to the instances collection
     foreach (var instanceProxy in instanceProxies)
     {
       instancesCollection.elements.Add(instanceProxy);
@@ -282,7 +244,7 @@ public class ProxyManager
   /// </summary>
   private Collection FindOrCreateLinkedModelCollection(Collection rootObject, string modelName)
   {
-    // Look for existing linked model collection
+    // look for existing linked model collection
     foreach (var element in rootObject.elements)
     {
       if (element is Collection collection && collection.name == modelName)
@@ -291,7 +253,7 @@ public class ProxyManager
       }
     }
 
-    // Create new collection if not found
+    // create new collection if not found
     _logger.LogWarning("Linked model collection '{ModelName}' not found, creating it", modelName);
     var linkedModelCollection = new Collection(modelName);
     rootObject.elements.Add(linkedModelCollection);
@@ -303,7 +265,7 @@ public class ProxyManager
   /// </summary>
   private Collection FindOrCreateInstancesCollection(Collection linkedModelCollection)
   {
-    // Look for existing instances collection
+    // look for existing instances collection
     foreach (var element in linkedModelCollection.elements)
     {
       if (element is Collection collection && collection.name == "instances")
@@ -312,7 +274,7 @@ public class ProxyManager
       }
     }
 
-    // Create new instances collection
+    // create new instances collection
     var instancesCollection = new Collection("instances");
     linkedModelCollection.elements.Add(instancesCollection);
     return instancesCollection;

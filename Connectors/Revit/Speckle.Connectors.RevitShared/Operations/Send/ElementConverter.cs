@@ -1,4 +1,3 @@
-using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
@@ -52,10 +51,8 @@ public class ElementConverter
   {
     if (mainModel == null)
     {
-      return new MainModelConversionResult(new List<SendConversionResult>(), new List<Element>());
+      return new MainModelConversionResult(new List<SendConversionResult>(), []);
     }
-
-    _logger.LogInformation("Converting main model with {ElementCount} elements", mainModel.Elements.Count);
 
     var unpackedMainModel = UnpackDocument(mainModel);
     var conversionResults = new List<SendConversionResult>();
@@ -88,11 +85,6 @@ public class ElementConverter
     int totalProcessedElements = 0;
 
     var totalElementsToConvert = linkedModelGroups.Values.Sum(group => group.First().Elements.Count);
-    _logger.LogInformation(
-      "Converting {ModelCount} unique linked models with {ElementCount} total elements",
-      linkedModelGroups.Count,
-      totalElementsToConvert
-    );
 
     foreach (var linkedModelGroup in linkedModelGroups)
     {
@@ -107,7 +99,7 @@ public class ElementConverter
       if (conversionResult != null)
       {
         linkedModelConversions.Add(conversionResult);
-        // Add the converted elements from the first instance (which was converted)
+        // add the converted elements from the first instance (which was converted)
         var firstInstance = linkedModelGroup.Value.First();
         var unpackedModel = UnpackDocument(firstInstance with { Transform = null });
         allConvertedElements.AddRange(unpackedModel.Elements);
@@ -131,20 +123,13 @@ public class ElementConverter
     string documentPath = linkedModelGroup.Key;
     var instances = linkedModelGroup.Value;
 
-    // Create result tracking object
+    // create result tracking object
     var conversionResult = new LinkedModelConversionResult(documentPath, instances);
 
-    // Convert only the FIRST instance of each unique linked model (without its transform)
+    // convert only the FIRST instance of each unique linked model (without its transform)
     var firstInstance = instances.First();
     var uniqueModelToConvert = firstInstance with { Transform = null }; // Remove transform
     var unpackedUniqueModel = UnpackDocument(uniqueModelToConvert);
-
-    string modelName = Path.GetFileNameWithoutExtension(documentPath);
-    _logger.LogInformation(
-      "Converting unique linked model '{ModelName}' once (will create {InstanceCount} lightweight instances)",
-      modelName,
-      instances.Count
-    );
 
     var modelResults = new List<SendConversionResult>();
     ConvertDocumentElements(
@@ -187,10 +172,10 @@ public class ElementConverter
     LinkedModelConversionResult? trackingResult
   )
   {
-    // Get display name for linked models
+    // get display name for linked models
     string? modelDisplayName = GetModelDisplayName(documentToConvert);
 
-    // Set conversion context - important: Transform is null for linked models in proxy system
+    // set conversion context - important: Transform is null for linked models in proxy system
     using (
       _converterSettings.Push(currentSettings =>
         currentSettings with
@@ -201,8 +186,6 @@ public class ElementConverter
       )
     )
     {
-      var conversionStats = new ConversionStats();
-
       foreach (Element revitElement in documentToConvert.Elements)
       {
         context.CancellationToken.ThrowIfCancellationRequested();
@@ -216,13 +199,10 @@ public class ElementConverter
         );
 
         results.Add(conversionResult);
-        UpdateConversionStats(conversionResult, conversionStats);
 
-        // Report progress
+        // report progress
         ReportProgress(context.Progress, ++totalProcessedElements, totalElementCount);
       }
-
-      LogConversionStats(documentToConvert, conversionStats);
     }
   }
 
@@ -319,53 +299,8 @@ public class ElementConverter
   }
 
   /// <summary>
-  /// Updates conversion statistics.
-  /// </summary>
-  private static void UpdateConversionStats(SendConversionResult result, ConversionStats stats)
-  {
-    switch (result.Status)
-    {
-      case Status.SUCCESS:
-        stats.SuccessCount++;
-        break;
-      case Status.WARNING:
-        stats.WarningCount++;
-        break;
-      case Status.ERROR:
-        stats.ErrorCount++;
-        break;
-    }
-  }
-
-  /// <summary>
   /// Reports conversion progress.
   /// </summary>
   private static void ReportProgress(IProgress<CardProgress> progress, int processed, int total) =>
     progress.Report(new CardProgress("Converting", (double)processed / total));
-
-  /// <summary>
-  /// Logs conversion statistics for a document.
-  /// </summary>
-  private void LogConversionStats(DocumentToConvert document, ConversionStats stats)
-  {
-    var documentName = document.Doc.IsLinked ? Path.GetFileNameWithoutExtension(document.Doc.PathName) : "Main Model";
-
-    _logger.LogInformation(
-      "Converted {DocumentName}: {Success} success, {Warning} warnings, {Error} errors",
-      documentName,
-      stats.SuccessCount,
-      stats.WarningCount,
-      stats.ErrorCount
-    );
-  }
-
-  /// <summary>
-  /// Simple struct to track conversion statistics.
-  /// </summary>
-  private struct ConversionStats
-  {
-    public int SuccessCount;
-    public int WarningCount;
-    public int ErrorCount;
-  }
 }
