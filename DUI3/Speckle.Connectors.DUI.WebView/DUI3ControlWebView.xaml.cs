@@ -33,12 +33,19 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
 
-    //always invoke even on the main thread because it's better somehow
-    Browser.Dispatcher.Invoke(
-      //fire and forget
-      () => Browser.ExecuteScriptAsync(script),
-      DispatcherPriority.Background
-    );
+    try
+    {
+      //always invoke even on the main thread because it's better somehow
+      Browser.Dispatcher.Invoke(
+        //fire and forget
+        () => Browser.ExecuteScriptAsync(script),
+        DispatcherPriority.Background
+      );
+    }
+    catch (OperationCanceledException)
+    {
+      //do nothing, happens when closing Revit while a script is being executed
+    }
   }
 
   public void SendProgress(string script) => ExecuteScript(script);
