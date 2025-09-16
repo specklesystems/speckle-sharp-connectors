@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
