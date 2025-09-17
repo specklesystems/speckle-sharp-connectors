@@ -41,7 +41,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
     // log the issue
     _logger.LogWarning(
       "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}. Using default: Source",
-      referencePointString ?? "null",
+      referencePointString,
       modelCard.ModelCardId
     );
 
