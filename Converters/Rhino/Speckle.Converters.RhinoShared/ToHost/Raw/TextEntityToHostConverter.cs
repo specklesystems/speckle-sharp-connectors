@@ -1,5 +1,8 @@
 using Rhino.DocObjects;
+using Rhino.Geometry;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
@@ -7,20 +10,28 @@ namespace Speckle.Converters.Rhino.ToHost.Raw;
 public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
 {
   private readonly ITypedConverter<SOG.Plane, RG.Plane> _planeConverter;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public TextEntityToHostConverter(ITypedConverter<SOG.Plane, RG.Plane> planeConverter)
+  public TextEntityToHostConverter(
+    ITypedConverter<SOG.Plane, RG.Plane> planeConverter,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+  )
   {
     _planeConverter = planeConverter;
+    _settingsStore = settingsStore;
   }
 
+  /// <remarks>⚠️ This conversion DOES perform scaling! this is because <see cref="GeometryBase.Transform"/> does NOT scale text height!</remarks>
   public RG.TextEntity Convert(SA.Text target)
   {
+    var scaleFactor = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
+
     RG.TextEntity result =
       new()
       {
         Plane = _planeConverter.Convert(target.plane),
         PlainText = target.value,
-        TextHeight = target.height,
+        TextHeight = target.height * scaleFactor,
         TextOrientation = target.screenOriented ? TextOrientation.InView : TextOrientation.InPlane,
         // text class does not have a scale prop.
         // Scale is built in to the text height on publish, therefore a factor of 1 is always used here.

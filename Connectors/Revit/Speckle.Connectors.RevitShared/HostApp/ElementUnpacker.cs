@@ -1,8 +1,5 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
-using Speckle.Converters.Common;
-using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -11,15 +8,6 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
-  private readonly RevitContext _revitContext;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-
-  public ElementUnpacker(RevitContext revitContext, IConverterSettingsStore<RevitConversionSettings> converterSettings)
-  {
-    _revitContext = revitContext;
-    _converterSettings = converterSettings;
-  }
-
   /// <summary>
   /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recurisvely, nested families into atomic family instances.
   /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
@@ -29,7 +17,7 @@ public class ElementUnpacker
   /// 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.<br/>
   /// 2- Evicting the cache while introducing the settings</param>
   /// <returns></returns>
-  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document? doc = null)
+  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document doc)
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
@@ -50,24 +38,19 @@ public class ElementUnpacker
   /// <remarks>
   /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
   /// </remarks>
-  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
+  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds, Document doc)
   {
-    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
     var docElements = doc.GetElements(objectIds);
-    return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
+
+    return UnpackSelectionForConversion(docElements, doc).Select(o => o.UniqueId).ToList();
   }
 
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
   // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
   // 2- Evicting the cache while introducing the settings
-  private List<Element> UnpackElements(IEnumerable<Element> elements, Document? doc = null)
+  private List<Element> UnpackElements(IEnumerable<Element> elements, Document doc)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
-    if (doc == null)
-    {
-      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
-    }
-
     foreach (var element in elements)
     {
       // UNPACK: Groups
@@ -77,7 +60,7 @@ public class ElementUnpacker
         // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(groupElements));
+        unpackedElements.AddRange(UnpackElements(groupElements, doc));
       }
       else if (element is BaseArray baseArray)
       {
@@ -85,8 +68,8 @@ public class ElementUnpacker
         // This handles cases where some elements might not resolve in linked contexts
         var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement).Where(el => el != null);
         var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(arrayElements));
-        unpackedElements.AddRange(UnpackElements(originalElements));
+        unpackedElements.AddRange(UnpackElements(arrayElements, doc));
+        unpackedElements.AddRange(UnpackElements(originalElements, doc));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
@@ -99,7 +82,7 @@ public class ElementUnpacker
 
         if (familyElements.Length != 0)
         {
-          unpackedElements.AddRange(UnpackElements(familyElements));
+          unpackedElements.AddRange(UnpackElements(familyElements, doc));
         }
 
         unpackedElements.Add(familyInstance);
@@ -107,7 +90,7 @@ public class ElementUnpacker
       else if (element is MultistoryStairs multistoryStairs)
       {
         var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(stairs));
+        unpackedElements.AddRange(UnpackElements(stairs, doc));
       }
       else
       {
@@ -125,13 +108,11 @@ public class ElementUnpacker
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
   // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
   // 2- Evicting the cache while introducing the settings
-  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document? doc = null)
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document doc)
   {
-    var ids = elements.Select(el => el.Id).ToArray();
-    if (doc == null)
-    {
-      doc = _revitContext.UIApplication?.ActiveUIDocument.Document!;
-    }
+    //just used for contains so use ToHashSet
+    var ids = elements.Select(el => el.Id).ToHashSet();
+
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
       || (
