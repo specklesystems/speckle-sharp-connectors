@@ -69,7 +69,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     );
 
     // return sensible default
-    DetailLevelType defaultValue = DetailLevelType.Medium;
+    DetailLevelType defaultValue = RevitSettingsConstants.DEFAULT_DETAIL_LEVEL;
     _detailLevelCache[modelCard.ModelCardId.NotNull()] = defaultValue;
     return defaultValue;
   }

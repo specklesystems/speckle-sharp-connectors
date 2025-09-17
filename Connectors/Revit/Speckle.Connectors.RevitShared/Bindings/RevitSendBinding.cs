@@ -13,6 +13,7 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -97,8 +98,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public List<ICardSetting> GetSendSettings() =>
     [
-      new DetailLevelSetting(DetailLevelType.Medium),
-      new ReferencePointSetting(ReferencePointType.InternalOrigin),
+      new DetailLevelSetting(RevitSettingsConstants.DEFAULT_DETAIL_LEVEL),
+      new ReferencePointSetting(RevitSettingsConstants.DEFAULT_REFERENCE_POINT),
       new SendParameterNullOrEmptyStringsSetting(false),
       new LinkedModelsSetting(true),
       new SendRebarsAsVolumetricSetting(false)
