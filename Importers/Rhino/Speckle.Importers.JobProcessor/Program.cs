@@ -34,6 +34,7 @@ public static class Program
     builder.Logging.AddEventLog(settings =>
     {
       settings.SourceName = "Speckle Rhino File Import Job Processor";
+      settings.Filter = (_, level) => level >= LogLevel.Information;
     });
 
     return builder.Build();
