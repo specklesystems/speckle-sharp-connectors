@@ -14,7 +14,7 @@ public sealed class RevitReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   ILogger<RevitReceiveBinding> logger,
-  Speckle.Connectors.Revit.Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
+  Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
   IReceiveOperationManagerFactory receiveOperationManagerFactory
 ) : IReceiveBinding
@@ -24,8 +24,7 @@ public sealed class RevitReceiveBinding(
   private IReceiveBindingUICommands Commands { get; } = new ReceiveBindingUICommands(parent);
 
 #pragma warning disable CA1024
-  public List<ICardSetting> GetReceiveSettings() =>
-    [new Speckle.Connectors.Revit.Operations.Receive.Settings.ReferencePointSetting(ReceiveReferencePointType.Source)];
+  public List<ICardSetting> GetReceiveSettings() => [new Operations.Receive.Settings.ReferencePointSetting()];
 #pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
