@@ -19,7 +19,7 @@ public class ElementUnpacker(RevitContext revitContext)
   /// 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.<br/>
   /// 2- Evicting the cache while introducing the settings</param>
   /// <returns></returns>
-  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document? doc = null)
+  public IEnumerable<Element> UnpackSelectionForConversion(IEnumerable<Element> selectionElements, Document doc)
   {
     // Note: steps kept separate on purpose.
     // Step 1: unpack groups
@@ -43,12 +43,14 @@ public class ElementUnpacker(RevitContext revitContext)
   public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
   {
     var doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
-    var docElements = doc?.GetElements(objectIds);
-    if (docElements == null)
+    if (doc == null)
     {
       throw new SpeckleException("Unable to retrieve active UI document");
     }
-    return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
+
+    var docElements = doc.GetElements(objectIds);
+
+    return UnpackSelectionForConversion(docElements, doc).Select(o => o.UniqueId).ToList();
   }
 
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
@@ -122,18 +124,9 @@ public class ElementUnpacker(RevitContext revitContext)
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
   // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
   // 2- Evicting the cache while introducing the settings
-  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document? doc = null)
+  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document doc)
   {
     var ids = elements.Select(el => el.Id).ToHashSet();
-    if (doc == null)
-    {
-      doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
-    }
-
-    if (doc == null)
-    {
-      throw new SpeckleException("Unable to retrieve active UI document");
-    }
 
     elements.RemoveAll(element =>
       (element is Mullion { Host: not null } m && ids.Contains(m.Host.Id))
