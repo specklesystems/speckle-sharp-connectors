@@ -289,7 +289,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         var selectedObjects = sender.SendFilter.NotNull().SelectedObjectIds;
         objectIds.AddRange(selectedObjects);
       }
-      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds, e.GetDocument());
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
@@ -410,7 +410,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds, doc);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
 
     // Note: we're doing object selection and card expiry management by old school ids

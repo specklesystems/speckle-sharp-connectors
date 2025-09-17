@@ -40,14 +40,8 @@ public class ElementUnpacker(RevitContext revitContext)
   /// <remarks>
   /// This is used to invalidate object ids in the send conversion cache when the selected object id is only the parent element id
   /// </remarks>
-  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
+  public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds, Document doc)
   {
-    var doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
-    if (doc == null)
-    {
-      throw new SpeckleException("Unable to retrieve active UI document");
-    }
-
     var docElements = doc.GetElements(objectIds);
 
     return UnpackSelectionForConversion(docElements, doc).Select(o => o.UniqueId).ToList();

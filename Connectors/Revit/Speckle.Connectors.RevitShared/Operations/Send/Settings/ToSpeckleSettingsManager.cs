@@ -6,6 +6,7 @@ using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
@@ -139,8 +140,13 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
   {
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (doc == null)
+    {
+      throw new SpeckleException("Unable to retrieve active UI document");
+    }
     var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().SelectedObjectIds : [];
-    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds, doc);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
 
