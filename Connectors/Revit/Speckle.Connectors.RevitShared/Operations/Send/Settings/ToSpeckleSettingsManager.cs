@@ -64,7 +64,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     // log the issue
     _logger.LogWarning(
       "Invalid detail level setting received: '{FidelityString}' for model {ModelCardId}. Using default: Medium",
-      fidelityString ?? "null",
+      fidelityString,
       modelCard.ModelCardId
     );
 
@@ -172,7 +172,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     // respected (linked models disabled but still sent linked models), I think we should note this occurence so we know
     if (settingValue == null)
     {
-      _logger.LogDebug(
+      _logger.LogWarning(
         "{SettingName} setting was null for model {ModelCardId}, using default: {DefaultValue}",
         settingName,
         modelCard.ModelCardId,
