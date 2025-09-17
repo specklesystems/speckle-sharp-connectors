@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -11,10 +12,12 @@ namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 public class ToHostSettingsManager : IToHostSettingsManager
 {
   private readonly RevitContext _revitContext;
+  private readonly ILogger<ToHostSettingsManager> _logger;
 
-  public ToHostSettingsManager(RevitContext revitContext)
+  public ToHostSettingsManager(RevitContext revitContext, ILogger<ToHostSettingsManager> logger)
   {
     _revitContext = revitContext;
+    _logger = logger;
   }
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
@@ -34,7 +37,15 @@ public class ToHostSettingsManager : IToHostSettingsManager
       return currentTransform;
     }
 
-    throw new ArgumentException($"Invalid reference point value: {referencePointString}");
+    // log the issue
+    _logger.LogWarning(
+      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}. Using default: Source",
+      referencePointString ?? "null",
+      modelCard.ModelCardId
+    );
+
+    // return default (null for Source means no transform)
+    return null;
   }
 
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)
