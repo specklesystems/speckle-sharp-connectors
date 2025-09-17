@@ -108,7 +108,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
       referencePointString,
       modelCard.ModelCardId,
-      Receive.Settings.ReferencePointSetting.DEFAULT_VALUE
+      ReferencePointSetting.DEFAULT_VALUE
     );
 
     // return default (null for InternalOrigin means no transform)
