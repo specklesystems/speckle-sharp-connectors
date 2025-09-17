@@ -40,7 +40,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
 
     // log the issue
     _logger.LogWarning(
-      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}. Using default: Source",
+      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: Source",
       referencePointString,
       modelCard.ModelCardId
     );
@@ -103,7 +103,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
     }
 
     throw new InvalidOperationException(
-      "Revit Context UI Application was null when retrieving reference point transform."
+      "Revit Context UI Application was null when retrieving reference point transform"
     );
   }
 }
