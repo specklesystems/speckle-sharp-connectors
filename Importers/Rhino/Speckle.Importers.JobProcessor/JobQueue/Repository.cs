@@ -56,15 +56,17 @@ internal sealed class Repository(ILogger<Repository> logger)
               "updatedAt" = NOW()
           WHERE id = (
               SELECT id FROM background_jobs
-              WHERE ( --queued job
+              WHERE ( -- job in a QUEUED state which has not yet exceeded maximum attempts and has a positive remaining compute budget
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status2
                   AND "attempt" < "maxAttempt"
+                  AND "remainingComputeBudgetSeconds"::int > 0
               )
-              OR ( --timed job left on processing state
+              OR ( -- any job left in a PROCESSING state for more than its timeout period
                   (payload ->> 'fileType') = ANY(@FileTypes)
                   AND status = @Status1
-                  AND "updatedAt" < NOW() - ("timeoutMs" * interval '1 millisecond')
+                  AND "attempt" <= "maxAttempt"
+                  AND "updatedAt" < NOW() - (payload ->> 'timeOutSeconds')::int * interval '1 second'
               )
               ORDER BY "createdAt"
               FOR UPDATE SKIP LOCKED
@@ -94,7 +96,7 @@ internal sealed class Repository(ILogger<Repository> logger)
     await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
 
-  public async Task SetJobStatus(
+  private async Task SetJobStatus(
     IDbConnection connection,
     string jobId,
     JobStatus jobStatus,
@@ -113,6 +115,36 @@ internal sealed class Repository(ILogger<Repository> logger)
     var command = new CommandDefinition(
       commandText: COMMAND_TEXT,
       parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
+      cancellationToken: cancellationToken
+    );
+
+    await connection.ExecuteAsync(command);
+  }
+
+  public async Task DeductFromComputeBudget(
+    IDbConnection connection,
+    string jobId,
+    long usedComputeTimeSeconds,
+    CancellationToken cancellationToken
+  )
+  {
+    logger.LogInformation(
+      "updating job: {jobId}'s remaining compute budget by deducting {usedComputeTimeSeconds} seconds",
+      jobId,
+      usedComputeTimeSeconds
+    );
+
+    //lang=postgresql
+    const string COMMAND_TEXT = """
+      UPDATE background_jobs
+      SET "remainingComputeBudgetSeconds" = "remainingComputeBudgetSeconds"::int - @usedComputeTimeSeconds,
+          "updatedAt" = NOW()
+      WHERE id = @jobId
+      """;
+
+    var command = new CommandDefinition(
+      commandText: COMMAND_TEXT,
+      parameters: new { usedComputeTimeSeconds, jobId },
       cancellationToken: cancellationToken
     );
 

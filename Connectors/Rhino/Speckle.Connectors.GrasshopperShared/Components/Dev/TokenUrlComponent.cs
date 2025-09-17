@@ -28,7 +28,12 @@ public class TokenUrlComponent : GH_Component
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
     pManager.AddTextParameter("Speckle Url", "Url", "Speckle URL", GH_ParamAccess.item);
-    pManager.AddTextParameter("Speckle Token", "Token", "Speckle Authorization Token", GH_ParamAccess.item);
+    pManager.AddTextParameter(
+      "Speckle Token",
+      "Token",
+      "Speckle Authorization Token. Requires profile:read, profile:email, stream:read, and workspace:read (unless on a non-workspace enable server), as well as any other write scopes needed",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -97,6 +102,11 @@ public class TokenUrlComponent : GH_Component
     else
     {
       throw new SpeckleException("No account found for server URL");
+    }
+
+    if (account.userInfo.id is null || account.userInfo.email is null)
+    {
+      throw new SpeckleException("Token requires profile:read and profile:email scopes");
     }
 
     IClient client = scope.Get<IClientFactory>().Create(account);

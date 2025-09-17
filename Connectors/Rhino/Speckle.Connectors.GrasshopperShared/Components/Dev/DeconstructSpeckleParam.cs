@@ -28,10 +28,8 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_deconstruct;
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
-  {
+  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
     pManager.AddGenericParameter("Speckle Param", "SP", "Speckle param to deconstruct", GH_ParamAccess.item);
-  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
@@ -40,7 +38,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     // on first iteration, discover all fields from all objects to create stable output structure
     if (da.Iteration == 0)
     {
-      HashSet<string> allFields = DiscoverAllFieldsFromInput();
+      var allFields = DiscoverAllFieldsFromInput();
 
       if (allFields.Count > 0)
       {
@@ -75,11 +73,12 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
   }
 
   /// <summary>
-  /// Discovers all unique field names from all input objects by looking at volatile data directly.
+  /// Discovers all unique field names and their access types from all input objects by looking at volatile data directly.
   /// </summary>
-  private HashSet<string> DiscoverAllFieldsFromInput()
+  /// <returns>A dictionary mapping field names to their required parameter access types.</returns>
+  private IReadOnlyDictionary<string, GH_ParamAccess> DiscoverAllFieldsFromInput()
   {
-    HashSet<string> allFields = new();
+    Dictionary<string, GH_ParamAccess> allFields = [];
 
     foreach (var item in Params.Input[0].VolatileData.AllData(true))
     {
@@ -88,7 +87,8 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       {
         foreach (var output in objectOutputs)
         {
-          allFields.Add(output.Param.Name);
+          string fieldName = output.Param.Name;
+          allFields[fieldName] = output.Param.Access;
         }
       }
     }
@@ -97,13 +97,13 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
   }
 
   /// <summary>
-  /// Creates output parameter wrappers from a set of field names, all with item access.
+  /// Creates output parameter wrappers from field names and their corresponding access types.
   /// </summary>
-  private List<OutputParamWrapper> CreateOutputParamsFromFieldNames(HashSet<string> fieldNames) =>
-    fieldNames
-      .OrderBy(name => name)
-      .Select(fieldName => CreateOutputParamByKeyValue(fieldName, null, GH_ParamAccess.item))
-      .ToList();
+  /// <param name="fieldAccessTypes">Dictionary mapping field names to their required parameter access types.</param>
+  /// <returns>List of output parameter wrappers with correct access types.</returns>
+  private List<OutputParamWrapper> CreateOutputParamsFromFieldNames(
+    IReadOnlyDictionary<string, GH_ParamAccess> fieldAccessTypes
+  ) => fieldAccessTypes.Select(kvp => CreateOutputParamByKeyValue(kvp.Key, null, kvp.Value)).ToList();
 
   /// <summary>
   /// Deconstructs a single object into its constituent fields/properties.
@@ -157,7 +157,10 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         SpecklePropertyGroupGoo propGroup => propGroup,
         _ => value
       };
-      objectOutputs.Add(CreateOutputParamByKeyValue(key, outputValue, GH_ParamAccess.item));
+
+      // determine access type based on the value
+      GH_ParamAccess access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item;
+      objectOutputs.Add(CreateOutputParamByKeyValue(key, outputValue, access));
     }
 
     return objectOutputs;

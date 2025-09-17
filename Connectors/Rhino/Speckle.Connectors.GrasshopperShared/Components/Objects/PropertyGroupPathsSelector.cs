@@ -13,7 +13,7 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
     : base(
       "Property Selector",
       "pSelect",
-      "Allows you to select a set of property keys for querying",
+      "Allows you to select a set of property keys for querying. Right-click for 'Auto-select all items' option.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.OBJECTS
     ) { }
@@ -24,17 +24,16 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 
   protected override void LoadVolatileData()
   {
-    var propertyGroups = VolatileData
+    List<SpecklePropertyGroupGoo> propertyGroups = VolatileData
       .AllData(true)
-      .Where(goo => goo is SpecklePropertyGroupGoo)
-      .Select(goo =>
-        goo switch
-        {
-          SpecklePropertyGroupGoo geometryGoo => geometryGoo,
-          _ => throw new InvalidOperationException("Unexpected goo type")
-        }
-      )
+      .OfType<SpecklePropertyGroupGoo>()
       .ToList();
+
+    if (VolatileDataCount > propertyGroups.Count)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Only Speckle Properties are accepted as inputs.");
+      return;
+    }
 
     if (propertyGroups.Count == 0)
     {

@@ -5,7 +5,6 @@
 /// </summary>
 internal sealed class FileimportPayload
 {
-  public required string JobId { get; init; }
   public required string Token { get; init; }
   public required string BlobId { get; init; }
   public required string JobType { get; init; }
