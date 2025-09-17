@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
@@ -24,7 +23,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.REFERENCE_POINT)?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
       && ReferencePointSetting.ReferencePointMap.TryGetValue(

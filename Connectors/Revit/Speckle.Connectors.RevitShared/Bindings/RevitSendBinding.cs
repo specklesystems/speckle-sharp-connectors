@@ -98,11 +98,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public List<ICardSetting> GetSendSettings() =>
     [
-      new DetailLevelSetting(RevitSettingsConstants.DEFAULT_DETAIL_LEVEL),
-      new ReferencePointSetting(RevitSettingsConstants.DEFAULT_REFERENCE_POINT),
-      new SendParameterNullOrEmptyStringsSetting(false),
-      new LinkedModelsSetting(true),
-      new SendRebarsAsVolumetricSetting(false)
+      new DetailLevelSetting(),
+      new ReferencePointSetting(),
+      new SendParameterNullOrEmptyStringsSetting(),
+      new LinkedModelsSetting(),
+      new SendRebarsAsVolumetricSetting()
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);

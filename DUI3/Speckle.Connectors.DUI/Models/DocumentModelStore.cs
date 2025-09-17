@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -142,23 +141,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
   protected string Serialize() => serializer.Serialize(Models.ToList());
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected List<ModelCard> Deserialize(string models)
-  {
-    try
-    {
-      var result = serializer.Deserialize<List<ModelCard>>(models);
-      return result ?? [];
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogError(
-        ex,
-        "Failed to deserialize model cards from document. The stored data may be corrupted."
-          + "Starting with empty model collection."
-      );
-      return [];
-    }
-  }
+  protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();
 
   protected void SaveState()
   {
@@ -193,7 +176,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     catch (Exception ex) when (!ex.IsFatal())
     {
       ClearAndSave();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
+      logger.LogWarning(ex, "Failed to deserialize model cards from document.");
     }
   }
 }

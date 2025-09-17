@@ -1,11 +1,13 @@
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.RevitShared.Operations;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 
-public class SendRebarsAsVolumetricSetting(bool value) : ICardSetting
+public class SendRebarsAsVolumetricSetting(bool value = SendRebarsAsVolumetricSetting.DEFAULT_VALUE) : ICardSetting
 {
-  public string? Id { get; set; } = RevitSettingsConstants.SEND_REBARS_AS_VOLUMETRIC;
+  public const string SETTING_ID = "sendRebarsAsVolumetric";
+  public const bool DEFAULT_VALUE = false;
+
+  public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Send Rebars As Volumetric (disable for better performance)";
   public string? Type { get; set; } = "boolean";
   public object? Value { get; set; } = value;

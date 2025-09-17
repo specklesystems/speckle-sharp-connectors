@@ -1,12 +1,14 @@
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 
-public class ReferencePointSetting(ReceiveReferencePointType value) : ICardSetting
+public class ReferencePointSetting(ReceiveReferencePointType value = ReferencePointSetting.DEFAULT_VALUE) : ICardSetting
 {
-  public string? Id { get; set; } = RevitSettingsConstants.REFERENCE_POINT;
+  public const string SETTING_ID = "referencePoint";
+  public const ReceiveReferencePointType DEFAULT_VALUE = ReceiveReferencePointType.Source;
+
+  public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Reference Point";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReceiveReferencePointType)).ToList();

@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
@@ -44,7 +43,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
     var fidelityString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.DETAIL_LEVEL)?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == DetailLevelSetting.SETTING_ID)?.Value as string;
     if (
       fidelityString is not null
       && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
@@ -69,7 +68,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     );
 
     // return sensible default
-    DetailLevelType defaultValue = RevitSettingsConstants.DEFAULT_DETAIL_LEVEL;
+    DetailLevelType defaultValue = DetailLevelSetting.DEFAULT_VALUE;
     _detailLevelCache[modelCard.ModelCardId.NotNull()] = defaultValue;
     return defaultValue;
   }
@@ -77,7 +76,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.REFERENCE_POINT)?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
       && ReferencePointSetting.ReferencePointMap.TryGetValue(
@@ -106,7 +105,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     // log the issue
     _logger.LogWarning(
       "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}. Using default: InternalOrigin",
-      referencePointString ?? "null",
+      referencePointString,
       modelCard.ModelCardId
     );
 
@@ -117,8 +116,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(
-      RevitSettingsConstants.SEND_NULL_EMPTY_PARAMS,
-      false,
+      SendParameterNullOrEmptyStringsSetting.SETTING_ID,
+      SendParameterNullOrEmptyStringsSetting.DEFAULT_VALUE,
       modelCard,
       _sendNullParamsCache,
       "Send null/empty parameters"
@@ -128,8 +127,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(
-      RevitSettingsConstants.INCLUDE_LINKED_MODELS,
-      true,
+      LinkedModelsSetting.SETTING_ID,
+      LinkedModelsSetting.DEFAULT_VALUE,
       modelCard,
       _sendLinkedModelsCache,
       "Linked models"
@@ -137,8 +136,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(
-      RevitSettingsConstants.SEND_REBARS_AS_VOLUMETRIC,
-      false,
+      SendRebarsAsVolumetricSetting.SETTING_ID,
+      SendRebarsAsVolumetricSetting.DEFAULT_VALUE,
       modelCard,
       _sendRebarsAsVolumetricCache,
       "Send rebars as volumetric"
