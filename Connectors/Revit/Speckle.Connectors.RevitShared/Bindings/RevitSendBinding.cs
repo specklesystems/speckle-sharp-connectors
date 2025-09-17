@@ -135,7 +135,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      _revitContext.UIApplication.NotNull().ActiveUIDocument
+      _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
