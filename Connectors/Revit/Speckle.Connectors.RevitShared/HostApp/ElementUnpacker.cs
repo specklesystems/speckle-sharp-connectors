@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -41,11 +42,11 @@ public class ElementUnpacker(RevitContext revitContext)
   /// </remarks>
   public IEnumerable<string> GetUnpackedElementIds(IEnumerable<string> objectIds)
   {
-    var doc = revitContext.UIApplication?.ActiveUIDocument.Document;
+    var doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
     var docElements = doc?.GetElements(objectIds);
     if (docElements == null)
     {
-      return [];
+      throw new SpeckleException("Unable to retrieve active UI document");
     }
     return UnpackSelectionForConversion(docElements).Select(o => o.UniqueId).ToList();
   }
@@ -58,11 +59,11 @@ public class ElementUnpacker(RevitContext revitContext)
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
     if (doc == null)
     {
-      doc = revitContext.UIApplication?.ActiveUIDocument.Document;
+      doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
     }
     if (doc == null)
     {
-      return [];
+      throw new SpeckleException("Unable to retrieve active UI document");
     }
     foreach (var element in elements)
     {
@@ -126,12 +127,12 @@ public class ElementUnpacker(RevitContext revitContext)
     var ids = elements.Select(el => el.Id).ToHashSet();
     if (doc == null)
     {
-      doc = revitContext.UIApplication?.ActiveUIDocument.Document;
+      doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
     }
 
     if (doc == null)
     {
-      return [];
+      throw new SpeckleException("Unable to retrieve active UI document");
     }
 
     elements.RemoveAll(element =>
