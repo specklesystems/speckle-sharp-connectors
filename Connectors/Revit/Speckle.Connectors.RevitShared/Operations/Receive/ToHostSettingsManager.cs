@@ -23,10 +23,10 @@ public class ToHostSettingsManager : IToHostSettingsManager
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == ReferencePointSetting.SETTING_ID)?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceiveReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
-      && ReferencePointSetting.ReferencePointMap.TryGetValue(
+      && ReceiveReferencePointSetting.ReferencePointMap.TryGetValue(
         referencePointString,
         out ReceiveReferencePointType referencePoint
       )
@@ -43,7 +43,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
       "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
       referencePointString,
       modelCard.ModelCardId,
-      ReferencePointSetting.DEFAULT_VALUE
+      ReceiveReferencePointSetting.DEFAULT_VALUE
     );
 
     // return default (null for Source means no transform)

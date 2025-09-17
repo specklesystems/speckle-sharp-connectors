@@ -3,7 +3,8 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 
-public class ReferencePointSetting(ReceiveReferencePointType value = ReferencePointSetting.DEFAULT_VALUE) : ICardSetting
+public class ReceiveReferencePointSetting(ReceiveReferencePointType value = ReceiveReferencePointSetting.DEFAULT_VALUE)
+  : ICardSetting
 {
   public const string SETTING_ID = "referencePoint";
   public const ReceiveReferencePointType DEFAULT_VALUE = ReceiveReferencePointType.Source;

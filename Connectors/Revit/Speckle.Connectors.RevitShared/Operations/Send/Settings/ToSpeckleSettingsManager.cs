@@ -77,10 +77,10 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
     var referencePointString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == ReferencePointSetting.SETTING_ID)?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == SendReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
-      && ReferencePointSetting.ReferencePointMap.TryGetValue(
+      && SendReferencePointSetting.ReferencePointMap.TryGetValue(
         referencePointString,
         out ReferencePointType referencePoint
       )
@@ -108,7 +108,7 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
       referencePointString,
       modelCard.ModelCardId,
-      ReferencePointSetting.DEFAULT_VALUE
+      SendReferencePointSetting.DEFAULT_VALUE
     );
 
     // return default (null for InternalOrigin means no transform)

@@ -98,7 +98,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   public List<ICardSetting> GetSendSettings() =>
     [
       new DetailLevelSetting(),
-      new ReferencePointSetting(),
+      new SendReferencePointSetting(),
       new SendParameterNullOrEmptyStringsSetting(),
       new LinkedModelsSetting(),
       new SendRebarsAsVolumetricSetting()
