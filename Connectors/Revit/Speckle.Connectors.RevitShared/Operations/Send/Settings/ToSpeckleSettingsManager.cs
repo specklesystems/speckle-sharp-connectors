@@ -62,9 +62,10 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
     // log the issue
     _logger.LogWarning(
-      "Invalid detail level setting received: '{FidelityString}' for model {ModelCardId}, using default: Medium",
+      "Invalid detail level setting received: '{FidelityString}' for model {ModelCardId}, using default: {DefaultValue}",
       fidelityString,
-      modelCard.ModelCardId
+      modelCard.ModelCardId,
+      DetailLevelSetting.DEFAULT_VALUE
     );
 
     // return sensible default
@@ -104,9 +105,10 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
     // log the issue
     _logger.LogWarning(
-      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: InternalOrigin",
+      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
       referencePointString,
-      modelCard.ModelCardId
+      modelCard.ModelCardId,
+      Receive.Settings.ReferencePointSetting.DEFAULT_VALUE
     );
 
     // return default (null for InternalOrigin means no transform)
