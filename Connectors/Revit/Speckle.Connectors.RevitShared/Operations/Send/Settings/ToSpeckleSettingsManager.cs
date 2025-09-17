@@ -115,46 +115,47 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
     return null;
   }
 
-  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
-  {
-    var value =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.SEND_NULL_EMPTY_PARAMS)?.Value as bool?;
-    return GetBooleanSettingWithCache(value, false, modelCard, _sendNullParamsCache, "Send null/empty parameters");
-  }
+  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      RevitSettingsConstants.SEND_NULL_EMPTY_PARAMS,
+      false,
+      modelCard,
+      _sendNullParamsCache,
+      "Send null/empty parameters"
+    );
 
   // NOTE: Cache invalidation currently a placeholder until we have more understanding on the sends
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
-  public bool GetLinkedModelsSetting(SenderModelCard modelCard)
-  {
-    var value =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.INCLUDE_LINKED_MODELS)?.Value as bool?;
-    return GetBooleanSettingWithCache(value, true, modelCard, _sendLinkedModelsCache, "Linked models");
-  }
+  public bool GetLinkedModelsSetting(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      RevitSettingsConstants.INCLUDE_LINKED_MODELS,
+      true,
+      modelCard,
+      _sendLinkedModelsCache,
+      "Linked models"
+    );
 
-  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
-  {
-    var value =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.SEND_REBARS_AS_VOLUMETRIC)?.Value as bool?;
-    return GetBooleanSettingWithCache(
-      value,
+  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      RevitSettingsConstants.SEND_REBARS_AS_VOLUMETRIC,
       false,
       modelCard,
       _sendRebarsAsVolumetricCache,
       "Send rebars as volumetric"
     );
-  }
 
   /// <summary>
   /// Helper method to handle boolean settings with caching and logging
   /// </summary>
   private bool GetBooleanSettingWithCache(
-    bool? settingValue,
+    string settingId,
     bool defaultValue,
     SenderModelCard modelCard,
     Dictionary<string, bool?> cache,
     string settingName
   )
   {
+    var settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value as bool?;
     bool returnValue = settingValue ?? defaultValue;
 
     if (cache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
@@ -167,7 +168,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
     cache[modelCard.ModelCardId] = returnValue;
 
-    // log if we had to use default
+    // NOTE: we probably don't need to log here BUT considering users might complain that a setting might not have been
+    // respected (linked models disabled but still sent linked models), I think we should note this occurence so we know
     if (settingValue == null)
     {
       _logger.LogDebug(
