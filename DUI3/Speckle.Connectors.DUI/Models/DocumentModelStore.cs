@@ -142,7 +142,23 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
   protected string Serialize() => serializer.Serialize(Models.ToList());
 
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
-  protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();
+  protected List<ModelCard> Deserialize(string models)
+  {
+    try
+    {
+      var result = serializer.Deserialize<List<ModelCard>>(models);
+      return result ?? [];
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(
+        ex,
+        "Failed to deserialize model cards from document. The stored data may be corrupted."
+          + "Starting with empty model collection."
+      );
+      return [];
+    }
+  }
 
   protected void SaveState()
   {
