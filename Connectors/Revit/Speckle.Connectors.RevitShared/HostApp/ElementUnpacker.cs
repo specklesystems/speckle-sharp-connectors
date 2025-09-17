@@ -110,6 +110,7 @@ public class ElementUnpacker
   // 2- Evicting the cache while introducing the settings
   private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document doc)
   {
+    //just used for contains so use ToHashSet
     var ids = elements.Select(el => el.Id).ToHashSet();
 
     elements.RemoveAll(element =>
