@@ -123,7 +123,10 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       SaveState();
       if (listForMissingModelCards.Count > 0)
       {
-        logger.LogWarning("Model cards with IDs {ListForMissingModelCards} not found to remove", listForMissingModelCards);
+        logger.LogWarning(
+          "Model cards with IDs {ListForMissingModelCards} not found to remove",
+          listForMissingModelCards
+        );
       }
     }
   }
