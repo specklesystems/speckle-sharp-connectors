@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Newtonsoft.Json;
 
@@ -7,7 +8,7 @@ namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 
 public class ReferencePointSetting(ReceiveReferencePointType value) : ICardSetting
 {
-  public string? Id { get; set; } = "referencePoint";
+  public string? Id { get; set; } = RevitSettingsConstants.REFERENCE_POINT;
   public string? Title { get; set; } = "Reference Point";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReceiveReferencePointType)).ToList();

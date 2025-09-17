@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
+using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
@@ -42,7 +43,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
-    var fidelityString = modelCard.Settings?.FirstOrDefault(s => s.Id == "detailLevel")?.Value as string;
+    var fidelityString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.DETAIL_LEVEL)?.Value as string;
     if (
       fidelityString is not null
       && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
@@ -74,7 +76,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
-    var referencePointString = modelCard.Settings?.FirstOrDefault(s => s.Id == "referencePoint")?.Value as string;
+    var referencePointString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.REFERENCE_POINT)?.Value as string;
     if (
       referencePointString is not null
       && ReferencePointSetting.ReferencePointMap.TryGetValue(
@@ -114,7 +117,8 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
 
   public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "nullemptyparams")?.Value as bool?;
+    var value =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.SEND_NULL_EMPTY_PARAMS)?.Value as bool?;
     return GetBooleanSettingWithCache(value, false, modelCard, _sendNullParamsCache, "Send null/empty parameters");
   }
 
@@ -122,13 +126,15 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
   public bool GetLinkedModelsSetting(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "includeLinkedModels")?.Value as bool?;
+    var value =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.INCLUDE_LINKED_MODELS)?.Value as bool?;
     return GetBooleanSettingWithCache(value, true, modelCard, _sendLinkedModelsCache, "Linked models");
   }
 
   public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
   {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "sendRebarsAsVolumetric")?.Value as bool?;
+    var value =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == RevitSettingsConstants.SEND_REBARS_AS_VOLUMETRIC)?.Value as bool?;
     return GetBooleanSettingWithCache(
       value,
       false,
