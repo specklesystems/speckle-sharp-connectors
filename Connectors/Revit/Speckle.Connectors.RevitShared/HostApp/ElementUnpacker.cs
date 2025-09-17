@@ -1,14 +1,12 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
-using Speckle.Converters.RevitShared.Helpers;
-using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
 /// Class that unpacks a given set of selection elements into atomic objects.
 /// </summary>
-public class ElementUnpacker(RevitContext revitContext)
+public class ElementUnpacker
 {
   /// <summary>
   /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recurisvely, nested families into atomic family instances.
@@ -50,17 +48,9 @@ public class ElementUnpacker(RevitContext revitContext)
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
   // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
   // 2- Evicting the cache while introducing the settings
-  private List<Element> UnpackElements(IEnumerable<Element> elements, Document? doc = null)
+  private List<Element> UnpackElements(IEnumerable<Element> elements, Document doc)
   {
     var unpackedElements = new List<Element>(); // note: could be a hashset/map so we prevent duplicates (?)
-    if (doc == null)
-    {
-      doc = revitContext.UIApplication?.ActiveUIDocument?.Document;
-    }
-    if (doc == null)
-    {
-      throw new SpeckleException("Unable to retrieve active UI document");
-    }
     foreach (var element in elements)
     {
       // UNPACK: Groups
@@ -70,7 +60,7 @@ public class ElementUnpacker(RevitContext revitContext)
         // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(groupElements));
+        unpackedElements.AddRange(UnpackElements(groupElements, doc));
       }
       else if (element is BaseArray baseArray)
       {
@@ -78,8 +68,8 @@ public class ElementUnpacker(RevitContext revitContext)
         // This handles cases where some elements might not resolve in linked contexts
         var arrayElements = baseArray.GetCopiedMemberIds().Select(doc.GetElement).Where(el => el != null);
         var originalElements = baseArray.GetOriginalMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(arrayElements));
-        unpackedElements.AddRange(UnpackElements(originalElements));
+        unpackedElements.AddRange(UnpackElements(arrayElements, doc));
+        unpackedElements.AddRange(UnpackElements(originalElements, doc));
       }
       // UNPACK: Family instances (as they potentially have nested families inside)
       else if (element is FamilyInstance familyInstance)
@@ -92,7 +82,7 @@ public class ElementUnpacker(RevitContext revitContext)
 
         if (familyElements.Length != 0)
         {
-          unpackedElements.AddRange(UnpackElements(familyElements));
+          unpackedElements.AddRange(UnpackElements(familyElements, doc));
         }
 
         unpackedElements.Add(familyInstance);
@@ -100,7 +90,7 @@ public class ElementUnpacker(RevitContext revitContext)
       else if (element is MultistoryStairs multistoryStairs)
       {
         var stairs = multistoryStairs.GetAllStairsIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(stairs));
+        unpackedElements.AddRange(UnpackElements(stairs, doc));
       }
       else
       {
