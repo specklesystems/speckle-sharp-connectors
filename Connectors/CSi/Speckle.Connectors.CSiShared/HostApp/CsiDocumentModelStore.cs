@@ -89,7 +89,7 @@ public class CsiDocumentModelStore : DocumentModelStore, IDisposable
         _speckleApplication.Slug
       );
       DocumentStateFile = Path.Combine(HostAppUserDataPath, $"{ModelPathHash}.json");
-      _logger.LogDebug($"Paths set - Hash: {ModelPathHash}, File: {DocumentStateFile}");
+      _logger.LogDebug("Paths set - Hash: {ModelPathHash}, File: {DocumentStateFile}", ModelPathHash, DocumentStateFile);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
