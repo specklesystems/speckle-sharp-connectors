@@ -13,7 +13,6 @@ using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
-using Speckle.Connectors.RevitShared.Operations;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
