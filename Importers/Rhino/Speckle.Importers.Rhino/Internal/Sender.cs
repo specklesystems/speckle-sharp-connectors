@@ -64,7 +64,7 @@ internal sealed class Sender(
     }
 
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
-    logger.LogInformation($"Root: {results.RootId}");
+    logger.LogInformation("Root: {RootId}", results.RootId);
 
     return version;
   }
