@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -11,18 +12,21 @@ namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 public class ToHostSettingsManager : IToHostSettingsManager
 {
   private readonly RevitContext _revitContext;
+  private readonly ILogger<ToHostSettingsManager> _logger;
 
-  public ToHostSettingsManager(RevitContext revitContext)
+  public ToHostSettingsManager(RevitContext revitContext, ILogger<ToHostSettingsManager> logger)
   {
     _revitContext = revitContext;
+    _logger = logger;
   }
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
-    var referencePointString = modelCard.Settings?.FirstOrDefault(s => s.Id == "referencePoint")?.Value as string;
+    var referencePointString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceiveReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
-      && ReferencePointSetting.ReferencePointMap.TryGetValue(
+      && ReceiveReferencePointSetting.ReferencePointMap.TryGetValue(
         referencePointString,
         out ReceiveReferencePointType referencePoint
       )
@@ -34,7 +38,16 @@ public class ToHostSettingsManager : IToHostSettingsManager
       return currentTransform;
     }
 
-    throw new ArgumentException($"Invalid reference point value: {referencePointString}");
+    // log the issue
+    _logger.LogWarning(
+      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
+      referencePointString,
+      modelCard.ModelCardId,
+      ReceiveReferencePointSetting.DEFAULT_VALUE
+    );
+
+    // return default (null for Source means no transform)
+    return null;
   }
 
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)
@@ -91,7 +104,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
     }
 
     throw new InvalidOperationException(
-      "Revit Context UI Application was null when retrieving reference point transform."
+      "Revit Context UI Application was null when retrieving reference point transform"
     );
   }
 }

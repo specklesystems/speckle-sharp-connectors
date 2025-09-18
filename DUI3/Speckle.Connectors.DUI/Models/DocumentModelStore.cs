@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -180,7 +179,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     catch (Exception ex) when (!ex.IsFatal())
     {
       ClearAndSave();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
+      logger.LogWarning(ex, "Failed to deserialize model cards from document");
     }
   }
 }
