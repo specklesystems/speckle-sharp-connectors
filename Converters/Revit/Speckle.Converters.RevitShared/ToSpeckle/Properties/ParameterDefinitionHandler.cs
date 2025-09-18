@@ -5,23 +5,22 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// </summary>
 public class ParameterDefinitionHandler
 {
+  private sealed record GroupDefinition(string Group, string? Units);
+
   /// <summary>
   /// Keeps track of all parameter definitions used in the current send operation. This should be attached to the root commit object post conversion.
   /// </summary>
   /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
-  public Dictionary<string, Dictionary<string, object?>> Definitions { get; } = new();
+  private readonly Dictionary<string, GroupDefinition> _groupDefinitions = new();
 
-  /// <summary>
-  /// Extracts out and stores in <see cref="Definitions"/> the parameter's definition.
-  /// </summary>
-  /// <param name="parameter"></param>
-  /// <returns></returns>
   public (string internalDefinitionName, string humanReadableName, string groupName, string? units) HandleDefinition(
     DB.Parameter parameter
   )
   {
     var definition = parameter.Definition;
+
     var internalDefinitionName = definition.Name; // aka real, internal name
+    var groupDefinitionId = definition.GetGroupTypeId().TypeId;
     var humanReadableName = internalDefinitionName;
     var isShared = parameter.IsShared;
 
@@ -39,14 +38,9 @@ public class ParameterDefinitionHandler
       }
     }
 
-    if (Definitions.TryGetValue(internalDefinitionName, out var def))
+    if (_groupDefinitions.TryGetValue(groupDefinitionId, out var def))
     {
-      return (
-        internalDefinitionName,
-        humanReadableName,
-        def["group"] as string ?? "unknown group",
-        def["units"] as string
-      );
+      return (internalDefinitionName, humanReadableName, def.Group, def.Units);
     }
 
     string? units = null;
@@ -57,15 +51,7 @@ public class ParameterDefinitionHandler
 
     var group = DB.LabelUtils.GetLabelForGroup(definition.GetGroupTypeId());
 
-    Definitions[internalDefinitionName] = new Dictionary<string, object?>()
-    {
-      ["definitionName"] = internalDefinitionName,
-      ["name"] = humanReadableName,
-      ["units"] = units,
-      ["isShared"] = isShared,
-      ["isReadOnly"] = parameter.IsReadOnly,
-      ["group"] = group
-    };
+    _groupDefinitions[groupDefinitionId] = new GroupDefinition(Group: group, Units: units);
 
     return (internalDefinitionName, humanReadableName, group, units);
   }
