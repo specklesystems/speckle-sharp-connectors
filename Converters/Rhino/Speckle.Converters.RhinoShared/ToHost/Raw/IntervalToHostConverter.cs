@@ -1,4 +1,6 @@
-﻿using Speckle.Converters.Common.Objects;
+﻿using System.Diagnostics.CodeAnalysis;
+using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Rhino.ToHost.Raw;
 
@@ -11,11 +13,11 @@ public class IntervalToHostConverter : ITypedConverter<SOP.Interval, RG.Interval
   /// <returns>The converted Rhino.Geometry.Interval object.</returns>
   /// <exception cref="ArgumentException">Thrown when the start or end value of the Interval is null.</exception>
   /// <remarks>⚠️ This conversion does NOT perform scaling.</remarks>
-  public RG.Interval Convert(SOP.Interval? target)
+  public RG.Interval Convert([NotNull] SOP.Interval? target)
   {
     if (target == null)
     {
-      return RG.Interval.Unset;
+      throw new ConversionException("Cannot convert a null Interval.  Check your Rhino model.");
     }
 
     return new RG.Interval(target.start, target.end);
