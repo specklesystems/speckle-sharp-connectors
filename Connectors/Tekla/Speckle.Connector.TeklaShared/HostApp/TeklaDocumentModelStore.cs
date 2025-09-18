@@ -56,7 +56,7 @@ public class TeklaDocumentModelStore : DocumentModelStore
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex.Message);
+      _logger.LogError(ex, "Failed to Save Host App State");
     }
   }
 
