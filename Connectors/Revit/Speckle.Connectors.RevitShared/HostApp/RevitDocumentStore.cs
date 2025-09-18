@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly ILogger<RevitDocumentStore> _logger;
   private readonly IAppIdleManager _idleManager;
   private readonly RevitContext _revitContext;
-  private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
 
@@ -28,7 +26,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
-    DocumentModelStorageSchema documentModelStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
     ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
@@ -39,7 +36,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _idleManager = idleManager;
     _revitContext = revitContext;
-    _documentModelStorageSchema = documentModelStorageSchema;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _logger = logger;
 
@@ -131,42 +127,15 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    var stateEntity = GetSpeckleEntity(document);
-    if (stateEntity == null || !stateEntity.IsValid())
-    {
-      ClearAndSave();
-      return;
-    }
-
     var key = GetKeyForDocument(document);
     if (key != null)
     {
       var state = _jsonCacheManager.GetObject(key);
+      if (state == null)
+      {
+        return;
+      }
       LoadFromString(state);
     }
-  }
-
-  private Entity? GetSpeckleEntity(Document? doc)
-  {
-    if (doc is null)
-    {
-      return null;
-    }
-    using FilteredElementCollector collector = new(doc);
-
-    FilteredElementCollector dataStorages = collector.OfClass(typeof(DataStorage));
-    foreach (Element element in dataStorages)
-    {
-      DataStorage dataStorage = (DataStorage)element;
-      Entity settingEntity = dataStorage.GetEntity(_documentModelStorageSchema.GetSchema());
-      if (!settingEntity.IsValid())
-      {
-        continue;
-      }
-
-      return settingEntity;
-    }
-
-    return null;
   }
 }
