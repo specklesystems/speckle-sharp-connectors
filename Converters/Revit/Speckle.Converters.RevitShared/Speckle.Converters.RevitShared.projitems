@@ -50,6 +50,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\LocalToGlobalToDirectShapeConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\MaterialQuantitiesToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterDefinitionHandler.cs" />
@@ -73,7 +74,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\VectorToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\XyzConversionToPoint.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialAsSpeckleMaterialConversionToSpeckle.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\MaterialQuantitiesToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\PointcloudToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\LocationToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\ModelCurveArrArrayToSpeckleConverter.cs" />

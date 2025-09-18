@@ -6,37 +6,20 @@ using Speckle.Sdk.Common;
 
 namespace Speckle.Converters.Revit2023.ToSpeckle.Properties;
 
-public readonly struct StructuralAssetProperties(
-  string name,
-  double density,
-  DB.ForgeTypeId densityUnitId,
-  string materialType,
-  double? compressiveStrength,
-  DB.ForgeTypeId? compressiveStrengthUnitId
-)
-{
-  public string Name { get; } = name;
-  public double Density { get; } = density;
-  public DB.ForgeTypeId DensityUnitId { get; } = densityUnitId;
-  public string MaterialType { get; } = materialType;
-  public double? CompressiveStrength { get; } = compressiveStrength;
-  public DB.ForgeTypeId? CompressiveStrengthUnitId { get; } = compressiveStrengthUnitId;
-}
+public sealed record  StructuralAssetProperties(
+  string Name,
+  double Density,
+  DB.ForgeTypeId DensityUnitId,
+  string MaterialType,
+  double? CompressiveStrength,
+  DB.ForgeTypeId? CompressiveStrengthUnitId
+);
 
-public class StructuralMaterialAssetExtractor
+public class StructuralMaterialAssetExtractor(
+  ScalingServiceToSpeckle scalingService,
+  IConverterSettingsStore<RevitConversionSettings> converterSettings)
 {
-  private readonly ScalingServiceToSpeckle _scalingService;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly Dictionary<string, StructuralAssetProperties> _structuralAssetCache = new();
-
-  public StructuralMaterialAssetExtractor(
-    ScalingServiceToSpeckle scalingService,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
-  )
-  {
-    _scalingService = scalingService;
-    _converterSettings = converterSettings;
-  }
 
   /// <summary>
   /// Attempts to get structural asset properties, using cached values if available.
@@ -69,7 +52,7 @@ public class StructuralMaterialAssetExtractor
   {
     // NOTE: assetId != DB.ElementId.InvalidElementId checked in calling method. Assuming a valid StructuralAssetId
     if (
-      _converterSettings.Current.Document.GetElement(structuralAssetId) is not DB.PropertySetElement propertySetElement
+      converterSettings.Current.Document.GetElement(structuralAssetId) is not DB.PropertySetElement propertySetElement
     )
     {
       throw new SpeckleException("Structural material asset is not of expected type.");
@@ -77,13 +60,13 @@ public class StructuralMaterialAssetExtractor
     DB.StructuralAsset structuralAsset = propertySetElement.GetStructuralAsset();
 
     // get unit forge type id
-    DB.ForgeTypeId densityUnitId = _converterSettings
+    DB.ForgeTypeId densityUnitId = converterSettings
       .Current.Document.GetUnits()
       .GetFormatOptions(DB.SpecTypeId.MassDensity)
       .GetUnitTypeId();
 
     // scale from internal to model units
-    double densityValue = _scalingService.Scale(structuralAsset.Density, densityUnitId);
+    double densityValue = scalingService.Scale(structuralAsset.Density, densityUnitId);
 
     // get material type
     string materialType = structuralAsset.StructuralAssetClass.ToString();
@@ -95,22 +78,22 @@ public class StructuralMaterialAssetExtractor
     // if concrete, extract compressive strength
     if (materialType == DB.StructuralAssetClass.Concrete.ToString())
     {
-      stressUnitId = _converterSettings
+      stressUnitId = converterSettings
         .Current.Document.GetUnits()
         .GetFormatOptions(DB.SpecTypeId.AreaForce)
         .GetUnitTypeId();
 
-      compressiveStrength = _scalingService.Scale(structuralAsset.ConcreteCompression, stressUnitId);
+      compressiveStrength = scalingService.Scale(structuralAsset.ConcreteCompression, stressUnitId);
     }
 
     // return value and units
     return new StructuralAssetProperties(
-      name: structuralAsset.Name,
-      density: densityValue,
-      densityUnitId: densityUnitId,
-      materialType: materialType,
-      compressiveStrength: compressiveStrength,
-      compressiveStrengthUnitId: stressUnitId
+   structuralAsset.Name,
+      densityValue,
+  densityUnitId,
+  materialType,
+compressiveStrength,
+stressUnitId
     );
   }
 }
