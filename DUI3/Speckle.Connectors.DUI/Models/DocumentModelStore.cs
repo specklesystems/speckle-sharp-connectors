@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Utils;
@@ -51,7 +50,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       var model = _models.FirstOrDefault(model => model.ModelCardId == id);
       if (model is null)
       {
-        logger.LogWarning($"Model with id {id} not found.");
+        logger.LogWarning($"Model with id {id} not found");
         return null;
       }
       return model;
@@ -123,7 +122,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       SaveState();
       if (listForMissingModelCards.Count > 0)
       {
-        logger.LogWarning($"Model cards with IDs {listForMissingModelCards} not found to remove.");
+        logger.LogWarning($"Model cards with IDs {listForMissingModelCards} not found to remove");
       }
     }
   }
@@ -177,7 +176,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     catch (Exception ex) when (!ex.IsFatal())
     {
       ClearAndSave();
-      Debug.WriteLine(ex.Message); // POC: Log here error and notify UI that cards not read succesfully
+      logger.LogWarning(ex, "Failed to deserialize model cards from document");
     }
   }
 }
