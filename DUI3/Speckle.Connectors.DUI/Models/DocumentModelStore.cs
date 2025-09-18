@@ -50,7 +50,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       var model = _models.FirstOrDefault(model => model.ModelCardId == id);
       if (model is null)
       {
-        logger.LogWarning($"Model with id {id} not found");
+        logger.LogWarning("Model with id {id} not found", id);
         return null;
       }
       return model;
@@ -82,7 +82,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
       if (index == -1)
       {
-        logger.LogWarning($"Model card not found to update. Model card ID: {model.ModelCardId}");
+        logger.LogWarning("Model card not found to update. Model card ID: {ModelCardId}", model.ModelCardId);
         return;
       }
       _models[index] = model;
@@ -97,7 +97,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
       if (index == -1)
       {
-        logger.LogWarning($"Model card not found to update. Model card ID: {model.ModelCardId}");
+        logger.LogWarning("Model card not found to update. Model card ID: {ModelCardId}", model.ModelCardId);
         return;
       }
       _models.RemoveAt(index);
@@ -122,7 +122,10 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
       SaveState();
       if (listForMissingModelCards.Count > 0)
       {
-        logger.LogWarning($"Model cards with IDs {listForMissingModelCards} not found to remove");
+        logger.LogWarning(
+          "Model cards with IDs {ListForMissingModelCards} not found to remove",
+          listForMissingModelCards
+        );
       }
     }
   }
