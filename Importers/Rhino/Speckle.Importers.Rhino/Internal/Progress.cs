@@ -13,7 +13,7 @@ internal sealed class Progress(ILogger<Progress> logger) : IProgress<CardProgres
     var now = DateTime.UtcNow;
     if (now - _lastTime >= _debounce)
     {
-      logger.LogInformation(value.Status + " p " + value.Progress);
+      logger.LogInformation("{Status} p {Progress}", value.Status, value.Progress);
       _lastTime = now;
     }
   }

@@ -231,9 +231,9 @@ public class ParameterExtractor
 
         paramGroup[targetKey] = param;
       }
-      catch (Exception e) when (!e.IsFatal())
+      catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogWarning(e, $"Failed to convert parameter {parameter.Definition.Name}");
+        _logger.LogWarning(ex, "Failed to convert parameter {parameterDefinitionName}", parameter.Definition.Name);
       }
     }
 

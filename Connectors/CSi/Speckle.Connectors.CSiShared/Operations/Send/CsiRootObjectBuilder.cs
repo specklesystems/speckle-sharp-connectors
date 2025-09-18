@@ -182,12 +182,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     // NOTE: CsiTendonWrapper - not typically modelled in ETABS, rather SAFE
     catch (NotImplementedException ex)
     {
-      _logger.LogError(ex, sourceType);
+      _logger.LogError(ex, "Failed to convert object {sourceType}", sourceType);
       return new(Status.WARNING, applicationId, sourceType, null, ex);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, sourceType);
+      _logger.LogError(ex, "Failed to convert object {sourceType}", sourceType);
       return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }

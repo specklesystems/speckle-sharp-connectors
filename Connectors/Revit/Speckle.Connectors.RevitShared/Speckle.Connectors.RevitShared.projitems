@@ -36,7 +36,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ElementUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReferencePointSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ToHostSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
@@ -49,7 +49,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ReferencePointSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\DetailLevelSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\IRevitPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCommand.cs" />
