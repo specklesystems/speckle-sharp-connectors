@@ -1,8 +1,8 @@
 using Speckle.Converters.Common;
-using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -24,23 +24,13 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// We're attaching density, type and concrete compression (if concrete) to all objects. This is still "lite". If we add
 /// more structural asset properties we should move to a proxy approach.
 /// </remarks>
-public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
+[GenerateAutoInterface]
+public class MaterialQuantitiesToSpeckleLite(
+  ScalingServiceToSpeckle scalingService,
+  IConverterSettingsStore<RevitConversionSettings> converterSettings,
+  StructuralMaterialAssetExtractor structuralAssetExtractor)
+  : IMaterialQuantitiesToSpeckleLite
 {
-  private readonly ScalingServiceToSpeckle _scalingService;
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
-
-  public MaterialQuantitiesToSpeckleLite(
-    ScalingServiceToSpeckle scalingService,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    StructuralMaterialAssetExtractor structuralAssetExtractor
-  )
-  {
-    _scalingService = scalingService;
-    _converterSettings = converterSettings;
-    _structuralAssetExtractor = structuralAssetExtractor;
-  }
-
   public Dictionary<string, object> Convert(DB.Element target)
   {
     Dictionary<string, object> quantities = new();
@@ -72,7 +62,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         }
 
         var materialQuantity = new Dictionary<string, object>();
-        var unitSettings = _converterSettings.Current.Document.GetUnits();
+        var unitSettings = converterSettings.Current.Document.GetUnits();
 
         // add material props
         if (TryAddMaterialPropertiesToQuantitiesDict(matId, materialQuantity, out string matName))
@@ -85,7 +75,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         AddMaterialProperty(
           materialQuantity,
           "area",
-          _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
+          scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
           areaUnitType
         );
 
@@ -93,7 +83,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         AddMaterialProperty(
           materialQuantity,
           "volume",
-          _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
+          scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
           volumeUnitType
         );
       }
@@ -107,8 +97,8 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     foreach (DB.ElementId elementId in elementIds)
     {
       if (
-        _converterSettings.Current.Document.GetElement(elementId) is DB.Element element
-        && _converterSettings.Current.Document.GetElement(element.GetTypeId()) is DB.ElementType elementType
+        converterSettings.Current.Document.GetElement(elementId) is DB.Element element
+        && converterSettings.Current.Document.GetElement(element.GetTypeId()) is DB.ElementType elementType
       )
       {
         DB.ElementId elementMatId = DB.ElementId.InvalidElementId;
@@ -150,7 +140,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     foreach (var entry in matLengths)
     {
       var materialQuantity = new Dictionary<string, object>();
-      var unitSettings = _converterSettings.Current.Document.GetUnits();
+      var unitSettings = converterSettings.Current.Document.GetUnits();
 
       // add material props
       if (TryAddMaterialPropertiesToQuantitiesDict(entry.Key, materialQuantity, out string matName))
@@ -162,7 +152,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         AddMaterialProperty(
           materialQuantity,
           "length",
-          _scalingService.Scale(entry.Value, lengthUnitType),
+          scalingService.Scale(entry.Value, lengthUnitType),
           lengthUnitType
         );
       }
@@ -183,7 +173,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   )
   {
     matName = "";
-    if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
+    if (converterSettings.Current.Document.GetElement(matId) is DB.Material material)
     {
       materialQuantity["materialName"] = material.Name;
       materialQuantity["materialCategory"] = material.MaterialCategory;
@@ -193,7 +183,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
       DB.ElementId structuralAssetId = material.StructuralAssetId;
       if (structuralAssetId != DB.ElementId.InvalidElementId)
       {
-        StructuralAssetProperties structuralAssetProperties = _structuralAssetExtractor.TryGetProperties(
+        StructuralAssetProperties structuralAssetProperties = structuralAssetExtractor.TryGetProperties(
           structuralAssetId
         );
 
