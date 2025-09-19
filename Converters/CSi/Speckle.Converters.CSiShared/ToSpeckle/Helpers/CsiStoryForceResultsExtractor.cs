@@ -24,7 +24,7 @@ public class CsiStoryForceResultsExtractor : IApplicationResultsExtractor
   public string ResultsKey => "storyForces";
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
-    new([STORY, LOAD_CASE, LOAD_CASE], [AXIAL_FORCE, MAJOR_SHEAR, MINOR_SHEAR, TORSION, MAJOR_MOMENT, MINOR_MOMENT]);
+    new([STORY, LOAD_CASE, LOCATION], [AXIAL_FORCE, MAJOR_SHEAR, MINOR_SHEAR, TORSION, MAJOR_MOMENT, MINOR_MOMENT]);
 
   public CsiStoryForceResultsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
