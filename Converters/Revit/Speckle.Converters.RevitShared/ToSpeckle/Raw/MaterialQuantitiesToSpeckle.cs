@@ -101,9 +101,9 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
             volumeUnitType
           );
         }
-        catch (ApplicationException e)
+        catch (ApplicationException ex)
         {
-          throw new ConversionException("Error in Material Quantities", e);
+          throw new ConversionException("Error in Material Quantities", ex);
         }
       }
     }
