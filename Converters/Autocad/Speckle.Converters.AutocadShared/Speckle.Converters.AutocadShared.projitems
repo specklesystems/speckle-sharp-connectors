@@ -16,6 +16,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)AutocadToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\EntityExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ListExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\ReferencePointHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IReferencePointConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ReferencePointConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\AutocadPolycurveToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\BrepToHostConverter.cs" />

@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Common;
+using Speckle.Converters.Common;
 using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converters.Autocad;
@@ -8,5 +8,9 @@ public class AutocadConversionSettingsFactory(IHostToSpeckleUnitConverter<ADB.Un
   : IAutocadConversionSettingsFactory
 {
   public AutocadConversionSettings Create(Document document) =>
-    new(document, unitsConverter.ConvertOrThrow(document.Database.Insunits));
+    new(
+      document,
+      document.Editor.CurrentUserCoordinateSystem,
+      unitsConverter.ConvertOrThrow(document.Database.Insunits)
+    );
 }

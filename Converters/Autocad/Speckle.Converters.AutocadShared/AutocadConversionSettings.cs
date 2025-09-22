@@ -1,3 +1,5 @@
-﻿namespace Speckle.Converters.Autocad;
+using Autodesk.AutoCAD.Geometry;
 
-public record AutocadConversionSettings(Document Document, string SpeckleUnits);
+namespace Speckle.Converters.Autocad;
+
+public record AutocadConversionSettings(Document Document, Matrix3d ReferencePointTransform, string SpeckleUnits);

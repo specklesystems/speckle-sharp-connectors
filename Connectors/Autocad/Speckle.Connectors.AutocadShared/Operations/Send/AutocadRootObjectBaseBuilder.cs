@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Common.Builders;
@@ -7,6 +8,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -120,6 +122,13 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
 
       // 5 - Unpack the color proxies
       root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
+
+      // 6 - Add the Reference Point
+      if (Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix)
+      {
+        var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(matrix);
+        root[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+      }
 
       // add any additional properties (most likely from verticals)
       AddAdditionalProxiesToRoot(root);
