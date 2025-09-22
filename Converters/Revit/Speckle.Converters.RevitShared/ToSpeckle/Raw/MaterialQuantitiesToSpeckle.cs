@@ -4,7 +4,7 @@ using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk.Common.Exceptions;
-using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
+using ApplicationException = Autodesk.Revit.Exceptions.ApplicationException;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
