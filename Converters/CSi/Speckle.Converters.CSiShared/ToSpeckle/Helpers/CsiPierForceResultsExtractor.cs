@@ -54,7 +54,8 @@ public class CsiPierForceResultsExtractor : IApplicationResultsExtractor
 
     if (success != 0 || numberResults == 0)
     {
-      throw new InvalidOperationException("Pier force extraction failed.");
+      // NOTE: if this is the case, the user probably doesn't have any piers assigned in their model?
+      throw new InvalidOperationException("No pier forces extracted");
     }
 
     // Step 3: organise arrays for dictionary processor
