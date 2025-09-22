@@ -3,6 +3,8 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common.Exceptions;
+using ArgumentException = Autodesk.Revit.Exceptions.ArgumentException;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -80,22 +82,29 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           quantities[matName] = materialQuantity;
         }
 
-        // add area and volume props
-        var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
-        AddMaterialProperty(
-          materialQuantity,
-          "area",
-          _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
-          areaUnitType
-        );
+        try
+        {
+          // add area and volume props
+          var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
+          AddMaterialProperty(
+            materialQuantity,
+            "area",
+            _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
+            areaUnitType
+          );
 
-        var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
-        AddMaterialProperty(
-          materialQuantity,
-          "volume",
-          _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
-          volumeUnitType
-        );
+          var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
+          AddMaterialProperty(
+            materialQuantity,
+            "volume",
+            _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
+            volumeUnitType
+          );
+        }
+        catch (ApplicationException e)
+        {
+          throw new ConversionException("Error in Material Quantities", e);
+        }
       }
     }
   }
