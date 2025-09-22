@@ -105,7 +105,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
     if (results.All(x => x.Status == Status.ERROR))
     {
-      throw new SpeckleException("Failed to convert all objects.");
+      throw new SpeckleException("Failed to convert all objects");
     }
 
     using (var _ = _activityFactory.Start("Process Proxies"))
@@ -129,13 +129,13 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       if (requestedResultTypes == null || requestedResultTypes.Count == 0)
       {
         throw new SpeckleException(
-          "No result type input for the requested load cases and combinations. Adjust publish settings."
+          "Adjust publish settings - no result type input for the requested load cases and combinations"
         );
       }
 
       if (!_csiApplicationService.SapModel.GetModelIsLocked())
       {
-        throw new SpeckleException("Model unlocked. No access to analysis results.");
+        throw new SpeckleException("Model unlocked, no access to analysis results");
       }
 
       try
@@ -147,9 +147,9 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         );
         rootObjectCollection["analysisResults"] = analysisResults;
       }
-      catch (Exception e)
+      catch (Exception ex)
       {
-        throw new SpeckleException("Analysis failed.", e);
+        throw new SpeckleException("Analysis result extraction failed", ex);
       }
     }
 
