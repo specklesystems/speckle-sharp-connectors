@@ -138,13 +138,21 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         throw new SpeckleException("Model unlocked. No access to analysis results.");
       }
 
-      var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
-        selectedCasesAndCombinations,
-        requestedResultTypes,
-        objectSelectionSummary
-      );
-      rootObjectCollection["analysisResults"] = analysisResults;
+      try
+      {
+        var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
+          selectedCasesAndCombinations,
+          requestedResultTypes,
+          objectSelectionSummary
+        );
+        rootObjectCollection["analysisResults"] = analysisResults;
+      }
+      catch (Exception e)
+      {
+        throw new SpeckleException("Analysis failed.", e);
+      }
     }
+
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
