@@ -35,7 +35,17 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
     }
 
     // define table keys that we don't want to exclude in the section proxy properties
-    var keysToExclude = new HashSet<string> { "GUID", "Name", "Color", "Notes", "FileName", "FromFile", "SectInFile" };
+    var keysToExclude = new HashSet<string>
+    {
+      "GUID",
+      "Name",
+      "Color",
+      "Notes",
+      "FileName",
+      "FromFile",
+      "SectInFile",
+      "NotAutoFact"
+    };
 
     // get the shape of the section using the dedicated api query (exception to the database approach)
     eFramePropType framePropType = 0;
@@ -64,10 +74,14 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
         }
         else
         {
-          Dictionary<string, object?> sectionDimensions = properties.EnsureNested(
-            SectionPropertyCategory.SECTION_DIMENSIONS
-          );
-          sectionDimensions.Add(key, double.Parse(value));
+          // dangerously assuming -> if we get to this stage and string can be parsed as a double, it's section dimension
+          if (double.TryParse(value, out double parsedValue))
+          {
+            Dictionary<string, object?> sectionDimensions = properties.EnsureNested(
+              SectionPropertyCategory.SECTION_DIMENSIONS
+            );
+            sectionDimensions.Add(key, parsedValue);
+          }
         }
       }
     }
