@@ -124,7 +124,10 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
 
       // 6 - Add the Reference Point
-      if (Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix)
+      if (
+        Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix
+        && matrix != Matrix3d.Identity
+      )
       {
         var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(matrix);
         root[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
