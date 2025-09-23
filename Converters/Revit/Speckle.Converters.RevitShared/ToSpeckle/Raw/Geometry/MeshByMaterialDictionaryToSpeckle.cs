@@ -8,14 +8,11 @@ using Speckle.Sdk.Common;
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public class MeshByMaterialDictionaryToSpeckle
-  : ITypedConverter<
-    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent),
-    List<SOG.Mesh>
-  >
+  : ITypedConverter<(Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.Element parent), List<SOG.Mesh>>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<DB.Material, RenderMaterial> _speckleRenderMaterialConverter;
-  private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
+  private readonly ITypedConverter<IReadOnlyList<DB.Mesh>, SOG.Mesh> _meshListConverter;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
 
   private readonly RenderMaterial _transparentMaterial =
@@ -28,7 +25,7 @@ public class MeshByMaterialDictionaryToSpeckle
     };
 
   public MeshByMaterialDictionaryToSpeckle(
-    ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
+    ITypedConverter<IReadOnlyList<DB.Mesh>, SOG.Mesh> meshListConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     ITypedConverter<DB.Material, RenderMaterial> speckleRenderMaterialConverter
@@ -54,14 +51,13 @@ public class MeshByMaterialDictionaryToSpeckle
   /// the material is added to the corresponding Speckle mesh. If the conversion fails, the operation simply continues without the material.
   /// TODO: update description
   /// </remarks>
-  public List<SOG.Mesh> Convert(
-    (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent) args
-  )
+  public List<SOG.Mesh> Convert((Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.Element parent) args)
   {
-    List<SOG.Mesh> result = new(args.target.Keys.Count);
+    bool makeTransparent = ShouldSetElementDisplayToTransparent(args.parent);
+
     var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
-    var key = args.parentElementId.ToString().NotNull();
+    var key = args.parent.Id.ToString().NotNull();
     // ids are same in copy pasted linked models, otherwise we reset the materialProxyMap in cache and only one of the linked model is having the render materials
     if (objectRenderMaterialProxiesMap.TryGetValue(key, out var cachedMaterialProxy))
     {
@@ -74,48 +70,90 @@ public class MeshByMaterialDictionaryToSpeckle
 
     if (args.target.Count == 0)
     {
-      return new();
+      return [];
     }
 
-    foreach (var keyValuePair in args.target)
+    using DB.Transform? worldToLocal = GetTransform(args.parent)?.Inverse;
+    List<SOG.Mesh> result = new(args.target.Keys.Count);
+    foreach (var kvp in args.target)
     {
-      DB.ElementId materialId = keyValuePair.Key;
-      string materialIdString = args.makeTransparent
-        ? _transparentMaterial.applicationId.NotNull()
-        : materialId.ToString().NotNull();
-      List<DB.Mesh> meshes = keyValuePair.Value;
-
-      // use the meshlist converter to convert the mesh values into a single speckle mesh
-      SOG.Mesh speckleMesh = _meshListConverter.Convert(meshes);
-      speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
-
-      // get the speckle render material
-      RenderMaterial? renderMaterial = args.makeTransparent
-        ? _transparentMaterial
-        : _converterSettings.Current.Document.GetElement(materialId) is DB.Material material
-          ? _speckleRenderMaterialConverter.Convert(material)
-          : null;
-
-      // get the render material if any
-      if (renderMaterial is not null)
-      {
-        if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
-        {
-          renderMaterialProxy = new RenderMaterialProxy()
-          {
-            value = renderMaterial,
-            applicationId = materialId.ToString(),
-            objects = []
-          };
-          materialProxyMap[materialIdString] = renderMaterialProxy;
-        }
-
-        renderMaterialProxy.objects.Add(speckleMesh.applicationId);
-      }
-
-      result.Add(speckleMesh);
+      IReadOnlyList<DB.Mesh> meshes;
+      //POC: This is a very inefficient way to do this.
+      // we should pass the transform down, and apply it as we're constructing the Speckle Meshes.
+      meshes = worldToLocal is not null ? kvp.Value.Select(x => x.get_Transformed(worldToLocal)).ToList() : kvp.Value;
+      var mesh = ConvertMesh(meshes, kvp.Key, materialProxyMap, makeTransparent);
+      result.Add(mesh);
     }
 
     return result;
+  }
+
+  private static DB.Transform? GetTransform(DB.Element element)
+  {
+    if (element is DB.Instance i)
+    {
+      return i.GetTotalTransform();
+    }
+
+    return null;
+  }
+
+  private SOG.Mesh ConvertMesh(
+    IReadOnlyList<DB.Mesh> meshes,
+    DB.ElementId materialId,
+    Dictionary<string, RenderMaterialProxy> materialProxyMap,
+    bool makeTransparent
+  )
+  {
+    string materialIdString = makeTransparent
+      ? _transparentMaterial.applicationId.NotNull()
+      : materialId.ToString().NotNull();
+
+    // use the meshlist converter to convert the mesh values into a single speckle mesh
+    SOG.Mesh speckleMesh = _meshListConverter.Convert(meshes);
+
+    // get the speckle render material
+    RenderMaterial? renderMaterial = makeTransparent
+      ? _transparentMaterial
+      : _converterSettings.Current.Document.GetElement(materialId) is DB.Material material
+        ? _speckleRenderMaterialConverter.Convert(material)
+        : null;
+
+    // get the render material if any
+    if (renderMaterial is not null)
+    {
+      if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
+      {
+        renderMaterialProxy = new RenderMaterialProxy()
+        {
+          value = renderMaterial,
+          applicationId = materialId.ToString(),
+          objects = []
+        };
+        materialProxyMap[materialIdString] = renderMaterialProxy;
+      }
+
+      renderMaterialProxy.objects.Add(speckleMesh.applicationId.NotNull());
+    }
+
+    return speckleMesh;
+  }
+
+  /// <summary>
+  /// Determines if an element should be sent with invisible display values
+  /// </summary>
+  /// <param name="element"></param>
+  /// <returns></returns>
+  private static bool ShouldSetElementDisplayToTransparent(DB.Element element)
+  {
+#if REVIT2023_OR_GREATER
+    return element.Category?.BuiltInCategory switch
+    {
+      DB.BuiltInCategory.OST_Rooms => true,
+      _ => false
+    };
+#else
+    return false;
+#endif
   }
 }

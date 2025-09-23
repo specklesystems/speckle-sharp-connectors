@@ -5,7 +5,7 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
-public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Mesh>
+public class MeshListConversionToSpeckle : ITypedConverter<IReadOnlyList<DB.Mesh>, SOG.Mesh>
 {
   private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly IReferencePointConverter _referencePointConverter;
@@ -22,7 +22,7 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
     _referencePointConverter = referencePointConverter;
   }
 
-  public SOG.Mesh Convert(List<DB.Mesh> target)
+  public SOG.Mesh Convert(IReadOnlyList<DB.Mesh> target)
   {
     // We compute the final size of the arrays to prevent unnecessary resizing.
     (int verticesSize, int facesSize) = GetVertexAndFaceListSize(target);
@@ -60,7 +60,8 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       {
         vertices = vertices,
         faces = faces,
-        units = _converterSettings.Current.SpeckleUnits
+        units = _converterSettings.Current.SpeckleUnits,
+        applicationId = target[0].Id.ToString(), // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
       };
 
     return speckleMesh;
