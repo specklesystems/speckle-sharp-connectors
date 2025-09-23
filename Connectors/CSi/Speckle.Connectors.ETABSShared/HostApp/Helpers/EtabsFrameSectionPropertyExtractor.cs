@@ -1,4 +1,5 @@
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.ETABSShared.HostApp.Services;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Utils;
@@ -11,66 +12,64 @@ namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionPropertyExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly EtabsSectionPropertyDefinitionService _definitionService;
 
-  public EtabsFrameSectionPropertyExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public EtabsFrameSectionPropertyExtractor(
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    EtabsSectionPropertyDefinitionService definitionService
+  )
   {
     _settingsStore = settingsStore;
+    _definitionService = definitionService;
   }
 
   /// <summary>
-  /// Gets generalised frame section properties
+  /// Gets frame section properties
   /// </summary>
-  /// <remarks>
-  /// Sap2000 doesn't support this method, unfortunately
-  /// Alternative is to account for extraction according to section type - we're talking over 40 section types!
-  /// This way, we get basic information with minimal computational costs.
-  /// </remarks>
   public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
-    // Get all frame properties
-    int numberOfNames = 0;
-    string[] names = [];
-    eFramePropType[] propTypes = [];
-    double[] t3 = [],
-      t2 = [],
-      tf = [],
-      tw = [],
-      t2b = [],
-      tfb = [],
-      area = [];
-
-    _settingsStore.Current.SapModel.PropFrame.GetAllFrameProperties_2(
-      ref numberOfNames,
-      ref names,
-      ref propTypes,
-      ref t3,
-      ref t2,
-      ref tf,
-      ref tw,
-      ref t2b,
-      ref tfb,
-      ref area
-    );
-
-    // Find the index of the current section
-    int sectionIndex = Array.IndexOf(names, sectionName);
-
-    if (sectionIndex != -1)
+    // get pre-loaded frame definitions from the service
+    if (!_definitionService.FrameDefinitions.TryGetValue(sectionName, out var rawDatabaseTableProperties))
     {
-      // General Data
-      var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
-      generalData["Section Shape"] = propTypes[sectionIndex].ToString();
+      return; // No definitions found for this section
+    }
 
-      // Section Dimensions
-      string unit = _settingsStore.Current.SpeckleUnits;
-      var sectionDimensions = properties.EnsureNested(SectionPropertyCategory.SECTION_DIMENSIONS);
-      sectionDimensions.AddWithUnits("t3", t3[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("t2", t2[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("tf", tf[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("tw", tw[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("t2b", t2b[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("tfb", tfb[sectionIndex], unit);
-      sectionDimensions.AddWithUnits("Area", area[sectionIndex], $"{unit}²");
+    // define table keys that we don't want to exclude in the section proxy properties
+    var keysToExclude = new HashSet<string> { "GUID", "Name", "Color", "Notes", "FileName", "FromFile", "SectInFile" };
+
+    // get the shape of the section using the dedicated api query (exception to the database approach)
+    eFramePropType framePropType = 0;
+    _settingsStore.Current.SapModel.PropFrame.GetTypeOAPI(sectionName, ref framePropType);
+    Dictionary<string, object?> generalProperties = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);
+    generalProperties.Add("Section Shape", framePropType.ToString());
+
+    // NOTE: this is gross and quite dangerous 🤨 but beats specific frame prop sect. property extractions imo
+    foreach (KeyValuePair<string, string> rawDatabaseTableProperty in rawDatabaseTableProperties)
+    {
+      string key = rawDatabaseTableProperty.Key;
+      string value = rawDatabaseTableProperty.Value;
+
+      if (!keysToExclude.Contains(key))
+      {
+        if (key == "Material")
+        {
+          generalProperties.Add(key, value);
+        }
+        else if (key.EndsWith("Mod"))
+        {
+          Dictionary<string, object?> modificationProperties = properties.EnsureNested(
+            SectionPropertyCategory.MODIFIERS
+          );
+          modificationProperties.Add(key, double.Parse(value));
+        }
+        else
+        {
+          Dictionary<string, object?> sectionDimensions = properties.EnsureNested(
+            SectionPropertyCategory.SECTION_DIMENSIONS
+          );
+          sectionDimensions.Add(key, double.Parse(value));
+        }
+      }
     }
   }
 }
