@@ -1,7 +1,5 @@
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
-using Speckle.Converters.Common;
-using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Sdk.Models.Proxies;
 
