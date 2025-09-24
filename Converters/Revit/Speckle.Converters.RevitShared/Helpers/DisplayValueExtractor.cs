@@ -202,7 +202,7 @@ public sealed class DisplayValueExtractor
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
     foreach (DB.Mesh untransformed in meshes)
     {
-      using DB.Mesh? transformed = worldToLocal == null ? untransformed.get_Transformed(worldToLocal) : null;
+      using DB.Mesh? transformed = worldToLocal != null ? untransformed.get_Transformed(worldToLocal) : null;
       DB.Mesh mesh = transformed ?? untransformed;
 
       var materialId = mesh.MaterialElementId;
@@ -218,7 +218,7 @@ public sealed class DisplayValueExtractor
     foreach (DB.Solid untransformed in solids)
     {
       using DB.Solid? transformed =
-        worldToLocal == null ? DB.SolidUtils.CreateTransformed(untransformed, worldToLocal) : null;
+        worldToLocal != null ? DB.SolidUtils.CreateTransformed(untransformed, worldToLocal) : null;
       DB.Solid solid = transformed ?? untransformed;
 
       foreach (DB.Face face in solid.Faces)
