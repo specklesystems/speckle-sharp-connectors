@@ -202,8 +202,7 @@ public sealed class DisplayValueExtractor
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
     foreach (DB.Mesh untransformed in meshes)
     {
-      using DB.Mesh? transformed = worldToLocal != null ? untransformed.get_Transformed(worldToLocal) : null;
-      DB.Mesh mesh = transformed ?? untransformed;
+      DB.Mesh mesh = worldToLocal != null ? untransformed.get_Transformed(worldToLocal) : untransformed;
 
       var materialId = mesh.MaterialElementId;
       if (!meshesByMaterial.TryGetValue(materialId, out List<DB.Mesh>? value))
