@@ -157,27 +157,37 @@ public sealed class DisplayValueExtractor
   /// </remarks>
   private List<Base> ProcessGeometryCollections(DB.Element element, GeometryCollections collections)
   {
-    List<Base> displayValue = new();
+    using DB.Transform? localToWorld = GetTransform(element);
+    using DB.Transform? worldToLocal = localToWorld?.Inverse;
 
     // handle all solids and meshes by their material
-    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids, worldToLocal);
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert((meshesByMaterial, element));
+
+    List<Base> displayValue =
+      new(displayMeshes.Count + collections.Curves.Count + collections.Polylines.Count + collections.Points.Count);
+
     displayValue.AddRange(displayMeshes);
 
     // add rest of geometry
-    foreach (var curve in collections.Curves)
+    foreach (DB.Curve untransformed in collections.Curves)
     {
+      using DB.Curve? transformed = worldToLocal == null ? untransformed.CreateTransformed(worldToLocal) : null;
+      DB.Curve curve = transformed ?? untransformed;
       displayValue.Add(GetCurveDisplayValue(curve));
     }
 
-    foreach (var polyline in collections.Polylines)
+    foreach (DB.PolyLine untransformed in collections.Polylines)
     {
+      using DB.PolyLine? transformed = worldToLocal == null ? untransformed.GetTransformed(worldToLocal) : null;
+      DB.PolyLine polyline = transformed ?? untransformed;
       displayValue.Add(_polylineConverter.Convert(polyline));
     }
 
-    foreach (var point in collections.Points)
+    foreach (var untransformed in collections.Points)
     {
-      displayValue.Add(_pointConverter.Convert(point));
+      //TODO: transform the point!!!
+      displayValue.Add(_pointConverter.Convert(untransformed));
     }
 
     return displayValue;
@@ -185,12 +195,16 @@ public sealed class DisplayValueExtractor
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
     List<DB.Mesh> meshes,
-    List<DB.Solid> solids
+    List<DB.Solid> solids,
+    DB.Transform? worldToLocal
   )
   {
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
-    foreach (var mesh in meshes)
+    foreach (DB.Mesh untransformed in meshes)
     {
+      using DB.Mesh? transformed = worldToLocal == null ? untransformed.get_Transformed(worldToLocal) : null;
+      DB.Mesh mesh = transformed ?? untransformed;
+
       var materialId = mesh.MaterialElementId;
       if (!meshesByMaterial.TryGetValue(materialId, out List<DB.Mesh>? value))
       {
@@ -201,8 +215,12 @@ public sealed class DisplayValueExtractor
       value.Add(mesh);
     }
 
-    foreach (var solid in solids)
+    foreach (DB.Solid untransformed in solids)
     {
+      using DB.Solid? transformed =
+        worldToLocal == null ? DB.SolidUtils.CreateTransformed(untransformed, worldToLocal) : null;
+      DB.Solid solid = transformed ?? untransformed;
+
       foreach (DB.Face face in solid.Faces)
       {
         var materialId = face.MaterialElementId;
@@ -468,6 +486,16 @@ public sealed class DisplayValueExtractor
     }
 
     return displayValue;
+  }
+
+  private static DB.Transform? GetTransform(DB.Element element)
+  {
+    if (element is not DB.Instance i)
+    {
+      return null;
+    }
+
+    return i.GetTotalTransform();
   }
 
   /// <summary>

@@ -73,29 +73,14 @@ public class MeshByMaterialDictionaryToSpeckle
       return [];
     }
 
-    using DB.Transform? worldToLocal = GetTransform(args.parent)?.Inverse;
     List<SOG.Mesh> result = new(args.target.Keys.Count);
     foreach (var kvp in args.target)
     {
-      IReadOnlyList<DB.Mesh> meshes;
-      //POC: This is a very inefficient way to do this.
-      // we should pass the transform down, and apply it as we're constructing the Speckle Meshes.
-      meshes = worldToLocal is not null ? kvp.Value.Select(x => x.get_Transformed(worldToLocal)).ToList() : kvp.Value;
-      var mesh = ConvertMesh(meshes, kvp.Key, materialProxyMap, makeTransparent);
+      var mesh = ConvertMesh(kvp.Value, kvp.Key, materialProxyMap, makeTransparent);
       result.Add(mesh);
     }
 
     return result;
-  }
-
-  private static DB.Transform? GetTransform(DB.Element element)
-  {
-    if (element is DB.Instance i)
-    {
-      return i.GetTotalTransform();
-    }
-
-    return null;
   }
 
   private SOG.Mesh ConvertMesh(
