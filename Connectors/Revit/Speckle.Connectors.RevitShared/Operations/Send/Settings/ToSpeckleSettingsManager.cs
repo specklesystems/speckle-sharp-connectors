@@ -1,11 +1,13 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
@@ -16,28 +18,32 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
   private readonly RevitContext _revitContext;
   private readonly ISendConversionCache _sendConversionCache;
   private readonly ElementUnpacker _elementUnpacker;
+  private readonly ILogger<ToSpeckleSettingsManager> _logger;
 
   // cache invalidation process run with ModelCardId since the settings are model specific
-  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = new();
-  private readonly Dictionary<string, Transform?> _referencePointCache = new();
-  private readonly Dictionary<string, bool?> _sendNullParamsCache = new();
-  private readonly Dictionary<string, bool?> _sendLinkedModelsCache = new();
-  private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = new();
+  private readonly Dictionary<string, DetailLevelType> _detailLevelCache = [];
+  private readonly Dictionary<string, Transform?> _referencePointCache = [];
+  private readonly Dictionary<string, bool?> _sendNullParamsCache = [];
+  private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
+  private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
 
   public ToSpeckleSettingsManager(
     RevitContext revitContext,
     ISendConversionCache sendConversionCache,
-    ElementUnpacker elementUnpacker
+    ElementUnpacker elementUnpacker,
+    ILogger<ToSpeckleSettingsManager> logger
   )
   {
     _revitContext = revitContext;
     _elementUnpacker = elementUnpacker;
     _sendConversionCache = sendConversionCache;
+    _logger = logger;
   }
 
   public DetailLevelType GetDetailLevelSetting(SenderModelCard modelCard)
   {
-    var fidelityString = modelCard.Settings?.FirstOrDefault(s => s.Id == "detailLevel")?.Value as string;
+    var fidelityString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == DetailLevelSetting.SETTING_ID)?.Value as string;
     if (
       fidelityString is not null
       && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
@@ -54,15 +60,27 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       return fidelity;
     }
 
-    throw new ArgumentException($"Invalid geometry fidelity value: {fidelityString}");
+    // log the issue
+    _logger.LogWarning(
+      "Invalid detail level setting received: '{FidelityString}' for model {ModelCardId}, using default: {DefaultValue}",
+      fidelityString,
+      modelCard.ModelCardId,
+      DetailLevelSetting.DEFAULT_VALUE
+    );
+
+    // return sensible default
+    DetailLevelType defaultValue = DetailLevelSetting.DEFAULT_VALUE;
+    _detailLevelCache[modelCard.ModelCardId.NotNull()] = defaultValue;
+    return defaultValue;
   }
 
   public Transform? GetReferencePointSetting(ModelCard modelCard)
   {
-    var referencePointString = modelCard.Settings?.FirstOrDefault(s => s.Id == "referencePoint")?.Value as string;
+    var referencePointString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == SendReferencePointSetting.SETTING_ID)?.Value as string;
     if (
       referencePointString is not null
-      && ReferencePointSetting.ReferencePointMap.TryGetValue(
+      && SendReferencePointSetting.ReferencePointMap.TryGetValue(
         referencePointString,
         out ReferencePointType referencePoint
       )
@@ -85,62 +103,96 @@ public class ToSpeckleSettingsManager : IToSpeckleSettingsManager
       return currentTransform;
     }
 
-    throw new ArgumentException($"Invalid reference point value: {referencePointString}");
+    // log the issue
+    _logger.LogWarning(
+      "Invalid reference point setting received: '{ReferencePointString}' for model {ModelCardId}, using default: {DefaultValue}",
+      referencePointString,
+      modelCard.ModelCardId,
+      SendReferencePointSetting.DEFAULT_VALUE
+    );
+
+    // return default (null for InternalOrigin means no transform)
+    _referencePointCache[modelCard.ModelCardId.NotNull()] = null;
+    return null;
   }
 
-  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard)
-  {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "nullemptyparams")?.Value as bool?;
-    var returnValue = value != null && value.NotNull();
-    if (_sendNullParamsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-
-    _sendNullParamsCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
+  public bool GetSendParameterNullOrEmptyStringsSetting(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      SendParameterNullOrEmptyStringsSetting.SETTING_ID,
+      SendParameterNullOrEmptyStringsSetting.DEFAULT_VALUE,
+      modelCard,
+      _sendNullParamsCache,
+      "Send null/empty parameters"
+    );
 
   // NOTE: Cache invalidation currently a placeholder until we have more understanding on the sends
   // TODO: Evaluate cache invalidation for GetLinkedModelsSetting
-  public bool GetLinkedModelsSetting(SenderModelCard modelCard)
-  {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "includeLinkedModels")?.Value as bool?;
-    var returnValue = value != null && value.NotNull();
+  public bool GetLinkedModelsSetting(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      LinkedModelsSetting.SETTING_ID,
+      LinkedModelsSetting.DEFAULT_VALUE,
+      modelCard,
+      _sendLinkedModelsCache,
+      "Linked models"
+    );
 
-    if (_sendLinkedModelsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      SendRebarsAsVolumetricSetting.SETTING_ID,
+      SendRebarsAsVolumetricSetting.DEFAULT_VALUE,
+      modelCard,
+      _sendRebarsAsVolumetricCache,
+      "Send rebars as volumetric"
+    );
+
+  /// <summary>
+  /// Helper method to handle boolean settings with caching and logging
+  /// </summary>
+  private bool GetBooleanSettingWithCache(
+    string settingId,
+    bool defaultValue,
+    SenderModelCard modelCard,
+    Dictionary<string, bool?> cache,
+    string settingName
+  )
+  {
+    var settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value as bool?;
+    bool returnValue = settingValue ?? defaultValue;
+
+    if (cache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
     {
       if (previousValue != returnValue)
       {
         EvictCacheForModelCard(modelCard);
       }
     }
-    _sendLinkedModelsCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
 
-  public bool GetSendRebarsAsVolumetric(SenderModelCard modelCard)
-  {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "sendRebarsAsVolumetric")?.Value as bool?;
-    var returnValue = value != null && value.NotNull();
-    if (_sendRebarsAsVolumetricCache.TryGetValue(modelCard.ModelCardId.NotNull(), out bool? previousValue))
+    cache[modelCard.ModelCardId] = returnValue;
+
+    // NOTE: we probably don't need to log here BUT considering users might complain that a setting might not have been
+    // respected (linked models disabled but still sent linked models), I think we should note this occurence so we know
+    if (settingValue == null)
     {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
+      _logger.LogWarning(
+        "{SettingName} setting was null for model {ModelCardId}, using default: {DefaultValue}",
+        settingName,
+        modelCard.ModelCardId,
+        defaultValue
+      );
     }
-    _sendRebarsAsVolumetricCache[modelCard.ModelCardId] = returnValue;
+
     return returnValue;
   }
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
   {
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (doc == null)
+    {
+      throw new SpeckleException("Unable to retrieve active UI document");
+    }
     var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().SelectedObjectIds : [];
-    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds, doc);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
   }
 

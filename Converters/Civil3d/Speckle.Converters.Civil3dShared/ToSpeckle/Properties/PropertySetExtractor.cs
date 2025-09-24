@@ -39,9 +39,9 @@ public class PropertySetExtractor
     {
       propertySetIds = AAECPDB.PropertyDataServices.GetPropertySets(dbObject);
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogWarning(e, $"Failed to retrieve property sets on object {dbObject.Handle.Value}");
+      _logger.LogWarning(ex, "Failed to retrieve property sets on object {HandleValue}", dbObject.Handle.Value);
     }
 
     if (propertySetIds is null || propertySetIds.Count == 0)
@@ -102,9 +102,9 @@ public class PropertySetExtractor
 
       return (name, propertySetData);
     }
-    catch (Exception e) when (!e.IsFatal())
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogWarning(e, $"Failed to convert property set {propertySet.Name}");
+      _logger.LogWarning(ex, "Failed to convert property set {propertySetName}", propertySet.Name);
     }
 
     return null;

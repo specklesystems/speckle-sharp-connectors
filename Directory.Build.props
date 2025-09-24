@@ -29,7 +29,7 @@
       <!-- Globalization rules -->
       CA1303;CA1304;CA1305;CA1307;CA1308;CA1309;CA1310;CA1311;
       <!-- Logging -->
-      CA1848;CA2254;CA1727;
+      CA1848;CA1727;
       <!-- Others we don't want -->
       CA1815;CA1725;CA1501;
       <!-- Package using wrong RIDs (Net8 changed them). Usually fixable by updating.  -->

@@ -98,7 +98,6 @@ public class SpeckleDataObjectPassthrough()
     if (da.GetData(0, ref inputObject))
     {
       result = inputObject.Value.DeepCopy();
-      result.Base.id = null; // ⚠️ TODO: Co-ordinate with SDK. We're having to do this otherwise the serializer won't recompute mutated objects
     }
 
     List<SpeckleGeometryWrapperGoo> inputGeometry = new();

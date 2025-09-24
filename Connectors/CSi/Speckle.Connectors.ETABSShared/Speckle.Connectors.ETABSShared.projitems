@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsFrameSectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyDefinitionService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionResolver.cs" />

@@ -15,18 +15,26 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
 
   public void ExecuteScript(string script)
   {
-    Browser.Dispatcher.Invoke(
-      () =>
-      {
-        //avoid exceptions by checking if IBrowser is there
-        if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
+    try
+    {
+      Browser.Dispatcher.Invoke(
+        () =>
         {
-          return;
-        }
-        Browser.ExecuteScriptAsync(script);
-      },
-      DispatcherPriority.Background
-    );
+          //avoid exceptions by checking if IBrowser is there
+          if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
+          {
+            return;
+          }
+
+          Browser.ExecuteScriptAsync(script);
+        },
+        DispatcherPriority.Background
+      );
+    }
+    catch (OperationCanceledException)
+    {
+      //do nothing, happens when closing Revit while a script is being executed
+    }
   }
 
   public void SendProgress(string script) => ExecuteScript(script);
