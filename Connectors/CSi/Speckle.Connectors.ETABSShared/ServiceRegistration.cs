@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
+using Speckle.Connectors.ETABS22.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp;
 using Speckle.Connectors.ETABSShared.HostApp.Helpers;
 using Speckle.Connectors.ETABSShared.HostApp.Services;
@@ -14,12 +15,18 @@ public static class ServiceRegistration
   {
     services.AddEtabsConverters();
     services.AddScoped<CsiSendCollectionManager, EtabsSendCollectionManager>();
+
+    // material services
+    services.AddScoped<IMaterialUnpacker, EtabsMaterialUnpacker>();
+    services.AddScoped<IApplicationMaterialPropertyExtractor, EtabsMaterialPropertyExtractor>();
+
+    // section services
+    services.AddScoped<ISectionUnpacker, EtabsSectionUnpacker>();
+    services.AddScoped<IApplicationFrameSectionPropertyExtractor, EtabsFrameSectionPropertyExtractor>();
+    services.AddScoped<IApplicationShellSectionPropertyExtractor, EtabsShellSectionPropertyExtractor>();
     services.AddScoped<EtabsSectionPropertyDefinitionService>();
     services.AddScoped<EtabsSectionPropertyExtractor>();
     services.AddScoped<EtabsShellSectionResolver>();
-    services.AddScoped<IApplicationFrameSectionPropertyExtractor, EtabsFrameSectionPropertyExtractor>();
-    services.AddScoped<IApplicationShellSectionPropertyExtractor, EtabsShellSectionPropertyExtractor>();
-    services.AddScoped<ISectionUnpacker, EtabsSectionUnpacker>();
 
     return services;
   }

@@ -31,8 +31,8 @@ public class AnalysisResultsExtractor
     Dictionary<ModelObjectType, List<string>> objectSelectionSummary
   )
   {
-    // Step 1: get analysis units
-    var analysisResults = CreateAnalysisResultsWithUnits();
+    // Step 1: create base object that will hold analysis results
+    var analysisResults = new Base();
 
     // Step 2: configure and validate load cases
     ConfigureAndValidateSelectedLoadCases(selectedCasesAndCombinations);
@@ -41,36 +41,6 @@ public class AnalysisResultsExtractor
     ExtractResults(requestedResultTypes, objectSelectionSummary, analysisResults);
 
     return analysisResults;
-  }
-
-  /// <summary>
-  /// Instantiates a Base object and pre-populates it with the models defined force units.
-  /// </summary>
-  /// <returns></returns>
-  /// <exception cref="SpeckleException"></exception>
-  private Base CreateAnalysisResultsWithUnits()
-  {
-    var forceUnit = eForce.NotApplicable;
-    var lengthUnit = eLength.NotApplicable;
-    var temperatureUnit = eTemperature.NotApplicable;
-
-    int success = _converterSettingsStore.Current.SapModel.GetDatabaseUnits_2(
-      ref forceUnit,
-      ref lengthUnit,
-      ref temperatureUnit
-    );
-
-    if (success != 0)
-    {
-      throw new SpeckleException("Failed to retrieve units for analysis results");
-    }
-
-    return new Base
-    {
-      ["forceUnit"] = forceUnit.ToString(),
-      ["lengthUnit"] = lengthUnit.ToString(),
-      ["temperatureUnit"] = temperatureUnit.ToString()
-    };
   }
 
   private void ExtractResults(
