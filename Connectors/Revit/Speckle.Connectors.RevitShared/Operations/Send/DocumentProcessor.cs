@@ -1,114 +1,275 @@
+using Autodesk.Revit.DB;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
+using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
 /// <summary>
-/// Coordinates the processing of documents from grouping through conversion.
-/// Acts as the orchestrator for document-level operations without getting into conversion details.
+/// Unified processor for all document types (main and linked models).
 /// </summary>
 public class DocumentProcessor
 {
-  private readonly LinkedModelDocumentHandler _linkedModelHandler;
-  private readonly ElementConverter _elementConverter;
-  private readonly DocumentValidator _validator;
+  private readonly IRootToSpeckleConverter _converter;
+  private readonly ElementUnpacker _elementUnpacker;
+  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly SendCollectionManager _sendCollectionManager;
 
   public DocumentProcessor(
-    LinkedModelDocumentHandler linkedModelHandler,
-    ElementConverter elementConverter,
-    DocumentValidator validator
+    IRootToSpeckleConverter converter,
+    ElementUnpacker elementUnpacker,
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    SendCollectionManager sendCollectionManager
   )
   {
-    _linkedModelHandler = linkedModelHandler;
-    _elementConverter = elementConverter;
-    _validator = validator;
+    _converter = converter;
+    _elementUnpacker = elementUnpacker;
+    _converterSettings = converterSettings;
+    _sendCollectionManager = sendCollectionManager;
   }
 
   /// <summary>
-  /// Processes all documents from initial grouping through final conversion.
-  /// This is the main entry point for document processing.
+  /// Main entry point: processes all documents from grouping through conversion.
   /// </summary>
   public DocumentConversionResults ProcessDocuments(
-    IReadOnlyList<DocumentToConvert> documentElementContexts,
+    IReadOnlyList<DocumentToConvert> documents,
     ConversionContext context
   )
   {
-    // group and organize documents
-    var documentGroups = _linkedModelHandler.GroupAndPrepareDocuments(documentElementContexts);
+    // Step 1: Group and validate documents in one pass
+    var processed = GroupAndValidateDocuments(documents, context);
 
-    // validate documents and filter invalid elements
-    var validationResults = new List<SendConversionResult>();
-    var validatedDocuments = _validator.FilterValidDocuments(
-      documentGroups,
-      context.SendWithLinkedModels,
-      validationResults
-    );
-    ValidateProcessableDocuments(validatedDocuments);
-
-    // convert main model
-    MainModelConversionResult? mainModelResult = null;
-    if (validatedDocuments.MainModel != null)
+    if (!processed.HasProcessableContent)
     {
-      mainModelResult = _elementConverter.ConvertMainModel(validatedDocuments.MainModel, context);
+      throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
     }
 
-    // convert linked models with proxy tracking
-    LinkedModelConversionResults? linkedModelResults = null;
-    if (context.SendWithLinkedModels && validatedDocuments.LinkedModelGroups.Count > 0)
+    // Step 2: Convert main model if present
+    MainModelConversionResult? mainResult = null;
+    if (processed.MainModel != null)
     {
-      linkedModelResults = _elementConverter.ConvertLinkedModelsForProxies(
-        validatedDocuments.LinkedModelGroups,
-        context
-      );
+      mainResult = ConvertMainModel(processed.MainModel, context);
     }
 
-    // combine results
-    var finalResults = CreateFinalResults(mainModelResult, linkedModelResults);
-    ValidateFinalResults(finalResults);
+    // Step 3: Convert linked models if enabled and present
+    LinkedModelConversionResults? linkedResults = null;
+    if (context.SendWithLinkedModels && processed.LinkedModelGroups.Count != 0)
+    {
+      linkedResults = ConvertLinkedModels(processed.LinkedModelGroups, context);
+    }
+
+    // Step 4: Create final results
+    var finalResults = new DocumentConversionResults(mainResult, linkedResults);
+    ValidateResults(finalResults);
 
     return finalResults;
   }
 
   /// <summary>
-  /// Validates that we have processable documents after validation.
+  /// Groups documents by type and validates them in a single pass.
   /// </summary>
-  private void ValidateProcessableDocuments(ValidatedDocuments validatedDocuments)
+  private ProcessedDocuments GroupAndValidateDocuments(
+    IReadOnlyList<DocumentToConvert> documents,
+    ConversionContext context
+  )
   {
-    bool hasMainModel = validatedDocuments.MainModel?.Elements.Count > 0;
-    bool hasLinkedModels = validatedDocuments.LinkedModelGroups.Count > 0;
+    var result = new ProcessedDocuments();
 
-    if (!hasMainModel && !hasLinkedModels)
+    foreach (var doc in documents)
     {
-      throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
+      if (doc?.Doc == null)
+      {
+        continue;
+      }
+
+      // filter out invalid elements early
+      var validElements = doc.Elements.Where(e => e?.Category != null).ToList();
+      if (validElements.Count == 0)
+      {
+        continue;
+      }
+
+      var validDoc = doc with { Elements = validElements };
+
+      if (doc.Doc.IsLinked)
+      {
+        ProcessLinkedModel(validDoc, context, result);
+      }
+      else
+      {
+        result = new ProcessedDocuments
+        {
+          MainModel = validDoc,
+          LinkedModelGroups = result.LinkedModelGroups,
+          ValidationResults = result.ValidationResults
+        };
+      }
+    }
+
+    return result;
+  }
+
+  private void ProcessLinkedModel(DocumentToConvert linkedDoc, ConversionContext context, ProcessedDocuments result)
+  {
+    if (!context.SendWithLinkedModels)
+    {
+      var warning = new SendConversionResult(
+        Status.WARNING,
+        linkedDoc.Doc.PathName,
+        typeof(RevitLinkInstance).ToString(),
+        null,
+        new SpeckleException("Enable linked model support from the settings to send this object")
+      );
+
+      result.ValidationResults.Add(warning);
+      return;
+    }
+
+    // group by document path (same file, different positions)
+    var documentPath = linkedDoc.Doc.PathName;
+    if (!result.LinkedModelGroups.TryGetValue(documentPath, out var group))
+    {
+      group = [];
+      result.LinkedModelGroups[documentPath] = group;
+    }
+
+    group.Add(linkedDoc);
+  }
+
+  /// <summary>
+  /// Converts main model
+  /// </summary>
+  private MainModelConversionResult ConvertMainModel(DocumentToConvert mainModel, ConversionContext context)
+  {
+    var unpackedModel = UnpackDocument(mainModel);
+    var results = new List<SendConversionResult>();
+    int totalElements = mainModel.Elements.Count;
+    int processedElements = 0;
+
+    foreach (var element in unpackedModel.Elements)
+    {
+      context.CancellationToken.ThrowIfCancellationRequested();
+
+      var result = ConvertElement(element, context, null);
+      results.Add(result);
+
+      context.Progress.Report(new CardProgress("Converting", ++processedElements / (double)totalElements));
+    }
+
+    return new MainModelConversionResult(results, unpackedModel.Elements);
+  }
+
+  /// <summary>
+  /// Converts linked models with proxy tracking
+  /// </summary>
+  private LinkedModelConversionResults ConvertLinkedModels(
+    Dictionary<string, List<DocumentToConvert>> linkedGroups,
+    ConversionContext context
+  )
+  {
+    var conversions = new List<LinkedModelConversionResult>();
+    var allConversionResults = new List<SendConversionResult>();
+    var allConvertedElements = new List<Element>();
+
+    foreach (var kvp in linkedGroups)
+    {
+      var documentPath = kvp.Key;
+      var instances = kvp.Value;
+
+      // convert the first instance (unique model) without transform
+      var firstInstance = instances.First();
+      var modelWithoutTransform = firstInstance with { Transform = null };
+
+      var unpackedModel = UnpackDocument(modelWithoutTransform);
+      var trackingResult = new LinkedModelConversionResult(documentPath, instances);
+
+      foreach (var element in unpackedModel.Elements)
+      {
+        context.CancellationToken.ThrowIfCancellationRequested();
+        var result = ConvertElement(element, context, trackingResult);
+        allConversionResults.Add(result);
+      }
+
+      conversions.Add(trackingResult);
+      allConvertedElements.AddRange(unpackedModel.Elements);
+    }
+
+    return new LinkedModelConversionResults(conversions, allConversionResults, allConvertedElements);
+  }
+
+  private SendConversionResult ConvertElement(
+    Element element,
+    ConversionContext context,
+    LinkedModelConversionResult? trackingResult
+  )
+  {
+    string applicationId = element.UniqueId;
+    string sourceType = element.GetType().Name;
+
+    try
+    {
+      using (_converterSettings.Push(settings => settings with { Document = element.Document }))
+      {
+        var converted = _converter.Convert(element);
+        converted.applicationId = applicationId;
+
+        // add to appropriate collection
+        var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(
+          element,
+          context.RootObject,
+          context.SendWithLinkedModels,
+          null // TODO: add model display name logic later if needed
+        );
+        collection.elements.Add(converted);
+
+        // add to tracking result if provided
+        trackingResult?.ConvertedElementIds.Add(converted.applicationId ?? applicationId);
+
+        return new SendConversionResult(Status.SUCCESS, applicationId, sourceType, converted);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return new SendConversionResult(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }
 
   /// <summary>
-  /// Combines all conversion results into a single result object.
+  /// Unpacks document elements
   /// </summary>
-  private DocumentConversionResults CreateFinalResults(
-    MainModelConversionResult? mainModelResult,
-    LinkedModelConversionResults? linkedModelResults
-  ) => new(mainModelResult, linkedModelResults);
+  private DocumentToConvert UnpackDocument(DocumentToConvert document)
+  {
+    using (_converterSettings.Push(settings => settings with { Document = document.Doc }))
+    {
+      var atomicObjects = _elementUnpacker.UnpackSelectionForConversion(document.Elements, document.Doc).ToList();
+
+      return document with
+      {
+        Elements = atomicObjects
+      };
+    }
+  }
 
   /// <summary>
-  /// Validates that the conversion didn't completely fail.
+  /// Simple validation of final results.
   /// </summary>
-  private void ValidateFinalResults(DocumentConversionResults results)
+  private static void ValidateResults(DocumentConversionResults results)
   {
     if (results.AllFailed)
     {
-      throw new SpeckleException("Failed to convert all objects.");
+      throw new SpeckleException("Failed to convert all objects");
     }
 
+    var totalResults = results.AllResults.Count;
     var skippedCount = results.AllResults.Count(r => r.Status == Status.WARNING);
-    var totalCount = results.AllResults.Count;
 
-    if (skippedCount == totalCount)
+    if (skippedCount == totalResults)
     {
-      throw new SpeckleException("No supported objects visible. Update publish filter or check publish settings.");
+      throw new SpeckleException("No supported objects visible. Update publish filter or check publish settings");
     }
   }
 }

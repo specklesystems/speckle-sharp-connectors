@@ -11,12 +11,11 @@ namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
 /// Handles linked model document operations: grouping, element collection, and display name management.
-/// Focused on linked model domain logic without conversion or proxy concerns.
 /// </summary>
 public class LinkedModelDocumentHandler
 {
   private readonly RevitContext _revitContext;
-  public Dictionary<string, string> LinkedModelDisplayNames { get; } = new();
+  public Dictionary<string, string> LinkedModelDisplayNames { get; } = [];
 
   public LinkedModelDocumentHandler(RevitContext revitContext)
   {
@@ -25,7 +24,6 @@ public class LinkedModelDocumentHandler
 
   /// <summary>
   /// Groups documents by their unique models and prepares display names.
-  /// This is the main entry point for organizing linked model documents.
   /// </summary>
   /// <param name="documents">All documents to process</param>
   /// <returns>Organized document groups</returns>
@@ -85,8 +83,6 @@ public class LinkedModelDocumentHandler
 
   /// <summary>
   /// Gets elements from a linked document based on the provided send filter.
-  /// This method handles the specifics of element collection but doesn't make decisions
-  /// about whether the linked model should be processed - that's the caller's responsibility.
   /// </summary>
   public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument, Transform? transform) =>
     sendFilter switch
@@ -234,9 +230,9 @@ public class LinkedModelDocumentHandler
     }
 
     // find matching instance by transform hash
-    string targetHash = TransformUtils.ComputeTransformHash(transform);
+    string targetHash = TransformUtils.CreateTransformHash(transform);
     var matchingInstance = linkInstances.FirstOrDefault(link =>
-      TransformUtils.ComputeTransformHash(link.GetTotalTransform().Inverse) == targetHash
+      TransformUtils.CreateTransformHash(link.GetTotalTransform().Inverse) == targetHash
     );
 
     return matchingInstance ?? linkInstances.First();

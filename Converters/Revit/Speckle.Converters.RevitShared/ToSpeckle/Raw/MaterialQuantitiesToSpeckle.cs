@@ -2,6 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.ToSpeckle.Properties;
 using Speckle.Sdk.Common.Exceptions;
 using ApplicationException = Autodesk.Revit.Exceptions.ApplicationException;
 

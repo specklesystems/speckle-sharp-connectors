@@ -61,9 +61,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddScoped<DocumentProcessor>();
-    serviceCollection.AddScoped<ElementConverter>();
     serviceCollection.AddScoped<ProxyManager>();
-    serviceCollection.AddScoped<DocumentValidator>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();

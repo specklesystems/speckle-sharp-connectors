@@ -42,11 +42,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ToHostSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\DocumentProcessor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\ElementConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\IRevitSendFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitCategoriesFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitViewsFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\ProcessedDocuments.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\ProxyManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\SendContext.cs" />

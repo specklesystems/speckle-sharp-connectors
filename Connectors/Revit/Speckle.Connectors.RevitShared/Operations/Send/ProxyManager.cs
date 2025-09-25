@@ -15,7 +15,6 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 
 /// <summary>
 /// Manages the creation and organization of all proxy objects (instances, materials, levels, etc.).
-/// Centralizes proxy logic to keep it separate from conversion and document processing.
 /// </summary>
 public class ProxyManager
 {
@@ -44,8 +43,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Adds all types of proxies to the root object based on conversion results.
-  /// This is the main entry point for proxy creation.
+  /// Adds all types of proxies to the root object based on conversion results
   /// </summary>
   public void AddAllProxies(Collection rootObject, DocumentConversionResults conversionResults)
   {
@@ -64,7 +62,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Creates and adds instance definition proxies and instance proxies for linked models.
+  /// Creates and adds instance definition proxies and instance proxies for linked models
   /// </summary>
   private void AddInstanceProxies(Collection rootObject, LinkedModelConversionResults linkedResults)
   {
@@ -78,7 +76,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Creates instance definition proxies for each unique linked model.
+  /// Creates instance definition proxies for each unique linked model
   /// </summary>
   private List<InstanceDefinitionProxy> CreateInstanceDefinitionProxies(LinkedModelConversionResults linkedResults)
   {
@@ -95,7 +93,7 @@ public class ProxyManager
         continue;
       }
 
-      string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+      string definitionId = TransformUtils.CreateDefinitionId(conversionResult.DocumentPath);
       string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
       var instanceDefinitionProxy = new InstanceDefinitionProxy
@@ -113,7 +111,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Creates instance proxy collections and adds them to the appropriate model collections.
+  /// Creates instance proxy collections and adds them to the appropriate model collections
   /// </summary>
   private void CreateInstanceProxyCollections(Collection rootObject, LinkedModelConversionResults linkedResults)
   {
@@ -124,7 +122,7 @@ public class ProxyManager
         continue;
       }
 
-      string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+      string definitionId = TransformUtils.CreateDefinitionId(conversionResult.DocumentPath);
       string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
       var instanceProxies = CreateInstanceProxiesForLinkedModel(conversionResult, definitionId);
@@ -137,7 +135,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Creates instance proxies for each instance of a linked model.
+  /// Creates instance proxies for each instance of a linked model
   /// </summary>
   private List<InstanceProxy> CreateInstanceProxiesForLinkedModel(
     LinkedModelConversionResult conversionResult,
@@ -156,7 +154,7 @@ public class ProxyManager
         continue;
       }
 
-      string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
+      string instanceId = TransformUtils.CreateInstanceId(definitionId, instanceIndex);
       var transformMatrix = _transformConverter.Convert((instance.Transform, _converterSettings.Current.SpeckleUnits));
       var instanceProxy = new InstanceProxy
       {
@@ -174,7 +172,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Adds instance proxies to the appropriate collection structure.
+  /// Adds instance proxies to the appropriate collection structure
   /// </summary>
   private void AddInstanceProxiesToCollection(
     Collection rootObject,
@@ -196,7 +194,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Finds or creates a collection for a linked model.
+  /// Finds or creates a collection for a linked model
   /// </summary>
   private Collection FindOrCreateLinkedModelCollection(Collection rootObject, string modelName)
   {
@@ -216,7 +214,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Finds or creates an "instances" subcollection within a linked model collection.
+  /// Finds or creates an "instances" subcollection within a linked model collection
   /// </summary>
   private Collection FindOrCreateInstancesCollection(Collection linkedModelCollection)
   {
@@ -236,7 +234,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Adds material proxies to the root object.
+  /// Adds material proxies to the root object
   /// </summary>
   private void AddMaterialProxies(Collection rootObject, List<Element> allElements)
   {
@@ -250,7 +248,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Adds level proxies to the root object.
+  /// Adds level proxies to the root object
   /// </summary>
   private void AddLevelProxies(Collection rootObject, List<Element> allElements)
   {
@@ -263,7 +261,7 @@ public class ProxyManager
   }
 
   /// <summary>
-  /// Adds reference point transform information to the root object if available.
+  /// Adds reference point transform information to the root object if available
   /// </summary>
   private void AddReferencePointTransform(Collection rootObject)
   {

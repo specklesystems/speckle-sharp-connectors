@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Revit.HostApp;
-using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
@@ -33,7 +32,7 @@ public class LinkedModelConversionResult
   {
     DocumentPath = documentPath;
     Instances = instances;
-    ConvertedElementIds = new List<string>();
+    ConvertedElementIds = [];
   }
 }
 
@@ -109,112 +108,3 @@ public record DocumentConversionResults(
   /// </summary>
   public bool AllFailed => AllResults.All(r => r.Status == Status.ERROR);
 }
-
-/// <summary>
-/// Validates documents and filters out invalid elements.
-/// Separated from conversion logic for better testability.
-/// </summary>
-public class DocumentValidator
-{
-  /// <summary>
-  /// Filters and validates documents, removing invalid elements and adding appropriate warnings.
-  /// </summary>
-  public ValidatedDocuments FilterValidDocuments(
-    DocumentGroups documentGroups,
-    bool sendWithLinkedModels,
-    List<SendConversionResult> results
-  )
-  {
-    var validMainModel = ValidateMainModel(documentGroups.MainModel);
-    var validLinkedModelGroups = ValidateLinkedModelGroups(
-      documentGroups.LinkedModelGroups,
-      sendWithLinkedModels,
-      results
-    );
-
-    return new ValidatedDocuments(validMainModel, validLinkedModelGroups);
-  }
-
-  private DocumentToConvert? ValidateMainModel(DocumentToConvert? mainModel)
-  {
-    if (mainModel == null)
-    {
-      return null;
-    }
-
-    var validElements = FilterValidElements(mainModel.Elements);
-    return validElements.Count > 0 ? mainModel with { Elements = validElements } : null;
-  }
-
-  private Dictionary<string, List<DocumentToConvert>> ValidateLinkedModelGroups(
-    Dictionary<string, List<DocumentToConvert>> linkedModelGroups,
-    bool sendWithLinkedModels,
-    List<SendConversionResult> results
-  )
-  {
-    var validLinkedModelGroups = new Dictionary<string, List<DocumentToConvert>>();
-
-    foreach (var linkedModelGroup in linkedModelGroups)
-    {
-      if (!sendWithLinkedModels)
-      {
-        AddLinkedModelWarnings(linkedModelGroup.Value, results);
-        continue;
-      }
-
-      var validatedGroup = ValidateLinkedModelGroup(linkedModelGroup);
-      if (validatedGroup != null)
-      {
-        validLinkedModelGroups[linkedModelGroup.Key] = validatedGroup;
-      }
-    }
-
-    return validLinkedModelGroups;
-  }
-
-  private void AddLinkedModelWarnings(List<DocumentToConvert> instances, List<SendConversionResult> results)
-  {
-    foreach (var instance in instances)
-    {
-      results.Add(
-        new SendConversionResult(
-          Status.WARNING,
-          instance.Doc.PathName,
-          typeof(RevitLinkInstance).ToString(),
-          null,
-          new SpeckleException("Enable linked model support from the settings to send this object")
-        )
-      );
-    }
-  }
-
-  private List<DocumentToConvert>? ValidateLinkedModelGroup(
-    KeyValuePair<string, List<DocumentToConvert>> linkedModelGroup
-  )
-  {
-    // For linked models, we only need to validate the first instance since we convert unique models once
-    var firstInstance = linkedModelGroup.Value.First();
-    var validElements = FilterValidElements(firstInstance.Elements);
-
-    if (validElements.Count == 0)
-    {
-      return null;
-    }
-
-    // Keep all instances but update the first one with valid elements
-    var validInstances = linkedModelGroup.Value.ToList();
-    validInstances[0] = validInstances[0] with { Elements = validElements };
-    return validInstances;
-  }
-
-  private List<Element> FilterValidElements(List<Element> elements) =>
-    elements.Where(element => element?.Category != null).ToList();
-}
-
-/// <summary>
-/// Contains validated documents ready for conversion.
-/// </summary>
-public record ValidatedDocuments(
-  DocumentToConvert? MainModel,
-  Dictionary<string, List<DocumentToConvert>> LinkedModelGroups
-);

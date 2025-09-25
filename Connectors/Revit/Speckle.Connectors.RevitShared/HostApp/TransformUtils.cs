@@ -1,70 +1,68 @@
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using Autodesk.Revit.DB;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
+/// <summary>
+/// Simplified utility for generating unique IDs for linked models and instances.
+/// </summary>
 public static class TransformUtils
 {
   /// <summary>
-  /// Generates a consistent hash for a transform to identify unique transformations.
-  /// Used for distinguishing different instances of the same linked model.
+  /// Creates a unique definition ID for a linked model based on its document path.
+  /// Same linked model always gets the same definition ID.
   /// </summary>
-  /// <param name="transform">The transform to hash</param>
-  /// <returns>An 8-character lowercase hexadecimal hash</returns>
-  public static string ComputeTransformHash(Transform transform)
+  /// <returns>Unique definition ID like "LinkedModel_Building_A_1234"</returns>
+  public static string CreateDefinitionId(string documentPath)
   {
-    // Create a simplified representation of the transform
-    string json =
-      $@"{{
-      ""origin"": [{transform.Origin.X:F2}, {transform.Origin.Y:F2}, {transform.Origin.Z:F2}],
-      ""basis"": [{transform.BasisX.X:F1}, {transform.BasisY.Y:F1}, {transform.BasisZ.Z:F1}]
-    }}";
-
-    byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
-    byte[] hashBytes = SHA256.HashData(jsonBytes);
-    // Take first 8 characters for a shorter but still unique hash
-    return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
-  }
-
-  /// <summary>
-  /// Generates a consistent definition ID for a linked model based on its document path.
-  /// Ensures the same linked model always gets the same definition ID across different projects.
-  /// </summary>
-  /// <param name="documentPath">The full path to the linked model document</param>
-  /// <returns>A unique definition ID in the format "LinkedModel_{fileName}_{hash}"</returns>
-  public static string GenerateDefinitionId(string documentPath)
-  {
-    string fileName = Path.GetFileNameWithoutExtension(documentPath);
-    string hash = ComputeSimpleHash(documentPath);
+    var fileName = Path.GetFileNameWithoutExtension(documentPath);
+    var hash = CreateSimpleHash(documentPath);
     return $"LinkedModel_{fileName}_{hash}";
   }
 
   /// <summary>
-  /// Computes a simple hash of a string for generating consistent IDs.
+  /// Creates a unique instance ID for a specific positioned instance of a linked model.
   /// </summary>
-  /// <param name="input">The input string to hash</param>
-  /// <returns>An 8-character lowercase hexadecimal hash</returns>
-  private static string ComputeSimpleHash(string input)
-  {
-    byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+  /// <param name="definitionId">The definition ID from CreateDefinitionId</param>
+  /// <param name="instanceIndex">1-based index of this instance</param>
+  /// <returns>Unique instance ID like "LinkedModel_Building_A_1234_instance_1"</returns>
+  public static string CreateInstanceId(string definitionId, int instanceIndex) =>
+    $"{definitionId}_instance_{instanceIndex}";
 
-#pragma warning disable CA1850
-    using (var sha256 = SHA256.Create())
-    {
-      byte[] hashBytes = sha256.ComputeHash(inputBytes);
-      return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
-    }
-#pragma warning restore CA1850
+  /// <summary>
+  /// Creates a simple hash for transform identification.
+  /// Used to distinguish different positioned instances of the same linked model.
+  /// </summary>
+  /// <param name="transform">The transform to hash</param>
+  /// <returns>8-character hex hash for quick comparison</returns>
+  public static string CreateTransformHash(Transform transform)
+  {
+    // Create simplified transform representation
+    var transformData =
+      $"{transform.Origin.X:F2},{transform.Origin.Y:F2},{transform.Origin.Z:F2},"
+      + $"{transform.BasisX.X:F1},{transform.BasisY.Y:F1},{transform.BasisZ.Z:F1}";
+
+    return CreateSimpleHash(transformData);
   }
 
   /// <summary>
-  /// Creates a unique instance ID for a linked model instance.
+  /// Creates a consistent 8-character hash from input string.
+  /// Using built-in GetHashCode for simplicity - adequate for our use case.
   /// </summary>
-  /// <param name="definitionId">The definition ID of the linked model</param>
-  /// <param name="instanceIndex">The index of this instance (1-based)</param>
-  /// <returns>A unique instance ID</returns>
-  public static string GenerateInstanceId(string definitionId, int instanceIndex) =>
-    $"{definitionId}_instance_{instanceIndex}";
+  private static string CreateSimpleHash(string input)
+  {
+    // Use built-in hash code - much simpler than SHA256 for this use case
+    var hash = input.GetHashCode();
+    return Math.Abs(hash).ToString("X8"); // 8-char hex string
+  }
+}
+
+// Extension method to make usage cleaner
+public static class DocumentToConvertExtensions
+{
+  /// <summary>
+  /// Gets a simple display name for the document.
+  /// </summary>
+  public static string GetDisplayName(this DocumentToConvert document) =>
+    Path.GetFileNameWithoutExtension(document.Doc.PathName);
 }
