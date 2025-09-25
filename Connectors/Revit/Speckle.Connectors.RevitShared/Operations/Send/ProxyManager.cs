@@ -8,7 +8,6 @@ using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
-using Speckle.Sdk;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
@@ -70,7 +69,7 @@ public class ProxyManager
   private void AddInstanceProxies(Collection rootObject, LinkedModelConversionResults linkedResults)
   {
     var instanceDefinitionProxies = CreateInstanceDefinitionProxies(linkedResults);
-    _ = CreateInstanceProxyCollections(rootObject, linkedResults);
+    CreateInstanceProxyCollections(rootObject, linkedResults);
 
     if (instanceDefinitionProxies.Count > 0)
     {
@@ -96,29 +95,18 @@ public class ProxyManager
         continue;
       }
 
-      try
-      {
-        string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
-        string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
+      string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+      string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
-        var instanceDefinitionProxy = new InstanceDefinitionProxy
-        {
-          applicationId = definitionId,
-          objects = conversionResult.ConvertedElementIds.ToList(),
-          maxDepth = 0, // linked models are at depth 0 for now
-          name = modelName
-        };
-
-        instanceDefinitionProxies.Add(instanceDefinitionProxy);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      var instanceDefinitionProxy = new InstanceDefinitionProxy
       {
-        _logger.LogError(
-          ex,
-          "Failed to create InstanceDefinitionProxy for linked model '{DocumentPath}'",
-          Path.GetFileName(conversionResult.DocumentPath)
-        );
-      }
+        applicationId = definitionId,
+        objects = conversionResult.ConvertedElementIds.ToList(),
+        maxDepth = 0, // linked models are at depth 0 for now
+        name = modelName
+      };
+
+      instanceDefinitionProxies.Add(instanceDefinitionProxy);
     }
 
     return instanceDefinitionProxies;
@@ -127,10 +115,8 @@ public class ProxyManager
   /// <summary>
   /// Creates instance proxy collections and adds them to the appropriate model collections.
   /// </summary>
-  private List<string> CreateInstanceProxyCollections(Collection rootObject, LinkedModelConversionResults linkedResults)
+  private void CreateInstanceProxyCollections(Collection rootObject, LinkedModelConversionResults linkedResults)
   {
-    var createdCollections = new List<string>();
-
     foreach (var conversionResult in linkedResults.LinkedModelConversions)
     {
       if (conversionResult.ConvertedElementIds.Count == 0)
@@ -138,30 +124,16 @@ public class ProxyManager
         continue;
       }
 
-      try
-      {
-        string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
-        string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
+      string definitionId = TransformUtils.GenerateDefinitionId(conversionResult.DocumentPath);
+      string modelName = Path.GetFileNameWithoutExtension(conversionResult.DocumentPath);
 
-        var instanceProxies = CreateInstanceProxiesForLinkedModel(conversionResult, definitionId, modelName);
+      var instanceProxies = CreateInstanceProxiesForLinkedModel(conversionResult, definitionId);
 
-        if (instanceProxies.Count > 0)
-        {
-          AddInstanceProxiesToCollection(rootObject, modelName, instanceProxies);
-          createdCollections.Add(modelName);
-        }
-      }
-      catch (Exception ex) when (!ex.IsFatal())
+      if (instanceProxies.Count > 0)
       {
-        _logger.LogError(
-          ex,
-          "Failed to create instance proxies for linked model '{DocumentPath}'",
-          Path.GetFileName(conversionResult.DocumentPath)
-        );
+        AddInstanceProxiesToCollection(rootObject, modelName, instanceProxies);
       }
     }
-
-    return createdCollections;
   }
 
   /// <summary>
@@ -169,13 +141,11 @@ public class ProxyManager
   /// </summary>
   private List<InstanceProxy> CreateInstanceProxiesForLinkedModel(
     LinkedModelConversionResult conversionResult,
-    string definitionId,
-    string modelName
+    string definitionId
   )
   {
     var instanceProxies = new List<InstanceProxy>();
     int instanceIndex = 0;
-    int skippedInstances = 0;
 
     foreach (var instance in conversionResult.Instances)
     {
@@ -183,42 +153,21 @@ public class ProxyManager
 
       if (instance.Transform == null)
       {
-        skippedInstances++;
         continue;
       }
 
-      try
+      string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
+      var transformMatrix = _transformConverter.Convert((instance.Transform, _converterSettings.Current.SpeckleUnits));
+      var instanceProxy = new InstanceProxy
       {
-        string instanceId = TransformUtils.GenerateInstanceId(definitionId, instanceIndex);
-        var transformMatrix = _transformConverter.Convert(
-          (instance.Transform, _converterSettings.Current.SpeckleUnits)
-        );
-        var instanceProxy = new InstanceProxy
-        {
-          applicationId = instanceId,
-          definitionId = definitionId,
-          transform = transformMatrix,
-          units = _converterSettings.Current.SpeckleUnits,
-          maxDepth = 0 // linked models are at depth 0 for now
-        };
+        applicationId = instanceId,
+        definitionId = definitionId,
+        transform = transformMatrix,
+        units = _converterSettings.Current.SpeckleUnits,
+        maxDepth = 0 // linked models are at depth 0 for now
+      };
 
-        instanceProxies.Add(instanceProxy);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogError(
-          ex,
-          "Failed to create InstanceProxy for instance {InstanceIndex} of '{ModelName}'",
-          instanceIndex,
-          modelName
-        );
-        skippedInstances++;
-      }
-    }
-
-    if (skippedInstances > 0)
-    {
-      _logger.LogWarning("Skipped {SkippedCount} instances due to errors", skippedInstances);
+      instanceProxies.Add(instanceProxy);
     }
 
     return instanceProxies;
@@ -261,7 +210,6 @@ public class ProxyManager
     }
 
     // create new collection if not found
-    _logger.LogWarning("Linked model collection '{ModelName}' not found, creating it", modelName);
     var linkedModelCollection = new Collection(modelName);
     rootObject.elements.Add(linkedModelCollection);
     return linkedModelCollection;

@@ -23,15 +23,9 @@ public static class TransformUtils
     }}";
 
     byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
-
-#pragma warning disable CA1850
-    using (var sha256 = SHA256.Create())
-    {
-      byte[] hashBytes = sha256.ComputeHash(jsonBytes);
-      // Take first 8 characters for a shorter but still unique hash
-      return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
-    }
-#pragma warning restore CA1850
+    byte[] hashBytes = SHA256.HashData(jsonBytes);
+    // Take first 8 characters for a shorter but still unique hash
+    return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
   }
 
   /// <summary>
