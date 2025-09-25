@@ -60,10 +60,12 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<LevelUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
+    serviceCollection.AddScoped<DocumentProcessor>();
+    serviceCollection.AddScoped<ProxyManager>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();
-    serviceCollection.AddSingleton<LinkedModelHandler>();
+    serviceCollection.AddSingleton<LinkedModelDocumentHandler>();
 
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();

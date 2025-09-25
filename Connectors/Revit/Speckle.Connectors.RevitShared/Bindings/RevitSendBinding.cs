@@ -33,7 +33,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly LinkedModelDocumentHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
 
@@ -56,7 +56,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    LinkedModelHandler linkedModelHandler,
+    LinkedModelDocumentHandler linkedModelHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory
@@ -182,11 +182,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         }
 
         // transform maps linked model elements into the main model's reference point coordinate system
-        // first apply the user's reference point transform (setting) then adjust for the linked model's placement relative to host.
-        Transform transform = (mainModelTransform ?? Transform.Identity).Multiply(
-          linkedModel.GetTotalTransform().Inverse
-        );
-
+        Transform transform = (mainModelTransform ?? Transform.Identity).Multiply(linkedModel.GetTotalTransform());
         // decision about whether to process elements is made here, not in the handler
         // only collects elements from linked models when the setting is enabled
         if (includeLinkedModels)
