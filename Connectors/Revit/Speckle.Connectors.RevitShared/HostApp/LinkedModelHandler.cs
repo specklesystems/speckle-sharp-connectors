@@ -1,4 +1,3 @@
-using System.IO;
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
@@ -10,7 +9,7 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
-/// Handles linked model document operations: grouping, element collection, and display name management.
+/// Handles linked model document operations
 /// </summary>
 public class LinkedModelDocumentHandler
 {
@@ -20,65 +19,6 @@ public class LinkedModelDocumentHandler
   public LinkedModelDocumentHandler(RevitContext revitContext)
   {
     _revitContext = revitContext;
-  }
-
-  /// <summary>
-  /// Groups documents by their unique models and prepares display names.
-  /// </summary>
-  /// <param name="documents">All documents to process</param>
-  /// <returns>Organized document groups</returns>
-  public DocumentGroups GroupAndPrepareDocuments(IReadOnlyList<DocumentToConvert> documents)
-  {
-    var (mainModel, linkedGroups) = GroupDocumentsByUniqueModels(documents);
-
-    if (linkedGroups.Count > 0)
-    {
-      PrepareLinkedModelDisplayNames(documents);
-    }
-
-    return new DocumentGroups(mainModel, linkedGroups);
-  }
-
-  /// <summary>
-  /// Groups documents by their unique linked models, separating main models from linked models.
-  /// This helps identify which linked models are the same (same file) but in different positions.
-  /// </summary>
-  /// <param name="documents">All documents to process</param>
-  /// <returns>Main model and grouped linked model instances</returns>
-  public (
-    DocumentToConvert? MainModel,
-    Dictionary<string, List<DocumentToConvert>> LinkedModelInstances
-  ) GroupDocumentsByUniqueModels(IReadOnlyList<DocumentToConvert> documents)
-  {
-    DocumentToConvert? mainModel = null;
-    var linkedModelInstances = new Dictionary<string, List<DocumentToConvert>>();
-
-    foreach (var document in documents)
-    {
-      if (document == null)
-      {
-        continue;
-      }
-
-      if (document.Doc.IsLinked)
-      {
-        // group linked models by their document path (same model file, different transforms)
-        string documentPathName = document.Doc.PathName;
-
-        if (!linkedModelInstances.TryGetValue(documentPathName, out List<DocumentToConvert>? instances))
-        {
-          instances = [];
-          linkedModelInstances[documentPathName] = instances;
-        }
-        instances.Add(document);
-      }
-      else
-      {
-        mainModel = document;
-      }
-    }
-
-    return (mainModel, linkedModelInstances);
   }
 
   /// <summary>
@@ -93,54 +33,6 @@ public class LinkedModelDocumentHandler
         => GetElementsFromView(linkedDocument, viewFilter, transform),
       _ => GetAllElementsForLinkedModelSelection(linkedDocument)
     };
-
-  /// <summary>
-  /// Creates a unique identifier for a DocumentToConvert that includes transform information.
-  /// </summary>
-  public string GetIdFromDocumentToConvert(DocumentToConvert documentToConvert)
-  {
-    var docHash = documentToConvert.Doc.GetHashCode();
-    var transformHash = documentToConvert.Transform?.GetHashCode() ?? 0;
-    return $"{docHash}-{transformHash}";
-  }
-
-  /// <summary>
-  /// Prepares display names for linked model documents based on filename.
-  /// Handles naming conflicts when multiple instances of the same model exist.
-  /// </summary>
-  private void PrepareLinkedModelDisplayNames(IReadOnlyList<DocumentToConvert> documentElementContexts)
-  {
-    LinkedModelDisplayNames.Clear();
-
-    // group linked models by filename
-    var linkedModels = documentElementContexts
-      .Where(ctx => ctx?.Doc.IsLinked == true)
-      .GroupBy(ctx => Path.GetFileNameWithoutExtension(ctx!.Doc.PathName))
-      .ToDictionary(g => g.Key, g => g.ToList()!);
-
-    // create unique display names for each instance
-    foreach (var group in linkedModels)
-    {
-      string baseName = group.Key;
-      var instances = group.Value;
-
-      if (instances.Count == 1)
-      {
-        // single instance - just use the base name
-        string id = GetIdFromDocumentToConvert(instances[0]);
-        LinkedModelDisplayNames[id] = baseName;
-      }
-      else
-      {
-        // multiple instances - add numbering
-        for (int i = 0; i < instances.Count; i++)
-        {
-          string id = GetIdFromDocumentToConvert(instances[i]);
-          LinkedModelDisplayNames[id] = $"{baseName}_{i + 1}";
-        }
-      }
-    }
-  }
 
   /// <summary>
   /// Gets elements from a document that belong to the specified categories.
@@ -238,11 +130,3 @@ public class LinkedModelDocumentHandler
     return matchingInstance ?? linkInstances.First();
   }
 }
-
-/// <summary>
-/// Data structure for organizing documents by type (main vs linked models).
-/// </summary>
-public record DocumentGroups(
-  DocumentToConvert? MainModel,
-  Dictionary<string, List<DocumentToConvert>> LinkedModelGroups
-);
