@@ -97,16 +97,12 @@ public class DocumentProcessor
 
       if (doc.Doc.IsLinked)
       {
+        // NOTE: mutates result object, probably not the greatest design
         ProcessLinkedModel(validDoc, context, result);
       }
       else
       {
-        result = new ProcessedDocuments
-        {
-          MainModel = validDoc,
-          LinkedModelGroups = result.LinkedModelGroups,
-          ValidationResults = result.ValidationResults
-        };
+        result.MainModel = validDoc;
       }
     }
 

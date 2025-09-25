@@ -14,7 +14,6 @@ namespace Speckle.Connectors.Revit.HostApp;
 public class LinkedModelDocumentHandler
 {
   private readonly RevitContext _revitContext;
-  public Dictionary<string, string> LinkedModelDisplayNames { get; } = [];
 
   public LinkedModelDocumentHandler(RevitContext revitContext)
   {

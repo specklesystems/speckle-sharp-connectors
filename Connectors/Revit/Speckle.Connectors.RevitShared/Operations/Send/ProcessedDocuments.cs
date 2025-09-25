@@ -11,7 +11,7 @@ public class ProcessedDocuments
   /// <summary>
   /// The main model document (non-linked), if any.
   /// </summary>
-  public DocumentToConvert? MainModel { get; init; }
+  public DocumentToConvert? MainModel { get; set; }
 
   /// <summary>
   /// Linked model instances grouped by document path.
