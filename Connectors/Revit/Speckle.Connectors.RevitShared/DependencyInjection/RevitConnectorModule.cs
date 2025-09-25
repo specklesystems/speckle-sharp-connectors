@@ -37,7 +37,6 @@ public static class ServiceRegistration
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
     // Storage Schema
-    serviceCollection.AddScoped<DocumentModelStorageSchema>();
     serviceCollection.AddScoped<IdStorageSchema>();
 
     // POC: we need to review the scopes and create a document on what the policy is

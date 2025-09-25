@@ -2,7 +2,8 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Converters.ToSpeckle.Properties;
+using Speckle.Sdk.Common.Exceptions;
+using ApplicationException = Autodesk.Revit.Exceptions.ApplicationException;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -80,22 +81,29 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
           quantities[matName] = materialQuantity;
         }
 
-        // add area and volume props
-        var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
-        AddMaterialProperty(
-          materialQuantity,
-          "area",
-          _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
-          areaUnitType
-        );
+        try
+        {
+          // add area and volume props
+          var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
+          AddMaterialProperty(
+            materialQuantity,
+            "area",
+            _scalingService.Scale(element.GetMaterialArea(matId, false), areaUnitType),
+            areaUnitType
+          );
 
-        var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
-        AddMaterialProperty(
-          materialQuantity,
-          "volume",
-          _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
-          volumeUnitType
-        );
+          var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
+          AddMaterialProperty(
+            materialQuantity,
+            "volume",
+            _scalingService.Scale(element.GetMaterialVolume(matId), volumeUnitType),
+            volumeUnitType
+          );
+        }
+        catch (ApplicationException ex)
+        {
+          throw new ConversionException("Error in Material Quantities", ex);
+        }
       }
     }
   }

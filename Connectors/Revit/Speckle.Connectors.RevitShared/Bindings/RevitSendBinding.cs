@@ -97,11 +97,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public List<ICardSetting> GetSendSettings() =>
     [
-      new DetailLevelSetting(DetailLevelType.Medium),
-      new ReferencePointSetting(ReferencePointType.InternalOrigin),
-      new SendParameterNullOrEmptyStringsSetting(false),
-      new LinkedModelsSetting(true),
-      new SendRebarsAsVolumetricSetting(false)
+      new DetailLevelSetting(),
+      new SendReferencePointSetting(),
+      new SendParameterNullOrEmptyStringsSetting(),
+      new LinkedModelsSetting(),
+      new SendRebarsAsVolumetricSetting()
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -135,7 +135,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
   {
     var activeUIDoc =
-      _revitContext.UIApplication.NotNull().ActiveUIDocument
+      _revitContext.UIApplication?.ActiveUIDocument
       ?? throw new SpeckleException("Unable to retrieve active UI document");
 
     if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
@@ -232,13 +232,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
   {
     ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
-
+    var doc = e.GetDocument();
+    if (doc == null)
+    {
+      return;
+    }
     // NOTE: Whenever we save data into file this event also trigger changes on its DataStorage.
     // On every add/remove/update model attempt triggers this handler and was causing unnecessary calls on `RunExpirationChecks`
     // Re-check it once we implement Linked Documents
     if (modifiedElementIds.Count == 1)
     {
-      var doc = e.GetDocument();
       if (modifiedElementIds.All(el => doc.GetElement(el) is DataStorage))
       {
         return;
@@ -268,7 +271,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
-    if (HaveUnitsChanged(e.GetDocument()))
+    if (HaveUnitsChanged(doc))
     {
       var objectIds = new List<string>();
       foreach (var sender in _store.GetSenders().ToList())
@@ -281,7 +284,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         var selectedObjects = sender.SendFilter.NotNull().SelectedObjectIds;
         objectIds.AddRange(selectedObjects);
       }
-      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds);
+      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds, doc);
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
@@ -344,10 +347,13 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     // {
     //    await Commands.RefreshSendFilters();
     // }
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (doc == null)
+    {
+      return;
+    }
 
-    if (
-      ChangedObjectIds.Any(e => _revitContext.UIApplication.NotNull().ActiveUIDocument.Document.GetElement(e) is View)
-    )
+    if (ChangedObjectIds.Any(e => doc.GetElement(e) is View))
     {
       await Commands.RefreshSendFilters();
     }
@@ -357,7 +363,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = _revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
 
     if (doc == null)
     {
@@ -399,7 +405,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
     }
 
-    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds);
+    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds, doc);
     _sendConversionCache.EvictObjects(unpackedObjectIds);
 
     // Note: we're doing object selection and card expiry management by old school ids

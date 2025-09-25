@@ -3,9 +3,13 @@ using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 
-public class ReferencePointSetting(ReferencePointType value) : ICardSetting
+public class SendReferencePointSetting(ReferencePointType value = SendReferencePointSetting.DEFAULT_VALUE)
+  : ICardSetting
 {
-  public string? Id { get; set; } = "referencePoint";
+  public const string SETTING_ID = "referencePoint";
+  public const ReferencePointType DEFAULT_VALUE = ReferencePointType.InternalOrigin;
+
+  public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Reference Point";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReferencePointType)).ToList();

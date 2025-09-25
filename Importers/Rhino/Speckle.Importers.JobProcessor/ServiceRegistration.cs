@@ -13,9 +13,9 @@ internal static class ServiceRegistration
   public static IServiceCollection AddJobProcessor(this IServiceCollection serviceCollection)
   {
     serviceCollection.AddLoggingConfig();
-    serviceCollection.AddTransient<JobProcessorInstance>();
     serviceCollection.AddTransient<Repository>();
     serviceCollection.AddTransient<ImportJobFileDownloader>();
+    serviceCollection.AddHostedService<JobProcessorInstance>();
     return serviceCollection;
   }
 

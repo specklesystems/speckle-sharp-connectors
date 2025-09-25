@@ -105,7 +105,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
 
     if (results.All(x => x.Status == Status.ERROR))
     {
-      throw new SpeckleException("Failed to convert all objects.");
+      throw new SpeckleException("Failed to convert all objects");
     }
 
     using (var _ = _activityFactory.Start("Process Proxies"))
@@ -129,22 +129,30 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
       if (requestedResultTypes == null || requestedResultTypes.Count == 0)
       {
         throw new SpeckleException(
-          "No result type input for the requested load cases and combinations. Adjust publish settings."
+          "Adjust publish settings - no result type input for the requested load cases and combinations"
         );
       }
 
       if (!_csiApplicationService.SapModel.GetModelIsLocked())
       {
-        throw new SpeckleException("Model unlocked. No access to analysis results.");
+        throw new SpeckleException("Model unlocked, no access to analysis results");
       }
 
-      var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
-        selectedCasesAndCombinations,
-        requestedResultTypes,
-        objectSelectionSummary
-      );
-      rootObjectCollection["analysisResults"] = analysisResults;
+      try
+      {
+        var analysisResults = _analysisResultsExtractor.ExtractAnalysisResults(
+          selectedCasesAndCombinations,
+          requestedResultTypes,
+          objectSelectionSummary
+        );
+        rootObjectCollection["analysisResults"] = analysisResults;
+      }
+      catch (Exception ex)
+      {
+        throw new SpeckleException("Analysis result extraction failed", ex);
+      }
     }
+
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
@@ -182,12 +190,12 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     // NOTE: CsiTendonWrapper - not typically modelled in ETABS, rather SAFE
     catch (NotImplementedException ex)
     {
-      _logger.LogError(ex, sourceType);
+      _logger.LogError(ex, "Failed to convert object {sourceType}", sourceType);
       return new(Status.WARNING, applicationId, sourceType, null, ex);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, sourceType);
+      _logger.LogError(ex, "Failed to convert object {sourceType}", sourceType);
       return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }

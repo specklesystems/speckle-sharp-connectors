@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Logging;
@@ -23,11 +24,11 @@ internal sealed class JobProcessorInstance(
   IAccountFactory accountFactory,
   IClientFactory clientFactory,
   ISdkActivityFactory activityFactory
-)
+) : BackgroundService
 {
   private static readonly TimeSpan s_idleTimeout = TimeSpan.FromSeconds(1);
 
-  public async Task StartProcessing(CancellationToken cancellationToken = default)
+  protected override async Task ExecuteAsync(CancellationToken cancellationToken)
   {
     await using var connection = await repository.SetupConnection(cancellationToken).ConfigureAwait(false);
 

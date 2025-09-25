@@ -119,7 +119,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, sourceType);
+      _logger.LogError(ex, "Failed to convert object {SourceType}", sourceType);
       return new(Status.ERROR, applicationId, sourceType, null, ex);
     }
   }
