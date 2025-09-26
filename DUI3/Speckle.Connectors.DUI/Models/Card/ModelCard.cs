@@ -53,9 +53,6 @@ public class ModelCard : DiscriminatedObject
       WorkspaceSlug = WorkspaceSlug,
       AccountId = AccountId,
       ServerUrl = ServerUrl,
-      Settings = Settings?.Select(x => x with
-      {
-        Enum = x.Enum?.ToList()
-      }).ToList(),
+      Settings = Settings?.Select(x => x with { Enum = x.Enum?.ToList() }).ToList(),
     };
 }
