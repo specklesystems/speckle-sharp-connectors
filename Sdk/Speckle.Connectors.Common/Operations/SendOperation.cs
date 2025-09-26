@@ -4,7 +4,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -19,7 +18,7 @@ public sealed class SendOperation<T>(
   IRootObjectBuilder<T> rootObjectBuilder,
   ISendConversionCache sendConversionCache,
   ISendProgress sendProgress,
-  IOperations operations,
+  ISendOperationExecutor sendOperationExecutor,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
   IThreadContext threadContext
@@ -88,7 +87,7 @@ public sealed class SendOperation<T>(
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
-    var sendResult = await operations.Send2(
+    var sendResult = await sendOperationExecutor.Send(
       new Uri(account.serverInfo.url),
       projectId,
       account.token,
