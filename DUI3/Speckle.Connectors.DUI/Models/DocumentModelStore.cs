@@ -141,8 +141,6 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     }
   }
 
-  protected string Serialize() => serializer.Serialize(Models.ToList());
-
   // POC: this seemms more like a IModelsDeserializer?, seems disconnected from this class
   protected List<ModelCard> Deserialize(string models) => serializer.Deserialize<List<ModelCard>>(models).NotNull();
 
@@ -150,7 +148,8 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
   {
     lock (_models)
     {
-      var state = Serialize();
+      //eager clone to avoid multi concurrency issues with settings?
+      var state = serializer.Serialize(_models.Select(x => x.Clone()).ToList());
       HostAppSaveState(state);
     }
   }
