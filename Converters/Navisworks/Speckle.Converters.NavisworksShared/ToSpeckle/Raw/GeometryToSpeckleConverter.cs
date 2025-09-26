@@ -39,7 +39,7 @@ public class GeometryToSpeckleConverter
   /// Converts a ModelItem's geometry to Speckle display geometry by accessing the underlying COM objects.
   /// Applies necessary transformations and unit scaling.
   /// </summary>
-  internal List<Base> Convert(NAV.ModelItem modelItem)
+  internal List<Base> Convert(NAV.ModelItem modelItem, bool isInstanceDefinition = false)
   {
     if (modelItem == null)
     {
@@ -64,7 +64,7 @@ public class GeometryToSpeckleConverter
           CollectFragments(path, fragmentStack);
         }
 
-        return ProcessFragments(fragmentStack, paths);
+        return ProcessFragments(fragmentStack, paths, isInstanceDefinition);
       }
       finally
       {
@@ -103,7 +103,7 @@ public class GeometryToSpeckleConverter
     }
   }
 
-  private List<Base> ProcessFragments(Stack<InwOaFragment3> fragmentStack, InwSelectionPathsColl paths)
+  private List<Base> ProcessFragments(Stack<InwOaFragment3> fragmentStack, InwSelectionPathsColl paths, bool isInstanceDefinition = false)
   {
     var callbackListeners = new List<PrimitiveProcessor>();
 
@@ -132,7 +132,7 @@ public class GeometryToSpeckleConverter
       callbackListeners.Add(processor);
     }
 
-    var baseGeometries = ProcessGeometries(callbackListeners);
+    var baseGeometries = ProcessGeometries(callbackListeners, isInstanceDefinition);
 
     return baseGeometries;
   }
@@ -147,7 +147,7 @@ public class GeometryToSpeckleConverter
     return IsSameFragmentPath(fragmentPathData, pathData);
   }
 
-  private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
+  private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors, bool isInstanceDefinition = false)
   {
     var baseGeometries = new List<Base>();
 
@@ -155,13 +155,13 @@ public class GeometryToSpeckleConverter
     {
       if (processor.Triangles.Count > 0)
       {
-        var mesh = CreateMesh(processor.Triangles);
+        var mesh = CreateMesh(processor.Triangles, isInstanceDefinition);
         baseGeometries.Add(mesh);
       }
 
       if (processor.Lines.Count > 0)
       {
-        var lines = CreateLines(processor.Lines);
+        var lines = CreateLines(processor.Lines, isInstanceDefinition);
         baseGeometries.AddRange(lines);
       }
     }
@@ -169,7 +169,7 @@ public class GeometryToSpeckleConverter
     return baseGeometries;
   }
 
-  private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
+  private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles, bool isInstanceDefinition = false)
   {
     var vertices = new List<double>();
     var faces = new List<int>();
@@ -178,20 +178,40 @@ public class GeometryToSpeckleConverter
     {
       var triangle = triangles[t];
 
-      // No need to worry about disposal of COM across boundaries - we're working with our safe structs
-      vertices.AddRange(
-        [
-          (triangle.Vertex1.X + _transformVector.X) * SCALE,
-          (triangle.Vertex1.Y + _transformVector.Y) * SCALE,
-          (triangle.Vertex1.Z + _transformVector.Z) * SCALE,
-          (triangle.Vertex2.X + _transformVector.X) * SCALE,
-          (triangle.Vertex2.Y + _transformVector.Y) * SCALE,
-          (triangle.Vertex2.Z + _transformVector.Z) * SCALE,
-          (triangle.Vertex3.X + _transformVector.X) * SCALE,
-          (triangle.Vertex3.Y + _transformVector.Y) * SCALE,
-          (triangle.Vertex3.Z + _transformVector.Z) * SCALE
-        ]
-      );
+      // For instance definitions, don't apply global transform - only apply coordinate system and scaling
+      if (isInstanceDefinition)
+      {
+        vertices.AddRange(
+          [
+            triangle.Vertex1.X * SCALE,
+            triangle.Vertex1.Y * SCALE,
+            triangle.Vertex1.Z * SCALE,
+            triangle.Vertex2.X * SCALE,
+            triangle.Vertex2.Y * SCALE,
+            triangle.Vertex2.Z * SCALE,
+            triangle.Vertex3.X * SCALE,
+            triangle.Vertex3.Y * SCALE,
+            triangle.Vertex3.Z * SCALE
+          ]
+        );
+      }
+      else
+      {
+        // For non-instance geometry, apply global transform as before
+        vertices.AddRange(
+          [
+            (triangle.Vertex1.X + _transformVector.X) * SCALE,
+            (triangle.Vertex1.Y + _transformVector.Y) * SCALE,
+            (triangle.Vertex1.Z + _transformVector.Z) * SCALE,
+            (triangle.Vertex2.X + _transformVector.X) * SCALE,
+            (triangle.Vertex2.Y + _transformVector.Y) * SCALE,
+            (triangle.Vertex2.Z + _transformVector.Z) * SCALE,
+            (triangle.Vertex3.X + _transformVector.X) * SCALE,
+            (triangle.Vertex3.Y + _transformVector.Y) * SCALE,
+            (triangle.Vertex3.Z + _transformVector.Z) * SCALE
+          ]
+        );
+      }
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
 
@@ -203,23 +223,37 @@ public class GeometryToSpeckleConverter
     };
   }
 
-  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines) =>
+  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines, bool isInstanceDefinition = false) =>
     (
       from line in lines
       select new Line
       {
-        start = new Point(
-          (line.Start.X + _transformVector.X) * SCALE,
-          (line.Start.Y + _transformVector.Y) * SCALE,
-          (line.Start.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
-        end = new Point(
-          (line.End.X + _transformVector.X) * SCALE,
-          (line.End.Y + _transformVector.Y) * SCALE,
-          (line.End.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
+        start = isInstanceDefinition
+          ? new Point(
+              line.Start.X * SCALE,
+              line.Start.Y * SCALE,
+              line.Start.Z * SCALE,
+              _settings.Derived.SpeckleUnits
+            )
+          : new Point(
+              (line.Start.X + _transformVector.X) * SCALE,
+              (line.Start.Y + _transformVector.Y) * SCALE,
+              (line.Start.Z + _transformVector.Z) * SCALE,
+              _settings.Derived.SpeckleUnits
+            ),
+        end = isInstanceDefinition
+          ? new Point(
+              line.End.X * SCALE,
+              line.End.Y * SCALE,
+              line.End.Z * SCALE,
+              _settings.Derived.SpeckleUnits
+            )
+          : new Point(
+              (line.End.X + _transformVector.X) * SCALE,
+              (line.End.Y + _transformVector.Y) * SCALE,
+              (line.End.Z + _transformVector.Z) * SCALE,
+              _settings.Derived.SpeckleUnits
+            ),
         units = _settings.Derived.SpeckleUnits
       }
     ).ToList();

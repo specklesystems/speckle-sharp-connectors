@@ -33,6 +33,9 @@ public class DisplayValueExtractor
       return [];
     }
 
-    return !IsElementVisible(modelItem) ? [] : _geometryConverter.Convert(modelItem);
+    // Check if this is an instance definition by looking at InstanceHashCode
+    bool isInstanceDefinition = modelItem.InstanceHashCode != 0;
+
+    return !IsElementVisible(modelItem) ? [] : _geometryConverter.Convert(modelItem, isInstanceDefinition);
   }
 }

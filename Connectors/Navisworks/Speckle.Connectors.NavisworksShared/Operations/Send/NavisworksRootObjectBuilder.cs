@@ -112,10 +112,49 @@ public class NavisworksRootObjectBuilder(
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
 
+    // Store instance definitions by their definition ID (hash of the first instance)
+    Dictionary<int, Base> instanceDefinitions = [];
+
     foreach (var item in navisworksModelItems)
     {
       cancellationToken.ThrowIfCancellationRequested();
+      string applicationId = elementSelectionService.GetModelItemPath(item);
+
+      if (item.InstanceHashCode != 0)
+      {
+        var instanceDefinitionId = item.Instances.First.GetHashCode();
+
+        // If this instance definition is already converted, create an instance reference
+        if (instanceDefinitions.TryGetValue(instanceDefinitionId, out var definitionBase))
+        {
+          var instanceBase = CreateInstanceReference(definitionBase, item);
+          convertedBases[applicationId] = instanceBase;
+          
+          results.Add(new SendConversionResult(Status.SUCCESS, applicationId, item.GetType().Name, instanceBase));
+          processedCount++;
+          onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+          continue;
+        }
+      }
+
+      // Convert the item (either a new instance definition or non-instance item)
       var converted = ConvertNavisworksItem(item, convertedBases, projectId);
+      if (converted.Status == Status.SUCCESS)
+      {
+        results.Add(converted);
+
+        // If this is an instance definition, store it for reuse
+        if (item.InstanceHashCode != 0)
+        {
+          var instanceDefinitionId = item.Instances.First.GetHashCode();
+          instanceDefinitions[instanceDefinitionId] = convertedBases[converted.SourceId]!;
+        }
+
+        processedCount++;
+        onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+        continue;
+      }
+
       results.Add(converted);
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
@@ -289,6 +328,84 @@ public class NavisworksRootObjectBuilder(
     }
 
     return Task.CompletedTask;
+  }
+
+  /// <summary>
+  /// Creates an instance reference that points to a converted base definition with instance-specific transforms.
+  /// </summary>
+  /// <param name="definitionBase">The converted base definition to reference.</param>
+  /// <param name="instanceItem">The Navisworks instance item.</param>
+  /// <returns>A Base object representing the instance with transforms.</returns>
+  private Base CreateInstanceReference(Base definitionBase, NAV.ModelItem instanceItem)
+  {
+    // Get the instance transform from Navisworks
+    var instanceTransform = GetInstanceTransform(instanceItem);
+    
+    // Create a new base that references the definition
+    var instanceBase = new Base
+    {
+      applicationId = elementSelectionService.GetModelItemPath(instanceItem),
+      // Store reference to the definition
+      ["@definition"] = definitionBase.applicationId,
+      // Store the instance transform
+      ["transform"] = instanceTransform,
+      // Copy the display value (geometry) from the definition
+      ["displayValue"] = definitionBase["displayValue"],
+      // Copy other properties from definition if needed
+      ["properties"] = definitionBase["properties"]
+    };
+
+    return instanceBase;
+  }
+
+  /// <summary>
+  /// Extracts the transform matrix from a Navisworks instance item.
+  /// </summary>
+  /// <param name="instanceItem">The Navisworks instance item.</param>
+  /// <returns>A transform matrix as a flat array or null if no transform.</returns>
+  private double[]? GetInstanceTransform(NAV.ModelItem instanceItem)
+  {
+    try
+    {
+      // Get the transform from the instance
+      var transform = instanceItem.Transform;
+      if (transform == null)
+      {
+        return null;
+      }
+
+      // Convert the Navisworks transform to a flat array
+      // For now, return identity matrix as POC - proper transform extraction needs Navisworks API research
+      var matrix = new double[16];
+      // Identity matrix
+      matrix[0] = 1;
+      matrix[1] = 0;
+      matrix[2] = 0;
+      matrix[3] = 0;
+      matrix[4] = 0;
+      matrix[5] = 1;
+      matrix[6] = 0;
+      matrix[7] = 0;
+      matrix[8] = 0;
+      matrix[9] = 0;
+      matrix[10] = 1;
+      matrix[11] = 0;
+      matrix[12] = 0;
+      matrix[13] = 0;
+      matrix[14] = 0;
+      matrix[15] = 1;
+
+      return matrix;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(
+        ex,
+        "Failed to extract transform from instance {id}",
+        elementSelectionService.GetModelItemPath(instanceItem)
+      );
+      return null;
+    }
   }
 
   /// <summary>

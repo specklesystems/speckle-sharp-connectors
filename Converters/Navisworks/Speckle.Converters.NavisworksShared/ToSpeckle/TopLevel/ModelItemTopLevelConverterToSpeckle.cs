@@ -40,6 +40,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   public Base Convert(object target) =>
     target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
+
   // Converts a Navisworks ModelItem into a Speckle Base object
   private Base Convert(NAV.ModelItem target)
   {
@@ -51,6 +52,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       : CreateNonGeometryObject(target, name, handler);
   }
 
+
   // There are in fact only two types of objects: geometry and non-geometry, the latter being collections of other objects
   private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
     new()
@@ -60,6 +62,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
       units = _settingsStore.Current.Derived.SpeckleUnits,
     };
+
 
   private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
     new()
