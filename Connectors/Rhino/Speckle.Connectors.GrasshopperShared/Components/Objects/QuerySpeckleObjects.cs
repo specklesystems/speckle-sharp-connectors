@@ -89,7 +89,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   private List<int>? _outputFilterIndices;
 
   // Caches the list of all objects by geometrybase type
-  private readonly Dictionary<ObjectType, List<SpeckleGeometryWrapper>> _filterDict = new();
+  private readonly Dictionary<ObjectType, List<SpeckleGeometryWrapper>> _filterDict = [];
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
@@ -103,6 +103,9 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     string path = "";
     dataAccess.GetData(1, ref path);
+
+    // ensure fresh data for type-specific outputs
+    _filterDict.Clear();
 
     // filter by collection path
     // Note: the collection paths selector will omit the target collection from the path of nested collections.
@@ -127,10 +130,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     // sort geometry objects by filters
     var geometryObjects = filteredObjects.OfType<SpeckleGeometryWrapper>().ToList();
-    if (_filterDict.Count == 0)
-    {
-      SortObjectsByGeometryBaseType(geometryObjects);
-    }
+    SortObjectsByGeometryBaseType(geometryObjects);
 
     // Set output objects
     for (int i = 0; i < Params.Output.Count; i++)
@@ -173,13 +173,13 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
   {
     if (_filterDict.Count > 0)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Stored input objects are in an invalid state.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Stored input objects are in an invalid state");
       return;
     }
 
     foreach (ObjectType filter in Filters)
     {
-      _filterDict.Add(filter, new());
+      _filterDict.Add(filter, []);
     }
 
     foreach (var wrapper in objs)
@@ -233,7 +233,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     // repopulate current output params if needed
     if (_outputFilterIndices is null)
     {
-      _outputFilterIndices = new();
+      _outputFilterIndices = [];
       foreach (var output in Params.Output)
       {
         if (Enum.TryParse(output.Name, out ObjectType filter))
@@ -289,8 +289,5 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
     base.RemovedFromDocument(document);
   }
 
-  private void OnParameterSourceChanged(object sender, GH_ParamServerEventArgs args) =>
-    // an empty filter dict will trigger the SortObjectsByGeometryBaseType method.
-    // we only want to re-sort objects if an input has changed, not on every trigger of solve instance.
-    _filterDict.Clear();
+  private void OnParameterSourceChanged(object sender, GH_ParamServerEventArgs args) { }
 }
