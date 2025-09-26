@@ -172,7 +172,7 @@ public class ParameterExtractor
         // NOTE: general assumption is that ids don't really have much meaning. See [CNX-556: All ID Parameters are send as Name](https://linear.app/speckle/issue/CNX-556/all-id-parameters-are-send-as-name)
         // NOTE: subsequent request resulting in certain IDs being brought back. See [CNX-1125](https://linear.app/speckle/issue/CNX-1125/publish-type-id-instead-of-name) in GetValue() method
         // "Type ID" (associated with "SYMBOL_ID_PARAM") won't evaluate to true here which is intentional
-        // NOTE: It seems we are skipping Type Mark parameter because it is called WINDOW_TYPE_ID internally (WTF ADSK). 
+        // NOTE: It seems we are skipping Type Mark parameter because it is called WINDOW_TYPE_ID internally (WTF ADSK).
         if (internalDefinitionName.EndsWith("_ID") && !internalDefinitionName.Equals("WINDOW_TYPE_ID"))
         {
           continue;
