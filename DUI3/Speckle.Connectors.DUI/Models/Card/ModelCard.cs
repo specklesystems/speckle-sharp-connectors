@@ -42,4 +42,20 @@ public class ModelCard : DiscriminatedObject
   public string? ServerUrl { get; set; }
 
   public List<CardSetting>? Settings { get; set; }
+
+  public ModelCard Clone() =>
+    new()
+    {
+      ModelCardId = ModelCardId,
+      ModelId = ModelId,
+      ProjectId = ProjectId,
+      WorkspaceId = WorkspaceId,
+      WorkspaceSlug = WorkspaceSlug,
+      AccountId = AccountId,
+      ServerUrl = ServerUrl,
+      Settings = Settings?.Select(x => x with
+      {
+        Enum = x.Enum?.ToList()
+      }).ToList(),
+    };
 }
