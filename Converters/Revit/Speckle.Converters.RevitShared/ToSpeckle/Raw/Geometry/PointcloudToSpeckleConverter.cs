@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
@@ -32,7 +33,10 @@ public sealed class PointcloudToSpeckleConverter : ITypedConverter<DB.PointCloud
     {
       var filter = DB.PointClouds.PointCloudFilterFactory.CreateMultiPlaneFilter(new List<DB.Plane>() { minPlane });
       var points = target.GetPoints(filter, 0.0001, 999999); // max limit is 1 mil but 1000000 throws error
-
+      if (points is null)
+      {
+        throw new ConversionException("No points found");
+      }
       var specklePointCloud = new SOG.Pointcloud
       {
         points = points
