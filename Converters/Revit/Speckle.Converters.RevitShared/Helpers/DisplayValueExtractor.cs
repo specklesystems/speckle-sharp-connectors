@@ -157,11 +157,8 @@ public sealed class DisplayValueExtractor
   /// </remarks>
   private List<Base> ProcessGeometryCollections(DB.Element element, GeometryCollections collections)
   {
-    using DB.Transform? localToWorld = GetTransform(element);
-    using DB.Transform? worldToLocal = localToWorld?.Inverse;
-
     // handle all solids and meshes by their material
-    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids, worldToLocal);
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert((meshesByMaterial, element));
 
     List<Base> displayValue =
@@ -170,24 +167,19 @@ public sealed class DisplayValueExtractor
     displayValue.AddRange(displayMeshes);
 
     // add rest of geometry
-    foreach (DB.Curve untransformed in collections.Curves)
+    foreach (var curve in collections.Curves)
     {
-      using DB.Curve? transformed = worldToLocal == null ? untransformed.CreateTransformed(worldToLocal) : null;
-      DB.Curve curve = transformed ?? untransformed;
       displayValue.Add(GetCurveDisplayValue(curve));
     }
 
-    foreach (DB.PolyLine untransformed in collections.Polylines)
+    foreach (var polyline in collections.Polylines)
     {
-      using DB.PolyLine? transformed = worldToLocal == null ? untransformed.GetTransformed(worldToLocal) : null;
-      DB.PolyLine polyline = transformed ?? untransformed;
       displayValue.Add(_polylineConverter.Convert(polyline));
     }
 
-    foreach (var untransformed in collections.Points)
+    foreach (var point in collections.Points)
     {
-      //TODO: transform the point!!!
-      displayValue.Add(_pointConverter.Convert(untransformed));
+      displayValue.Add(_pointConverter.Convert(point));
     }
 
     return displayValue;
@@ -195,15 +187,12 @@ public sealed class DisplayValueExtractor
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
     List<DB.Mesh> meshes,
-    List<DB.Solid> solids,
-    DB.Transform? worldToLocal
+    List<DB.Solid> solids
   )
   {
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
-    foreach (DB.Mesh untransformed in meshes)
+    foreach (DB.Mesh mesh in meshes)
     {
-      DB.Mesh mesh = worldToLocal != null ? untransformed.get_Transformed(worldToLocal) : untransformed;
-
       var materialId = mesh.MaterialElementId;
       if (!meshesByMaterial.TryGetValue(materialId, out List<DB.Mesh>? value))
       {
@@ -214,12 +203,8 @@ public sealed class DisplayValueExtractor
       value.Add(mesh);
     }
 
-    foreach (DB.Solid untransformed in solids)
+    foreach (DB.Solid solid in solids)
     {
-      using DB.Solid? transformed =
-        worldToLocal != null ? DB.SolidUtils.CreateTransformed(untransformed, worldToLocal) : null;
-      DB.Solid solid = transformed ?? untransformed;
-
       foreach (DB.Face face in solid.Faces)
       {
         var materialId = face.MaterialElementId;
@@ -266,6 +251,18 @@ public sealed class DisplayValueExtractor
   /// </summary>
   private void SortGeometry(DB.Element element, GeometryCollections collections, DB.GeometryElement geom)
   {
+    using DB.Transform localToWorld = GetTransform(element);
+    using DB.Transform worldToLocal = localToWorld.Inverse;
+    SortGeometry(element, collections, geom, worldToLocal);
+  }
+
+  private void SortGeometry(
+    DB.Element element,
+    GeometryCollections collections,
+    DB.GeometryElement geom,
+    DB.Transform transform
+  )
+  {
     foreach (DB.GeometryObject geomObj in geom)
     {
       if (SkipGeometry(geomObj, element))
@@ -282,29 +279,30 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
-          collections.Solids.Add(solid);
+          collections.Solids.Add(DB.SolidUtils.CreateTransformed(solid, transform));
           break;
 
         case DB.Mesh mesh:
-          collections.Meshes.Add(mesh);
+          collections.Meshes.Add(mesh.get_Transformed(transform));
           break;
 
         case DB.Curve curve:
-          collections.Curves.Add(curve);
+          collections.Curves.Add(curve.CreateTransformed(transform));
           break;
 
         case DB.PolyLine polyline:
-          collections.Polylines.Add(polyline);
+          collections.Polylines.Add(polyline.GetTransformed(transform));
           break;
 
         case DB.Point point:
+          //TODO: apply transform
           collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          SortGeometry(element, collections, instance.GetInstanceGeometry());
+          SortGeometry(element, collections, instance.GetInstanceGeometry(transform), DB.Transform.Identity);
           break;
 
         case DB.GeometryElement geometryElement:
@@ -326,7 +324,7 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+    DB.GraphicsStyle bjk; // ask ogu why this variable is named like this
 
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
@@ -340,15 +338,12 @@ public sealed class DisplayValueExtractor
 
 #if REVIT2023_OR_GREATER
     if (bjk?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
-    {
-      return true;
-    }
 #else
     if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
+#endif
     {
       return true;
     }
-#endif
 
     return false;
   }
@@ -487,11 +482,11 @@ public sealed class DisplayValueExtractor
     return displayValue;
   }
 
-  private static DB.Transform? GetTransform(DB.Element element)
+  private static DB.Transform GetTransform(DB.Element element)
   {
     if (element is not DB.Instance i)
     {
-      return null;
+      return DB.Transform.Identity;
     }
 
     return i.GetTotalTransform();
