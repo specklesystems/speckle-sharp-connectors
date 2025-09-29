@@ -4,9 +4,12 @@ using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
+using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -18,9 +21,11 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private readonly ITypedConverter<DB.Location, Base> _locationConverter;
   private readonly LevelExtractor _levelExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
 
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     PropertiesExtractor propertiesExtractor,
     LevelExtractor levelExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
@@ -28,6 +33,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   )
   {
     _displayValueExtractor = displayValueExtractor;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _propertiesExtractor = propertiesExtractor;
     _levelExtractor = levelExtractor;
     _locationConverter = locationConverter;
@@ -95,7 +101,63 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     }
 
     // get the display value
-    List<Base> displayValue = _displayValueExtractor.GetDisplayValue(target);
+    List<(Base, Matrix4x4?)> displayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
+    var displayValues = displayValuesWithTransforms.ConvertAll(displayValueConverter => displayValueConverter.Item1);
+
+    List<Base> proxifiedDisplayValues = new();
+    foreach ((Base, Matrix4x4?) displayValueWithTransform in displayValuesWithTransforms)
+    {
+      if (displayValueWithTransform.Item1 is SOG.Mesh && displayValueWithTransform.Item2 is not null)
+      {
+        // potential instances scenario here
+        var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
+        if (unbakedMesh is not null)
+        {
+          var instanceDefinitionId = Math.Abs(unbakedMesh.vertices[0]).ToString();
+          if (
+            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
+              instanceDefinitionId,
+              out InstanceDefinitionProxy? instanceDefinition
+            )
+          )
+          {
+            // instanceDefinition.objects.Add(unbakedMesh.applicationId.NotNull());
+          }
+          else
+          {
+            var newInstanceDefinition = new InstanceDefinitionProxy()
+            {
+              applicationId = instanceDefinitionId,
+              objects = new List<string> { unbakedMesh.applicationId.NotNull() },
+              maxDepth = 1,
+              name = instanceDefinitionId,
+            };
+            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
+          }
+
+          _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
+          var instanceProxy = new InstanceProxy()
+          {
+            applicationId = unbakedMesh.applicationId.NotNull(),
+            definitionId = instanceDefinitionId,
+            transform = displayValueWithTransform.Item2.Value,
+            maxDepth = 1,
+            units = unbakedMesh.units
+          };
+          proxifiedDisplayValues.Add(instanceProxy);
+        }
+        else
+        {
+          proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
+        }
+      }
+      else
+      {
+        proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
+      }
+    }
+
+    // assumption here is that if we have matrix for corresponding base it is instancable
 
     // get level
     string? level = _levelExtractor.GetLevelName(target);
@@ -117,7 +179,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         category = category,
         location = convertedLocation,
         elements = children,
-        displayValue = displayValue.Cast<Base>().ToList(),
+        displayValue = proxifiedDisplayValues,
         properties = properties,
         units = _converterSettings.Current.SpeckleUnits
       };
