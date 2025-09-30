@@ -150,7 +150,7 @@ Target(
 
 Target(
   RESTORE,
-  FORMAT,
+  DependsOn(FORMAT),
   Consts.Solutions,
   async s =>
   {
@@ -207,7 +207,7 @@ Target(
 
 Target(
   PACK,
-  DependsOn(BUILD, FORMAT),
+  DependsOn(BUILD),
   Consts.Solutions,
   async solution =>
   {

@@ -9,6 +9,20 @@
     <PolySharpExcludeGeneratedTypes>System.Range;System.Index</PolySharpExcludeGeneratedTypes>
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
+    <ILRepackExcludeAssemblies>
+      Microsoft.Extensions.Configuration.Abstractions;
+      Microsoft.Extensions.Configuration;
+      Microsoft.Extensions.Configuration.Binder;
+      Microsoft.Extensions.DependencyInjection;
+      Microsoft.Extensions.DependencyInjection.Abstractions;
+      Microsoft.Extensions.Logging;
+      Microsoft.Extensions.Logging.Abstractions;
+      Microsoft.Extensions.Logging.Configuration;
+      Microsoft.Extensions.Options;
+      Microsoft.Extensions.Options.ConfigurationExtensions;
+      Microsoft.Extensions.Primitives;
+      Microsoft.Extensions.Diagnostics.Abstractions;
+    </ILRepackExcludeAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.FullAuto">
