@@ -17,7 +17,6 @@ using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
-using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
@@ -110,6 +109,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (document == null)
+    {
+      return;
+    }
     using var manager = _sendOperationManagerFactory.Create();
 
     await manager.Process<DocumentToConvert>(
@@ -120,24 +124,20 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         sp.GetRequiredService<IConverterSettingsStore<RevitConversionSettings>>()
           .Initialize(
             _revitConversionSettingsFactory.Create(
-              _toSpeckleSettingsManager.GetDetailLevelSetting(card),
-              _toSpeckleSettingsManager.GetReferencePointSetting(card),
-              _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(card),
-              _toSpeckleSettingsManager.GetLinkedModelsSetting(card),
-              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(card)
+              _toSpeckleSettingsManager.GetDetailLevelSetting(document, card),
+              _toSpeckleSettingsManager.GetReferencePointSetting(document, card),
+              _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(document, card),
+              _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
+              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card)
             )
           );
       },
-      async x => await RefreshElementsIdsOnSender(x.NotNull())
+      async x => await RefreshElementsIdsOnSender(document, x.NotNull())
     );
   }
 
-  private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(SenderModelCard modelCard)
+  private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(Document document, SenderModelCard modelCard)
   {
-    var activeUIDoc =
-      _revitContext.UIApplication?.ActiveUIDocument
-      ?? throw new SpeckleException("Unable to retrieve active UI document");
-
     if (modelCard.SendFilter.NotNull() is IRevitSendFilter viewFilter)
     {
       viewFilter.SetContext(_revitContext);
@@ -147,10 +147,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       () => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
     );
 
-    var allElements = selectedObjects
-      .Select(uid => activeUIDoc.Document.GetElement(uid))
-      .Where(el => el is not null)
-      .ToList();
+    var allElements = selectedObjects.Select(uid => document.GetElement(uid)).Where(el => el is not null).ToList();
 
     // split elements between main model and linked models
     var elementsOnMainModel = allElements.Where(el => el is not RevitLinkInstance).ToList();
@@ -158,14 +155,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // should ideally reuse the initialized value from the scoped IConverterSettingsStore<RevitConversionSettings>.
     // but, it's scoped and to avoid bigger scarier changes I'm re-fetching the setting here (inexpensive operation?)
-    Transform? mainModelTransform = _toSpeckleSettingsManager.GetReferencePointSetting(modelCard);
-    List<DocumentToConvert> documentElementContexts =
-    [
-      new(mainModelTransform, activeUIDoc.Document, elementsOnMainModel)
-    ];
+    Transform? mainModelTransform = _toSpeckleSettingsManager.GetReferencePointSetting(document, modelCard);
+    List<DocumentToConvert> documentElementContexts = [new(mainModelTransform, document, elementsOnMainModel)];
 
     // get the linked models setting - this decision belongs at this level
-    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(modelCard);
+    bool includeLinkedModels = _toSpeckleSettingsManager.GetLinkedModelsSetting(document, modelCard);
 
     // ⚠️ process linked models - RevitSendBinding controls the flow based on settings!
     // If setting not enabled, we won't unpack (see if-else block)
@@ -332,9 +326,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private async Task PostSetObjectIds()
   {
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (document == null)
+    {
+      return;
+    }
     foreach (var sender in _store.GetSenders().ToList())
     {
-      await RefreshElementsIdsOnSender(sender);
+      await RefreshElementsIdsOnSender(document, sender);
     }
   }
 
