@@ -10,18 +10,18 @@
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
     <ILRepackExcludeAssemblies>
-      Microsoft.Extensions.Configuration.Abstractions;
-      Microsoft.Extensions.Configuration;
-      Microsoft.Extensions.Configuration.Binder;
-      Microsoft.Extensions.DependencyInjection;
-      Microsoft.Extensions.DependencyInjection.Abstractions;
-      Microsoft.Extensions.Logging;
-      Microsoft.Extensions.Logging.Abstractions;
-      Microsoft.Extensions.Logging.Configuration;
-      Microsoft.Extensions.Options;
-      Microsoft.Extensions.Options.ConfigurationExtensions;
-      Microsoft.Extensions.Primitives;
-      Microsoft.Extensions.Diagnostics.Abstractions;
+      Microsoft.Extensions.Configuration.Abstractions.dll;
+      Microsoft.Extensions.Configuration.dll;
+      Microsoft.Extensions.Configuration.Binder.dll;
+      Microsoft.Extensions.DependencyInjection.dll;
+      Microsoft.Extensions.DependencyInjection.Abstractions.dll;
+      Microsoft.Extensions.Logging.dll;
+      Microsoft.Extensions.Logging.Abstractions.dll;
+      Microsoft.Extensions.Logging.Configuration.dll;
+      Microsoft.Extensions.Options.dll;
+      Microsoft.Extensions.Options.ConfigurationExtensions.dll;
+      Microsoft.Extensions.Primitives.dll;
+      Microsoft.Extensions.Diagnostics.Abstractions.dll;
     </ILRepackExcludeAssemblies>
   </PropertyGroup>
   <ItemGroup>
