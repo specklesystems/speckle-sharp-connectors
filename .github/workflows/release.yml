@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-connectors:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest # Keeping on windows for now, for cross platform building of exe projects, we need to use dotnet publish
     env:
       SEMVER: "unset"
       FILE_VERSION: "unset"
@@ -32,7 +32,7 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
       - name: ⚒️ Run build and zip connectors
-        run: ./build.sh zip
+        run: ./build.ps1 zip
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@v4
@@ -46,9 +46,9 @@ jobs:
       - id: set-version
         name: Set version to output
         run: |
-          echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
-          echo "file_version=${FILE_VERSION}" >> "$GITHUB_OUTPUT"
-
+          echo "semver=${{ env.SEMVER }}" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=${{ env.FILE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
+          
   deploy-installers:
     runs-on: ubuntu-latest
     needs: build-connectors
@@ -79,11 +79,8 @@ jobs:
         with:
           name: output-*
 
-  deploy-nugets:
+  test:
     uses: ./.github/workflows/pr.yml
     if: (github.ref_type == 'tag')
-    with:
-      deployNugets: true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      CONNECTORS_NUGET_TOKEN: ${{ secrets.CONNECTORS_NUGET_TOKEN }}

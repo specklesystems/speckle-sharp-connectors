@@ -2,17 +2,9 @@ name: .NET Test
 
 on:
   workflow_call:
-    inputs:
-      deployNugets:
-        description: "When true, will deploy packages to nuget.org"
-        required: true
-        type: boolean
-        default: false
     secrets:
       CODECOV_TOKEN:
         required: true
-      CONNECTORS_NUGET_TOKEN:
-        required: false
 
   pull_request: {}
 
@@ -22,8 +14,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -45,6 +35,9 @@ jobs:
           files: Converters/**/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Push to nuget.org
-        if: ${{ inputs.deployNugets }}
-        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }}
+      # Disabling this code for now, since we no longer need to publish nugets from this repo
+      # But keeping it around incase we ever need in the future.
+      # Ideally, I'd also like to move the nuget token to be an environment secret, and to have tight package scopes
+#      - name: Push to nuget.org
+#        if: ${{ inputs.deployNugets }}
+#        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }}

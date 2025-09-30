@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
-    <IsPackable>true</IsPackable>
   </PropertyGroup>
   <PropertyGroup>
     <PolySharpExcludeGeneratedTypes>System.Range;System.Index</PolySharpExcludeGeneratedTypes>
