@@ -48,20 +48,23 @@ public static class ReferencePointHelper
     new()
     {
       M11 = transform.BasisX.X,
-      M12 = transform.BasisX.Y,
-      M13 = transform.BasisX.Z,
-      M14 = 0,
-      M21 = transform.BasisY.X,
+      M21 = transform.BasisX.Y,
+      M31 = transform.BasisX.Z,
+      M41 = 0,
+
+      M12 = transform.BasisY.X,
       M22 = transform.BasisY.Y,
-      M23 = transform.BasisY.Z,
-      M24 = 0,
-      M31 = transform.BasisZ.X,
-      M32 = transform.BasisZ.Y,
+      M32 = transform.BasisY.Z,
+      M42 = 0,
+
+      M13 = transform.BasisZ.X,
+      M23 = transform.BasisZ.Y,
       M33 = transform.BasisZ.Z,
-      M34 = 0,
-      M41 = transform.Origin.X,
-      M42 = transform.Origin.Y,
-      M43 = transform.Origin.Z,
+      M43 = 0,
+
+      M14 = transform.Origin.X,
+      M24 = transform.Origin.Y,
+      M34 = transform.Origin.Z,
       M44 = 1
     };
 

@@ -135,10 +135,14 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
             _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
           }
 
-          _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
+          if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
+          {
+            _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
+          }
+
           var instanceProxy = new InstanceProxy()
           {
-            applicationId = unbakedMesh.applicationId.NotNull(),
+            applicationId = Guid.NewGuid().ToString(),
             definitionId = instanceDefinitionId,
             transform = displayValueWithTransform.Item2.Value,
             maxDepth = 1,

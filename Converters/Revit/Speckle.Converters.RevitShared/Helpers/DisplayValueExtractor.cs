@@ -172,7 +172,7 @@ public sealed class DisplayValueExtractor
     List<(Base, Matrix4x4?)> local = new();
     foreach (SOG.Mesh mesh in displayMeshes)
     {
-      local.Add((mesh, localToWorld is not null ? ReferencePointHelper.TransformToMatrix(localToWorld) : null));
+      local.Add((mesh, worldToLocal is not null ? ReferencePointHelper.TransformToMatrix(worldToLocal) : null));
     }
     displayValue.AddRange(local);
 
