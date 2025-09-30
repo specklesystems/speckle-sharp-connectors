@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -5,10 +6,15 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
 public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3dCollection, SOG.Polyline>
 {
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public Point3dCollectionToSpeckleRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
+  public Point3dCollectionToSpeckleRawConverter(
+    IReferencePointConverter referencePointConverter,
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
+  )
   {
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -33,7 +39,7 @@ public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3d
 
     return new()
     {
-      value = value,
+      value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // transform by reference point
       units = _settingsStore.Current.SpeckleUnits,
       closed = false,
       length = length

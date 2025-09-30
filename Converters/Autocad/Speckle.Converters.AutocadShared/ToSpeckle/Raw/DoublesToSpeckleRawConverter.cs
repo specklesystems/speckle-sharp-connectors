@@ -3,12 +3,12 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class VectorToSpeckleRawConverter : ITypedConverter<AG.Vector3d, SOG.Vector>
+public class DoublesToSpeckleRawConverter : ITypedConverter<List<double>, SOG.Polyline>
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly IReferencePointConverter _referencePointConverter;
 
-  public VectorToSpeckleRawConverter(
+  public DoublesToSpeckleRawConverter(
     IConverterSettingsStore<AutocadConversionSettings> settingsStore,
     IReferencePointConverter referencePointConverter
   )
@@ -17,9 +17,16 @@ public class VectorToSpeckleRawConverter : ITypedConverter<AG.Vector3d, SOG.Vect
     _referencePointConverter = referencePointConverter;
   }
 
-  public SOG.Vector Convert(AG.Vector3d target)
+  public SOG.Polyline Convert(List<double> target)
   {
-    AG.Vector3d extVector = _referencePointConverter.ConvertVectorToExternalCoordinates(target);
-    return new(extVector.X, extVector.Y, extVector.Z, _settingsStore.Current.SpeckleUnits);
+    // throw if list is malformed
+    if (target.Count % 3 != 0)
+    {
+      throw new ArgumentException("Point list of xyz values is malformed", nameof(target));
+    }
+
+    List<double> value = _referencePointConverter.ConvertDoublesToExternalCoordinates(target);
+
+    return new() { value = value, units = _settingsStore.Current.SpeckleUnits };
   }
 }

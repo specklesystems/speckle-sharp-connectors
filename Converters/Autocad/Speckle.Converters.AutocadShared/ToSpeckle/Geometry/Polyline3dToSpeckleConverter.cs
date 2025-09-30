@@ -18,19 +18,19 @@ public class Polyline3dToSpeckleConverter
   : IToSpeckleTopLevelConverter,
     ITypedConverter<ADB.Polyline3d, SOG.Autocad.AutocadPolycurve>
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+    ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
+    _doublesConverter = doublesConverter;
     _splineConverter = splineConverter;
     _boxConverter = boxConverter;
     _settingsStore = settingsStore;
@@ -94,18 +94,15 @@ public class Polyline3dToSpeckleConverter
         }
       }
 
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
-      if (displayValue != null)
-      {
-        spline.displayValue = displayValue;
-      }
+      // set displayValue of spline
+      spline.displayValue = _doublesConverter.Convert(segmentValues);
 
       segments.Add(spline);
     }
     // for simple polyline3ds just get the polyline segment from the value
     else
     {
-      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
+      SOG.Polyline polyline = _doublesConverter.Convert(value);
       if (target.Closed)
       {
         polyline.closed = true;
@@ -123,7 +120,7 @@ public class Polyline3dToSpeckleConverter
         bulges = null,
         tangents = null,
         normal = null,
-        value = value,
+        value = value, // do not need to convert with reference point since GCS is used internally
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,

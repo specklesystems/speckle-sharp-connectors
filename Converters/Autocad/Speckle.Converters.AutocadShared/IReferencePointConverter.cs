@@ -2,6 +2,10 @@ namespace Speckle.Converters.Autocad;
 
 public interface IReferencePointConverter
 {
+  List<double> ConvertDoublesToExternalCoordinates(List<double> d);
+
+  List<double> ConvertDoublesToInternalCoordinates(List<double> d);
+
   AG.Point3d ConvertPointToExternalCoordinates(AG.Point3d p);
 
   AG.Point3d ConvertPointToInternalCoordinates(AG.Point3d p);

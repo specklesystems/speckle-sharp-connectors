@@ -28,8 +28,8 @@ public class PlaneToSpeckleRawConverter : ITypedConverter<AG.Plane, SOG.Plane>
     {
       origin = _pointConverter.Convert(target.PointOnPlane),
       normal = _vectorConverter.Convert(target.Normal),
-      xdir = _vectorConverter.Convert(target.GetCoordinateSystem().Xaxis),
-      ydir = _vectorConverter.Convert(target.GetCoordinateSystem().Yaxis),
+      xdir = _vectorConverter.Convert(target.GetCoordinateSystem().Xaxis), // TODO: validate if this returns the coordinate system in GCS or already transformed
+      ydir = _vectorConverter.Convert(target.GetCoordinateSystem().Yaxis), // TODO: validate if this returns the coordinate system in GCS or already transformed
       units = _settingsStore.Current.SpeckleUnits,
     };
 }

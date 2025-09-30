@@ -3,12 +3,12 @@ using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
-public class PointToSpeckleRawConverter : ITypedConverter<AG.Point3d, SOG.Point>
+public class Point3dToSpeckleRawConverter : ITypedConverter<AG.Point3d, SOG.Point>
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly IReferencePointConverter _referencePointConverter;
 
-  public PointToSpeckleRawConverter(
+  public Point3dToSpeckleRawConverter(
     IConverterSettingsStore<AutocadConversionSettings> settingsStore,
     IReferencePointConverter referencePointConverter
   )

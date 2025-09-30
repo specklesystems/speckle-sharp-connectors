@@ -5,17 +5,14 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public MTextToSpeckleRawConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _settingsStore = settingsStore;
   }

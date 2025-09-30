@@ -8,18 +8,24 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Curve>
 {
+  private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<AG.Interval, SOP.Interval> _intervalConverter;
   private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBSplineToSpeckleRawConverter(
+    ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<AG.Interval, SOP.Interval> intervalConverter,
     ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
+    _doublesConverter = doublesConverter;
     _intervalConverter = intervalConverter;
     _boxConverter = boxConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -44,11 +50,11 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
       }
     }
 
-    // get points
+    // get points, transformed by reference point setting
     List<Point3d> points = new();
     foreach (Point3d point in data.GetControlPoints().OfType<Point3d>())
     {
-      points.Add(point);
+      points.Add(_referencePointConverter.ConvertPointToExternalCoordinates(point));
     }
 
     // NOTE: for closed periodic splines, autocad does not track last #degree points.
@@ -147,6 +153,6 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
         break;
     }
 
-    return verticesList.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
+    return _doublesConverter.Convert(verticesList);
   }
 }

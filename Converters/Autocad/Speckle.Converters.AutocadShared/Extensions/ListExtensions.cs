@@ -2,17 +2,6 @@ namespace Speckle.Converters.Autocad.Extensions;
 
 public static class ListExtensions
 {
-  public static SOG.Polyline ConvertToSpecklePolyline(this List<double> pointList, string speckleUnits)
-  {
-    // throw if list is malformed
-    if (pointList.Count % 3 != 0)
-    {
-      throw new ArgumentException("Point list of xyz values is malformed", nameof(pointList));
-    }
-
-    return new() { value = pointList, units = speckleUnits };
-  }
-
   public static List<AG.Point2d> ConvertToPoint2d(this List<double> pointList, double conversionFactor = 1)
   {
     // throw if list is malformed

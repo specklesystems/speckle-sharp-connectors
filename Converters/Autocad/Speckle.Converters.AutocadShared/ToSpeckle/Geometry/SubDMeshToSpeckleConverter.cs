@@ -8,18 +8,23 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(ADB.SubDMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 {
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
-  public DBSubDMeshToSpeckleConverter(IConverterSettingsStore<AutocadConversionSettings> settingsStore)
+  public DBSubDMeshToSpeckleConverter(
+    IReferencePointConverter referencePointConverter,
+    IConverterSettingsStore<AutocadConversionSettings> settingsStore
+  )
   {
     _settingsStore = settingsStore;
+    _referencePointConverter = referencePointConverter;
   }
 
   public Base Convert(object target) => RawConvert((ADB.SubDMesh)target);
 
   public SOG.Mesh RawConvert(ADB.SubDMesh target)
   {
-    //vertices
+    // vertices
     var vertices = new List<double>(target.Vertices.Count * 3);
     foreach (AG.Point3d vert in target.Vertices)
     {
@@ -67,7 +72,7 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
     SOG.Mesh speckleMesh =
       new()
       {
-        vertices = vertices,
+        vertices = _referencePointConverter.ConvertDoublesToExternalCoordinates(vertices), // transform with reference point
         faces = faces,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,

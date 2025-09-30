@@ -1,5 +1,6 @@
 using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Common;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.Autocad;
 
@@ -10,6 +11,62 @@ namespace Speckle.Converters.Autocad;
 public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSettings> converterSettings)
   : IReferencePointConverter
 {
+  public List<double> ConvertDoublesToExternalCoordinates(List<double> d)
+  {
+    if (d.Count % 3 != 0)
+    {
+      throw new ArgumentException("Point list of xyz values is malformed", nameof(d));
+    }
+
+    if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
+    {
+      Matrix4x4 transform = ConvertToSpeckle(m.Inverse());
+
+      var transformed = new List<double>(d.Count);
+
+      for (int i = 0; i < d.Count; i += 3)
+      {
+        Vector3 p = Vector3.Transform(new(d[i], d[i + 1], d[i + 2]), transform);
+
+        transformed.Add(p.X);
+        transformed.Add(p.Y);
+        transformed.Add(p.Z);
+      }
+
+      return transformed;
+    }
+
+    return d;
+  }
+
+  public List<double> ConvertDoublesToInternalCoordinates(List<double> d)
+  {
+    if (d.Count % 3 != 0)
+    {
+      throw new ArgumentException("Point list of xyz values is malformed", nameof(d));
+    }
+
+    if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
+    {
+      Matrix4x4 transform = ConvertToSpeckle(m);
+
+      var transformed = new List<double>(d.Count);
+
+      for (int i = 0; i < d.Count; i += 3)
+      {
+        Vector3 p = Vector3.Transform(new(d[i], d[i + 1], d[i + 2]), transform);
+
+        transformed.Add(p.X);
+        transformed.Add(p.Y);
+        transformed.Add(p.Z);
+      }
+
+      return transformed;
+    }
+
+    return d;
+  }
+
   public AG.Point3d ConvertPointToExternalCoordinates(AG.Point3d p)
   {
     if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
@@ -49,4 +106,24 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
     return v;
   }
+
+  private Matrix4x4 ConvertToSpeckle(Matrix3d m) =>
+    new(
+      m[1, 1],
+      m[1, 2],
+      m[1, 3],
+      m[1, 4],
+      m[2, 1],
+      m[2, 2],
+      m[2, 3],
+      m[2, 4],
+      m[3, 1],
+      m[3, 2],
+      m[3, 3],
+      m[3, 4],
+      m[4, 1],
+      m[4, 2],
+      m[4, 3],
+      m[4, 4]
+    );
 }
