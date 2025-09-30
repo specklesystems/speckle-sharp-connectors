@@ -46,8 +46,8 @@ jobs:
       - id: set-version
         name: Set version to output
         run: |
-          echo "semver=${{ env.SEMVER }}" >> "$Env:GITHUB_OUTPUT"
-          echo "file_version=${{ env.FILE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
+          echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
+          echo "file_version=${FILE_VERSION}" >> "$GITHUB_OUTPUT"
 
   deploy-installers:
     runs-on: ubuntu-latest

@@ -47,4 +47,4 @@ jobs:
 
       - name: Push to nuget.org
         if: ${{ inputs.deployNugets }}
-        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }} --skip-duplicate
+        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }}
