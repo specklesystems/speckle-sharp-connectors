@@ -63,8 +63,8 @@ jobs:
           token: ${{ secrets.CONNECTORS_GH_TOKEN }}
           inputs: '{
             "run_id": "${{ github.run_id }}",
-            "semver": "${{ needs.build-windows.outputs.semver }}",
-            "file_version": "${{ needs.build-windows.outputs.file_version }}",
+            "semver": "${{ needs.build-connectors.outputs.semver }}",
+            "file_version": "${{ needs.build-connectors.outputs.file_version }}",
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
@@ -79,7 +79,7 @@ jobs:
         with:
           name: output-*
 
-  deploy_nugets:
+  deploy-nugets:
     uses: ./.github/workflows/pr.yml
     if: (github.ref_type == 'tag')
     with:
