@@ -81,6 +81,6 @@ jobs:
 
   test:
     uses: ./.github/workflows/pr.yml
-    if: (github.ref_type == 'tag')
+    if: (github.ref_type != 'tag') # run test for code cov
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
