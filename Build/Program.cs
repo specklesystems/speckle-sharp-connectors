@@ -19,6 +19,7 @@ const string GEN_SOLUTIONS = "generate-solutions";
 const string DEEP_CLEAN = "deep-clean";
 const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 const string DETECT_AFFECTED = "detect-affected";
+const string TEST_AND_PACK = "test-and-pack";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -204,6 +205,8 @@ Target(
     );
   }
 );
+
+Target(TEST_AND_PACK, DependsOn(TEST, PACK));
 
 Target(
   PACK,

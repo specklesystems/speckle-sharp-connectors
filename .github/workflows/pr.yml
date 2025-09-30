@@ -17,7 +17,7 @@ on:
   pull_request: {}
 
 jobs:
-  test_and_pack:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,11 +36,8 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run Build and Pack
-        run: ./build.sh pack
-
-      - name: ⚒️ Run tests
-        run: ./build.sh test
+      - name: ⚒️ Run Test
+        run: ./build.sh test-and-pack
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
