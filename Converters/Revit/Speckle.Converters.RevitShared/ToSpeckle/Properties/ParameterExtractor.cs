@@ -148,7 +148,7 @@ public class ParameterExtractor
       {
         foreach (DB.Connector conn in cm.Connectors)
         {
-          if (conn.IsConnected && conn.MEPSystem != null)
+          if (conn.ConnectorType == DB.ConnectorType.Physical && conn.IsConnected && conn.MEPSystem != null)
           {
             return conn.MEPSystem;
           }
