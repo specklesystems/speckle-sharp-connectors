@@ -241,7 +241,13 @@ public class RevitRootObjectBuilder(
     rootObject[ProxyKeys.LEVEL] = levelProxies;
 
     rootObject[ProxyKeys.INSTANCE_DEFINITION] = revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Values;
-    rootObject["instancedObjects"] = revitToSpeckleCacheSingleton.InstancedObjects.Values;
+    rootObject.elements.Add(
+      new Collection()
+      {
+        elements = revitToSpeckleCacheSingleton.InstancedObjects.Values.ToList(),
+        name = "revitInstancedObjects"
+      }
+    );
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
