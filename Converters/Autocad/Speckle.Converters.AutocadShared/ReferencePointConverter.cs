@@ -1,4 +1,3 @@
-using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
@@ -19,7 +18,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
       throw new ArgumentException("Point list of xyz values is malformed", nameof(d));
     }
 
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
+    if (converterSettings.Current.ReferencePointTransform is AG.Matrix3d m)
     {
       Matrix4x4 transform = TransformHelper.ConvertToMatrix4x4(m.Inverse());
 
@@ -42,7 +41,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
   public AG.Point3d ConvertPointToExternalCoordinates(AG.Point3d p)
   {
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
+    if (converterSettings.Current.ReferencePointTransform is AG.Matrix3d transform)
     {
       return p.TransformBy(transform.Inverse());
     }
@@ -52,7 +51,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
   public AG.Vector3d ConvertVectorToExternalCoordinates(AG.Vector3d v)
   {
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
+    if (converterSettings.Current.ReferencePointTransform is AG.Matrix3d transform)
     {
       return v.TransformBy(transform.Inverse());
     }
