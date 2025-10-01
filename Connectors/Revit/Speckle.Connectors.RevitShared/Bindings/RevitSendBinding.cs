@@ -17,6 +17,7 @@ using Speckle.Connectors.RevitShared.Operations.Send.Filters;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Bindings;
@@ -112,7 +113,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     if (document == null)
     {
-      return;
+      throw new SpeckleException("No document is active for sending.");
     }
     using var manager = _sendOperationManagerFactory.Create();
 
