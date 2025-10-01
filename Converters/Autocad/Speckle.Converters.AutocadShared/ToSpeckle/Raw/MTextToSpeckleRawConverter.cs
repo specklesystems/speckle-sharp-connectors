@@ -5,15 +5,18 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
+  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public MTextToSpeckleRawConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
+    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+    ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _planeConverter = planeConverter;
+    _pointConverter = pointConverter;
+    _vectorConverter = vectorConverter;
     _settingsStore = settingsStore;
   }
 
@@ -35,16 +38,28 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       units = _settingsStore.Current.SpeckleUnits
     };
 
+  // For MText, the following properties are stored in:
+  // - Position: WCS
+  // - Normal: WCS??
+  // - Rotation: OCS -> UCS?? https://help.autodesk.com/view/OARX/2020/ENU/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_MText_Rotation
+  // "Accesses the angle between the X axis of the OCS for the normal vector of the current AutoCAD editor's UCS
+  // and the projection of the MText object's direction vector onto the plane of the AutoCAD editor's current UCS."
+  // - Direction: WCS
+  // "Note that the direction vector need not be orthogonal to the normal vector." <- do not use FML
   private SOG.Plane GetTextPlane(ADB.MText target)
   {
-    AG.Plane plane = new(target.Location, target.Normal);
+    // Rotation prop is in UCS already: do NOT use vector converter or it will transform again!
+    AG.Vector3d xDir = AG.Vector3d.XAxis.RotateBy(target.Rotation, target.Normal);
+    AG.Vector3d yDir = AG.Vector3d.YAxis.RotateBy(target.Rotation, target.Normal);
 
-    if (target.Rotation != 0)
+    return new()
     {
-      plane.RotateBy(target.Rotation, target.Normal, target.Location);
-    }
-
-    return _planeConverter.Convert(plane);
+      origin = _pointConverter.Convert(target.Location),
+      normal = _vectorConverter.Convert(target.Normal),
+      xdir = new(xDir.X, xDir.Y, xDir.Z, _settingsStore.Current.SpeckleUnits),
+      ydir = new(yDir.X, yDir.Y, yDir.Z, _settingsStore.Current.SpeckleUnits),
+      units = _settingsStore.Current.SpeckleUnits,
+    };
   }
 
   /// <summary>

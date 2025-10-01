@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Annotation;
@@ -6,15 +7,18 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
 {
-  private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
+  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBTextToSpeckleRawConverter(
-    ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
+    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+    ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _planeConverter = planeConverter;
+    _pointConverter = pointConverter;
+    _vectorConverter = vectorConverter;
     _settingsStore = settingsStore;
   }
 
@@ -38,15 +42,24 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       units = _settingsStore.Current.SpeckleUnits
     };
 
+  // For DBText, the following properties are stored in:
+  // - Position: WCS
+  // - Normal: WCS
+  // - Rotation: OCS -> WCS https://help.autodesk.com/view/OARX/2020/ENU/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_DBText_Rotation
   private SOG.Plane GetTextPlane(ADB.DBText target)
   {
-    AG.Plane plane = new(target.Position, target.Normal);
+    // Rotation prop is in OCS: calculate the x and y axis based in WCS
+    AG.Matrix3d transform = TransformHelper.GetTransformFromOCSToWCS(target.Normal).Inverse();
+    AG.Vector3d xDir = AG.Vector3d.XAxis.RotateBy(target.Rotation, target.Normal).TransformBy(transform);
+    AG.Vector3d yDir = AG.Vector3d.YAxis.RotateBy(target.Rotation, target.Normal).TransformBy(transform);
 
-    if (target.Rotation != 0)
+    return new()
     {
-      plane.RotateBy(target.Rotation, target.Normal, target.Position);
-    }
-
-    return _planeConverter.Convert(plane);
+      origin = _pointConverter.Convert(target.Position),
+      normal = _vectorConverter.Convert(target.Normal),
+      xdir = _vectorConverter.Convert(xDir),
+      ydir = _vectorConverter.Convert(yDir),
+      units = _settingsStore.Current.SpeckleUnits,
+    };
   }
 }

@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.Geometry;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 
@@ -20,7 +21,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
     if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
     {
-      Matrix4x4 transform = ConvertToSpeckle(m.Inverse());
+      Matrix4x4 transform = TransformHelper.ConvertToMatrix4x4(m.Inverse());
 
       var transformed = new List<double>(d.Count);
 
@@ -48,7 +49,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
     if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
     {
-      Matrix4x4 transform = ConvertToSpeckle(m);
+      Matrix4x4 transform = TransformHelper.ConvertToMatrix4x4(m);
 
       var transformed = new List<double>(d.Count);
 
@@ -106,24 +107,4 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
     return v;
   }
-
-  private Matrix4x4 ConvertToSpeckle(Matrix3d m) =>
-    new(
-      m[0, 0],
-      m[1, 0],
-      m[2, 0],
-      m[3, 0],
-      m[0, 1],
-      m[1, 1],
-      m[2, 1],
-      m[3, 1],
-      m[0, 2],
-      m[1, 2],
-      m[2, 2],
-      m[3, 2],
-      m[0, 3],
-      m[1, 3],
-      m[2, 3],
-      m[3, 3]
-    );
 }
