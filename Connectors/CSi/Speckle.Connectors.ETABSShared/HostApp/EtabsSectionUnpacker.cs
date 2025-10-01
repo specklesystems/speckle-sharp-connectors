@@ -47,18 +47,17 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       string sectionName = entry.Key;
       List<string> frameIds = entry.Value;
 
-      // Initialize properties outside the if statement
-      Dictionary<string, object?> properties = new Dictionary<string, object?>();
+      // initialize properties
+      Dictionary<string, object?> properties = [];
 
-      // get the properties of the section
-      // openings will have objects assigned to them, but won't have properties
-      // sectionName is initialized with string.Empty, but api ref returns string "None"
-      if (sectionName != "None")
+      // Extract properties if valid section name
+      // "None" is weird but api returns that string if an opening, null element etc.
+      if (sectionName != "None" && !string.IsNullOrEmpty(sectionName))
       {
         properties = _propertyExtractor.ExtractFrameSectionProperties(sectionName);
       }
 
-      // create the section proxy
+      // create section proxy
       GroupProxy sectionProxy =
         new()
         {
@@ -66,8 +65,8 @@ public class EtabsSectionUnpacker : ISectionUnpacker
           name = sectionName,
           applicationId = sectionName,
           objects = frameIds,
-          ["type"] = "Frame Section", // since sectionProxies are a flat list, need some way to distinguish from shell
-          ["properties"] = properties // openings will just have an empty dict here
+          ["type"] = "Frame Section",
+          ["properties"] = properties
         };
 
       yield return sectionProxy;
@@ -81,8 +80,8 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       string sectionName = entry.Key;
       List<string> frameIds = entry.Value;
 
-      // Initialize properties outside the if statement
-      Dictionary<string, object?> properties = new Dictionary<string, object?>();
+      // initialize properties outside the if statement
+      Dictionary<string, object?> properties = [];
 
       // get the properties of the section
       // openings will have objects assigned to them, but won't have properties
@@ -92,7 +91,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
         properties = _propertyExtractor.ExtractShellSectionProperties(sectionName);
       }
 
-      // create the section proxy
+      // create section proxy
       GroupProxy sectionProxy =
         new()
         {

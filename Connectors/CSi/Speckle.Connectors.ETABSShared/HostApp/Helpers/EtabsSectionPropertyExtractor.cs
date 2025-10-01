@@ -34,7 +34,7 @@ public class EtabsSectionPropertyExtractor
   /// </summary>
   public Dictionary<string, object?> ExtractFrameSectionProperties(string sectionName)
   {
-    Dictionary<string, object?> properties = new();
+    Dictionary<string, object?> properties = [];
     _csiFrameExtractor.ExtractProperties(sectionName, properties);
     _etabsFrameExtractor.ExtractProperties(sectionName, properties);
     return properties;
@@ -45,7 +45,7 @@ public class EtabsSectionPropertyExtractor
   /// </summary>
   public Dictionary<string, object?> ExtractShellSectionProperties(string sectionName)
   {
-    Dictionary<string, object?> properties = new();
+    Dictionary<string, object?> properties = [];
     _csiShellExtractor.ExtractProperties(sectionName, properties);
     _etabsShellExtractor.ExtractProperties(sectionName, properties);
     return properties;
