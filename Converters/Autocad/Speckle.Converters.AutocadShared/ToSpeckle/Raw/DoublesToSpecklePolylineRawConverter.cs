@@ -5,8 +5,8 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class DoublesToSpeckleRawConverter : ITypedConverter<List<double>, SOG.Polyline>
 {
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
   private readonly IReferencePointConverter _referencePointConverter;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DoublesToSpeckleRawConverter(
     IConverterSettingsStore<AutocadConversionSettings> settingsStore,

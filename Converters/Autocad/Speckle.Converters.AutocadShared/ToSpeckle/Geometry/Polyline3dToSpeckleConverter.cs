@@ -20,19 +20,16 @@ public class Polyline3dToSpeckleConverter
 {
   private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
     ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _doublesConverter = doublesConverter;
     _splineConverter = splineConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -56,7 +53,6 @@ public class Polyline3dToSpeckleConverter
     }
 
     // get all vertex data except control vertices
-    List<double> value = new();
     List<ADB.PolylineVertex3d> vertices = target
       .GetSubEntities<ADB.PolylineVertex3d>(
         ADB.OpenMode.ForRead,
@@ -64,10 +60,13 @@ public class Polyline3dToSpeckleConverter
       )
       .Where(e => e.VertexType != ADB.Vertex3dType.FitVertex) // Do not collect fit vertex points, they are not used for creation
       .ToList();
+    List<double> value = new(vertices.Count * 3);
     for (int i = 0; i < vertices.Count; i++)
     {
       // vertex value is in the Global Coordinate System (GCS).
-      value.AddRange(vertices[i].Position.ToArray());
+      value.Add(vertices[i].Position.X);
+      value.Add(vertices[i].Position.Y);
+      value.Add(vertices[i].Position.Z);
     }
 
     List<Objects.ICurve> segments = new();
@@ -111,8 +110,6 @@ public class Polyline3dToSpeckleConverter
       segments.Add(polyline);
     }
 
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
-
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
       {
@@ -124,7 +121,6 @@ public class Polyline3dToSpeckleConverter
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,
-        bbox = bbox,
         units = _settingsStore.Current.SpeckleUnits
       };
 

@@ -19,10 +19,8 @@ public class Point2dToSpeckleRawConverter : ITypedConverter<AG.Point2d, SOG.Poin
 
   public SOG.Point Convert(AG.Point2d target)
   {
-    AG.Point3d extPt = _referencePointConverter.ConvertPointToExternalCoordinates(
-      new AG.Point3d(target.X, target.Y, 0)
-    );
+    var extPt = _referencePointConverter.ConvertDoublesToExternalCoordinates(new(3) { target.X, target.Y, 0 });
 
-    return new(extPt.X, extPt.Y, extPt.Z, _settingsStore.Current.SpeckleUnits);
+    return new(extPt[0], extPt[1], extPt[2], _settingsStore.Current.SpeckleUnits);
   }
 }

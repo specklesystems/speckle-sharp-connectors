@@ -24,7 +24,6 @@ public class Polyline2dToSpeckleConverter
   private readonly ITypedConverter<ADB.Line, SOG.Line> _lineConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline2dToSpeckleConverter(
@@ -33,7 +32,6 @@ public class Polyline2dToSpeckleConverter
     ITypedConverter<ADB.Line, SOG.Line> lineConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
@@ -42,7 +40,6 @@ public class Polyline2dToSpeckleConverter
     _lineConverter = lineConverter;
     _splineConverter = splineConverter;
     _vectorConverter = vectorConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -89,7 +86,9 @@ public class Polyline2dToSpeckleConverter
 
       // get vertex value in the Global Coordinate System (GCS).
       // NOTE: for some reason, the z value of the position for rotated polyline2ds doesn't seem to match the exploded segment endpoint values
-      value.AddRange(vertex.Position.ToArray());
+      value.Add(vertex.Position.X);
+      value.Add(vertex.Position.Y);
+      value.Add(vertex.Position.Z);
 
       // get the bulge and tangent
       bulges.Add(vertex.Bulge);
@@ -165,7 +164,7 @@ public class Polyline2dToSpeckleConverter
     }
 
     SOG.Vector normal = _vectorConverter.Convert(target.Normal);
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
+
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
       {
@@ -179,7 +178,6 @@ public class Polyline2dToSpeckleConverter
         closed = target.Closed,
         length = target.Length,
         area = target.Area,
-        bbox = bbox,
         units = _settingsStore.Current.SpeckleUnits
       };
 

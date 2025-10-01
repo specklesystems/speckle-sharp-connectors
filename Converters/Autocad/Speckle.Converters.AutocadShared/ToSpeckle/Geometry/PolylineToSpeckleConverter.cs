@@ -18,21 +18,18 @@ public class PolylineToSpeckleConverter
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _vectorConverter = vectorConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -47,7 +44,9 @@ public class PolylineToSpeckleConverter
     {
       // get vertex value in the Object Coordinate System (OCS)
       AG.Point3d vertex = target.GetPoint3dAt(i);
-      value.AddRange(vertex.ToArray());
+      value.Add(vertex.X);
+      value.Add(vertex.Y);
+      value.Add(vertex.Z);
 
       // get the bulge
       bulges.Add(target.GetBulgeAt(i));
@@ -71,7 +70,6 @@ public class PolylineToSpeckleConverter
     }
 
     SOG.Vector normal = _vectorConverter.Convert(target.Normal);
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
 
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
@@ -86,7 +84,6 @@ public class PolylineToSpeckleConverter
         closed = target.Closed,
         length = target.Length,
         area = target.Area,
-        bbox = bbox,
         units = _settingsStore.Current.SpeckleUnits
       };
 
