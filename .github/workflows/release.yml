@@ -79,9 +79,3 @@ jobs:
       - uses: geekyeggo/delete-artifact@v5
         with:
           name: output-*
-
-  test:
-    uses: ./.github/workflows/pr.yml
-    if: (github.ref_name  == 'main') # run test for code cov
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

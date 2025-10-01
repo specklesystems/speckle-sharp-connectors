@@ -1,12 +1,9 @@
 name: .NET Test
 
 on:
-  workflow_call:
-    secrets:
-      CODECOV_TOKEN:
-        required: true
-
   pull_request: {}
+  push:
+    branches: ["main"]
 
 jobs:
   test:
