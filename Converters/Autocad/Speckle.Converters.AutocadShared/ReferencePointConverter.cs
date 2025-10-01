@@ -40,34 +40,6 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
     return d;
   }
 
-  public List<double> ConvertDoublesToInternalCoordinates(List<double> d)
-  {
-    if (d.Count % 3 != 0)
-    {
-      throw new ArgumentException("Point list of xyz values is malformed", nameof(d));
-    }
-
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d m)
-    {
-      Matrix4x4 transform = TransformHelper.ConvertToMatrix4x4(m);
-
-      var transformed = new List<double>(d.Count);
-
-      for (int i = 0; i < d.Count; i += 3)
-      {
-        Vector3 p = Vector3.Transform(new(d[i], d[i + 1], d[i + 2]), transform);
-
-        transformed.Add(p.X);
-        transformed.Add(p.Y);
-        transformed.Add(p.Z);
-      }
-
-      return transformed;
-    }
-
-    return d;
-  }
-
   public AG.Point3d ConvertPointToExternalCoordinates(AG.Point3d p)
   {
     if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
@@ -78,31 +50,11 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
     return p;
   }
 
-  public AG.Point3d ConvertPointToInternalCoordinates(AG.Point3d p)
-  {
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
-    {
-      return p.TransformBy(transform);
-    }
-
-    return p;
-  }
-
   public AG.Vector3d ConvertVectorToExternalCoordinates(AG.Vector3d v)
   {
     if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
     {
       return v.TransformBy(transform.Inverse());
-    }
-
-    return v;
-  }
-
-  public AG.Vector3d ConvertVectorToInternalCoordinates(AG.Vector3d v)
-  {
-    if (converterSettings.Current.ReferencePointTransform is Matrix3d transform)
-    {
-      return v.TransformBy(transform);
     }
 
     return v;

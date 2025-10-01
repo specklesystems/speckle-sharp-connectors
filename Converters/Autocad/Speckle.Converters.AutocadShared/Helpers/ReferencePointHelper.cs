@@ -1,8 +1,7 @@
 namespace Speckle.Converters.Autocad.Helpers;
 
 /// <summary>
-/// Helper class for working with transform data coming from UCS
-/// This allows preserving the reference point information between operations.
+/// Helper class for working with reference points
 /// </summary>
 public static class ReferencePointHelper
 {
@@ -39,30 +38,5 @@ public static class ReferencePointHelper
         }
       }
     };
-  }
-
-  /// <summary>
-  /// Extracts and reconstructs a transform from the matrix data stored on root object
-  /// </summary>
-  public static AG.Matrix3d? GetTransformFromRootObject(object? matrixObj)
-  {
-    double[]? matrixData = null;
-
-    // NOTE: why all these if checks? We send double[] but get List<object> back on receive, so need to convert
-    if (matrixObj is double[] doubleArray)
-    {
-      matrixData = doubleArray;
-    }
-    else if (matrixObj is List<object> listValues)
-    {
-      matrixData = listValues.Select(v => Convert.ToDouble(v)).ToArray();
-    }
-
-    if (matrixData == null || matrixData.Length != 16)
-    {
-      return null;
-    }
-
-    return new(matrixData);
   }
 }
