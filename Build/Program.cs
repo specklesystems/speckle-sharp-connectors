@@ -7,9 +7,9 @@ using static SimpleExec.Command;
 const string CLEAN = "clean";
 const string RESTORE = "restore";
 const string BUILD = "build";
-const string BUILD_LINUX = "build-linux";
+const string PACK = "pack";
+const string TEST_AFFECTED = "test-affected";
 const string TEST = "test";
-const string TEST_ONLY = "test-only";
 const string FORMAT = "format";
 const string ZIP = "zip";
 const string RESTORE_TOOLS = "restore-tools";
@@ -19,6 +19,7 @@ const string GEN_SOLUTIONS = "generate-solutions";
 const string DEEP_CLEAN = "deep-clean";
 const string DEEP_CLEAN_LOCAL = "deep-clean-local";
 const string DETECT_AFFECTED = "detect-affected";
+const string TEST_AND_PACK = "test-and-pack";
 
 //need to pass arguments
 /*var arguments = new List<string>();
@@ -150,7 +151,7 @@ Target(
 
 Target(
   RESTORE,
-  DependsOn(FORMAT, DETECT_AFFECTED),
+  DependsOn(FORMAT),
   Consts.Solutions,
   async s =>
   {
@@ -181,8 +182,8 @@ Target(CHECK_SOLUTIONS, Solutions.CompareConnectorsToLocal);
 Target(GEN_SOLUTIONS, Solutions.GenerateSolutions);
 
 Target(
-  TEST,
-  DependsOn(BUILD, CHECK_SOLUTIONS),
+  TEST_AFFECTED,
+  DependsOn(DETECT_AFFECTED, BUILD, CHECK_SOLUTIONS),
   async () =>
   {
     foreach (var s in await Affected.GetTestProjects())
@@ -192,14 +193,12 @@ Target(
   }
 );
 
-//all tests on purpose
 Target(
-  TEST_ONLY,
-  DependsOn(FORMAT),
+  TEST,
+  DependsOn(BUILD, CHECK_SOLUTIONS),
   Glob.Files(".", "**/*.Tests.csproj"),
   file =>
   {
-    Run("dotnet", $"build \"{file}\" -c Release --no-incremental");
     Run(
       "dotnet",
       $"test \"{file}\" -c Release --no-build --verbosity=minimal /p:AltCover=true /p:AltCoverAttributeFilter=ExcludeFromCodeCoverage /p:AltCoverVerbosity=Warning"
@@ -207,31 +206,28 @@ Target(
   }
 );
 
+Target(TEST_AND_PACK, DependsOn(TEST, PACK));
+
 Target(
-  BUILD_LINUX,
-  DependsOn(FORMAT),
-  Glob.Files(".", "**/Speckle.Importers.Ifc.csproj"),
-  async file =>
+  PACK,
+  DependsOn(BUILD),
+  Consts.Solutions,
+  async solution =>
   {
-    await RunAsync("dotnet", $"restore \"{file}\" --locked-mode");
     var version = await Versions.ComputeVersion();
     var fileVersion = await Versions.ComputeFileVersion();
     Console.WriteLine($"Version: {version} & {fileVersion}");
-    await RunAsync(
-      "dotnet",
-      $"build \"{file}\" -c Release --no-restore -warnaserror -p:Version={version} -p:FileVersion={fileVersion} -v:m"
-    );
 
     await RunAsync(
       "dotnet",
-      $"pack \"{file}\" -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
+      $"pack \"{solution}\" -c Release -o output --no-build -p:Version={version} -p:FileVersion={fileVersion} -v:m"
     );
   }
 );
 
 Target(
   ZIP,
-  DependsOn(TEST),
+  DependsOn(TEST_AFFECTED),
   async () =>
   {
     var version = await Versions.ComputeVersion();
@@ -282,6 +278,6 @@ Target(
   }
 );
 
-Target("default", DependsOn(TEST), () => Console.WriteLine("Done!"));
+Target("default", DependsOn(TEST_AFFECTED), () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);

@@ -1,29 +1,11 @@
-name: .NET Build
+name: .NET Test
 
-on: pull_request
+on:
+  pull_request: {}
+  push:
+    branches: ["main"]
 
 jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 8.0.4xx # Align with global.json (including roll forward rules)
-
-      - name: Cache Nuget
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-
-      - name: ⚒️ Run build
-        run: ./build.ps1 test
   test:
     runs-on: ubuntu-latest
     steps:
@@ -43,14 +25,18 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
 
-      - name: ⚒️ Run Build on Linux
-        run: ./build.sh build-linux
-
-      - name: ⚒️ Run tests
-        run: ./build.sh test-only
+      - name: ⚒️ Run Test
+        run: ./build.sh test-and-pack
 
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
         with:
           files: Converters/**/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      # Disabling this code for now, since we no longer need to publish nugets from this repo
+      # But keeping it around incase we ever need in the future.
+      # Ideally, I'd also like to move the nuget token to be an environment secret, and to have tight package scopes
+#      - name: Push to nuget.org
+#        if: ${{ inputs.deployNugets }}
+#        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }}
