@@ -18,7 +18,8 @@ public class CsiConversionSettingsFactory(
   )
   {
     // NOTE: only applicable to ETABS. If we bring in SAP2000 then we need to revert to GetPresentUnits
-    // NOTE: change from GetPresentUnits as this was linked to weird behaviour for mismatched user units (see CNX-2621)
+    // NOTE: change from GetPresentUnits as this was linked to weird behaviour (see CNX-2621), returning "0" sometimes
+    // bug in the GetPresentUnits api call ...
     eTemperature temperatureUnit = eTemperature.NotApplicable;
     eLength lengthUnit = eLength.NotApplicable;
     eForce forceUnit = eForce.NotApplicable;
