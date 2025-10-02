@@ -97,6 +97,11 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     try
     {
       var key = GetKeyForDocument(document);
+      if (key is null)
+      {
+        LoadFromString(null);
+        return;
+      }
       _jsonCacheManager.UpdateObject(key, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -106,9 +111,19 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
   }
 
-  private string GetKeyForDocument(Document doc)
+  private string? GetKeyForDocument(Document doc)
   {
-    return  doc.CreationGUID.ToString();
+#if REVIT2024_OR_GREATER
+    return doc.CreationGUID.ToString();
+#else
+    //basically, no documents will never be saved when it's a new document.  It must be saved first.
+    var x = doc.PathName;
+    if (string.IsNullOrEmpty(x))
+    {
+      return null;
+    }
+    return x;
+#endif
   }
 
   protected override void LoadState()
@@ -121,6 +136,11 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     var key = GetKeyForDocument(document);
+    if (key is null)
+    {
+      LoadFromString(null);
+      return;
+    }
     var state = _jsonCacheManager.GetObject(key);
     LoadFromString(state);
   }
