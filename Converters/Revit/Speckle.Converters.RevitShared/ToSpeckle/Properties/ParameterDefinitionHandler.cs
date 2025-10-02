@@ -39,7 +39,7 @@ public class ParameterDefinitionHandler
         internalDefinitionName = builtInParameter.ToString();
       }
     }
-    var key =  new ParameterKey(internalDefinitionName, groupDefinitionId);
+    var key = new ParameterKey(internalDefinitionName, groupDefinitionId);
     if (_parameterDefinitions.TryGetValue(key, out var parameterDefinition))
     {
       return (internalDefinitionName, humanReadableName, parameterDefinition.GroupName, parameterDefinition.Units);
@@ -51,7 +51,7 @@ public class ParameterDefinitionHandler
     {
       units = DB.LabelUtils.GetLabelForUnit(parameter.GetUnitTypeId());
     }
-    
+
     _parameterDefinitions[key] = new ParameterDefinition(GroupName: group, Units: units);
     return (internalDefinitionName, humanReadableName, group, units);
   }
