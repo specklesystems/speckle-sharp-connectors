@@ -115,7 +115,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     var children = GetElementChildren(target).ToList();
 
     // get properties
-    Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
+    Base properties = _propertiesExtractor.GetProperties(target);
 
     RevitObject revitObject =
       new()
@@ -128,9 +128,10 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         location = convertedLocation,
         elements = children,
         displayValue = proxifiedDisplayValues,
-        properties = properties,
+        properties = new Dictionary<string, object?>() { },
         units = _converterSettings.Current.SpeckleUnits
       };
+    revitObject["@serializedProperties"] = properties;
 
     return revitObject;
   }

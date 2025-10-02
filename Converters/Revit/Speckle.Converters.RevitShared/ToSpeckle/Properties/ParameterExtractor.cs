@@ -3,6 +3,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -42,15 +43,24 @@ public class ParameterExtractor
   /// </summary>
   /// <param name="element"></param>
   /// <returns></returns>
-  public Dictionary<string, object?> GetParameters(DB.Element element)
+  public Base GetParameters(DB.Element element)
   {
+    var instanceParams = new Base();
+    instanceParams["instanceParameters"] = ParseParameterSet(element.Parameters);
+    var typeParams = new Base();
+    typeParams["typeParameters"] = GetTypeParameterDictionary(element);
     // NOTE: Woe and despair, I'm really abusing dictionaries here. See note at the top of class.
-    return new Dictionary<string, object?>()
-    {
-      ["Instance Parameters"] = ParseParameterSet(element.Parameters),
-      ["Type Parameters"] = GetTypeParameterDictionary(element),
-      ["System Type Parameters"] = GetSystemTypeParameterDictionary(element)
-    };
+    var props = new Base();
+    props["@Instance Parameters"] = instanceParams;
+    props["@Type Parameters"] = typeParams;
+    props["System Type Parameters"] = GetSystemTypeParameterDictionary(element);
+    // return new Dictionary<string, object?>()
+    // {
+    //   ["@Instance Parameters"] = instanceParams,
+    //   ["@Type Parameters"] = typeParams,
+    //   ["System Type Parameters"] = GetSystemTypeParameterDictionary(element)
+    // };
+    return props;
   }
 
   private Dictionary<string, Dictionary<string, object?>>? GetTypeParameterDictionary(DB.Element element)
