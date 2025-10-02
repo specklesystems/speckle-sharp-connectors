@@ -113,6 +113,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
         if (unbakedMesh is not null)
         {
+          // TODO Hackady hack hack
           var instanceDefinitionId = Math.Abs(unbakedMesh.vertices[0]).ToString();
           if (
             _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
@@ -144,7 +145,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
           {
             applicationId = Guid.NewGuid().ToString(),
             definitionId = instanceDefinitionId,
-            transform = displayValueWithTransform.Item2.Value,
+            transform = displayValueWithTransform.Item2.Value, // TODO combine with linked model doc transform if doc.IsLinked
             maxDepth = 1,
             units = unbakedMesh.units
           };

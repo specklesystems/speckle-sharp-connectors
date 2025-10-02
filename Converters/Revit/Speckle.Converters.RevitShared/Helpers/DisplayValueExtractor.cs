@@ -160,8 +160,8 @@ public sealed class DisplayValueExtractor
   {
     List<(Base, Matrix4x4?)> displayValue = new();
 
-    using DB.Transform? localToWorld = GetTransform(element);
-    using DB.Transform? worldToLocal = localToWorld?.Inverse;
+    using DB.Transform? localToWorld = GetTransform(element); // on an element level
+    using DB.Transform? worldToLocal = localToWorld?.Inverse; // this needs to be scaled?
 
     // handle all solids and meshes by their material
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids, worldToLocal);
