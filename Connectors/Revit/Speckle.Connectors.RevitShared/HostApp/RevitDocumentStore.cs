@@ -116,7 +116,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 #if REVIT2024_OR_GREATER
     return doc.CreationGUID.ToString();
 #else
-    //basically, no documents will never be saved when it's a new document.  It must be saved first.
+    //basically, no document state will ever be saved when it's a new document.  It must be saved first for path name to be a valid value.
     var x = doc.PathName;
     if (string.IsNullOrEmpty(x))
     {
