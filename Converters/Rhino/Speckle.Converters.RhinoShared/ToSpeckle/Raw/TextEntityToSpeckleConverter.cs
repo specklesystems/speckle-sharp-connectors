@@ -6,17 +6,14 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 
 public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Text>
 {
-  private readonly ITypedConverter<RG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<RG.Plane, SOG.Plane> _planeConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public TextEntityToSpeckleConverter(
-    ITypedConverter<RG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<RG.Plane, SOG.Plane> planeConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _settingsStore = settingsStore;
   }
