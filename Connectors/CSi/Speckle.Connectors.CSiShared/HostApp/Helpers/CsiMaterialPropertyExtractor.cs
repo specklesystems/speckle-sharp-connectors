@@ -11,7 +11,7 @@ namespace Speckle.Connectors.CSiShared.HostApp.Helpers;
 /// Currently, all material property extraction can happen on a CsiShared level which simplifies things a lot.
 /// Properties depend on the directional symmetry of the material, hence the switch statements.
 /// </remarks>
-public class CsiMaterialPropertyExtractor
+public class CsiMaterialPropertyExtractor : IMaterialPropertyExtractor
 {
   /// <summary>
   /// Property strings for all mechanical properties, used by numerous methods.
@@ -35,11 +35,11 @@ public class CsiMaterialPropertyExtractor
     _settingsStore = settingsStore;
   }
 
-  public void ExtractProperties(string materialName, Dictionary<string, object?> properties)
+  public void ExtractProperties(string name, Dictionary<string, object?> properties)
   {
-    GetGeneralProperties(materialName, properties);
-    GetWeightAndMassProperties(materialName, properties); // TODO: Add units
-    GetMechanicalProperties(materialName, properties); // TODO: Add units
+    GetGeneralProperties(name, properties);
+    GetWeightAndMassProperties(name, properties);
+    GetMechanicalProperties(name, properties);
   }
 
   private void GetGeneralProperties(string materialName, Dictionary<string, object?> properties)
@@ -76,7 +76,7 @@ public class CsiMaterialPropertyExtractor
       ref massPerUnitVolume
     );
 
-    var weightAndMass = properties.EnsureNested("Weight and Mass");
+    var weightAndMass = properties.EnsureNested(SectionPropertyCategory.WEIGHT_AND_MASS);
     weightAndMass["Weight per Unit Volume"] = weightPerUnitVolume;
     weightAndMass["Mass per Unit Volume"] = massPerUnitVolume;
   }
@@ -101,7 +101,7 @@ public class CsiMaterialPropertyExtractor
       _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}")
     };
 
-    var mechanicalProperties = properties.EnsureNested("Mechanical Properties");
+    var mechanicalProperties = properties.EnsureNested(SectionPropertyCategory.MECHANICAL_DATA);
     mechanicalProperties["Directional Symmetry Type"] = materialDirectionalSymmetryValue.ToString();
 
     GetMechanicalPropertiesByType(materialName, materialDirectionalSymmetryValue, mechanicalProperties);
