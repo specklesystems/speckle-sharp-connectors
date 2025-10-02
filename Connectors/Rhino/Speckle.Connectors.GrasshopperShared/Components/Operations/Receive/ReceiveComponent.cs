@@ -33,6 +33,9 @@ public class ReceiveComponentInput
 
 public class ReceiveComponentOutput
 {
+  /// <remarks>
+  /// Made nullable as output can be null when Run = false or on error
+  /// </remarks>
   public SpeckleCollectionWrapperGoo? RootObject { get; set; }
 }
 
@@ -121,7 +124,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
         GH_RuntimeMessageLevel.Error,
         "Only one model can be loaded at a time. To load to multiple models, please use different load components."
       );
-      return new();
+      return new ReceiveComponentOutput();
     }
     if (!input.Run)
     {
