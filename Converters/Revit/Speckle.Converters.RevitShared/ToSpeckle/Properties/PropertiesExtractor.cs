@@ -1,4 +1,5 @@
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 
@@ -19,25 +20,23 @@ public class PropertiesExtractor
     _materialQuantityConverter = materialQuantityConverter;
   }
 
-  public Dictionary<string, object?> GetProperties(DB.Element element)
+  public Base GetProperties(DB.Element element)
   {
+    var props = new Base();
     // by default, always get class properties first
-    Dictionary<string, object?> properties = _classPropertiesExtractor.GetClassProperties(element);
+    props["@classProps"] = _classPropertiesExtractor.GetClassProperties(element);
 
     // add material quantities
-    Dictionary<string, object> matQuantities = _materialQuantityConverter.Convert(element);
-    if (matQuantities.Count > 0)
-    {
-      properties.Add("Material Quantities", matQuantities);
-    }
+    props["@matProps"] = _materialQuantityConverter.Convert(element);
+    // if (matQuantities.Count > 0)
+    // {
+    //   properties.Add("Material Quantities", matQuantities);
+    // }
 
     // add parameters
-    Dictionary<string, object?> parameters = _parameterExtractor.GetParameters(element);
-    if (parameters.Count > 0)
-    {
-      properties.Add("Parameters", parameters);
-    }
+    Base parameters = _parameterExtractor.GetParameters(element);
+    props["@parameters"] = parameters;
 
-    return properties;
+    return parameters;
   }
 }

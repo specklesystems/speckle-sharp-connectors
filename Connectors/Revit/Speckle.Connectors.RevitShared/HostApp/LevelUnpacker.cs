@@ -50,7 +50,7 @@ public class LevelUnpacker
         {
           name = level.Name,
           displayValue = [],
-          properties = _propertiesExtractor.GetProperties(level)
+          properties = new Dictionary<string, object?>() { }
         };
         var unitSettings = _converterSettings.Current.Document.GetUnits();
         var lengthUnitType = unitSettings.GetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length).GetUnitTypeId();
