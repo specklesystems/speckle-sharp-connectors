@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
@@ -19,6 +20,7 @@ public sealed class DisplayValueExtractor
     List<SOG.Mesh>
   > _meshByMaterialConverter;
 
+  private readonly IScalingServiceToSpeckle _toSpeckleScalingService;
   private readonly ITypedConverter<DB.Curve, ICurve> _curveConverter;
   private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
@@ -36,7 +38,8 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     ILogger<DisplayValueExtractor> logger,
-    IConverterSettingsStore<RevitConversionSettings> converterSettings
+    IConverterSettingsStore<RevitConversionSettings> converterSettings,
+    IScalingServiceToSpeckle toSpeckleScalingService
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
@@ -46,6 +49,7 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _logger = logger;
     _converterSettings = converterSettings;
+    _toSpeckleScalingService = toSpeckleScalingService;
   }
 
   public List<(Base, Matrix4x4?)> GetDisplayValue(DB.Element element)
@@ -172,7 +176,7 @@ public sealed class DisplayValueExtractor
     List<(Base, Matrix4x4?)> local = new();
     foreach (SOG.Mesh mesh in displayMeshes)
     {
-      local.Add((mesh, worldToLocal is not null ? ReferencePointHelper.TransformToMatrix(worldToLocal) : null));
+      local.Add((mesh, localToWorld is not null ? TransformToMatrix(localToWorld) : null));
     }
     displayValue.AddRange(local);
 
@@ -195,14 +199,38 @@ public sealed class DisplayValueExtractor
     return displayValue;
   }
 
+  public Matrix4x4 TransformToMatrix(DB.Transform transform) =>
+    new()
+    {
+      M11 = transform.BasisX.X,
+      M21 = transform.BasisX.Y,
+      M31 = transform.BasisX.Z,
+      M41 = 0,
+
+      M12 = transform.BasisY.X,
+      M22 = transform.BasisY.Y,
+      M32 = transform.BasisY.Z,
+      M42 = 0,
+
+      M13 = transform.BasisZ.X,
+      M23 = transform.BasisZ.Y,
+      M33 = transform.BasisZ.Z,
+      M43 = 0,
+
+      M14 = _toSpeckleScalingService.ScaleLength(transform.Origin.X),
+      M24 = _toSpeckleScalingService.ScaleLength(transform.Origin.Y),
+      M34 = _toSpeckleScalingService.ScaleLength(transform.Origin.Z),
+      M44 = 1
+    };
+
   private static DB.Transform? GetTransform(DB.Element element)
   {
-    if (element is not DB.Instance i)
+    if (element is DB.Instance i)
     {
-      return null;
+      return i.GetTotalTransform();
     }
 
-    return i.GetTotalTransform();
+    return null;
   }
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
