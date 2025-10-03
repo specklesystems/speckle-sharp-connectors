@@ -39,7 +39,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiToSpeckleCacheSingleton>();
 
     // Settings and unit conversions
-    serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);
+    serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eLength>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CsiConversionSettings>,
       ConverterSettingsStore<CsiConversionSettings>
