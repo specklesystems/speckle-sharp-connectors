@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Common.Instances;
@@ -8,6 +8,7 @@ public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   void AddInstanceProxy(string objectId, InstanceProxy instanceProxy);
   void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy);
   void AddAtomicObject(string objectId, THostObjectType obj);
+  void AddAtomicDefinitionObject(string objectId, THostObjectType obj);
   void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies);
   UnpackResult<THostObjectType> GetUnpackResult();
   bool TryGetInstanceProxiesFromDefinitionId(

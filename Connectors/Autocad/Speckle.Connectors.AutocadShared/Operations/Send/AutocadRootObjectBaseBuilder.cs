@@ -8,6 +8,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
@@ -21,6 +22,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadRootObject>
 {
   private readonly IRootToSpeckleConverter _converter;
+  private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
   private readonly string[] _documentPathSeparator = ["\\"];
   private readonly ISendConversionCache _sendConversionCache;
   private readonly AutocadInstanceUnpacker _instanceUnpacker;
@@ -32,6 +34,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
 
   protected AutocadRootObjectBaseBuilder(
     IRootToSpeckleConverter converter,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,
@@ -42,6 +45,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   )
   {
     _converter = converter;
+    _converterSettings = converterSettings;
     _sendConversionCache = sendConversionCache;
     _instanceUnpacker = instanceObjectManager;
     _materialUnpacker = materialUnpacker;
@@ -83,17 +87,32 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // 1 - Unpack the instances
-    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceUnpacker.UnpackSelection(objects);
+    var (atomicObjects, atomicDefinitionObjects, instanceProxies, instanceDefinitionProxies) =
+      _instanceUnpacker.UnpackSelection(objects);
     root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
 
     // 2 - Unpack the groups
     root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
+
+    // 7 - Add the Reference Point
+    Matrix3d? referenceTransform = null;
+    if (
+      Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix
+      && matrix != Matrix3d.Identity
+    )
+    {
+      referenceTransform = matrix.Inverse();
+      var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(matrix);
+      root[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+    }
+
     using (var _ = _activityFactory.Start("Converting objects"))
     {
-      // 3 - Convert atomic objects
       List<LayerTableRecord> usedAcadLayers = new(); // Keeps track of autocad layers used, so we can pass them on later to the material and color unpacker.
       List<SendConversionResult> results = new();
       int count = 0;
+
+      // 3 - Convert atomic objects
       foreach (var (entity, applicationId) in atomicObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
@@ -106,10 +125,42 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
           root.elements.Add(objectCollection);
         }
 
-        var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
+        var result = ConvertAutocadEntity(
+          entity,
+          applicationId,
+          objectCollection,
+          instanceProxies,
+          projectId,
+          referenceTransform // set this for top level instance proxies to use if needed
+        );
+
         results.Add(result);
 
         onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
+      }
+
+      // 4 - Convert atomic definition objects
+      // smelly POC!! This can be refactored if instance unpacker returns a hash of application id for block objs instead of a separate list of atomic objs
+      // if this atomic object came from an instance definition, we do *not* want to bake in the reference point settings
+      using (_converterSettings.Push(currentSettings => currentSettings with { ReferencePointTransform = null }))
+      {
+        foreach (var (entity, applicationId) in atomicDefinitionObjects)
+        {
+          cancellationToken.ThrowIfCancellationRequested();
+          // Create and add a collection for this entity if not done so already.
+          (Collection objectCollection, LayerTableRecord? autocadLayer) = CreateObjectCollection(entity, tr);
+
+          if (autocadLayer is not null)
+          {
+            usedAcadLayers.Add(autocadLayer);
+            root.elements.Add(objectCollection);
+          }
+
+          var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
+          results.Add(result);
+
+          onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
+        }
       }
 
       if (results.All(x => x.Status == Status.ERROR))
@@ -117,21 +168,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
         throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
       }
 
-      // 4 - Unpack the render material proxies
+      // 5 - Unpack the render material proxies
       root[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackMaterials(atomicObjects, usedAcadLayers);
 
-      // 5 - Unpack the color proxies
+      // 6 - Unpack the color proxies
       root[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, usedAcadLayers);
-
-      // 6 - Add the Reference Point
-      if (
-        Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix
-        && matrix != Matrix3d.Identity
-      )
-      {
-        var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(matrix);
-        root[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
-      }
 
       // add any additional properties (most likely from verticals)
       AddAdditionalProxiesToRoot(root);
@@ -155,15 +196,24 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     string applicationId,
     Collection collectionHost,
     IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
-    string projectId
+    string projectId,
+    Matrix3d? transform = null
   )
   {
     string sourceType = entity.GetType().ToString();
     try
     {
       Base converted;
-      if (entity is BlockReference && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
+      if (entity is BlockReference br && instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
       {
+        // modify transform by reference point this if it is top level
+        if (instanceProxy.maxDepth == 0 && transform is Matrix3d validTransform)
+        {
+          instanceProxy.transform = TransformHelper.ConvertToInstanceMatrix4x4(
+            br.BlockTransform.PreMultiplyBy(validTransform)
+          );
+        }
+
         converted = instanceProxy;
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))

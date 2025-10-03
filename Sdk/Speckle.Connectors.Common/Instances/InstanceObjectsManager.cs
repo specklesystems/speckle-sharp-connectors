@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Common.Instances;
@@ -10,6 +10,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   private readonly Dictionary<string, List<InstanceProxy>> _instanceProxiesByDefinitionId = new();
   private readonly Dictionary<string, InstanceDefinitionProxy> _definitionProxies = new();
   private readonly Dictionary<string, THostObjectType> _flatAtomicObjects = new();
+  private readonly Dictionary<string, THostObjectType> _flatAtomicDefinitionObjects = new();
 
   public void AddInstanceProxy(string objectId, InstanceProxy instanceProxy) =>
     _instanceProxies[objectId] = instanceProxy;
@@ -19,11 +20,14 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 
   public void AddAtomicObject(string objectId, THostObjectType obj) => _flatAtomicObjects[objectId] = obj;
 
+  public void AddAtomicDefinitionObject(string objectId, THostObjectType obj) =>
+    _flatAtomicDefinitionObjects[objectId] = obj;
+
   public void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies) =>
     _instanceProxiesByDefinitionId[definitionId] = instanceProxies;
 
   public UnpackResult<THostObjectType> GetUnpackResult() =>
-    new(GetAtomicObjects(), GetInstanceProxies(), GetDefinitionProxies());
+    new(GetAtomicObjects(), GetAtomicDefinitionObjects(), GetInstanceProxies(), GetDefinitionProxies());
 
   public bool TryGetInstanceProxiesFromDefinitionId(
     string definitionId,
@@ -57,6 +61,8 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   public InstanceProxy GetInstanceProxy(string instanceId) => _instanceProxies[instanceId];
 
   private List<THostObjectType> GetAtomicObjects() => _flatAtomicObjects.Values.ToList();
+
+  private List<THostObjectType> GetAtomicDefinitionObjects() => _flatAtomicDefinitionObjects.Values.ToList();
 
   private List<InstanceDefinitionProxy> GetDefinitionProxies() => _definitionProxies.Values.ToList();
 
