@@ -4,6 +4,7 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
@@ -20,6 +21,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
     AutocadLayerUnpacker layerUnpacker,
     PropertySetDefinitionHandler propertySetDefinitionHandler,
     IRootToSpeckleConverter converter,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,
@@ -30,6 +32,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
   )
     : base(
       converter,
+      converterSettings,
       sendConversionCache,
       instanceObjectManager,
       materialUnpacker,
