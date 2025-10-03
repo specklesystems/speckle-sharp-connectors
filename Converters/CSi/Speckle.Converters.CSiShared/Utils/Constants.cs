@@ -30,11 +30,14 @@ public static class ObjectPropertyKey
 /// </summary>
 public static class SectionPropertyCategory
 {
+  public const string DESIGN_DATA = "Design Data";
   public const string GENERAL_DATA = "General Data";
+  public const string MECHANICAL_DATA = "Mechanical Data";
   public const string MODIFIERS = "Modifiers";
   public const string PROPERTY_DATA = "Property Data";
   public const string SECTION_PROPERTIES = "Section Properties";
   public const string SECTION_DIMENSIONS = "Section Dimensions";
+  public const string WEIGHT_AND_MASS = "Weight and Mass";
 }
 
 /// <summary>
