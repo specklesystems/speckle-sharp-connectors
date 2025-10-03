@@ -24,7 +24,12 @@ public class LinkedModelHandler
   /// This method handles the specifics of element collection but doesn't make decisions
   /// about whether the linked model should be processed - that's the caller's responsibility.
   /// </summary>
-  public List<Element> GetLinkedModelElements(Document currentDocument, ISendFilter sendFilter, Document linkedDocument, Transform? transform)
+  public List<Element> GetLinkedModelElements(
+    Document currentDocument,
+    ISendFilter sendFilter,
+    Document linkedDocument,
+    Transform? transform
+  )
   {
     // send mode → Categories
     if (sendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories is not null)
@@ -44,11 +49,7 @@ public class LinkedModelHandler
     // send mode → Views (taken from the legacy code)
     if (sendFilter is RevitViewsFilter viewFilter && viewFilter.GetView(currentDocument) != null)
     {
-      RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument.PathName,
-        currentDocument,
-        transform
-      );
+      RevitLinkInstance linkInstance = FindLinkInstanceForDocument(linkedDocument.PathName, currentDocument, transform);
 
 #if REVIT2024_OR_GREATER
       // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
