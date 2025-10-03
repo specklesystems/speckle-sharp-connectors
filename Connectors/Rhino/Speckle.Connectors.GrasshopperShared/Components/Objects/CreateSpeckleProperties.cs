@@ -34,8 +34,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     pManager.AddParameter(param);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
       "Properties",
@@ -43,7 +42,6 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
       "Properties for Speckle Objects",
       GH_ParamAccess.item
     );
-  }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -167,10 +165,8 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
     ExpireSolution(true);
   }
 
-  protected override void WriteComponentSpecificData(GH_IWriter writer)
-  {
+  protected override void WriteComponentSpecificData(GH_IWriter writer) =>
     writer.SetBoolean("CreateEmptyProperties", CreateEmptyProperties);
-  }
 
   protected override void ReadComponentSpecificData(GH_IReader reader)
   {
