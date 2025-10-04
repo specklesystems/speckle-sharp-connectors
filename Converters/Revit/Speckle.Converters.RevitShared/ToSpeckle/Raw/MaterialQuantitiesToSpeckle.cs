@@ -1,8 +1,8 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.ToSpeckle.Properties;
 using Speckle.Sdk.Common.Exceptions;
 using ApplicationException = Autodesk.Revit.Exceptions.ApplicationException;
 
@@ -12,35 +12,28 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// Lighter converter for material quantities.
 /// </summary>
 /// <remarks>
-/// We need to validate this with user needs. Currently limited to:
-/// <list type="bullet">
-///     <item><description>material category</description></item>
-///     <item><description>material class</description></item>
-///     <item><description>material name</description></item>
-///     <item><description>area</description></item>
-///     <item><description>volume</description></item>
-///     <item><description>density (if valid StructuralAssetId)</description></item>
-///     <item><description>type (if valid StructuralAssetId)</description></item>
-///     <item><description>concrete compressive strength (if valid StructuralAssetId and of type concrete)</description></item>
-/// </list>
-/// We're attaching density, type and concrete compression (if concrete) to all objects. This is still "lite". If we add
-/// more structural asset properties we should move to a proxy approach.
+/// We need to validate this with user needs. Was limited to basic volume and instance-based numeric quantities. However,
+/// this has grown to include material (not instance-based) strings for Fast+Epp, now custom parameters for Stantec.
+/// Approach is now inefficient. We need a proxy / detached props approach that satisfies all workflows (bi, viewer, etc.)
 /// </remarks>
 public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dictionary<string, object>>
 {
   private readonly ScalingServiceToSpeckle _scalingService;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
+  private readonly CustomMaterialParametersExtractor _customMaterialParametersExtractor;
 
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    StructuralMaterialAssetExtractor structuralAssetExtractor
+    StructuralMaterialAssetExtractor structuralAssetExtractor,
+    CustomMaterialParametersExtractor customMaterialParametersExtractor
   )
   {
     _scalingService = scalingService;
     _converterSettings = converterSettings;
     _structuralAssetExtractor = structuralAssetExtractor;
+    _customMaterialParametersExtractor = customMaterialParametersExtractor;
   }
 
   public Dictionary<string, object> Convert(DB.Element target)
@@ -179,11 +172,8 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   }
 
   /// <summary>
-  /// Adds the material properties (like name, category, and class) to the material quantity dictionary
+  /// Adds the material properties to the material quantity dictionary
   /// </summary>
-  /// <param name="matId">the material id</param>
-  /// <param name="materialQuantity"></param>
-  /// <param name="matName"></param>
   /// <returns>true if material is found, false if not</returns>
   private bool TryAddMaterialPropertiesToQuantitiesDict(
     DB.ElementId matId,
@@ -197,6 +187,18 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
       materialQuantity["materialName"] = material.Name;
       materialQuantity["materialCategory"] = material.MaterialCategory;
       materialQuantity["materialClass"] = material.MaterialClass;
+
+      // NOTE: this is inefficient, we're slapping some props to multiple instances
+      // nothing would make me happier if we can get around this. Until we have a better properties approach, this serves
+      // as an INTERIM (hopefully) approach
+      if (_converterSettings.Current.SendMaterialCustomParameters)
+      {
+        var customParams = _customMaterialParametersExtractor.TryGetCustomParameters(matId);
+        if (customParams.Count > 0)
+        {
+          materialQuantity["Custom Parameters"] = customParams;
+        }
+      }
 
       // get StructuralAssetId (or try to)
       DB.ElementId structuralAssetId = material.StructuralAssetId;

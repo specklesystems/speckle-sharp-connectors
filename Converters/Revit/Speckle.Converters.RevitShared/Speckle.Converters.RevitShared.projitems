@@ -50,6 +50,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\LocalToGlobalToDirectShapeConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RenderMaterialToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\VectorConverterToHost.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\CustomMaterialParametersExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ParameterDefinitionHandler.cs" />

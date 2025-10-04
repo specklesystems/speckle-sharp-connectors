@@ -17,11 +17,12 @@ public class RevitConversionSettingsFactory(
     bool sendEmptyOrNullParams,
     bool sendLinkedModels,
     bool sendRebarsAsVolumetric,
+    bool sendMaterialCustomParameters,
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
     var document = revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
-    return new(
+    return new RevitConversionSettings(
       document,
       detailLevelType,
       referencePointTransform,
@@ -29,6 +30,7 @@ public class RevitConversionSettingsFactory(
       sendEmptyOrNullParams,
       sendLinkedModels,
       sendRebarsAsVolumetric,
+      sendMaterialCustomParameters,
       tolerance
     );
   }
