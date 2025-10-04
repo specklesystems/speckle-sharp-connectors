@@ -22,6 +22,7 @@ public class ToSpeckleSettingsManager(
   private readonly Dictionary<string, bool?> _sendNullParamsCache = [];
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
   private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
+  private readonly Dictionary<string, bool?> _sendMaterialCustomParametersCache = [];
 
   public DetailLevelType GetDetailLevelSetting(Document document, SenderModelCard modelCard)
   {
@@ -129,6 +130,16 @@ public class ToSpeckleSettingsManager(
       modelCard,
       _sendRebarsAsVolumetricCache,
       "Send rebars as volumetric"
+    );
+
+  public bool GetSendMaterialCustomParameters(Document document, SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      document,
+      SendMaterialCustomParameters.SETTING_ID,
+      SendMaterialCustomParameters.DEFAULT_VALUE,
+      modelCard,
+      _sendMaterialCustomParametersCache,
+      "Send material custom parameters"
     );
 
   /// <summary>
