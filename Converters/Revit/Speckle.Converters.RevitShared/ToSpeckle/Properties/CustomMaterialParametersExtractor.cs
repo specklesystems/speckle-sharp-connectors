@@ -62,7 +62,7 @@ public class CustomMaterialParametersExtractor
       // reactivity to send null/empty params setting
       var isNullOrEmpty =
         extractedParameterValue == null
-        || extractedParameterValue.TryGetValue("value", out object value) && value == null
+        || extractedParameterValue.TryGetValue("value", out object? value) && value == null
         || (value is string s && string.IsNullOrEmpty(s));
 
       if (!_converterSettings.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
@@ -90,7 +90,7 @@ public class CustomMaterialParametersExtractor
       _ => null
     };
 
-  private Dictionary<string, object>? GetScaledDoubleValue(DB.Parameter param)
+  private Dictionary<string, object> GetScaledDoubleValue(DB.Parameter param)
   {
     double rawValue = param.AsDouble();
     var dataType = param.Definition.GetDataType();
