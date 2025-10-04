@@ -57,7 +57,20 @@ public class CustomMaterialParametersExtractor
 
     foreach (DB.Parameter customParameter in customParameters)
     {
-      customParams[customParameter.Definition.Name] = ExtractParameterValue(customParameter);
+      var extractedParameterValue = ExtractParameterValue(customParameter);
+
+      // reactivity to send null/empty params setting
+      var isNullOrEmpty =
+        extractedParameterValue == null
+        || extractedParameterValue.TryGetValue("value", out object value) && value == null
+        || (value is string s && string.IsNullOrEmpty(s));
+
+      if (!_converterSettings.Current.SendParameterNullOrEmptyStrings && isNullOrEmpty)
+      {
+        continue;
+      }
+
+      customParams[customParameter.Definition.Name] = extractedParameterValue;
     }
 
     return customParams;
@@ -67,7 +80,7 @@ public class CustomMaterialParametersExtractor
     param.Definition is not DB.InternalDefinition internalDef
     || internalDef.BuiltInParameter == DB.BuiltInParameter.INVALID; // ExternalDefinition (shared params) are custom
 
-  private object? ExtractParameterValue(DB.Parameter param) =>
+  private Dictionary<string, object>? ExtractParameterValue(DB.Parameter param) =>
     param.StorageType switch
     {
       DB.StorageType.Double => GetScaledDoubleValue(param),
@@ -77,7 +90,7 @@ public class CustomMaterialParametersExtractor
       _ => null
     };
 
-  private object? GetScaledDoubleValue(DB.Parameter param)
+  private Dictionary<string, object>? GetScaledDoubleValue(DB.Parameter param)
   {
     double rawValue = param.AsDouble();
     var dataType = param.Definition.GetDataType();
@@ -97,6 +110,6 @@ public class CustomMaterialParametersExtractor
     };
   }
 
-  private Dictionary<string, object>? CreatePropertyDict(string name, object value) =>
+  private Dictionary<string, object> CreatePropertyDict(string name, object value) =>
     new() { ["name"] = name, ["value"] = value };
 }
