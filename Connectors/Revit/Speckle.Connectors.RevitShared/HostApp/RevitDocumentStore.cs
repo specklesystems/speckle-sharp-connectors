@@ -97,10 +97,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     try
     {
       var key = GetKeyForDocument(document);
-      if (key != null)
+      if (key is null)
       {
-        _jsonCacheManager.UpdateObject(key, modelCardState);
+        LoadFromString(null);
+        return;
       }
+      _jsonCacheManager.UpdateObject(key, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -111,11 +113,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
   private string? GetKeyForDocument(Document doc)
   {
-    string? id = doc?.ProjectInformation?.UniqueId; //ProjectInformation Should only be null for family docs
-#if REVIT_2024_OR_GREATER
-    id ??= doc.CreationGUID.ToString(); //fallback for family docs
+#if REVIT2024_OR_GREATER
+    return doc.CreationGUID.ToString();
+#else
+    //basically, no document state will ever be saved when it's a new document.  It must be saved first for path name to be a valid value.
+    var x = doc.PathName;
+    if (string.IsNullOrEmpty(x))
+    {
+      return null;
+    }
+    return x;
 #endif
-    return id;
   }
 
   protected override void LoadState()
@@ -128,14 +136,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     }
 
     var key = GetKeyForDocument(document);
-    if (key != null)
+    if (key is null)
     {
-      var state = _jsonCacheManager.GetObject(key);
-      if (state == null)
-      {
-        return;
-      }
-      LoadFromString(state);
+      LoadFromString(null);
+      return;
     }
+    var state = _jsonCacheManager.GetObject(key);
+    LoadFromString(state);
   }
 }
