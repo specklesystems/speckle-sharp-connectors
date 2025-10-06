@@ -11,6 +11,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public class SpeckleOutputParam : Param_GenericObject
 {
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
   public override Guid ComponentGuid => new("D2B4713D-FE8B-4EF0-8445-B6096DB15B24");
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
