@@ -173,7 +173,7 @@ public class ToSpeckleSettingsManager(
 
   private void EvictCacheForModelCard(Document document, SenderModelCard modelCard)
   {
-    var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().SelectedObjectIds : [];
+    var objectIds = modelCard.SendFilter?.SelectedObjectIds ?? [];
     var unpackedObjectIds = elementUnpacker.GetUnpackedElementIds(objectIds, document);
     sendConversionCache.EvictObjects(unpackedObjectIds);
   }
