@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.RevitShared.Helpers;
@@ -23,7 +24,11 @@ public sealed class LinkedModelElementCacheScoped
   /// <summary>
   /// Attempts to retrieve a cached element from a linked model.
   /// </summary>
-  public bool TryGetCachedElement(string documentPath, string elementUniqueId, out Base? cachedElement)
+  public bool TryGetCachedElement(
+    string documentPath,
+    string elementUniqueId,
+    [NotNullWhen(true)] out Base? cachedElement
+  )
   {
     string key = CreateCacheKey(documentPath, elementUniqueId);
 
@@ -34,7 +39,6 @@ public sealed class LinkedModelElementCacheScoped
     }
 
     CacheMisses++;
-    cachedElement = null;
     return false;
   }
 

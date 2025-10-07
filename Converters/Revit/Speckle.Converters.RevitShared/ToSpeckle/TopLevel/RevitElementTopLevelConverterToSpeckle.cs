@@ -22,10 +22,12 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private readonly LevelExtractor _levelExtractor;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
+  private readonly LinkedModelElementCacheScoped _linkedModelElementCacheScoped;
 
   public ElementTopLevelConverterToSpeckle(
     DisplayValueExtractor displayValueExtractor,
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
+    LinkedModelElementCacheScoped linkedModelElementCacheScoped,
     PropertiesExtractor propertiesExtractor,
     LevelExtractor levelExtractor,
     ITypedConverter<DB.Location, Base> locationConverter,
@@ -34,6 +36,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   {
     _displayValueExtractor = displayValueExtractor;
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
+    _linkedModelElementCacheScoped = linkedModelElementCacheScoped;
     _propertiesExtractor = propertiesExtractor;
     _levelExtractor = levelExtractor;
     _locationConverter = locationConverter;
@@ -42,8 +45,31 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((DB.Element)target);
 
-  public RevitObject Convert(DB.Element target)
+  private RevitObject Convert(DB.Element target)
   {
+    // for linked model elements, check the cache. an "early exit" with an already converted element saves majority of
+    // ensuing extractor logic. this happens if we have multiple instances of the same linked model.
+    if (target.Document.IsLinked)
+    {
+      if (
+        _linkedModelElementCacheScoped.TryGetCachedElement(
+          target.Document.PathName,
+          target.UniqueId,
+          out Base? cachedElement
+        )
+      )
+      {
+        var cachedRevitObject = (RevitObject)cachedElement;
+
+        // we can use all props of the cachedElement apart from the display values (different transform)
+        List<(Base, Matrix4x4?)> freshDisplayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
+        List<Base> freshProxifiedDisplayValues = ProxifyDisplayValues(freshDisplayValuesWithTransforms);
+        cachedRevitObject.displayValue = freshProxifiedDisplayValues;
+
+        return cachedRevitObject;
+      }
+    }
+
     string category = target.Category?.Name ?? "none";
 
     // special case for direct shapes: use builtin category instead
@@ -103,65 +129,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     // get the display value
     List<(Base, Matrix4x4?)> displayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
     var displayValues = displayValuesWithTransforms.ConvertAll(displayValueConverter => displayValueConverter.Item1);
-
-    List<Base> proxifiedDisplayValues = new();
-    foreach ((Base, Matrix4x4?) displayValueWithTransform in displayValuesWithTransforms)
-    {
-      if (displayValueWithTransform.Item1 is SOG.Mesh && displayValueWithTransform.Item2 is not null)
-      {
-        // potential instances scenario here
-        var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
-        if (unbakedMesh is not null)
-        {
-          var instanceDefinitionId = GenerateUntransformedMeshId(unbakedMesh);
-          if (
-            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
-              instanceDefinitionId,
-              out InstanceDefinitionProxy? instanceDefinition
-            )
-          )
-          {
-            // instanceDefinition.objects.Add(unbakedMesh.applicationId.NotNull());
-          }
-          else
-          {
-            var newInstanceDefinition = new InstanceDefinitionProxy
-            {
-              applicationId = instanceDefinitionId,
-              objects = new List<string> { unbakedMesh.applicationId.NotNull() },
-              maxDepth = 1,
-              name = instanceDefinitionId,
-            };
-            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
-          }
-
-          if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
-          {
-            _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
-          }
-
-          var instanceProxy = new InstanceProxy
-          {
-            applicationId = Guid.NewGuid().ToString(),
-            definitionId = instanceDefinitionId,
-            transform = displayValueWithTransform.Item2.Value, // TODO combine with linked model doc transform if doc.IsLinked
-            maxDepth = 1,
-            units = unbakedMesh.units
-          };
-          proxifiedDisplayValues.Add(instanceProxy);
-        }
-        else
-        {
-          proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
-        }
-      }
-      else
-      {
-        proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
-      }
-    }
-
-    // assumption here is that if we have matrix for corresponding base it is instancable
+    List<Base> proxifiedDisplayValues = ProxifyDisplayValues(displayValuesWithTransforms);
 
     // get level
     string? level = _levelExtractor.GetLevelName(target);
@@ -254,4 +222,66 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   // ewwwww ...
   private string GenerateUntransformedMeshId(SOG.Mesh mesh) =>
     (mesh.vertices.Average() / mesh.VerticesCount).ToString();
+
+  private List<Base> ProxifyDisplayValues(List<(Base, Matrix4x4?)> displayValuesWithTransforms)
+  {
+    List<Base> proxifiedDisplayValues = new();
+
+    foreach ((Base, Matrix4x4?) displayValueWithTransform in displayValuesWithTransforms)
+    {
+      if (displayValueWithTransform.Item1 is SOG.Mesh && displayValueWithTransform.Item2 is not null)
+      {
+        var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
+        if (unbakedMesh is not null)
+        {
+          var instanceDefinitionId = GenerateUntransformedMeshId(unbakedMesh);
+          if (
+            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
+              instanceDefinitionId,
+              out InstanceDefinitionProxy? instanceDefinition
+            )
+          )
+          {
+            // instanceDefinition.objects.Add(unbakedMesh.applicationId.NotNull());
+          }
+          else
+          {
+            var newInstanceDefinition = new InstanceDefinitionProxy
+            {
+              applicationId = instanceDefinitionId,
+              objects = new List<string> { unbakedMesh.applicationId.NotNull() },
+              maxDepth = 1,
+              name = instanceDefinitionId,
+            };
+            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
+          }
+
+          if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
+          {
+            _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
+          }
+
+          var instanceProxy = new InstanceProxy
+          {
+            applicationId = Guid.NewGuid().ToString(),
+            definitionId = instanceDefinitionId,
+            transform = displayValueWithTransform.Item2.Value,
+            maxDepth = 1,
+            units = unbakedMesh.units
+          };
+          proxifiedDisplayValues.Add(instanceProxy);
+        }
+        else
+        {
+          proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
+        }
+      }
+      else
+      {
+        proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
+      }
+    }
+
+    return proxifiedDisplayValues;
+  }
 }
