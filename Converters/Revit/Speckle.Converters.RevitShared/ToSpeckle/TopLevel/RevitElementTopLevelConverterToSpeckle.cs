@@ -113,8 +113,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
         if (unbakedMesh is not null)
         {
-          // TODO Hackady hack hack
-          var instanceDefinitionId = Math.Abs(unbakedMesh.vertices[0]).ToString();
+          var instanceDefinitionId = GenerateUntransformedMeshId(unbakedMesh);
           if (
             _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
               instanceDefinitionId,
@@ -126,7 +125,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
           }
           else
           {
-            var newInstanceDefinition = new InstanceDefinitionProxy()
+            var newInstanceDefinition = new InstanceDefinitionProxy
             {
               applicationId = instanceDefinitionId,
               objects = new List<string> { unbakedMesh.applicationId.NotNull() },
@@ -141,7 +140,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
             _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
           }
 
-          var instanceProxy = new InstanceProxy()
+          var instanceProxy = new InstanceProxy
           {
             applicationId = Guid.NewGuid().ToString(),
             definitionId = instanceDefinitionId,
@@ -251,4 +250,8 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       yield return Convert(_converterSettings.Current.Document.GetElement(childId));
     }
   }
+
+  // ewwwww ...
+  private string GenerateUntransformedMeshId(SOG.Mesh mesh) =>
+    (mesh.vertices.Average() / mesh.VerticesCount).ToString();
 }
