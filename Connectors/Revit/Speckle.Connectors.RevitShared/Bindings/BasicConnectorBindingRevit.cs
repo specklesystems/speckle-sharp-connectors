@@ -106,7 +106,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
 
       if (senderModelCard.SendFilter is RevitViewsFilter revitViewsFilter)
       {
-        var view = revitViewsFilter.GetView();
+        var view = revitViewsFilter.GetView(activeUIDoc.Document);
         if (view is not null)
         {
           await _revitTask

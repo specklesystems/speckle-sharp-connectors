@@ -187,7 +187,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
         if (includeLinkedModels)
         {
           // handler is only responsible for element collection mechanics
-          var linkedElements = _linkedModelHandler.GetLinkedModelElements(modelCard.SendFilter, linkedDoc, transform);
+          var linkedElements = _linkedModelHandler.GetLinkedModelElements(
+            document,
+            modelCard.SendFilter,
+            linkedDoc,
+            transform
+          );
           linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
         }
         // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
