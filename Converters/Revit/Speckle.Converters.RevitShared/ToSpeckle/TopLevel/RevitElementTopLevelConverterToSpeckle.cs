@@ -156,6 +156,12 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         units = _converterSettings.Current.SpeckleUnits
       };
 
+    // store in cache if linked model element
+    if (target.Document.IsLinked)
+    {
+      _linkedModelElementCacheScoped.StoreCachedElement(target.Document.PathName, target.UniqueId, revitObject);
+    }
+
     return revitObject;
   }
 
