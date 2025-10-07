@@ -17,7 +17,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }
-  public List<string> SelectedObjectIds { get; set; }
+  public List<string> SelectedObjectIds { get; set; } = new();
   public Dictionary<string, string>? IdMap { get; set; } = new();
   public List<string>? AvailableViews { get; set; }
 
