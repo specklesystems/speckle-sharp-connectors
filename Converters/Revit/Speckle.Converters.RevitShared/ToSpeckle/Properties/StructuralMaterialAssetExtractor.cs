@@ -4,7 +4,7 @@ using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
-namespace Speckle.Converters.Revit2023.ToSpeckle.Properties;
+namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 public readonly struct StructuralAssetProperties(
   string name,
