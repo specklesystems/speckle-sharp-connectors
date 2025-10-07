@@ -29,6 +29,7 @@ public static class ServiceRegistration
 
     serviceCollection.AddSingleton(new RevitToHostCacheSingleton());
     serviceCollection.AddSingleton(new RevitToSpeckleCacheSingleton());
+    serviceCollection.AddScoped<LinkedModelElementCacheScoped>();
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     serviceCollection.AddScoped<ScalingServiceToSpeckle>();

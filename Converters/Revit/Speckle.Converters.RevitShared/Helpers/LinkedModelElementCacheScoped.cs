@@ -4,9 +4,14 @@ namespace Speckle.Converters.RevitShared.Helpers;
 
 /// <summary>
 /// Caches converted elements from linked models to avoid redundant conversions when the same linked model is instanced
-/// multiple times. Scoped per send operation.
+/// multiple times.
 /// </summary>
-public sealed class LinkedModelElementCacheSingleton
+/// <remarks>
+/// Scoped per send operation. Don't think we can reliably have change tracking on linked model elements, so we clear
+/// the cache per operation rather than risk stale data. Also, aim of this cache is to avoid re-converting same elements
+/// across multiple instances of same linked model. So, not a cache in the RevitToSpeckleCacheSingleton sense.
+/// </remarks>
+public sealed class LinkedModelElementCacheScoped
 {
   private readonly Dictionary<string, Base> _cache = [];
 
