@@ -112,9 +112,12 @@ public sealed class DisplayValueExtractor
 
   private List<(Base, Matrix4x4?)> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
-    using DB.Transform? localToWorld = GetTransform(element);
-    using DB.Transform? worldToLocal = localToWorld?.Inverse;
-    var collections = GetSortedGeometryFromElement(element, options, worldToLocal);
+    using DB.Transform? localToDocument = GetTransform(element);
+    using DB.Transform? documentToLocal = localToDocument?.Inverse;
+    using DB.Transform? localToWorld = localToDocument is not null
+      ? _converterSettings.Current.ReferencePointTransform?.Inverse.Multiply(localToDocument)
+      : _converterSettings.Current.ReferencePointTransform;
+    var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
     return ProcessGeometryCollections(element, collections, localToWorld);
   }
 
