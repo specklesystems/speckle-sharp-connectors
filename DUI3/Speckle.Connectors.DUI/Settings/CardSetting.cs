@@ -3,7 +3,7 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Connectors.DUI.Settings;
 
 [GenerateAutoInterface]
-public class CardSetting : ICardSetting
+public record CardSetting : ICardSetting
 {
   public string? Id { get; set; }
   public string? Title { get; set; }
