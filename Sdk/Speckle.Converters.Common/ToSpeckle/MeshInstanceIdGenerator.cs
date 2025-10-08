@@ -16,7 +16,9 @@ namespace Speckle.Converters.Common.ToSpeckle;
 public static class MeshInstanceIdGenerator
 {
   /// <summary>
-  ///
+  /// Generate a unique hash from the vertex data of a mesh.
+  /// This is a "good enough" way to compare the equality of meshes.
+  /// Note, does not consider other mesh data, only <see cref="Mesh.vertices"/>
   /// </summary>
   /// <remarks>
   /// There are two implementations of this function because NET Framework lacks some of the Marshall and Span based functions.
@@ -78,10 +80,7 @@ public static class MeshInstanceIdGenerator
     }
   }
 
-  private static readonly FieldInfo s_listItemsField = typeof(List<double>).GetField(
-    "_items",
-    BindingFlags.NonPublic | BindingFlags.Instance
-  )!;
-  //TODO: check if a null check would be bad here. if so, include this message
-  //do not replace with a null check, I don't want to interrupt the compile time optimisation of reflection
+  private static readonly FieldInfo s_listItemsField = typeof(List<double>)
+    .GetField("_items", BindingFlags.NonPublic | BindingFlags.Instance)
+    .NotNull();
 }
