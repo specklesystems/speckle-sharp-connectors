@@ -126,6 +126,10 @@ public sealed class DisplayValueExtractor
   /// Note: Some special element types (like Rebar) cannot use this method as their
   /// get_Geometry() returns null, requiring specialized extraction methods.
   /// </remarks>
+  /// <param name="element"></param>
+  /// <param name="options"></param>
+  /// <param name="worldToLocal"></param>
+  /// <returns></returns>
   private GeometryCollections GetSortedGeometryFromElement(
     DB.Element element,
     DB.Options? options,
@@ -340,6 +344,7 @@ public sealed class DisplayValueExtractor
           collections.Meshes.Add(mesh);
           break;
 
+        //Note, we're not applying transforms to curves/polylines/points because ProcessGeometryCollections expects them in world coordinates
         case DB.Curve curve:
           collections.Curves.Add(curve);
           break;
@@ -355,7 +360,7 @@ public sealed class DisplayValueExtractor
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
           // Nested geomInstances should have their geom retrieved with GetInstanceGeom, not GetSymbolGeom
-          if (worldToLocal == null)
+          if (worldToLocal == null) //see remark on method for why this is safe to do...
           {
             SortGeometry(element, collections, instance.GetInstanceGeometry(), null);
           }
@@ -565,6 +570,10 @@ public sealed class DisplayValueExtractor
   /// Used to pass multiple geometry collections as a single parameter to improve code readability
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
+  /// <remarks>
+  /// <see cref="Solids"/> and <see cref="Meshes"/> potentially in local coordinate space.
+  /// For now, <see cref="Curves"/>, <see cref="Polylines"/>, <see cref="Points"/> will always be in world space
+  /// </remarks>
   private sealed record GeometryCollections
   {
     public List<DB.Solid> Solids { get; } = new();
