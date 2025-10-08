@@ -9,19 +9,16 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
 {
   private readonly ITypedConverter<RG.Polyline, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public NurbsCurveConverter(
     ITypedConverter<RG.Polyline, SOG.Polyline> polylineConverter,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _polylineConverter = polylineConverter;
     _intervalConverter = intervalConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -76,8 +73,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
       rational = nurbsCurve.IsRational,
       domain = _intervalConverter.Convert(nurbsCurve.Domain),
       closed = nurbsCurve.IsClosed,
-      length = nurbsCurve.GetLength(),
-      bbox = _boxConverter.Convert(new RG.Box(nurbsCurve.GetBoundingBox(true)))
+      length = nurbsCurve.GetLength()
     };
 
     return myCurve;

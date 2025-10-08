@@ -11,14 +11,13 @@ namespace Speckle.Connectors.RevitShared.Operations.Send.Filters;
 public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilter
 {
   private RevitContext _revitContext;
-  private Document? _doc;
   public string Id { get; set; } = "revitViews";
   public string Name { get; set; } = "Views";
   public string Type { get; set; } = "Custom";
   public string? Summary { get; set; }
   public bool IsDefault { get; set; }
   public string? SelectedView { get; set; }
-  public List<string> SelectedObjectIds { get; set; }
+  public List<string> SelectedObjectIds { get; set; } = new();
   public Dictionary<string, string>? IdMap { get; set; } = new();
   public List<string>? AvailableViews { get; set; }
 
@@ -27,12 +26,14 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public RevitViewsFilter(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
-
-    GetViews();
+    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (doc is not null)
+    {
+      GetViews(doc);
+    }
   }
 
-  public View? GetView()
+  public View? GetView(Document document)
   {
     if (SelectedView is null)
     {
@@ -42,7 +43,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     var viewFamilyString = result[0];
     var viewString = result[1];
 
-    using var collector = new FilteredElementCollector(_doc);
+    using var collector = new FilteredElementCollector(document);
     return collector
       .OfClass(typeof(View))
       .Cast<View>()
@@ -56,7 +57,8 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   /// <exception cref="SpeckleSendFilterException">Whenever no view is found.</exception>
   public List<string> RefreshObjectIds()
   {
-    if (SelectedView is null)
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (SelectedView is null || document is null)
     {
       return [];
     }
@@ -66,7 +68,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     var viewFamilyString = result[0];
     var viewString = result[1];
 
-    using var collector = new FilteredElementCollector(_doc);
+    using var collector = new FilteredElementCollector(document);
     View? view = collector
       .OfClass(typeof(View))
       .Cast<View>()
@@ -78,7 +80,7 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
       return [];
     }
 
-    IEnumerable<Element> elementsInView = GetFilteredElementsForView(view);
+    IEnumerable<Element> elementsInView = GetFilteredElementsForView(document, view);
 
     // NOTE: FilteredElementCollector() includes sweeps and reveals from a wall family's definition and includes them as additional objects
     // on this return. displayValue for Wall already includes these, therefore we end up with duplicate elements on wall sweeps
@@ -94,9 +96,9 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     return objectIds;
   }
 
-  private void GetViews()
+  private void GetViews(Document document)
   {
-    using var collector = new FilteredElementCollector(_doc);
+    using var collector = new FilteredElementCollector(document);
     var views = collector
       .OfClass(typeof(View))
       .Cast<View>()
@@ -125,7 +127,6 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
   public void SetContext(RevitContext revitContext)
   {
     _revitContext = revitContext;
-    _doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
   }
 
   // NOTE: Element collector returns parts and source elements even when Parts Visibility is set as "Show Parts" only.
@@ -161,9 +162,9 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     return elementsToExclude;
   }
 
-  private IEnumerable<Element> GetFilteredElementsForView(View view)
+  private IEnumerable<Element> GetFilteredElementsForView(Document document, View view)
   {
-    using var viewCollector = new FilteredElementCollector(_doc, view.Id);
+    using var viewCollector = new FilteredElementCollector(document, view.Id);
     var allElements = viewCollector.ToElements();
 
     // parts filtering when view is set to show Parts only (and overwrites allElements)

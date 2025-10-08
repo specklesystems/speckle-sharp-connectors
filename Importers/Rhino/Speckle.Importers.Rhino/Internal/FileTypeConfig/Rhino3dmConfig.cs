@@ -11,7 +11,6 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 /// </remarks>
 public sealed class Rhino3dmConfig : IFileTypeConfig
 {
-  [Obsolete("Bugged, don't use until fixed")]
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
     RhinoDoc? doc = RhinoDoc.OpenHeadless(filePath);

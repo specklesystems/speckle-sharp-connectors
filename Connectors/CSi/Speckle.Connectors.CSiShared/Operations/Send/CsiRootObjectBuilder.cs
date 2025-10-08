@@ -34,7 +34,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettings;
   private readonly CsiSendCollectionManager _sendCollectionManager;
-  private readonly MaterialUnpacker _materialUnpacker;
+  private readonly IMaterialUnpacker _materialUnpacker;
   private readonly ISectionUnpacker _sectionUnpacker;
   private readonly ILogger<CsiRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
@@ -45,7 +45,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     IRootToSpeckleConverter rootToSpeckleConverter,
     IConverterSettingsStore<CsiConversionSettings> converterSettings,
     CsiSendCollectionManager sendCollectionManager,
-    MaterialUnpacker materialUnpacker,
+    IMaterialUnpacker materialUnpacker,
     ISectionUnpacker sectionUnpacker,
     ILogger<CsiRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory,
@@ -83,8 +83,16 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     using var activity = _activityFactory.Start("Build");
 
     string modelFileName = _csiApplicationService.SapModel.GetModelFilename(false) ?? "Unnamed model";
+    (string forceUnit, string tempUnit) = GetForceAndTemperatureUnits();
+
     Collection rootObjectCollection =
-      new() { name = modelFileName, ["units"] = _converterSettings.Current.SpeckleUnits };
+      new()
+      {
+        name = modelFileName,
+        ["units"] = _converterSettings.Current.SpeckleUnits,
+        ["forceUnits"] = forceUnit,
+        ["temperatureUnits"] = tempUnit
+      };
 
     List<SendConversionResult> results = new(csiObjects.Count);
     int count = 0;
@@ -217,4 +225,20 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
         group => group.Key, // ModelObjectType (FRAME, JOINT, etc.)
         group => group.Select(obj => obj.Name).ToList() // Extract Name from each ICsiWrapper and convert to List<string>
       );
+
+  /// <summary>
+  /// Instantiates a Base object and pre-populates it with the models defined force units.
+  /// </summary>
+  /// <returns></returns>
+  /// <exception cref="SpeckleException"></exception>
+  private (string, string) GetForceAndTemperatureUnits()
+  {
+    var forceUnit = eForce.NotApplicable;
+    var lengthUnit = eLength.NotApplicable;
+    var temperatureUnit = eTemperature.NotApplicable;
+
+    _converterSettings.Current.SapModel.GetDatabaseUnits_2(ref forceUnit, ref lengthUnit, ref temperatureUnit);
+
+    return (forceUnit.ToString(), temperatureUnit.ToString());
+  }
 }

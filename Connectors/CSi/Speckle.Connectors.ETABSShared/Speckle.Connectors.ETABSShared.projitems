@@ -9,9 +9,11 @@
     <Import_RootNamespace>Speckle.Connectors.ETABSShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\EtabsSendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsFrameSectionPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsMaterialPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyDefinitionService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionPropertyExtractor.cs" />
