@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -110,10 +111,9 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       if (displayValueWithTransform.Item1 is SOG.Mesh && displayValueWithTransform.Item2 is not null)
       {
         // potential instances scenario here
-        var unbakedMesh = displayValueWithTransform.Item1 as SOG.Mesh;
-        if (unbakedMesh is not null)
+        if (displayValueWithTransform.Item1 is SOG.Mesh unbakedMesh)
         {
-          var instanceDefinitionId = GenerateUntransformedMeshId(unbakedMesh);
+          var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(unbakedMesh);
           if (
             _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
               instanceDefinitionId,
@@ -250,8 +250,4 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       yield return Convert(_converterSettings.Current.Document.GetElement(childId));
     }
   }
-
-  // ewwwww ...
-  private string GenerateUntransformedMeshId(SOG.Mesh mesh) =>
-    (mesh.vertices.Average() / mesh.VerticesCount).ToString();
 }
