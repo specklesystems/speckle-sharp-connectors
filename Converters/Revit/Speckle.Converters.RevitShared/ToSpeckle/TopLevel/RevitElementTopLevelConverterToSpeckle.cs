@@ -61,10 +61,16 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       {
         var cachedRevitObject = (RevitObject)cachedElement;
 
-        // we can use all props of the cachedElement apart from the display values (different transform)
-        List<(Base, Matrix4x4?)> freshDisplayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
-        List<Base> freshProxifiedDisplayValues = ProxifyDisplayValues(freshDisplayValuesWithTransforms);
-        cachedRevitObject.displayValue = freshProxifiedDisplayValues;
+        // ensure we're using the current linked model instance's document context.
+        // This is critical because the same element (e.g., wall-123) exists in multiple
+        // linked model instances, and each instance has a different placement transform.
+        using (_converterSettings.Push(s => s with { Document = target.Document }))
+        {
+          // we can use all props of the cachedElement apart from the display values (different transform)
+          List<(Base, Matrix4x4?)> freshDisplayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
+          List<Base> freshProxifiedDisplayValues = ProxifyDisplayValues(freshDisplayValuesWithTransforms);
+          cachedRevitObject.displayValue = freshProxifiedDisplayValues;
+        }
 
         return cachedRevitObject;
       }
@@ -244,7 +250,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
           if (
             _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
               instanceDefinitionId,
-              out InstanceDefinitionProxy? instanceDefinition
+              out InstanceDefinitionProxy? _
             )
           )
           {
