@@ -114,11 +114,14 @@ public sealed class DisplayValueExtractor
   {
     using DB.Transform? localToDocument = GetTransform(element);
     using DB.Transform? documentToLocal = localToDocument?.Inverse;
-    using DB.Transform? compoundTransform = localToDocument is not null
-      ? _converterSettings.Current.ReferencePointTransform?.Multiply(localToDocument)
-      : null; //don't want to accidentally dispose of the ReferencePointTransform
-    DB.Transform? localToWorld =
-      compoundTransform ?? localToDocument ?? _converterSettings.Current.ReferencePointTransform;
+
+    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
+    using DB.Transform? compoundTransform =
+      localToDocument is not null && documentToWorld is not null
+        ? documentToWorld.Multiply(localToDocument)
+        : localToDocument; //don't want to accidentally dispose of the ReferencePointTransform
+
+    DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
     return ProcessGeometryCollections(element, collections, localToWorld);
