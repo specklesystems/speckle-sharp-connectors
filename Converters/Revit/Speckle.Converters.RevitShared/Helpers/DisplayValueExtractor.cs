@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
@@ -25,7 +24,6 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
-  private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public DisplayValueExtractor(
@@ -37,7 +35,6 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.PolyLine, SOG.Polyline> polylineConverter,
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
-    ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle toSpeckleScalingService
   )
@@ -47,31 +44,30 @@ public sealed class DisplayValueExtractor
     _polylineConverter = polylineConverter;
     _pointConverter = pointConverter;
     _pointcloudConverter = pointcloudConverter;
-    _logger = logger;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
   }
 
-  public List<(Base, Matrix4x4?)> GetDisplayValue(DB.Element element)
+  public List<DisplayValueResult> GetDisplayValue(DB.Element element)
   {
     switch (element)
     {
       // get custom (anything not using element.get_geometry) display values
       case DB.PointCloudInstance pointcloud:
-        return new() { (_pointcloudConverter.Convert(pointcloud), null) };
+        return [DisplayValueResult.WithoutTransform(_pointcloudConverter.Convert(pointcloud))];
       case DB.ModelCurve modelCurve:
-        return new() { (GetCurveDisplayValue(modelCurve.GeometryCurve), null) };
+        return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(modelCurve.GeometryCurve))];
       case DB.Grid grid:
-        return new() { (GetCurveDisplayValue(grid.Curve), null) };
+        return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        List<(Base, Matrix4x4?)> areaDisplay = new();
+        List<DisplayValueResult> areaDisplay = new();
         using (var options = new DB.SpatialElementBoundaryOptions())
         {
           foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
           {
             foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
             {
-              areaDisplay.Add((GetCurveDisplayValue(boundarySegment.GetCurve()), null));
+              areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
             }
           }
         }
@@ -92,7 +88,7 @@ public sealed class DisplayValueExtractor
         return wall.CurtainGrid is not null || wall.IsStackedWall ? new() : GetGeometryDisplayValue(element);
       // railings should also include toprail which need to be retrieved separately
       case DBA.Railing railing:
-        List<(Base, Matrix4x4?)> railingDisplay = GetGeometryDisplayValue(railing);
+        List<DisplayValueResult> railingDisplay = GetGeometryDisplayValue(railing);
         if (railing.TopRail != DB.ElementId.InvalidElementId)
         {
           var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
@@ -110,7 +106,7 @@ public sealed class DisplayValueExtractor
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
 
-  private List<(Base, Matrix4x4?)> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
+  private List<DisplayValueResult> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
     using DB.Transform? localToDocument = GetTransform(element);
     using DB.Transform? documentToLocal = localToDocument?.Inverse;
@@ -119,7 +115,7 @@ public sealed class DisplayValueExtractor
     using DB.Transform? compoundTransform =
       localToDocument is not null && documentToWorld is not null
         ? documentToWorld.Multiply(localToDocument)
-        : localToDocument; //don't want to accidentally dispose of the ReferencePointTransform
+        : localToDocument; // don't want to accidentally dispose of the ReferencePointTransform
 
     DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
 
@@ -179,7 +175,7 @@ public sealed class DisplayValueExtractor
   /// <remarks>
   /// Essentially all the ensuing steps after the common get_Geometry element method
   /// </remarks>
-  private List<(Base, Matrix4x4?)> ProcessGeometryCollections(
+  private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
     GeometryCollections collections,
     DB.Transform? localToWorld
@@ -191,33 +187,38 @@ public sealed class DisplayValueExtractor
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
 
-    List<(Base, Matrix4x4?)> displayValue = new(collections.TotalCount);
+    List<DisplayValueResult> displayValue = new(collections.TotalCount);
     Matrix4x4? matrix = localToWorld is not null ? TransformToMatrix(localToWorld) : null;
+
     foreach (SOG.Mesh mesh in displayMeshes)
     {
-      displayValue.Add((mesh, matrix));
+      displayValue.Add(
+        matrix.HasValue
+          ? DisplayValueResult.WithTransform(mesh, matrix.Value)
+          : DisplayValueResult.WithoutTransform(mesh)
+      );
     }
 
-    // add rest of geometry
+    // add rest of geometry (always without transform)
     foreach (var curve in collections.Curves)
     {
-      displayValue.Add((GetCurveDisplayValue(curve), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     foreach (var polyline in collections.Polylines)
     {
-      displayValue.Add((_polylineConverter.Convert(polyline), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
     }
 
     foreach (var point in collections.Points)
     {
-      displayValue.Add((_pointConverter.Convert(point), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
     }
 
     return displayValue;
   }
 
-  public Matrix4x4 TransformToMatrix(DB.Transform transform) =>
+  private Matrix4x4 TransformToMatrix(DB.Transform transform) =>
     new()
     {
       M11 = transform.BasisX.X,
@@ -511,7 +512,7 @@ public sealed class DisplayValueExtractor
   /// Instead, we use GetFullGeometryForView() to obtain the geometry and then process it
   /// using the standard geometry sorting and conversion.
   /// </remarks>
-  private List<(Base, Matrix4x4?)> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
+  private List<DisplayValueResult> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
   {
     var collections = new GeometryCollections();
 
@@ -527,7 +528,7 @@ public sealed class DisplayValueExtractor
     }
 
     // Return empty list if no geometry is found - imo not critical
-    return new List<(Base, Matrix4x4?)>();
+    return new List<DisplayValueResult>();
   }
 
   /// <summary>
@@ -536,7 +537,7 @@ public sealed class DisplayValueExtractor
   /// <remarks>
   /// This method extracts the centerlines of rebar elements when a simplified representation is preferred.
   /// </remarks>
-  private List<(Base, Matrix4x4?)> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
+  private List<DisplayValueResult> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
   {
     bool isSingleLayout = rebar.LayoutRule == DB.Structure.RebarLayoutRule.Single;
     int numberOfBarPositions = rebar.NumberOfBarPositions;
@@ -565,10 +566,10 @@ public sealed class DisplayValueExtractor
       );
     }
 
-    List<(Base, Matrix4x4?)> displayValue = new();
+    List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      displayValue.Add((GetCurveDisplayValue(curve), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     return displayValue;

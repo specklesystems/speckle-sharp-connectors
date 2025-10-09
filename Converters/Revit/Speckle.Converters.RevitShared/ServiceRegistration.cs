@@ -19,7 +19,8 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
     //register types by default
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
-    // Register single root
+
+    // register single root
     serviceCollection.AddRootCommon<RevitRootToSpeckleConverter>(converterAssembly);
 
     // register all application converters

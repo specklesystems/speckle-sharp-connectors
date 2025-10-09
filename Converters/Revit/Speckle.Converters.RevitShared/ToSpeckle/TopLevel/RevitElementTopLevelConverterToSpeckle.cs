@@ -102,66 +102,10 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     }
 
     // get the display value
-    List<(Base, Matrix4x4?)> displayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
-    var displayValues = displayValuesWithTransforms.ConvertAll(displayValueConverter => displayValueConverter.Item1);
+    List<DisplayValueResult> displayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
 
-    List<Base> proxifiedDisplayValues = new();
-    foreach ((Base, Matrix4x4?) displayValueWithTransform in displayValuesWithTransforms)
-    {
-      if (displayValueWithTransform.Item1 is SOG.Mesh && displayValueWithTransform.Item2 is not null)
-      {
-        // potential instances scenario here
-        if (displayValueWithTransform.Item1 is SOG.Mesh unbakedMesh)
-        {
-          var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(unbakedMesh);
-          if (
-            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
-              instanceDefinitionId,
-              out InstanceDefinitionProxy? instanceDefinition
-            )
-          )
-          {
-            // instanceDefinition.objects.Add(unbakedMesh.applicationId.NotNull());
-          }
-          else
-          {
-            var newInstanceDefinition = new InstanceDefinitionProxy
-            {
-              applicationId = instanceDefinitionId,
-              objects = new List<string> { unbakedMesh.applicationId.NotNull() },
-              maxDepth = 1,
-              name = instanceDefinitionId,
-            };
-            _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
-          }
-
-          if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
-          {
-            _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, unbakedMesh);
-          }
-
-          var instanceProxy = new InstanceProxy
-          {
-            applicationId = Guid.NewGuid().ToString(),
-            definitionId = instanceDefinitionId,
-            transform = displayValueWithTransform.Item2.Value,
-            maxDepth = 1,
-            units = unbakedMesh.units
-          };
-          proxifiedDisplayValues.Add(instanceProxy);
-        }
-        else
-        {
-          proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
-        }
-      }
-      else
-      {
-        proxifiedDisplayValues.Add(displayValueWithTransform.Item1);
-      }
-    }
-
-    // assumption here is that if we have matrix for corresponding base it is instancable
+    // process display values and create instance proxies where applicable
+    List<Base> proxifiedDisplayValues = ProcessDisplayValues(displayValuesWithTransforms);
 
     // get level
     string? level = _levelExtractor.GetLevelName(target);
@@ -249,5 +193,70 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     {
       yield return Convert(_converterSettings.Current.Document.GetElement(childId));
     }
+  }
+
+  /// <summary>
+  /// Processes display values with transforms and creates instance proxies for meshes that can be instanced.
+  /// </summary>
+  /// <returns>List of processed display values, with meshes replaced by instance proxies where applicable</returns>
+  private List<Base> ProcessDisplayValues(List<DisplayValueResult> displayValues)
+  {
+    List<Base> proxifiedDisplayValues = new();
+
+    foreach (var displayValue in displayValues)
+    {
+      // check if this is a mesh with a transform - potential instance scenario
+      // assumption here is that if we have matrix for corresponding base it is instance-able
+      if (displayValue.Geometry is SOG.Mesh mesh && displayValue.Transform is not null)
+      {
+        var instanceProxy = CreateOrGetInstanceProxy(mesh, displayValue.Transform.Value);
+        proxifiedDisplayValues.Add(instanceProxy);
+      }
+      else
+      {
+        proxifiedDisplayValues.Add(displayValue.Geometry);
+      }
+    }
+
+    return proxifiedDisplayValues;
+  }
+
+  /// <summary>
+  /// Creates or retrieves an instance proxy for a mesh, managing instance definitions and caching.
+  /// </summary>
+  private InstanceProxy CreateOrGetInstanceProxy(SOG.Mesh mesh, Matrix4x4 transform)
+  {
+    var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
+
+    // ensure instance definition exists
+    if (!_revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.ContainsKey(instanceDefinitionId))
+    {
+      var newInstanceDefinition = new InstanceDefinitionProxy
+      {
+        applicationId = instanceDefinitionId,
+        objects = new List<string> { mesh.applicationId.NotNull() },
+        maxDepth = 1,
+        name = instanceDefinitionId,
+      };
+      _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
+    }
+
+    // cache the untransformed mesh object if not already cached
+    if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
+    {
+      _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, mesh);
+    }
+
+    // create and return instance proxy with transform
+    var instanceProxy = new InstanceProxy
+    {
+      applicationId = Guid.NewGuid().ToString(),
+      definitionId = instanceDefinitionId,
+      transform = transform,
+      maxDepth = 1,
+      units = mesh.units
+    };
+
+    return instanceProxy;
   }
 }
