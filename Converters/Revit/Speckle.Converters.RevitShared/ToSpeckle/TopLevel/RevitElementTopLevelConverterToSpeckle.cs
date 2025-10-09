@@ -48,8 +48,8 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   private RevitObject Convert(DB.Element target)
   {
-    // for linked model elements, check the cache. an "early exit" with an already converted element saves majority of
-    // ensuing extractor logic. this happens if we have multiple instances of the same linked model.
+    // for linked model elements, check the cache. an "early exit" with cached properties saves expensive re-extraction
+    // this happens when we have multiple instances of the same linked model.
     if (target.Document.IsLinked)
     {
       if (
@@ -62,18 +62,25 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       {
         var cachedRevitObject = (RevitObject)cachedElement;
 
-        // ensure we're using the current linked model instance's document context.
-        // This is critical because the same element (e.g., wall-123) exists in multiple
-        // linked model instances, and each instance has a different placement transform.
-        using (_converterSettings.Push(s => s with { Document = target.Document }))
-        {
-          // we can use all props of the cachedElement apart from the display values (different transform)
-          List<(Base, Matrix4x4?)> freshDisplayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
-          List<Base> freshProxifiedDisplayValues = ProxifyDisplayValues(freshDisplayValuesWithTransforms);
-          cachedRevitObject.displayValue = freshProxifiedDisplayValues;
-        }
+        // Re-extract display values (different per instance due to transforms)
+        // but reuse everything else (properties, location, level, etc.)
+        List<DisplayValueResult> freshDisplayValues = _displayValueExtractor.GetDisplayValue(target);
+        List<Base> freshProxifiedDisplayValues = ProcessDisplayValues(freshDisplayValues);
 
-        return cachedRevitObject;
+        // Create new RevitObject with cached properties but fresh display values
+        return new RevitObject
+        {
+          name = cachedRevitObject.name,
+          type = cachedRevitObject.type,
+          family = cachedRevitObject.family,
+          level = cachedRevitObject.level,
+          category = cachedRevitObject.category,
+          location = cachedRevitObject.location,
+          elements = cachedRevitObject.elements,
+          displayValue = freshProxifiedDisplayValues, // ← only this is fresh
+          properties = cachedRevitObject.properties,
+          units = cachedRevitObject.units
+        };
       }
     }
 
