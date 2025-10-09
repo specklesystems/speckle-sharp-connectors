@@ -4,6 +4,7 @@ using Rhino;
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.Parameters;
@@ -27,7 +28,25 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
   // The list of layer/collection names that forms the full path to this object
   public List<string> Path { get; set; } = new();
   public SpeckleCollectionWrapper? Parent { get; set; }
-  public SpecklePropertyGroupGoo Properties { get; set; } = new();
+
+  /// <summary>
+  /// Properties that stay synchronized with Base["properties"]
+  /// </summary>
+  public SpecklePropertyGroupGoo Properties
+  {
+    get
+    {
+      // always create from Base["properties"] like SpeckleDataObjectWrapper does
+      if (Base[Constants.PROPERTIES_PROP] is Dictionary<string, object?> baseProps)
+      {
+        return new SpecklePropertyGroupGoo(baseProps);
+      }
+      return new SpecklePropertyGroupGoo(); // return empty if no properties
+    }
+    set =>
+      // unwrap and store in Base["properties"] like SpeckleDataObjectWrapper does
+      Base[Constants.PROPERTIES_PROP] = value.Unwrap();
+  }
 
   /// <summary>
   /// The color of the <see cref="Base"/>

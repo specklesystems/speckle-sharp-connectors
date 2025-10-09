@@ -1,3 +1,4 @@
+using Rhino.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Common.Exceptions;
@@ -7,15 +8,10 @@ namespace Speckle.Converters.Rhino.ToSpeckle.Raw;
 [NameAndRankValue(typeof(RG.Mesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
 {
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
-  public MeshToSpeckleConverter(
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore
-  )
+  public MeshToSpeckleConverter(IConverterSettingsStore<RhinoConversionSettings> settingsStore)
   {
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
   }
 
@@ -103,8 +99,9 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       }
     }
 
+    // get area and volume props
+    double area = AreaMassProperties.Compute(target).Area;
     double volume = target.IsClosed ? target.Volume() : 0;
-    SOG.Box bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(false)));
 
     return new SOG.Mesh
     {
@@ -115,7 +112,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       vertexNormals = [.. vertexNormals], // this will be empty array when setting is false
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
-      bbox = bbox
+      area = area
     };
   }
 }

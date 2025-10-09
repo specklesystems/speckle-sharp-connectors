@@ -38,6 +38,8 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
     {
       displayValue = displayValue,
       encodedValue = brepEncoding,
+      volume = target.IsSolid ? target.GetVolume() : 0,
+      area = target.GetArea(),
       units = _settingsStore.Current.SpeckleUnits
     };
 

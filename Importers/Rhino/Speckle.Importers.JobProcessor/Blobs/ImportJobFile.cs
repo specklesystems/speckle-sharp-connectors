@@ -37,7 +37,14 @@ internal sealed class ImportJobFile(ILogger<ImportJobFile> logger, FileInfo file
     catch (Exception ex)
     {
       logger.LogError(ex, "Failed to cleanup file");
-      throw;
+
+      // We had hoped that making Rhino a sub-process would help avoid this scenario, and it mostly has,
+      // But occasionally, we still see some particually weird 3dm files staying locked even after the process has exited...
+      // For now, we'll just swallow the IOException
+      if (ex is not IOException)
+      {
+        throw;
+      }
     }
   }
 

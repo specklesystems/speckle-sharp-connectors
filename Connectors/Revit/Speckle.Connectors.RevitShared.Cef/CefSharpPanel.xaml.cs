@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
@@ -30,6 +31,10 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
         },
         DispatcherPriority.Background
       );
+    }
+    catch (SEHException)
+    {
+      //do nothing as we can't control external components
     }
     catch (OperationCanceledException)
     {
