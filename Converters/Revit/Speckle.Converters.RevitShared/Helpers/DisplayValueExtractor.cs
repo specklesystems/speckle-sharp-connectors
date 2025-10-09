@@ -117,7 +117,8 @@ public sealed class DisplayValueExtractor
     using DB.Transform? compoundTransform = localToDocument is not null
       ? _converterSettings.Current.ReferencePointTransform?.Multiply(localToDocument)
       : null; //don't want to accidentally dispose of the ReferencePointTransform
-    DB.Transform? localToWorld = compoundTransform ?? _converterSettings.Current.ReferencePointTransform;
+    DB.Transform? localToWorld =
+      compoundTransform ?? localToDocument ?? _converterSettings.Current.ReferencePointTransform;
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
     return ProcessGeometryCollections(element, collections, localToWorld);
