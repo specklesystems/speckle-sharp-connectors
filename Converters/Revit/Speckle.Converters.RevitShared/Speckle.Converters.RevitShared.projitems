@@ -9,6 +9,7 @@
     <Import_RootNamespace>Speckle.Converters.RevitShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueResult.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\LevelExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\LinkedModelElementCacheScoped.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ReferencePointHelper.cs" />

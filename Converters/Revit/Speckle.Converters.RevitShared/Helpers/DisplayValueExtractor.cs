@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Extensions;
@@ -25,7 +24,6 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.PolyLine, SOG.Polyline> _polylineConverter;
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
-  private readonly ILogger<DisplayValueExtractor> _logger;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
 
   public DisplayValueExtractor(
@@ -37,7 +35,6 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.PolyLine, SOG.Polyline> polylineConverter,
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
-    ILogger<DisplayValueExtractor> logger,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle toSpeckleScalingService
   )
@@ -47,31 +44,30 @@ public sealed class DisplayValueExtractor
     _polylineConverter = polylineConverter;
     _pointConverter = pointConverter;
     _pointcloudConverter = pointcloudConverter;
-    _logger = logger;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
   }
 
-  public List<(Base, Matrix4x4?)> GetDisplayValue(DB.Element element)
+  public List<DisplayValueResult> GetDisplayValue(DB.Element element)
   {
     switch (element)
     {
       // get custom (anything not using element.get_geometry) display values
       case DB.PointCloudInstance pointcloud:
-        return new() { (_pointcloudConverter.Convert(pointcloud), null) };
+        return [DisplayValueResult.WithoutTransform(_pointcloudConverter.Convert(pointcloud))];
       case DB.ModelCurve modelCurve:
-        return new() { (GetCurveDisplayValue(modelCurve.GeometryCurve), null) };
+        return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(modelCurve.GeometryCurve))];
       case DB.Grid grid:
-        return new() { (GetCurveDisplayValue(grid.Curve), null) };
+        return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        List<(Base, Matrix4x4?)> areaDisplay = new();
+        List<DisplayValueResult> areaDisplay = new();
         using (var options = new DB.SpatialElementBoundaryOptions())
         {
           foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
           {
             foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
             {
-              areaDisplay.Add((GetCurveDisplayValue(boundarySegment.GetCurve()), null));
+              areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
             }
           }
         }
@@ -92,7 +88,7 @@ public sealed class DisplayValueExtractor
         return wall.CurtainGrid is not null || wall.IsStackedWall ? new() : GetGeometryDisplayValue(element);
       // railings should also include toprail which need to be retrieved separately
       case DBA.Railing railing:
-        List<(Base, Matrix4x4?)> railingDisplay = GetGeometryDisplayValue(railing);
+        List<DisplayValueResult> railingDisplay = GetGeometryDisplayValue(railing);
         if (railing.TopRail != DB.ElementId.InvalidElementId)
         {
           var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
@@ -110,10 +106,21 @@ public sealed class DisplayValueExtractor
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
 
-  private List<(Base, Matrix4x4?)> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
+  private List<DisplayValueResult> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
-    var collections = GetSortedGeometryFromElement(element, options);
-    return ProcessGeometryCollections(element, collections);
+    using DB.Transform? localToDocument = GetTransform(element);
+    using DB.Transform? documentToLocal = localToDocument?.Inverse;
+
+    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
+    using DB.Transform? compoundTransform =
+      localToDocument is not null && documentToWorld is not null
+        ? documentToWorld.Multiply(localToDocument)
+        : localToDocument; // don't want to accidentally dispose of the ReferencePointTransform
+
+    DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
+
+    var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
+    return ProcessGeometryCollections(element, collections, localToWorld);
   }
 
   /// <summary>
@@ -124,7 +131,15 @@ public sealed class DisplayValueExtractor
   /// Note: Some special element types (like Rebar) cannot use this method as their
   /// get_Geometry() returns null, requiring specialized extraction methods.
   /// </remarks>
-  private GeometryCollections GetSortedGeometryFromElement(DB.Element element, DB.Options? options)
+  /// <param name="element"></param>
+  /// <param name="options"></param>
+  /// <param name="worldToLocal"></param>
+  /// <returns></returns>
+  private GeometryCollections GetSortedGeometryFromElement(
+    DB.Element element,
+    DB.Options? options,
+    DB.Transform? worldToLocal
+  )
   {
     //options = ViewSpecificOptions ?? options ?? new Options() { DetailLevel = DetailLevelSetting };
     options ??= new DB.Options { DetailLevel = _detailLevelMap[_converterSettings.Current.DetailLevel] };
@@ -147,7 +162,7 @@ public sealed class DisplayValueExtractor
     if (geom != null && geom.Any())
     {
       // retrieves all meshes and solids from a geometry element
-      SortGeometry(element, collections, geom);
+      SortGeometry(element, collections, geom, worldToLocal);
     }
 
     return collections;
@@ -160,46 +175,50 @@ public sealed class DisplayValueExtractor
   /// <remarks>
   /// Essentially all the ensuing steps after the common get_Geometry element method
   /// </remarks>
-  private List<(Base, Matrix4x4?)> ProcessGeometryCollections(DB.Element element, GeometryCollections collections)
+  private List<DisplayValueResult> ProcessGeometryCollections(
+    DB.Element element,
+    GeometryCollections collections,
+    DB.Transform? localToWorld
+  )
   {
-    List<(Base, Matrix4x4?)> displayValue = new();
-
-    using DB.Transform? localToWorld = GetTransform(element); // on an element level
-    using DB.Transform? worldToLocal = localToWorld?.Inverse; // this needs to be scaled?
-
     // handle all solids and meshes by their material
-    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids, worldToLocal);
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
     List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
-    // TODO: fix below bullshit
-    List<(Base, Matrix4x4?)> local = new();
+
+    List<DisplayValueResult> displayValue = new(collections.TotalCount);
+    Matrix4x4? matrix = localToWorld is not null ? TransformToMatrix(localToWorld) : null;
+
     foreach (SOG.Mesh mesh in displayMeshes)
     {
-      local.Add((mesh, localToWorld is not null ? TransformToMatrix(localToWorld) : null));
+      displayValue.Add(
+        matrix.HasValue
+          ? DisplayValueResult.WithTransform(mesh, matrix.Value)
+          : DisplayValueResult.WithoutTransform(mesh)
+      );
     }
-    displayValue.AddRange(local);
 
-    // add rest of geometry
+    // add rest of geometry (always without transform)
     foreach (var curve in collections.Curves)
     {
-      displayValue.Add((GetCurveDisplayValue(curve), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     foreach (var polyline in collections.Polylines)
     {
-      displayValue.Add((_polylineConverter.Convert(polyline), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
     }
 
     foreach (var point in collections.Points)
     {
-      displayValue.Add((_pointConverter.Convert(point), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
     }
 
     return displayValue;
   }
 
-  public Matrix4x4 TransformToMatrix(DB.Transform transform) =>
+  private Matrix4x4 TransformToMatrix(DB.Transform transform) =>
     new()
     {
       M11 = transform.BasisX.X,
@@ -235,14 +254,12 @@ public sealed class DisplayValueExtractor
 
   private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
     List<DB.Mesh> meshes,
-    List<DB.Solid> solids,
-    DB.Transform? worldToLocal
+    List<DB.Solid> solids
   )
   {
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
-    foreach (var untransformed in meshes)
+    foreach (var mesh in meshes)
     {
-      DB.Mesh mesh = worldToLocal != null ? untransformed.get_Transformed(worldToLocal) : untransformed;
       var materialId = mesh.MaterialElementId;
       if (!meshesByMaterial.TryGetValue(materialId, out List<DB.Mesh>? value))
       {
@@ -253,11 +270,8 @@ public sealed class DisplayValueExtractor
       value.Add(mesh);
     }
 
-    foreach (var untransformed in solids)
+    foreach (var solid in solids)
     {
-      using DB.Solid? transformed =
-        worldToLocal != null ? DB.SolidUtils.CreateTransformed(untransformed, worldToLocal) : null;
-      DB.Solid solid = transformed ?? untransformed;
       foreach (DB.Face face in solid.Faces)
       {
         var materialId = face.MaterialElementId;
@@ -302,7 +316,12 @@ public sealed class DisplayValueExtractor
   ///
   /// Note: this is basically a geometry unpacker for all types of geometry
   /// </summary>
-  private void SortGeometry(DB.Element element, GeometryCollections collections, DB.GeometryElement geom)
+  private void SortGeometry(
+    DB.Element element,
+    GeometryCollections collections,
+    DB.GeometryElement geom,
+    DB.Transform? worldToLocal
+  )
   {
     foreach (DB.GeometryObject geomObj in geom)
     {
@@ -320,13 +339,22 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
+          if (worldToLocal is not null)
+          {
+            solid = DB.SolidUtils.CreateTransformed(solid, worldToLocal);
+          }
           collections.Solids.Add(solid);
           break;
 
         case DB.Mesh mesh:
+          if (worldToLocal is not null)
+          {
+            mesh = mesh.get_Transformed(worldToLocal);
+          }
           collections.Meshes.Add(mesh);
           break;
 
+        //Note, we're not applying transforms to curves/polylines/points because ProcessGeometryCollections expects them in world coordinates
         case DB.Curve curve:
           collections.Curves.Add(curve);
           break;
@@ -341,12 +369,19 @@ public sealed class DisplayValueExtractor
 
         case DB.GeometryInstance instance:
           // element transforms should not be carried down into nested geometryInstances.
-          // Nested geomInstances should have their geom retreived with GetInstanceGeom, not GetSymbolGeom
-          SortGeometry(element, collections, instance.GetInstanceGeometry());
+          // Nested geomInstances should have their geom retrieved with GetInstanceGeom, not GetSymbolGeom
+          if (worldToLocal == null) //see remark on method for why this is safe to do...
+          {
+            SortGeometry(element, collections, instance.GetInstanceGeometry(), null);
+          }
+          else
+          {
+            SortGeometry(element, collections, instance.GetSymbolGeometry(), null);
+          }
           break;
 
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, collections, geometryElement);
+          SortGeometry(element, collections, geometryElement, null);
           break;
       }
     }
@@ -477,25 +512,23 @@ public sealed class DisplayValueExtractor
   /// Instead, we use GetFullGeometryForView() to obtain the geometry and then process it
   /// using the standard geometry sorting and conversion.
   /// </remarks>
-  private List<(Base, Matrix4x4?)> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
+  private List<DisplayValueResult> GetRebarVolumetricDisplayValue(DB.Structure.Rebar rebar)
   {
     var collections = new GeometryCollections();
 
     // Regular get_Geometry() returns null for rebar, so we need to use GetFullGeometryForView
     // ❗NOTE: ️view detail level needs to be fine in order for this to work
     // Same behaviour as sending structural frame though - consistent and therefore okay.
-    DB.GeometryElement geometryElements = rebar.GetFullGeometryForView(_converterSettings.Current.Document.ActiveView);
-
-    SortGeometry(rebar, collections, geometryElements);
+    DB.GeometryElement? geometryElements = rebar.GetFullGeometryForView(_converterSettings.Current.Document.ActiveView);
 
     if (geometryElements != null)
     {
-      SortGeometry(rebar, collections, geometryElements);
-      return ProcessGeometryCollections(rebar, collections);
+      SortGeometry(rebar, collections, geometryElements, null);
+      return ProcessGeometryCollections(rebar, collections, null);
     }
 
     // Return empty list if no geometry is found - imo not critical
-    return new List<(Base, Matrix4x4?)>();
+    return new List<DisplayValueResult>();
   }
 
   /// <summary>
@@ -504,7 +537,7 @@ public sealed class DisplayValueExtractor
   /// <remarks>
   /// This method extracts the centerlines of rebar elements when a simplified representation is preferred.
   /// </remarks>
-  private List<(Base, Matrix4x4?)> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
+  private List<DisplayValueResult> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
   {
     bool isSingleLayout = rebar.LayoutRule == DB.Structure.RebarLayoutRule.Single;
     int numberOfBarPositions = rebar.NumberOfBarPositions;
@@ -533,10 +566,10 @@ public sealed class DisplayValueExtractor
       );
     }
 
-    List<(Base, Matrix4x4?)> displayValue = new();
+    List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      displayValue.Add((GetCurveDisplayValue(curve), null));
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     return displayValue;
@@ -547,6 +580,10 @@ public sealed class DisplayValueExtractor
   /// Used to pass multiple geometry collections as a single parameter to improve code readability
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
+  /// <remarks>
+  /// <see cref="Solids"/> and <see cref="Meshes"/> potentially in local coordinate space.
+  /// For now, <see cref="Curves"/>, <see cref="Polylines"/>, <see cref="Points"/> will always be in world space
+  /// </remarks>
   private sealed record GeometryCollections
   {
     public List<DB.Solid> Solids { get; } = new();
@@ -554,5 +591,7 @@ public sealed class DisplayValueExtractor
     public List<DB.Curve> Curves { get; } = new();
     public List<DB.PolyLine> Polylines { get; } = new();
     public List<DB.Point> Points { get; } = new();
+
+    public int TotalCount => Solids.Count + Meshes.Count + Curves.Count + Polylines.Count + Points.Count;
   }
 }
