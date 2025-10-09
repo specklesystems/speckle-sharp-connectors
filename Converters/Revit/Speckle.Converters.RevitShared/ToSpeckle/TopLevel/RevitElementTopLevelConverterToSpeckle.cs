@@ -235,7 +235,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       {
         applicationId = instanceDefinitionId,
         objects = new List<string> { mesh.applicationId.NotNull() },
-        maxDepth = 1,
+        maxDepth = 0,
         name = instanceDefinitionId,
       };
       _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
@@ -253,7 +253,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       applicationId = Guid.NewGuid().ToString(),
       definitionId = instanceDefinitionId,
       transform = transform,
-      maxDepth = 1,
+      maxDepth = 0,
       units = mesh.units
     };
 
