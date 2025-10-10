@@ -20,16 +20,19 @@ public class Polyline3dToSpeckleConverter
 {
   private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
     ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _doublesConverter = doublesConverter;
     _splineConverter = splineConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -117,7 +120,7 @@ public class Polyline3dToSpeckleConverter
         bulges = null,
         tangents = null,
         normal = null,
-        value = value, // do not need to convert with reference point since GCS is used internally
+        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,

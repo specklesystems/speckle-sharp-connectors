@@ -18,18 +18,21 @@ public class PolylineToSpeckleConverter
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
     ITypedConverter<AG.LineSegment3d, SOG.Line> lineConverter,
     ITypedConverter<AG.CircularArc3d, SOG.Arc> arcConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _lineConverter = lineConverter;
     _arcConverter = arcConverter;
     _vectorConverter = vectorConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -37,15 +40,16 @@ public class PolylineToSpeckleConverter
 
   public SOG.Autocad.AutocadPolycurve Convert(ADB.Polyline target)
   {
-    List<double> value = new(target.NumberOfVertices * 3);
+    List<double> value = new(target.NumberOfVertices * 2);
     List<double> bulges = new(target.NumberOfVertices);
     List<Objects.ICurve> segments = new();
     for (int i = 0; i < target.NumberOfVertices; i++)
     {
-      // get vertex value in the Object Coordinate System (OCS)
-      AG.Point2d vertex = target.GetPoint2dAt(i);
+      // get vertex value in the World Coordinate System (WCS)
+      AG.Point3d vertex = target.GetPoint3dAt(i);
       value.Add(vertex.X);
       value.Add(vertex.Y);
+      value.Add(vertex.Z);
 
       // get the bulge
       bulges.Add(target.GetBulgeAt(i));
@@ -74,7 +78,7 @@ public class PolylineToSpeckleConverter
       new()
       {
         segments = segments,
-        value = value, // do not need to convert with reference point since OCS is used internally
+        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
         bulges = bulges,
         normal = normal,
         tangents = null,

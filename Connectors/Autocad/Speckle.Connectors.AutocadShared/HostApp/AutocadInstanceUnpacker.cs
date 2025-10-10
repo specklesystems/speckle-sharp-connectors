@@ -176,6 +176,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         }
 
         _instanceObjectsManager.AddAtomicDefinitionObjectId(appId);
+        _instanceObjectsManager.AddAtomicObject(appId, new(obj, appId));
       }
 
       _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);

@@ -24,6 +24,7 @@ public class Polyline2dToSpeckleConverter
   private readonly ITypedConverter<ADB.Line, SOG.Line> _lineConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline2dToSpeckleConverter(
@@ -32,6 +33,7 @@ public class Polyline2dToSpeckleConverter
     ITypedConverter<ADB.Line, SOG.Line> lineConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
@@ -40,6 +42,7 @@ public class Polyline2dToSpeckleConverter
     _lineConverter = lineConverter;
     _splineConverter = splineConverter;
     _vectorConverter = vectorConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -169,7 +172,7 @@ public class Polyline2dToSpeckleConverter
       new()
       {
         segments = segments,
-        value = value, // do not need to convert with reference point since GCS is used internally
+        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
         bulges = bulges,
         tangents = tangents,
         normal = normal,
