@@ -4,7 +4,7 @@ namespace Speckle.Connectors.Common.Instances;
 
 public record UnpackResult<T>(
   List<T> AtomicObjects,
-  List<T> AtomicDefinitionObjects,
+  HashSet<string> AtomicDefinitionObjectIds,
   Dictionary<string, InstanceProxy> InstanceProxies,
   List<InstanceDefinitionProxy> InstanceDefinitionProxies
 );

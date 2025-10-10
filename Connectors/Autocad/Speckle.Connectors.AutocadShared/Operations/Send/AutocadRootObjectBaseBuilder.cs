@@ -87,14 +87,14 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // 1 - Unpack the instances
-    var (atomicObjects, atomicDefinitionObjects, instanceProxies, instanceDefinitionProxies) =
+    var (atomicObjects, atomicDefinitionObjectIds, instanceProxies, instanceDefinitionProxies) =
       _instanceUnpacker.UnpackSelection(objects);
     root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
 
     // 2 - Unpack the groups
     root[ProxyKeys.GROUP] = _groupUnpacker.UnpackGroups(atomicObjects);
 
-    // 7 - Add the Reference Point
+    // 3 - Add the Reference Point
     Matrix3d? referenceTransform = null;
     if (
       Application.DocumentManager.CurrentDocument.Editor.CurrentUserCoordinateSystem is Matrix3d matrix
@@ -112,7 +112,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
       List<SendConversionResult> results = new();
       int count = 0;
 
-      // 3 - Convert atomic objects
+      // 4 - Convert atomic objects
       foreach (var (entity, applicationId) in atomicObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
@@ -125,42 +125,29 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
           root.elements.Add(objectCollection);
         }
 
-        var result = ConvertAutocadEntity(
-          entity,
-          applicationId,
-          objectCollection,
-          instanceProxies,
-          projectId,
-          referenceTransform // set this for top level instance proxies to use if needed
-        );
+        SendConversionResult? result = null;
+        // If this is a atomic definition object, we *do not* want to bake in the reference point transform to the object
+        if (atomicDefinitionObjectIds.Contains(applicationId))
+        {
+          using (_converterSettings.Push(currentSettings => currentSettings with { ReferencePointTransform = null }))
+          {
+            result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
+          }
+        }
+        else // this is a selected atomic object (not part of definition)
+        {
+          result = ConvertAutocadEntity(
+            entity,
+            applicationId,
+            objectCollection,
+            instanceProxies,
+            projectId,
+            referenceTransform // set this for top level instance proxies to use if needed
+          );
+        }
 
         results.Add(result);
-
         onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
-      }
-
-      // 4 - Convert atomic definition objects
-      // smelly POC!! This can be refactored if instance unpacker returns a hash of application id for block objs instead of a separate list of atomic objs
-      // if this atomic object came from an instance definition, we do *not* want to bake in the reference point settings
-      using (_converterSettings.Push(currentSettings => currentSettings with { ReferencePointTransform = null }))
-      {
-        foreach (var (entity, applicationId) in atomicDefinitionObjects)
-        {
-          cancellationToken.ThrowIfCancellationRequested();
-          // Create and add a collection for this entity if not done so already.
-          (Collection objectCollection, LayerTableRecord? autocadLayer) = CreateObjectCollection(entity, tr);
-
-          if (autocadLayer is not null)
-          {
-            usedAcadLayers.Add(autocadLayer);
-            root.elements.Add(objectCollection);
-          }
-
-          var result = ConvertAutocadEntity(entity, applicationId, objectCollection, instanceProxies, projectId);
-          results.Add(result);
-
-          onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
-        }
       }
 
       if (results.All(x => x.Status == Status.ERROR))

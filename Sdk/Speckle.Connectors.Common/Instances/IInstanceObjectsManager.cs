@@ -8,7 +8,7 @@ public interface IInstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   void AddInstanceProxy(string objectId, InstanceProxy instanceProxy);
   void AddDefinitionProxy(string objectId, InstanceDefinitionProxy instanceDefinitionProxy);
   void AddAtomicObject(string objectId, THostObjectType obj);
-  void AddAtomicDefinitionObject(string objectId, THostObjectType obj);
+  void AddAtomicDefinitionObjectId(string objectId);
   void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies);
   UnpackResult<THostObjectType> GetUnpackResult();
   bool TryGetInstanceProxiesFromDefinitionId(

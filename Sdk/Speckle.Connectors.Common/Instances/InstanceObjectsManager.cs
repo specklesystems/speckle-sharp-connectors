@@ -10,7 +10,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
   private readonly Dictionary<string, List<InstanceProxy>> _instanceProxiesByDefinitionId = new();
   private readonly Dictionary<string, InstanceDefinitionProxy> _definitionProxies = new();
   private readonly Dictionary<string, THostObjectType> _flatAtomicObjects = new();
-  private readonly Dictionary<string, THostObjectType> _flatAtomicDefinitionObjects = new();
+  private readonly HashSet<string> _flatAtomicDefinitionObjectIds = new();
 
   public void AddInstanceProxy(string objectId, InstanceProxy instanceProxy) =>
     _instanceProxies[objectId] = instanceProxy;
@@ -20,14 +20,13 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 
   public void AddAtomicObject(string objectId, THostObjectType obj) => _flatAtomicObjects[objectId] = obj;
 
-  public void AddAtomicDefinitionObject(string objectId, THostObjectType obj) =>
-    _flatAtomicDefinitionObjects[objectId] = obj;
+  public void AddAtomicDefinitionObjectId(string objectId) => _flatAtomicDefinitionObjectIds.Add(objectId);
 
   public void AddInstanceProxiesByDefinitionId(string definitionId, List<InstanceProxy> instanceProxies) =>
     _instanceProxiesByDefinitionId[definitionId] = instanceProxies;
 
   public UnpackResult<THostObjectType> GetUnpackResult() =>
-    new(GetAtomicObjects(), GetAtomicDefinitionObjects(), GetInstanceProxies(), GetDefinitionProxies());
+    new(GetAtomicObjects(), GetAtomicDefinitionObjectIds(), GetInstanceProxies(), GetDefinitionProxies());
 
   public bool TryGetInstanceProxiesFromDefinitionId(
     string definitionId,
@@ -62,7 +61,7 @@ public class InstanceObjectsManager<THostObjectType, TAppIdMapValueType>
 
   private List<THostObjectType> GetAtomicObjects() => _flatAtomicObjects.Values.ToList();
 
-  private List<THostObjectType> GetAtomicDefinitionObjects() => _flatAtomicDefinitionObjects.Values.ToList();
+  private HashSet<string> GetAtomicDefinitionObjectIds() => _flatAtomicDefinitionObjectIds;
 
   private List<InstanceDefinitionProxy> GetDefinitionProxies() => _definitionProxies.Values.ToList();
 

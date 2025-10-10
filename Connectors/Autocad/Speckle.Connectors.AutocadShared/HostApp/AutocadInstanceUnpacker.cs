@@ -46,6 +46,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, 0, transaction);
       }
+
       _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
     }
     return _instanceObjectsManager.GetUnpackResult();
@@ -174,7 +175,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           UnpackInstance(blockReference, depth + 1, transaction);
         }
 
-        _instanceObjectsManager.AddAtomicDefinitionObject(appId, new(obj, appId));
+        _instanceObjectsManager.AddAtomicDefinitionObjectId(appId);
       }
 
       _instanceObjectsManager.AddDefinitionProxy(definitionId.ToString(), definitionProxy);
