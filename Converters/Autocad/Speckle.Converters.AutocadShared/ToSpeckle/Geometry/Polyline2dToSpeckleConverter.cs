@@ -19,30 +19,30 @@ public class Polyline2dToSpeckleConverter
   : IToSpeckleTopLevelConverter,
     ITypedConverter<ADB.Polyline2d, SOG.Autocad.AutocadPolycurve>
 {
+  private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<ADB.Arc, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<ADB.Line, SOG.Line> _lineConverter;
-  private readonly ITypedConverter<ADB.Polyline, SOG.Autocad.AutocadPolycurve> _polylineConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline2dToSpeckleConverter(
+    ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<ADB.Arc, SOG.Arc> arcConverter,
     ITypedConverter<ADB.Line, SOG.Line> lineConverter,
-    ITypedConverter<ADB.Polyline, SOG.Autocad.AutocadPolycurve> polylineConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
+    _doublesConverter = doublesConverter;
     _arcConverter = arcConverter;
     _lineConverter = lineConverter;
-    _polylineConverter = polylineConverter;
     _splineConverter = splineConverter;
     _vectorConverter = vectorConverter;
-    _boxConverter = boxConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -89,7 +89,9 @@ public class Polyline2dToSpeckleConverter
 
       // get vertex value in the Global Coordinate System (GCS).
       // NOTE: for some reason, the z value of the position for rotated polyline2ds doesn't seem to match the exploded segment endpoint values
-      value.AddRange(vertex.Position.ToArray());
+      value.Add(vertex.Position.X);
+      value.Add(vertex.Position.Y);
+      value.Add(vertex.Position.Z);
 
       // get the bulge and tangent
       bulges.Add(vertex.Bulge);
@@ -160,22 +162,17 @@ public class Polyline2dToSpeckleConverter
     if (isSpline)
     {
       SOG.Curve spline = _splineConverter.Convert(target.Spline);
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
-      if (displayValue != null)
-      {
-        spline.displayValue = displayValue;
-      }
-
+      spline.displayValue = _doublesConverter.Convert(segmentValues);
       segments.Add(spline);
     }
 
     SOG.Vector normal = _vectorConverter.Convert(target.Normal);
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
+
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
       {
         segments = segments,
-        value = value,
+        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
         bulges = bulges,
         tangents = tangents,
         normal = normal,
@@ -184,7 +181,6 @@ public class Polyline2dToSpeckleConverter
         closed = target.Closed,
         length = target.Length,
         area = target.Area,
-        bbox = bbox,
         units = _settingsStore.Current.SpeckleUnits
       };
 

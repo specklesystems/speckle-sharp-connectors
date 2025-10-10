@@ -2,7 +2,14 @@ namespace Speckle.Converters.Autocad.Extensions;
 
 public static class ListExtensions
 {
-  public static SOG.Polyline ConvertToSpecklePolyline(this List<double> pointList, string speckleUnits)
+  /// <summary>
+  /// Converts a list of doubles representing 3d points to 2d points by ignoring the z value
+  /// </summary>
+  /// <param name="pointList"></param>
+  /// <param name="conversionFactor"></param>
+  /// <returns></returns>
+  /// <exception cref="ArgumentException"></exception>
+  public static List<AG.Point2d> ConvertToPoint2d(this List<double> pointList, double conversionFactor = 1)
   {
     // throw if list is malformed
     if (pointList.Count % 3 != 0)
@@ -10,21 +17,10 @@ public static class ListExtensions
       throw new ArgumentException("Point list of xyz values is malformed", nameof(pointList));
     }
 
-    return new() { value = pointList, units = speckleUnits };
-  }
-
-  public static List<AG.Point2d> ConvertToPoint2d(this List<double> pointList, double conversionFactor = 1)
-  {
-    // throw if list is malformed
-    if (pointList.Count % 2 != 0)
+    List<AG.Point2d> points2d = new(pointList.Count / 3);
+    for (int i = 2; i < pointList.Count; i += 3)
     {
-      throw new ArgumentException("Point list of xy values is malformed", nameof(pointList));
-    }
-
-    List<AG.Point2d> points2d = new(pointList.Count / 2);
-    for (int i = 1; i < pointList.Count; i += 2)
-    {
-      points2d.Add(new AG.Point2d(pointList[i - 1] * conversionFactor, pointList[i] * conversionFactor));
+      points2d.Add(new AG.Point2d(pointList[i - 2] * conversionFactor, pointList[i - 1] * conversionFactor));
     }
 
     return points2d;
