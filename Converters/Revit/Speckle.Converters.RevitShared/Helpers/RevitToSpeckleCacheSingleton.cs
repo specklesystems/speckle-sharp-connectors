@@ -1,4 +1,6 @@
 using Speckle.Objects.Other;
+using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -23,6 +25,10 @@ public class RevitToSpeckleCacheSingleton
   /// a per object map of material proxies. not the best way???
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
+
+  public Dictionary<string, InstanceDefinitionProxy> InstanceDefinitionProxiesMap { get; } = new();
+
+  public Dictionary<string, Base> InstancedObjects { get; } = new();
 
   /// <summary>
   /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.
