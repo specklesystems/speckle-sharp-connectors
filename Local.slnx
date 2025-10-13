@@ -179,11 +179,6 @@
     <Project Path="Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj" />
   </Folder>
   <Folder Name="/Importers/" />
-  <Folder Name="/Importers/Ifc/">
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj" />
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj" />
-    <Project Path="Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj" />
-  </Folder>
   <Folder Name="/Importers/Rhino/">
     <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj" Type="C#">
       <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />

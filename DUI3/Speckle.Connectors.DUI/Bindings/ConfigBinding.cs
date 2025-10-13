@@ -115,6 +115,30 @@ public class ConfigBinding : IBinding
     }
   }
 
+  public GlobalConfig? GetGlobalConfig()
+  {
+    var rawConfig = _jsonCacheManager.GetObject("global");
+    if (rawConfig is null)
+    {
+      return null;
+    }
+
+    try
+    {
+      var config = _serializer.Deserialize<GlobalConfig>(rawConfig);
+      if (config is null)
+      {
+        throw new SerializationException("Failed to deserialize global config");
+      }
+
+      return config;
+    }
+    catch (SerializationException)
+    {
+      return null;
+    }
+  }
+
   public AccountsConfig? GetAccountsConfig()
   {
     var rawConfig = _jsonCacheManager.GetObject("accounts");
@@ -180,6 +204,11 @@ public class ConfigBinding : IBinding
 public class ConnectorConfig
 {
   public bool DarkTheme { get; set; } = true;
+}
+
+public class GlobalConfig
+{
+  public bool IsUpdateNotificationDisabled { get; set; }
 }
 
 public class AccountsConfig

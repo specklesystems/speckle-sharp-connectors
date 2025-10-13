@@ -256,15 +256,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Naviswor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Navisworks2025", "Connectors\Navisworks\Speckle.Connectors.Navisworks2025\Speckle.Connectors.Navisworks2025.csproj", "{7791806E-7531-41D8-9C9D-4A1249D9F99C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc", "Importers\Ifc\Speckle.Importers.Ifc\Speckle.Importers.Ifc.csproj", "{E6B7A640-F85C-41C9-8226-B5310A98822D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ifc", "Ifc", "{F93052A6-6937-443F-8F1F-4A967A8A2BEF}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Importers", "Importers", "{336F0341-5C39-40F7-9377-122FED4E4549}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester", "Importers\Ifc\Speckle.Importers.Ifc.Tester\Speckle.Importers.Ifc.Tester.csproj", "{FCD6CB79-6B41-4448-99E1-787408AD24B0}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Importers.Ifc.Tester2", "Importers\Ifc\Speckle.Importers.Ifc.Tester2\Speckle.Importers.Ifc.Tester2.csproj", "{17FB6920-DF63-4D94-86A4-F1619D501C6D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Common.Tests", "Sdk\Speckle.Connectors.Common.Tests\Speckle.Connectors.Common.Tests.csproj", "{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}"
 EndProject
@@ -669,24 +661,6 @@ Global
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Local|Any CPU.Build.0 = Local|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Local|Any CPU.ActiveCfg = Local|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Local|Any CPU.Build.0 = Local|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E6B7A640-F85C-41C9-8226-B5310A98822D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Local|Any CPU.ActiveCfg = Local|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Local|Any CPU.Build.0 = Local|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Local|Any CPU.ActiveCfg = Debug|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Local|Any CPU.Build.0 = Debug|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6}.Local|Any CPU.ActiveCfg = Local|Any CPU
@@ -908,10 +882,6 @@ Global
 		{04FC86A3-2E25-41A1-98C5-10898616CD78} = {19F15419-F493-4D53-83EA-F90869D97D6E}
 		{FD44E1F0-D20A-49B6-ADC9-482D911A74FB} = {91DCAFB0-283B-4B07-9F6F-7335DECEEB08}
 		{7791806E-7531-41D8-9C9D-4A1249D9F99C} = {A88CFA1F-B2D5-4DBE-8496-68D0AFA46F2D}
-		{E6B7A640-F85C-41C9-8226-B5310A98822D} = {F93052A6-6937-443F-8F1F-4A967A8A2BEF}
-		{F93052A6-6937-443F-8F1F-4A967A8A2BEF} = {336F0341-5C39-40F7-9377-122FED4E4549}
-		{FCD6CB79-6B41-4448-99E1-787408AD24B0} = {F93052A6-6937-443F-8F1F-4A967A8A2BEF}
-		{17FB6920-DF63-4D94-86A4-F1619D501C6D} = {F93052A6-6937-443F-8F1F-4A967A8A2BEF}
 		{F86DFA8A-E2E0-4EBE-9BAF-72AE2698EDC6} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{B740A025-1035-4A75-865B-7825857D610C} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
 		{65230E97-8EBA-4594-8A17-2847C5E2B459} = {2E00592E-558D-492D-88F9-3ECEE4C0C7DA}
@@ -968,6 +938,7 @@ Global
 		Connectors\Autocad\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems*{4459f2b1-a340-488e-a856-eb2ae9c72ad4}*SharedItemsImports = 5
 		Converters\Revit\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems*{4d40a101-07e6-4ff2-8934-83434932591d}*SharedItemsImports = 5
 		Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems*{52666479-5401-47d6-b7ba-d554784439ea}*SharedItemsImports = 13
+		Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems*{5422f2c8-1e00-4dae-bb01-65a17be8cd68}*SharedItemsImports = 5
 		Converters\Autocad\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems*{5505b953-d434-49ce-8ebd-efd7b3c378f7}*SharedItemsImports = 5
 		Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems*{56680ea7-3599-4d88-83a5-b43ba93ac046}*SharedItemsImports = 5
 		Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.projitems*{56a909ae-6e99-4d4d-a22e-38bdc5528b8e}*SharedItemsImports = 5

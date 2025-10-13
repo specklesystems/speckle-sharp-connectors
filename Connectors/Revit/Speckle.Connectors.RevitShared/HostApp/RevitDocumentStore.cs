@@ -1,50 +1,43 @@
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
 // POC: should be interfaced out
 internal sealed class RevitDocumentStore : DocumentModelStore
 {
-  // POC: move to somewhere central?
-  private static readonly Guid s_revitDocumentStoreId = new("D35B3695-EDC9-4E15-B62A-D3FC2CB83FA3");
-
+  private readonly ILogger<RevitDocumentStore> _logger;
   private readonly IAppIdleManager _idleManager;
   private readonly RevitContext _revitContext;
-  private readonly DocumentModelStorageSchema _documentModelStorageSchema;
-  private readonly IdStorageSchema _idStorageSchema;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
-  private readonly IThreadContext _threadContext;
+  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
 
   public RevitDocumentStore(
-    ILogger<DocumentModelStore> logger,
     IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
-    DocumentModelStorageSchema documentModelStorageSchema,
-    IdStorageSchema idStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IThreadContext threadContext,
-    IRevitTask revitTask
+    IRevitTask revitTask,
+    ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
+    ILogger<RevitDocumentStore> logger
   )
     : base(logger, jsonSerializer)
   {
+    _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _idleManager = idleManager;
     _revitContext = revitContext;
-    _documentModelStorageSchema = documentModelStorageSchema;
-    _idStorageSchema = idStorageSchema;
     _topLevelExceptionHandler = topLevelExceptionHandler;
-    _threadContext = threadContext;
+    _logger = logger;
 
     UIApplication uiApplication = _revitContext.UIApplication.NotNull();
 
@@ -101,103 +94,54 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    _threadContext
-      .RunOnMain(() =>
+    try
+    {
+      var key = GetKeyForDocument(document);
+      if (key is null)
       {
-        //if not the same active document then don't save the current cards to a bad document!
-        if (!EnsureActiveDocumentIsSame(document))
-        {
-          return;
-        }
-        using Transaction t = new(document, "Speckle Write State");
-        t.Start();
-        using DataStorage ds = GetSettingsDataStorage(document) ?? DataStorage.Create(document);
-
-        using Entity stateEntity = new(_documentModelStorageSchema.GetSchema());
-        string serializedModels = Serialize();
-        stateEntity.Set("contents", serializedModels);
-
-        using Entity idEntity = new(_idStorageSchema.GetSchema());
-        idEntity.Set("Id", s_revitDocumentStoreId);
-
-        ds.SetEntity(idEntity);
-        ds.SetEntity(stateEntity);
-        t.Commit();
-      })
-      .FireAndForget();
+        LoadFromString(null);
+        return;
+      }
+      _jsonCacheManager.UpdateObject(key, modelCardState);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      var key = GetKeyForDocument(document);
+      _logger.LogError(ex, "Failed to save model card state for document {DocumentId}", key);
+    }
   }
 
-  private bool EnsureActiveDocumentIsSame(Document document)
+  private string? GetKeyForDocument(Document doc)
   {
-    var localDoc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
-    if (localDoc == null)
+#if REVIT2024_OR_GREATER
+    return doc.CreationGUID.ToString();
+#else
+    //basically, no document state will ever be saved when it's a new document.  It must be saved first for path name to be a valid value.
+    var x = doc.PathName;
+    if (string.IsNullOrEmpty(x))
     {
-      return false;
+      return null;
     }
-
-    return localDoc.Equals(document);
+    return x;
+#endif
   }
 
   protected override void LoadState()
   {
-    var stateEntity = GetSpeckleEntity(_revitContext.UIApplication?.ActiveUIDocument?.Document);
-    if (stateEntity == null || !stateEntity.IsValid())
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    // POC: this can happen? A: Not really, imho (dim) (Adam seyz yes it can if loading also triggers a save)
+    if (document == null)
     {
-      ClearAndSave();
       return;
     }
 
-    string modelsString = stateEntity.Get<string>("contents");
-    LoadFromString(modelsString);
-  }
-
-  private DataStorage? GetSettingsDataStorage(Document doc)
-  {
-    using FilteredElementCollector collector = new(doc);
-    FilteredElementCollector dataStorages = collector.OfClass(typeof(DataStorage));
-
-    foreach (Element element in dataStorages)
+    var key = GetKeyForDocument(document);
+    if (key is null)
     {
-      DataStorage dataStorage = (DataStorage)element;
-      Entity settingIdEntity = dataStorage.GetEntity(_idStorageSchema.GetSchema());
-      if (!settingIdEntity.IsValid())
-      {
-        continue;
-      }
-
-      Guid id = settingIdEntity.Get<Guid>("Id");
-      if (!id.Equals(s_revitDocumentStoreId))
-      {
-        continue;
-      }
-
-      return dataStorage;
+      LoadFromString(null);
+      return;
     }
-
-    return null;
-  }
-
-  private Entity? GetSpeckleEntity(Document? doc)
-  {
-    if (doc is null)
-    {
-      return null;
-    }
-    using FilteredElementCollector collector = new(doc);
-
-    FilteredElementCollector dataStorages = collector.OfClass(typeof(DataStorage));
-    foreach (Element element in dataStorages)
-    {
-      DataStorage dataStorage = (DataStorage)element;
-      Entity settingEntity = dataStorage.GetEntity(_documentModelStorageSchema.GetSchema());
-      if (!settingEntity.IsValid())
-      {
-        continue;
-      }
-
-      return settingEntity;
-    }
-
-    return null;
+    var state = _jsonCacheManager.GetObject(key);
+    LoadFromString(state);
   }
 }

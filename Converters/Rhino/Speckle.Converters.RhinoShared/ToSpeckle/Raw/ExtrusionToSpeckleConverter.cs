@@ -1,3 +1,4 @@
+using Rhino.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino.ToSpeckle.Encoding;
@@ -30,13 +31,23 @@ public class ExtrusionToSpeckleConverter : ITypedConverter<RG.Extrusion, SOG.Ext
 
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
       target,
-      _settingsStore.Current.ModelFarFromOrigin,
-      _settingsStore.Current.SpeckleUnits,
-      _meshConverter
+      _meshConverter,
+      _settingsStore.Current.Document
     );
+
+    // get area and volume props
+    double area = AreaMassProperties.Compute(target).Area;
+    double volume = 0;
+    if (target.IsSolid)
+    {
+      var volProps = VolumeMassProperties.Compute(target);
+      volume = volProps.Volume;
+    }
 
     var bx = new SOG.ExtrusionX()
     {
+      area = area,
+      volume = volume,
       displayValue = displayValue,
       encodedValue = extrusionEncoding,
       units = _settingsStore.Current.SpeckleUnits

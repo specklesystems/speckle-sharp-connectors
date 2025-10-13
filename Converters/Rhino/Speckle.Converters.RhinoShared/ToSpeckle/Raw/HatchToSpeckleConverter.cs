@@ -41,9 +41,8 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
 
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
       brep,
-      _settingsStore.Current.ModelFarFromOrigin,
-      _settingsStore.Current.SpeckleUnits,
-      _meshConverter
+      _meshConverter,
+      _settingsStore.Current.Document
     );
 
     return new SOG.Region

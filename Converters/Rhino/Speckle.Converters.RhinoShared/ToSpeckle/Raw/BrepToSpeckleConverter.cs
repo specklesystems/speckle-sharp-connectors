@@ -30,15 +30,16 @@ public class BrepToSpeckleConverter : ITypedConverter<RG.Brep, SOG.BrepX>
 
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(
       target,
-      _settingsStore.Current.ModelFarFromOrigin,
-      _settingsStore.Current.SpeckleUnits,
-      _meshConverter
+      _meshConverter,
+      _settingsStore.Current.Document
     );
 
     var bx = new SOG.BrepX()
     {
       displayValue = displayValue,
       encodedValue = brepEncoding,
+      volume = target.IsSolid ? target.GetVolume() : 0,
+      area = target.GetArea(),
       units = _settingsStore.Current.SpeckleUnits
     };
 

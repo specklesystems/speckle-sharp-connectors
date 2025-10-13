@@ -9,7 +9,6 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Sdk;
-using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -37,7 +36,7 @@ public class SendOperationTests : MoqTest
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var sendProgress = Create<ISendProgress>();
-    var operations = Create<IOperations>();
+    var sendOperationExecutor = Create<ISendOperationExecutor>();
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
@@ -67,7 +66,7 @@ public class SendOperationTests : MoqTest
       rootObjectBuilder.Object,
       sendConversionCache.Object,
       sendProgress.Object,
-      operations.Object,
+      sendOperationExecutor.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
       threadContext.Object
@@ -92,7 +91,7 @@ public class SendOperationTests : MoqTest
     var rootObjectBuilder = Create<IRootObjectBuilder<object>>();
     var sendConversionCache = Create<ISendConversionCache>();
     var sendProgress = Create<ISendProgress>();
-    var operations = Create<IOperations>();
+    var sendOperationExecutor = Create<ISendOperationExecutor>();
     var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
@@ -105,7 +104,7 @@ public class SendOperationTests : MoqTest
     var sourceApplication = "sourceApplication";
     var account = new Account()
     {
-      userInfo = new UserInfo(),
+      userInfo = new UserInfo() { email = "test_user@example.com" },
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };
@@ -119,8 +118,8 @@ public class SendOperationTests : MoqTest
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
     activityFactory.Setup(x => x.Start("SendOperation", "Send")).Returns((ISdkActivity?)null);
 
-    operations
-      .Setup(x => x.Send2(url, projectId, token, commitObject, It.IsAny<PassthroughProgress>(), ct))
+    sendOperationExecutor
+      .Setup(x => x.Send(url, projectId, token, commitObject, It.IsAny<PassthroughProgress>(), ct))
       .ReturnsAsync(serializeProcessResults);
 
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
@@ -137,7 +136,7 @@ public class SendOperationTests : MoqTest
       rootObjectBuilder.Object,
       sendConversionCache.Object,
       sendProgress.Object,
-      operations.Object,
+      sendOperationExecutor.Object,
       sendOperationVersionRecorder.Object,
       activityFactory.Object,
       threadContext.Object

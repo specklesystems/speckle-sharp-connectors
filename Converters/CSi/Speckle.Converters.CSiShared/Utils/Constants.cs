@@ -30,10 +30,14 @@ public static class ObjectPropertyKey
 /// </summary>
 public static class SectionPropertyCategory
 {
+  public const string DESIGN_DATA = "Design Data";
   public const string GENERAL_DATA = "General Data";
+  public const string MECHANICAL_DATA = "Mechanical Data";
+  public const string MODIFIERS = "Modifiers";
+  public const string PROPERTY_DATA = "Property Data";
   public const string SECTION_PROPERTIES = "Section Properties";
   public const string SECTION_DIMENSIONS = "Section Dimensions";
-  public const string PROPERTY_DATA = "Property Data";
+  public const string WEIGHT_AND_MASS = "Weight and Mass";
 }
 
 /// <summary>
@@ -51,4 +55,32 @@ public static class CommonObjectProperty
   public const string ANGLE = "Angle";
   public const string ADVANCED = "Advanced";
   public const string DESIGN_ORIENTATION = "Design Orientation";
+}
+
+/// <summary>
+/// These strings are repeated when defining UI dropdown list `ResultTypeSetting.cs` as well as `CsiResultsExtractorFactory.cs`/>
+/// </summary>
+public static class ResultsKey
+{
+  public const string BASE_REACT = "Base Reactions";
+  public const string FRAME_FORCES = "Frame Forces";
+  public const string JOINT_REACT = "Joint Reactions";
+  public const string MODAL_PERIOD = "Modal Period";
+  public const string PIER_FORCES = "Pier Forces";
+  public const string SPANDREL_FORCES = "Spandrel Forces";
+  public const string STORY_DRIFTS = "Story Drifts";
+  public const string STORY_FORCES = "Story Forces";
+
+  // Used by ResultTypeSetting to get all defined result keys
+  public static readonly string[] All =
+  [
+    BASE_REACT,
+    FRAME_FORCES,
+    JOINT_REACT,
+    MODAL_PERIOD,
+    PIER_FORCES,
+    SPANDREL_FORCES,
+    STORY_DRIFTS,
+    STORY_FORCES
+  ];
 }

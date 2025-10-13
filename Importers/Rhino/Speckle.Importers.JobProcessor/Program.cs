@@ -1,10 +1,7 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using Dapper;
+﻿using Dapper;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Rhino.Runtime.InProcess;
-using RhinoInside;
 using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.JobProcessor.JobHandlers;
 using Speckle.Importers.JobProcessor.JobQueue;
@@ -13,66 +10,44 @@ namespace Speckle.Importers.JobProcessor;
 
 public static class Program
 {
-  static Program()
+  public static async Task Main(string[] args)
   {
-    Resolver.Initialize();
+    // Dapper doesn't understand how to handle JSON deserialization, so we need to tell it what types can be deserialzied
+    SqlMapper.AddTypeHandler(new JsonHandler<FileimportPayload>());
+
+    var host = ConfigureAppHost(args);
+
+    ConfigureTopLevelLogs(host.Services.GetRequiredService<ILogger<object>>());
+
+    await host.RunAsync();
   }
 
-  [STAThread]
-  public static async Task Main()
+  private static IHost ConfigureAppHost(string[] args)
   {
-    ILogger? logger = null;
-    try
+    // DI setup
+    var builder = Host.CreateApplicationBuilder(args);
+
+    builder.Services.AddJobProcessor();
+    builder.Services.AddWindowsService();
+    builder.Services.AddTransient<IJobHandler, RhinoJobHandler>();
+
+    builder.Logging.AddEventLog(settings =>
     {
-      // Dapper doesn't understand how to handle JSON deserialization, so we need to tell it what types can be deserialzied
-      SqlMapper.AddTypeHandler(new JsonHandler<FileimportPayload>());
+      settings.SourceName = "Speckle Rhino File Import Job Processor";
+      settings.Filter = (_, level) => level >= LogLevel.Information;
+    });
 
-      // DI setup
-      var serviceCollection = new ServiceCollection();
-      serviceCollection.AddJobProcessor();
+    return builder.Build();
+  }
 
-      serviceCollection.AddTransient<IJobHandler, RhinoJobHandler>();
+  private static void ConfigureTopLevelLogs(ILogger logger)
+  {
+    TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
+      logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
 
-      var serviceProvider = serviceCollection.BuildServiceProvider();
-
-      var processor = serviceProvider.GetRequiredService<JobProcessorInstance>();
-      logger = serviceProvider.GetRequiredService<ILogger<object>>();
-
-      TaskScheduler.UnobservedTaskException += (sender, args) =>
-        logger.LogCritical(args.Exception, "Unobserved Task Exception");
-
-      using (new RhinoCore(["/netcore-8"], WindowStyle.NoWindow))
-      {
-        //What ever thread RhinoCore is created on it will grab as soon as it's available, and it will hog it forever.
-        //Right now, we're giving it the main STA thread (not 100% if it needs STA or if it could work on any thread)
-        await Task.Run(async () =>
-          {
-            logger.LogInformation("Job processor has started!");
-            try
-            {
-              await processor.StartProcessing();
-            }
-            catch (Exception ex)
-            {
-              logger.LogCritical(ex, "Unhandled exception in Main");
-              throw;
-            }
-          })
-          .ConfigureAwait(false);
-      }
-    }
-    catch (Exception ex)
+    AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
     {
-      if (logger is not null)
-      {
-        logger.LogCritical(ex, "Unhandled exception reached entry point");
-      }
-      else
-      {
-        Console.WriteLine($"Unhandled exception reached entry point: {ex}");
-      }
-
-      throw;
-    }
+      logger.LogCritical(eventArgs.ExceptionObject as Exception, "Unhandled exception occurred in the AppDomain");
+    };
   }
 }
