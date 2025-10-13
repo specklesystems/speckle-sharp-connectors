@@ -85,13 +85,13 @@ public class Polyline2dToSpeckleConverter
 
     for (int i = 0; i < vertices.Count; i++)
     {
-      ADB.Vertex2d vertex = vertices[i];
+      ADB.Vertex2d vertex = vertices[i]; // this is in OCS
 
       // get vertex value in the Global Coordinate System (GCS).
-      // NOTE: for some reason, the z value of the position for rotated polyline2ds doesn't seem to match the exploded segment endpoint values
-      value.Add(vertex.Position.X);
-      value.Add(vertex.Position.Y);
-      value.Add(vertex.Position.Z);
+      AG.Point3d vertexGCS = target.VertexPosition(vertex);
+      value.Add(vertexGCS.X);
+      value.Add(vertexGCS.Y);
+      value.Add(vertexGCS.Z);
 
       // get the bulge and tangent
       bulges.Add(vertex.Bulge);
@@ -166,7 +166,7 @@ public class Polyline2dToSpeckleConverter
       segments.Add(spline);
     }
 
-    SOG.Vector normal = _vectorConverter.Convert(target.Normal);
+    SOG.Vector normal = _vectorConverter.Convert(target.Normal); // wcs
 
     SOG.Autocad.AutocadPolycurve polycurve =
       new()

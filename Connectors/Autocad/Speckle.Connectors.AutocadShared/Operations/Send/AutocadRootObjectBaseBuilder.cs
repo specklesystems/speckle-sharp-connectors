@@ -102,8 +102,11 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     )
     {
       referenceTransform = matrix.Inverse();
+
+      /* POC: Do not attach transform to root for now! we are not consuming this in autocad/civil on receive and in revit it will undo all baked transforms :(
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(matrix);
       root[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+      */
     }
 
     using (var _ = _activityFactory.Start("Converting objects"))
