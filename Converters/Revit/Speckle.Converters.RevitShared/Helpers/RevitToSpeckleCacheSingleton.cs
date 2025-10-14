@@ -61,4 +61,10 @@ public class RevitToSpeckleCacheSingleton
     }
     return mergeTarget.Values.ToList();
   }
+
+  public void ClearInstanceProxies()
+  {
+    InstanceDefinitionProxiesMap.Clear();
+    InstancedObjects.Clear();
+  }
 }
