@@ -120,9 +120,23 @@ public class RevitMaterialBaker
 
       try
       {
+        // NOTE: added after CNX-2661, without having file that caused issue hard to say what the issue is
+        // api bug / funny model (custom textures) / upgrade from old model (e.g. Rhino 6)? who knows.
+        // PBR standard is 0-1. Clamping to valid range to at least avoid receive failing
+        double roughness = speckleRenderMaterial.roughness;
+        if (roughness < 0 || roughness > 1)
+        {
+          _logger.LogWarning(
+            "Material '{Name}' has invalid roughness value of {Value}",
+            speckleRenderMaterial.name,
+            roughness
+          );
+          roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from C# 8.0
+        }
+
         var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
         double transparency = 1 - speckleRenderMaterial.opacity;
-        double smoothness = 1 - speckleRenderMaterial.roughness;
+        double smoothness = 1 - roughness;
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
         string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
