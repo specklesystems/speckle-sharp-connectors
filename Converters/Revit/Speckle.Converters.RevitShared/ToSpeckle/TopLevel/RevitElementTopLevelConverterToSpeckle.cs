@@ -228,8 +228,19 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   {
     var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
 
-    // ensure instance definition exists
-    if (!_revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.ContainsKey(instanceDefinitionId))
+    // We need to attach element id relationship to proxy singleton for send caching.
+    // Send caching skips whole DB.Element that turn into RevitDataObject. since we have instance proxies in RevitDataObject but
+    // its definitions outside of caching mechanism, this elementId helps us to filter which definition proxies should be attached to the root
+    if (
+      _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
+        instanceDefinitionId,
+        out var instanceDefinition
+      )
+    )
+    {
+      instanceDefinition.elementIds.Add(elementId);
+    }
+    else
     {
       var newInstanceDefinition = new InstanceDefinitionProxy
       {
@@ -240,14 +251,18 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       };
       _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(
         instanceDefinitionId,
-        (elementId, newInstanceDefinition)
+        ([elementId], newInstanceDefinition)
       );
     }
 
-    // cache the untransformed mesh object if not already cached
-    if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
+    // some comment valid here as above if statement, since we store original meshes outside of RevitDataObject, we need to know which of them will be attached.
+    if (_revitToSpeckleCacheSingleton.InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
     {
-      _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, (elementId, mesh));
+      instancedObject.elementIds.Add(elementId);
+    }
+    else
+    {
+      _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, ([elementId], mesh));
     }
 
     // create and return instance proxy with transform

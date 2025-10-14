@@ -42,14 +42,12 @@ public class RevitRootObjectBuilder(
       () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
     );
 
-#pragma warning disable CA1506
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
-#pragma warning restore CA1506
   {
     Console.WriteLine(projectId);
     var doc = converterSettings.Current.Document;
@@ -263,8 +261,6 @@ public class RevitRootObjectBuilder(
         name = "revitInstancedObjects"
       }
     );
-
-    // revitToSpeckleCacheSingleton.ClearInstanceProxies();
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
