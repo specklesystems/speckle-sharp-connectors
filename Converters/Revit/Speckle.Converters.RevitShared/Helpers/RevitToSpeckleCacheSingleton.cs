@@ -26,9 +26,12 @@ public class RevitToSpeckleCacheSingleton
   /// </summary>
   public Dictionary<string, Dictionary<string, RenderMaterialProxy>> ObjectRenderMaterialProxiesMap { get; } = new();
 
-  public Dictionary<string, InstanceDefinitionProxy> InstanceDefinitionProxiesMap { get; } = new();
+  public Dictionary<
+    string,
+    (string elementId, InstanceDefinitionProxy definitionProxy)
+  > InstanceDefinitionProxiesMap { get; } = new();
 
-  public Dictionary<string, Base> InstancedObjects { get; } = new();
+  public Dictionary<string, (string elementId, Base baseObj)> InstancedObjects { get; } = new();
 
   /// <summary>
   /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.
@@ -61,6 +64,15 @@ public class RevitToSpeckleCacheSingleton
     }
     return mergeTarget.Values.ToList();
   }
+
+  public List<InstanceDefinitionProxy> GetInstanceDefinitionProxiesForObjects(List<string> elementIds) =>
+    InstanceDefinitionProxiesMap
+      .Values.Where(v => elementIds.Contains(v.elementId))
+      .Select(v => v.definitionProxy)
+      .ToList();
+
+  public List<Base> GetBaseObjectsForObjects(List<string> elementIds) =>
+    InstancedObjects.Values.Where(v => elementIds.Contains(v.elementId)).Select(v => v.baseObj).ToList();
 
   public void ClearInstanceProxies()
   {
