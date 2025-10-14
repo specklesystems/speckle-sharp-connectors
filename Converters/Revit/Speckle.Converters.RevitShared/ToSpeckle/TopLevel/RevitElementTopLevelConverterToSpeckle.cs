@@ -105,7 +105,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     List<DisplayValueResult> displayValuesWithTransforms = _displayValueExtractor.GetDisplayValue(target);
 
     // process display values and create instance proxies where applicable
-    List<Base> proxifiedDisplayValues = ProcessDisplayValues(displayValuesWithTransforms);
+    List<Base> proxifiedDisplayValues = ProcessDisplayValues(target.Id.ToString(), displayValuesWithTransforms);
 
     // get level
     string? level = _levelExtractor.GetLevelName(target);
@@ -199,7 +199,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// Processes display values with transforms and creates instance proxies for meshes that can be instanced.
   /// </summary>
   /// <returns>List of processed display values, with meshes replaced by instance proxies where applicable</returns>
-  private List<Base> ProcessDisplayValues(List<DisplayValueResult> displayValues)
+  private List<Base> ProcessDisplayValues(string elementId, List<DisplayValueResult> displayValues)
   {
     List<Base> proxifiedDisplayValues = new();
 
@@ -209,7 +209,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       // assumption here is that if we have matrix for corresponding base it is instance-able
       if (displayValue.Geometry is SOG.Mesh mesh && displayValue.Transform is not null)
       {
-        var instanceProxy = CreateOrGetInstanceProxy(mesh, displayValue.Transform.Value);
+        var instanceProxy = CreateOrGetInstanceProxy(elementId, mesh, displayValue.Transform.Value);
         proxifiedDisplayValues.Add(instanceProxy);
       }
       else
@@ -224,12 +224,23 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// <summary>
   /// Creates or retrieves an instance proxy for a mesh, managing instance definitions and caching.
   /// </summary>
-  private InstanceProxy CreateOrGetInstanceProxy(SOG.Mesh mesh, Matrix4x4 transform)
+  private InstanceProxy CreateOrGetInstanceProxy(string elementId, SOG.Mesh mesh, Matrix4x4 transform)
   {
     var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
 
-    // ensure instance definition exists
-    if (!_revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.ContainsKey(instanceDefinitionId))
+    // We need to attach element id relationship to proxy singleton for send caching.
+    // Send caching skips whole DB.Element that turn into RevitDataObject. since we have instance proxies in RevitDataObject but
+    // its definitions outside of caching mechanism, this elementId helps us to filter which definition proxies should be attached to the root
+    if (
+      _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.TryGetValue(
+        instanceDefinitionId,
+        out var instanceDefinition
+      )
+    )
+    {
+      instanceDefinition.elementIds.Add(elementId);
+    }
+    else
     {
       var newInstanceDefinition = new InstanceDefinitionProxy
       {
@@ -238,13 +249,20 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         maxDepth = 0,
         name = instanceDefinitionId,
       };
-      _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(instanceDefinitionId, newInstanceDefinition);
+      _revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Add(
+        instanceDefinitionId,
+        ([elementId], newInstanceDefinition)
+      );
     }
 
-    // cache the untransformed mesh object if not already cached
-    if (!_revitToSpeckleCacheSingleton.InstancedObjects.ContainsKey(instanceDefinitionId))
+    // some comment valid here as above if statement, since we store original meshes outside of RevitDataObject, we need to know which of them will be attached.
+    if (_revitToSpeckleCacheSingleton.InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
     {
-      _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, mesh);
+      instancedObject.elementIds.Add(elementId);
+    }
+    else
+    {
+      _revitToSpeckleCacheSingleton.InstancedObjects.Add(instanceDefinitionId, ([elementId], mesh));
     }
 
     // create and return instance proxy with transform

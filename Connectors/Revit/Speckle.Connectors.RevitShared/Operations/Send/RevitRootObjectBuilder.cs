@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
-// using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
@@ -21,7 +21,7 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 public class RevitRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
-  //ISendConversionCache sendConversionCache,
+  ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
   LevelUnpacker levelUnpacker,
   IThreadContext threadContext,
@@ -131,7 +131,7 @@ public class RevitRootObjectBuilder(
     }
 
     var countProgress = 0;
-    // var cacheHitCount = 0;
+    var cacheHitCount = 0;
     var skippedObjectCount = 0;
 
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
@@ -185,16 +185,26 @@ public class RevitRootObjectBuilder(
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
 
-            if (hasTransform)
+            if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
             {
-              string transformHash = linkedModelHandler.GetTransformHash(
-                atomicObjectByDocumentAndTransform.Transform.NotNull()
-              );
-              applicationId = $"{applicationId}_t{transformHash}";
+              converted = value;
+              cacheHitCount++;
             }
-            // normal conversions
-            converted = converter.Convert(revitElement);
-            converted.applicationId = applicationId;
+            // not in cache means we convert
+            else
+            {
+              // if it has a transform we append transform hash to the applicationId to distinguish the elements from other instances
+              if (hasTransform)
+              {
+                string transformHash = linkedModelHandler.GetTransformHash(
+                  atomicObjectByDocumentAndTransform.Transform.NotNull()
+                );
+                applicationId = $"{applicationId}_t{transformHash}";
+              }
+              // normal conversions
+              converted = converter.Convert(revitElement);
+              converted.applicationId = applicationId;
+            }
 
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
@@ -240,17 +250,16 @@ public class RevitRootObjectBuilder(
     var levelProxies = levelUnpacker.Unpack(flatElements);
     rootObject[ProxyKeys.LEVEL] = levelProxies;
 
-    rootObject[ProxyKeys.INSTANCE_DEFINITION] =
-      revitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap.Values.ToList();
+    rootObject[ProxyKeys.INSTANCE_DEFINITION] = revitToSpeckleCacheSingleton.GetInstanceDefinitionProxiesForObjects(
+      idsAndSubElementIds
+    );
     rootObject.elements.Add(
       new Collection()
       {
-        elements = revitToSpeckleCacheSingleton.InstancedObjects.Values.ToList(),
+        elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
         name = "revitInstancedObjects"
       }
     );
-
-    revitToSpeckleCacheSingleton.ClearInstanceProxies();
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
