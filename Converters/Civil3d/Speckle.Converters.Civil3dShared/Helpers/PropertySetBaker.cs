@@ -29,7 +29,8 @@ public class PropertySetBaker
   /// </summary>
   /// <param name="entity">The target entity.</param>
   /// <param name="sourceObject">The source Speckle object containing property set data.</param>
-  public bool TryBakePropertySets(ADB.Entity entity, Base sourceObject)
+  /// <param name="tr">The active transaction to use for database operations.</param>
+  public bool TryBakePropertySets(ADB.Entity entity, Base sourceObject, ADB.Transaction tr)
   {
     if (sourceObject["properties"] is not Dictionary<string, object?> properties)
     {
@@ -48,8 +49,6 @@ public class PropertySetBaker
 
     try
     {
-      using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
-
       foreach (var propertySet in propertySets)
       {
         string setName = propertySet.Key;
@@ -67,7 +66,6 @@ public class PropertySetBaker
         }
       }
 
-      tr.Commit();
       return true;
     }
     catch (Exception ex) when (!ex.IsFatal())

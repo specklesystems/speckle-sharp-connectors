@@ -165,12 +165,12 @@ public class AutocadHostObjectBuilder(
     switch (converted)
     {
       case Entity entity:
-        var bakedEntity = BakeObject(entity, obj, layerName);
+        var bakedEntity = BakeObject(entity, obj, layerName, tr);
         convertedEntities.Add(bakedEntity);
         break;
 
       case List<(Entity, Base)> listConversionResult: // this is from fallback conversion for brep/brepx/subdx/extrusionx/polycurve
-        var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix);
+        var bakedFallbackEntities = BakeObjectsAsGroup(listConversionResult, obj, layerName, baseLayerNamePrefix, tr);
         convertedEntities.UnionWith(bakedFallbackEntities);
         break;
 
@@ -183,7 +183,13 @@ public class AutocadHostObjectBuilder(
     return convertedEntities.Freeze();
   }
 
-  private Entity BakeObject(Entity entity, Base originalObject, string layerName, Base? parentObject = null)
+  private Entity BakeObject(
+    Entity entity,
+    Base originalObject,
+    string layerName,
+    Transaction tr,
+    Base? parentObject = null
+  )
   {
     var objId = originalObject.applicationId ?? originalObject.id.NotNull();
     if (colorBaker.ObjectColorsIdMap.TryGetValue(objId, out AutocadColor? color))
@@ -198,7 +204,7 @@ public class AutocadHostObjectBuilder(
 
     entity.AppendToDb(layerName);
 
-    propertySetBaker?.TryBakePropertySets(entity, originalObject);
+    propertySetBaker?.TryBakePropertySets(entity, originalObject, tr);
 
     return entity;
   }
@@ -207,14 +213,15 @@ public class AutocadHostObjectBuilder(
     List<(Entity, Base)> fallbackConversionResult,
     Base parentObject,
     string layerName,
-    string baseLayerName
+    string baseLayerName,
+    Transaction tr
   )
   {
     var ids = new ObjectIdCollection();
     var entities = new List<Entity>();
     foreach (var (conversionResult, originalObject) in fallbackConversionResult)
     {
-      BakeObject(conversionResult, originalObject, layerName, parentObject);
+      BakeObject(conversionResult, originalObject, layerName, tr, parentObject);
       ids.Add(conversionResult.ObjectId);
       entities.Add(conversionResult);
     }
@@ -223,8 +230,6 @@ public class AutocadHostObjectBuilder(
     {
       return entities;
     }
-
-    var tr = Application.DocumentManager.CurrentDocument.Database.TransactionManager.TopTransaction;
     var groupDictionary = (DBDictionary)
       tr.GetObject(Application.DocumentManager.CurrentDocument.Database.GroupDictionaryId, OpenMode.ForWrite);
 
