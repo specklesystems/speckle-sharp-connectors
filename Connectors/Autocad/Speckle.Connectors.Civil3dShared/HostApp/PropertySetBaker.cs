@@ -1,9 +1,14 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converters.Civil3dShared;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
+using AAEC = Autodesk.Aec;
+using AAECPDB = Autodesk.Aec.PropertyData.DatabaseServices;
+using ADB = Autodesk.AutoCAD.DatabaseServices;
 
-namespace Speckle.Converters.Civil3dShared.Helpers;
+namespace Speckle.Connectors.Civil3dShared.HostApp;
 
 /// <summary>
 /// Helper class to bake property sets to entities on receive.
@@ -91,15 +96,13 @@ public class PropertySetBaker
         return false;
       }
 
-      // Check if property set already exists on the object
+      // Property set should never pre-exist on a newly created entity in a fresh receive operation
       if (ObjectHasPropertySet(entity, propertySetDefId))
       {
-        return UpdatePropertySet(entity, propertySetDefId, setData, tr);
+        throw new SpeckleException($"Property set '{setName}' already exists on entity.");
       }
-      else
-      {
-        return AddPropertySetToEntity(entity, propertySetDefId, setData, tr);
-      }
+
+      return AddPropertySetToEntity(entity, propertySetDefId, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

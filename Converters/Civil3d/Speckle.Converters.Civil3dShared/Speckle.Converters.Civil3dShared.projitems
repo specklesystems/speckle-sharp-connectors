@@ -20,7 +20,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\CorridorHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\BaseCurveExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\DisplayValueExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertySetBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CogoPointToSpeckleTopLevelConverter.cs" />

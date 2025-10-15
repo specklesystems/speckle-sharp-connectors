@@ -1,9 +1,9 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Receive;
+using Speckle.Connectors.Civil3dShared.HostApp;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
-using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models;
 
