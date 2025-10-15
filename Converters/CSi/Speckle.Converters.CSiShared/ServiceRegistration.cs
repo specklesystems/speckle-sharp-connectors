@@ -32,13 +32,14 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<CsiPierForceResultsExtractor>();
     serviceCollection.AddScoped<CsiSpandrelForceResultsExtractor>();
     serviceCollection.AddScoped<CsiStoryDriftsResultsExtractor>();
+    serviceCollection.AddScoped<CsiStoryForceResultsExtractor>();
     serviceCollection.AddScoped<ResultsArrayProcessor>();
 
     // Register connector caches
     serviceCollection.AddScoped<CsiToSpeckleCacheSingleton>();
 
     // Settings and unit conversions
-    serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eUnits>(converterAssembly);
+    serviceCollection.AddApplicationConverters<CsiToSpeckleUnitConverter, eLength>(converterAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<CsiConversionSettings>,
       ConverterSettingsStore<CsiConversionSettings>

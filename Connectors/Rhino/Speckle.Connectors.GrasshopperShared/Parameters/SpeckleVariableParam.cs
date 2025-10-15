@@ -52,6 +52,7 @@ public class SpeckleVariableParam : Param_GenericObject
     }
   }
 
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
   public override Guid ComponentGuid => new("A1B2C3D4-E5F6-7890-ABCD-123456789ABC");
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)

@@ -21,6 +21,7 @@ public static class ContainerRegistration
     serviceCollection.AddScoped<ReceiveOperation>();
     serviceCollection.AddSingleton<IAccountService, AccountService>();
     serviceCollection.AddSingleton<IMixPanelManager, MixPanelManager>();
+    serviceCollection.AddSingleton<ISerializationOptions, SerializationOptions>();
 
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));
   }

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using GH_IO.Serialization;
 using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
@@ -296,6 +297,32 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.ToFormattedString());
     }
+  }
+
+  public override bool Write(GH_IWriter writer)
+  {
+    // call base implementation first
+    var result = base.Write(writer);
+
+    // persist AutoReceive setting
+    writer.SetBoolean("AutoReceive", AutoReceive);
+
+    return result;
+  }
+
+  public override bool Read(GH_IReader reader)
+  {
+    // call base implementation first
+    var result = base.Read(reader);
+
+    // restore AutoReceive setting
+    bool autoReceive = false;
+    if (reader.TryGetBoolean("AutoReceive", ref autoReceive))
+    {
+      AutoReceive = autoReceive;
+    }
+
+    return result;
   }
 }
 

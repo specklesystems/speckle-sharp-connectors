@@ -7,17 +7,14 @@ public class PolylineToSpeckleConverter
   : ITypedConverter<RG.Polyline, SOG.Polyline>,
     ITypedConverter<RG.PolylineCurve, SOG.Polyline>
 {
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public PolylineToSpeckleConverter(
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter
   )
   {
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
     _intervalConverter = intervalConverter;
   }
@@ -30,8 +27,6 @@ public class PolylineToSpeckleConverter
   /// <remarks>⚠️ This conversion assumes domain interval is (0,LENGTH) as Rhino Polylines have no domain. If needed, you may want to use PolylineCurve conversion instead. </remarks>
   public SOG.Polyline Convert(RG.Polyline target)
   {
-    var box = _boxConverter.Convert(new RG.Box(target.BoundingBox));
-
     var count = target.IsClosed ? target.Count - 1 : target.Count;
     List<double> points = new(count * 3);
     for (int i = 0; i < count; i++)
@@ -46,7 +41,6 @@ public class PolylineToSpeckleConverter
     {
       value = points,
       units = _settingsStore.Current.SpeckleUnits,
-      bbox = box,
       length = target.Length,
       domain = new() { start = 0, end = target.Length },
       closed = target.IsClosed

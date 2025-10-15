@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
+using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
@@ -12,6 +13,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Collections;
 
@@ -31,11 +33,20 @@ public class ReceiveComponentInput
 
 public class ReceiveComponentOutput
 {
-  public SpeckleCollectionWrapperGoo RootObject { get; set; }
+  /// <remarks>
+  /// Made nullable as output can be null when Run = false or on error
+  /// </remarks>
+  public SpeckleCollectionWrapperGoo? RootObject { get; set; }
 }
 
 public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
 {
+  private IClient? _apiClient;
+  private string? _lastVersionId;
+  private SpeckleUrlModelResource? _lastResource;
+  public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
+  protected override Bitmap Icon => Resources.speckle_operations_syncload;
+
   public ReceiveComponent()
     : base(
       "(Sync) Load",
@@ -44,9 +55,6 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
     ) { }
-
-  public override Guid ComponentGuid => new("74954F59-B1B7-41FD-97DE-4C6B005F2801");
-  protected override Bitmap Icon => Resources.speckle_operations_syncload;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -77,19 +85,28 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     bool run = false;
     da.GetData(1, ref run);
 
-    return new(url, run);
+    if (run)
+    {
+      SetupSubscription(url);
+    }
+    else
+    {
+      CleanupSubscription();
+    }
+
+    return new ReceiveComponentInput(url, run);
   }
 
   protected override void SetOutput(IGH_DataAccess da, ReceiveComponentOutput result)
   {
     if (result.RootObject is null)
     {
-      Message = "Not Loaded";
+      Message = _apiClient != null ? "Monitoring" : "Not Loaded";
     }
     else
     {
       da.SetData(0, result.RootObject);
-      Message = "Done";
+      Message = _apiClient != null ? "Loaded" : "Done";
     }
   }
 
@@ -107,11 +124,11 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
         GH_RuntimeMessageLevel.Error,
         "Only one model can be loaded at a time. To load to multiple models, please use different load components."
       );
-      return new();
+      return new ReceiveComponentOutput();
     }
     if (!input.Run)
     {
-      return new();
+      return new ReceiveComponentOutput();
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
@@ -128,6 +145,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
     using var client = clientFactory.Create(account);
     var receiveInfo = await input.Resource.GetReceiveInfo(client, cancellationToken).ConfigureAwait(false);
+
+    // store version id for tracking
+    _lastVersionId = receiveInfo.SelectedVersionId;
 
     var progress = new Progress<CardProgress>(_ =>
     {
@@ -194,5 +214,117 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     return new ReceiveComponentOutput { RootObject = goo };
+  }
+
+  private void SetupSubscription(SpeckleUrlModelResource resource)
+  {
+    // skip if already subscribed to this resource
+    if (_apiClient != null && _lastResource != null && _lastResource.Equals(resource))
+    {
+      return;
+    }
+
+    // only subscribe for Model URLs (not specific versions)
+    if (resource is SpeckleUrlModelVersionResource)
+    {
+      CleanupSubscription();
+      _lastResource = resource;
+      return;
+    }
+
+    try
+    {
+      CleanupSubscription(); // clean up old subscription first
+
+      using var scope = PriorityLoader.CreateScopeForActiveDocument();
+      var account = resource.Account.GetAccount(scope);
+      if (account == null)
+      {
+        return;
+      }
+
+      _apiClient = scope.Get<IClientFactory>().Create(account);
+      _apiClient.Subscription.CreateProjectVersionsUpdatedSubscription(resource.ProjectId).Listeners +=
+        OnVersionCreated;
+
+      _lastResource = resource;
+      Message = "Monitoring";
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not setup monitoring: {ex.Message}");
+    }
+  }
+
+  private void OnVersionCreated(object? sender, ProjectVersionsUpdatedMessage e) =>
+    // new version detected - trigger reload
+    RhinoApp.InvokeOnUiThread(
+      (Action)
+        delegate
+        {
+          ExpireSolution(true);
+        }
+    );
+
+  private void CleanupSubscription()
+  {
+    if (_apiClient != null && _lastResource != null)
+    {
+      try
+      {
+        _apiClient.Subscription.CreateProjectVersionsUpdatedSubscription(_lastResource.ProjectId).Listeners -=
+          OnVersionCreated;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // ignore cleanup errors
+      }
+
+      _apiClient.Dispose();
+      _apiClient = null;
+    }
+  }
+
+  // Cleanup on removal
+  public override void RemovedFromDocument(GH_Document document)
+  {
+    CleanupSubscription();
+    base.RemovedFromDocument(document);
+  }
+
+  // Handle document context changes
+  public override void DocumentContextChanged(GH_Document document, GH_DocumentContext context)
+  {
+    if (context == GH_DocumentContext.Unloaded)
+    {
+      CleanupSubscription();
+    }
+    else if (context == GH_DocumentContext.Loaded && _lastResource != null && _apiClient != null)
+    {
+      // Check for version changes when document reopens
+      Task.Run(async () =>
+      {
+        try
+        {
+          var receiveInfo = await _lastResource.GetReceiveInfo(_apiClient);
+          if (receiveInfo.SelectedVersionId != _lastVersionId)
+          {
+            RhinoApp.InvokeOnUiThread(
+              (Action)
+                delegate
+                {
+                  ExpireSolution(true);
+                }
+            );
+          }
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          // ignore errors during background check
+        }
+      });
+    }
+
+    base.DocumentContextChanged(document, context);
   }
 }

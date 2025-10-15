@@ -120,9 +120,14 @@ public class RevitMaterialBaker
 
       try
       {
+        // all values assumed to be on the 0 - 1 scale need to pass through this validation and logging (if assumption wrong)
+        double roughness = ClampToUnitRange(speckleRenderMaterial.roughness, "roughness", speckleRenderMaterial.name);
+        double opacity = ClampToUnitRange(speckleRenderMaterial.opacity, "opacity", speckleRenderMaterial.name);
+        double metalness = ClampToUnitRange(speckleRenderMaterial.metalness, "metalness", speckleRenderMaterial.name);
+
         var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
-        double transparency = 1 - speckleRenderMaterial.opacity;
-        double smoothness = 1 - speckleRenderMaterial.roughness;
+        double transparency = 1 - opacity;
+        double smoothness = 1 - roughness;
         string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
         string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
 
@@ -130,7 +135,7 @@ public class RevitMaterialBaker
         var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
         revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
         revitMaterial.Transparency = (int)(transparency * 100);
-        revitMaterial.Shininess = (int)(speckleRenderMaterial.metalness * 128);
+        revitMaterial.Shininess = (int)(metalness * 128);
         revitMaterial.Smoothness = (int)(smoothness * 128);
 
         foreach (var objectId in proxy.objects)
@@ -162,5 +167,31 @@ public class RevitMaterialBaker
 
       document.Delete(materialIds);
     }
+  }
+
+  /// <summary>
+  /// After CNX-2661, we've seen some edge cases contradicting the expected 0 - 1 range for PRB properties.
+  /// Defensively, we'd rather clamp these values than throw.
+  /// </summary>
+  /// <remarks>
+  /// Created a method so that we can extend the checks to any numerical value potentially leading to a negative value,
+  /// which would throw an exception. Generalised method since Math.Clamp() only available since C# 8.0 and this method
+  /// handles logging (in the hope that we can get a better feel for these "weird" models, e.g. 0 - 100 scale??)
+  /// </remarks>
+  private double ClampToUnitRange(double value, string propertyName, string materialName)
+  {
+    if (value is < 0 or > 1)
+    {
+      _logger.LogWarning(
+        "Material '{MaterialName}' has an invalid {PropertyName} value of {Value} and was clamped to 0 - 1 range",
+        materialName,
+        propertyName,
+        value
+      );
+
+      value = Math.Min(Math.Max(0, value), 1);
+    }
+
+    return value;
   }
 }

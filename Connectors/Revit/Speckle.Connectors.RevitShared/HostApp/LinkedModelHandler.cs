@@ -3,7 +3,6 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 
@@ -17,20 +16,19 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class LinkedModelHandler
 {
-  private readonly RevitContext _revitContext;
   public Dictionary<string, string> LinkedModelDisplayNames { get; } = new();
-
-  public LinkedModelHandler(RevitContext revitContext)
-  {
-    _revitContext = revitContext;
-  }
 
   /// <summary>
   /// Gets elements from a linked document based on the provided send filter.
   /// This method handles the specifics of element collection but doesn't make decisions
   /// about whether the linked model should be processed - that's the caller's responsibility.
   /// </summary>
-  public List<Element> GetLinkedModelElements(ISendFilter sendFilter, Document linkedDocument, Transform? transform)
+  public List<Element> GetLinkedModelElements(
+    Document currentDocument,
+    ISendFilter sendFilter,
+    Document linkedDocument,
+    Transform? transform
+  )
   {
     // send mode → Categories
     if (sendFilter is RevitCategoriesFilter categoryFilter && categoryFilter.SelectedCategories is not null)
@@ -48,19 +46,15 @@ public class LinkedModelHandler
     }
 
     // send mode → Views (taken from the legacy code)
-    if (sendFilter is RevitViewsFilter viewFilter && viewFilter.GetView() != null)
+    if (sendFilter is RevitViewsFilter viewFilter && viewFilter.GetView(currentDocument) != null)
     {
-      RevitLinkInstance linkInstance = FindLinkInstanceForDocument(
-        linkedDocument.PathName,
-        _revitContext.UIApplication.NotNull().ActiveUIDocument.Document,
-        transform
-      );
+      RevitLinkInstance linkInstance = FindLinkInstanceForDocument(linkedDocument.PathName, currentDocument, transform);
 
 #if REVIT2024_OR_GREATER
       // revit 2024 and 2025 we can use the three-parameter constructor to get only visible elements
       using var viewCollector = new FilteredElementCollector(
-        _revitContext.UIApplication.ActiveUIDocument.Document,
-        viewFilter.GetView().NotNull().Id,
+        currentDocument,
+        viewFilter.GetView(currentDocument).NotNull().Id,
         linkInstance.Id
       );
 
@@ -70,7 +64,7 @@ public class LinkedModelHandler
       // 🚨 LIMITATION: in Revit 2023 and below, we can only check if the entire linked model is visible,
       // not individual elements within it. If the linked model is visible, all its elements will be included.
       // constructor overload pertaining to searching and filtering visible elements from a revit link only added 2024.
-      if (linkInstance.IsHidden(viewFilter.GetView().NotNull()))
+      if (linkInstance.IsHidden(viewFilter.GetView(currentDocument).NotNull()))
       {
         return new List<Element>(); // if the linked model is hidden, return no elements
       }

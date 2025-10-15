@@ -218,13 +218,23 @@ public class RhinoMaterialUnpacker
       ? pbRenderMaterial.Material.EmissionColor
       : pbRenderMaterial.Emission.AsSystemColor(); // pbRenderMaterial.emission gives wrong color for emission materials, and material.emissioncolor gives the wrong value for most others *shrug*
 
+    // NOTE: added after CNX-2661, without having file that caused issue hard to say what the issue is
+    // api bug / funny model (custom textures) / upgrade from old model (e.g. Rhino 6)? who knows.
+    // PBR standard is 0-1. Clamping to valid range. This may indicate texture data is in wrong scale.
+    double roughness = pbRenderMaterial.Roughness;
+    if (roughness < 0 || roughness > 1)
+    {
+      _logger.LogWarning("Material '{Name}' has invalid roughness value of {Value}", renderMaterial.Name, roughness);
+      roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from C# 8.0
+    }
+
     SpeckleRenderMaterial speckleRenderMaterial =
       new()
       {
         name = renderMaterialName,
         opacity = opacity,
         metalness = pbRenderMaterial.Metallic,
-        roughness = pbRenderMaterial.Roughness,
+        roughness = roughness,
         diffuse = diffuse.ToArgb(),
         emissive = emissive.ToArgb(),
         applicationId = renderMaterial.Id.ToString()

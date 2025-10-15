@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
@@ -9,18 +9,15 @@ public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Pol
 {
   private readonly IServiceProvider _serviceProvider;
   private readonly ITypedConverter<RG.Interval, SOP.Interval> _intervalConverter;
-  private readonly ITypedConverter<RG.Box, SOG.Box> _boxConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public PolyCurveToSpeckleConverter(
     ITypedConverter<RG.Interval, SOP.Interval> intervalConverter,
-    ITypedConverter<RG.Box, SOG.Box> boxConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
     IServiceProvider serviceProvider
   )
   {
     _intervalConverter = intervalConverter;
-    _boxConverter = boxConverter;
     _settingsStore = settingsStore;
     _serviceProvider = serviceProvider;
   }
@@ -44,7 +41,6 @@ public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Pol
       closed = target.IsClosed,
       domain = _intervalConverter.Convert(target.Domain),
       length = target.GetLength(),
-      bbox = _boxConverter.Convert(new RG.Box(target.GetBoundingBox(true))),
       segments = target.DuplicateSegments().Select(x => CurveConverter.Value.Convert(x)).ToList(),
       units = _settingsStore.Current.SpeckleUnits
     };

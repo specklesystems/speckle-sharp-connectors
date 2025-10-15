@@ -1,5 +1,4 @@
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
   private readonly ILogger<RevitDocumentStore> _logger;
   private readonly IAppIdleManager _idleManager;
   private readonly RevitContext _revitContext;
-  private readonly DocumentModelStorageSchema _documentModelStorageSchema;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
 
@@ -28,7 +26,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     IAppIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
-    DocumentModelStorageSchema documentModelStorageSchema,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
     ISqLiteJsonCacheManagerFactory jsonCacheManagerFactory,
@@ -39,7 +36,6 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
     _idleManager = idleManager;
     _revitContext = revitContext;
-    _documentModelStorageSchema = documentModelStorageSchema;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _logger = logger;
 
@@ -101,10 +97,12 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     try
     {
       var key = GetKeyForDocument(document);
-      if (key != null)
+      if (key is null)
       {
-        _jsonCacheManager.UpdateObject(key, modelCardState);
+        LoadFromString(null);
+        return;
       }
+      _jsonCacheManager.UpdateObject(key, modelCardState);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -115,11 +113,17 @@ internal sealed class RevitDocumentStore : DocumentModelStore
 
   private string? GetKeyForDocument(Document doc)
   {
-    string? id = doc?.ProjectInformation?.UniqueId; //ProjectInformation Should only be null for family docs
-#if REVIT_2024_OR_GREATER
-    id ??= doc.CreationGUID.ToString(); //fallback for family docs
+#if REVIT2024_OR_GREATER
+    return doc.CreationGUID.ToString();
+#else
+    //basically, no document state will ever be saved when it's a new document.  It must be saved first for path name to be a valid value.
+    var x = doc.PathName;
+    if (string.IsNullOrEmpty(x))
+    {
+      return null;
+    }
+    return x;
 #endif
-    return id;
   }
 
   protected override void LoadState()
@@ -131,42 +135,13 @@ internal sealed class RevitDocumentStore : DocumentModelStore
       return;
     }
 
-    var stateEntity = GetSpeckleEntity(document);
-    if (stateEntity == null || !stateEntity.IsValid())
+    var key = GetKeyForDocument(document);
+    if (key is null)
     {
-      ClearAndSave();
+      LoadFromString(null);
       return;
     }
-
-    var key = GetKeyForDocument(document);
-    if (key != null)
-    {
-      var state = _jsonCacheManager.GetObject(key);
-      LoadFromString(state);
-    }
-  }
-
-  private Entity? GetSpeckleEntity(Document? doc)
-  {
-    if (doc is null)
-    {
-      return null;
-    }
-    using FilteredElementCollector collector = new(doc);
-
-    FilteredElementCollector dataStorages = collector.OfClass(typeof(DataStorage));
-    foreach (Element element in dataStorages)
-    {
-      DataStorage dataStorage = (DataStorage)element;
-      Entity settingEntity = dataStorage.GetEntity(_documentModelStorageSchema.GetSchema());
-      if (!settingEntity.IsValid())
-      {
-        continue;
-      }
-
-      return settingEntity;
-    }
-
-    return null;
+    var state = _jsonCacheManager.GetObject(key);
+    LoadFromString(state);
   }
 }

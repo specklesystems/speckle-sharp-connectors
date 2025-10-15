@@ -30,10 +30,14 @@ public static class ObjectPropertyKey
 /// </summary>
 public static class SectionPropertyCategory
 {
+  public const string DESIGN_DATA = "Design Data";
   public const string GENERAL_DATA = "General Data";
+  public const string MECHANICAL_DATA = "Mechanical Data";
+  public const string MODIFIERS = "Modifiers";
+  public const string PROPERTY_DATA = "Property Data";
   public const string SECTION_PROPERTIES = "Section Properties";
   public const string SECTION_DIMENSIONS = "Section Dimensions";
-  public const string PROPERTY_DATA = "Property Data";
+  public const string WEIGHT_AND_MASS = "Weight and Mass";
 }
 
 /// <summary>
@@ -65,6 +69,7 @@ public static class ResultsKey
   public const string PIER_FORCES = "Pier Forces";
   public const string SPANDREL_FORCES = "Spandrel Forces";
   public const string STORY_DRIFTS = "Story Drifts";
+  public const string STORY_FORCES = "Story Forces";
 
   // Used by ResultTypeSetting to get all defined result keys
   public static readonly string[] All =
@@ -75,6 +80,7 @@ public static class ResultsKey
     MODAL_PERIOD,
     PIER_FORCES,
     SPANDREL_FORCES,
-    STORY_DRIFTS
+    STORY_DRIFTS,
+    STORY_FORCES
   ];
 }
