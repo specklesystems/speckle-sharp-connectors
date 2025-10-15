@@ -15,7 +15,7 @@ public sealed class LevelExtractor
       return null;
     }
 
-    return level?.Name;
+    return level.Name;
   }
 
   /// <summary>
