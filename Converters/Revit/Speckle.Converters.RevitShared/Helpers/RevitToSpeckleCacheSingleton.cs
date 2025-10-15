@@ -90,6 +90,7 @@ public class RevitToSpeckleCacheSingleton
 
   public void ClearCache()
   {
+    ObjectRenderMaterialProxiesMap.Clear();
     SpeckleRenderMaterialCache.Clear();
     InstanceDefinitionProxiesMap.Clear();
     InstancedObjects.Clear();
