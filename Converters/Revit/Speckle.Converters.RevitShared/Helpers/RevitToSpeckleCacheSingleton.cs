@@ -87,4 +87,11 @@ public class RevitToSpeckleCacheSingleton
   /// <returns></returns>
   public List<Base> GetBaseObjectsForObjects(List<string> elementIds) =>
     InstancedObjects.Values.Where(v => v.elementIds.Any(id => elementIds.Contains(id))).Select(v => v.baseObj).ToList();
+
+  public void ClearCache()
+  {
+    SpeckleRenderMaterialCache.Clear();
+    InstanceDefinitionProxiesMap.Clear();
+    InstancedObjects.Clear();
+  }
 }
