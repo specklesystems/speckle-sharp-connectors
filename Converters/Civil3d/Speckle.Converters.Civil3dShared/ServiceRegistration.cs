@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared.Helpers;
-using Speckle.Converters.Civil3dShared.ToHost.Properties;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -44,7 +43,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<BaseCurveExtractor>();
     serviceCollection.AddScoped<PropertySetExtractor>();
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
-    serviceCollection.AddScoped<PropertySetConverter>(); // for civil
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<CorridorHandler>();
