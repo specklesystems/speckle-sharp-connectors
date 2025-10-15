@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.Bindings;
+using Speckle.Connectors.Civil3dShared.Operations.Receive;
 using Speckle.Connectors.Civil3dShared.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
@@ -25,6 +26,7 @@ public static class Civil3dConnectorModule
 
     // add receive
     serviceCollection.LoadReceive();
+    serviceCollection.AddScoped<IHostObjectBuilder, Civil3dHostObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dReceiveBinding>();
 
     // additional classes
