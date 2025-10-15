@@ -106,6 +106,8 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
       _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
+    PostParseProxies(rootObject);
+
     // 4 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
     HashSet<string> bakedObjectIds = new();
@@ -232,12 +234,16 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
   }
 
   /// <summary>
+  /// Hook method for derived classes to parse additional proxies from root object.
+  /// Called after materials and colors are parsed, before converting atomic objects.
+  /// </summary>
+  protected virtual void PostParseProxies(Base rootObject)
+  {
+    // Default implementation does nothing - override in derived classes
+  }
+
   /// Hook method for derived classes to perform additional operations after an entity is baked to the database.
   /// Called after the entity has been added to the database but before the transaction is committed.
-  /// </summary>
-  /// <param name="entity">The entity that was just added to the database.</param>
-  /// <param name="originalObject">The original Speckle object.</param>
-  /// <param name="tr">The active transaction.</param>
   protected virtual void PostBakeEntity(Entity entity, Base originalObject, Transaction tr)
   {
     // Default implementation does nothing - override in derived classes

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
@@ -19,6 +20,11 @@ public class PropertySetBaker
   private readonly ILogger<PropertySetBaker> _logger;
   private readonly PropertyHandler _propertyHandler;
 
+  /// <summary>
+  /// Map of property set definition name to its ObjectId. Populated during ParsePropertySetDefinitions.
+  /// </summary>
+  private Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
+
   public PropertySetBaker(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     ILogger<PropertySetBaker> logger
@@ -30,24 +36,69 @@ public class PropertySetBaker
   }
 
   /// <summary>
-  /// Try to bake property sets from a Speckle object to an AutoCAD entity.
+  /// Parse and bake all property set definitions from the root object.
+  /// Should be called once at the beginning of the receive operation.
   /// </summary>
-  /// <param name="entity">The target entity.</param>
-  /// <param name="sourceObject">The source Speckle object containing property set data.</param>
-  /// <param name="tr">The active transaction to use for database operations.</param>
+  public void ParsePropertySetDefinitions(Base rootObject)
+  {
+    _propertySetDefinitionMap.Clear();
+
+    if (rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] is not Dictionary<string, object?> definitions)
+    {
+      return;
+    }
+
+    if (definitions.Count == 0)
+    {
+      return;
+    }
+
+    using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
+
+    foreach (var definition in definitions)
+    {
+      string setName = definition.Key;
+      object? setDefObj = definition.Value;
+
+      if (setDefObj is not Dictionary<string, object?> setDefData)
+      {
+        _logger.LogWarning("Property set definition {SetName} has invalid data format", setName);
+        continue;
+      }
+
+      if (!setDefData.TryGetValue("propertyDefinitions", out var propDefsObj))
+      {
+        _logger.LogWarning("Property set definition {SetName} missing propertyDefinitions", setName);
+        continue;
+      }
+
+      if (propDefsObj is not Dictionary<string, object?> propertyDefinitions)
+      {
+        _logger.LogWarning("Property set definition {SetName} propertyDefinitions has invalid format", setName);
+        continue;
+      }
+
+      ADB.ObjectId defId = GetOrCreatePropertySetDefinition(setName, propertyDefinitions, tr);
+      if (!defId.IsNull)
+      {
+        _propertySetDefinitionMap[setName] = defId;
+      }
+    }
+
+    tr.Commit();
+  }
+
+  /// <summary>
+  /// Try to bake property sets from a Speckle object to a Civil3D entity.
+  /// </summary>
   public bool TryBakePropertySets(ADB.Entity entity, Base sourceObject, ADB.Transaction tr)
   {
-    if (sourceObject["properties"] is not Dictionary<string, object?> properties)
-    {
-      return false;
-    }
-
-    if (!properties.TryGetValue("Property Sets", out var propertySetsObj))
-    {
-      return false;
-    }
-
-    if (propertySetsObj is not Dictionary<string, object?> propertySets || propertySets.Count == 0)
+    if (
+      sourceObject["properties"] is not Dictionary<string, object?> properties
+      || !properties.TryGetValue("Property Sets", out var propertySetsObj)
+      || propertySetsObj is not Dictionary<string, object?> propertySets
+      || propertySets.Count == 0
+    )
     {
       return false;
     }
@@ -89,14 +140,17 @@ public class PropertySetBaker
   {
     try
     {
-      ADB.ObjectId propertySetDefId = GetOrCreatePropertySetDefinition(setName, setData, tr);
+      if (!_propertySetDefinitionMap.TryGetValue(setName, out ADB.ObjectId propertySetDefId))
+      {
+        _logger.LogWarning("Property set definition {SetName} not found in definition map", setName);
+        return false;
+      }
 
       if (propertySetDefId.IsNull)
       {
         return false;
       }
 
-      // Property set should never pre-exist on a newly created entity in a fresh receive operation
       if (ObjectHasPropertySet(entity, propertySetDefId))
       {
         throw new SpeckleException($"Property set '{setName}' already exists on entity.");
@@ -113,7 +167,7 @@ public class PropertySetBaker
 
   private ADB.ObjectId GetOrCreatePropertySetDefinition(
     string setName,
-    Dictionary<string, object?> setData,
+    Dictionary<string, object?> propertyDefinitions,
     ADB.Transaction tr
   )
   {
@@ -131,46 +185,64 @@ public class PropertySetBaker
     propSetDef.Description = "Property Set Definition added by Speckle";
     propSetDef.AppliesToAll = true;
 
-    foreach (var propertyEntry in setData)
+    foreach (var propertyDefinition in propertyDefinitions)
     {
-      string propertyName = propertyEntry.Key;
-      object? propertyDataObj = propertyEntry.Value;
+      string propertyName = propertyDefinition.Key;
+      object? propertyDefObj = propertyDefinition.Value;
 
-      if (propertyDataObj is not Dictionary<string, object?> propertyDataDict)
+      if (propertyDefObj is not Dictionary<string, object?> propertyDefDict)
       {
         continue;
       }
 
-      if (!propertyDataDict.TryGetValue("value", out var value) || value == null)
+      if (!propertyDefDict.TryGetValue("dataType", out var dataTypeStr) || dataTypeStr is not string dataTypeString)
       {
+        _logger.LogWarning("Property {PropertyName} missing or invalid dataType", propertyName);
         continue;
       }
 
-      AAEC.PropertyData.DataType? dataType = GetPropertyDataType(value);
-      if (dataType == null)
+      if (!TryParseDataType(dataTypeString, out AAEC.PropertyData.DataType dataType))
       {
-        _logger.LogWarning("Unsupported property data type for {PropertyName}", propertyName);
+        _logger.LogWarning(
+          "Unsupported property data type {DataType} for {PropertyName}",
+          dataTypeString,
+          propertyName
+        );
         continue;
       }
 
-      var propDef = new AAECPDB.PropertyDefinition
-      {
-        DataType = dataType.Value,
-        Name = propertyName,
-        DefaultData = value
-      };
+      var propDef = new AAECPDB.PropertyDefinition { DataType = dataType, Name = propertyName };
 
       propDef.SetToStandard(db);
       propDef.SubSetDatabaseDefaults(db);
+
+      if (propertyDefDict.TryGetValue("defaultValue", out var defaultValue) && defaultValue != null)
+      {
+        try
+        {
+          object? convertedValue = ConvertDefaultValue(defaultValue, dataType);
+          if (convertedValue != null)
+          {
+            propDef.DefaultData = convertedValue;
+          }
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(
+            ex,
+            "Failed to set default value for property {PropertyName}, continuing without default",
+            propertyName
+          );
+        }
+      }
+
       propSetDef.Definitions.Add(propDef);
     }
 
     propSetDefs.AddNewRecord(setName, propSetDef);
     tr.AddNewlyCreatedDBObject(propSetDef, true);
 
-    ADB.ObjectId defId = propSetDef.ObjectId;
-
-    return defId;
+    return propSetDef.ObjectId;
   }
 
   private bool ObjectHasPropertySet(ADB.DBObject obj, ADB.ObjectId propertySetId)
@@ -270,19 +342,28 @@ public class PropertySetBaker
     }
   }
 
-  private AAEC.PropertyData.DataType? GetPropertyDataType(object value)
+  private bool TryParseDataType(string dataTypeString, out AAEC.PropertyData.DataType dataType)
   {
-    return value switch
+    return Enum.TryParse(dataTypeString, out dataType);
+  }
+
+  private object? ConvertDefaultValue(object value, AAEC.PropertyData.DataType dataType)
+  {
+    try
     {
-      int => AAEC.PropertyData.DataType.Integer,
-      double => AAEC.PropertyData.DataType.Real,
-      bool => AAEC.PropertyData.DataType.TrueFalse,
-      string => AAEC.PropertyData.DataType.Text,
-      List<int> => AAEC.PropertyData.DataType.List,
-      List<double> => AAEC.PropertyData.DataType.List,
-      List<bool> => AAEC.PropertyData.DataType.List,
-      List<string> => AAEC.PropertyData.DataType.List,
-      _ => null
-    };
+      return dataType switch
+      {
+        AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value),
+        AAEC.PropertyData.DataType.Real => Convert.ToDouble(value),
+        AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value),
+        AAEC.PropertyData.DataType.Text => value.ToString(),
+        _ => value
+      };
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Failed to convert default value {Value} to type {DataType}", value, dataType);
+      return null;
+    }
   }
 }

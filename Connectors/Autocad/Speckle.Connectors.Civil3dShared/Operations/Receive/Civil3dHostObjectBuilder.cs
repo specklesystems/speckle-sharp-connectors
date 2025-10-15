@@ -43,6 +43,11 @@ public sealed class Civil3dHostObjectBuilder : AutocadHostObjectBaseBuilder
     _propertySetBaker = propertySetBaker;
   }
 
+  protected override void PostParseProxies(Base rootObject)
+  {
+    _propertySetBaker.ParsePropertySetDefinitions(rootObject);
+  }
+
   protected override void PostBakeEntity(Entity entity, Base originalObject, Transaction tr)
   {
     _propertySetBaker.TryBakePropertySets(entity, originalObject, tr);
