@@ -79,22 +79,38 @@ public class SpeckleOperationWizard
     var resources = SpeckleResourceBuilder.FromUrlString(input, token);
     if (resources.Length == 0)
     {
-      throw new SpeckleException($"Input url string was empty");
+      throw new SpeckleException("Input url string was empty");
     }
 
     if (resources.Length > 1)
     {
-      throw new SpeckleException($"Input multi-model url is not supported");
+      throw new SpeckleException("Input multi-model url is not supported");
     }
 
     var resource = resources.First();
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var account = resource.Account.GetAccount(scope);
-    SetAccount(account, false);
+    var urlDerivedAccount = resource.Account.GetAccount(scope);
 
+    // if no account is selected, happily go through the url derived account approach
     if (SelectedAccount == null)
     {
-      throw new SpeckleException("No account found for server URL");
+      SetAccount(urlDerivedAccount, false);
+    }
+    // if we have an account from right-click context-menu, we rely on that and just validate that it's actually applicable to that server
+    else if (urlDerivedAccount != null && SelectedAccount.serverInfo.url != urlDerivedAccount.serverInfo.url)
+    {
+      throw new SpeckleException(
+        $"Selected account is for '{SelectedAccount.serverInfo.url}' "
+          + $"but URL requires '{urlDerivedAccount.serverInfo.url}'"
+      );
+    }
+
+    // we have both scenarios covered
+    // Scenario #1 - default account from url
+    // Scenario #2 - triggered by account switch on right-click context (and validated)
+    if (SelectedAccount == null)
+    {
+      throw new SpeckleException("No account found for the given server url");
     }
 
     IClient client = _clientFactory.Create(SelectedAccount);

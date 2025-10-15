@@ -87,6 +87,7 @@ public class SpeckleSelectModelComponent : GH_Component
       string? urlInput = null;
 
       // SCENARIO 1: Component has input wire connected
+
       if (da.GetData(0, ref urlInput))
       {
         UrlInput = urlInput;
@@ -97,6 +98,11 @@ public class SpeckleSelectModelComponent : GH_Component
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input url was empty or null");
           return;
+        }
+
+        if (_justPastedIn)
+        {
+          RestoreAccountFromStoredState();
         }
 
         try
@@ -132,22 +138,9 @@ public class SpeckleSelectModelComponent : GH_Component
         _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
       }
 
-      if (_justPastedIn && _storedUserId != null && !string.IsNullOrEmpty(_storedUserId))
+      if (_justPastedIn)
       {
-        try
-        {
-          SpeckleOperationWizard.SetAccountFromId(_storedUserId);
-        }
-        catch (SpeckleAccountManagerException e)
-        {
-          // Swallow and move onto checking server.
-          Console.WriteLine(e);
-        }
-
-        if (_storedServer != null && SpeckleOperationWizard.SelectedAccount == null)
-        {
-          SpeckleOperationWizard.SetAccountFromIdAndUrl(_storedUserId, _storedServer);
-        }
+        RestoreAccountFromStoredState();
       }
 
       // Validate backing data
@@ -395,5 +388,27 @@ public class SpeckleSelectModelComponent : GH_Component
     ModelContextMenuButton.ExpirePreview(redraw);
     VersionContextMenuButton.ExpirePreview(redraw);
     base.ExpirePreview(redraw);
+  }
+
+  private void RestoreAccountFromStoredState()
+  {
+    if (_storedUserId is null || string.IsNullOrEmpty(_storedUserId))
+    {
+      return;
+    }
+
+    try
+    {
+      SpeckleOperationWizard.SetAccountFromId(_storedUserId);
+    }
+    catch (SpeckleAccountManagerException e)
+    {
+      Console.WriteLine(e);
+    }
+
+    if (_storedServer != null && SpeckleOperationWizard.SelectedAccount == null)
+    {
+      SpeckleOperationWizard.SetAccountFromIdAndUrl(_storedUserId, _storedServer);
+    }
   }
 }
