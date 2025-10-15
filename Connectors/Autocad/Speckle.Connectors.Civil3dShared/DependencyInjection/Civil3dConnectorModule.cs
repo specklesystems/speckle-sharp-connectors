@@ -6,6 +6,7 @@ using Speckle.Connectors.Civil3dShared.Bindings;
 using Speckle.Connectors.Civil3dShared.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Sdk;
 
@@ -28,6 +29,7 @@ public static class Civil3dConnectorModule
 
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
+    serviceCollection.AddScoped<PropertySetBaker>();
 
     // automatically detects the Class:IClass interface pattern to register all generated interfaces
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());

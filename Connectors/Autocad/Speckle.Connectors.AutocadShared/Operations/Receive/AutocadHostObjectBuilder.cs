@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
+using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Dependencies;
@@ -28,7 +29,8 @@ public class AutocadHostObjectBuilder(
   IAutocadColorBaker colorBaker,
   AutocadContext autocadContext,
   RootObjectUnpacker rootObjectUnpacker,
-  IReceiveConversionHandler conversionHandler
+  IReceiveConversionHandler conversionHandler,
+  PropertySetBaker? propertySetBaker = null
 ) : IHostObjectBuilder
 {
   public Task<HostObjectBuilderResult> Build(
@@ -195,6 +197,9 @@ public class AutocadHostObjectBuilder(
     }
 
     entity.AppendToDb(layerName);
+
+    propertySetBaker?.TryBakePropertySets(entity, originalObject);
+
     return entity;
   }
 
