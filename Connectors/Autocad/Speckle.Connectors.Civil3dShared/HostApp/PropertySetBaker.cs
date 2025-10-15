@@ -23,7 +23,7 @@ public class PropertySetBaker
   /// <summary>
   /// Map of property set definition name to its ObjectId. Populated during ParsePropertySetDefinitions.
   /// </summary>
-  private Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
+  private readonly Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
 
   public PropertySetBaker(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
