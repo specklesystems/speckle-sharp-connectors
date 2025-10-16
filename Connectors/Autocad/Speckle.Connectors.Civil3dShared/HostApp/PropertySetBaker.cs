@@ -36,11 +36,59 @@ public class PropertySetBaker
   }
 
   /// <summary>
+  /// Removes all property set definitions with a prefix before receive operation.
+  /// </summary>
+  public void PurgePropertySets(string namePrefix)
+  {
+    var db = _settingsStore.Current.Document.Database;
+    using var tr = db.TransactionManager.StartTransaction();
+
+    var definitionsToDelete = new List<ADB.ObjectId>();
+
+    // Access the property set definition dictionary from the named object dictionary
+    var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
+
+    if (nod.Contains("AecPropertySetDefs"))
+    {
+      var propSetDefsDictId = nod.GetAt("AecPropertySetDefs");
+      var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(propSetDefsDictId, ADB.OpenMode.ForRead);
+
+      // Iterate through all property set definitions in the dictionary
+      foreach (var entry in propSetDefsDict)
+      {
+        if (entry.Key.Contains(namePrefix))
+        {
+          definitionsToDelete.Add(entry.Value);
+        }
+      }
+    }
+
+    // Delete the matching definitions
+    foreach (ADB.ObjectId defId in definitionsToDelete)
+    {
+      try
+      {
+        var propSetDef = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForWrite);
+        propSetDef.Erase();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed to purge property set definition");
+      }
+    }
+
+    tr.Commit();
+  }
+
+  /// <summary>
   /// Parse and bake all property set definitions from the root object.
   /// Should be called once at the beginning of the receive operation.
   /// </summary>
-  public void ParsePropertySetDefinitions(Base rootObject)
+  public void ParsePropertySetDefinitions(Base rootObject, string namePrefix)
   {
+    // Purge existing property set definitions with this prefix
+    PurgePropertySets(namePrefix);
+
     _propertySetDefinitionMap.Clear();
 
     if (rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] is not Dictionary<string, object?> definitions)
@@ -78,7 +126,7 @@ public class PropertySetBaker
         continue;
       }
 
-      ADB.ObjectId defId = GetOrCreatePropertySetDefinition(setName, propertyDefinitions, tr);
+      ADB.ObjectId defId = CreatePropertySetDefinition(setName, propertyDefinitions, namePrefix, tr);
       if (!defId.IsNull)
       {
         _propertySetDefinitionMap[setName] = defId;
@@ -165,19 +213,17 @@ public class PropertySetBaker
     }
   }
 
-  private ADB.ObjectId GetOrCreatePropertySetDefinition(
+  private ADB.ObjectId CreatePropertySetDefinition(
     string setName,
     Dictionary<string, object?> propertyDefinitions,
+    string namePrefix,
     ADB.Transaction tr
   )
   {
     var db = _settingsStore.Current.Document.Database;
     using var propSetDefs = new AAECPDB.DictionaryPropertySetDefinitions(db);
 
-    if (propSetDefs.Has(setName, tr))
-    {
-      return propSetDefs.GetAt(setName);
-    }
+    string prefixedName = $"{setName}-{namePrefix}";
 
     AAECPDB.PropertySetDefinition propSetDef = new();
     propSetDef.SetToStandard(db);
@@ -225,7 +271,7 @@ public class PropertySetBaker
       {
         try
         {
-          // Cast numeric types: JSON deserialization returns long but AutoCAD expects int
+          // Cast numeric types - to avoid bad numeric value errors
           var convertedValue = dataType switch
           {
             AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
@@ -246,7 +292,7 @@ public class PropertySetBaker
       propSetDef.Definitions.Add(propDef);
     }
 
-    propSetDefs.AddNewRecord(setName, propSetDef);
+    propSetDefs.AddNewRecord(prefixedName, propSetDef);
     tr.AddNewlyCreatedDBObject(propSetDef, true);
 
     return propSetDef.ObjectId;

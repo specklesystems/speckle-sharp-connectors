@@ -106,7 +106,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
       _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
 
-    PostParseProxies(rootObject);
+    PostParseProxies(rootObject, baseLayerPrefix);
 
     // 4 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
@@ -237,7 +237,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
   /// Hook method for derived classes to parse additional proxies from root object.
   /// Called after materials and colors are parsed, before converting atomic objects.
   /// </summary>
-  protected virtual void PostParseProxies(Base rootObject)
+  protected virtual void PostParseProxies(Base rootObject, string baseLayerPrefix)
   {
     // Default implementation does nothing - override in derived classes
   }
