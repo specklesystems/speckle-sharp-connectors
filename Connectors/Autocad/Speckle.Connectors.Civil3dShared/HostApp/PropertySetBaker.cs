@@ -220,11 +220,14 @@ public class PropertySetBaker
       {
         try
         {
-          object? convertedValue = ConvertDefaultValue(defaultValue, dataType);
-          if (convertedValue != null)
+          // Convert numeric types: JSON deserialization returns long/double but AutoCAD expects int/double
+          var convertedValue = dataType switch
           {
-            propDef.DefaultData = convertedValue;
-          }
+            AAEC.PropertyData.DataType.Integer => Convert.ToInt32(defaultValue),
+            AAEC.PropertyData.DataType.Real => Convert.ToDouble(defaultValue),
+            _ => defaultValue
+          };
+          propDef.DefaultData = convertedValue;
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
@@ -339,26 +342,6 @@ public class PropertySetBaker
     {
       _logger.LogWarning(ex, "Failed to update property set values");
       return false;
-    }
-  }
-
-  private object? ConvertDefaultValue(object value, AAEC.PropertyData.DataType dataType)
-  {
-    try
-    {
-      return dataType switch
-      {
-        AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value),
-        AAEC.PropertyData.DataType.Real => Convert.ToDouble(value),
-        AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value),
-        AAEC.PropertyData.DataType.Text => value.ToString(),
-        _ => value
-      };
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      _logger.LogWarning(ex, "Failed to convert default value {Value} to type {DataType}", value, dataType);
-      return null;
     }
   }
 }
