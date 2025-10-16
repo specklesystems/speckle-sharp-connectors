@@ -197,18 +197,23 @@ public class PropertySetBaker
 
       if (!propertyDefDict.TryGetValue("dataType", out var dataTypeStr) || dataTypeStr is not string dataTypeString)
       {
-        _logger.LogWarning("Property {PropertyName} missing or invalid dataType", propertyName);
-        continue;
+        _logger.LogError(
+          "Property set definition {SetName} is invalid: property {PropertyName} missing or invalid dataType",
+          setName,
+          propertyName
+        );
+        return ADB.ObjectId.Null;
       }
 
       if (!Enum.TryParse(dataTypeString, out AAEC.PropertyData.DataType dataType))
       {
-        _logger.LogWarning(
-          "Unsupported property data type {DataType} for {PropertyName}",
+        _logger.LogError(
+          "Property set definition {SetName} is invalid: unsupported data type {DataType} for property {PropertyName}",
+          setName,
           dataTypeString,
           propertyName
         );
-        continue;
+        return ADB.ObjectId.Null;
       }
 
       var propDef = new AAECPDB.PropertyDefinition { DataType = dataType, Name = propertyName };
@@ -220,11 +225,10 @@ public class PropertySetBaker
       {
         try
         {
-          // Convert numeric types: JSON deserialization returns long/double but AutoCAD expects int/double
+          // Cast numeric types: JSON deserialization returns long but AutoCAD expects int
           var convertedValue = dataType switch
           {
-            AAEC.PropertyData.DataType.Integer => Convert.ToInt32(defaultValue),
-            AAEC.PropertyData.DataType.Real => Convert.ToDouble(defaultValue),
+            AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
             _ => defaultValue
           };
           propDef.DefaultData = convertedValue;
@@ -277,7 +281,7 @@ public class PropertySetBaker
 
       AAECPDB.PropertyDataServices.AddPropertySet(entity, propertySetDefId);
 
-      return UpdatePropertySet(entity, propertySetDefId, setData, tr);
+      return TrySetPropertyValues(entity, propertySetDefId, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -286,7 +290,7 @@ public class PropertySetBaker
     }
   }
 
-  private bool UpdatePropertySet(
+  private bool TrySetPropertyValues(
     ADB.Entity entity,
     ADB.ObjectId propertySetDefId,
     Dictionary<string, object?> setData,
