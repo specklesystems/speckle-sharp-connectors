@@ -10,7 +10,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Connectors.Civil3dShared.Operations.Receive;
 
 /// <summary>
-/// <para>Civil3D-specific host object builder with property set support. Expects to be a scoped dependency per receive operation.</para>
+/// <para>Civil3D specific host object builder with property set support. Expects to be a scoped dependency per receive operation.</para>
 /// </summary>
 public sealed class Civil3dHostObjectBuilder : AutocadHostObjectBaseBuilder
 {
