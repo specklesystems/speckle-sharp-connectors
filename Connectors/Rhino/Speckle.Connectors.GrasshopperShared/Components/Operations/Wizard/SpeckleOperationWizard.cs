@@ -110,7 +110,9 @@ public class SpeckleOperationWizard
     // Scenario #2 - triggered by account switch on right-click context (and validated)
     if (SelectedAccount == null)
     {
-      throw new SpeckleException("No account found for the given server url");
+      throw new SpeckleException(
+        $"No appropriate account found for the given '{urlDerivedAccount?.serverInfo.url}' server"
+      );
     }
 
     IClient client = _clientFactory.Create(SelectedAccount);
