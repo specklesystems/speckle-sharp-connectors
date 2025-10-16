@@ -201,7 +201,7 @@ public class PropertySetBaker
         continue;
       }
 
-      if (!TryParseDataType(dataTypeString, out AAEC.PropertyData.DataType dataType))
+      if (!Enum.TryParse(dataTypeString, out AAEC.PropertyData.DataType dataType))
       {
         _logger.LogWarning(
           "Unsupported property data type {DataType} for {PropertyName}",
@@ -340,11 +340,6 @@ public class PropertySetBaker
       _logger.LogWarning(ex, "Failed to update property set values");
       return false;
     }
-  }
-
-  private bool TryParseDataType(string dataTypeString, out AAEC.PropertyData.DataType dataType)
-  {
-    return Enum.TryParse(dataTypeString, out dataType);
   }
 
   private object? ConvertDefaultValue(object value, AAEC.PropertyData.DataType dataType)
