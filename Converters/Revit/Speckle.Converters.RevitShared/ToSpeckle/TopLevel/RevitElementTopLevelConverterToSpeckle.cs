@@ -361,8 +361,10 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       }
       else
       {
-        // shouldn't happen, but fallback to mesh ID
-        meshIdToAdd = mesh.applicationId.NotNull();
+        // i think we should be loud here. this shouldn't occur. if it is an instance, it should be in the cache?!
+        throw new InvalidOperationException(
+          $"Instance definition '{instanceDefinitionId}' not found in cache for mesh '{mesh.applicationId}'"
+        );
       }
     }
     else
