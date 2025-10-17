@@ -82,13 +82,10 @@ public class PropertySetBaker
 
   /// <summary>
   /// Parse and bake all property set definitions from the root object.
-  /// Should be called once at the beginning of the receive operation.
+  /// Should be called after purging and after materials/colors are parsed.
   /// </summary>
   public void ParsePropertySetDefinitions(Base rootObject, string namePrefix)
   {
-    // Purge existing property set definitions with this prefix
-    PurgePropertySets(namePrefix);
-
     _propertySetDefinitionMap.Clear();
 
     if (rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] is not Dictionary<string, object?> definitions)
@@ -271,10 +268,11 @@ public class PropertySetBaker
       {
         try
         {
-          // Cast numeric types - to avoid bad numeric value errors
+          // Cast numeric types to avoid bad numeric value errors
           var convertedValue = dataType switch
           {
             AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
+            AAEC.PropertyData.DataType.AutoIncrement => (int)(long)defaultValue,
             _ => defaultValue
           };
           propDef.DefaultData = convertedValue;

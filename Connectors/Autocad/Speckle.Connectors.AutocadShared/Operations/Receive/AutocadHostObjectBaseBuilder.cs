@@ -70,7 +70,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
 
     // 0 - Clean then Rock n Roll!
     string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
-    PreReceiveDeepClean(baseLayerPrefix);
+    PreReceiveDeepClean(rootObject, baseLayerPrefix);
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -105,8 +105,6 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     {
       _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
-
-    PostParseProxies(rootObject, baseLayerPrefix);
 
     // 4 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
@@ -167,7 +165,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
-  private void PreReceiveDeepClean(string baseLayerPrefix)
+  protected virtual void PreReceiveDeepClean(Base rootObject, string baseLayerPrefix)
   {
     _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
     _instanceBaker.PurgeInstances(baseLayerPrefix);
@@ -231,15 +229,6 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     PostBakeEntity(entity, originalObject, tr);
 
     return entity;
-  }
-
-  /// <summary>
-  /// Hook method for derived classes to parse additional proxies from root object.
-  /// Called after materials and colors are parsed, before converting atomic objects.
-  /// </summary>
-  protected virtual void PostParseProxies(Base rootObject, string baseLayerPrefix)
-  {
-    // Default implementation does nothing - override in derived classes
   }
 
   /// Hook method for derived classes to perform additional operations after an entity is baked to the database.
