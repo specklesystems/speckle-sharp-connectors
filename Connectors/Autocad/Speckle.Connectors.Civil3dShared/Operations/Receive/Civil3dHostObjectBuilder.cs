@@ -43,10 +43,14 @@ public sealed class Civil3dHostObjectBuilder : AutocadHostObjectBaseBuilder
     _propertySetBaker = propertySetBaker;
   }
 
-  protected override void PreReceiveDeepCleanCivil3d(Base rootObject, string baseLayerPrefix)
+  protected override void PreReceiveAdditionalDeepClean(string baseLayerPrefix)
   {
     _propertySetBaker.PurgePropertySets(baseLayerPrefix);
-    _propertySetBaker.ParsePropertySetDefinitions(rootObject, baseLayerPrefix);
+  }
+
+  protected override void ParseAndBakeAdditionalProxies(Base rootObject, string baseLayerPrefix)
+  {
+    _propertySetBaker.ParseAndBakePropertySetDefinitions(rootObject, baseLayerPrefix);
   }
 
   protected override void PostBakeEntity(Entity entity, Base originalObject, Transaction tr)

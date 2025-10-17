@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Civil3dShared;
 using Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
@@ -16,6 +17,7 @@ namespace Speckle.Connectors.Civil3dShared.HostApp;
 /// </summary>
 public class PropertySetBaker
 {
+  private const string PROP_SET_DEF_DICT_NAME = "AecPropertySetDefs";
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly ILogger<PropertySetBaker> _logger;
   private readonly PropertyHandler _propertyHandler;
@@ -40,21 +42,21 @@ public class PropertySetBaker
   /// </summary>
   public void PurgePropertySets(string namePrefix)
   {
-    var db = _settingsStore.Current.Document.Database;
+    ADB.Database db = _settingsStore.Current.Document.Database;
     using var tr = db.TransactionManager.StartTransaction();
 
-    var definitionsToDelete = new List<ADB.ObjectId>();
+    List<ADB.ObjectId> definitionsToDelete = new();
 
     // Access the property set definition dictionary from the named object dictionary
     var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
 
-    if (nod.Contains("AecPropertySetDefs"))
+    if (nod.Contains(PROP_SET_DEF_DICT_NAME))
     {
-      var propSetDefsDictId = nod.GetAt("AecPropertySetDefs");
+      ADB.ObjectId propSetDefsDictId = nod.GetAt(PROP_SET_DEF_DICT_NAME);
       var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(propSetDefsDictId, ADB.OpenMode.ForRead);
 
       // Iterate through all property set definitions in the dictionary
-      foreach (var entry in propSetDefsDict)
+      foreach (ADB.DBDictionaryEntry entry in propSetDefsDict)
       {
         if (entry.Key.Contains(namePrefix))
         {
@@ -84,7 +86,7 @@ public class PropertySetBaker
   /// Parse and bake all property set definitions from the root object.
   /// Should be called after purging and after materials/colors are parsed.
   /// </summary>
-  public void ParsePropertySetDefinitions(Base rootObject, string namePrefix)
+  public void ParseAndBakePropertySetDefinitions(Base rootObject, string namePrefix)
   {
     _propertySetDefinitionMap.Clear();
 
@@ -111,7 +113,7 @@ public class PropertySetBaker
         continue;
       }
 
-      if (!setDefData.TryGetValue("propertyDefinitions", out var propDefsObj))
+      if (!setDefData.TryGetValue(PropertySetDefinitionHandler.PROP_SET_PROP_DEFS_KEY, out var propDefsObj))
       {
         _logger.LogWarning("Property set definition {SetName} missing propertyDefinitions", setName);
         continue;
@@ -218,14 +220,14 @@ public class PropertySetBaker
   )
   {
     var db = _settingsStore.Current.Document.Database;
-    using var propSetDefs = new AAECPDB.DictionaryPropertySetDefinitions(db);
+    using AAECPDB.DictionaryPropertySetDefinitions propSetDefs = new(db);
 
     string prefixedName = $"{setName}-{namePrefix}";
 
     AAECPDB.PropertySetDefinition propSetDef = new();
     propSetDef.SetToStandard(db);
     propSetDef.SubSetDatabaseDefaults(db);
-    propSetDef.Description = "Property Set Definition added by Speckle";
+    //propSetDef.Description = "Property Set Definition added by Speckle"; // POC: should use the description that was published. can this back in if needed
     propSetDef.AppliesToAll = true;
 
     foreach (var propertyDefinition in propertyDefinitions)
@@ -238,7 +240,10 @@ public class PropertySetBaker
         continue;
       }
 
-      if (!propertyDefDict.TryGetValue("dataType", out var dataTypeStr) || dataTypeStr is not string dataTypeString)
+      if (
+        !propertyDefDict.TryGetValue(PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY, out var dataTypeStr)
+        || dataTypeStr is not string dataTypeString
+      )
       {
         _logger.LogError(
           "Property set definition {SetName} is invalid: property {PropertyName} missing or invalid dataType",
@@ -259,22 +264,26 @@ public class PropertySetBaker
         return ADB.ObjectId.Null;
       }
 
-      var propDef = new AAECPDB.PropertyDefinition { DataType = dataType, Name = propertyName };
+      AAECPDB.PropertyDefinition propDef = new() { DataType = dataType, Name = propertyName };
 
       propDef.SetToStandard(db);
       propDef.SubSetDatabaseDefaults(db);
 
-      if (propertyDefDict.TryGetValue("defaultValue", out var defaultValue) && defaultValue != null)
+      if (
+        propertyDefDict.TryGetValue(PropertySetDefinitionHandler.PROP_DEF_DEFAULT_VALUE_KEY, out object? defaultValue)
+        && defaultValue != null
+      )
       {
         try
         {
           // Cast numeric types to avoid bad numeric value errors
           var convertedValue = dataType switch
           {
-            AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
-            AAEC.PropertyData.DataType.AutoIncrement => (int)(long)defaultValue,
+            AAEC.PropertyData.DataType.Integer => (int)defaultValue,
+            AAEC.PropertyData.DataType.AutoIncrement => (int)defaultValue,
             _ => defaultValue
           };
+
           propDef.DefaultData = convertedValue;
         }
         catch (Exception ex) when (!ex.IsFatal())

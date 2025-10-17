@@ -70,7 +70,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
 
     // 0 - Clean then Rock n Roll!
     string baseLayerPrefix = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
-    PreReceiveDeepClean(rootObject, baseLayerPrefix);
+    PreReceiveDeepClean(baseLayerPrefix);
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
@@ -91,7 +91,7 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
       instanceComponentsWithPath.AddRange(transformed);
     }
 
-    // 3 - Bake materials and colors, as they are used later down the line by layers and objects
+    // 3 - Parse and bake proxies (materials and colors), as they are used later down the line by layers and objects
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       _materialBaker.ParseAndBakeRenderMaterials(
@@ -105,6 +105,9 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     {
       _colorBaker.ParseColors(unpackedRoot.ColorProxies, onOperationProgressed);
     }
+
+    // 3.5 - Parse and bake additional proxies that are needed for conversion
+    ParseAndBakeAdditionalProxies(rootObject, baseLayerPrefix);
 
     // 4 - Convert atomic objects
     HashSet<ReceiveConversionResult> results = new();
@@ -165,21 +168,23 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, results));
   }
 
-  protected virtual void PreReceiveDeepClean(Base rootObject, string baseLayerPrefix)
+  protected void PreReceiveDeepClean(string baseLayerPrefix)
   {
     _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
     _instanceBaker.PurgeInstances(baseLayerPrefix);
     _materialBaker.PurgeMaterials(baseLayerPrefix);
-    PreReceiveDeepCleanCivil3d(rootObject, baseLayerPrefix);
+    PreReceiveAdditionalDeepClean(baseLayerPrefix);
   }
 
   /// <summary>
-  /// Hook method for Civil3D to perform additional deep cleaning operations.
+  /// Method for adding app-specific additional deep clean of the document prior to receiving.
   /// </summary>
-  protected virtual void PreReceiveDeepCleanCivil3d(Base rootObject, string baseLayerPrefix)
-  {
-    // Default implementation does nothing - override in Civil3D
-  }
+  protected virtual void PreReceiveAdditionalDeepClean(string baseLayerPrefix) { }
+
+  /// <summary>
+  /// Method for parsing and baking additional app-specific proxies on the root prior to converting and baking objects
+  /// </summary>
+  protected virtual void ParseAndBakeAdditionalProxies(Base rootObject, string baseLayerPrefix) { }
 
   private IReadOnlyCollection<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
   {
@@ -240,8 +245,13 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     return entity;
   }
 
-  /// Hook method for derived classes to perform additional operations after an entity is baked to the database.
-  /// Called after the entity has been added to the database but before the transaction is committed.
+  /// <summary>
+  /// Method for additional app-specific operations on entities after the entity has been added to the document database.
+  /// Called after the entity is added to the database in an open transaction
+  /// </summary>
+  /// <param name="entity"></param>
+  /// <param name="originalObject"></param>
+  /// <param name="tr"></param>
   protected virtual void PostBakeEntity(Entity entity, Base originalObject, Transaction tr)
   {
     // Default implementation does nothing - override in derived classes
