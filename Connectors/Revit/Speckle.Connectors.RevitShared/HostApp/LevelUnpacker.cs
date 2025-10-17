@@ -34,18 +34,22 @@ public class LevelUnpacker
     Dictionary<string, LevelProxy> levelProxies = new();
     foreach (var element in elements)
     {
-      if (levelProxies.TryGetValue(element.LevelId.ToString(), out LevelProxy? levelProxy))
+      // NOTE: Use level.UniqueId (not element.LevelId) as key
+      // face-based instances don't have a valid element.LevelId, hence all the changes in the LevelExtractor
+      var level = _levelExtractor.GetLevel(element);
+      if (level is null)
+      {
+        continue;
+      }
+
+      string levelKey = level.UniqueId;
+
+      if (levelProxies.TryGetValue(levelKey, out LevelProxy? levelProxy))
       {
         levelProxy.objects.Add(element.UniqueId);
       }
       else
       {
-        var level = _levelExtractor.GetLevel(element);
-        if (level is null)
-        {
-          continue;
-        }
-
         var levelDataObject = new DataObject()
         {
           name = level.Name,
@@ -53,11 +57,11 @@ public class LevelUnpacker
           properties = _propertiesExtractor.GetProperties(level)
         };
         var unitSettings = _converterSettings.Current.Document.GetUnits();
-        var lengthUnitType = unitSettings.GetFormatOptions(Autodesk.Revit.DB.SpecTypeId.Length).GetUnitTypeId();
+        var lengthUnitType = unitSettings.GetFormatOptions(SpecTypeId.Length).GetUnitTypeId();
         levelDataObject["elevation"] = UnitUtils.ConvertFromInternalUnits(level.Elevation, lengthUnitType);
         levelDataObject["units"] = _converterSettings.Current.SpeckleUnits;
 
-        levelProxies[element.LevelId.ToString()] = new LevelProxy()
+        levelProxies[levelKey] = new LevelProxy()
         {
           applicationId = level.UniqueId,
           objects = [element.UniqueId],
