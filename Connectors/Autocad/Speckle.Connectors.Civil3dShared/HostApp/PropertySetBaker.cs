@@ -279,8 +279,8 @@ public class PropertySetBaker
           // Cast numeric types to avoid bad numeric value errors
           var convertedValue = dataType switch
           {
-            AAEC.PropertyData.DataType.Integer => (int)defaultValue,
-            AAEC.PropertyData.DataType.AutoIncrement => (int)defaultValue,
+            AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
+            AAEC.PropertyData.DataType.AutoIncrement => (int)(long)defaultValue,
             _ => defaultValue
           };
 
