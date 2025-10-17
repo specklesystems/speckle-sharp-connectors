@@ -38,6 +38,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\EntityExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TransactionContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBaseBuilder.cs" />

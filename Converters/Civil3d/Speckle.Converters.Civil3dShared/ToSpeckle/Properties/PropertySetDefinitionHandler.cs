@@ -14,6 +14,17 @@ public class PropertySetDefinitionHandler
   /// POC: We're storing these by property set def name atm. There is a decent change different property sets can have the same name, need to validate this.
   public Dictionary<string, Dictionary<string, object?>> Definitions { get; } = new();
 
+  // Keys used for the dictionary representing a single property set definition
+  public const string PROP_SET_DEF_NAME_KEY = "name"; // name of the property set definition
+  public const string PROP_SET_PROP_DEFS_KEY = "propertyDefinitions"; // property definitions in this property set definition
+
+  // Keys used for inidividual property definitions within a single property set definition
+  public const string PROP_DEF_NAME_KEY = "name";
+  public const string PROP_DEF_DESCRIPTION_KEY = "description";
+  public const string PROP_DEF_ID_KEY = "id";
+  public const string PROP_DEF_TYPE_KEY = "dataType";
+  public const string PROP_DEF_DEFAULT_VALUE_KEY = "defaultValue";
+
   /// <summary>
   /// Extracts out and stores in <see cref="Definitions"/> the property set definition.
   /// </summary>
@@ -29,12 +40,11 @@ public class PropertySetDefinitionHandler
       propertyDefinitionNames[propertyDefinition.Id] = propertyName;
       var propertyDict = new Dictionary<string, object?>()
       {
-        ["name"] = propertyName,
-        ["description"] = propertyDefinition.Description,
-        ["id"] = propertyDefinition.Id,
-        ["isReadOnly"] = propertyDefinition.IsReadOnly,
-        ["dataType"] = propertyDefinition.DataType.ToString(),
-        ["defaultValue"] = propertyDefinition.DefaultData
+        [PROP_DEF_NAME_KEY] = propertyName,
+        [PROP_DEF_DESCRIPTION_KEY] = propertyDefinition.Description,
+        [PROP_DEF_ID_KEY] = propertyDefinition.Id,
+        [PROP_DEF_TYPE_KEY] = propertyDefinition.DataType.ToString(),
+        [PROP_DEF_DEFAULT_VALUE_KEY] = propertyDefinition.DefaultData
       };
 
       // accessing unit type prop can be expected to throw if it's not applicable to the definition
@@ -53,8 +63,8 @@ public class PropertySetDefinitionHandler
 
     Definitions[name] = new Dictionary<string, object?>()
     {
-      ["name"] = name,
-      ["propertyDefinitions"] = propertyDefinitionsDict
+      [PROP_SET_DEF_NAME_KEY] = name,
+      [PROP_SET_PROP_DEFS_KEY] = propertyDefinitionsDict
     };
 
     return propertyDefinitionNames;
