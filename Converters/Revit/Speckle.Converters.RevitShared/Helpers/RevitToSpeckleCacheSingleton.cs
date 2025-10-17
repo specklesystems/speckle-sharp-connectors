@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Logging;
+using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Objects.Other;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 
@@ -13,7 +16,7 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// Ask dim for more and he might start crying.
 /// </para>
 /// </summary>
-public class RevitToSpeckleCacheSingleton
+public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> logger)
 {
   /// <summary>
   /// (DB.Material id, RenderMaterial). This can be generated from converting render materials or material quantities.
@@ -106,6 +109,81 @@ public class RevitToSpeckleCacheSingleton
   /// <returns></returns>
   public List<Base> GetBaseObjectsForObjects(List<string> elementIds) =>
     InstancedObjects.Values.Where(v => v.elementIds.Any(id => elementIds.Contains(id))).Select(v => v.baseObj).ToList();
+
+  /// <summary>
+  /// Adds a mesh ID to the appropriate material proxy.
+  /// For instances: adds the definition mesh ID.
+  /// For non-instances: adds the mesh's own ID.
+  /// </summary>
+  /// <remarks>
+  /// Cache navigation logic is encapsulated here. Failures are logged but do not throw exceptions,
+  /// allowing conversion to continue even if material assignment fails.
+  /// </remarks>
+  public void AddMeshToMaterialProxy(string elementId, SOG.Mesh mesh, bool isInstance)
+  {
+    // get mesh-to-material mapping
+    if (!MeshToMaterialMap.TryGetValue(elementId, out var meshMatMap))
+    {
+      logger.LogWarning("No mesh-to-material mapping found for element {ElementId}", elementId);
+      return;
+    }
+
+    // get material ID for this mesh
+    if (!meshMatMap.TryGetValue(mesh.applicationId.NotNull(), out var materialId))
+    {
+      logger.LogError(
+        "Cache inconsistency: Mesh {MeshId} not found in material mapping for element {ElementId}",
+        mesh.applicationId,
+        elementId
+      );
+      return;
+    }
+
+    // get material proxy map
+    if (!ObjectRenderMaterialProxiesMap.TryGetValue(elementId, out var proxyMap))
+    {
+      logger.LogError("Cache inconsistency: Material proxy map not found for element {ElementId}", elementId);
+      return;
+    }
+
+    // get specific material proxy
+    if (!proxyMap.TryGetValue(materialId, out var materialProxy))
+    {
+      logger.LogError(
+        "Cache inconsistency: Material proxy not found for material {MaterialId} in element {ElementId}",
+        materialId,
+        elementId
+      );
+      return;
+    }
+
+    // determine which mesh ID to add
+    string meshIdToAdd;
+
+    if (isInstance)
+    {
+      var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
+
+      if (!InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
+      {
+        throw new InvalidOperationException(
+          $"Instance definition '{instanceDefinitionId}' not found in cache for mesh '{mesh.applicationId}'"
+        );
+      }
+
+      meshIdToAdd = instancedObject.baseObj.applicationId.NotNull();
+    }
+    else
+    {
+      meshIdToAdd = mesh.applicationId.NotNull();
+    }
+
+    // add to proxy if not already present
+    if (!materialProxy.objects.Contains(meshIdToAdd))
+    {
+      materialProxy.objects.Add(meshIdToAdd);
+    }
+  }
 
   public void ClearCache()
   {
