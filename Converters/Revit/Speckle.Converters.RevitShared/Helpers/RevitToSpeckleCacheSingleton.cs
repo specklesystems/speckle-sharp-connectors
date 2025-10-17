@@ -75,7 +75,7 @@ public class RevitToSpeckleCacheSingleton
       }
     }
 
-    // Final deduplication (should be minimal now)
+    // final deduplication (should be minimal now)
     foreach (var renderMaterialProxy in mergeTarget.Values)
     {
       renderMaterialProxy.objects = renderMaterialProxy.objects.Distinct().ToList();

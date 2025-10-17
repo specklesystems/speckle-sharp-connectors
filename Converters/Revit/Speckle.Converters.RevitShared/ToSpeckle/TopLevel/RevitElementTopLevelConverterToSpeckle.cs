@@ -224,18 +224,18 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
     foreach (var displayValue in displayValues)
     {
-      // Check if this is a mesh with a transform - potential instance scenario
+      // check if this is a mesh with a transform - potential instance scenario
       if (displayValue.Geometry is SOG.Mesh mesh && displayValue.Transform is not null)
       {
         var instanceProxy = CreateOrGetInstanceProxy(elementId, mesh, displayValue.Transform.Value);
         proxifiedDisplayValues.Add(instanceProxy);
 
-        // ✅ NEW: Add the DEFINITION mesh ID to material proxy, not the instance mesh
+        // add the DEFINITION mesh ID to material proxy, not the instance mesh
         AddMeshToMaterialProxy(elementId, mesh, isInstance: true);
       }
       else if (displayValue.Geometry is SOG.Mesh nonInstanceMesh)
       {
-        // ✅ NEW: Non-instance mesh - add its own ID to material proxy
+        // non-instance mesh - add its own ID to material proxy
         AddMeshToMaterialProxy(elementId, nonInstanceMesh, isInstance: false);
         proxifiedDisplayValues.Add(nonInstanceMesh);
       }
