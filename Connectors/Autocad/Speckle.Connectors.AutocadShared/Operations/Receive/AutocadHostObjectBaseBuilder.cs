@@ -170,6 +170,15 @@ public abstract class AutocadHostObjectBaseBuilder : IHostObjectBuilder
     _layerBaker.DeleteAllLayersByPrefix(baseLayerPrefix);
     _instanceBaker.PurgeInstances(baseLayerPrefix);
     _materialBaker.PurgeMaterials(baseLayerPrefix);
+    PreReceiveDeepCleanCivil3d(rootObject, baseLayerPrefix);
+  }
+
+  /// <summary>
+  /// Hook method for Civil3D to perform additional deep cleaning operations.
+  /// </summary>
+  protected virtual void PreReceiveDeepCleanCivil3d(Base rootObject, string baseLayerPrefix)
+  {
+    // Default implementation does nothing - override in Civil3D
   }
 
   private IReadOnlyCollection<Entity> ConvertObject(Base obj, Collection[] layerPath, string baseLayerNamePrefix)
