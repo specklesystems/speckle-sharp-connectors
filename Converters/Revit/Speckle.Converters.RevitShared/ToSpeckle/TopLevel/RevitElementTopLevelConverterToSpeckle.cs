@@ -197,20 +197,47 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   /// <summary>
   /// Processes display values with transforms and creates instance proxies for meshes that can be instanced.
+  /// Also populates material proxy objects lists with the appropriate mesh IDs based on whether geometry is instanced or not.
   /// </summary>
-  /// <returns>List of processed display values, with meshes replaced by instance proxies where applicable</returns>
+  /// <returns>
+  /// List of processed display values, with meshes replaced by instance proxies where applicable.
+  /// Non-instance geometry is returned as-is.
+  /// </returns>
+  /// <remarks>
+  /// <para>
+  /// This is a bit of a code smell. This method is doing to much, "this ... AND this...".
+  /// </para>
+  /// <para>
+  /// But, given a mesh:
+  /// - if it has a transform, mesh is converted to instance proxy, and the definition mesh ID is added to material proxies
+  /// - if it doesn't have a transform, it remains as a regular mesh, and its own ID is added to material proxies
+  /// - other geometry types pass through unchanged
+  /// </para>
+  /// <para>
+  /// This is where material proxy population occurs (deferred from <see cref="MeshByMaterialDictionaryToSpeckle.Convert"/>)
+  /// to ensure we use definition mesh IDs for instances rather than individual instance mesh IDs.
+  /// </para>
+  /// </remarks>
   private List<Base> ProcessDisplayValues(string elementId, List<DisplayValueResult> displayValues)
   {
     List<Base> proxifiedDisplayValues = new();
 
     foreach (var displayValue in displayValues)
     {
-      // check if this is a mesh with a transform - potential instance scenario
-      // assumption here is that if we have matrix for corresponding base it is instance-able
+      // Check if this is a mesh with a transform - potential instance scenario
       if (displayValue.Geometry is SOG.Mesh mesh && displayValue.Transform is not null)
       {
         var instanceProxy = CreateOrGetInstanceProxy(elementId, mesh, displayValue.Transform.Value);
         proxifiedDisplayValues.Add(instanceProxy);
+
+        // ✅ NEW: Add the DEFINITION mesh ID to material proxy, not the instance mesh
+        AddMeshToMaterialProxy(elementId, mesh, isInstance: true);
+      }
+      else if (displayValue.Geometry is SOG.Mesh nonInstanceMesh)
+      {
+        // ✅ NEW: Non-instance mesh - add its own ID to material proxy
+        AddMeshToMaterialProxy(elementId, nonInstanceMesh, isInstance: false);
+        proxifiedDisplayValues.Add(nonInstanceMesh);
       }
       else
       {
@@ -224,6 +251,18 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// <summary>
   /// Creates or retrieves an instance proxy for a mesh, managing instance definitions and caching.
   /// </summary>
+  /// <remarks>
+  /// <para>
+  /// This method generates a deterministic instance definition ID based on the untransformed mesh geometry using
+  /// <see cref="MeshInstanceIdGenerator.GenerateUntransformedMeshId"/>. Multiple instances with identical geometry
+  /// will share the same definition.
+  /// </para>
+  /// <para>
+  /// The method manages two caches:
+  /// - <see cref="RevitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap"/>: Tracks instance definitions and which elements use them
+  /// - <see cref="RevitToSpeckleCacheSingleton.InstancedObjects"/>: Stores the actual definition meshes for later serialization
+  /// </para>
+  /// </remarks>
   private InstanceProxy CreateOrGetInstanceProxy(string elementId, SOG.Mesh mesh, Matrix4x4 transform)
   {
     var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
@@ -276,5 +315,66 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     };
 
     return instanceProxy;
+  }
+
+  /// <summary>
+  /// Adds the appropriate mesh ID to its associated material proxy.
+  /// For instances: adds the definition mesh ID
+  /// For non-instances: adds the mesh's own ID
+  /// </summary>
+  private void AddMeshToMaterialProxy(string elementId, SOG.Mesh mesh, bool isInstance)
+  {
+    // get the mesh-to-material mapping for this element
+    if (!_revitToSpeckleCacheSingleton.MeshToMaterialMap.TryGetValue(elementId, out var meshMatMap))
+    {
+      return; // no material mapping exists
+    }
+
+    // get the material ID for this mesh
+    if (!meshMatMap.TryGetValue(mesh.applicationId.NotNull(), out var materialId))
+    {
+      return; // no material for this mesh
+    }
+
+    // get the material proxy
+    if (!_revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap.TryGetValue(elementId, out var materialProxyMap))
+    {
+      return; // no material proxies for this element
+    }
+
+    if (!materialProxyMap.TryGetValue(materialId, out var materialProxy))
+    {
+      return; // no proxy for this material
+    }
+
+    // determine which ID to add
+    string meshIdToAdd;
+
+    if (isInstance)
+    {
+      // for instances, use the definition mesh ID
+      var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
+
+      if (_revitToSpeckleCacheSingleton.InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
+      {
+        meshIdToAdd = instancedObject.baseObj.applicationId.NotNull();
+      }
+      else
+      {
+        // shouldn't happen, but fallback to mesh ID
+        meshIdToAdd = mesh.applicationId.NotNull();
+      }
+    }
+    else
+    {
+      // for non-instances, use the mesh's own ID
+      meshIdToAdd = mesh.applicationId.NotNull();
+    }
+
+    // add to proxy if not already present
+    if (!materialProxy.objects.Contains(meshIdToAdd))
+    {
+      materialProxy.objects.Add(meshIdToAdd);
+    }
   }
 }

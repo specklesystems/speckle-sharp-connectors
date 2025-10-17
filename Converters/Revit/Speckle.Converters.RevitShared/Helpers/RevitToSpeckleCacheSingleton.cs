@@ -34,10 +34,23 @@ public class RevitToSpeckleCacheSingleton
   public Dictionary<string, (List<string> elementIds, Base baseObj)> InstancedObjects { get; } = new();
 
   /// <summary>
-  /// Returns the merged material proxy list for the given object ids. Use this to get post conversion a correct list of material proxies for setting on the root commit object.
+  /// Maps mesh application IDs to their material IDs for later proxy population.
+  /// Dictionary: elementId -> (meshAppId -> materialId)
   /// </summary>
-  /// <param name="elementIds"></param>
-  /// <returns></returns>
+  public Dictionary<string, Dictionary<string, string>> MeshToMaterialMap { get; } = new();
+
+  /// <summary>
+  /// Returns the merged material proxy list for the given object IDs.
+  /// Use this post-conversion to get a correct list of material proxies for the root commit object.
+  /// </summary>
+  /// <returns>A deduplicated list of <see cref="RenderMaterialProxy"/> objects for all specified elements.</returns>
+  /// <remarks>
+  /// <para>
+  /// Material proxy objects lists should already be correctly populated at this point (with definition mesh IDs for instances
+  /// and individual mesh IDs for non-instances), so the merging primarily handles cross-element scenarios rather than
+  /// fixing incorrect data.
+  /// </para>
+  /// </remarks>
   public List<RenderMaterialProxy> GetRenderMaterialProxyListForObjects(List<string> elementIds)
   {
     var proxiesToMerge = ObjectRenderMaterialProxiesMap
@@ -51,17 +64,23 @@ public class RevitToSpeckleCacheSingleton
       {
         if (!mergeTarget.TryGetValue(kvp.Key, out RenderMaterialProxy? value))
         {
-          value = kvp.Value;
-          mergeTarget[kvp.Key] = value;
-          continue;
+          // first time seeing this material - add it
+          mergeTarget[kvp.Key] = kvp.Value;
         }
-        value.objects.AddRange(kvp.Value.objects);
+        else
+        {
+          // merge objects lists (should already be mostly correct now)
+          value.objects.AddRange(kvp.Value.objects);
+        }
       }
     }
+
+    // Final deduplication (should be minimal now)
     foreach (var renderMaterialProxy in mergeTarget.Values)
     {
       renderMaterialProxy.objects = renderMaterialProxy.objects.Distinct().ToList();
     }
+
     return mergeTarget.Values.ToList();
   }
 
@@ -94,5 +113,6 @@ public class RevitToSpeckleCacheSingleton
     SpeckleRenderMaterialCache.Clear();
     InstanceDefinitionProxiesMap.Clear();
     InstancedObjects.Clear();
+    MeshToMaterialMap.Clear();
   }
 }
