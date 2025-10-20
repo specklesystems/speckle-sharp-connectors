@@ -111,7 +111,7 @@ public class MeshByMaterialDictionaryToSpeckle
       // Create proxy but DON'T populate objects list yet
       if (renderMaterial is not null)
       {
-        if (!materialProxyMap.TryGetValue(materialIdString, out _))
+        if (!materialProxyMap.ContainsKey(materialIdString))
         {
           RenderMaterialProxy? renderMaterialProxy =
             new()
