@@ -36,12 +36,9 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
 
       foreach (DB.XYZ vert in mesh.Vertices)
       {
-        // We need this method to take into account reference point transforms
-        DB.XYZ extVert = _referencePointConverter.ConvertToExternalCoordinates(vert, true);
-
-        vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.X));
-        vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.Y));
-        vertices.Add(_toSpeckleScalingService.ScaleLength(extVert.Z));
+        vertices.Add(_toSpeckleScalingService.ScaleLength(vert.X));
+        vertices.Add(_toSpeckleScalingService.ScaleLength(vert.Y));
+        vertices.Add(_toSpeckleScalingService.ScaleLength(vert.Z));
       }
 
       for (int i = 0; i < mesh.NumTriangles; i++)

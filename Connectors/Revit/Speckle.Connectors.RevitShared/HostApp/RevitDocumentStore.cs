@@ -120,7 +120,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     var x = doc.PathName;
     if (string.IsNullOrEmpty(x))
     {
-      return null;
+      return doc.Title;
     }
     return x;
 #endif
