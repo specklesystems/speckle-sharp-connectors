@@ -169,7 +169,7 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
 
   public void PurgeInstances(string namePrefix)
   {
-    var currentDoc = RhinoDoc.ActiveDoc;
+    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
     // clean name prefix to match how block names are created
     var cleanedPrefix = RhinoUtils.CleanBlockDefinitionName(namePrefix);
