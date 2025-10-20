@@ -91,7 +91,8 @@ public class PropertySetExtractor
             ? propertyDefinitionName
             : data.FieldBucketId;
 
-        var value = GetValue(data);
+        // POC: not sure how to support graphic types atm
+        var value = data.DataType is AAEC.PropertyData.DataType.Graphic ? null : data.GetData(data.UnitType);
 
         Dictionary<string, object?> propertyValueDict = new() { ["value"] = value, ["name"] = dataName };
         PropertyHandler propHandler = new();
@@ -108,32 +109,5 @@ public class PropertySetExtractor
     }
 
     return null;
-  }
-
-  private object? GetValue(AAECPDB.PropertySetData data)
-  {
-    object fieldData = data.GetData(data.UnitType);
-
-    switch (data.DataType)
-    {
-      case AAEC.PropertyData.DataType.Integer:
-        return fieldData as int?;
-      case AAEC.PropertyData.DataType.Real:
-        return fieldData as double?;
-      case AAEC.PropertyData.DataType.TrueFalse:
-        return fieldData as bool?;
-      case AAEC.PropertyData.DataType.Graphic: // POC: not sure how to support atm
-        return null;
-      case AAEC.PropertyData.DataType.List:
-        return fieldData as List<object>;
-      case AAEC.PropertyData.DataType.AutoIncrement:
-        return fieldData as int?;
-      case AAEC.PropertyData.DataType.AlphaIncrement: // POC: not sure what this is
-        return fieldData;
-      case AAEC.PropertyData.DataType.Text:
-        return fieldData as string;
-      default:
-        return fieldData;
-    }
   }
 }
