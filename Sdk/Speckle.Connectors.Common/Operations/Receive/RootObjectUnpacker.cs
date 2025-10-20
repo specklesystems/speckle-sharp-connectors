@@ -1,4 +1,5 @@
-﻿using Speckle.Objects.Other;
+﻿using Speckle.Objects.Data;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -63,6 +64,17 @@ public class RootObjectUnpacker
       else
       {
         atomicObjects.Add(tc);
+      }
+
+      if (tc.Current is DataObject dataObject)
+      {
+        foreach (var displayValue in dataObject.displayValue)
+        {
+          if (displayValue is IInstanceComponent)
+          {
+            instanceComponents.Add(new TraversalContext(displayValue, parent: tc));
+          }
+        }
       }
     }
     return (atomicObjects, instanceComponents);

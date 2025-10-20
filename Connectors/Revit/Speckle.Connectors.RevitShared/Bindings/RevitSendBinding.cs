@@ -29,9 +29,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
+
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
+  private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
@@ -55,6 +57,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     ToSpeckleSettingsManager toSpeckleSettingsManager,
     ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
+    RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
@@ -71,6 +74,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
+    _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
@@ -449,6 +453,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private async Task OnDocumentChanged()
   {
     _sendConversionCache.ClearCache();
+    _revitToSpeckleCacheSingleton.ClearCache();
 
     if (_cancellationManager.NumberOfOperations > 0)
     {
