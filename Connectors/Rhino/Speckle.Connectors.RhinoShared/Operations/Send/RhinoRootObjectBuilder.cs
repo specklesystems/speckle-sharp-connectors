@@ -33,6 +33,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoGroupUnpacker _groupUnpacker;
   private readonly RhinoMaterialUnpacker _materialUnpacker;
   private readonly RhinoColorUnpacker _colorUnpacker;
+  private readonly RhinoViewUnpacker _viewUnpacker;
   private readonly PropertiesExtractor _propertiesExtractor;
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
@@ -46,6 +47,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoGroupUnpacker groupUnpacker,
     RhinoMaterialUnpacker materialUnpacker,
     RhinoColorUnpacker colorUnpacker,
+    RhinoViewUnpacker viewUnpacker,
     PropertiesExtractor propertiesExtractor,
     ILogger<RhinoRootObjectBuilder> logger,
     ISdkActivityFactory activityFactory
@@ -59,6 +61,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     _rootToSpeckleConverter = rootToSpeckleConverter;
     _materialUnpacker = materialUnpacker;
     _colorUnpacker = colorUnpacker;
+    _viewUnpacker = viewUnpacker;
     _propertiesExtractor = propertiesExtractor;
     _logger = logger;
     _activityFactory = activityFactory;
@@ -130,10 +133,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       // 4 - Unpack the render material proxies
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(atomicObjects, layers);
     }
+
     using (var _ = _activityFactory.Start("UnpackColors"))
     {
       // 5 - Unpack the color proxies
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers);
+    }
+
+    using (var _ = _activityFactory.Start("UnpackViews"))
+    {
+      // 6 - Unpack the view proxies
+      rootObjectCollection[ProxyKeys.COLOR] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
