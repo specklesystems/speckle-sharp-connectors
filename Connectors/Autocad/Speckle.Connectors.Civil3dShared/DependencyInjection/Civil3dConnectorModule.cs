@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.DependencyInjection;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.Bindings;
+using Speckle.Connectors.Civil3dShared.HostApp;
+using Speckle.Connectors.Civil3dShared.Operations.Receive;
 using Speckle.Connectors.Civil3dShared.Operations.Send;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
@@ -24,10 +26,12 @@ public static class Civil3dConnectorModule
 
     // add receive
     serviceCollection.LoadReceive();
+    serviceCollection.AddScoped<IHostObjectBuilder, Civil3dHostObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dReceiveBinding>();
 
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
+    serviceCollection.AddScoped<PropertySetBaker>();
 
     // automatically detects the Class:IClass interface pattern to register all generated interfaces
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
