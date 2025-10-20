@@ -43,7 +43,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => Convert((DB.Element)target);
 
-  public RevitObject Convert(DB.Element target)
+  private RevitObject Convert(DB.Element target)
   {
     string category = target.Category?.Name ?? "none";
 
@@ -197,8 +197,27 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   /// <summary>
   /// Processes display values with transforms and creates instance proxies for meshes that can be instanced.
+  /// Also populates material proxy objects lists with the appropriate mesh IDs based on whether geometry is instanced or not.
   /// </summary>
-  /// <returns>List of processed display values, with meshes replaced by instance proxies where applicable</returns>
+  /// <returns>
+  /// List of processed display values, with meshes replaced by instance proxies where applicable.
+  /// Non-instance geometry is returned as-is.
+  /// </returns>
+  /// <remarks>
+  /// <para>
+  /// This is a bit of a code smell. This method is doing to much, "this ... AND this...".
+  /// </para>
+  /// <para>
+  /// But, given a mesh:
+  /// - if it has a transform, mesh is converted to instance proxy, and the definition mesh ID is added to material proxies
+  /// - if it doesn't have a transform, it remains as a regular mesh, and its own ID is added to material proxies
+  /// - other geometry types pass through unchanged
+  /// </para>
+  /// <para>
+  /// This is where material proxy population occurs (deferred from <see cref="MeshByMaterialDictionaryToSpeckle.Convert"/>)
+  /// to ensure we use definition mesh IDs for instances rather than individual instance mesh IDs.
+  /// </para>
+  /// </remarks>
   private List<Base> ProcessDisplayValues(string elementId, List<DisplayValueResult> displayValues)
   {
     List<Base> proxifiedDisplayValues = new();
@@ -206,11 +225,21 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     foreach (var displayValue in displayValues)
     {
       // check if this is a mesh with a transform - potential instance scenario
-      // assumption here is that if we have matrix for corresponding base it is instance-able
       if (displayValue.Geometry is SOG.Mesh mesh && displayValue.Transform is not null)
       {
         var instanceProxy = CreateOrGetInstanceProxy(elementId, mesh, displayValue.Transform.Value);
         proxifiedDisplayValues.Add(instanceProxy);
+
+        // add the definition mesh ID to material proxy, not the instance mesh
+        // method technically is a "Try" but logs internally, so we don't have a return to check
+        _revitToSpeckleCacheSingleton.AddMeshToMaterialProxy(elementId, mesh, isInstance: true);
+      }
+      else if (displayValue.Geometry is SOG.Mesh nonInstanceMesh)
+      {
+        // non-instance mesh - add its own ID to material proxy
+        // method technically is a "Try" but logs internally, so we don't have a return to check
+        _revitToSpeckleCacheSingleton.AddMeshToMaterialProxy(elementId, nonInstanceMesh, isInstance: false);
+        proxifiedDisplayValues.Add(nonInstanceMesh);
       }
       else
       {
@@ -224,6 +253,18 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// <summary>
   /// Creates or retrieves an instance proxy for a mesh, managing instance definitions and caching.
   /// </summary>
+  /// <remarks>
+  /// <para>
+  /// This method generates a deterministic instance definition ID based on the untransformed mesh geometry using
+  /// <see cref="MeshInstanceIdGenerator.GenerateUntransformedMeshId"/>. Multiple instances with identical geometry
+  /// will share the same definition.
+  /// </para>
+  /// <para>
+  /// The method manages two caches:
+  /// - <see cref="RevitToSpeckleCacheSingleton.InstanceDefinitionProxiesMap"/>: Tracks instance definitions and which elements use them
+  /// - <see cref="RevitToSpeckleCacheSingleton.InstancedObjects"/>: Stores the actual definition meshes for later serialization
+  /// </para>
+  /// </remarks>
   private InstanceProxy CreateOrGetInstanceProxy(string elementId, SOG.Mesh mesh, Matrix4x4 transform)
   {
     var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);

@@ -48,7 +48,6 @@ public class RevitRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    Console.WriteLine(projectId);
     var doc = converterSettings.Current.Document;
 
     if (doc.IsFamilyDocument)
