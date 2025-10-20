@@ -172,29 +172,8 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
     var currentDoc = RhinoDoc.ActiveDoc;
 
     // clean name prefix to match how block names are created
-    // this was an absolute mindf***, but just look at how we name the block definitions ...
     var cleanedPrefix = RhinoUtils.CleanBlockDefinitionName(namePrefix);
 
-    // step 1 - delete all instance objects that reference definitions with this prefix
-    var instancesToDelete = new List<Guid>();
-    foreach (var obj in currentDoc.Objects.GetObjectList(ObjectType.InstanceReference))
-    {
-      if (obj is InstanceObject instanceObj)
-      {
-        var definition = instanceObj.InstanceDefinition;
-        if (definition != null && !definition.IsDeleted && definition.Name.Contains(cleanedPrefix))
-        {
-          instancesToDelete.Add(instanceObj.Id);
-        }
-      }
-    }
-
-    if (instancesToDelete.Count > 0)
-    {
-      currentDoc.Objects.Delete(instancesToDelete, true);
-    }
-
-    // step 2 - now delete the definitions themselves
     foreach (var definition in currentDoc.InstanceDefinitions)
     {
       if (!definition.IsDeleted && definition.Name.Contains(cleanedPrefix))
