@@ -104,10 +104,10 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
             attributes
           );
 
-          // POC: check on defIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
+          // POC: check on defIndex -1, means we haven't created anything - this is most likely an unrecoverable error at this stage
           if (defIndex == -1)
           {
-            throw new ConversionException("Failed to create an instance defintion object.");
+            throw new ConversionException("Failed to create an instance definition object.");
           }
 
           if (definitionProxy.applicationId != null)
@@ -170,9 +170,13 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
   public void PurgeInstances(string namePrefix)
   {
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+
+    // clean name prefix to match how block names are created
+    var cleanedPrefix = RhinoUtils.CleanBlockDefinitionName(namePrefix);
+
     foreach (var definition in currentDoc.InstanceDefinitions)
     {
-      if (!definition.IsDeleted && definition.Name.Contains(namePrefix))
+      if (!definition.IsDeleted && definition.Name.Contains(cleanedPrefix))
       {
         currentDoc.InstanceDefinitions.Delete(definition.Index, true, false);
       }

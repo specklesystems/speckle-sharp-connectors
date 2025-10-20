@@ -1,5 +1,6 @@
 ﻿using Speckle.DoubleNumerics;
 using Speckle.InterfaceGenerator;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Dependencies;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -35,6 +36,19 @@ public class LocalToGlobalUnpacker : ILocalToGlobalUnpacker
       else
       {
         atomicObjects.Add((objectToUnpack, objectToUnpack.Current));
+      }
+
+      if (objectToUnpack.Current is DataObject dataObject)
+      {
+        foreach (Base displayValue in dataObject.displayValue)
+        {
+          if (displayValue is InstanceProxy instanceProxyInDisplayValue)
+          {
+            instanceProxies.Add(
+              (new TraversalContext(instanceProxyInDisplayValue, parent: objectToUnpack), instanceProxyInDisplayValue)
+            );
+          }
+        }
       }
     }
 

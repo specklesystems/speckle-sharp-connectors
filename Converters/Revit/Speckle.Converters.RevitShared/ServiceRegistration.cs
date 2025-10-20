@@ -2,7 +2,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
-using Speckle.Converters.Revit2023.ToSpeckle.Properties;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
@@ -19,7 +18,8 @@ public static class ServiceRegistration
     var converterAssembly = Assembly.GetExecutingAssembly();
     //register types by default
     serviceCollection.AddMatchingInterfacesAsTransient(converterAssembly);
-    // Register single root
+
+    // register single root
     serviceCollection.AddRootCommon<RevitRootToSpeckleConverter>(converterAssembly);
 
     // register all application converters
@@ -29,7 +29,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton(new RevitContext());
 
     serviceCollection.AddSingleton(new RevitToHostCacheSingleton());
-    serviceCollection.AddSingleton(new RevitToSpeckleCacheSingleton());
+    serviceCollection.AddSingleton<RevitToSpeckleCacheSingleton>();
 
     // POC: do we need ToSpeckleScalingService as is, do we need to interface it out?
     serviceCollection.AddScoped<ScalingServiceToSpeckle>();
