@@ -138,7 +138,7 @@ public class SpeckleGeometryPassthrough()
 
     if (result == null && inputGeometry == null)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Speckle Geometry or Geometry.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a Speckle Geometry or Geometry");
       return;
     }
 
