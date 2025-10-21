@@ -110,7 +110,8 @@ public sealed class RevitHostObjectBuilder(
     // TODO: TransformTo and material baking needs to be fixed in Revit!!
 
     // create a mapping from original to modified IDs <- so that we can actually map ids in the proxies to the objects
-    Dictionary<string, string> originalToModifiedIds = new();
+    // as part of CNX-2677, we have a one-to-many problem. many instances share the same reference, so we use a list
+    Dictionary<string, List<string>> originalToModifiedIds = new();
 
     // modify application IDs BEFORE material baking
     foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
@@ -139,7 +140,13 @@ public sealed class RevitHostObjectBuilder(
         string modifiedAppId = $"{originalAppId}_{Guid.NewGuid().ToString("N")[..8]}";
         if (originalAppId != null)
         {
-          originalToModifiedIds[originalAppId] = modifiedAppId;
+          if (!originalToModifiedIds.TryGetValue(originalAppId, out List<string>? modifiedIds))
+          {
+            modifiedIds = new List<string>();
+            originalToModifiedIds[originalAppId] = modifiedIds;
+          }
+
+          modifiedIds.Add(modifiedAppId);
         }
 
         localToGlobalMap.AtomicObject.applicationId = modifiedAppId;
@@ -152,14 +159,20 @@ public sealed class RevitHostObjectBuilder(
     {
       foreach (var proxy in unpackedRoot.RenderMaterialProxies)
       {
-        var updatedObjects = new List<string>();
+        var objectIdsToUse = new List<string>();
         foreach (var objectId in proxy.objects)
         {
           // Use the modified ID if it exists, otherwise keep the original <- this SUCKS and we need to change
-          string idToUse = originalToModifiedIds.TryGetValue(objectId, out var modifiedId) ? modifiedId : objectId;
-          updatedObjects.Add(idToUse);
+          if (originalToModifiedIds.TryGetValue(objectId, out var modifiedIds))
+          {
+            objectIdsToUse.AddRange(modifiedIds);
+          }
+          else
+          {
+            objectIdsToUse.Add(objectId);
+          }
         }
-        proxy.objects = updatedObjects;
+        proxy.objects = objectIdsToUse;
       }
     }
 

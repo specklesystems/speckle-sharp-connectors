@@ -52,6 +52,8 @@ internal sealed class ImporterInstance(Sender sender, ILogger<ImporterInstance> 
     try
     {
       using var config = GetConfig(Path.GetExtension(args.FilePath));
+      logger.LogInformation("Opening file {FilePath}", args.FilePath);
+
       _rhinoDoc = config.OpenInHeadlessDocument(args.FilePath);
       RhinoDoc.ActiveDoc = _rhinoDoc;
 

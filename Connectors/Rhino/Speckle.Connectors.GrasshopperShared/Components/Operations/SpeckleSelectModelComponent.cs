@@ -87,6 +87,7 @@ public class SpeckleSelectModelComponent : GH_Component
       string? urlInput = null;
 
       // SCENARIO 1: Component has input wire connected
+
       if (da.GetData(0, ref urlInput))
       {
         UrlInput = urlInput;
@@ -97,6 +98,11 @@ public class SpeckleSelectModelComponent : GH_Component
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input url was empty or null");
           return;
+        }
+
+        if (_justPastedIn)
+        {
+          RestoreAccountFromStoredState();
         }
 
         try
@@ -132,22 +138,9 @@ public class SpeckleSelectModelComponent : GH_Component
         _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
       }
 
-      if (_justPastedIn && _storedUserId != null && !string.IsNullOrEmpty(_storedUserId))
+      if (_justPastedIn)
       {
-        try
-        {
-          SpeckleOperationWizard.SetAccountFromId(_storedUserId);
-        }
-        catch (SpeckleAccountManagerException e)
-        {
-          // Swallow and move onto checking server.
-          Console.WriteLine(e);
-        }
-
-        if (_storedServer != null && SpeckleOperationWizard.SelectedAccount == null)
-        {
-          SpeckleOperationWizard.SetAccountFromIdAndUrl(_storedUserId, _storedServer);
-        }
+        RestoreAccountFromStoredState();
       }
 
       // Validate backing data
@@ -395,5 +388,40 @@ public class SpeckleSelectModelComponent : GH_Component
     ModelContextMenuButton.ExpirePreview(redraw);
     VersionContextMenuButton.ExpirePreview(redraw);
     base.ExpirePreview(redraw);
+  }
+
+  /// <summary>
+  /// Restores the account from stored state when the component is pasted or loaded from file.
+  /// </summary>
+  /// <remarks>
+  /// Attempts to restore account in two stages:
+  /// <list type="number">
+  /// <item>First tries to get account by stored user ID</item>
+  /// <item>If that fails and server url is available, falls back to getting any account matching the server</item>
+  /// </list>
+  /// Only executes when <see cref="_justPastedIn"/> is true and <see cref="_storedUserId"/> is not empty.
+  /// </remarks>
+  private void RestoreAccountFromStoredState()
+  {
+    if (_storedUserId is null || string.IsNullOrEmpty(_storedUserId))
+    {
+      return;
+    }
+
+    try
+    {
+      SpeckleOperationWizard.SetAccountFromId(_storedUserId);
+    }
+    catch (SpeckleAccountManagerException e)
+    {
+      Console.WriteLine(e);
+    }
+
+    // Fallback: if account wasn't found by ID but we have a server URL,
+    // try to find any account matching that server
+    if (_storedServer != null && SpeckleOperationWizard.SelectedAccount == null)
+    {
+      SpeckleOperationWizard.SetAccountFromIdAndUrl(_storedUserId, _storedServer);
+    }
   }
 }
