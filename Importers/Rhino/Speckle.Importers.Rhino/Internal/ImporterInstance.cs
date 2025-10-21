@@ -9,25 +9,24 @@ using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Rhino.Internal;
 
-internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger<ImporterInstance> logger)
-  : IDisposable
+internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger<ImporterInstance> logger) : IDisposable
 {
   private readonly RhinoCore _rhinoInstance = new(["/netcore-8"], WindowStyle.NoWindow);
 
   private readonly RhinoDoc _rhinoDoc = OpenDocument(args, logger);
-  
+
   private readonly IReadOnlyList<IDisposable> _scopes =
   [
-    ActivityScope.SetTag("jobId", args.JobId), 
+    ActivityScope.SetTag("jobId", args.JobId),
     ActivityScope.SetTag("job.attempt", args.Attempt.ToString()),
     // ActivityScope.SetTag("jobType", args.JobType),
     ActivityScope.SetTag("serverUrl", args.Account.serverInfo.url),
-    ActivityScope.SetTag("projectId", args.Project.id), ActivityScope.SetTag("modelId", args.ModelId),
+    ActivityScope.SetTag("projectId", args.Project.id),
+    ActivityScope.SetTag("modelId", args.ModelId),
     ActivityScope.SetTag("blobId", args.BlobId),
     ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.')),
     UserActivityScope.AddUserScope(args.Account),
   ];
-  
 
   public async Task<Version> RunRhinoImport(ImporterArgs args, CancellationToken cancellationToken)
   {
@@ -35,7 +34,9 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
     {
       RhinoDoc.ActiveDoc = _rhinoDoc;
 
-      var version = await sender.Send(args.Project, args.ModelId, args.Account, cancellationToken).ConfigureAwait(false);
+      var version = await sender
+        .Send(args.Project, args.ModelId, args.Account, cancellationToken)
+        .ConfigureAwait(false);
       return version;
     }
     finally
@@ -43,13 +44,14 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
       RhinoDoc.ActiveDoc = null;
     }
   }
-  private static RhinoDoc OpenDocument(ImporterArgs args,ILogger logger)
+
+  private static RhinoDoc OpenDocument(ImporterArgs args, ILogger logger)
   {
     using var config = GetConfig(Path.GetExtension(args.FilePath));
     logger.LogInformation("Opening file {FilePath}", args.FilePath);
     return config.OpenInHeadlessDocument(args.FilePath);
   }
-  
+
   [Pure]
   private static IFileTypeConfig GetConfig(string extension) =>
     extension.ToLowerInvariant() switch
