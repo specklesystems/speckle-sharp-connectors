@@ -1,4 +1,3 @@
-using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
@@ -14,18 +13,15 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(ADB.PolyFaceMesh), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBPolyfaceMeshToSpeckleConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
-    _boxConverter = boxConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -33,7 +29,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
 
   public SOG.Mesh RawConvert(ADB.PolyFaceMesh target)
   {
-    List<Point3d> dbVertices = new();
+    List<double> vertices = new();
     List<int> faces = new();
     List<int> faceVisibility = new();
     List<int> colors = new();
@@ -45,7 +41,9 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         switch (obj)
         {
           case ADB.PolyFaceMeshVertex o:
-            dbVertices.Add(o.Position);
+            vertices.Add(o.Position.X);
+            vertices.Add(o.Position.Y);
+            vertices.Add(o.Position.Z);
             colors.Add(o.Color.ColorValue.ToArgb());
             break;
           case ADB.FaceRecord o:
@@ -84,22 +82,13 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       tr.Commit();
     }
 
-    List<double> vertices = new(dbVertices.Count * 3);
-    foreach (Point3d vert in dbVertices)
-    {
-      vertices.AddRange(_pointConverter.Convert(vert).ToList());
-    }
-
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
-
     SOG.Mesh speckleMesh =
       new()
       {
-        vertices = vertices,
+        vertices = _referencePointConverter.ConvertDoublesToExternalCoordinates(vertices), // transform by reference point
         faces = faces,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,
-        bbox = bbox,
         ["faceVisibility"] = faceVisibility
       };
 
