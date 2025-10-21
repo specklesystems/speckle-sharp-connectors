@@ -158,6 +158,10 @@ public class SpeckleDataObjectPassthrough()
       result.Properties = inputProperties;
     }
 
+    // generate application ID for new data objects. Unlike SpeckleGeometry, DataObject wrappers aren't created
+    // through casting (which auto-generates IDs), so we must explicitly ensure an ID exists here
+    result.ApplicationId ??= Guid.NewGuid().ToString();
+
     // get the path
     string? path =
       result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
