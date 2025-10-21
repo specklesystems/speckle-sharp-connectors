@@ -143,7 +143,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     using (var _ = _activityFactory.Start("UnpackViews"))
     {
       // 6 - Unpack the view proxies
-      rootObjectCollection[ProxyKeys.COLOR] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
+      rootObjectCollection[ProxyKeys.VIEW] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);

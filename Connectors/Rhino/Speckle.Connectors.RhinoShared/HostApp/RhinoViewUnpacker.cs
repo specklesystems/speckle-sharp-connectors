@@ -32,14 +32,14 @@ public class RhinoViewUnpacker
 
     try
     {
-      View? converted = (View)_rootToSpeckleConverter.Convert(view);
+      var converted = (Speckle.Objects.Other.Camera)_rootToSpeckleConverter.Convert(view);
       if (converted != null)
       {
         return new()
         {
-          value = converted,
-          applicationId = view.NamedViewId.ToString(),
           name = view.Name,
+          camera = converted,
+          applicationId = view.Name,
           objects = new()
         };
       }
@@ -50,7 +50,8 @@ public class RhinoViewUnpacker
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to create a view proxy from {view}", view?.Name);
+      _logger.LogError(ex, "Failed to create a view proxy from {view}", view.Name);
+      return null;
     }
   }
 
@@ -63,6 +64,11 @@ public class RhinoViewUnpacker
   {
     foreach (ViewInfo? view in views)
     {
+      if (ViewProxies.ContainsKey(view.Name))
+      {
+        continue;
+      }
+
       if (ConvertViewToViewProxy(view) is ViewProxy viewProxy)
       {
         ViewProxies.Add(view.Name, viewProxy);
