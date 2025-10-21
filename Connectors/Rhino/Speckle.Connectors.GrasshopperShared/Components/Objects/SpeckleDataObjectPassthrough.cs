@@ -103,7 +103,7 @@ public class SpeckleDataObjectPassthrough()
     List<SpeckleGeometryWrapperGoo> inputGeometry = new();
     if (!da.GetDataList(1, inputGeometry) && result == null)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Pass in a Speckle DataObject or Geometries.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a Speckle DataObject or Geometries");
       return;
     }
 
@@ -111,7 +111,7 @@ public class SpeckleDataObjectPassthrough()
     {
       if (inputGeo.Value is SpeckleBlockInstanceWrapper)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"DataObjects cannot contain Block Instances.");
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "DataObjects cannot contain Block Instances");
         return;
       }
     }
