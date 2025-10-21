@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB;
+using Speckle.DoubleNumerics;
 
 namespace Speckle.Converters.RevitShared.Helpers;
 
@@ -42,6 +43,30 @@ public static class ReferencePointHelper
       }
     };
   }
+
+  public static Matrix4x4 TransformToMatrix(Transform transform) =>
+    new()
+    {
+      M11 = transform.BasisX.X,
+      M21 = transform.BasisX.Y,
+      M31 = transform.BasisX.Z,
+      M41 = 0,
+
+      M12 = transform.BasisY.X,
+      M22 = transform.BasisY.Y,
+      M32 = transform.BasisY.Z,
+      M42 = 0,
+
+      M13 = transform.BasisZ.X,
+      M23 = transform.BasisZ.Y,
+      M33 = transform.BasisZ.Z,
+      M43 = 0,
+
+      M14 = transform.Origin.X,
+      M24 = transform.Origin.Y,
+      M34 = transform.Origin.Z,
+      M44 = 1
+    };
 
   /// <summary>
   /// Extracts and reconstructs a transform from the matrix data stored on root object

@@ -183,6 +183,7 @@ public class RevitRootObjectBuilder(
             // non-transformed elements can safely rely on cache
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
+
             if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
             {
               converted = value;
@@ -247,6 +248,17 @@ public class RevitRootObjectBuilder(
 
     var levelProxies = levelUnpacker.Unpack(flatElements);
     rootObject[ProxyKeys.LEVEL] = levelProxies;
+
+    rootObject[ProxyKeys.INSTANCE_DEFINITION] = revitToSpeckleCacheSingleton.GetInstanceDefinitionProxiesForObjects(
+      idsAndSubElementIds
+    );
+    rootObject.elements.Add(
+      new Collection()
+      {
+        elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
+        name = "revitInstancedObjects"
+      }
+    );
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;

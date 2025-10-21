@@ -43,16 +43,22 @@ public class MeshByMaterialDictionaryToSpeckle
   /// <summary>
   /// Converts a dictionary of Revit meshes, where key is MaterialId, into a list of Speckle meshes.
   /// </summary>
-  /// <param name="args">A tuple consisting of (1) a dictionary with DB.ElementId keys and List of DB.Mesh values and (2) the root element id (the one generating all the meshes).</param>
   /// <returns>
   /// Returns a list of <see cref="SOG.Mesh"/> objects where each mesh represents one unique material in the input dictionary.
   /// </returns>
   /// <remarks>
-  /// Be aware that this method internally creates a new instance of <see cref="SOG.Mesh"/> for each unique material in the input dictionary.
-  /// These meshes are created with an initial capacity based on the size of the vertex and face arrays to avoid unnecessary resizing.
-  /// Also note that, for each unique material, the method tries to retrieve the related DB.Material from the current document and convert it. If the conversion is successful,
-  /// the material is added to the corresponding Speckle mesh. If the conversion fails, the operation simply continues without the material.
-  /// TODO: update description
+  /// <para>
+  /// This method creates a new instance of <see cref="SOG.Mesh"/> for each unique material in the input dictionary.
+  /// </para>
+  /// <para>
+  /// For each unique material, the method retrieves the related DB.Material from the current document and converts it to a <see cref="RenderMaterial"/>.
+  /// Material proxies are created but their objects lists are NOT populated at this stage. The mesh-to-material relationship is stored
+  /// in <see cref="RevitToSpeckleCacheSingleton.MeshToMaterialMap"/> for later population during display value processing.
+  /// </para>
+  /// <para>
+  /// Deferred population of the object list to ensure that instance geometry references the definition mesh ID in material proxies,
+  /// rather than individual instance mesh IDs. We can only do this later, because proxification hasn't happened yet.
+  /// </para>
   /// </remarks>
   public List<SOG.Mesh> Convert(
     (Dictionary<DB.ElementId, List<DB.Mesh>> target, DB.ElementId parentElementId, bool makeTransparent) args
@@ -62,7 +68,7 @@ public class MeshByMaterialDictionaryToSpeckle
     var objectRenderMaterialProxiesMap = _revitToSpeckleCacheSingleton.ObjectRenderMaterialProxiesMap;
     var materialProxyMap = new Dictionary<string, RenderMaterialProxy>();
     var key = args.parentElementId.ToString().NotNull();
-    // ids are same in copy pasted linked models, otherwise we reset the materialProxyMap in cache and only one of the linked model is having the render materials
+
     if (objectRenderMaterialProxiesMap.TryGetValue(key, out var cachedMaterialProxy))
     {
       materialProxyMap = cachedMaterialProxy;
@@ -85,32 +91,37 @@ public class MeshByMaterialDictionaryToSpeckle
         : materialId.ToString().NotNull();
       List<DB.Mesh> meshes = keyValuePair.Value;
 
-      // use the meshlist converter to convert the mesh values into a single speckle mesh
       SOG.Mesh speckleMesh = _meshListConverter.Convert(meshes);
-      speckleMesh.applicationId = Guid.NewGuid().ToString(); // NOTE: as we are composing meshes out of multiple ones for the same material, we need to generate our own application id. c'est la vie.
+      speckleMesh.applicationId = Guid.NewGuid().ToString();
 
-      // get the speckle render material
+      // store mesh-to-material mapping
+      if (!_revitToSpeckleCacheSingleton.MeshToMaterialMap.TryGetValue(key, out var meshMatMap))
+      {
+        meshMatMap = new Dictionary<string, string>();
+        _revitToSpeckleCacheSingleton.MeshToMaterialMap[key] = meshMatMap;
+      }
+      meshMatMap[speckleMesh.applicationId.NotNull()] = materialIdString;
+
       RenderMaterial? renderMaterial = args.makeTransparent
         ? _transparentMaterial
         : _converterSettings.Current.Document.GetElement(materialId) is DB.Material material
           ? _speckleRenderMaterialConverter.Convert(material)
           : null;
 
-      // get the render material if any
+      // Create proxy but DON'T populate objects list yet
       if (renderMaterial is not null)
       {
-        if (!materialProxyMap.TryGetValue(materialIdString, out RenderMaterialProxy? renderMaterialProxy))
+        if (!materialProxyMap.ContainsKey(materialIdString))
         {
-          renderMaterialProxy = new RenderMaterialProxy()
-          {
-            value = renderMaterial,
-            applicationId = materialId.ToString(),
-            objects = []
-          };
+          RenderMaterialProxy? renderMaterialProxy =
+            new()
+            {
+              value = renderMaterial,
+              applicationId = materialId.ToString(),
+              objects = []
+            };
           materialProxyMap[materialIdString] = renderMaterialProxy;
         }
-
-        renderMaterialProxy.objects.Add(speckleMesh.applicationId);
       }
 
       result.Add(speckleMesh);
