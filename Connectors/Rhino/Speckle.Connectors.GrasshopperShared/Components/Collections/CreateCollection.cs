@@ -64,6 +64,13 @@ public class CreateCollection : VariableParameterComponentBase
       }
     }
 
+    // validate for duplicate application IDs across the entire collection hierarchy
+    if (HasDuplicateApplicationIds(rootCollection))
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The same object(s) cannot appear in multiple collections");
+      return; // error already added in validation method
+    }
+
     dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootCollection));
   }
 
@@ -178,6 +185,54 @@ public class CreateCollection : VariableParameterComponentBase
       else
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{obj?.GetType().Name} type cannot be added to collections.");
+      }
+    }
+  }
+
+  /// <summary>
+  /// Validates that all application IDs are unique across the entire collection hierarchy.
+  /// Shows an error if duplicates are found, indicating objects appear in multiple collections.
+  /// </summary>
+  /// <returns>True if duplicates exist, false if all IDs are unique</returns>
+  private bool HasDuplicateApplicationIds(SpeckleCollectionWrapper rootCollection)
+  {
+    // args to CheckForDuplicateApplicationIds passed in since the method can recursively check
+    var seenIds = new HashSet<string>();
+    var duplicateIds = new HashSet<string>();
+
+    // iterate, create hash set and check all application IDs
+    ProcessAndCheckForDuplicateApplicationIds(rootCollection, seenIds, duplicateIds);
+
+    return duplicateIds.Count > 0;
+  }
+
+  /// <summary>
+  /// Recursively collects application IDs from all in the collection hierarchy.
+  /// </summary>
+  /// <remarks>
+  /// Only checks the wrapper's ApplicationId, not for example geometries within DataObjects.
+  /// </remarks>
+  private void ProcessAndCheckForDuplicateApplicationIds(
+    SpeckleCollectionWrapper collection,
+    HashSet<string> seenIds,
+    HashSet<string> duplicateIds
+  )
+  {
+    foreach (var element in collection.Elements)
+    {
+      switch (element)
+      {
+        case SpeckleCollectionWrapper childCollection:
+          // recurse into child collections
+          ProcessAndCheckForDuplicateApplicationIds(childCollection, seenIds, duplicateIds);
+          break;
+
+        case SpeckleWrapper wrapper:
+          if (wrapper.ApplicationId != null && !seenIds.Add(wrapper.ApplicationId))
+          {
+            duplicateIds.Add(wrapper.ApplicationId);
+          }
+          break;
       }
     }
   }
