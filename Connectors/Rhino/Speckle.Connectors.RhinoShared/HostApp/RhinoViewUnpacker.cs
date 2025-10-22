@@ -38,7 +38,7 @@ public class RhinoViewUnpacker
         return new()
         {
           name = view.Name,
-          camera = converted,
+          value = converted,
           applicationId = view.Name,
           objects = new()
         };
