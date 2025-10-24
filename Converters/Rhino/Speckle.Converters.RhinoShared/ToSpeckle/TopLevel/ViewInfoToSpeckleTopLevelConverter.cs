@@ -1,6 +1,7 @@
 using Rhino.DocObjects;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Rhino.ToSpeckle.TopLevel;
@@ -24,15 +25,17 @@ public class ViewInfoToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter, I
 
   public SOO.Camera Convert(ViewInfo target)
   {
-    RG.Vector3d forward = target.Viewport.CameraDirection;
-    forward.Unitize();
+    if (target.Viewport.IsParallelProjection)
+    {
+      throw new ConversionException("Parallel projection views are not supported.");
+    }
 
     return new()
     {
+      name = target.Name,
       position = _pointConverter.Convert(target.Viewport.CameraLocation),
       up = _vectorConverter.Convert(target.Viewport.CameraY),
-      forward = _vectorConverter.Convert(forward),
-      isOrthographic = target.Viewport.IsParallelProjection
+      forward = _vectorConverter.Convert(target.Viewport.CameraZ),
     };
   }
 }

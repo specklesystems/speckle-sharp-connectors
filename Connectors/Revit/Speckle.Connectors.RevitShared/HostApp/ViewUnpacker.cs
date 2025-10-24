@@ -20,42 +20,34 @@ public class ViewUnpacker
     _logger = logger;
   }
 
-  private Dictionary<ElementId, ViewProxy> ViewProxies { get; } = new();
-
-  private ViewProxy? ConvertViewToViewProxy(View3D view)
+  private Camera? ConvertViewToCamera(View3D view)
   {
     try
     {
       var converted = (Camera)_rootToSpeckleConverter.Convert(view);
-      if (converted != null)
+      if (converted is null)
       {
-        return new()
-        {
-          name = view.Title,
-          value = converted,
-          applicationId = view.Id.ToString(),
-          objects = new()
-        };
-      }
-      else
-      {
+        _logger.LogError("Failed to create a view from {view}", view.Name);
         return null;
       }
+
+      return converted;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to create a view proxy from {view}", view.Name);
+      _logger.LogError(ex, "Failed to create a view from {view}", view.Name);
       return null;
     }
   }
 
   /// <summary>
-  /// Iterates through the 3D views in the provided document to create view proxies
+  /// Iterates through the 3D views in the provided document to create cameras
   /// </summary>
   /// <param name="doc">Document to retrieve 3D views from</param>
   /// <returns></returns>
-  public List<ViewProxy> Unpack(Document doc)
+  public List<Camera> Unpack(Document doc)
   {
+    List<Camera> cameras = new();
     using FilteredElementCollector collector = new(doc);
     List<View> views = collector
       .WhereElementIsNotElementType()
@@ -66,17 +58,30 @@ public class ViewUnpacker
 
     foreach (View view in views)
     {
-      if (ViewProxies.ContainsKey(view.Id) || view is not View3D view3D)
+      if (view is not View3D view3D)
       {
         continue;
       }
 
-      if (ConvertViewToViewProxy(view3D) is ViewProxy viewProxy)
+      // not supporting parallel project yet, since it is too complex to match in the viewer for now
+      try
       {
-        ViewProxies.Add(view.Id, viewProxy);
+        if (!view3D.IsPerspective)
+        {
+          continue;
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+      {
+        continue; // some threed views will throw an exception: returns true if view is not a view template
+      }
+
+      if (ConvertViewToCamera(view3D) is Camera camera)
+      {
+        cameras.Add(camera);
       }
     }
 
-    return ViewProxies.Values.ToList();
+    return cameras;
   }
 }

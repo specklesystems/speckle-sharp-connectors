@@ -18,39 +18,21 @@ public class RhinoViewUnpacker
     _logger = logger;
   }
 
-  /// <summary>
-  /// For send operations
-  /// </summary>
-  private Dictionary<string, ViewProxy> ViewProxies { get; } = new();
-
-  private ViewProxy? ConvertViewToViewProxy(ViewInfo? view)
+  private Camera? ConvertViewToCamera(ViewInfo view)
   {
-    if (view is null)
-    {
-      return null;
-    }
-
     try
     {
       var converted = (Speckle.Objects.Other.Camera)_rootToSpeckleConverter.Convert(view);
-      if (converted != null)
-      {
-        return new()
-        {
-          name = view.Name,
-          value = converted,
-          applicationId = view.Name,
-          objects = new()
-        };
-      }
-      else
+      if (converted is null)
       {
         return null;
       }
+
+      return converted;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to create a view proxy from {view}", view.Name);
+      _logger.LogError(ex, "Failed to create a view from {view}", view.Name);
       return null;
     }
   }
@@ -60,21 +42,24 @@ public class RhinoViewUnpacker
   /// </summary>
   /// <param name="views">current document named views</param>
   /// <returns></returns>
-  public List<ViewProxy> UnpackViews(NamedViewTable views)
+  public List<Camera> UnpackViews(NamedViewTable views)
   {
-    foreach (ViewInfo? view in views)
+    List<Camera> cameras = new();
+    foreach (ViewInfo view in views)
     {
-      if (ViewProxies.ContainsKey(view.Name))
+      // skip isometric views for now.
+      // getting the orthographic match between host apps and the viewer requires too much effort atm.
+      if (view.Viewport.IsParallelProjection)
       {
         continue;
       }
 
-      if (ConvertViewToViewProxy(view) is ViewProxy viewProxy)
+      if (ConvertViewToCamera(view) is Camera camera)
       {
-        ViewProxies.Add(view.Name, viewProxy);
+        cameras.Add(camera);
       }
     }
 
-    return ViewProxies.Values.ToList();
+    return cameras;
   }
 }

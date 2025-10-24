@@ -9,8 +9,6 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointHelper
 {
-  public const string REFERENCE_POINT_TRANSFORM_KEY = "referencePointTransform";
-
   /// <summary>
   /// Changes Revit Transform to a double array.
   /// Uses a 16-element column-major matrix representation. See https://speckle.guide/dev/objects.html

@@ -241,15 +241,12 @@ public class RevitRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // STEP 6: Unpack proxies to attach to root collection
+    // STEP 5: Unpack proxies to attach to root collection
     var flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
 
     var renderMaterialProxies = revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds);
     rootObject[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
-
-    var viewProxies = viewUnpacker.Unpack(converterSettings.Current.Document);
-    rootObject[ProxyKeys.VIEW] = viewProxies;
 
     var levelProxies = levelUnpacker.Unpack(flatElements);
     rootObject[ProxyKeys.LEVEL] = levelProxies;
@@ -265,6 +262,10 @@ public class RevitRootObjectBuilder(
       }
     );
 
+    // STEP 6: Unpack all other objects to attach to root collection
+    var views = viewUnpacker.Unpack(converterSettings.Current.Document);
+    rootObject[RootKeys.VIEW] = views;
+
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
 
@@ -272,7 +273,7 @@ public class RevitRootObjectBuilder(
     if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
-      rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] = transformMatrix;
+      rootObject[RootKeys.REFERENCE_POINT] = transformMatrix;
     }
 
     return new RootObjectBuilderResult(rootObject, results);

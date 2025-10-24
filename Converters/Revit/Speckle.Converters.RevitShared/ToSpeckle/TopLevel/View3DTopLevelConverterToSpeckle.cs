@@ -25,18 +25,25 @@ public class View3DTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter, ITy
 
   public Camera Convert(DB.View3D target)
   {
+    if (!target.IsPerspective)
+    {
+      throw new ConversionException("Non-Perspective views are not supported");
+    }
+
     // some views have null origin, not sure why
     if (target.Origin == null)
     {
       throw new ConversionException("Views with no origin are not supported");
     }
 
+    DB.ViewOrientation3D orientation = target.GetSavedOrientation();
+
     return new()
     {
+      name = target.Title,
       position = _xyzToPointConverter.Convert(target.Origin),
-      forward = _xyzToVectorConverter.Convert(target.GetSavedOrientation().ForwardDirection),
-      up = _xyzToVectorConverter.Convert(target.GetSavedOrientation().UpDirection),
-      isOrthographic = !target.IsPerspective
+      forward = _xyzToVectorConverter.Convert(orientation.ForwardDirection),
+      up = _xyzToVectorConverter.Convert(orientation.UpDirection)
     };
   }
 }

@@ -125,25 +125,24 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
+    // 4 - Unpack all proxies for the root
     // Get all layers from the created collections on the root object commit for proxy processing
     List<Layer> layers = _layerUnpacker.GetUsedLayers().ToList();
 
     using (var _ = _activityFactory.Start("UnpackRenderMaterials"))
     {
-      // 4 - Unpack the render material proxies
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(atomicObjects, layers);
     }
 
     using (var _ = _activityFactory.Start("UnpackColors"))
     {
-      // 5 - Unpack the color proxies
       rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers);
     }
 
+    // 5 - Unpack all other objects for the root
     using (var _ = _activityFactory.Start("UnpackViews"))
     {
-      // 6 - Unpack the view proxies
-      rootObjectCollection[ProxyKeys.VIEW] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
+      rootObjectCollection[RootKeys.VIEW] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
