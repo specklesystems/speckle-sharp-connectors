@@ -12,3 +12,9 @@ public static class ProxyKeys
   public const string SECTION = "sectionProxies";
   public const string LEVEL = "levelProxies";
 }
+
+public static class RootKeys
+{
+  public const string VIEW = "views";
+  public const string REFERENCE_POINT = "referencePointTransform";
+}

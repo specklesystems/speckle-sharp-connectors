@@ -24,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LevelUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\ViewUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\HideWarningsFailuresPreprocessor.cs" />
