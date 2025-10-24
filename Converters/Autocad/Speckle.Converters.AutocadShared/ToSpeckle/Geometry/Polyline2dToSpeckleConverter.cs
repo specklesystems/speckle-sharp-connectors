@@ -166,7 +166,8 @@ public class Polyline2dToSpeckleConverter
       segments.Add(spline);
     }
 
-    SOG.Vector normal = _vectorConverter.Convert(target.Normal); // wcs
+    // normal is already in wcs and shouldn't be transformed by reference point
+    SOG.Vector normal = new(target.Normal.X, target.Normal.Y, target.Normal.Z, _settingsStore.Current.SpeckleUnits);
 
     SOG.Autocad.AutocadPolycurve polycurve =
       new()

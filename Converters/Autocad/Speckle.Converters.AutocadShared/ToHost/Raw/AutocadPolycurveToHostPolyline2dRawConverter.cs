@@ -39,6 +39,16 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
 
+    // transform vertices from ucs back to wcs (inverse of ucs transform applied on publish)
+    // Polyline2d constructor expects vertices in wcs
+    if (_settingsStore.Current.ReferencePointTransform is AG.Matrix3d refTransform)
+    {
+      for (int i = 0; i < points.Count; i++)
+      {
+        points[i] = points[i].TransformBy(refTransform);
+      }
+    }
+
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)
     {
