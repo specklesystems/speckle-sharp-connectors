@@ -35,25 +35,29 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     CancellationToken ct = default
   )
   {
-    // deep copy input (to not mutate input) and set the input collection name to "Grasshopper Model"
-    var inputCollectionGoo = (SpeckleCollectionWrapperGoo)input[0].Duplicate();
-    inputCollectionGoo.Value.Name = "Grasshopper Model";
+    // create root collection
+    var rootCollectionGoo = (SpeckleRootCollectionWrapperGoo)input[0].Duplicate();
+    rootCollectionGoo.Value.Name = "Grasshopper Model";
+    RootCollection rootCollection = new(rootCollectionGoo.Value.Name)
+    {
+      applicationId = rootCollectionGoo.Value.ApplicationId, rootProperties = rootCollectionGoo.Value.RootProperties
+    };
 
     // create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
     GrasshopperMaterialPacker materialPacker = new();
     GrasshopperBlockPacker blockPacker = new(_instanceObjectsManager);
-
+    
     // unwrap the input collection to remove all wrappers
-    Collection root = Unwrap(inputCollectionGoo.Value, colorPacker, materialPacker, blockPacker);
+    Unwrap(rootCollectionGoo.Value, rootCollection, colorPacker, materialPacker, blockPacker);
 
     // add proxies
-    root[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
-    root[ProxyKeys.RENDER_MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
-    root[ProxyKeys.INSTANCE_DEFINITION] = blockPacker.InstanceDefinitionProxies.Values.ToList();
+    rootCollection[ProxyKeys.COLOR] = colorPacker.ColorProxies.Values.ToList();
+    rootCollection[ProxyKeys.RENDER_MATERIAL] = materialPacker.RenderMaterialProxies.Values.ToList();
+    rootCollection[ProxyKeys.INSTANCE_DEFINITION] = blockPacker.InstanceDefinitionProxies.Values.ToList();
 
     // TODO: Not getting any conversion results yet
-    var result = new RootObjectBuilderResult(root, []);
+    var result = new RootObjectBuilderResult(rootCollection, []);
 
     return Task.FromResult(result);
   }
@@ -62,13 +66,12 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   // Also packs colors, render materials and block definitions into proxies while unwrapping.
   private Collection Unwrap(
     SpeckleCollectionWrapper wrapper,
+    Collection targetCollection,
     GrasshopperColorPacker colorPacker,
     GrasshopperMaterialPacker materialPacker,
     GrasshopperBlockPacker blockPacker
   )
   {
-    Collection currentColl = wrapper.Collection;
-
     // unpack color, render material and block definitions
     colorPacker.ProcessColor(wrapper.ApplicationId, wrapper.Color);
     materialPacker.ProcessMaterial(wrapper.ApplicationId, wrapper.Material);
@@ -84,20 +87,20 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
 
           // add to collection and continue unwrap
-          currentColl.elements.Add(collWrapper.Collection);
-          Unwrap(collWrapper, colorPacker, materialPacker, blockPacker);
+          targetCollection.elements.Add(collWrapper.Collection);
+          Unwrap(collWrapper, collWrapper.Collection, colorPacker, materialPacker, blockPacker);
           break;
 
         case SpeckleGeometryWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
           Base objectBase = UnwrapGeometry(so);
           string applicationId = objectBase.applicationId!;
-          currentColl.elements.Add(objectBase);
+          targetCollection.elements.Add(objectBase);
 
           // do block instance specific stuff (if this object wrapper is actually a block instance)
           if (so is SpeckleBlockInstanceWrapper blockInstance)
           {
-            ProcessBlockInstanceDefinition(blockInstance, colorPacker, materialPacker, blockPacker, currentColl);
+            ProcessBlockInstanceDefinition(blockInstance, colorPacker, materialPacker, blockPacker, targetCollection);
           }
 
           // process color and material for all object wrappers (including block instances)
@@ -110,7 +113,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           // UnwrapDataObject will unwrap underlying geometry and handle color and material
           // arguably doing too much, but I'm apprehensive looping twice without good reason
           DataObject dataObject = UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
-          currentColl.elements.Add(dataObject);
+          targetCollection.elements.Add(dataObject);
           break;
       }
     }
@@ -127,7 +130,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     }
     */
 
-    return currentColl;
+    return targetCollection;
   }
 
   /// <summary>

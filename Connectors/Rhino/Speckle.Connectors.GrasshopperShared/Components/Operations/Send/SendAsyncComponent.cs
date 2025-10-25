@@ -51,6 +51,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public IClient ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; private set; }
   public SpeckleUrlModelResource? OutputParam { get; set; }
   public bool HasMultipleInputs { get; set; }
 
@@ -58,7 +59,10 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
+    // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+
+    // collection
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -68,6 +72,16 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     );
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
+
+    // model-wide props (see cnx-2722)
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Model Properties",
+      "MP",
+      "Optional model-wide properties to attach to the root collection",
+      GH_ParamAccess.item
+    );
+    pManager[3].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -280,6 +294,10 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     string? versionMessage = null;
     da.GetData(2, ref versionMessage);
     VersionMessage = versionMessage;
+
+    SpecklePropertyGroupGoo? rootPropsGoo = null;
+    da.GetData(3, ref rootPropsGoo);
+    RootProperties = rootPropsGoo;
   }
 }
 
@@ -395,6 +413,13 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       throw new InvalidOperationException("Root Collection was null");
     }
 
+    var rootWrapper = new SpeckleRootCollectionWrapper(
+      rootCollectionWrapper.Value,
+      Parent.RootProperties?.Unwrap()
+    );
+
+    rootCollectionWrapper = new SpeckleRootCollectionWrapperGoo(rootWrapper);
+
     // Step 1 - SEND TO SERVER
     var sendInfo = await urlModelResource.GetSendInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
 
@@ -408,7 +433,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     SendOperationResult? result = await sendOperation
       .Execute(
-        new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
+        new List<SpeckleCollectionWrapperGoo> { rootCollectionWrapper },
         sendInfo,
         Parent.VersionMessage,
         progress,

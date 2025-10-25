@@ -20,12 +20,14 @@ public class SendComponentInput
   public SpeckleUrlModelResource Resource { get; }
   public SpeckleCollectionWrapperGoo Input { get; }
   public bool Run { get; }
+  public SpecklePropertyGroupGoo? RootProperties { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run)
+  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run, SpecklePropertyGroupGoo? rootProperties)
   {
     Resource = resource;
     Input = input;
     Run = run;
+    RootProperties = rootProperties;
   }
 }
 
@@ -36,6 +38,11 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
 
 public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
+  public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
+  public string? Url { get; private set; }
+  public string? VersionMessage { get; private set; }
+  protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
+
   public SendComponent()
     : base(
       "(Sync) Publish",
@@ -45,17 +52,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       ComponentCategories.DEVELOPER
     ) { }
 
-  public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
-
-  public string? Url { get; private set; }
-
-  public string? VersionMessage { get; private set; }
-
-  protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
-
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
+    // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+
+    // collection
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -65,13 +67,21 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     );
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
+
+    // model-wide props (see cnx-2722)
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Model Properties",
+      "MP",
+      "Optional model-wide properties to attach to the root collection",
+      GH_ParamAccess.item
+    );
+    pManager[3].Optional = true;
+
     pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
-    pManager.AddParameter(new SpeckleUrlModelResourceParam());
-  }
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) => pManager.AddParameter(new SpeckleUrlModelResourceParam());
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
@@ -93,10 +103,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     da.GetData(2, ref versionMessage);
     VersionMessage = versionMessage;
 
+    SpecklePropertyGroupGoo? rootPropsGoo = null;
+    da.GetData(3, ref rootPropsGoo);
+    
     bool run = false;
-    da.GetData(3, ref run);
+    da.GetData(4, ref run);
 
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run);
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
   }
 
   protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
@@ -166,6 +179,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       return new(null);
     }
 
+    // always create root wrapper (properties can be null)
+    var rootWrapper = new SpeckleRootCollectionWrapper(
+      input.Input.Value,
+      input.RootProperties?.Unwrap()
+    );
+    var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
+
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
@@ -173,7 +193,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     Account? account = input.Resource.Account.GetAccount(scope);
     if (account is null)
     {
-      throw new SpeckleAccountManagerException($"No default account was found");
+      throw new SpeckleAccountManagerException("No default account was found");
     }
 
     var progress = new Progress<CardProgress>(_ =>
@@ -186,7 +206,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     await sendOperation
       .Execute(
-        new List<SpeckleCollectionWrapperGoo>() { input.Input },
+        new List<SpeckleCollectionWrapperGoo> { collectionToSend },
         sendInfo,
         VersionMessage,
         progress,
