@@ -22,7 +22,12 @@ public class SendComponentInput
   public bool Run { get; }
   public SpecklePropertyGroupGoo? RootProperties { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run, SpecklePropertyGroupGoo? rootProperties)
+  public SendComponentInput(
+    SpeckleUrlModelResource resource,
+    SpeckleCollectionWrapperGoo input,
+    bool run,
+    SpecklePropertyGroupGoo? rootProperties
+  )
   {
     Resource = resource;
     Input = input;
@@ -81,7 +86,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager) => pManager.AddParameter(new SpeckleUrlModelResourceParam());
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
+    pManager.AddParameter(new SpeckleUrlModelResourceParam());
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
@@ -105,7 +111,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     SpecklePropertyGroupGoo? rootPropsGoo = null;
     da.GetData(3, ref rootPropsGoo);
-    
+
     bool run = false;
     da.GetData(4, ref run);
 
@@ -178,14 +184,11 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     {
       return new(null);
     }
-    
+
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
     // constructed here from the Collection + Model Properties inputs.
     // if this changes, then we need to update below!
-    var rootWrapper = new SpeckleRootCollectionWrapper(
-      input.Input.Value,
-      input.RootProperties?.Unwrap()
-    );
+    var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
     var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();

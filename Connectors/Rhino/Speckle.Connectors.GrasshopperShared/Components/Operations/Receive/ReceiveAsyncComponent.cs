@@ -66,7 +66,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       "The model collection of the loaded version",
       GH_ParamAccess.item
     );
-    
+
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
       "Model Properties",
@@ -455,10 +455,12 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       .ConfigureAwait(false);
 
     CancellationToken.ThrowIfCancellationRequested();
-    
+
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
-    if (Root is RootCollection rootCollection &&
-        rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary)
+    if (
+      Root is RootCollection rootCollection
+      && rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary
+    )
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
     }
@@ -496,7 +498,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     // process block instances using converted atomic objects
     // block processing needs converted objects, but object filtering needs block definitions.
     mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
-    
+
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     RootProperties = rootPropertiesGoo;
 

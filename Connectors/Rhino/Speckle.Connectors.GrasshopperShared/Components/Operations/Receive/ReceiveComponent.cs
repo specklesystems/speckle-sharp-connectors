@@ -79,7 +79,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       "MP",
       "Optional model-wide properties to attach to the root collection",
       GH_ParamAccess.item
-      );
+    );
   }
 
   protected override ReceiveComponentInput GetInput(IGH_DataAccess da)
@@ -114,9 +114,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
     else
     {
-      da.SetData(0, result.RootObject); 
+      da.SetData(0, result.RootObject);
       da.SetData(1, result.RootProperties);
-    
+
       Message = _apiClient != null ? "Loaded" : "Done";
     }
   }
@@ -169,11 +169,13 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     var root = await receiveOperation
       .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
       .ConfigureAwait(false);
-    
+
     // extract model-wide root properties (see cnx-2722)
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
-    if (root is RootCollection rootCollection &&
-        rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary)
+    if (
+      root is RootCollection rootCollection
+      && rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary
+    )
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
     }
@@ -232,7 +234,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-    return new ReceiveComponentOutput { RootObject = goo , RootProperties = rootPropertiesGoo };
+    return new ReceiveComponentOutput { RootObject = goo, RootProperties = rootPropertiesGoo };
   }
 
   private void SetupSubscription(SpeckleUrlModelResource resource)

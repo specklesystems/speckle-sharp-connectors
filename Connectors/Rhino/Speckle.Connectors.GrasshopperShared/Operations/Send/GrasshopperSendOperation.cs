@@ -38,16 +38,18 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     // create root collection
     var rootCollectionGoo = (SpeckleRootCollectionWrapperGoo)input[0].Duplicate();
     rootCollectionGoo.Value.Name = "Grasshopper Model";
-    RootCollection rootCollection = new(rootCollectionGoo.Value.Name)
-    {
-      applicationId = rootCollectionGoo.Value.ApplicationId, rootProperties = rootCollectionGoo.Value.RootProperties
-    };
+    RootCollection rootCollection =
+      new(rootCollectionGoo.Value.Name)
+      {
+        applicationId = rootCollectionGoo.Value.ApplicationId,
+        rootProperties = rootCollectionGoo.Value.RootProperties
+      };
 
     // create packers for colors and render materials
     GrasshopperColorPacker colorPacker = new();
     GrasshopperMaterialPacker materialPacker = new();
     GrasshopperBlockPacker blockPacker = new(_instanceObjectsManager);
-    
+
     // unwrap the input collection to remove all wrappers
     Unwrap(rootCollectionGoo.Value, rootCollection, colorPacker, materialPacker, blockPacker);
 

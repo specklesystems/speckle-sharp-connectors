@@ -416,10 +416,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
     // constructed here from the Collection + Model Properties inputs.
     // if this changes, then we need to update below!
-    var rootWrapper = new SpeckleRootCollectionWrapper(
-      rootCollectionWrapper.Value,
-      Parent.RootProperties?.Unwrap()
-    );
+    var rootWrapper = new SpeckleRootCollectionWrapper(rootCollectionWrapper.Value, Parent.RootProperties?.Unwrap());
 
     rootCollectionWrapper = new SpeckleRootCollectionWrapperGoo(rootWrapper);
 

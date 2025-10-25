@@ -7,9 +7,12 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
   public Dictionary<string, object?>? RootProperties { get; set; }
 
   public SpeckleRootCollectionWrapper() { }
-  
+
   [SetsRequiredMembers]
-  public SpeckleRootCollectionWrapper(SpeckleCollectionWrapper wrapper, Dictionary<string, object?>? rootProperties = null)
+  public SpeckleRootCollectionWrapper(
+    SpeckleCollectionWrapper wrapper,
+    Dictionary<string, object?>? rootProperties = null
+  )
   {
     Base = wrapper.Base;
     Color = wrapper.Color;
