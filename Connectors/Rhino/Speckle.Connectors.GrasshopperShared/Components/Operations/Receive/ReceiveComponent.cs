@@ -37,6 +37,7 @@ public class ReceiveComponentOutput
   /// Made nullable as output can be null when Run = false or on error
   /// </remarks>
   public SpeckleCollectionWrapperGoo? RootObject { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; set; }
 }
 
 public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
@@ -71,6 +72,14 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       "The model collection of the loaded version",
       GH_ParamAccess.item
     );
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Model Properties",
+      "MP",
+      "Optional model-wide properties to attach to the root collection",
+      GH_ParamAccess.item
+      );
   }
 
   protected override ReceiveComponentInput GetInput(IGH_DataAccess da)
@@ -105,7 +114,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
     else
     {
-      da.SetData(0, result.RootObject);
+      da.SetData(0, result.RootObject); 
+      da.SetData(1, result.RootProperties);
+    
       Message = _apiClient != null ? "Loaded" : "Done";
     }
   }
@@ -140,7 +151,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     Account? account = input.Resource.Account.GetAccount(scope);
     if (account is null)
     {
-      throw new SpeckleAccountManagerException($"No default account was found");
+      throw new SpeckleAccountManagerException("No default account was found");
     }
 
     using var client = clientFactory.Create(account);
@@ -158,6 +169,14 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     var root = await receiveOperation
       .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
       .ConfigureAwait(false);
+    
+    // extract model-wide root properties (see cnx-2722)
+    SpecklePropertyGroupGoo? rootPropertiesGoo = null;
+    if (root is RootCollection rootCollection &&
+        rootCollection[RootKeys.ROOT_PROPERTIES] is Dictionary<string, object?> rootPropertiesDictionary)
+    {
+      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
+    }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>()
@@ -213,7 +232,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-    return new ReceiveComponentOutput { RootObject = goo };
+    return new ReceiveComponentOutput { RootObject = goo , RootProperties = rootPropertiesGoo };
   }
 
   private void SetupSubscription(SpeckleUrlModelResource resource)

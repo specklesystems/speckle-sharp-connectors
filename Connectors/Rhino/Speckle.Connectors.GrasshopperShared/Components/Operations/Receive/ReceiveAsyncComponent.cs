@@ -66,6 +66,14 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       "The model collection of the loaded version",
       GH_ParamAccess.item
     );
+    
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Model Properties",
+      "MP",
+      "Model-wide properties from the root collection",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
@@ -338,6 +346,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
   public Base Root { get; set; }
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo Result { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; private set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance<ReceiveAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
@@ -374,6 +383,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
 
     da.SetData(0, Result);
+    da.SetData(1, RootProperties);
   }
 
   public override async Task DoWork(Action<string, double> reportProgress, Action done)
@@ -445,6 +455,13 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       .ConfigureAwait(false);
 
     CancellationToken.ThrowIfCancellationRequested();
+    
+    SpecklePropertyGroupGoo? rootPropertiesGoo = null;
+    if (Root is RootCollection rootCollection &&
+        rootCollection["rootProperties"] is Dictionary<string, object?> rootPropertiesDictionary)
+    {
+      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
+    }
 
     // Step 2 - CONVERT
     //receiveComponent.Message = $"Unpacking...";
@@ -479,8 +496,9 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     // process block instances using converted atomic objects
     // block processing needs converted objects, but object filtering needs block definitions.
     mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
-
+    
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+    RootProperties = rootPropertiesGoo;
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>()

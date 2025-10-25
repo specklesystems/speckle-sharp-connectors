@@ -134,7 +134,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, "View created model online ↗", (s, e) => Open(Url));
     }
 
     static void Open(string url)
@@ -215,7 +215,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object>() { { "isAsync", false } };
+    var customProperties = new Dictionary<string, object> { { "isAsync", false } };
     if (sendInfo.WorkspaceId != null)
     {
       customProperties.Add("workspace_id", sendInfo.WorkspaceId);
