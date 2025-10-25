@@ -173,13 +173,13 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     // extract model-wide root properties (see cnx-2722)
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
     if (root is RootCollection rootCollection &&
-        rootCollection[RootKeys.ROOT_PROPERTIES] is Dictionary<string, object?> rootPropertiesDictionary)
+        rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary)
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
     }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object>()
+    var customProperties = new Dictionary<string, object>
     {
       { "isAsync", false },
       { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }

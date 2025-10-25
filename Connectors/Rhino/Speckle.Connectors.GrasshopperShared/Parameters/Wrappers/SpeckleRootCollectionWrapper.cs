@@ -36,7 +36,7 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
       Path = baseCopy.Path,
       Topology = baseCopy.Topology,
       Elements = baseCopy.Elements,
-      RootProperties = RootProperties != null ? new Dictionary<string, object?>(RootProperties) : null
+      RootProperties = RootProperties != null ? new Dictionary<string, object?>(RootProperties) : null // RootProperties are not mutated after creation, so shallow copy okay? 🫣
     };
   }
 }

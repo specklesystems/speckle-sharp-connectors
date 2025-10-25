@@ -458,7 +458,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
     if (Root is RootCollection rootCollection &&
-        rootCollection["rootProperties"] is Dictionary<string, object?> rootPropertiesDictionary)
+        rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary)
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
     }

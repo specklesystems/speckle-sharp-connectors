@@ -178,8 +178,10 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     {
       return new(null);
     }
-
-    // always create root wrapper (properties can be null)
+    
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
+    // constructed here from the Collection + Model Properties inputs.
+    // if this changes, then we need to update below!
     var rootWrapper = new SpeckleRootCollectionWrapper(
       input.Input.Value,
       input.RootProperties?.Unwrap()

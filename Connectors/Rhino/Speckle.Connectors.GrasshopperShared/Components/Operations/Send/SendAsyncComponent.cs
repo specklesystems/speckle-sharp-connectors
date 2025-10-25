@@ -413,6 +413,9 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       throw new InvalidOperationException("Root Collection was null");
     }
 
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
+    // constructed here from the Collection + Model Properties inputs.
+    // if this changes, then we need to update below!
     var rootWrapper = new SpeckleRootCollectionWrapper(
       rootCollectionWrapper.Value,
       Parent.RootProperties?.Unwrap()
