@@ -58,7 +58,10 @@ public class CsiStoryForceResultsExtractor : IApplicationResultsExtractor
     // Step 2: Filter out entries that don't match user's selected load cases/combinations
     // and organize arrays for dictionary processor
     var filteredEntries = tableData
-      .Where(entry => userSelectedLoadCases.Count == 0 || userSelectedLoadCases.Contains(GetOutputCase(entry.Value)))
+      .Where(entry =>
+        userSelectedLoadCases.Count == 0
+        || userSelectedLoadCases.Contains(ResultsExtractorHelper.GetOutputCase(entry.Value, OUTPUT_CASE))
+      )
       .ToList();
 
     if (filteredEntries.Count == 0)
@@ -94,12 +97,12 @@ public class CsiStoryForceResultsExtractor : IApplicationResultsExtractor
       locations[i] = nestedDict.TryGetValue(LOCATION, out var location) ? location : string.Empty;
 
       // Extract force values directly from nested dictionary using field names as keys
-      pValues[i] = TryParseDouble(nestedDict.TryGetValue(AXIAL_FORCE, out var p) ? p : null);
-      vxValues[i] = TryParseDouble(nestedDict.TryGetValue(MAJOR_SHEAR, out var vx) ? vx : null);
-      vyValues[i] = TryParseDouble(nestedDict.TryGetValue(MINOR_SHEAR, out var vy) ? vy : null);
-      tValues[i] = TryParseDouble(nestedDict.TryGetValue(TORSION, out var t) ? t : null);
-      mxValues[i] = TryParseDouble(nestedDict.TryGetValue(MAJOR_MOMENT, out var mx) ? mx : null);
-      myValues[i] = TryParseDouble(nestedDict.TryGetValue(MINOR_MOMENT, out var my) ? my : null);
+      pValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(AXIAL_FORCE, out var p) ? p : null);
+      vxValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(MAJOR_SHEAR, out var vx) ? vx : null);
+      vyValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(MINOR_SHEAR, out var vy) ? vy : null);
+      tValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(TORSION, out var t) ? t : null);
+      mxValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(MAJOR_MOMENT, out var mx) ? mx : null);
+      myValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(MINOR_MOMENT, out var my) ? my : null);
     }
 
     var rawArrays = new Dictionary<string, object>
@@ -117,40 +120,5 @@ public class CsiStoryForceResultsExtractor : IApplicationResultsExtractor
 
     // Step 4: return sorted and processed dictionary
     return _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);
-  }
-
-  /// <summary>
-  /// Extracts the OutputCase from the nested dictionary structure.
-  /// This is used for filtering against user selected load cases.
-  /// </summary>
-  /// <remarks>
-  /// All database values are strings
-  /// </remarks>
-  private static string GetOutputCase(IReadOnlyDictionary<string, string> nestedDict) =>
-    nestedDict.TryGetValue(OUTPUT_CASE, out var outputCase) ? outputCase : string.Empty;
-
-  /// <summary>
-  /// Safely parses a value to double, returning 0.0 if parsing fails.
-  /// Database returns all values as strings, so conversion is needed.
-  /// </summary>
-  private static double TryParseDouble(object? value)
-  {
-    if (value == null)
-    {
-      throw new InvalidOperationException("Cannot parse null value to double in story force results");
-    }
-
-    var stringValue = value.ToString();
-    if (string.IsNullOrEmpty(stringValue))
-    {
-      throw new InvalidOperationException("Cannot parse empty string to double in story force results");
-    }
-
-    if (!double.TryParse(stringValue, out double result))
-    {
-      throw new InvalidOperationException($"Failed to parse '{stringValue}' as double in story force results");
-    }
-
-    return result;
   }
 }

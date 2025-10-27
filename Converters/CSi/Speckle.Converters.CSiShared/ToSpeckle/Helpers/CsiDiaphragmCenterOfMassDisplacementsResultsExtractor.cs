@@ -9,6 +9,7 @@ public class CsiDiaphragmCenterOfMassDisplacementsResultsExtractor : IApplicatio
   private readonly DatabaseTableExtractor _databaseTableExtractor;
   private readonly ResultsArrayProcessor _resultsArrayProcessor;
 
+  private const string TABLE_KEY = "Diaphragm Center Of Mass Displacements";
   private const string STORY = "Story";
   private const string DIAPHRAGM = "Diaphragm";
   private const string LOAD_CASE = "LoadCase";
@@ -37,6 +38,38 @@ public class CsiDiaphragmCenterOfMassDisplacementsResultsExtractor : IApplicatio
     _resultsArrayProcessor = resultsArrayProcessor;
   }
 
-  public Dictionary<string, object> GetResults(IEnumerable<string>? objectNames = null) =>
-    throw new NotImplementedException();
+  public Dictionary<string, object> GetResults(IEnumerable<string>? objectNames = null)
+  {
+    // Step 1: use DatabaseTableExtractor to get results
+    // NOTE: this differs from other results since diaphragm center of mass displacements don't have a
+    // SapModel.Results method
+    var tableData = _databaseTableExtractor
+      .GetTableData(TABLE_KEY, STORY, additionalKeyColumns: [LOAD_CASE, DIAPHRAGM])
+      .Rows;
+
+    // Get user selected load cases and combinations for filtering
+    var userSelectedLoadCases = _settingsStore.Current.SelectedLoadCasesAndCombinations?.ToHashSet();
+
+    if (userSelectedLoadCases == null)
+    {
+      // NOTE: this should never happen as we validate in root object builder
+      throw new InvalidOperationException("No load cases or combinations selected");
+    }
+
+    // Step 2: Filter out entries that don't match user's selected load cases/combinations
+    // and organize arrays for dictionary processor
+    var filteredEntries = tableData
+      .Where(entry =>
+        userSelectedLoadCases.Count == 0
+        || userSelectedLoadCases.Contains(ResultsExtractorHelper.GetOutputCase(entry.Value, LOAD_CASE))
+      )
+      .ToList();
+
+    if (filteredEntries.Count == 0)
+    {
+      throw new InvalidOperationException(
+        "No load cases or combinations in database match user-selected load cases and combinations"
+      ); // shouldn't fail silently
+    }
+  }
 }
