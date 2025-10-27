@@ -61,7 +61,7 @@ public sealed class EtabsShellPropertiesExtractor
     {
       // I am paranoid about what etabs could throw our way
       double computedVolume = area * thickness;
-      volume = double.IsFinite(computedVolume) ? computedVolume : double.NaN;
+      volume = (!double.IsInfinity(computedVolume) && !double.IsNaN(computedVolume)) ? computedVolume : double.NaN;
     }
 
     geometry.AddWithUnits(ObjectPropertyKey.THICKNESS, thickness, _settingsStore.Current.SpeckleUnits);

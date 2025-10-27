@@ -65,7 +65,7 @@ public sealed class CsiFramePropertiesExtractor
     {
       // I am paranoid about what etabs could throw our way
       double computedVolume = length * area;
-      volume = double.IsFinite(computedVolume) ? computedVolume : double.NaN;
+      volume = (!double.IsInfinity(computedVolume) && !double.IsNaN(computedVolume)) ? computedVolume : double.NaN;
     }
 
     geometry.AddWithUnits(ObjectPropertyKey.LENGTH, length, _settingsStore.Current.SpeckleUnits);
