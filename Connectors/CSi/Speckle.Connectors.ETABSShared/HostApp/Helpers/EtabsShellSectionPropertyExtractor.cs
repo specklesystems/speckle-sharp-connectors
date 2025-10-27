@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
-using Speckle.Converters.CSiShared.Utils;
 using Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
 namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
@@ -35,43 +34,31 @@ public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionProper
   /// </remarks>
   public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
-    // read from cache (populated during conversion)
-    if (_csiToSpeckleCacheSingleton.ShellSectionPropertiesCache.TryGetValue(sectionName, out var cachedProperties))
+    var sectionProps = GetSectionProperties(sectionName);
+
+    // shallow copy nested dictionaries into provided properties dict to mutate it (required by interface contract)
+    foreach (var kvp in sectionProps)
     {
-      CopyCachedProperties(cachedProperties, properties);
-      return;
+      properties[kvp.Key] = kvp.Value;
     }
-
-    // fallback - section not in cache (shouldn't happen for sections in ShellSectionCache), but ... who knows? Etabs...
-    _logger.LogWarning("Section {SectionName} not found in cache during unpacking", sectionName);
-
-    Dictionary<string, object?> resolvedProperties = _etabsShellSectionResolver.ResolveSection(sectionName);
-
-    // cache it for next time (shouldn't be needed but defensive)
-    _csiToSpeckleCacheSingleton.ShellSectionPropertiesCache[sectionName] = resolvedProperties;
-
-    CopyCachedProperties(resolvedProperties, properties);
   }
 
-  private void CopyCachedProperties(Dictionary<string, object?> source, Dictionary<string, object?> destination)
+  private Dictionary<string, object?> GetSectionProperties(string sectionName)
   {
-    foreach (var kvp in source)
+    // return cached properties directly
+    if (_csiToSpeckleCacheSingleton.ShellSectionPropertiesCache.TryGetValue(sectionName, out var cachedProperties))
     {
-      if (kvp.Value is not Dictionary<string, object?> nestedValues)
-      {
-        _logger.LogWarning(
-          "Unexpected value type for key {Key}, expected Dictionary<string, object?>, got {ActualType}",
-          kvp.Key,
-          kvp.Value?.GetType().Name ?? "null"
-        );
-        continue;
-      }
-
-      var nestedProperties = destination.EnsureNested(kvp.Key);
-      foreach (var nested in nestedValues)
-      {
-        nestedProperties[nested.Key] = nested.Value;
-      }
+      return cachedProperties;
     }
+
+    // fallback - shouldn't happen because cached populated on the fly as sections appear in the extractor
+    _logger.LogWarning(
+      "Section {SectionName} not in cache during unpacking - resolving via API (expensive)",
+      sectionName
+    );
+
+    var resolved = _etabsShellSectionResolver.ResolveSection(sectionName);
+    _csiToSpeckleCacheSingleton.ShellSectionPropertiesCache[sectionName] = resolved;
+    return resolved;
   }
 }
