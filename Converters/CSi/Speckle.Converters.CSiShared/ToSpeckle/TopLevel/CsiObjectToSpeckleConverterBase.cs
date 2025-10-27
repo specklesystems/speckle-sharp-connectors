@@ -39,7 +39,7 @@ public abstract class CsiObjectToSpeckleConverterBase : IToSpeckleTopLevelConver
 
   public Base Convert(object target) => Convert((CsiWrapperBase)target);
 
-  public Base Convert(CsiWrapperBase wrapper)
+  private Base Convert(CsiWrapperBase wrapper)
   {
     var displayValue = _displayValueExtractor.GetDisplayValue(wrapper).ToList();
     var objectData = _applicationPropertiesExtractor.ExtractProperties(wrapper);

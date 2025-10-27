@@ -8,32 +8,13 @@ namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 /// <summary>
 /// Extracts ETABS-specific properties from frame elements using the FrameObj API calls.
 /// </summary>
-/// <remarks>
-/// Responsibilities:
-/// <list type="bullet">
-///     <item><description>Extracts properties only available in ETABS (e.g., Label, Level)</description></item>
-///     <item><description>Complements <see cref="CsiFramePropertiesExtractor"/> by adding product-specific data</description></item>
-///     <item><description>Follows same pattern of single-purpose methods for clear API mapping</description></item>
-/// </list>
-///
-/// Design Decisions:
-/// <list type="bullet">
-///     <item><description>Maintains separate methods for each property following CSI API structure</description></item>
-///     <item><description>Properties are organized by their functional groups (Object ID, Assignments, Design)</description></item>
-/// </list>
-/// </remarks>
 public sealed class EtabsFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
-  public EtabsFramePropertiesExtractor(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    DatabaseTableExtractor databaseTableExtractor
-  )
+  public EtabsFramePropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _databaseTableExtractor = databaseTableExtractor;
   }
 
   public void ExtractProperties(CsiFrameWrapper frame, Dictionary<string, object?> properties)
@@ -46,11 +27,7 @@ public sealed class EtabsFramePropertiesExtractor
     assignments[CommonObjectProperty.SPRING_ASSIGNMENT] = GetSpringAssignmentName(frame);
 
     var design = properties.EnsureNested(ObjectPropertyCategory.DESIGN);
-    design["Design Procedure"] = GetDesignProcedure(frame);
-
-    var geometry = properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
-    double length = GetLength(frame);
-    geometry.AddWithUnits("Length", length, _settingsStore.Current.SpeckleUnits);
+    design[ObjectPropertyKey.DESIGN_PROCEDURE] = GetDesignProcedure(frame);
   }
 
   private (string label, string level) GetLabelAndLevel(CsiFrameWrapper frame)
@@ -89,17 +66,5 @@ public sealed class EtabsFramePropertiesExtractor
     string springPropertyName = string.Empty;
     _ = _settingsStore.Current.SapModel.FrameObj.GetSpringAssignment(frame.Name, ref springPropertyName);
     return springPropertyName;
-  }
-
-  private double GetLength(CsiFrameWrapper frame)
-  {
-    // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
-    // limit query size to "UniqueName" and "Length" fields
-    string length = _databaseTableExtractor
-      .GetTableData("Frame Assignments - Summary", requestedColumns: ["UniqueName", "Length"])
-      .GetRowValue(frame.Name, "Length");
-
-    // all database data is returned as strings
-    return double.TryParse(length, out double result) ? result : double.NaN;
   }
 }

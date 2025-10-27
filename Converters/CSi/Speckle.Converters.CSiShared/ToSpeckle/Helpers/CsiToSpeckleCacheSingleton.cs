@@ -16,4 +16,14 @@ public class CsiToSpeckleCacheSingleton
   /// A map of (section id, shell object id). Assumes the section id is the unique name of the section
   /// </summary>
   public Dictionary<string, List<string>> ShellSectionCache { get; set; } = [];
+
+  /// <summary>
+  /// A cache of cross-sectional areas used by <see cref="CsiFramePropertiesExtractor"/>
+  /// </summary>
+  public Dictionary<string, double> FrameSectionAreaCache { get; set; } = [];
+
+  /// <summary>
+  /// A cache of shell thicknesses used by <see cref="CsiShellPropertiesExtractor"/>
+  /// </summary>
+  public Dictionary<string, double> ShellThicknessCache { get; set; } = [];
 }
