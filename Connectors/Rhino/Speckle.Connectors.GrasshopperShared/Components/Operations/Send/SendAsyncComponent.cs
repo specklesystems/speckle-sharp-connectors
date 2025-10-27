@@ -76,8 +76,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     // model-wide props (see cnx-2722)
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
-      "Model Properties",
-      "MP",
+      "Properties",
+      "properties",
       "Optional model-wide properties to attach to the root collection",
       GH_ParamAccess.item
     );

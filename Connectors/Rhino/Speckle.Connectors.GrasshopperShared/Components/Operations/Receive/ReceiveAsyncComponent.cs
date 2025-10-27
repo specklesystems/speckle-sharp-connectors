@@ -69,8 +69,8 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
 
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
-      "Model Properties",
-      "MP",
+      "Properties",
+      "properties",
       "Model-wide properties from the root collection",
       GH_ParamAccess.item
     );
@@ -293,7 +293,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       Account? account = urlResource.Account.GetAccount(scope);
       if (account is null)
       {
-        throw new SpeckleAccountManagerException($"No default account was found");
+        throw new SpeckleAccountManagerException("No default account was found");
       }
 
       ApiClient?.Dispose();
@@ -459,7 +459,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
     if (
       Root is RootCollection rootCollection
-      && rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary
+      && rootCollection.properties is Dictionary<string, object?> rootPropertiesDictionary
     )
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);

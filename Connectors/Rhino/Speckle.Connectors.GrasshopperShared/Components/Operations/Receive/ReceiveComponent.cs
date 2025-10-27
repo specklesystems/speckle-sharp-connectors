@@ -75,9 +75,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
-      "Model Properties",
-      "MP",
-      "Optional model-wide properties to attach to the root collection",
+      "Properties",
+      "properties",
+      "Model-wide properties from the root collection",
       GH_ParamAccess.item
     );
   }
@@ -174,7 +174,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
     if (
       root is RootCollection rootCollection
-      && rootCollection.rootProperties is Dictionary<string, object?> rootPropertiesDictionary
+      && rootCollection.properties is Dictionary<string, object?> rootPropertiesDictionary
     )
     {
       rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);

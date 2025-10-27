@@ -42,7 +42,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
       new(rootCollectionGoo.Value.Name)
       {
         applicationId = rootCollectionGoo.Value.ApplicationId,
-        rootProperties = rootCollectionGoo.Value.RootProperties
+        properties = rootCollectionGoo.Value.RootProperties
       };
 
     // create packers for colors and render materials
