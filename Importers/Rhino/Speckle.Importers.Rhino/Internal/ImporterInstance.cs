@@ -28,7 +28,7 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
     UserActivityScope.AddUserScope(args.Account),
   ];
 
-  public async Task<Version> RunRhinoImport(ImporterArgs args, CancellationToken cancellationToken)
+  public async Task<Version> RunRhinoImport(CancellationToken cancellationToken)
   {
     try
     {

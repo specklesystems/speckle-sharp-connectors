@@ -58,7 +58,7 @@ public static class Program
         {
           try
           {
-            Version result = await importer.RunRhinoImport(importerArgs, CancellationToken.None).ConfigureAwait(false);
+            Version result = await importer.RunRhinoImport(CancellationToken.None).ConfigureAwait(false);
             WriteResult(new() { Version = result }, importerArgs.ResultsPath);
           }
           catch (Exception ex)
