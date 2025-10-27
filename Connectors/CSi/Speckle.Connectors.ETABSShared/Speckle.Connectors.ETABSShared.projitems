@@ -17,7 +17,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyDefinitionService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsSectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionPropertyExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\EtabsShellSectionResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsPluginBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\EtabsSpeckleFormBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

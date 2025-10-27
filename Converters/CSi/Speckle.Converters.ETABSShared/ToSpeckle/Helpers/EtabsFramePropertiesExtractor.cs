@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
-using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
 
 namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;

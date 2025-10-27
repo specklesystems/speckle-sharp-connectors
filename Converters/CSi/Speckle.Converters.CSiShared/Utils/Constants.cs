@@ -21,6 +21,7 @@ public static class ObjectPropertyCategory
 /// </summary>
 public static class ObjectPropertyKey
 {
+  public const string AREA = "Area";
   public const string CROSS_SECTIONAL_AREA = "Cross-Sectional Area";
   public const string DESIGN_PROCEDURE = "Design Procedure";
   public const string LENGTH = "Length";

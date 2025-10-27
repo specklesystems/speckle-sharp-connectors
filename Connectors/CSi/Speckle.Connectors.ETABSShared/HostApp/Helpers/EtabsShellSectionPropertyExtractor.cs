@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
-using Speckle.Converters.Common;
-using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 using Speckle.Converters.CSiShared.Utils;
+using Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
 namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 
@@ -11,53 +11,66 @@ namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
 /// </summary>
 public class EtabsShellSectionPropertyExtractor : IApplicationShellSectionPropertyExtractor
 {
-  private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly ILogger<EtabsShellSectionPropertyExtractor> _logger;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
   private readonly EtabsShellSectionResolver _etabsShellSectionResolver;
 
   public EtabsShellSectionPropertyExtractor(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
     ILogger<EtabsShellSectionPropertyExtractor> logger,
-    EtabsShellSectionResolver etabsShellSectionResolver
+    EtabsShellSectionResolver etabsShellSectionResolver,
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
   )
   {
-    _settingsStore = settingsStore;
     _logger = logger;
     _etabsShellSectionResolver = etabsShellSectionResolver;
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
   /// <summary>
-  /// Extract shell section properties
+  /// Extract shell section properties from cache.
   /// </summary>
   /// <remarks>
-  /// sectionName is unique across all types (Wall, Slab and Deck)
-  /// There is no general query such as PropArea.GetShell() - rather we have to be specific on the type, for example
-  /// PropArea.GetWall() or PropArea.GetDeck() BUT we can't get the building type given a SectionName.
-  /// Hence the introduction of ResolveSection.
+  /// By the time this method is called during section unpacking, all sections should already be
+  /// resolved and cached by <see cref="EtabsShellPropertiesExtractor"/> during object conversion.
   /// </remarks>
   public void ExtractProperties(string sectionName, Dictionary<string, object?> properties)
   {
-    // Step 01: Finding the appropriate api query for the unknown section type (wall, deck or slab)
+    // read from cache (populated during conversion)
+    if (_csiToSpeckleCacheSingleton.ShellSectionPropertiesCache.TryGetValue(sectionName, out var cachedProperties))
+    {
+      CopyCachedProperties(cachedProperties, properties);
+      return;
+    }
+
+    // fallback - section not in cache (shouldn't happen for sections in ShellSectionCache), but ... who knows? Etabs...
+    _logger.LogWarning("Section {SectionName} not found in cache during unpacking", sectionName);
+
     Dictionary<string, object?> resolvedProperties = _etabsShellSectionResolver.ResolveSection(sectionName);
 
-    // Step 02: Mutate properties dictionary with resolved properties
-    foreach (var nestedDictionary in resolvedProperties)
+    // cache it for next time (shouldn't be needed but defensive)
+    _csiToSpeckleCacheSingleton.ShellSectionPropertiesCache[sectionName] = resolvedProperties;
+
+    CopyCachedProperties(resolvedProperties, properties);
+  }
+
+  private void CopyCachedProperties(Dictionary<string, object?> source, Dictionary<string, object?> destination)
+  {
+    foreach (var kvp in source)
     {
-      if (nestedDictionary.Value is not Dictionary<string, object?> nestedValues)
+      if (kvp.Value is not Dictionary<string, object?> nestedValues)
       {
         _logger.LogWarning(
-          "Unexpected value type for key {Key} in section {SectionName}. Expected Dictionary<string, object?>, got {ActualType}",
-          nestedDictionary.Key,
-          sectionName,
-          nestedDictionary.Value?.GetType().Name ?? "null"
+          "Unexpected value type for key {Key}, expected Dictionary<string, object?>, got {ActualType}",
+          kvp.Key,
+          kvp.Value?.GetType().Name ?? "null"
         );
         continue;
       }
 
-      var nestedProperties = properties.EnsureNested(nestedDictionary.Key);
-      foreach (var kvp in nestedValues)
+      var nestedProperties = destination.EnsureNested(kvp.Key);
+      foreach (var nested in nestedValues)
       {
-        nestedProperties[kvp.Key] = kvp.Value;
+        nestedProperties[nested.Key] = nested.Value;
       }
     }
   }

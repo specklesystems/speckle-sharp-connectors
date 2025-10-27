@@ -18,12 +18,14 @@ public class CsiToSpeckleCacheSingleton
   public Dictionary<string, List<string>> ShellSectionCache { get; set; } = [];
 
   /// <summary>
-  /// A cache of cross-sectional areas used by <see cref="CsiFramePropertiesExtractor"/>
+  /// A cache of cross-sectional areas used
   /// </summary>
   public Dictionary<string, double> FrameSectionAreaCache { get; set; } = [];
 
   /// <summary>
-  /// A cache of shell thicknesses used by <see cref="CsiShellPropertiesExtractor"/>
+  /// A cache of resolved shell section properties populated by "EtabsShellPropertiesExtractor"
+  /// and consumed by "EtabsShellSectionPropertyExtractor".
+  /// This eliminates redundant section resolution API calls.
   /// </summary>
-  public Dictionary<string, double> ShellThicknessCache { get; set; } = [];
+  public Dictionary<string, Dictionary<string, object?>> ShellSectionPropertiesCache { get; set; } = [];
 }

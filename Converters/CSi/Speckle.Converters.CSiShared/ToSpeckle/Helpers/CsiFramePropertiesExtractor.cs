@@ -56,7 +56,7 @@ public sealed class CsiFramePropertiesExtractor
     assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
     assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
 
-    // CNX-2725 adds more numeric props for dashboarding
+    // CNX-2725 adds more numeric props for dashboard-ing
     double length = GetLength(frame);
     double area = GetCrossSectionalArea(sectionId);
 
