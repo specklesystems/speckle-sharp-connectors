@@ -55,17 +55,18 @@ public static class Program
       // As soon as the main thread is yielded, it will be hogged by Rhino
       // Task.Run ensures we run everything on a thread pool thread.
       await Task.Run(async () =>
-      {
-        try
         {
-          Version result = await importer.RunRhinoImport(importerArgs, CancellationToken.None).ConfigureAwait(false);
-          WriteResult(new() { Version = result }, importerArgs.ResultsPath);
-        }
-        catch (Exception ex)
-        {
-          WriteResult(new() { ErrorMessage = ex.Message }, importerArgs.ResultsPath);
-        }
-      });
+          try
+          {
+            Version result = await importer.RunRhinoImport(importerArgs, CancellationToken.None).ConfigureAwait(false);
+            WriteResult(new() { Version = result }, importerArgs.ResultsPath);
+          }
+          catch (Exception ex)
+          {
+            WriteResult(new() { ErrorMessage = ex.Message }, importerArgs.ResultsPath);
+          }
+        })
+        .ConfigureAwait(false);
     }
     catch (Exception ex)
     {
