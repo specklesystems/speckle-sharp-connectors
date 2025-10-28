@@ -71,5 +71,61 @@ public class CsiDiaphragmCenterOfMassDisplacementsResultsExtractor : IApplicatio
         "No load cases or combinations in database match user-selected load cases and combinations"
       ); // shouldn't fail silently
     }
+
+    // Step 3: Extract arrays from the nested dictionary structure
+    var stories = new string[filteredEntries.Count];
+    var diaphragms = new string[filteredEntries.Count];
+    var loadCases = new string[filteredEntries.Count];
+    var stepNums = new string[filteredEntries.Count];
+    var uxValues = new double[filteredEntries.Count];
+    var uyValues = new double[filteredEntries.Count];
+    var rzValues = new double[filteredEntries.Count];
+    var pointValues = new string[filteredEntries.Count];
+    var xValues = new double[filteredEntries.Count];
+    var yValues = new double[filteredEntries.Count];
+    var zValues = new double[filteredEntries.Count];
+
+    for (int i = 0; i < filteredEntries.Count; i++)
+    {
+      var entry = filteredEntries[i];
+      var nestedDict = entry.Value;
+
+      // Extract Story, Diaphragm, LoadCase, StepNum, PointValues and Location directly from the nested dictionary
+      if (!nestedDict.TryGetValue(STORY, out var story) || string.IsNullOrEmpty(story))
+      {
+        throw new InvalidOperationException($"Missing or empty 'Story' column in database row {i}");
+      }
+      stories[i] = story;
+      diaphragms[i] = nestedDict.TryGetValue(DIAPHRAGM, out var diaphragm) ? diaphragm : string.Empty;
+      loadCases[i] = nestedDict.TryGetValue(LOAD_CASE, out var loadCase) ? loadCase : string.Empty;
+      stepNums[i] = nestedDict.TryGetValue(STEP_NUM, out var step) ? step : string.Empty;
+      pointValues[i] = nestedDict.TryGetValue(POINT, out var point) ? point : string.Empty;
+
+      // Extract numeric values directly from nested dictionary using field names as keys
+      uxValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(UX, out var ux) ? ux : null);
+      uyValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(UY, out var uy) ? uy : null);
+      rzValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(RZ, out var rz) ? rz : null);
+      xValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(X, out var x) ? x : null);
+      yValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(Y, out var y) ? y : null);
+      zValues[i] = ResultsExtractorHelper.TryParseDouble(nestedDict.TryGetValue(Z, out var z) ? z : null);
+    }
+
+    var rawArrays = new Dictionary<string, object>
+    {
+      [STORY] = stories,
+      [DIAPHRAGM] = diaphragms,
+      [LOAD_CASE] = loadCases,
+      [STEP_NUM] = stepNums,
+      [POINT] = pointValues,
+      [UX] = uxValues,
+      [UY] = uyValues,
+      [RZ] = rzValues,
+      [X] = xValues,
+      [Y] = yValues,
+      [Z] = zValues
+    };
+
+    // Step 4: return sorted and processed dictionary
+    return _resultsArrayProcessor.ProcessArrays(rawArrays, Configuration);
   }
 }

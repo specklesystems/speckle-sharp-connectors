@@ -26,6 +26,7 @@ public static class ServiceRegistration
 
     // Register results extractors
     serviceCollection.AddScoped<CsiBaseReactResultsExtractor>();
+    serviceCollection.AddScoped<CsiDiaphragmCenterOfMassDisplacementsResultsExtractor>();
     serviceCollection.AddScoped<CsiFrameForceResultsExtractor>();
     serviceCollection.AddScoped<CsiJointReactResultsExtractor>();
     serviceCollection.AddScoped<CsiModalPeriodExtractor>();

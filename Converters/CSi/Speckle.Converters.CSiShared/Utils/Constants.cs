@@ -63,6 +63,7 @@ public static class CommonObjectProperty
 public static class ResultsKey
 {
   public const string BASE_REACT = "Base Reactions";
+  public const string DIAPHRAGM_CENTER_OF_MASS_DISPLACEMENTS = "Diaphragm Center Of Mass Displacements";
   public const string FRAME_FORCES = "Frame Forces";
   public const string JOINT_REACT = "Joint Reactions";
   public const string MODAL_PERIOD = "Modal Period";
@@ -75,6 +76,7 @@ public static class ResultsKey
   public static readonly string[] All =
   [
     BASE_REACT,
+    DIAPHRAGM_CENTER_OF_MASS_DISPLACEMENTS,
     FRAME_FORCES,
     JOINT_REACT,
     MODAL_PERIOD,

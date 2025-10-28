@@ -17,6 +17,8 @@ public class CsiResultsExtractorFactory
     resultsKey switch
     {
       ResultsKey.BASE_REACT => _serviceProvider.GetRequiredService<CsiBaseReactResultsExtractor>(),
+      ResultsKey.DIAPHRAGM_CENTER_OF_MASS_DISPLACEMENTS
+        => _serviceProvider.GetRequiredService<CsiDiaphragmCenterOfMassDisplacementsResultsExtractor>(),
       ResultsKey.FRAME_FORCES => _serviceProvider.GetRequiredService<CsiFrameForceResultsExtractor>(),
       ResultsKey.JOINT_REACT => _serviceProvider.GetRequiredService<CsiJointReactResultsExtractor>(),
       ResultsKey.MODAL_PERIOD => _serviceProvider.GetRequiredService<CsiModalPeriodExtractor>(),
