@@ -8,28 +8,18 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// Extracts properties common to shell elements across CSi products (e.g., Etabs, Sap2000)
 /// using the AreaObj API calls.
 /// </summary>
-/// <remarks>
-/// Design Decisions:
-/// <list type="bullet">
-///     <item>
-///         <description>
-///             Individual methods preferred over batched calls due to:
-///             <list type="bullet">
-///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
-///                 <item><description>Easier debugging and error tracing</description></item>
-///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
-///             </list>
-///         </description>
-///     </item>
-/// </list>
-/// </remarks>
 public sealed class CsiShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
+  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
-  public CsiShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
+  public CsiShellPropertiesExtractor(
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
+  )
   {
     _settingsStore = settingsStore;
+    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, PropertyExtractionResult shellData)
@@ -37,7 +27,7 @@ public sealed class CsiShellPropertiesExtractor
     shellData.ApplicationId = shell.GetSpeckleApplicationId(_settingsStore.Current.SapModel);
 
     var geometry = shellData.Properties.EnsureNested(ObjectPropertyCategory.GEOMETRY);
-    geometry["Joints"] = GetPointNames(shell); // TODO: 🪲 Viewer shows 4 but only displays 3
+    geometry["Joints"] = GetPointNames(shell);
 
     var assignments = shellData.Properties.EnsureNested(ObjectPropertyCategory.ASSIGNMENTS);
     assignments[CommonObjectProperty.GROUPS] = GetGroupAssigns(shell);
