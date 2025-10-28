@@ -26,7 +26,6 @@ public static class ServiceRegistration
     services.AddScoped<IApplicationShellSectionPropertyExtractor, EtabsShellSectionPropertyExtractor>();
     services.AddScoped<EtabsSectionPropertyDefinitionService>();
     services.AddScoped<EtabsSectionPropertyExtractor>();
-    services.AddScoped<EtabsShellSectionResolver>();
 
     return services;
   }
