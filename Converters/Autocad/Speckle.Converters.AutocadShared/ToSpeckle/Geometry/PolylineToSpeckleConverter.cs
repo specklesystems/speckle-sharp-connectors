@@ -17,6 +17,7 @@ public class PolylineToSpeckleConverter
 {
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc3d, SOG.Arc> _arcConverter;
+
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
   private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
@@ -40,7 +41,7 @@ public class PolylineToSpeckleConverter
 
   public SOG.Autocad.AutocadPolycurve Convert(ADB.Polyline target)
   {
-    List<double> value = new(target.NumberOfVertices * 2);
+    List<double> value = new(target.NumberOfVertices * 3);
     List<double> bulges = new(target.NumberOfVertices);
     List<Objects.ICurve> segments = new();
     for (int i = 0; i < target.NumberOfVertices; i++)
@@ -74,6 +75,13 @@ public class PolylineToSpeckleConverter
 
     SOG.Vector normal = _vectorConverter.Convert(target.Normal);
 
+    // get the elevation transformed by ucs
+    double elevation = target.Elevation;
+    if (_settingsStore.Current.ReferencePointTransform is AG.Matrix3d ucsToWcs)
+    {
+      elevation = TransformElevationByUCS(target.Normal, elevation, ucsToWcs);
+    }
+
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
       {
@@ -82,7 +90,7 @@ public class PolylineToSpeckleConverter
         bulges = bulges,
         normal = normal,
         tangents = null,
-        elevation = target.Elevation,
+        elevation = elevation,
         polyType = SOG.Autocad.AutocadPolyType.Light,
         closed = target.Closed,
         length = target.Length,
@@ -91,5 +99,28 @@ public class PolylineToSpeckleConverter
       };
 
     return polycurve;
+  }
+
+  /// <summary>
+  /// The elevation prop is actually the perpendicular distance of the OCS plane from WCS origin
+  /// So to get the elevation in UCS, we need to get that perpendicular distance measured in UCS’s coordinate axes fml
+  /// </summary>
+  /// <param name="normal">in WCS</param>
+  /// <param name="elevation"></param>
+  /// <param name="ucsToWcs"></param>
+  /// <returns></returns>
+  private double TransformElevationByUCS(AG.Vector3d normal, double elevation, AG.Matrix3d ucsToWcs)
+  {
+    // get a point in wcs on the plane
+    AG.Point3d wcsPoint = AG.Point3d.Origin + normal * elevation;
+
+    // Transform into UCS
+    AG.Matrix3d wcsToUcs = ucsToWcs.Inverse();
+    AG.Point3d ucsPoint = wcsPoint.TransformBy(wcsToUcs);
+    AG.Vector3d ucsNormal = normal.TransformBy(wcsToUcs);
+
+    // Compute UCS elevation as plane offset
+    double ucsElevation = ucsPoint.GetAsVector().DotProduct(ucsNormal);
+    return ucsElevation;
   }
 }

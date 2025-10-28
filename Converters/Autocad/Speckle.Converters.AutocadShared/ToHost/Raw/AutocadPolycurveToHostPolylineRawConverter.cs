@@ -29,21 +29,25 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
       );
     }
 
+    // get the transform from WCS to OCS based on the normal
+    AG.Vector3d normal = _vectorConverter.Convert(target.normal);
+    AG.Matrix3d matrixOCS = AG.Matrix3d.WorldToPlane(normal);
+
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point2d> points2d = target.value.ConvertToPoint2d(f);
+    List<AG.Point3d> points3d = target.value.ConvertToPoint3d(f).Select(o => o.TransformBy(matrixOCS)).ToList();
 
     ADB.Polyline polyline =
       new()
       {
-        Normal = _vectorConverter.Convert(target.normal),
+        Normal = normal,
         Elevation = (double)target.elevation * f,
         Closed = target.closed
       };
 
-    for (int i = 0; i < points2d.Count; i++)
+    for (int i = 0; i < points3d.Count; i++)
     {
       var bulge = target.bulges is null ? 0 : target.bulges[i];
-      polyline.AddVertexAt(i, points2d[i], bulge, 0, 0);
+      polyline.AddVertexAt(i, new(points3d[i].X, points3d[i].Y), bulge, 0, 0);
     }
 
     return polyline;
