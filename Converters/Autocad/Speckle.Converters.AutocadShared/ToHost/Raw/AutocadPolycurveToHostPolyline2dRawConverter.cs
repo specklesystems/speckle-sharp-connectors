@@ -35,13 +35,10 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
       throw new ArgumentException($"Autocad polycurve of type {target.polyType} did not have an elevation");
     }
 
-    // get the transform from wcs to ocs based on the normal
+    // convert the normal, get vertices and transform them to ocs
     var convertedNormal = _vectorConverter.Convert(normal);
-    var matrixOCS = AG.Matrix3d.WorldToPlane(convertedNormal);
-
-    // get vertices and transform them to ocs
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points = target.value.ConvertToPoint3d(f).Select(o => o.TransformBy(matrixOCS)).ToList();
+    List<AG.Point3d> points = target.value.ConvertToPoint3dInOcs(convertedNormal, f);
 
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)
