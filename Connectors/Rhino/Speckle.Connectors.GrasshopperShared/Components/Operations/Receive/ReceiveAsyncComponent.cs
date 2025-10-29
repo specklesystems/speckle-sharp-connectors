@@ -47,15 +47,13 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
   public bool JustPastedIn { get; set; }
   public string LastVersionDate { get; set; }
   public string LastInfoMessage { get; set; }
-  public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
+  public SpeckleUrlModelResource? UrlModelResource { get; set; }
 
   // DI props
   public IClient ApiClient { get; private set; }
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
-  {
+  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
     pManager.AddParameter(new SpeckleUrlModelResourceParam(GH_ParamAccess.item));
-  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
@@ -457,12 +455,9 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     CancellationToken.ThrowIfCancellationRequested();
 
     SpecklePropertyGroupGoo? rootPropertiesGoo = null;
-    if (
-      Root is RootCollection rootCollection
-      && rootCollection.properties is Dictionary<string, object?> rootPropertiesDictionary
-    )
+    if (Root is RootCollection rootCollection && rootCollection.properties.Count > 0)
     {
-      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootPropertiesDictionary);
+      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootCollection.properties);
     }
 
     // Step 2 - CONVERT

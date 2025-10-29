@@ -4,15 +4,12 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 
 public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
 {
-  public Dictionary<string, object?>? RootProperties { get; set; }
+  public Dictionary<string, object?>? Properties { get; set; }
 
   public SpeckleRootCollectionWrapper() { }
 
   [SetsRequiredMembers]
-  public SpeckleRootCollectionWrapper(
-    SpeckleCollectionWrapper wrapper,
-    Dictionary<string, object?>? rootProperties = null
-  )
+  public SpeckleRootCollectionWrapper(SpeckleCollectionWrapper wrapper, Dictionary<string, object?>? properties = null)
   {
     Base = wrapper.Base;
     Color = wrapper.Color;
@@ -22,7 +19,7 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
     Path = wrapper.Path;
     Topology = wrapper.Topology;
     Elements = wrapper.Elements;
-    RootProperties = rootProperties;
+    Properties = properties;
   }
 
   public new SpeckleRootCollectionWrapper DeepCopy()
@@ -39,7 +36,7 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
       Path = baseCopy.Path,
       Topology = baseCopy.Topology,
       Elements = baseCopy.Elements,
-      RootProperties = RootProperties != null ? new Dictionary<string, object?>(RootProperties) : null // RootProperties are not mutated after creation, so shallow copy okay? 🫣
+      Properties = Properties != null ? new Dictionary<string, object?>(Properties) : null
     };
   }
 }
