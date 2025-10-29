@@ -172,7 +172,7 @@ public class Polyline2dToSpeckleConverter
     double elevation = target.Elevation;
     if (_settingsStore.Current.ReferencePointTransform is AG.Matrix3d ucsToWcs)
     {
-      elevation = TransformElevationByUCS(target.Normal, elevation, ucsToWcs);
+      elevation = target.Normal.TransformElevationToUCS(elevation, ucsToWcs);
     }
 
     SOG.Autocad.AutocadPolycurve polycurve =
@@ -192,29 +192,6 @@ public class Polyline2dToSpeckleConverter
       };
 
     return polycurve;
-  }
-
-  /// <summary>
-  /// The elevation prop is actually the perpendicular distance of the OCS plane from WCS origin
-  /// So to get the elevation in UCS, we need to get that perpendicular distance measured in UCSâ€™s coordinate axes fml
-  /// </summary>
-  /// <param name="normal">in WCS</param>
-  /// <param name="elevation"></param>
-  /// <param name="ucsToWcs"></param>
-  /// <returns></returns>
-  private double TransformElevationByUCS(AG.Vector3d normal, double elevation, AG.Matrix3d ucsToWcs)
-  {
-    // get a point in wcs on the plane
-    AG.Point3d wcsPoint = AG.Point3d.Origin + normal * elevation;
-
-    // Transform into UCS
-    AG.Matrix3d wcsToUcs = ucsToWcs.Inverse();
-    AG.Point3d ucsPoint = wcsPoint.TransformBy(wcsToUcs);
-    AG.Vector3d ucsNormal = normal.TransformBy(wcsToUcs);
-
-    // Compute UCS elevation as plane offset
-    double ucsElevation = ucsPoint.GetAsVector().DotProduct(ucsNormal);
-    return ucsElevation;
   }
 
   /// <summary>
