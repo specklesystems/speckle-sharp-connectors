@@ -25,7 +25,7 @@ public class DoublesToSpeckleRawConverter : ITypedConverter<List<double>, SOG.Po
       throw new ArgumentException("Point list of xyz values is malformed", nameof(target));
     }
 
-    List<double> value = _referencePointConverter.ConvertDoublesToExternalCoordinates(target);
+    List<double> value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(target);
 
     return new() { value = value, units = _settingsStore.Current.SpeckleUnits };
   }

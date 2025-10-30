@@ -51,7 +51,7 @@ public class DBSplineToSpeckleRawConverter : ITypedConverter<ADB.Spline, SOG.Cur
     List<Point3d> points = new();
     foreach (Point3d point in data.GetControlPoints().OfType<Point3d>())
     {
-      points.Add(_referencePointConverter.ConvertPointToExternalCoordinates(point));
+      points.Add(_referencePointConverter.ConvertWCSPointToExternalCoordinates(point));
     }
 
     // NOTE: for closed periodic splines, autocad does not track last #degree points.

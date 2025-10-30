@@ -11,7 +11,7 @@ namespace Speckle.Converters.Autocad;
 public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSettings> converterSettings)
   : IReferencePointConverter
 {
-  public List<double> ConvertDoublesToExternalCoordinates(List<double> d)
+  public List<double> ConvertWCSDoublesToExternalCoordinates(List<double> d)
   {
     if (d.Count % 3 != 0)
     {
@@ -39,7 +39,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
     return d;
   }
 
-  public AG.Point3d ConvertPointToExternalCoordinates(AG.Point3d p)
+  public AG.Point3d ConvertWCSPointToExternalCoordinates(AG.Point3d p)
   {
     if (converterSettings.Current.ReferencePointTransform is AG.Matrix3d transform)
     {
@@ -49,7 +49,7 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
     return p;
   }
 
-  public AG.Vector3d ConvertVectorToExternalCoordinates(AG.Vector3d v)
+  public AG.Vector3d ConvertWCSVectorToExternalCoordinates(AG.Vector3d v)
   {
     if (converterSettings.Current.ReferencePointTransform is AG.Matrix3d transform)
     {

@@ -70,7 +70,7 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
         new()
         {
           faces = faces,
-          vertices = _referencePointConverter.ConvertDoublesToExternalCoordinates(vertices), // transform by reference point
+          vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
           units = _settingsStore.Current.SpeckleUnits,
           area = target.GetSurfaceArea()
         };

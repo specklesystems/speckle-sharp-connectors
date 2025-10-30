@@ -68,7 +68,7 @@ public class DBSubDMeshToSpeckleRawConverter : ITypedConverter<ADB.SubDMesh, SOG
     SOG.Mesh speckleMesh =
       new()
       {
-        vertices = _referencePointConverter.ConvertDoublesToExternalCoordinates(vertices), // transform with reference point
+        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform with reference point
         faces = faces,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,

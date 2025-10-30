@@ -39,7 +39,7 @@ public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3d
 
     return new()
     {
-      value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // transform by reference point
+      value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // transform by reference point
       units = _settingsStore.Current.SpeckleUnits,
       closed = false,
       length = length

@@ -19,7 +19,7 @@ public class Point3dToSpeckleRawConverter : ITypedConverter<AG.Point3d, SOG.Poin
 
   public SOG.Point Convert(AG.Point3d target)
   {
-    AG.Point3d extPt = _referencePointConverter.ConvertPointToExternalCoordinates(target);
+    AG.Point3d extPt = _referencePointConverter.ConvertWCSPointToExternalCoordinates(target);
     return new(extPt.X, extPt.Y, extPt.Z, _settingsStore.Current.SpeckleUnits);
   }
 }

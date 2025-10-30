@@ -179,7 +179,7 @@ public class Polyline2dToSpeckleConverter
       new()
       {
         segments = segments,
-        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
+        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // convert with reference point
         bulges = bulges,
         tangents = tangents,
         normal = normal,

@@ -68,7 +68,7 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
     SOG.Mesh mesh =
       new()
       {
-        vertices = _referencePointConverter.ConvertDoublesToExternalCoordinates(vertices), // transform by reference point
+        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
         faces = faces,
         units = _settingsStore.Current.SpeckleUnits
       };

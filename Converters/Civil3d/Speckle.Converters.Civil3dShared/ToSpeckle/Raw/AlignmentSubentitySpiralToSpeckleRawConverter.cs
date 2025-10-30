@@ -51,7 +51,7 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     SOG.Polyline polyline =
       new()
       {
-        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(polylineValue), // convert by ref point transform
+        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(polylineValue), // convert by ref point transform
         units = units,
         closed = spiral.StartPoint == spiral.EndPoint
       };

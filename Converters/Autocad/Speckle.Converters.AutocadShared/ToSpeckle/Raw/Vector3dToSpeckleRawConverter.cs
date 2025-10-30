@@ -19,7 +19,7 @@ public class Vector3dToSpeckleRawConverter : ITypedConverter<AG.Vector3d, SOG.Ve
 
   public SOG.Vector Convert(AG.Vector3d target)
   {
-    AG.Vector3d extVector = _referencePointConverter.ConvertVectorToExternalCoordinates(target);
+    AG.Vector3d extVector = _referencePointConverter.ConvertWCSVectorToExternalCoordinates(target);
     return new(extVector.X, extVector.Y, extVector.Z, _settingsStore.Current.SpeckleUnits);
   }
 }

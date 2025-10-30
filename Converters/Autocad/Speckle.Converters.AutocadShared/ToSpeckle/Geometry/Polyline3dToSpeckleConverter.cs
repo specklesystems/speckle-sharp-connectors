@@ -120,7 +120,7 @@ public class Polyline3dToSpeckleConverter
         bulges = null,
         tangents = null,
         normal = null,
-        value = _referencePointConverter.ConvertDoublesToExternalCoordinates(value), // convert with reference point
+        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // convert with reference point
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,
