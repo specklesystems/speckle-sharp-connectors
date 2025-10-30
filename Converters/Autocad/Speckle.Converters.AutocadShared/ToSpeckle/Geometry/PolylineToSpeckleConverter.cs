@@ -1,4 +1,3 @@
-using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Sdk.Models;
@@ -77,11 +76,10 @@ public class PolylineToSpeckleConverter
     SOG.Vector normal = _vectorConverter.Convert(target.Normal);
 
     // get the elevation transformed by ucs
-    double elevation = target.Elevation;
-    if (_settingsStore.Current.ReferencePointTransform is AG.Matrix3d ucsToWcs)
-    {
-      elevation = target.Normal.TransformElevationToUCS(elevation, ucsToWcs);
-    }
+    double elevation = _referencePointConverter.ConvertOCSElevationDoubleToExternalCoordinates(
+      target.Elevation,
+      target.Normal
+    );
 
     SOG.Autocad.AutocadPolycurve polycurve =
       new()

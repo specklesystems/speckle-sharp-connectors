@@ -58,4 +58,17 @@ public class ReferencePointConverter(IConverterSettingsStore<AutocadConversionSe
 
     return v;
   }
+
+  public double ConvertOCSElevationDoubleToExternalCoordinates(double elevation, AG.Vector3d normal)
+  {
+    // get a point on the plane in WCS
+    AG.Point3d wcsPoint = AG.Point3d.Origin + normal * elevation;
+
+    // transform to external coords
+    AG.Point3d extPoint = ConvertWCSPointToExternalCoordinates(wcsPoint);
+    AG.Vector3d extNormal = ConvertWCSVectorToExternalCoordinates(normal);
+
+    // calculate elevation as perpendicular distance in external coords
+    return extPoint.GetAsVector().DotProduct(extNormal);
+  }
 }
