@@ -35,9 +35,10 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
       throw new ArgumentException($"Autocad polycurve of type {target.polyType} did not have an elevation");
     }
 
-    // get vertices
+    // convert the normal, get vertices and transform them to ocs
+    var convertedNormal = _vectorConverter.Convert(normal);
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
+    List<AG.Point3d> points = target.value.ConvertToPoint3dInOcs(convertedNormal, f);
 
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)
@@ -52,7 +53,6 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
     }
 
     // create the polyline2d using the empty constructor
-    AG.Vector3d convertedNormal = _vectorConverter.Convert(normal);
     double convertedElevation = elevation * f;
     ADB.Polyline2d polyline =
       new()

@@ -24,17 +24,13 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
   {
     if (target.normal is null || target.elevation is null)
     {
-      throw new System.ArgumentException(
-        "Autocad polycurve of type light did not have a valid normal and/or elevation"
-      );
+      throw new ArgumentException("Autocad polycurve of type light did not have a valid normal and/or elevation");
     }
 
-    // get the transform from WCS to OCS based on the normal
+    // convert the normal, get vertices and transform them to ocs
     AG.Vector3d normal = _vectorConverter.Convert(target.normal);
-    AG.Matrix3d matrixOCS = AG.Matrix3d.WorldToPlane(normal);
-
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points3d = target.value.ConvertToPoint3d(f).Select(o => o.TransformBy(matrixOCS)).ToList();
+    List<AG.Point3d> points3d = target.value.ConvertToPoint3dInOcs(normal, f);
 
     ADB.Polyline polyline =
       new()
