@@ -25,6 +25,8 @@ public static class ServiceRegistration
     >();
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
 
+    serviceCollection.AddScoped<IReferencePointConverter, ReferencePointConverter>();
+
     // add other classes
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
