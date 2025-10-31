@@ -4,7 +4,9 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Serialisation;
@@ -21,6 +23,7 @@ public sealed class SendOperation<T>(
   ISendOperationExecutor sendOperationExecutor,
   ISendOperationVersionRecorder sendOperationVersionRecorder,
   ISdkActivityFactory activityFactory,
+  IClientFactory clientFactory,
   IThreadContext threadContext
 ) : ISendOperation<T>
 {
@@ -29,25 +32,50 @@ public sealed class SendOperation<T>(
     SendInfo sendInfo,
     string? versionMessage,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct
   )
   {
+    using var apiClient = clientFactory.Create(sendInfo.Account);
+
+    Ingest ingest = await apiClient.Ingest.Create(
+      new IngestCreateInput(
+        "My Rhino File",
+        20,
+        sendInfo.ModelId,
+        sendInfo.ProjectId,
+        sendInfo.SourceApplication,
+        "1234",
+        new Dictionary<string, object?>()
+      ),
+      ct
+    );
+
+    DateTime lastUpdate = new DateTime();
+    var ingestProgress = new Progress<CardProgress>(x =>
+    {
+      onOperationProgressed.Report(x);
+      var updateInput = new IngestUpdateInput(
+        ingest.id,
+        x.Progress is null ? null : Math.Round((float)x.Progress.Value, 3),
+        x.Status,
+        ingest.projectId
+      );
+
+      var now = DateTime.Now;
+      var elapsedMs = (now - lastUpdate).Milliseconds;
+      if (elapsedMs > 500)
+      {
+        lastUpdate = now;
+        _ = apiClient.Ingest.Update(updateInput, ct).Result;
+      }
+    });
+
     ct.ThrowIfCancellationRequested();
-    var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
+    var buildResult = await Build(objects, sendInfo.ProjectId, ingestProgress, ct);
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
     var (results, version) = await threadContext.RunOnWorkerAsync(
-      () =>
-        Send(
-          buildResult.RootObject,
-          sendInfo.ProjectId,
-          sendInfo.ModelId,
-          sendInfo.SourceApplication,
-          versionMessage,
-          sendInfo.Account,
-          onOperationProgressed,
-          ct
-        )
+      () => Send(buildResult.RootObject, ingest, versionMessage, apiClient, ingestProgress, ct)
     );
     ct.ThrowIfCancellationRequested();
     return new(results.RootId, version.id, results.ConvertedReferences, buildResult.ConversionResults);
@@ -70,11 +98,9 @@ public sealed class SendOperation<T>(
 
   public async Task<(SerializeProcessResults, Version)> Send(
     Base commitObject,
-    string projectId,
-    string modelId,
-    string sourceApplication,
+    Ingest ingest,
     string? versionMessage,
-    Account account,
+    IClient apiClient,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken ct = default
   )
@@ -83,20 +109,20 @@ public sealed class SendOperation<T>(
 
     onOperationProgressed.Report(new("Uploading...", null));
 
-    using var userScope = UserActivityScope.AddUserScope(account);
+    using var userScope = UserActivityScope.AddUserScope(apiClient.Account);
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
     var sendResult = await sendOperationExecutor.Send(
-      new Uri(account.serverInfo.url),
-      projectId,
-      account.token,
+      apiClient.ServerUrl,
+      ingest.projectId,
+      apiClient.Account.token,
       commitObject,
       onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
       ct
     );
 
-    sendConversionCache.StoreSendResult(projectId, sendResult.ConvertedReferences);
+    sendConversionCache.StoreSendResult(ingest.projectId, sendResult.ConvertedReferences);
 
     ct.ThrowIfCancellationRequested();
 
@@ -105,11 +131,9 @@ public sealed class SendOperation<T>(
     // 8 - Create the version (commit)
     var version = await sendOperationVersionRecorder.RecordVersion(
       sendResult.RootId,
-      modelId,
-      projectId,
-      sourceApplication,
+      ingest,
       versionMessage,
-      account,
+      apiClient,
       ct
     );
 

@@ -1,33 +1,42 @@
 ﻿using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
-using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]
-public class SendOperationVersionRecorder(IClientFactory clientFactory) : ISendOperationVersionRecorder
+public class SendOperationVersionRecorder : ISendOperationVersionRecorder
 {
   public async Task<Version> RecordVersion(
     string rootId,
-    string modelId,
-    string projectId,
-    string sourceApplication,
+    Ingest ingest,
     string? versionMessage,
-    Account account,
+    IClient apiClient,
     CancellationToken ct
   )
   {
-    using var apiClient = clientFactory.Create(account);
+    // var x = await apiClient
+    //   .Version.Create(
+    //     new CreateVersionInput(
+    //       rootId,
+    //       modelId,
+    //       projectId,
+    //       sourceApplication: sourceApplication,
+    //       message: versionMessage
+    //     ),
+    //     ct
+    //   )
+    //   .ConfigureAwait(true);
+
     var x = await apiClient
-      .Version.Create(
-        new CreateVersionInput(
+      .Ingest.End(
+        new IngestFinishInput(
+          ingest.id,
+          versionMessage,
           rootId,
-          modelId,
-          projectId,
-          sourceApplication: sourceApplication,
-          message: versionMessage
+          ingest.projectId
         ),
         ct
       )
