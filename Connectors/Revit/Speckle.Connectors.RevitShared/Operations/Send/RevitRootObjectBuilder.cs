@@ -263,8 +263,11 @@ public class RevitRootObjectBuilder(
     );
 
     // STEP 6: Unpack all other objects to attach to root collection
-    var views = viewUnpacker.Unpack(converterSettings.Current.Document);
-    rootObject[RootKeys.VIEW] = views;
+    List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
+    if (views.Count > 0)
+    {
+      rootObject[RootKeys.VIEW] = views;
+    }
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;

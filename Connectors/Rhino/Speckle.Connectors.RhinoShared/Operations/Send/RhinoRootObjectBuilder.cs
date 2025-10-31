@@ -142,7 +142,11 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     // 5 - Unpack all other objects for the root
     using (var _ = _activityFactory.Start("UnpackViews"))
     {
-      rootObjectCollection[RootKeys.VIEW] = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
+      List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
+      if (views.Count > 0)
+      {
+        rootObjectCollection[RootKeys.VIEW] = views;
+      }
     }
 
     return new RootObjectBuilderResult(rootObjectCollection, results);
