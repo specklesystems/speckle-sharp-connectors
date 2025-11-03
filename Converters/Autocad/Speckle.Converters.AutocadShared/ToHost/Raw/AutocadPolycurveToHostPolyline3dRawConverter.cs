@@ -20,7 +20,7 @@ public class AutocadPolycurveToHostPolyline3dRawConverter
   {
     // get vertices
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
+    List<AG.Point3d> points = target.value.ConvertToPoint3dFromWcsToOcs(f);
 
     // create the polyline3d using the empty constructor
     ADB.Polyline3d polyline = new() { Closed = target.closed };

@@ -27,16 +27,17 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
       throw new ArgumentException("Autocad polycurve of type light did not have a valid normal and/or elevation");
     }
 
-    // convert the normal, get vertices and transform them to ocs
+    // convert the normal, get vertices and transform them to ocs (extension method supports both 2d and 3d polyline vertices)
     AG.Vector3d normal = _vectorConverter.Convert(target.normal);
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points3d = target.value.ConvertToPoint3dInOcs(normal, f);
+    double elevation = (double)target.elevation;
+    List<AG.Point3d> points3d = target.value.ConvertPolylineValueToPoint3dInOcs(normal, elevation, f);
 
     ADB.Polyline polyline =
       new()
       {
         Normal = normal,
-        Elevation = (double)target.elevation * f,
+        Elevation = elevation * f,
         Closed = target.closed
       };
 
