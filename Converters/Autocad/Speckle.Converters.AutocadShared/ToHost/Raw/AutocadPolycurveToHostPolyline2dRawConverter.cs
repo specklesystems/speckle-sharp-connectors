@@ -38,7 +38,13 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
     // convert the normal, get vertices and transform them to ocs (extension method supports both 2d and 3d polyline vertices)
     var convertedNormal = _vectorConverter.Convert(normal);
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points = target.value.ConvertPolylineValueToPoint3dInOcs(convertedNormal, elevation, f);
+    List<AG.Point3d> points = target.value.ConvertPolylineValueToPoint3dInOcs(
+      convertedNormal,
+      elevation,
+      f,
+      target.bulges,
+      target.tangents
+    );
 
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)

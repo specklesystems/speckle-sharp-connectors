@@ -34,10 +34,12 @@ public static class ListExtensions
     this List<double> pointList,
     AG.Vector3d normal,
     double elevation,
-    double conversionFactor = 1
+    double conversionFactor = 1,
+    List<double>? bulges = null,
+    List<double?>? tangents = null
   )
   {
-    bool is2DPointList = pointList.Count % 2 == 0 && pointList.Count % 3 != 0;
+    bool is2DPointList = IsPointList2D(pointList, bulges, tangents);
 
     if (is2DPointList)
     {
@@ -58,6 +60,43 @@ public static class ListExtensions
 
     // 3D format: XYZ in external coords, transform to OCS
     return pointList.ConvertToPoint3dInOcs(normal, conversionFactor);
+  }
+
+  private static bool IsPointList2D(
+    List<double> pointList,
+    List<double>? bulgeList = null,
+    List<double?>? tangentList = null
+  )
+  {
+    // first pass: use bulge or tangent list length to determine vertex count
+    int? vertexCount = null;
+
+    if (bulgeList != null && bulgeList.Count > 0)
+    {
+      vertexCount = bulgeList.Count;
+    }
+    else if (tangentList != null && tangentList.Count > 0)
+    {
+      vertexCount = tangentList.Count;
+    }
+
+    // if we know the vertex count, check if pointList matches 2D or 3D format
+    if (vertexCount.HasValue)
+    {
+      if (pointList.Count == vertexCount.Value * 2)
+      {
+        return true; // 2D format (XY pairs)
+      }
+
+      if (pointList.Count == vertexCount.Value * 3)
+      {
+        return false; // 3D format (XYZ triplets)
+      }
+    }
+
+    // second pass: fall back to point count analysis
+    // assume 3D (safer default), only treat as 2D if NOT divisible by 3
+    return pointList.Count % 3 != 0;
   }
 
   /// <summary>
