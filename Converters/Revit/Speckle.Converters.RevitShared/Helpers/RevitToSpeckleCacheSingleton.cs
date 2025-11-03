@@ -149,11 +149,15 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
     // get specific material proxy
     if (!proxyMap.TryGetValue(materialId, out var materialProxy))
     {
-      logger.LogError(
-        "Cache inconsistency: Material proxy not found for material {MaterialId} in element {ElementId}",
-        materialId,
-        elementId
-      );
+      if (materialId != DB.ElementId.InvalidElementId.ToString())
+      {
+        logger.LogError(
+          "Cache inconsistency: Material proxy not found for material {MaterialId} in element {ElementId}",
+          materialId,
+          elementId
+        );
+      }
+
       return;
     }
 
