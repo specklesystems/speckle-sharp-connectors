@@ -183,8 +183,9 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     var unpackedRoot = rootObjectUnpacker.Unpack(root);
 
     // split atomic objects from block components before conversion
-    var (atomicObjects, blockInstances, atomicObjectsWithInstances, displayInstances) =
-      rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+    var (atomicObjects, blockInstances, atomicObjectsWithInstances) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+      unpackedRoot.ObjectsToConvert
+    );
 
     // Initialize unpackers and collection builder
     var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);

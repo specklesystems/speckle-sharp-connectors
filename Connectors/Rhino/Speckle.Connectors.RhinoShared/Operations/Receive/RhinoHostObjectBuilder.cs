@@ -86,39 +86,34 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
-    var (
-      atomicObjectsWithoutInstanceComponents,
-      atomicInstanceComponents,
-      atomicObjectsWithInstanceComponents,
-      displayInstanceComponents
-    ) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+    var (atomicObjectsWithoutInstanceComponents, instanceComponents, atomicObjectsWithInstanceComponents) =
+      _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
 
     var atomicObjectsWithoutInstanceComponentsWithPath = _layerBaker.GetAtomicObjectsWithPath(
       atomicObjectsWithoutInstanceComponents
     );
-    var atomicInstanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(atomicInstanceComponents);
+    var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
     var atomicObjectsWithInstanceComponentsWithPath = _layerBaker.GetAtomicObjectsWithPath(
       atomicObjectsWithInstanceComponents
     );
-    var displayInstanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(displayInstanceComponents);
 
     // 2.0 - POC!! this could be done with a traversal helper!!
     // create a map between atomic objects with display instances, and the display instances of that atomic object (index)
     Dictionary<int, List<int>> displayInstanceIdMap = new();
-    for (int i = 0; i < displayInstanceComponents.Count; i++)
+    for (int i = 0; i < atomicObjectsWithInstanceComponents.Count; i++)
     {
-      TraversalContext displayInstanceComponent = displayInstanceComponents.ElementAt(i);
-      for (int j = 0; j < atomicObjectsWithInstanceComponents.Count; j++)
+      TraversalContext atomicObjectWithInstanceDisplay = atomicObjectsWithInstanceComponents.ElementAt(i);
+      for (int j = 0; j < instanceComponents.Count; j++)
       {
-        if (displayInstanceComponent.Parent == atomicObjectsWithInstanceComponents.ElementAt(j))
+        if (atomicObjectWithInstanceDisplay == instanceComponents.ElementAt(j))
         {
-          if (displayInstanceIdMap.TryGetValue(j, out List<int>? value))
+          if (displayInstanceIdMap.TryGetValue(i, out List<int>? value))
           {
-            value.Add(i);
+            value.Add(j);
           }
           else
           {
-            displayInstanceIdMap.Add(j, new List<int>() { i });
+            displayInstanceIdMap.Add(i, new List<int>() { j });
           }
         }
       }
@@ -130,11 +125,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      // POC:!!!! commenting this out for now, because we have no way of differentiating between atomic instance definitions and display instance definitions.
-      // This means that currently atomic instances are broken.
-      // we should introduce a separate root key to store display value definitions.
-      //atomicInstanceComponentsWithPath.AddRange(transformed);
-      displayInstanceComponentsWithPath.AddRange(transformed);
+
+      instanceComponentsWithPath.AddRange(transformed);
     }
 
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
@@ -165,7 +157,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
           var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
           paths.AddRange(atomicObjectsWithInstanceComponentsWithPath.Select(t => t.path));
-          paths.AddRange(atomicInstanceComponentsWithPath.Select(t => t.path));
+          paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
           _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
         })
         .Wait(cancellationToken);
@@ -258,30 +250,18 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       // bake atomic instances
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
-        atomicInstanceComponentsWithPath,
+        instanceComponentsWithPath,
         applicationIdMap,
         baseLayerName,
         onOperationProgressed
       );
 
+      createdDisplayIds = createdInstanceIds;
+
       bakedObjectIds.RemoveWhere(id => consumedObjectIds.Contains(id)); // remove all objects that have been "consumed"
       bakedObjectIds.UnionWith(createdInstanceIds); // add instance ids
       conversionResults.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
       conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
-
-      // bake display instances
-      var (createdDisplayInstanceIds, consumedDisplayObjectIds, displayInstanceConversionResults) =
-        _instanceBaker.BakeInstances(
-          displayInstanceComponentsWithPath,
-          applicationIdMap,
-          baseLayerName,
-          onOperationProgressed
-        );
-
-      createdDisplayIds = createdDisplayInstanceIds;
-      conversionResults.RemoveWhere(result =>
-        result.ResultId != null && consumedDisplayObjectIds.Contains(result.ResultId)
-      ); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
     }
 
     // 7 - Convert atomic objects with instance components
@@ -308,11 +288,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
           // 3: bake
           var conversionIds = new List<string>();
-
+          List<string> createdInstanceIds = new();
           if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion, this should be the only type of non instance atomic object with instances in display value
           {
             // add display instances here
-            List<string> createdInstanceIds = new();
             if (displayInstanceIdMap.TryGetValue(i, out List<int>? value))
             {
               foreach (var instanceIndex in value)
@@ -320,6 +299,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
                 createdInstanceIds.Add(createdDisplayIds.ElementAt(instanceIndex));
               }
             }
+
             var guids = BakeObjectsAsFallbackGroup(
               fallbackConversionResult,
               createdInstanceIds,

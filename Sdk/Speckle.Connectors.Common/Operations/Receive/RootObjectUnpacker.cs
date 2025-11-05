@@ -56,20 +56,18 @@ public class RootObjectUnpacker
   /// <returns></returns>
   public (
     IReadOnlyCollection<TraversalContext> atomicNonInstanceObjects,
-    IReadOnlyCollection<TraversalContext> atomicInstanceComponents,
-    IReadOnlyCollection<TraversalContext> atomicNonInstanceObjectsWithInstanceComponents,
-    IReadOnlyCollection<TraversalContext> displayInstanceComponents
+    IReadOnlyCollection<TraversalContext> instanceComponents,
+    IReadOnlyCollection<TraversalContext> atomicNonInstanceObjectsWithInstanceComponents
   ) SplitAtomicObjectsAndInstances(IEnumerable<TraversalContext> objectsToSplit)
   {
     List<TraversalContext> atomicObjectsWithoutInstanceComponents = [];
-    List<TraversalContext> atomicInstanceComponents = [];
+    List<TraversalContext> instanceComponents = [];
     List<TraversalContext> atomicObjectsWithInstanceComponents = [];
-    List<TraversalContext> displayInstanceComponents = [];
     foreach (TraversalContext tc in objectsToSplit)
     {
       if (tc.Current is IInstanceComponent)
       {
-        atomicInstanceComponents.Add(tc);
+        instanceComponents.Add(tc);
       }
       else
       {
@@ -81,7 +79,7 @@ public class RootObjectUnpacker
             if (displayValue is IInstanceComponent)
             {
               containsInstanceComponents = true;
-              displayInstanceComponents.Add(new TraversalContext(displayValue, parent: tc));
+              instanceComponents.Add(new TraversalContext(displayValue, parent: tc));
             }
           }
 
@@ -101,12 +99,7 @@ public class RootObjectUnpacker
       }
     }
 
-    return (
-      atomicObjectsWithoutInstanceComponents,
-      atomicInstanceComponents,
-      atomicObjectsWithInstanceComponents,
-      displayInstanceComponents
-    );
+    return (atomicObjectsWithoutInstanceComponents, instanceComponents, atomicObjectsWithInstanceComponents);
   }
 
   private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>
