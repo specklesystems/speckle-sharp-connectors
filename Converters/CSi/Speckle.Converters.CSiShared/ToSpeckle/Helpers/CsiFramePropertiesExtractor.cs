@@ -8,25 +8,11 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 /// Extracts properties common to frame elements across CSi products (e.g., Etabs, Sap2000)
 /// using the FrameObj API calls.
 /// </summary>
-/// <remarks>
-/// Design Decisions:
-/// <list type="bullet">
-///     <item>
-///         <description>
-///             Individual methods preferred over batched calls due to:
-///             <list type="bullet">
-///                 <item><description>Independent API calls with no performance gain from batching (?)</description></item>
-///                 <item><description>Easier debugging and error tracing</description></item>
-///                 <item><description>Simpler maintenance as each method maps to one API concept</description></item>
-///             </list>
-///         </description>
-///     </item>
-/// </list>
-/// </remarks>
 public sealed class CsiFramePropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
   private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
+  private readonly DatabaseTableExtractor _databaseTableExtractor;
 
   private static readonly string[] s_releaseKeys =
   [
@@ -36,15 +22,17 @@ public sealed class CsiFramePropertiesExtractor
     "Torsion",
     "Moment 22 (Minor)",
     "Moment 33 (Major)"
-  ]; // Note: caching keys for better performance
+  ];
 
   public CsiFramePropertiesExtractor(
     CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton,
-    IConverterSettingsStore<CsiConversionSettings> settingsStore
+    IConverterSettingsStore<CsiConversionSettings> settingsStore,
+    DatabaseTableExtractor databaseTableExtractor
   )
   {
     _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
     _settingsStore = settingsStore;
+    _databaseTableExtractor = databaseTableExtractor;
   }
 
   public void ExtractProperties(CsiFrameWrapper frame, PropertyExtractionResult frameData)
@@ -61,12 +49,28 @@ public sealed class CsiFramePropertiesExtractor
     assignments[CommonObjectProperty.PROPERTY_MODIFIERS] = GetModifiers(frame);
     assignments["End Releases"] = GetReleases(frame);
 
-    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc.
+    // NOTE: sectionId and materialId a "quick-fix" to enable filtering in the viewer etc. Strings are unique
     // Assign sectionId to variable as this will be an argument for the GetMaterialName method
     string sectionId = GetSectionName(frame);
     string materialId = GetMaterialName(sectionId);
     assignments[ObjectPropertyKey.SECTION_ID] = sectionId;
     assignments[ObjectPropertyKey.MATERIAL_ID] = materialId;
+
+    // CNX-2725 adds more numeric props for dashboard-ing
+    double length = GetLength(frame);
+    double area = GetCrossSectionalArea(sectionId);
+
+    double volume = double.NaN;
+    if (!double.IsNaN(length) && !double.IsNaN(area) && length > 0 && area > 0)
+    {
+      // I am paranoid about what etabs could throw our way
+      double computedVolume = length * area;
+      volume = (!double.IsInfinity(computedVolume) && !double.IsNaN(computedVolume)) ? computedVolume : double.NaN;
+    }
+
+    geometry.AddWithUnits(ObjectPropertyKey.LENGTH, length, _settingsStore.Current.SpeckleUnits);
+    geometry.AddWithUnits(ObjectPropertyKey.CROSS_SECTIONAL_AREA, area, $"{_settingsStore.Current.SpeckleUnits}²");
+    geometry.AddWithUnits(ObjectPropertyKey.VOLUME, volume, $"{_settingsStore.Current.SpeckleUnits}³");
 
     // store the object, section, and material id relationships in their corresponding caches to be accessed by the connector
     if (!string.IsNullOrEmpty(sectionId))
@@ -195,5 +199,57 @@ public sealed class CsiFramePropertiesExtractor
     string materialName = string.Empty;
     _ = _settingsStore.Current.SapModel.PropFrame.GetMaterial(sectionName, ref materialName);
     return materialName;
+  }
+
+  private double GetLength(CsiFrameWrapper frame)
+  {
+    // using the DatabaseTableExtractor fetch table with key "Frame Assignments - Summary"
+    // limit query size to "UniqueName" and "Length" fields
+    string length = _databaseTableExtractor
+      .GetTableData("Frame Assignments - Summary", requestedColumns: ["UniqueName", ObjectPropertyKey.LENGTH])
+      .GetRowValue(frame.Name, ObjectPropertyKey.LENGTH);
+
+    // all database data is returned as strings
+    return double.TryParse(length, out double result) ? result : double.NaN;
+  }
+
+  private double GetCrossSectionalArea(string sectionName)
+  {
+    if (_csiToSpeckleCacheSingleton.FrameSectionAreaCache.TryGetValue(sectionName, out double value))
+    {
+      return value;
+    }
+
+    double area = 0,
+      as2 = 0,
+      as3 = 0,
+      torsion = 0,
+      i22 = 0,
+      i33 = 0,
+      s22 = 0,
+      s33 = 0,
+      z22 = 0,
+      z33 = 0,
+      r22 = 0,
+      r33 = 0;
+    int result = _settingsStore.Current.SapModel.PropFrame.GetSectProps(
+      sectionName,
+      ref area,
+      ref as2,
+      ref as3,
+      ref torsion,
+      ref i22,
+      ref i33,
+      ref s22,
+      ref s33,
+      ref z22,
+      ref z33,
+      ref r22,
+      ref r33
+    );
+
+    double validatedArea = result == 0 ? area : double.NaN;
+    _csiToSpeckleCacheSingleton.FrameSectionAreaCache.Add(sectionName, validatedArea);
+    return validatedArea;
   }
 }

@@ -21,8 +21,14 @@ public static class ObjectPropertyCategory
 /// </summary>
 public static class ObjectPropertyKey
 {
+  public const string AREA = "Area";
+  public const string CROSS_SECTIONAL_AREA = "Cross-Sectional Area";
+  public const string DESIGN_PROCEDURE = "Design Procedure";
+  public const string LENGTH = "Length";
   public const string MATERIAL_ID = "Material";
   public const string SECTION_ID = "Section Property";
+  public const string THICKNESS = "Thickness";
+  public const string VOLUME = "Volume";
 }
 
 /// <summary>
