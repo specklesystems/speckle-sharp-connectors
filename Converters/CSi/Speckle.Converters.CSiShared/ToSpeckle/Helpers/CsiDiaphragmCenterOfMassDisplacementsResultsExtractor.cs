@@ -12,8 +12,8 @@ public class CsiDiaphragmCenterOfMassDisplacementsResultsExtractor : IApplicatio
   private const string TABLE_KEY = "Diaphragm Center Of Mass Displacements";
   private const string STORY = "Story";
   private const string DIAPHRAGM = "Diaphragm";
-  private const string LOAD_CASE = "LoadCase";
-  private const string STEP_NUM = "StepNum";
+  private const string LOAD_CASE = "OutputCase";
+  private const string STEP_NUM = "StepNumber";
   private const string UX = "UX";
   private const string UY = "UY";
   private const string RZ = "RZ";
@@ -25,7 +25,7 @@ public class CsiDiaphragmCenterOfMassDisplacementsResultsExtractor : IApplicatio
   public string ResultsKey => "diaphragmCenterOfMassDisplacements";
   public ModelObjectType TargetObjectType => ModelObjectType.NONE;
   public ResultsConfiguration Configuration { get; } =
-    new([STORY, DIAPHRAGM, LOAD_CASE, STEP_NUM], [UX, UY, RZ, POINT, X, Y, Z]);
+    new([STORY, DIAPHRAGM, LOAD_CASE, $"Wrap:{STEP_NUM}"], [UX, UY, RZ, POINT, X, Y, Z]);
 
   public CsiDiaphragmCenterOfMassDisplacementsResultsExtractor(
     IConverterSettingsStore<CsiConversionSettings> settingsStore,
