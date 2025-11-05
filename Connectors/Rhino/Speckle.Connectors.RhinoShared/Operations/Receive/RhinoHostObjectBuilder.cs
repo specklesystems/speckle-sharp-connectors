@@ -105,7 +105,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       TraversalContext atomicObjectWithInstanceDisplay = atomicObjectsWithInstanceComponents.ElementAt(i);
       for (int j = 0; j < instanceComponents.Count; j++)
       {
-        if (atomicObjectWithInstanceDisplay == instanceComponents.ElementAt(j))
+        if (atomicObjectWithInstanceDisplay == instanceComponents.ElementAt(j).Parent)
         {
           if (displayInstanceIdMap.TryGetValue(i, out List<int>? value))
           {
