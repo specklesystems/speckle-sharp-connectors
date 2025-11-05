@@ -1,4 +1,4 @@
-﻿using Speckle.Objects.Data;
+using Speckle.Objects.Data;
 using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -48,36 +48,65 @@ public class RootObjectUnpacker
   public IReadOnlyCollection<LevelProxy>? TryGetLevelProxies(Base root) =>
     TryGetProxies<LevelProxy>(root, ProxyKeys.LEVEL);
 
+  /// <summary>
+  /// POC!!! super hacky, we need an official way to differentiate between atomic instances, display value instances, atomic instance definitions, and display value instance definitions.
+  /// This should be reflected on the root collection.
+  /// </summary>
+  /// <param name="objectsToSplit"></param>
+  /// <returns></returns>
   public (
-    IReadOnlyCollection<TraversalContext> atomicObjects,
-    IReadOnlyCollection<TraversalContext> instanceComponents
+    IReadOnlyCollection<TraversalContext> atomicNonInstanceObjects,
+    IReadOnlyCollection<TraversalContext> atomicInstanceComponents,
+    IReadOnlyCollection<TraversalContext> atomicNonInstanceObjectsWithInstanceComponents,
+    IReadOnlyCollection<TraversalContext> displayInstanceComponents
   ) SplitAtomicObjectsAndInstances(IEnumerable<TraversalContext> objectsToSplit)
   {
-    List<TraversalContext> atomicObjects = [];
-    List<TraversalContext> instanceComponents = [];
+    List<TraversalContext> atomicObjectsWithoutInstanceComponents = [];
+    List<TraversalContext> atomicInstanceComponents = [];
+    List<TraversalContext> atomicObjectsWithInstanceComponents = [];
+    List<TraversalContext> displayInstanceComponents = [];
     foreach (TraversalContext tc in objectsToSplit)
     {
       if (tc.Current is IInstanceComponent)
       {
-        instanceComponents.Add(tc);
+        atomicInstanceComponents.Add(tc);
       }
       else
       {
-        atomicObjects.Add(tc);
-      }
-
-      if (tc.Current is DataObject dataObject)
-      {
-        foreach (var displayValue in dataObject.displayValue)
+        if (tc.Current is DataObject dataObject)
         {
-          if (displayValue is IInstanceComponent)
+          bool containsInstanceComponents = false;
+          foreach (var displayValue in dataObject.displayValue)
           {
-            instanceComponents.Add(new TraversalContext(displayValue, parent: tc));
+            if (displayValue is IInstanceComponent)
+            {
+              containsInstanceComponents = true;
+              displayInstanceComponents.Add(new TraversalContext(displayValue, parent: tc));
+            }
           }
+
+          if (containsInstanceComponents)
+          {
+            atomicObjectsWithInstanceComponents.Add(tc);
+          }
+          else
+          {
+            atomicObjectsWithoutInstanceComponents.Add(tc);
+          }
+        }
+        else
+        {
+          atomicObjectsWithoutInstanceComponents.Add(tc);
         }
       }
     }
-    return (atomicObjects, instanceComponents);
+
+    return (
+      atomicObjectsWithoutInstanceComponents,
+      atomicInstanceComponents,
+      atomicObjectsWithInstanceComponents,
+      displayInstanceComponents
+    );
   }
 
   private IReadOnlyCollection<T>? TryGetProxies<T>(Base root, string key) =>

@@ -16,6 +16,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
@@ -64,9 +65,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _conversionHandler = conversionHandler;
   }
 
-#pragma warning disable CA1506
+#pragma warning disable CA1506, CA1502
   public Task<HostObjectBuilderResult> Build(
-#pragma warning restore CA1506
+#pragma warning restore CA1506, CA1502
     Base rootObject,
     string projectName,
     string modelName,
@@ -85,13 +86,43 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
     // 2 - Split atomic objects and instance components with their path
-    var (atomicObjectsWithoutInstanceComponentsForConverter, instanceComponents) =
-      _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+    var (
+      atomicObjectsWithoutInstanceComponents,
+      atomicInstanceComponents,
+      atomicObjectsWithInstanceComponents,
+      displayInstanceComponents
+    ) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
 
     var atomicObjectsWithoutInstanceComponentsWithPath = _layerBaker.GetAtomicObjectsWithPath(
-      atomicObjectsWithoutInstanceComponentsForConverter
+      atomicObjectsWithoutInstanceComponents
     );
-    var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
+    var atomicInstanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(atomicInstanceComponents);
+    var atomicObjectsWithInstanceComponentsWithPath = _layerBaker.GetAtomicObjectsWithPath(
+      atomicObjectsWithInstanceComponents
+    );
+    var displayInstanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(displayInstanceComponents);
+
+    // 2.0 - POC!! this could be done with a traversal helper!!
+    // create a map between atomic objects with display instances, and the display instances of that atomic object (index)
+    Dictionary<int, List<int>> displayInstanceIdMap = new();
+    for (int i = 0; i < displayInstanceComponents.Count; i++)
+    {
+      TraversalContext displayInstanceComponent = displayInstanceComponents.ElementAt(i);
+      for (int j = 0; j < atomicObjectsWithInstanceComponents.Count; j++)
+      {
+        if (displayInstanceComponent.Parent == atomicObjectsWithInstanceComponents.ElementAt(j))
+        {
+          if (displayInstanceIdMap.TryGetValue(j, out List<int>? value))
+          {
+            value.Add(i);
+          }
+          else
+          {
+            displayInstanceIdMap.Add(j, new List<int>() { i });
+          }
+        }
+      }
+    }
 
     // 2.1 - these are not captured by traversal, so we need to re-add them here
     if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
@@ -99,7 +130,11 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      instanceComponentsWithPath.AddRange(transformed);
+      // POC:!!!! commenting this out for now, because we have no way of differentiating between atomic instance definitions and display instance definitions.
+      // This means that currently atomic instances are broken.
+      // we should introduce a separate root key to store display value definitions.
+      //atomicInstanceComponentsWithPath.AddRange(transformed);
+      displayInstanceComponentsWithPath.AddRange(transformed);
     }
 
     // 3 - Bake materials and colors, as they are used later down the line by layers and objects
@@ -129,13 +164,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         {
           using var layerNoDraw = new DisableRedrawScope(_converterSettings.Current.Document.Views);
           var paths = atomicObjectsWithoutInstanceComponentsWithPath.Select(t => t.path).ToList();
-          paths.AddRange(instanceComponentsWithPath.Select(t => t.path));
+          paths.AddRange(atomicObjectsWithInstanceComponentsWithPath.Select(t => t.path));
+          paths.AddRange(atomicInstanceComponentsWithPath.Select(t => t.path));
           _layerBaker.CreateAllLayersForReceive(paths, baseLayerName);
         })
         .Wait(cancellationToken);
     }
 
-    // 5 - Convert atomic objects
+    // 5 - Convert atomic objects without instances first!!
     var bakedObjectIds = new HashSet<string>();
     Dictionary<string, IReadOnlyCollection<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
     HashSet<ReceiveConversionResult> conversionResults = new();
@@ -146,7 +182,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       foreach (var (path, obj) in atomicObjectsWithoutInstanceComponentsWithPath)
       {
         onOperationProgressed.Report(
-          new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponentsForConverter.Count)
+          new("Converting objects", (double)++count / atomicObjectsWithoutInstanceComponents.Count)
         );
         var ex = _conversionHandler.TryConvert(() =>
         {
@@ -182,7 +218,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           }
           else if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion
           {
-            var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, obj, atts, baseLayerName);
+            var guids = BakeObjectsAsFallbackGroup(fallbackConversionResult, new(), obj, atts, baseLayerName);
             conversionIds.AddRange(guids.Select(id => id.ToString()));
           }
 
@@ -217,10 +253,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 6 - Convert instances
+    IReadOnlyCollection<string> createdDisplayIds;
     using (var _ = _activityFactory.Start("Converting instances"))
     {
+      // bake atomic instances
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
-        instanceComponentsWithPath,
+        atomicInstanceComponentsWithPath,
         applicationIdMap,
         baseLayerName,
         onOperationProgressed
@@ -230,6 +268,96 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       bakedObjectIds.UnionWith(createdInstanceIds); // add instance ids
       conversionResults.RemoveWhere(result => result.ResultId != null && consumedObjectIds.Contains(result.ResultId)); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
       conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
+
+      // bake display instances
+      var (createdDisplayInstanceIds, consumedDisplayObjectIds, displayInstanceConversionResults) =
+        _instanceBaker.BakeInstances(
+          displayInstanceComponentsWithPath,
+          applicationIdMap,
+          baseLayerName,
+          onOperationProgressed
+        );
+
+      createdDisplayIds = createdDisplayInstanceIds;
+      conversionResults.RemoveWhere(result =>
+        result.ResultId != null && consumedDisplayObjectIds.Contains(result.ResultId)
+      ); // remove all conversion results for atomic objects that have been consumed (POC: not that cool, but prevents problems on object highlighting)
+    }
+
+    // 7 - Convert atomic objects with instance components
+    using (var _ = _activityFactory.Start("Converting objects"))
+    {
+      for (int i = 0; i < atomicObjectsWithInstanceComponentsWithPath.Count; i++)
+      {
+        var (path, obj) = atomicObjectsWithInstanceComponentsWithPath.ElementAt(i);
+        onOperationProgressed.Report(
+          new("Converting objects", (double)++count / atomicObjectsWithInstanceComponentsWithPath.Count)
+        );
+        var ex = _conversionHandler.TryConvert(() =>
+        {
+          // 0: get pre-created layer from cache in layer baker
+          int layerIndex = _layerBaker.GetLayerIndex(path, baseLayerName);
+          cancellationToken.ThrowIfCancellationRequested();
+
+          // 1: create object attributes for baking
+          ObjectAttributes atts = obj.GetAttributes();
+          atts.LayerIndex = layerIndex;
+
+          // 2: convert
+          var result = _converter.Convert(obj);
+
+          // 3: bake
+          var conversionIds = new List<string>();
+
+          if (result is List<(GeometryBase, Base)> fallbackConversionResult) // one to many fallback conversion, this should be the only type of non instance atomic object with instances in display value
+          {
+            // add display instances here
+            List<string> createdInstanceIds = new();
+            if (displayInstanceIdMap.TryGetValue(i, out List<int>? value))
+            {
+              foreach (var instanceIndex in value)
+              {
+                createdInstanceIds.Add(createdDisplayIds.ElementAt(instanceIndex));
+              }
+            }
+            var guids = BakeObjectsAsFallbackGroup(
+              fallbackConversionResult,
+              createdInstanceIds,
+              obj,
+              atts,
+              baseLayerName
+            );
+            conversionIds.AddRange(guids.Select(id => id.ToString()));
+          }
+
+          if (conversionIds.Count == 0)
+          {
+            // TODO: add this condition to report object - same as in autocad
+            throw new ConversionException("Object did not convert to any native geometry");
+          }
+
+          // 4: log
+          var id = conversionIds[0]; // this is group id if it is a one to many conversion, otherwise id of object itself
+          conversionResults.Add(new(Status.SUCCESS, obj, id, result.GetType().ToString()));
+          if (conversionIds.Count == 1)
+          {
+            bakedObjectIds.Add(id);
+          }
+          else
+          {
+            // first item always a group id if it is a one-to-many,
+            // we do not want to deal with later groups and its sub elements. It causes a huge issue on performance.
+            bakedObjectIds.AddRange(conversionIds.Skip(1));
+          }
+
+          // 5: populate app id map
+          applicationIdMap[obj.applicationId ?? obj.id.NotNull()] = conversionIds;
+        });
+        if (ex is not null)
+        {
+          conversionResults.Add(new(Status.ERROR, obj, null, null, ex));
+        }
+      }
     }
 
     // 7 - Create groups
@@ -334,6 +462,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   private List<Guid> BakeObjectsAsFallbackGroup(
     IEnumerable<(GeometryBase, Base)> fallbackConversionResult,
+    List<string> createdInstanceIds,
     Base originatingObject,
     ObjectAttributes atts,
     string baseLayerName
@@ -347,6 +476,21 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       var id = BakeObject(conversionResult, originalBaseObject, parentId, atts);
       objectIds.Add(id);
       objCount++;
+    }
+
+    // now add already created instances
+    foreach (string instanceId in createdInstanceIds)
+    {
+      var instanceGuid = new Guid(instanceId);
+      var docObject = _converterSettings.Current.Document.Objects.FindId(instanceGuid);
+      if (docObject is null)
+      {
+        continue;
+      }
+      docObject.Attributes = atts;
+      docObject.CommitChanges();
+      objCount++;
+      objectIds.Add(instanceGuid);
     }
 
     // only create groups if we really need to, ie if the fallback conversion result count is bigger than one.

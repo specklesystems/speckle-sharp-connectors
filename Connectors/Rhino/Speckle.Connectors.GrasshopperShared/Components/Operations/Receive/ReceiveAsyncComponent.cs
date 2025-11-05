@@ -452,7 +452,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
 
     // separate atomic objects from block instances
-    var (atomicObjects, blockInstances) = scope
+    var (atomicObjects, blockInstances, atomicObjectsWithInstances, displayInstances) = scope
       .Get<RootObjectUnpacker>()
       .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
 

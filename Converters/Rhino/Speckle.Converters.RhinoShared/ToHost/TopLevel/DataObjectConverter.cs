@@ -4,6 +4,7 @@ using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
@@ -83,6 +84,7 @@ public class DataObjectConverter
       SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
       SOG.Region region => new() { _regionConverter.Convert(region) },
       SOG.SubDX subd => _subdConverter.Convert(subd),
+      InstanceProxy => [],
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
   }
