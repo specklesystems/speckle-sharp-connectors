@@ -297,6 +297,15 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
     SpecklePropertyGroupGoo? rootPropsGoo = null;
     da.GetData(3, ref rootPropsGoo);
+
+    // validate single properties group
+    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
+    if (Params.Input[3].VolatileData.DataCount > 1)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Only one Model Properties group is allowed");
+      return;
+    }
+
     RootProperties = rootPropsGoo;
   }
 }

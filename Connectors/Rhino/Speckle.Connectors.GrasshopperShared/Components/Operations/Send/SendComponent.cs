@@ -112,6 +112,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     SpecklePropertyGroupGoo? rootPropsGoo = null;
     da.GetData(3, ref rootPropsGoo);
 
+    // validate single properties group
+    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
+    if (Params.Input[3].VolatileData.DataCount > 1)
+    {
+      throw new SpeckleException("Only one Model Properties group is allowed");
+    }
+
     bool run = false;
     da.GetData(4, ref run);
 
