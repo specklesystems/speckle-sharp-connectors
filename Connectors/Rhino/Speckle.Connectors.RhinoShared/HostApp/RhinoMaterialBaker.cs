@@ -96,27 +96,27 @@ public class RhinoMaterialBaker
     }
   }
 
-  /// <summary>
-  /// Removes all materials with a name starting with <paramref name="namePrefix"/> from the active document
-  /// </summary>
-  /// <param name="namePrefix"></param>
-  [Obsolete("Material purging is no longer performed automatically during receives. Materials are now reused across receives to preserve user edits.")]
-  public void PurgeMaterials(string namePrefix)
-  {
-    var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
-    foreach (Material material in currentDoc.Materials)
-    {
-      try
-      {
-        if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
-        {
-          currentDoc.Materials.Delete(material);
-        }
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        _logger.LogError(ex, "Failed to purge a material from the document");
-      }
-    }
-  }
+  // /// <summary>
+  // /// Removes all materials with a name starting with <paramref name="namePrefix"/> from the active document
+  // /// </summary>
+  // /// <param name="namePrefix"></param>
+  // [Obsolete("Material purging is no longer performed automatically during receives. Materials are now reused across receives to preserve user edits.")]
+  // public void PurgeMaterials(string namePrefix)
+  // {
+  //   var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
+  //   foreach (Material material in currentDoc.Materials)
+  //   {
+  //     try
+  //     {
+  //       if (!material.IsDeleted && material.Name != null && material.Name.Contains(namePrefix))
+  //       {
+  //         currentDoc.Materials.Delete(material);
+  //       }
+  //     }
+  //     catch (Exception ex) when (!ex.IsFatal())
+  //     {
+  //       _logger.LogError(ex, "Failed to purge a material from the document");
+  //     }
+  //   }
+  // }
 }
