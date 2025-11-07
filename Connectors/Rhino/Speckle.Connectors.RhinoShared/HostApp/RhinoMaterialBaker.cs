@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Rhino;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
