@@ -1,0 +1,9 @@
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Speckle.Importers.Rhino": {
+      "commandName": "Project",
+      "commandLineArgs": "\"{\\\"FilePath\\\":\\\"C:\\\\\\\\Test Files\\\\Non-conf\\\\Drawing1.dwg\\\",\\\"JobId\\\":\\\"FAKE\\\",\\\"BlobId\\\":\\\"FAKE\\\",\\\"Attempt\\\":1,\\\"ResultsPath\\\":\\\"C:\\\\\\\\Users\\\\Jedd\\\\AppData\\\\Local\\\\Temp\\\\speckle-file-importeja00ppl.hue/results.json\\\",\\\"HostApplication\\\":{\\\"Name\\\":\\\"LOCAL\\\",\\\"Slug\\\":\\\"slug\\\"},\\\"Project\\\":{\\\"id\\\":\\\"4969a740d0\\\"},\\\"ModelId\\\":\\\"ddf8bb0f1f\\\",\\\"Account\\\":{\\\"id\\\":\\\"5C016E8F0F95F039102CBE8366C5C7F3\\\",\\\"token\\\":null,\\\"refreshToken\\\":null,\\\"isDefault\\\":false,\\\"isOnline\\\":true,\\\"serverInfo\\\":{\\\"name\\\":\\\"My new Speckle Server\\\",\\\"company\\\":\\\"Unknown Company\\\",\\\"version\\\":\\\"custom\\\",\\\"description\\\":\\\"This a community deployment of a Speckle Server.\\\",\\\"frontend2\\\":true,\\\"url\\\":\\\"http://127.0.0.1\\\",\\\"migration\\\":null},\\\"userInfo\\\":{\\\"id\\\":\\\"9034646ad1\\\",\\\"name\\\":\\\"asdf\\\",\\\"email\\\":\\\"email@example.com\\\",\\\"company\\\":null,\\\"avatar\\\":null}}}\" True"
+    }
+  }
+}
