@@ -29,22 +29,22 @@ public class RootObjectUnpacker
       TryGetLevelProxies(root)
     );
 
-  public IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
+  private IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
     _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).ToArray();
 
-  public IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
+  private IReadOnlyCollection<ColorProxy>? TryGetColorProxies(Base root) =>
     TryGetProxies<ColorProxy>(root, ProxyKeys.COLOR);
 
-  public IReadOnlyCollection<RenderMaterialProxy>? TryGetRenderMaterialProxies(Base root) =>
+  private IReadOnlyCollection<RenderMaterialProxy>? TryGetRenderMaterialProxies(Base root) =>
     TryGetProxies<RenderMaterialProxy>(root, ProxyKeys.RENDER_MATERIAL);
 
-  public IReadOnlyCollection<InstanceDefinitionProxy>? TryGetInstanceDefinitionProxies(Base root) =>
+  private IReadOnlyCollection<InstanceDefinitionProxy>? TryGetInstanceDefinitionProxies(Base root) =>
     TryGetProxies<InstanceDefinitionProxy>(root, ProxyKeys.INSTANCE_DEFINITION);
 
-  public IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) =>
+  private IReadOnlyCollection<GroupProxy>? TryGetGroupProxies(Base root) =>
     TryGetProxies<GroupProxy>(root, ProxyKeys.GROUP);
 
-  public IReadOnlyCollection<LevelProxy>? TryGetLevelProxies(Base root) =>
+  private IReadOnlyCollection<LevelProxy>? TryGetLevelProxies(Base root) =>
     TryGetProxies<LevelProxy>(root, ProxyKeys.LEVEL);
 
   public (
