@@ -4,7 +4,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
-public sealed class ObjConfig : IFileTypeConfig
+internal sealed class ObjConfig : IFileTypeConfig
 {
   private readonly FileObjReadOptions _readOptions =
     new(new FileReadOptions() { OpenMode = true })
