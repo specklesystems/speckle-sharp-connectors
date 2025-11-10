@@ -59,22 +59,11 @@ public class RootObjectUnpacker
     {
       if (tc.Current is IInstanceComponent)
       {
-        instanceComponents.Add(tc);
+        instanceComponents.Add(tc); // handles actual blocks / instances
       }
       else
       {
-        atomicObjects.Add(tc);
-      }
-
-      if (tc.Current is DataObject dataObject)
-      {
-        foreach (var displayValue in dataObject.displayValue)
-        {
-          if (displayValue is IInstanceComponent)
-          {
-            instanceComponents.Add(new TraversalContext(displayValue, parent: tc));
-          }
-        }
+        atomicObjects.Add(tc); // handles DataObject which INCLUDES DataObject with proxified displayValue(s)
       }
     }
     return (atomicObjects, instanceComponents);
