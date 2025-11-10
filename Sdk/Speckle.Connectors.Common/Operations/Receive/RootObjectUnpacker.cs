@@ -1,5 +1,4 @@
-﻿using Speckle.Objects.Data;
-using Speckle.Objects.Other;
+﻿using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
