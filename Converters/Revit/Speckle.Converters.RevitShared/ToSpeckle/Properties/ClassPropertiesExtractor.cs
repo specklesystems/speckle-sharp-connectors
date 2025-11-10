@@ -73,16 +73,26 @@ public class ClassPropertiesExtractor
       elementProperties.Add("worksetName", worksetName);
     }
 
-    // get room id if applicable (only for FamilyInstance elements)
-    if (element is DB.FamilyInstance familyInstance && familyInstance.Room is not null)
+    if (element is DB.FamilyInstance familyInstance)
     {
-      elementProperties.Add("roomId", familyInstance.Room.Id.ToString());
-    }
+      try
+      {
+        // get room id if applicable (only for FamilyInstance elements)
+        if (familyInstance.Room is not null)
+        {
+          elementProperties.Add("roomId", familyInstance.Room.Id.ToString());
+        }
 
-    // get space id if applicable (only for FamilyInstance elements)
-    if (element is DB.FamilyInstance familyInstanceForSpace && familyInstanceForSpace.Space is not null)
-    {
-      elementProperties.Add("spaceId", familyInstanceForSpace.Space.Id.ToString());
+        // get space id if applicable (only for FamilyInstance elements)
+        if (familyInstance.Space is not null)
+        {
+          elementProperties.Add("spaceId", familyInstance.Space.Id.ToString());
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        // silently ignore - not critical
+      }
     }
 
     // get group name if applicable
