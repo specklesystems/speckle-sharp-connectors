@@ -1,4 +1,7 @@
-﻿using Speckle.Sdk.Models;
+﻿using Speckle.DoubleNumerics;
+using Speckle.Objects;
+using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
@@ -12,8 +15,8 @@ namespace Speckle.Connectors.Common.Instances;
 /// </remarks>
 public class ProxifiedDisplayValueManager
 {
-  // definitionId → actual mesh geometry
-  private readonly Dictionary<string, List<Base>> _definitionGeometry = new();
+  // definitionId → list of definition meshes
+  private readonly Dictionary<string, List<Mesh>> _definitionGeometry = new();
 
   /// <summary>
   /// Initialize by finding all definition geometries in a single pass.
@@ -31,34 +34,76 @@ public class ProxifiedDisplayValueManager
       return; // no instances in this model, nothing to do
     }
 
-    // build a set of all object IDs that are part of instance definitions (to get us a O(1) lookup when searching)
+    // build a set of all object IDs that are part of instance definitions (to get us O(1) lookup when searching)
     var definitionObjectIds = new HashSet<string>(definitionProxies.SelectMany(dp => dp.objects));
 
-    // single pass through all objects - find the ones that are definition geometries
+    // single pass through all objects - find the ones that are definition meshes
     foreach (var tc in allObjects)
     {
       if (tc.Current.applicationId != null && definitionObjectIds.Contains(tc.Current.applicationId))
       {
-        // this object is part of an instance definition, find which definition proxy it belongs to
-        var defProxy = definitionProxies.First(dp => dp.objects.Contains(tc.Current.applicationId));
-
-        // store in list - a definition can have multiple geometry objects
-        if (!_definitionGeometry.TryGetValue(defProxy.applicationId!, out var geometryList))
+        // under the assumption that we only proxifying meshes, if we encounter non-mesh, we should throw?
+        if (tc.Current is not Mesh mesh)
         {
-          _definitionGeometry[defProxy.applicationId!] = geometryList = new List<Base>();
+          throw new InvalidOperationException("Proxified display values should only contain Mesh geometry");
         }
 
-        geometryList.Add(tc.Current);
+        // this mesh is part of an instance definition, find which definition proxy it belongs to
+        var defProxy = definitionProxies.First(dp => dp.objects.Contains(tc.Current.applicationId));
+
+        // store in list - a definition can have multiple meshes
+        if (!_definitionGeometry.TryGetValue(defProxy.applicationId!, out var meshList))
+        {
+          _definitionGeometry[defProxy.applicationId!] = meshList = new List<Mesh>();
+        }
+
+        meshList.Add(mesh);
       }
     }
   }
 
   /// <summary>
-  /// Get the definition geometries for an InstanceProxy.
+  /// Resolve an InstanceProxy to its transformed meshes, ready for conversion.
   /// </summary>
-  /// <returns>Returns all geometry objects that make up this definition</returns>
-  public IReadOnlyList<Base>? GetDefinitionGeometry(string definitionId) =>
-    _definitionGeometry.TryGetValue(definitionId, out var geometry) ? geometry : null;
+  /// <remarks>
+  /// Applies the instance transform to each definition mesh.
+  /// </remarks>
+  public IReadOnlyList<Mesh> ResolveInstanceProxy(InstanceProxy proxy)
+  {
+    // get definition meshes
+    if (!_definitionGeometry.TryGetValue(proxy.definitionId, out var definitionMeshes))
+    {
+      // definition not found - shouldn't happen if data is clean
+      return [];
+    }
+
+    var transformedMeshes = new List<Mesh>(definitionMeshes.Count);
+
+    // apply instance transform to each definition mesh
+    foreach (var defMesh in definitionMeshes)
+    {
+      var transformed = ApplyTransform(defMesh, proxy.transform, proxy.units);
+      transformedMeshes.Add(transformed);
+    }
+
+    return transformedMeshes;
+  }
+
+  /// <summary>
+  /// Apply a transform to a mesh, cloning to avoid mutating the cached definition.
+  /// </summary>
+  private static Mesh ApplyTransform(Mesh mesh, Matrix4x4 transform, string units)
+  {
+    // shallow copy to avoid mutating the cached definition mesh
+    var copiedMesh = (Mesh)mesh.ShallowCopy();
+
+    // apply transform
+    var speckleTransform = new Transform { matrix = transform, units = units };
+
+    copiedMesh.TransformTo(speckleTransform, out ITransformable result);
+
+    return (Mesh)result;
+  }
 
   public void Clear() => _definitionGeometry.Clear();
 }
