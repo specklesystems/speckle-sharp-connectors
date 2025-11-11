@@ -1,9 +1,11 @@
+using Speckle.Connectors.Common.Instances;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
@@ -27,6 +29,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
   private readonly ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> _subdConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
+  private readonly ProxifiedDisplayValueManager _proxifiedDisplayValueManager;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
@@ -43,7 +46,8 @@ public class DataObjectConverter
     ITypedConverter<SOG.Polycurve, RG.PolyCurve> polycurveConverter,
     ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
     ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> subdConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
+    ProxifiedDisplayValueManager proxifiedDisplayValueManager
   )
   {
     _arcConverter = arcConverter;
@@ -61,6 +65,7 @@ public class DataObjectConverter
     _regionConverter = regionConverter;
     _subdConverter = subdConverter;
     _settingsStore = settingsStore;
+    _proxifiedDisplayValueManager = proxifiedDisplayValueManager;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -83,6 +88,10 @@ public class DataObjectConverter
       SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
       SOG.Region region => new() { _regionConverter.Convert(region) },
       SOG.SubDX subd => _subdConverter.Convert(subd),
+      InstanceProxy proxy
+        => new List<RG.GeometryBase>(
+          _proxifiedDisplayValueManager.ResolveInstanceProxy(proxy).Select(mesh => _meshConverter.Convert(mesh))
+        ),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
   }
