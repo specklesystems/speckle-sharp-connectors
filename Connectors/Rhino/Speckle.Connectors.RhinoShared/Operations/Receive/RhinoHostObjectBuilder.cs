@@ -303,23 +303,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
-    Console.WriteLine($"[BakeObject] Looking up material for objectId: {objectId}");
 
     if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
-      Console.WriteLine($"[BakeObject] Found material index: {mIndex}");
       atts.MaterialIndex = mIndex;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-      Console.WriteLine(
-        $"[BakeObject] Set attributes - MaterialIndex: {atts.MaterialIndex}, MaterialSource: {atts.MaterialSource}"
-      );
     }
     else if (
       parentObjectId is not null
       && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
     )
     {
-      Console.WriteLine($"[BakeObject] No material found for objectId: {objectId}");
       atts.MaterialIndex = mIndexSpeckleObj;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
@@ -338,8 +332,6 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.ColorSource = colorSpeckleObj.Item2;
     }
 
-    var bakedGuid = _converterSettings.Current.Document.Objects.Add(obj, atts);
-    Console.WriteLine($"[BakeObject] Baked object {bakedGuid} with material index: {atts.MaterialIndex}");
     return _converterSettings.Current.Document.Objects.Add(obj, atts);
   }
 

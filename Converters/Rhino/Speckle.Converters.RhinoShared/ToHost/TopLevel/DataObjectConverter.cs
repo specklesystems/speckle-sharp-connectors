@@ -70,6 +70,23 @@ public class DataObjectConverter
 
   public object Convert(Base target) => Convert((DataObject)target);
 
+  public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
+  {
+    var resultPairs = new List<(RG.GeometryBase, Base)>();
+
+    foreach (var item in target.displayValue)
+    {
+      var converted = GetConvertedGeometry(item);
+      foreach (var geom in converted)
+      {
+        geom.Transform(GetUnitsTransform(item));
+        resultPairs.Add((geom, item));
+      }
+    }
+
+    return resultPairs;
+  }
+
   private List<RG.GeometryBase> GetConvertedGeometry(Base b) =>
     b switch
     {
@@ -93,22 +110,6 @@ public class DataObjectConverter
         ),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
-
-  public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
-  {
-    var result = new List<RG.GeometryBase>();
-    foreach (var item in target.displayValue)
-    {
-      var converted = GetConvertedGeometry(item);
-      foreach (var x in converted)
-      {
-        x.Transform(GetUnitsTransform(item));
-        result.Add(x);
-      }
-    }
-
-    return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
-  }
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
   {

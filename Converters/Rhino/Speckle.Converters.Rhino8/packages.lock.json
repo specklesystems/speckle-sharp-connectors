@@ -254,33 +254,11 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
-      "speckle.connectors.common": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
-          "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.5.4, )",
-          "Speckle.Sdk": "[3.5.4, )",
-          "Speckle.Sdk.Dependencies": "[3.5.4, )"
-        }
-      },
-      "speckle.connectors.logging": {
-        "type": "Project"
-      },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.5.4, )"
-        }
-      },
-      "Microsoft.Extensions.DependencyInjection": {
-        "type": "CentralTransitive",
-        "requested": "[2.2.0, )",
-        "resolved": "2.2.0",
-        "contentHash": "MZtBIwfDFork5vfjpJdG5g8wuJFt7d/y3LOSVVtDK/76wlbtz6cjltfKHqLx2TKVqTj5/c41t77m1+h20zqtPA==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0"
         }
       },
       "Microsoft.Extensions.Logging": {
@@ -560,33 +538,11 @@
         "resolved": "4.5.1",
         "contentHash": "Zh8t8oqolRaFa9vmOZfdQm/qKejdqz0J9kr7o2Fu0vPeoH3BL1EOXipKWwkWtLT1JPzjByrF19fGuFlNbmPpiw=="
       },
-      "speckle.connectors.common": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
-          "Speckle.Connectors.Logging": "[1.0.0, )",
-          "Speckle.Objects": "[3.5.4, )",
-          "Speckle.Sdk": "[3.5.4, )",
-          "Speckle.Sdk.Dependencies": "[3.5.4, )"
-        }
-      },
-      "speckle.connectors.logging": {
-        "type": "Project"
-      },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.5.4, )"
-        }
-      },
-      "Microsoft.Extensions.DependencyInjection": {
-        "type": "CentralTransitive",
-        "requested": "[2.2.0, )",
-        "resolved": "2.2.0",
-        "contentHash": "MZtBIwfDFork5vfjpJdG5g8wuJFt7d/y3LOSVVtDK/76wlbtz6cjltfKHqLx2TKVqTj5/c41t77m1+h20zqtPA==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.2.0"
         }
       },
       "Microsoft.Extensions.Logging": {

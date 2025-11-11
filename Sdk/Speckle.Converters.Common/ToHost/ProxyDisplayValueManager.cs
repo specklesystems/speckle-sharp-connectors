@@ -79,11 +79,6 @@ public class ProxyDisplayValueManager : IProxyDisplayValueManager
     // we need the clone for transform independence (can't mutate the shared definition geometry)
     var copiedMesh = (Mesh)mesh.ShallowCopy();
     
-    copiedMesh.id = mesh.id;
-    copiedMesh.applicationId = mesh.applicationId;
-    Console.WriteLine($"[ProxyManager] Transformed mesh - appId: {mesh.applicationId}, id: {mesh.id}");
-
-
     // apply transform to mesh
     var speckleTransform = new Transform { matrix = transform, units = units };
     copiedMesh.TransformTo(speckleTransform, out ITransformable result);
