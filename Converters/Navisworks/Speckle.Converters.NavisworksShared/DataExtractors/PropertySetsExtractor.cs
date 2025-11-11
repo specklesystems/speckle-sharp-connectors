@@ -1,4 +1,5 @@
-﻿using Speckle.Converter.Navisworks.Settings;
+﻿using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
@@ -18,6 +19,17 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
     return propertyDictionary;
   }
 
+  private static NAV.Units GetModelUnits(NAV.ModelItem modelItem)
+  {
+    NAV.ModelItem? ancestor = modelItem;
+    while (ancestor != null && !ancestor.HasModel)
+    {
+      ancestor = ancestor.Parent;
+    }
+
+    return ancestor != null ? ancestor.Model.Units : NAV.Units.Meters;
+  }
+
   /// <summary>
   /// Extracts property sets from a NAV.ModelItem and adds them to a dictionary,
   /// PropertySets are specific to the host application source appended to Navisworks and therefore
@@ -25,9 +37,10 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
   /// </summary>
   /// <param name="modelItem">The NAV.ModelItem from which property sets are extracted.</param>
   /// <returns>A dictionary containing property sets of the modelItem.</returns>
-  private Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
+  private static Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
   {
     var propertySetDictionary = new Dictionary<string, object?>();
+    var modelUnits = GetModelUnits(modelItem);
 
     foreach (var propertyCategory in modelItem.PropertyCategories)
     {
@@ -40,23 +53,18 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
 
       foreach (var property in propertyCategory.Properties)
       {
-        string sanitizedName = SanitizePropertyName(property.DisplayName);
-        var propertyValue = ConvertPropertyValue(property.Value, settingsStore.Current.Derived.SpeckleUnits);
-
+        var sanitizedName = SanitizePropertyName(property.DisplayName);
+        var propertyValue = ConvertPropertyValue(property.Value, modelUnits, property.DisplayName, property.Name);
         if (propertyValue != null)
         {
           propertySet[sanitizedName] = propertyValue;
         }
       }
 
-      if (propertySet.Count <= 0)
+      if (propertySet.Count > 0)
       {
-        continue;
+        propertySetDictionary[SanitizePropertyName(propertyCategory.DisplayName)] = propertySet;
       }
-
-      string categoryName = SanitizePropertyName(propertyCategory.DisplayName);
-
-      propertySetDictionary[categoryName] = propertySet;
     }
 
     return propertySetDictionary;
