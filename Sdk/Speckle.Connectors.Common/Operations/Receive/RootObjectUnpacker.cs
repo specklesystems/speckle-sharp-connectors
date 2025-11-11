@@ -1,4 +1,5 @@
-﻿using Speckle.Objects.Other;
+﻿using Speckle.Connectors.Common.Instances;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -13,21 +14,31 @@ namespace Speckle.Connectors.Common.Operations.Receive;
 public class RootObjectUnpacker
 {
   private readonly GraphTraversal _traverseFunction;
+  private readonly ProxifiedDisplayValueManager _proxifiedDisplayValueManager;
 
-  public RootObjectUnpacker(GraphTraversal traverseFunction)
+  public RootObjectUnpacker(GraphTraversal traverseFunction, ProxifiedDisplayValueManager proxifiedDisplayValueManager)
   {
     _traverseFunction = traverseFunction;
+    _proxifiedDisplayValueManager = proxifiedDisplayValueManager;
   }
 
-  public RootObjectUnpackerResult Unpack(Base root) =>
-    new(
-      GetObjectsToConvert(root),
-      TryGetInstanceDefinitionProxies(root),
+  public RootObjectUnpackerResult Unpack(Base root)
+  {
+    var objectsToConvert = GetObjectsToConvert(root);
+    var definitionProxies = TryGetInstanceDefinitionProxies(root);
+
+    // initialize manager here - unpacker owns this responsibility
+    _proxifiedDisplayValueManager.Initialize(definitionProxies, objectsToConvert);
+
+    return new(
+      objectsToConvert,
+      definitionProxies,
       TryGetGroupProxies(root),
       TryGetRenderMaterialProxies(root),
       TryGetColorProxies(root),
       TryGetLevelProxies(root)
     );
+  }
 
   private IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
     _traverseFunction.Traverse(root).Where(obj => obj.Current is not Collection).ToArray();
