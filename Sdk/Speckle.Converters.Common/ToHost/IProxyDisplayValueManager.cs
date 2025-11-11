@@ -1,4 +1,5 @@
 ﻿using Speckle.Objects.Geometry;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.Common.ToHost;
@@ -8,6 +9,11 @@ namespace Speckle.Converters.Common.ToHost;
 /// </summary>
 public interface IProxyDisplayValueManager
 {
+  void Initialize(
+    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies,
+    IReadOnlyCollection<TraversalContext> allObjects
+  );
+
   /// <summary>
   /// Asks the cache to hand over the fully transformed meshes for a given instance proxy.
   /// </summary>
@@ -16,5 +22,5 @@ public interface IProxyDisplayValueManager
   /// <summary>
   /// Wipes the memory clean. The Builder should call this at the very end.
   /// </summary>
-  public void Clear();
+  void Clear();
 }

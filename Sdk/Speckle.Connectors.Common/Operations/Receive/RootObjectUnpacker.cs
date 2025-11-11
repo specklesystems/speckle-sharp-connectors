@@ -14,10 +14,12 @@ namespace Speckle.Connectors.Common.Operations.Receive;
 public class RootObjectUnpacker
 {
   private readonly GraphTraversal _traverseFunction;
+  private readonly IProxyDisplayValueManager _proxyDisplayValueManager;
 
-  public RootObjectUnpacker(GraphTraversal traverseFunction)
+  public RootObjectUnpacker(GraphTraversal traverseFunction, IProxyDisplayValueManager proxyDisplayValueManager)
   {
     _traverseFunction = traverseFunction;
+    _proxyDisplayValueManager = proxyDisplayValueManager;
   }
 
   public RootObjectUnpackerResult Unpack(Base root)
@@ -25,8 +27,7 @@ public class RootObjectUnpacker
     var objectsToConvert = GetObjectsToConvert(root);
     var definitionProxies = TryGetInstanceDefinitionProxies(root);
 
-    var proxyDisplayValueManager = new ProxyDisplayValueManager();
-    proxyDisplayValueManager.Initialize(definitionProxies, objectsToConvert);
+    _proxyDisplayValueManager.Initialize(definitionProxies, objectsToConvert);
 
     return new(
       objectsToConvert,
@@ -35,7 +36,7 @@ public class RootObjectUnpacker
       TryGetRenderMaterialProxies(root),
       TryGetColorProxies(root),
       TryGetLevelProxies(root),
-      proxyDisplayValueManager
+      _proxyDisplayValueManager
     );
   }
 
