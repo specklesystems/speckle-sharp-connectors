@@ -84,7 +84,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = _rootObjectUnpacker.Unpack(rootObject);
 
-    // 2 - Split atomic objects and instance components with their path
+    // 2. Initialize state store with manager
+
+
+    // 3 - Split atomic objects and instance components with their path
     var (atomicObjectsWithoutInstanceComponentsForConverter, instanceComponents) =
       _rootObjectUnpacker.SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
 
@@ -93,7 +96,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     );
     var instanceComponentsWithPath = _layerBaker.GetInstanceComponentsWithPath(instanceComponents);
 
-    // 2.1 - these are not captured by traversal, so we need to re-add them here
+    // 3.1 - these are not captured by traversal, so we need to re-add them here
     if (unpackedRoot.DefinitionProxies != null && unpackedRoot.DefinitionProxies.Count > 0)
     {
       var transformed = unpackedRoot.DefinitionProxies.Select(proxy =>
@@ -102,7 +105,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       instanceComponentsWithPath.AddRange(transformed);
     }
 
-    // 3 - Bake materials and colors, as they are used later down the line by layers and objects
+    // 4 - Bake materials and colors, as they are used later down the line by layers and objects
     onOperationProgressed.Report(new("Converting materials and colors", null));
     if (unpackedRoot.RenderMaterialProxies != null)
     {
@@ -118,7 +121,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       _colorBaker.ParseColors(unpackedRoot.ColorProxies);
     }
 
-    // 4 - Bake layers
+    // 5 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
     onOperationProgressed.Report(new("Baking layers (redraw disabled)", null));
     using (var _ = _activityFactory.Start("Pre baking layers"))
@@ -135,7 +138,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
         .Wait(cancellationToken);
     }
 
-    // 5 - Convert atomic objects
+    // 6 - Convert atomic objects
     var bakedObjectIds = new HashSet<string>();
     Dictionary<string, IReadOnlyCollection<string>> applicationIdMap = new(); // This map is used in converting blocks in stage 2. keeps track of original app id => resulting new app ids post baking
     HashSet<ReceiveConversionResult> conversionResults = new();
@@ -216,7 +219,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       }
     }
 
-    // 6 - Convert instances
+    // 7 - Convert instances
     using (var _ = _activityFactory.Start("Converting instances"))
     {
       var (createdInstanceIds, consumedObjectIds, instanceConversionResults) = _instanceBaker.BakeInstances(
@@ -232,11 +235,14 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
     }
 
-    // 7 - Create groups
+    // 8 - Create groups
     if (unpackedRoot.GroupProxies is not null)
     {
       _groupBaker.BakeGroups(unpackedRoot.GroupProxies, applicationIdMap, baseLayerName);
     }
+
+    // 9 - Clear state at end
+    unpackedRoot.ProxyDisplayValueCache?.Clear();
 
     _converterSettings.Current.Document.Views.Redraw();
     return Task.FromResult(new HostObjectBuilderResult(bakedObjectIds, conversionResults));

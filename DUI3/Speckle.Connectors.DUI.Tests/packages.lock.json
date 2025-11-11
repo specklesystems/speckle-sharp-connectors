@@ -314,6 +314,7 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
+          "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Objects": "[3.5.4, )",
           "Speckle.Sdk": "[3.5.4, )",
           "Speckle.Sdk.Dependencies": "[3.5.4, )"
@@ -328,6 +329,13 @@
       },
       "speckle.connectors.logging": {
         "type": "Project"
+      },
+      "speckle.converters.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
+          "Speckle.Objects": "[3.5.4, )"
+        }
       },
       "speckle.testing": {
         "type": "Project",

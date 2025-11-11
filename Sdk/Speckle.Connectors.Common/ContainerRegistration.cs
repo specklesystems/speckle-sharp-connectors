@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
@@ -23,8 +22,6 @@ public static class ContainerRegistration
     serviceCollection.AddSingleton<IAccountService, AccountService>();
     serviceCollection.AddSingleton<IMixPanelManager, MixPanelManager>();
     serviceCollection.AddSingleton<ISerializationOptions, SerializationOptions>();
-    serviceCollection.AddScoped<ProxifiedDisplayValueManager>();
-
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));
   }
 }

@@ -22,6 +22,7 @@ using Speckle.Connectors.Rhino.Operations.Receive;
 using Speckle.Connectors.Rhino.Operations.Send;
 using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Connectors.Rhino.Plugin;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Rhino.DependencyInjection;
@@ -75,7 +76,7 @@ public static class ServiceRegistration
       InstanceObjectsManager<RhinoObject, List<string>>
     >();
 
-    // Register unpackers and bakers
+    // register unpackers and bakers
     serviceCollection.AddScoped<RhinoLayerUnpacker>();
     serviceCollection.AddScoped<RhinoLayerBaker>();
 
@@ -93,6 +94,9 @@ public static class ServiceRegistration
 
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<RevitMappingResolver>();
+
+    // register proxy display value manager
+    serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
 
     // register helpers
     serviceCollection.AddScoped<RhinoLayerHelper>();

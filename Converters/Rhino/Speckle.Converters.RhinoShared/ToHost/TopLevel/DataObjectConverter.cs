@@ -1,6 +1,6 @@
-using Speckle.Connectors.Common.Instances;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
@@ -29,7 +29,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
   private readonly ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> _subdConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
-  private readonly ProxifiedDisplayValueManager _proxifiedDisplayValueManager;
+  private readonly IProxyDisplayValueManager _proxyDisplayValueManager;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
@@ -47,7 +47,7 @@ public class DataObjectConverter
     ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
     ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> subdConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
-    ProxifiedDisplayValueManager proxifiedDisplayValueManager
+    IProxyDisplayValueManager proxyDisplayValueManager
   )
   {
     _arcConverter = arcConverter;
@@ -65,14 +65,13 @@ public class DataObjectConverter
     _regionConverter = regionConverter;
     _subdConverter = subdConverter;
     _settingsStore = settingsStore;
-    _proxifiedDisplayValueManager = proxifiedDisplayValueManager;
+    _proxyDisplayValueManager = proxyDisplayValueManager;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
 
-  private List<RG.GeometryBase> GetConvertedGeometry(Base b)
-  {
-    return b switch
+  private List<RG.GeometryBase> GetConvertedGeometry(Base b) =>
+    b switch
     {
       SOG.Arc arc => new() { _arcConverter.Convert(arc) },
       SOG.BrepX brep => _brepConverter.Convert(brep),
@@ -90,11 +89,10 @@ public class DataObjectConverter
       SOG.SubDX subd => _subdConverter.Convert(subd),
       InstanceProxy proxy
         => new List<RG.GeometryBase>(
-          _proxifiedDisplayValueManager.ResolveInstanceProxy(proxy).Select(mesh => _meshConverter.Convert(mesh))
+          _proxyDisplayValueManager.ResolveInstanceProxy(proxy).Select(mesh => _meshConverter.Convert(mesh)).ToList()
         ),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
-  }
 
   public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
   {

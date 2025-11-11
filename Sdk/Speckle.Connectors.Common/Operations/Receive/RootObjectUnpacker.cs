@@ -1,4 +1,4 @@
-﻿using Speckle.Connectors.Common.Instances;
+﻿using Speckle.Converters.Common.ToHost;
 using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -14,12 +14,10 @@ namespace Speckle.Connectors.Common.Operations.Receive;
 public class RootObjectUnpacker
 {
   private readonly GraphTraversal _traverseFunction;
-  private readonly ProxifiedDisplayValueManager _proxifiedDisplayValueManager;
 
-  public RootObjectUnpacker(GraphTraversal traverseFunction, ProxifiedDisplayValueManager proxifiedDisplayValueManager)
+  public RootObjectUnpacker(GraphTraversal traverseFunction)
   {
     _traverseFunction = traverseFunction;
-    _proxifiedDisplayValueManager = proxifiedDisplayValueManager;
   }
 
   public RootObjectUnpackerResult Unpack(Base root)
@@ -27,8 +25,8 @@ public class RootObjectUnpacker
     var objectsToConvert = GetObjectsToConvert(root);
     var definitionProxies = TryGetInstanceDefinitionProxies(root);
 
-    // initialize manager here - unpacker owns this responsibility
-    _proxifiedDisplayValueManager.Initialize(definitionProxies, objectsToConvert);
+    var proxyDisplayValueManager = new ProxyDisplayValueManager();
+    proxyDisplayValueManager.Initialize(definitionProxies, objectsToConvert);
 
     return new(
       objectsToConvert,
@@ -36,7 +34,8 @@ public class RootObjectUnpacker
       TryGetGroupProxies(root),
       TryGetRenderMaterialProxies(root),
       TryGetColorProxies(root),
-      TryGetLevelProxies(root)
+      TryGetLevelProxies(root),
+      proxyDisplayValueManager
     );
   }
 
