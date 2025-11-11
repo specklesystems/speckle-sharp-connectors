@@ -348,6 +348,7 @@
         "type": "Project",
         "dependencies": {
           "RhinoCommon": "[7.13.21348.13001, )",
+          "Speckle.Connectors.Common": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )"
         }
       },
