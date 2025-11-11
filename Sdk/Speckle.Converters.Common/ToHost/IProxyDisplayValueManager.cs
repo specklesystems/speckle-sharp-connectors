@@ -18,9 +18,4 @@ public interface IProxyDisplayValueManager
   /// Asks the cache to hand over the fully transformed meshes for a given instance proxy.
   /// </summary>
   IReadOnlyList<Mesh> ResolveInstanceProxy(InstanceProxy proxy);
-
-  /// <summary>
-  /// Wipes the memory clean. The Builder should call this at the very end.
-  /// </summary>
-  void Clear();
 }

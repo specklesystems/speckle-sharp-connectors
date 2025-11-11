@@ -73,15 +73,22 @@ public class ProxyDisplayValueManager : IProxyDisplayValueManager
     return transformedMeshes;
   }
 
-  /// <inheritdoc />
-  public void Clear() => _definitionGeometry.Clear();
-
   // Helper method remains static and private, only used internally for clean cloning/transforming.
   private static Mesh ApplyTransform(Mesh mesh, Matrix4x4 transform, string units)
   {
+    // we need the clone for transform independence (can't mutate the shared definition geometry)
     var copiedMesh = (Mesh)mesh.ShallowCopy();
+    
+    copiedMesh.id = mesh.id;
+    copiedMesh.applicationId = mesh.applicationId;
+    Console.WriteLine($"[ProxyManager] Transformed mesh - appId: {mesh.applicationId}, id: {mesh.id}");
+
+
+    // apply transform to mesh
     var speckleTransform = new Transform { matrix = transform, units = units };
     copiedMesh.TransformTo(speckleTransform, out ITransformable result);
+
+    // return the definition geometry now positioned correctly in space
     return (Mesh)result;
   }
 }
