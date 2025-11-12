@@ -259,7 +259,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       .RunOnMain(() =>
       {
         _instanceBaker.PurgeInstances(baseLayerName);
-        _materialBaker.PurgeMaterials(baseLayerName);
+        // Materials are now reused across receives instead of being purged
+        // _materialBaker.PurgeMaterials(baseLayerName);
 
         var doc = _converterSettings.Current.Document;
         // Cleans up any previously received objects

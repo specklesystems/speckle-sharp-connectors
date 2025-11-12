@@ -7,27 +7,19 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 /// Creates a headless doc and imports the file
 /// </summary>
 /// <remarks>
-/// Note: imported geometry will be converted to the default <c>mm</c> units
-/// If we need to preserve the file units, a custom config needs to be created
+/// Note: using OpenHeadless should preserve the original file's unit system for file types that have units
 /// </remarks>
-public sealed class DefaultConfig : IFileTypeConfig
+internal sealed class DefaultConfig : IFileTypeConfig
 {
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
-    var doc = RhinoDoc.CreateHeadless(null);
-    try
+    RhinoDoc? doc = RhinoDoc.OpenHeadless(filePath, null);
+    if (doc is null)
     {
-      if (!doc.Import(filePath, null))
-      {
-        throw new SpeckleException("Rhino could not import this file");
-      }
-      return doc;
+      throw new SpeckleException("Rhino could not open this file");
     }
-    catch
-    {
-      doc.Dispose();
-      throw;
-    }
+
+    return doc;
   }
 
   public void Dispose() { }
