@@ -51,7 +51,7 @@ public static class SharedRegistration
     serviceCollection.AddScoped<IAutocadMaterialBaker, AutocadMaterialBaker>();
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
-    
+
     // register proxy display value manager
     serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
 
