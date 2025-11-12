@@ -162,6 +162,7 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
       Params.RegisterInputParam(param);
     }
 
+    Params.OnParametersChanged();
     ExpireSolution(true);
   }
 

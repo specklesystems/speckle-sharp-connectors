@@ -45,24 +45,15 @@ Make sure to also check and ⭐️ these other Speckle next generation repositor
 
 # Developing and Debugging
 
-Clone this repo. **Each section has its own readme**, so follow each readme for specific build and debug instructions.
+## Developing
 
-Issues or questions? We encourage everyone interested to debug / hack / contribute / give feedback to this project.
+It is recommended that you use Jetbrains Rider (version 2024.3 or greater) or Visual Studio 2022 (version 17.13 or greater)
+The project requires version 8.0.4xx of the .NET SDK.
+You can download the latest version from https://dotnet.microsoft.com/en-us/download/dotnet/8.0
 
-> **A note on Accounts:**
-> The connectors themselves don't have features to manage your Speckle accounts; this functionality is delegated to the Speckle Manager desktop app. You can install it [from here](https://speckle-releases.ams3.digitaloceanspaces.com/manager/SpeckleManager%20Setup.exe).
+From there you can open the main `Speckle.Connectors.sln` solution and build the project
 
-## Local Builds
-
-For good development experience and environment setup, run the commands below as needed.
-
-### Switching to SLNX
-
-SLNX was introduced with .NET 9 (in May 2024), Visual Studio 17.13 and Rider 2024.3.  The older SLNs being used remain for now but will be removed when .NET 10 is introduced to the repo.  SLNXs specific to certain host apps are being generated from the main SLN to allow for faster developmenet.
-
-[https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/)
-
-[https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/](https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/)
+For good development experience and environment setup, you the commands are avaible needed.
 
 ### Formatting
 We're using [CSharpier](https://github.com/belav/csharpier) to format our code.  You can install Csharpier in a few ways:
@@ -106,6 +97,14 @@ This solution includes the Core and Objects projects from the speckle-sharp-sdk 
 
 > [!WARNING]
 > Using `Local.sln` will modify all your package locks. **Don't check these in!** Revert with the `clean-locks` command or use the regular solution to revert once your changes are made.
+
+## Switching to SLNX
+
+SLNX was introduced with .NET 9 (in May 2024), Visual Studio 17.13 and Rider 2024.3.  The older SLNs being used remain for now but will be removed when .NET 10 is introduced to the repo.  SLNXs specific to certain host apps are being generated from the main SLN to allow for faster developmenet.
+
+[https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/)
+
+[https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/](https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/)
 
 # Security and Licensing
       

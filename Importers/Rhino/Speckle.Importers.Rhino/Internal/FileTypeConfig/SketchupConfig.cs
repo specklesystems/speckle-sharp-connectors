@@ -4,7 +4,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
-public sealed class SketchupConfig : IFileTypeConfig
+internal sealed class SketchupConfig : IFileTypeConfig
 {
   private readonly FileSkpReadOptions _options =
     new()
@@ -20,20 +20,12 @@ public sealed class SketchupConfig : IFileTypeConfig
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
-    var doc = RhinoDoc.CreateHeadless(null);
-    try
+    RhinoDoc? doc = RhinoDoc.OpenHeadless(filePath, _options.ToDictionary());
+    if (doc is null)
     {
-      if (!doc.Import(filePath, _options.ToDictionary()))
-      {
-        throw new SpeckleException("Rhino could not import this file");
-      }
-      return doc;
+      throw new SpeckleException("Rhino could not import this file");
     }
-    catch
-    {
-      doc.Dispose();
-      throw;
-    }
+    return doc;
   }
 
   public void Dispose() { }
