@@ -147,7 +147,7 @@ internal static class UnitLabels
       _ => "Metres"
     };
 
-  public static string Area(NAV.Units u) => $"Square {Linear(u).ToLower()}";
+  internal static string Area(NAV.Units u) => $"Square {Linear(u).ToLower()}";
 
   public static string Volume(NAV.Units u) => $"Cubic {Linear(u).ToLower()}";
 }
