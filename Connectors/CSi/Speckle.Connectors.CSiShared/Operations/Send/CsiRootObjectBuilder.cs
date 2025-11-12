@@ -153,7 +153,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
           requestedResultTypes,
           objectSelectionSummary
         );
-        rootObjectCollection["analysisResults"] = analysisResults;
+        rootObjectCollection[RootKeys.ANALYSIS_RESULTS] = analysisResults;
       }
       catch (Exception ex)
       {
