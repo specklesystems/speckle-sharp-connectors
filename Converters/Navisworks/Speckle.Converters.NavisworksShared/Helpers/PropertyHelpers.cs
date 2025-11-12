@@ -131,7 +131,7 @@ public static class PropertyHelpers
       { NAV.VariantDataType.Int32, (v, _) => v.ToInt32() },
       { NAV.VariantDataType.Double, (v, _) => v.ToDouble() },
       // Angle as dictionary with units
-      { NAV.VariantDataType.DoubleAngle, (v, t) => NumObj(t.name, v.ToDoubleAngle(), "Degrees", t.internalName) },
+      { NAV.VariantDataType.DoubleAngle, (v, t) => NumObj(t.name, v.ToDoubleAngle(), "Degrees") },
       // Length → dictionary in UI units
       {
         NAV.VariantDataType.DoubleLength,
@@ -139,7 +139,7 @@ public static class PropertyHelpers
         {
           var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
           var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
-          return NumObj(t.name, v.ToDoubleLength() * k, UnitLabels.Linear(ui), t.internalName);
+          return NumObj(t.name, v.ToDoubleLength() * k, UnitLabels.Linear(ui));
         }
       },
       // Area → dictionary in UI units^2
@@ -150,7 +150,7 @@ public static class PropertyHelpers
           var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
           var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
           k *= k;
-          return NumObj(t.name, v.ToDoubleArea() * k, UnitLabels.Area(ui), t.internalName);
+          return NumObj(t.name, v.ToDoubleArea() * k, UnitLabels.Area(ui));
         }
       },
       // Volume → dictionary in UI units^3
@@ -161,7 +161,7 @@ public static class PropertyHelpers
           var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
           var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
           k = k * k * k;
-          return NumObj(t.name, v.ToDoubleVolume() * k, UnitLabels.Volume(ui), t.internalName);
+          return NumObj(t.name, v.ToDoubleVolume() * k, UnitLabels.Volume(ui));
         }
       },
       { NAV.VariantDataType.DateTime, (v, _) => v.ToDateTime().ToString(CultureInfo.InvariantCulture) },
@@ -181,18 +181,12 @@ public static class PropertyHelpers
       }
     };
 
-  private static Dictionary<string, object> NumObj(
-    string name,
-    double value,
-    string units,
-    string? internalDef = null
-  ) =>
+  private static Dictionary<string, object> NumObj(string name, double value, string units) =>
     new()
     {
       ["name"] = name,
       ["value"] = value,
-      ["units"] = units,
-      ["internalDefinitionName"] = internalDef ?? string.Empty
+      ["units"] = units
     };
 
   /// <summary>
