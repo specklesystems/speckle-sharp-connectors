@@ -16,6 +16,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk.Models.GraphTraversal;
 
 namespace Speckle.Connectors.Autocad.DependencyInjection;
@@ -50,6 +51,9 @@ public static class SharedRegistration
     serviceCollection.AddScoped<IAutocadMaterialBaker, AutocadMaterialBaker>();
 
     serviceCollection.AddSingleton<IAppIdleManager, AutocadIdleManager>();
+    
+    // register proxy display value manager
+    serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

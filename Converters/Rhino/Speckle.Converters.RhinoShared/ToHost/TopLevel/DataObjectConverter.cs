@@ -76,6 +76,8 @@ public class DataObjectConverter
 
     foreach (var item in target.displayValue)
     {
+      // InstanceProxy handled separately and not in ConvertDisplayObject
+      // material lookup needs the resolved mesh's applicationId, not the proxy's
       if (item is InstanceProxy proxy)
       {
         var resolvedMeshes = _proxyDisplayValueManager.ResolveInstanceProxy(proxy);

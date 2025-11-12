@@ -1,9 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
@@ -17,6 +19,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
+  private readonly IProxyDisplayValueManager _proxyDisplayValueManager;
 
   public DataObjectConverter(
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
@@ -25,7 +28,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
-    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter,
+    IProxyDisplayValueManager proxyDisplayValueManager
   )
   {
     _curveConverter = curveConverter;
@@ -35,6 +39,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _pointConverter = pointConverter;
     _subDXConverter = subDXConverter;
     _regionConverter = regionConverter;
+    _proxyDisplayValueManager = proxyDisplayValueManager;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -42,14 +47,30 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {
     var result = new List<(ADB.Entity a, Base b)>();
+
     foreach (var item in target.displayValue)
     {
-      result.AddRange(ConvertDisplayObject(item));
+      // InstanceProxy handled separately and not in ConvertDisplayObject
+      // material lookup needs the resolved mesh's applicationId, not the proxy's
+      if (item is InstanceProxy proxy)
+      {
+        var resolvedMeshes = _proxyDisplayValueManager.ResolveInstanceProxy(proxy);
+        foreach (var speckleMesh in resolvedMeshes)
+        {
+          var autocadMesh = _meshConverter.Convert(speckleMesh);
+          result.Add((autocadMesh, speckleMesh));
+        }
+      }
+      else
+      {
+        result.AddRange(ConvertDisplayObject(item));
+      }
     }
+
     return result;
   }
 
-  public IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
+  private IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
   {
     switch (displayObject)
     {

@@ -84,9 +84,8 @@ public class ProxyDisplayValueManager : IProxyDisplayValueManager
     var speckleTransform = new Transform { matrix = transform, units = units };
     copiedMesh.TransformTo(speckleTransform, out ITransformable result);
 
-    var transformedMesh = (Mesh)result;
-
     // restore applicationId after TransformTo creates new object
+    var transformedMesh = (Mesh)result;
     transformedMesh.applicationId = originalApplicationId;
 
     return transformedMesh;
