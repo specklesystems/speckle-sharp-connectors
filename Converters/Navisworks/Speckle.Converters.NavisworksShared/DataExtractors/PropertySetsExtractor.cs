@@ -1,10 +1,14 @@
-﻿using Speckle.Converter.Navisworks.Settings;
+﻿using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
+public class PropertySetsExtractor(
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  IPropertyConverter propertyConverter
+)
 {
   internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
@@ -36,10 +40,12 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
   /// </summary>
   /// <param name="modelItem">The NAV.ModelItem from which property sets are extracted.</param>
   /// <returns>A dictionary containing property sets of the modelItem.</returns>
-  private static Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
+  private Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
   {
     var propertySetDictionary = new Dictionary<string, object?>();
     var modelUnits = GetModelUnits(modelItem);
+
+    propertyConverter.Reset();
 
     foreach (var propertyCategory in modelItem.PropertyCategories)
     {
@@ -53,7 +59,7 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
       foreach (var property in propertyCategory.Properties)
       {
         var sanitizedName = SanitizePropertyName(property.DisplayName);
-        var propertyValue = ConvertPropertyValue(property.Value, modelUnits, property.DisplayName, property.Name);
+        var propertyValue = propertyConverter.ConvertPropertyValue(property.Value, modelUnits, property.DisplayName);
         if (propertyValue != null)
         {
           propertySet[sanitizedName] = propertyValue;

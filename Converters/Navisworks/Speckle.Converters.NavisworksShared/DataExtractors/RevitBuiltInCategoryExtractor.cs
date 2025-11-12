@@ -1,8 +1,10 @@
-using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
+using Speckle.InterfaceGenerator;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public static class RevitBuiltInCategoryExtractor
+[GenerateAutoInterface]
+public class RevitBuiltInCategoryExtractor(IPropertyConverter converter) : IRevitBuiltInCategoryExtractor
 {
   private const int ANCESTOR_AND_SELF_COUNT = 4; // It seems like this is the maximum depth found needed in practice
   private const string REVIT_CAT_GROUP = "LcRevitData_Element";
@@ -13,17 +15,9 @@ public static class RevitBuiltInCategoryExtractor
   /// Attempts to map a Navisworks/Revit display category from the given model item or its ancestors
   /// to a known Revit built-in category constant (e.g., "OST_Walls").
   /// </summary>
-  internal static bool TryGetBuiltInCategory(
-    NAV.ModelItem item,
-    out string mapped,
-    int maxDepth = ANCESTOR_AND_SELF_COUNT
-  )
+  public bool TryGetBuiltInCategory(NAV.ModelItem item, out string mapped, int maxDepth = ANCESTOR_AND_SELF_COUNT)
   {
     mapped = string.Empty;
-
-    // UI units once per call; cheap; or pass in a cached value from your caller
-    UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits);
-    var unitLabel = uiUnits.ToString();
 
     // Find the category VariantData up the hierarchy
     var v = FindRevitCategoryInHierarchy(item, maxDepth);
@@ -32,8 +26,10 @@ public static class RevitBuiltInCategoryExtractor
       return false;
     }
 
+    converter.Reset();
+
     // Convert using per-object model units and current UI units
-    var nameObj = PropertyHelpers.ConvertPropertyValue(v, item.Model.Units, item.DisplayName, unitLabel);
+    var nameObj = converter.ConvertPropertyValue(v, item.Model.Units, item.DisplayName);
     var name = nameObj?.ToString();
     if (string.IsNullOrWhiteSpace(name))
     {
