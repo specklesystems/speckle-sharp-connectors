@@ -15,7 +15,7 @@ public static class UiUnitsUtil
 
     int code = -1;
 
-    var v = new NAV.VariantData();
+    using var v = new NAV.VariantData();
     disp.GetValue(0, v);
     var s = v.ToString();
     var colon = s.LastIndexOf(':');
