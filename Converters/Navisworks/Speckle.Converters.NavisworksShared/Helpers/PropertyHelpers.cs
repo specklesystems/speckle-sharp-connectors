@@ -49,20 +49,6 @@ public static class UiUnitsUtil
     return code >= 0;
   }
 
-  private static double LinearFactor(NAV.Units fromUnits, NAV.Units toUnits) =>
-    NAV.UnitConversion.ScaleFactor(fromUnits, toUnits);
-
-  internal static double AreaFactor(NAV.Units fromUnits, NAV.Units toUnits)
-  {
-    var k = LinearFactor(fromUnits, toUnits);
-    return k * k;
-  }
-
-  internal static double VolumeFactor(NAV.Units fromUnits, NAV.Units toUnits)
-  {
-    var k = LinearFactor(fromUnits, toUnits);
-    return k * k * k;
-  }
 }
 
 public static class PropertyHelpers
