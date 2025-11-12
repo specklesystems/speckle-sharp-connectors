@@ -1,17 +1,8 @@
-﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using Autodesk.Navisworks.Api.Interop;
 using static Autodesk.Navisworks.Api.Interop.LcUOption;
 
 namespace Speckle.Converter.Navisworks.Helpers;
-
-// context passed to handlers
-public readonly struct UnitsCtx(NAV.Units model, NAV.Units ui, string unitLabel)
-{
-  public NAV.Units Model { get; } = model;
-  public NAV.Units Ui { get; } = ui;
-  public string UnitLabel { get; } = unitLabel;
-}
 
 public static class UiUnitsUtil
 {
@@ -58,7 +49,7 @@ public static class UiUnitsUtil
     return code >= 0;
   }
 
-  internal static double LinearFactor(NAV.Units fromUnits, NAV.Units toUnits) =>
+  private static double LinearFactor(NAV.Units fromUnits, NAV.Units toUnits) =>
     NAV.UnitConversion.ScaleFactor(fromUnits, toUnits);
 
   internal static double AreaFactor(NAV.Units fromUnits, NAV.Units toUnits)
@@ -77,20 +68,6 @@ public static class UiUnitsUtil
 public static class PropertyHelpers
 {
   private static readonly HashSet<string> s_excludedCategories = ["Geometry", "Metadata"];
-
-  internal static object? ConvertPropertyValue(
-    NAV.VariantData? value,
-    NAV.Units modelUnits,
-    string propDisplayName,
-    string propInternalName
-  ) =>
-    value == null
-      ? null
-      : s_handlers.TryGetValue(value.DataType, out var f)
-        ? f(value, (modelUnits, propDisplayName, propInternalName))
-        : value.DataType is NAV.VariantDataType.None or NAV.VariantDataType.Point2D
-          ? null
-          : value.ToString();
 
   /// <summary>
   /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
@@ -118,76 +95,6 @@ public static class PropertyHelpers
         break;
     }
   }
-
-  private static readonly Dictionary<
-    NAV.VariantDataType,
-    Func<NAV.VariantData, (NAV.Units model, string name, string internalName), object?>
-  > s_handlers =
-    new()
-    {
-      { NAV.VariantDataType.Boolean, (v, _) => v.ToBoolean() },
-      { NAV.VariantDataType.DisplayString, (v, _) => v.ToDisplayString() },
-      { NAV.VariantDataType.IdentifierString, (v, _) => v.ToIdentifierString() },
-      { NAV.VariantDataType.Int32, (v, _) => v.ToInt32() },
-      { NAV.VariantDataType.Double, (v, _) => v.ToDouble() },
-      // Angle as dictionary with units
-      { NAV.VariantDataType.DoubleAngle, (v, t) => NumObj(t.name, v.ToDoubleAngle(), "Degrees") },
-      // Length → dictionary in UI units
-      {
-        NAV.VariantDataType.DoubleLength,
-        (v, t) =>
-        {
-          var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
-          var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
-          return NumObj(t.name, v.ToDoubleLength() * k, UnitLabels.Linear(ui));
-        }
-      },
-      // Area → dictionary in UI units^2
-      {
-        NAV.VariantDataType.DoubleArea,
-        (v, t) =>
-        {
-          var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
-          var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
-          k *= k;
-          return NumObj(t.name, v.ToDoubleArea() * k, UnitLabels.Area(ui));
-        }
-      },
-      // Volume → dictionary in UI units^3
-      {
-        NAV.VariantDataType.DoubleVolume,
-        (v, t) =>
-        {
-          var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
-          var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
-          k = k * k * k;
-          return NumObj(t.name, v.ToDoubleVolume() * k, UnitLabels.Volume(ui));
-        }
-      },
-      { NAV.VariantDataType.DateTime, (v, _) => v.ToDateTime().ToString(CultureInfo.InvariantCulture) },
-      { NAV.VariantDataType.NamedConstant, (v, _) => v.ToNamedConstant().DisplayName },
-      { NAV.VariantDataType.None, (_, _) => null },
-      { NAV.VariantDataType.Point2D, (_, _) => null },
-      {
-        NAV.VariantDataType.Point3D,
-        (v, t) =>
-        {
-          var ui = UiUnitsUtil.TryGetUiLinearUnits(out var uiUnits) ? uiUnits : t.model;
-          var k = NAV.UnitConversion.ScaleFactor(t.model, ui);
-          var p = v.ToPoint3D();
-
-          return new Speckle.Objects.Geometry.Point(p.X * k, p.Y * k, p.Z * k, UnitLabels.Linear(ui));
-        }
-      }
-    };
-
-  private static Dictionary<string, object> NumObj(string name, double value, string units) =>
-    new()
-    {
-      ["name"] = name,
-      ["value"] = value,
-      ["units"] = units
-    };
 
   /// <summary>
   /// Helper method to assign the property to the base object or dictionary.
@@ -243,23 +150,4 @@ internal static class UnitLabels
   public static string Area(NAV.Units u) => $"Square {Linear(u).ToLower()}";
 
   public static string Volume(NAV.Units u) => $"Cubic {Linear(u).ToLower()}";
-}
-
-internal static class UiUnitsCache
-{
-  private static NAV.Units? s_ui;
-
-  public static NAV.Units Ensure()
-  {
-    if (s_ui.HasValue)
-    {
-      return s_ui.Value;
-    }
-
-    UiUnitsUtil.TryGetUiLinearUnits(out var ui);
-    s_ui = ui;
-    return s_ui.Value;
-  }
-
-  public static void Reset() => s_ui = null;
 }
