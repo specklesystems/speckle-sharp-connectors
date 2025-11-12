@@ -16,6 +16,7 @@ using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2026_OR_GREATER
@@ -74,8 +75,10 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
-
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
+
+    // register proxy display value manager
+    serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
 
     // operation progress manager
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
