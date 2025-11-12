@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
@@ -25,7 +26,8 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  IElementSelectionService elementSelectionService
+  IElementSelectionService elementSelectionService,
+  IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -257,12 +259,14 @@ public class NavisworksRootObjectBuilder(
 
     (string name, string path) = GetContext(convertedBase.applicationId);
 
+    var units = uiUnitsCache.Ensure();
+
     return new NavisworksObject
     {
       name = name,
       displayValue = convertedBase["displayValue"] as List<Base> ?? [],
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
-      units = converterSettings.Current.Derived.SpeckleUnits,
+      units = units.ToString(),
       applicationId = convertedBase.applicationId,
       ["path"] = path
     };
