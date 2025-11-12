@@ -76,11 +76,24 @@ public class DataObjectConverter
 
     foreach (var item in target.displayValue)
     {
-      var converted = GetConvertedGeometry(item);
-      foreach (var geom in converted)
+      if (item is InstanceProxy proxy)
       {
-        geom.Transform(GetUnitsTransform(item));
-        resultPairs.Add((geom, item));
+        var resolvedMeshes = _proxyDisplayValueManager.ResolveInstanceProxy(proxy);
+        foreach (var speckleMesh in resolvedMeshes)
+        {
+          var rhinoMesh = _meshConverter.Convert(speckleMesh);
+          rhinoMesh.Transform(GetUnitsTransform(speckleMesh));
+          resultPairs.Add((rhinoMesh, speckleMesh));
+        }
+      }
+      else
+      {
+        var converted = GetConvertedGeometry(item);
+        foreach (var geom in converted)
+        {
+          geom.Transform(GetUnitsTransform(item));
+          resultPairs.Add((geom, item));
+        }
       }
     }
 
@@ -104,10 +117,6 @@ public class DataObjectConverter
       SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
       SOG.Region region => new() { _regionConverter.Convert(region) },
       SOG.SubDX subd => _subdConverter.Convert(subd),
-      InstanceProxy proxy
-        => new List<RG.GeometryBase>(
-          _proxyDisplayValueManager.ResolveInstanceProxy(proxy).Select(mesh => _meshConverter.Convert(mesh)).ToList()
-        ),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
 
