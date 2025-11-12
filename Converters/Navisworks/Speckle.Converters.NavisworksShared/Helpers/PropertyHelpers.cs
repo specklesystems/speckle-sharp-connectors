@@ -70,17 +70,17 @@ internal static class UnitLabels
   internal static string Linear(NAV.Units u) =>
     u switch
     {
-      NAV.Units.Kilometers => "Kilometres",
+      NAV.Units.Kilometers => "Kilometers",
       NAV.Units.Meters => "Metres",
-      NAV.Units.Centimeters => "Centimetres",
-      NAV.Units.Millimeters => "Millimetres",
-      NAV.Units.Micrometers => "Micrometres",
+      NAV.Units.Centimeters => "Centimeters",
+      NAV.Units.Millimeters => "Millimeters",
+      NAV.Units.Micrometers => "Micrometers",
       NAV.Units.Miles => "Miles",
       NAV.Units.Yards => "Yards",
       NAV.Units.Feet => "Feet",
       NAV.Units.Inches => "Inches",
       NAV.Units.Mils => "Mils",
-      NAV.Units.Microinches => "MicroInches",
+      NAV.Units.Microinches => "Microinches",
       _ => "Metres"
     };
 
