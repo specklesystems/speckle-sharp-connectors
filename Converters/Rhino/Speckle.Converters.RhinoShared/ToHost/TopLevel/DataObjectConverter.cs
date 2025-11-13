@@ -29,7 +29,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
   private readonly ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> _subdConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
-  private readonly IProxyDisplayValueManager _proxyDisplayValueManager;
+  private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
@@ -47,7 +47,7 @@ public class DataObjectConverter
     ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
     ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> subdConverter,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore,
-    IProxyDisplayValueManager proxyDisplayValueManager
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry
   )
   {
     _arcConverter = arcConverter;
@@ -65,7 +65,7 @@ public class DataObjectConverter
     _regionConverter = regionConverter;
     _subdConverter = subdConverter;
     _settingsStore = settingsStore;
-    _proxyDisplayValueManager = proxyDisplayValueManager;
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -74,27 +74,22 @@ public class DataObjectConverter
   {
     var resultPairs = new List<(RG.GeometryBase, Base)>();
 
+    // check if display value contains InstanceProxies - register for special handling
+    if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
+    {
+      var instanceProxies = target.displayValue.Cast<InstanceProxy>().ToList();
+      _dataObjectInstanceRegistry.Register(target.id.NotNull(), target, instanceProxies);
+      return resultPairs; // empty - will be handled by instance baker
+    }
+
+    // normal display value conversion
     foreach (var item in target.displayValue)
     {
-      // InstanceProxy handled separately and not in ConvertDisplayObject
-      // material lookup needs the resolved mesh's applicationId, not the proxy's
-      if (item is InstanceProxy proxy)
+      var converted = GetConvertedGeometry(item);
+      foreach (var geom in converted)
       {
-        var resolvedMeshes = _proxyDisplayValueManager.ResolveInstanceProxy(proxy);
-        foreach (var speckleMesh in resolvedMeshes)
-        {
-          var rhinoMesh = _meshConverter.Convert(speckleMesh);
-          resultPairs.Add((rhinoMesh, speckleMesh));
-        }
-      }
-      else
-      {
-        var converted = GetConvertedGeometry(item);
-        foreach (var geom in converted)
-        {
-          geom.Transform(GetUnitsTransform(item));
-          resultPairs.Add((geom, item));
-        }
+        geom.Transform(GetUnitsTransform(item));
+        resultPairs.Add((geom, item));
       }
     }
 

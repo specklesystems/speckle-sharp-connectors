@@ -98,6 +98,10 @@ public static class ServiceRegistration
     // register proxy display value manager
     serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
 
+    // handling proxified display values
+    serviceCollection.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();
+    serviceCollection.AddScoped<DataObjectInstanceGrouper>();
+
     // register helpers
     serviceCollection.AddScoped<RhinoLayerHelper>();
     serviceCollection.AddScoped<RhinoObjectHelper>();

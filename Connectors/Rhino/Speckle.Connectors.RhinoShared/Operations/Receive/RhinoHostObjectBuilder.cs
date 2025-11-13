@@ -10,6 +10,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
@@ -36,6 +37,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
   private readonly IReceiveConversionHandler _conversionHandler;
+  private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
+  private readonly DataObjectInstanceGrouper _dataObjectInstanceGrouper;
 
   public RhinoHostObjectBuilder(
     IRootToHostConverter converter,
@@ -48,7 +51,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoGroupBaker groupBaker,
     ISdkActivityFactory activityFactory,
     IThreadContext threadContext,
-    IReceiveConversionHandler conversionHandler
+    IReceiveConversionHandler conversionHandler,
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry,
+    DataObjectInstanceGrouper dataObjectInstanceGrouper
   )
   {
     _converter = converter;
@@ -62,6 +67,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _activityFactory = activityFactory;
     _threadContext = threadContext;
     _conversionHandler = conversionHandler;
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
+    _dataObjectInstanceGrouper = dataObjectInstanceGrouper;
   }
 
 #pragma warning disable CA1506
@@ -188,8 +195,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
           if (conversionIds.Count == 0)
           {
-            // TODO: add this condition to report object - same as in autocad
-            throw new ConversionException("Object did not convert to any native geometry");
+            // Don't throw if this DataObject was registered for instance baking
+            if (!_dataObjectInstanceRegistry.IsRegistered(obj.id.NotNull()))
+            {
+              throw new ConversionException("Object did not convert to any native geometry");
+            }
+            // Skip normal processing - will be handled by DataObjectInstanceGrouper
+            return;
           }
 
           // 4: log
@@ -232,7 +244,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       conversionResults.UnionWith(instanceConversionResults); // add instance conversion results to our list
     }
 
-    // 7 - Create groups
+    // 7.1 Group DataObject instances and apply metadata
+    _dataObjectInstanceGrouper.GroupAndApplyMetadata(_dataObjectInstanceRegistry, baseLayerName);
+
+    // 7.2 Normal group creation
     if (unpackedRoot.GroupProxies is not null)
     {
       _groupBaker.BakeGroups(unpackedRoot.GroupProxies, applicationIdMap, baseLayerName);
@@ -244,6 +259,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
   private void PreReceiveDeepClean(string baseLayerName)
   {
+    // Clear DataObject instance registry at start of new build
+    _dataObjectInstanceRegistry.Clear();
+
     // Remove all previously received layers and render materials from the document
     int rootLayerIndex = _converterSettings.Current.Document.Layers.Find(
       Guid.Empty,
