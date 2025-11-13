@@ -1,9 +1,11 @@
+using System.IO;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -19,6 +21,7 @@ public class RhinoMaterialUnpacker
   /// For send operations
   /// </summary>
   private Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; } = new();
+  private Dictionary<string, string> Textures { get; } = new();
 
   public RhinoMaterialUnpacker(ILogger<RhinoMaterialUnpacker> logger)
   {
@@ -237,14 +240,32 @@ public class RhinoMaterialUnpacker
         roughness = roughness,
         diffuse = diffuse.ToArgb(),
         emissive = emissive.ToArgb(),
-        applicationId = renderMaterial.Id.ToString()
+        applicationId = renderMaterial.Id.ToString(),
+        ["diffuseTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_BaseColor),
+        ["metallicTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Metallic),
+        ["specularTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Specular),
+        ["shineTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Sheen),
+        ["roughnessTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Roughness),
+        ["opacityTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.Opacity),
+        ["bumpTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.Bump),
+        ["emissionTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Emission),
+        ["typeName"] = renderMaterial.TypeName,
+        ["ior"] = pbRenderMaterial.ReflectiveIOR,
+        ["shine"] = pbRenderMaterial.Material.Shine,
+        ["specular"] = pbRenderMaterial.Specular
       };
 
-    // add additional dynamic props for rhino material receive
-    speckleRenderMaterial["typeName"] = renderMaterial.TypeName;
-    speckleRenderMaterial["ior"] = pbRenderMaterial.Material.IndexOfRefraction;
-    speckleRenderMaterial["shine"] = pbRenderMaterial.Material.Shine;
-
     return speckleRenderMaterial;
+  }
+
+  private static Blob? GetEncodedTexture(PhysicallyBasedMaterial pbRenderMaterial, TextureType kind)
+  {
+    var texture = pbRenderMaterial.GetTexture(kind);
+    string? path = texture?.FileName;
+    if (string.IsNullOrEmpty(path) || !File.Exists(path))
+    {
+      return null;
+    }
+    return new Blob(path!);
   }
 }
