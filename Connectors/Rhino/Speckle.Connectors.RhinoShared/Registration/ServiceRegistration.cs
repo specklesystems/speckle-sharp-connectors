@@ -95,9 +95,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<RevitMappingResolver>();
 
-    // register proxy display value manager
-    serviceCollection.AddScoped<IProxyDisplayValueManager, ProxyDisplayValueManager>();
-
     // handling proxified display values
     serviceCollection.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();
     serviceCollection.AddScoped<DataObjectInstanceGrouper>();

@@ -78,7 +78,7 @@ public class DataObjectConverter
     if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
     {
       var instanceProxies = target.displayValue.Cast<InstanceProxy>().ToList();
-      _dataObjectInstanceRegistry.Register(target.id.NotNull(), target, instanceProxies);
+      _dataObjectInstanceRegistry.Register(target.applicationId ?? target.id.NotNull(), target, instanceProxies);
       return resultPairs; // empty - will be handled by instance baker
     }
 

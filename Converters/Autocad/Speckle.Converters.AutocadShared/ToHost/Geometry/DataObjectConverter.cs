@@ -1,6 +1,5 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.ToHost;
 using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
@@ -19,7 +18,6 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
-  private readonly IProxyDisplayValueManager _proxyDisplayValueManager;
 
   public DataObjectConverter(
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
@@ -28,8 +26,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
-    ITypedConverter<SOG.Region, ADB.Entity> regionConverter,
-    IProxyDisplayValueManager proxyDisplayValueManager
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
   )
   {
     _curveConverter = curveConverter;
@@ -39,7 +36,6 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _pointConverter = pointConverter;
     _subDXConverter = subDXConverter;
     _regionConverter = regionConverter;
-    _proxyDisplayValueManager = proxyDisplayValueManager;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -52,14 +48,9 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     {
       // InstanceProxy handled separately and not in ConvertDisplayObject
       // material lookup needs the resolved mesh's applicationId, not the proxy's
-      if (item is InstanceProxy proxy)
+      if (item is InstanceProxy)
       {
-        var resolvedMeshes = _proxyDisplayValueManager.ResolveInstanceProxy(proxy);
-        foreach (var speckleMesh in resolvedMeshes)
-        {
-          var autocadMesh = _meshConverter.Convert(speckleMesh);
-          result.Add((autocadMesh, speckleMesh));
-        }
+        continue;
       }
       else
       {

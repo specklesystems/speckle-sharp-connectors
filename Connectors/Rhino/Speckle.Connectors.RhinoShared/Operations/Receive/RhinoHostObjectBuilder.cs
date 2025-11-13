@@ -196,7 +196,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
           if (conversionIds.Count == 0)
           {
             // Don't throw if this DataObject was registered for instance baking
-            if (!_dataObjectInstanceRegistry.IsRegistered(obj.id.NotNull()))
+
+            if (!_dataObjectInstanceRegistry.IsRegistered(obj.applicationId ?? obj.id.NotNull()))
             {
               throw new ConversionException("Object did not convert to any native geometry");
             }
@@ -245,7 +246,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 7.1 Group DataObject instances and apply metadata
-    _dataObjectInstanceGrouper.GroupAndApplyMetadata(_dataObjectInstanceRegistry, baseLayerName);
+    _dataObjectInstanceGrouper.GroupAndApplyProperties();
 
     // 7.2 Normal group creation
     if (unpackedRoot.GroupProxies is not null)

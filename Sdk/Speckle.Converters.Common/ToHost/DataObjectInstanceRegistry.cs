@@ -24,7 +24,8 @@ public sealed class DataObjectInstanceRegistry : IDataObjectInstanceRegistry
     // track reverse mapping for each proxy
     foreach (var proxy in instanceProxies)
     {
-      _instanceProxyToDataObject[proxy.id.NotNull()] = dataObjectId;
+      var proxyId = proxy.applicationId ?? proxy.id.NotNull();
+      _instanceProxyToDataObject[proxyId] = dataObjectId;
     }
 
     _dataObjectToBakedInstances[dataObjectId] = new List<string>();

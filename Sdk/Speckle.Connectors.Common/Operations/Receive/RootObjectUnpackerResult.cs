@@ -1,5 +1,4 @@
-﻿using Speckle.Converters.Common.ToHost;
-using Speckle.Objects.Other;
+﻿using Speckle.Objects.Other;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
@@ -12,6 +11,5 @@ public record RootObjectUnpackerResult(
   IReadOnlyCollection<GroupProxy>? GroupProxies,
   IReadOnlyCollection<RenderMaterialProxy>? RenderMaterialProxies,
   IReadOnlyCollection<ColorProxy>? ColorProxies,
-  IReadOnlyCollection<LevelProxy>? LevelProxies,
-  IProxyDisplayValueManager? ProxyDisplayValueCache = null
+  IReadOnlyCollection<LevelProxy>? LevelProxies
 );
