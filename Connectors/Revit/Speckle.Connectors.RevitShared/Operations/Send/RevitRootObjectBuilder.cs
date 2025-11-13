@@ -276,7 +276,7 @@ public class RevitRootObjectBuilder(
     if (converterSettings.Current.ReferencePointTransform is Transform transform)
     {
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
-      rootObject[RootKeys.REFERENCE_POINT] = transformMatrix;
+      rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] = transformMatrix;
     }
 
     return new RootObjectBuilderResult(rootObject, results);

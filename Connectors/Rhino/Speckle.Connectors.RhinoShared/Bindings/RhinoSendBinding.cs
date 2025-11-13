@@ -83,7 +83,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _rhinoLayerHelper = rhinoLayerHelper;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
-    PreviousUnitSystem = RhinoDoc.ActiveDoc.ModelUnitSystem;
+    PreviousUnitSystem = RhinoDoc.ActiveDoc?.ModelUnitSystem ?? UnitSystem.None;
     SubscribeToRhinoEvents();
   }
 

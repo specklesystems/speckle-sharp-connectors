@@ -47,15 +47,13 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
   public bool JustPastedIn { get; set; }
   public string LastVersionDate { get; set; }
   public string LastInfoMessage { get; set; }
-  public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
+  public SpeckleUrlModelResource? UrlModelResource { get; set; }
 
   // DI props
   public IClient ApiClient { get; private set; }
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
-  {
+  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
     pManager.AddParameter(new SpeckleUrlModelResourceParam(GH_ParamAccess.item));
-  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
@@ -64,6 +62,14 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       "Collection",
       "collection",
       "The model collection of the loaded version",
+      GH_ParamAccess.item
+    );
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Model-wide properties from the root collection",
       GH_ParamAccess.item
     );
   }
@@ -285,7 +291,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       Account? account = urlResource.Account.GetAccount(scope);
       if (account is null)
       {
-        throw new SpeckleAccountManagerException($"No default account was found");
+        throw new SpeckleAccountManagerException("No default account was found");
       }
 
       ApiClient?.Dispose();
@@ -338,6 +344,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
   public Base Root { get; set; }
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo Result { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; private set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance<ReceiveAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
@@ -374,6 +381,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
 
     da.SetData(0, Result);
+    da.SetData(1, RootProperties);
   }
 
   public override async Task DoWork(Action<string, double> reportProgress, Action done)
@@ -446,6 +454,12 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
     CancellationToken.ThrowIfCancellationRequested();
 
+    SpecklePropertyGroupGoo? rootPropertiesGoo = null;
+    if (Root is RootCollection rootCollection && rootCollection.properties.Count > 0)
+    {
+      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootCollection.properties);
+    }
+
     // Step 2 - CONVERT
     //receiveComponent.Message = $"Unpacking...";
     TraversalContextUnpacker traversalContextUnpacker = new();
@@ -481,6 +495,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
 
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+    RootProperties = rootPropertiesGoo;
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>()
