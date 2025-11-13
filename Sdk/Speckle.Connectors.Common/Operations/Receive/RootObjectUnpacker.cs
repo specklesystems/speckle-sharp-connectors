@@ -1,4 +1,5 @@
 ﻿using Speckle.Converters.Common.ToHost;
+using Speckle.Objects.Data;
 using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
@@ -74,6 +75,17 @@ public class RootObjectUnpacker
       else
       {
         atomicObjects.Add(tc); // handles DataObject which INCLUDES DataObject with proxified displayValue(s)
+      }
+
+      if (tc.Current is DataObject dataObject)
+      {
+        foreach (var displayValue in dataObject.displayValue)
+        {
+          if (displayValue is IInstanceComponent)
+          {
+            instanceComponents.Add(new TraversalContext(displayValue, parent: tc));
+          }
+        }
       }
     }
     return (atomicObjects, instanceComponents);

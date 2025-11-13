@@ -1,7 +1,4 @@
-﻿using Speckle.DoubleNumerics;
-using Speckle.Objects;
-using Speckle.Objects.Geometry;
-using Speckle.Objects.Other;
+﻿using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 
@@ -62,32 +59,6 @@ public class ProxyDisplayValueManager : IProxyDisplayValueManager
       return [];
     }
 
-    var transformedMeshes = new List<Mesh>(definitionMeshes.Count);
-
-    foreach (var defMesh in definitionMeshes)
-    {
-      var transformed = ApplyTransform(defMesh, proxy.transform, proxy.units);
-      transformedMeshes.Add(transformed);
-    }
-
-    return transformedMeshes;
-  }
-
-  // Helper method remains static and private, only used internally for clean cloning/transforming.
-  private static Mesh ApplyTransform(Mesh mesh, Matrix4x4 transform, string units)
-  {
-    var copiedMesh = (Mesh)mesh.ShallowCopy();
-
-    // preserve the applicationId for material lookup
-    var originalApplicationId = copiedMesh.applicationId;
-
-    var speckleTransform = new Transform { matrix = transform, units = units };
-    copiedMesh.TransformTo(speckleTransform, out ITransformable result);
-
-    // restore applicationId after TransformTo creates new object
-    var transformedMesh = (Mesh)result;
-    transformedMesh.applicationId = originalApplicationId;
-
-    return transformedMesh;
+    return definitionMeshes;
   }
 }

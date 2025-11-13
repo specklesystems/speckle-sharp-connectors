@@ -354,7 +354,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     if (objCount > 1)
     {
       var groupIndex = _converterSettings.Current.Document.Groups.Add(
-        $@"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
+        $"{originatingObject.speckle_type.Split('.').Last()} - {parentId}  ({baseLayerName})",
         objectIds
       );
 

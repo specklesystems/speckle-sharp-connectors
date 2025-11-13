@@ -84,7 +84,6 @@ public class DataObjectConverter
         foreach (var speckleMesh in resolvedMeshes)
         {
           var rhinoMesh = _meshConverter.Convert(speckleMesh);
-          rhinoMesh.Transform(GetUnitsTransform(speckleMesh));
           resultPairs.Add((rhinoMesh, speckleMesh));
         }
       }
