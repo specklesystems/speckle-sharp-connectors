@@ -128,41 +128,26 @@ public class GeometryToSpeckleConverter(
 
   private List<Base> ProcessSharedGeometry(InwSelectionPathsColl paths, Stack<InwOaFragment3> fragmentStack)
   {
-    _logger.LogDebug("ProcessSharedGeometry called with {PathCount} paths", paths.Count);
-
     // Generate ID from fragment data for shared geometry
     var fragmentId = GenerateFragmentId(paths);
 
     if (string.IsNullOrEmpty(fragmentId))
     {
-      _logger.LogWarning(
-        "Could not generate fragment ID from {PathCount} paths with {FragmentCount} total fragments - falling back to normal geometry processing",
-        paths.Count,
-        paths.Cast<InwOaPath>().Sum(p => p.Fragments().Count)
-      );
-
       // Fallback to normal processing if we can't generate ID
       foreach (InwOaPath path in paths)
       {
         CollectFragments(path, fragmentStack);
       }
 
-      return ProcessFragments(fragmentStack, paths);
+      return ProcessFragments(fragmentStack, paths, true);
     }
 
     // Check if shared geometry already exists in store
     if (_instanceStoreManager.ContainsSharedGeometry(fragmentId))
     {
-      _logger.LogDebug(
-        "Reusing existing shared geometry: Fragment={FragmentId}, Definition={DefinitionId}",
-        fragmentId,
-        $"def_{fragmentId}"
-      );
       // Return instance reference to existing geometry
       return CreateInstanceReference(fragmentId, paths);
     }
-
-    _logger.LogDebug("Creating new shared geometry with FragmentId={FragmentId}", fragmentId);
 
     // Extract untransformed base geometry
     foreach (InwOaPath path in paths)
@@ -180,16 +165,9 @@ public class GeometryToSpeckleConverter(
     // Store both the geometry definition and create the instance definition proxy
     if (!_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry))
     {
-      _logger.LogWarning("Failed to store shared geometry for FragmentId={FragmentId}", fragmentId);
       return ProcessFragments(fragmentStack, paths);
     }
 
-    _logger.LogDebug(
-      "Successfully stored shared geometry: Fragment={FragmentId}, Geometry={GeometryId}, Definition={DefinitionId}",
-      fragmentId,
-      $"geom_{fragmentId}",
-      $"def_{fragmentId}"
-    );
     // Return instance reference to the newly stored geometry
     return CreateInstanceReference(fragmentId, paths);
 
@@ -199,7 +177,7 @@ public class GeometryToSpeckleConverter(
   private List<Base> ProcessFragments(
     Stack<InwOaFragment3> fragmentStack,
     InwSelectionPathsColl paths,
-    bool isSingleObject = true
+    bool isSingleObject = false
   )
   {
     var callbackListeners = new List<PrimitiveProcessor>();
@@ -523,7 +501,6 @@ public class GeometryToSpeckleConverter(
   /// <summary>
   /// Creates a SHA256 hash of the raw fragment data to ensure consistent, secure identifiers.
   /// </summary>
-  /// <param name="rawData">The raw fragment data to hash (without prefix)</param>
   /// <returns>SHA256 hash as lowercase hex string (64 characters)</returns>
   private static string HashRawData(string rawData)
   {
@@ -568,7 +545,8 @@ public class GeometryToSpeckleConverter(
       definitionId = $"def_{fragmentId}",
       transform = transform,
       units = _settings.Derived.SpeckleUnits,
-      maxDepth = 0
+      maxDepth = 0,
+      applicationId = Guid.NewGuid().ToString()
     };
 
     return [instanceReference];
@@ -586,6 +564,9 @@ public class GeometryToSpeckleConverter(
         return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       }
 
+      // cast the com object collextion to enumerable
+      var pathsEnum = paths.Cast<InwOaPath>();
+
       var firstPath = paths.Cast<InwOaPath>().First();
       var fragments = firstPath.Fragments();
 
@@ -593,9 +574,25 @@ public class GeometryToSpeckleConverter(
       {
         return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       }
-
+      var fragmentStack = new Stack<InwOaFragment3>();
       // Get the first fragment's transform matrix
-      var fragment = fragments.OfType<InwOaFragment3>().First();
+      foreach (var frag in fragments.OfType<InwOaFragment3>())
+      {
+        if (frag.path?.ArrayData is not Array pathData1 || firstPath.ArrayData is not Array pathData2)
+        {
+          continue;
+        }
+
+        var pathArray1 = pathData1.Cast<int>().ToArray<int>();
+        var pathArray2 = pathData2.Cast<int>().ToArray<int>();
+
+        if (pathArray1.Length == pathArray2.Length && pathArray1.SequenceEqual(pathArray2))
+        {
+          fragmentStack.Push(frag);
+        }
+      }
+
+      var fragment = fragmentStack.First();
       var matrix = fragment.GetLocalToWorldMatrix();
 
       if (matrix is InwLTransform3f3 { Matrix: Array matrixArray })
@@ -605,7 +602,7 @@ public class GeometryToSpeckleConverter(
         // Apply coordinate system transformation
         var transformedMatrix = ApplyCoordinateTransform(transformArray);
 
-        return new Matrix4x4(
+        var newMatrix = new Matrix4x4(
           transformedMatrix[0],
           transformedMatrix[1],
           transformedMatrix[2],
@@ -623,6 +620,8 @@ public class GeometryToSpeckleConverter(
           transformedMatrix[14],
           transformedMatrix[15]
         );
+
+        return Matrix4x4.Transpose(newMatrix);
       }
     }
     catch (COMException ex)
