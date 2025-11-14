@@ -23,6 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSendBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\RhinoSelectionBinding.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\AttributeExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\DataObjectInstanceGrouper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoViewUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
