@@ -44,18 +44,13 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   {
     var result = new List<(ADB.Entity a, Base b)>();
 
+    if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
+    {
+      return []; // return empty - defer to instance baker
+    }
     foreach (var item in target.displayValue)
     {
-      // InstanceProxy handled separately and not in ConvertDisplayObject
-      // material lookup needs the resolved mesh's applicationId, not the proxy's
-      if (item is InstanceProxy)
-      {
-        continue;
-      }
-      else
-      {
-        result.AddRange(ConvertDisplayObject(item));
-      }
+      result.AddRange(ConvertDisplayObject(item));
     }
 
     return result;
