@@ -1,7 +1,10 @@
+using Autodesk.Navisworks.Api.ComApi;
+using Autodesk.Navisworks.Api.Interop.ComApi;
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -11,7 +14,8 @@ namespace Speckle.Connector.Navisworks.HostApp;
 public class NavisworksMaterialUnpacker(
   ILogger<NavisworksMaterialUnpacker> logger,
   IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
-  IElementSelectionService selectionService
+  IElementSelectionService selectionService,
+  GeometryToSpeckleConverter converter
 )
 {
   // Helper function to select a property based on the representation mode
@@ -64,6 +68,19 @@ public class NavisworksMaterialUnpacker(
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
+
+        var item = selectionService.GetModelItemFromPath(finalId);
+        string hashId = "";
+        var comSelection = ComApiBridge.ToInwOpSelection([item]);
+        var paths = comSelection.Paths();
+        var path = paths.OfType<InwOaPath>().First();
+        var fragments = path.Fragments();
+        if (fragments.Count > 1)
+        {
+          var fragmentId = converter.GenerateFragmentId(paths);
+          hashId = $"geom_{fragmentId}";
+        }
+
         var geometry = navisworksObject.Geometry;
         var mode = converterSettings.Current.User.VisualRepresentationMode;
 
@@ -120,7 +137,7 @@ public class NavisworksMaterialUnpacker(
 
         if (renderMaterialProxies.TryGetValue(renderMaterialId.ToString(), out RenderMaterialProxy? value))
         {
-          value.objects.Add(finalId);
+          value.objects.Add(!string.IsNullOrEmpty(hashId) ? hashId : finalId);
         }
         else
         {
@@ -132,7 +149,7 @@ public class NavisworksMaterialUnpacker(
               renderColor,
               renderMaterialId
             ),
-            objects = [finalId]
+            objects = [!string.IsNullOrEmpty(hashId) ? hashId : finalId]
           };
         }
       }

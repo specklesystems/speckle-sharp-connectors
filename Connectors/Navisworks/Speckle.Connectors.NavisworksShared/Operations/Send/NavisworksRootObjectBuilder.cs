@@ -312,10 +312,7 @@ public class NavisworksRootObjectBuilder(
 
     // Add instance definition proxies from dual store
     var instanceDefinitionProxies = instanceStoreManager.GetInstanceDefinitionProxies();
-    logger.LogDebug(
-      "Retrieved {Count} instance definition proxies from store",
-      instanceDefinitionProxies.Count
-    );
+    logger.LogDebug("Retrieved {Count} instance definition proxies from store", instanceDefinitionProxies.Count);
 
     if (instanceDefinitionProxies.Count > 0)
     {

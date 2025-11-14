@@ -306,7 +306,7 @@ public class GeometryToSpeckleConverter(
   /// Generates an idempotent ID from fragment path data for shared geometry.
   /// Uses the path.Fragments() collection to create a reproducible hash.
   /// </summary>
-  private string GenerateFragmentId(InwSelectionPathsColl paths)
+  public string GenerateFragmentId(InwSelectionPathsColl paths)
   {
     try
     {
@@ -574,6 +574,7 @@ public class GeometryToSpeckleConverter(
       {
         return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       }
+
       var fragmentStack = new Stack<InwOaFragment3>();
       // Get the first fragment's transform matrix
       foreach (var frag in fragments.OfType<InwOaFragment3>())
