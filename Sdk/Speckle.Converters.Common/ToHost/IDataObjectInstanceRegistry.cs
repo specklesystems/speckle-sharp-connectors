@@ -10,6 +10,11 @@ public interface IDataObjectInstanceRegistry
 {
   void Register(string dataObjectId, DataObject dataObject, List<InstanceProxy> instanceProxies);
   bool IsRegistered(string dataObjectId);
+
+  /// <summary>
+  /// Dictionary of data object id to DataObjectInstanceEntry (which holds the DataObject and instance proxies
+  /// that form the display value of that data object).
+  /// </summary>
   IReadOnlyDictionary<string, DataObjectInstanceEntry> GetEntries();
   void Clear();
 

@@ -27,10 +27,18 @@ public class DataObjectInstanceGrouper
     _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
   }
 
+  /// <summary>
+  /// After all instances have been created, we then run through the data object instance registry to see which instances
+  /// belonged to a data object. The method then groups all instances to "re-assemble" the original data object and
+  /// applies the properties of the data object on to the instances.
+  /// </summary>
+  /// <remarks>
+  /// This is a deferred action and can only occur once the RhinoInstanceBaker has done its thing.
+  /// </remarks>
   public void GroupAndApplyProperties()
   {
     var doc = _converterSettings.Current.Document;
-    var entries = _dataObjectInstanceRegistry.GetEntries();
+    var entries = _dataObjectInstanceRegistry.GetEntries(); // see docstring
 
     foreach (var kvp in entries)
     {
@@ -51,7 +59,7 @@ public class DataObjectInstanceGrouper
 
         if (groupIndex >= 0)
         {
-          // apply properties to each instance
+          // apply properties to each instance (doing this on an instance level because setting to group doesn't work)
           foreach (var instanceId in instanceIds)
           {
             var rhinoObj = doc.Objects.FindId(new Guid(instanceId));

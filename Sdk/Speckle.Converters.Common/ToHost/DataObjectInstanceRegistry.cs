@@ -33,6 +33,7 @@ public sealed class DataObjectInstanceRegistry : IDataObjectInstanceRegistry
 
   public bool IsRegistered(string dataObjectId) => _entries.ContainsKey(dataObjectId);
 
+  /// <inheritdoc />
   public IReadOnlyDictionary<string, DataObjectInstanceEntry> GetEntries() => _entries;
 
   public void LinkInstanceToDataObject(string instanceProxyId, string bakedInstanceId)
