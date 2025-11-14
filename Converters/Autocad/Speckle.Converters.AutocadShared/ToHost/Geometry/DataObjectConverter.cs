@@ -4,6 +4,7 @@ using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
@@ -42,14 +43,20 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {
     var result = new List<(ADB.Entity a, Base b)>();
+
+    if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
+    {
+      return []; // return empty - defer to instance baker
+    }
     foreach (var item in target.displayValue)
     {
       result.AddRange(ConvertDisplayObject(item));
     }
+
     return result;
   }
 
-  public IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
+  private IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
   {
     switch (displayObject)
     {
