@@ -15,6 +15,7 @@ using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
@@ -22,6 +23,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
@@ -462,6 +464,8 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
     // Step 2 - CONVERT
     //receiveComponent.Message = $"Unpacking...";
+
+    SpeckleConversionContext.SetupCurrent(scope);
     TraversalContextUnpacker traversalContextUnpacker = new();
     var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
 
@@ -477,22 +481,64 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       (Root as Collection) ?? new Collection { name = "unnamed" }
     );
 
+    // get registry from DI
+    var registry = scope.Get<IDataObjectInstanceRegistry>();
+
     // convert atomic objects directly
     var mapHandler = new LocalToGlobalMapHandler(
       traversalContextUnpacker,
       collectionRebuilder,
       colorUnpacker,
-      materialUnpacker
+      materialUnpacker,
+      registry,
+      unpackedRoot.DefinitionProxies
     );
 
+    // First pass: convert all atomic objects to populate ConvertedObjectsMap
+    // (this ensures definition objects are available for DataObject resolution)
     foreach (var atomicContext in atomicObjects)
     {
       mapHandler.ConvertAtomicObject(atomicContext);
     }
 
+    // Second pass: process registered DataObjects with InstanceProxies
+    // (now that all definition objects are in ConvertedObjectsMap)
+    foreach (var atomicContext in atomicObjects)
+    {
+      if (atomicContext.Current is Speckle.Objects.Data.DataObject dataObject)
+      {
+        var dataObjectId = dataObject.applicationId ?? dataObject.id;
+        if (dataObjectId != null && registry.IsRegistered(dataObjectId))
+        {
+          mapHandler.ConvertRegisteredDataObject(atomicContext);
+        }
+      }
+    }
+
+    // filter out InstanceProxies that belong to registered DataObjects
+    var filteredBlockInstances = blockInstances
+      .Where(tc =>
+      {
+        if (tc.Current is InstanceProxy proxy)
+        {
+          // check if this proxy's parent is a registered DataObject
+          var parent = tc.Parent?.Current;
+          if (parent is Speckle.Objects.Data.DataObject dataObject)
+          {
+            var dataObjectId = dataObject.applicationId ?? dataObject.id;
+            if (dataObjectId != null && registry.IsRegistered(dataObjectId))
+            {
+              return false; // skip this proxy - it's handled by DataObject conversion
+            }
+          }
+        }
+        return true; // keep all other instance components
+      })
+      .ToList();
+
     // process block instances using converted atomic objects
     // block processing needs converted objects, but object filtering needs block definitions.
-    mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
+    mapHandler.ConvertBlockInstances(filteredBlockInstances, unpackedRoot.DefinitionProxies);
 
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     RootProperties = rootPropertiesGoo;
