@@ -9,7 +9,7 @@ namespace Speckle.Converter.Navisworks.Services;
 /// for existence and skip if needed.
 /// </summary>
 [GenerateAutoInterface]
-public class SharedGeometryStore : ISharedGeometryStore
+public class SharedGeometryStores : ISharedGeometryStore
 {
   private readonly HashSet<Base> _geometries = new();
   private readonly Dictionary<string, Base> _geometriesByApplicationId = new();
