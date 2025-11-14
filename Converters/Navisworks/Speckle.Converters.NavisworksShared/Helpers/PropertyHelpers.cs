@@ -48,9 +48,7 @@ public static class PropertyHelpers
     }
 
     // Default case for unsupported types
-    return value.DataType == NAV.VariantDataType.None || value.DataType == NAV.VariantDataType.Point2D
-      ? null
-      : value.ToString();
+    return value.DataType is NAV.VariantDataType.None or NAV.VariantDataType.Point2D ? null : value.ToString();
   }
 
   /// <summary>

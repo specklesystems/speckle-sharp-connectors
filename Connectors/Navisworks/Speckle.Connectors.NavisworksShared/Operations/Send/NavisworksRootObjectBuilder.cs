@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
@@ -25,7 +26,8 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  IElementSelectionService elementSelectionService
+  IElementSelectionService elementSelectionService,
+  InstanceStoreManager instanceStoreManager
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -41,7 +43,7 @@ public class NavisworksRootObjectBuilder(
   {
 #if DEBUG
     // This is a temporary workaround to disable node merging for debugging purposes - false is default, true is for debugging
-    SkipNodeMerging = false;
+    SkipNodeMerging = true;
 #endif
     using var activity = activityFactory.Start("Build");
 
@@ -50,22 +52,42 @@ public class NavisworksRootObjectBuilder(
     // 2. Initialize root collection
     var rootCollection = InitializeRootCollection();
 
+    // InstanceStoreManager is scoped - starts fresh for each conversion session
+
     // 3. Convert all model items and store results
-    var (convertedElements, conversionResults) = await ConvertModelItemsAsync(
-      navisworksModelItems,
-      projectId,
-      onOperationProgressed,
-      cancellationToken
-    );
+    (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
+      await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
 
     ValidateConversionResults(conversionResults);
 
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
+    List<Base> geometryDefinitions = instanceStoreManager.GetGeometryDefinitions();
 
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
-    rootCollection.elements = finalElements;
+    // rootCollection.elements will contain two Collections: one for geometry definitions and one for the main elements
+
+    var geometryDefinitionsCollection = new Collection
+    {
+      name = "Geometry Definitions",
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
+      elements = geometryDefinitions
+    };
+
+    var mainElementsCollection = new Collection
+    {
+      name = rootCollection.name,
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
+      elements = finalElements
+    };
+
+    rootCollection.elements = [mainElementsCollection];
+    if (geometryDefinitions.Count > 0)
+    {
+      rootCollection.elements.Add(geometryDefinitionsCollection);
+    }
+
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
 
@@ -286,6 +308,27 @@ public class NavisworksRootObjectBuilder(
     if (colors.Count > 0)
     {
       rootCollection[ProxyKeys.COLOR] = colors;
+    }
+
+    // Add instance definition proxies from dual store
+    var instanceDefinitionProxies = instanceStoreManager.GetInstanceDefinitionProxies();
+    logger.LogDebug(
+      "Retrieved {Count} instance definition proxies from store",
+      instanceDefinitionProxies.Count
+    );
+
+    if (instanceDefinitionProxies.Count > 0)
+    {
+      rootCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies.ToList();
+      logger.LogDebug(
+        "Added {Count} instance definition proxies to root collection under key '{Key}'",
+        instanceDefinitionProxies.Count,
+        ProxyKeys.INSTANCE_DEFINITION
+      );
+    }
+    else
+    {
+      logger.LogDebug("No instance definition proxies to add to root collection");
     }
 
     return Task.CompletedTask;
