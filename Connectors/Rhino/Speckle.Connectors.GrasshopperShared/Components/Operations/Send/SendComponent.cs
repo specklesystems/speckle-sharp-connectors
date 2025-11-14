@@ -20,12 +20,19 @@ public class SendComponentInput
   public SpeckleUrlModelResource Resource { get; }
   public SpeckleCollectionWrapperGoo Input { get; }
   public bool Run { get; }
+  public SpecklePropertyGroupGoo? RootProperties { get; }
 
-  public SendComponentInput(SpeckleUrlModelResource resource, SpeckleCollectionWrapperGoo input, bool run)
+  public SendComponentInput(
+    SpeckleUrlModelResource resource,
+    SpeckleCollectionWrapperGoo input,
+    bool run,
+    SpecklePropertyGroupGoo? rootProperties
+  )
   {
     Resource = resource;
     Input = input;
     Run = run;
+    RootProperties = rootProperties;
   }
 }
 
@@ -36,6 +43,11 @@ public class SendComponentOutput(SpeckleUrlModelResource? resource)
 
 public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
 {
+  public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
+  public string? Url { get; private set; }
+  public string? VersionMessage { get; private set; }
+  protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
+
   public SendComponent()
     : base(
       "(Sync) Publish",
@@ -45,17 +57,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       ComponentCategories.DEVELOPER
     ) { }
 
-  public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
-
-  public string? Url { get; private set; }
-
-  public string? VersionMessage { get; private set; }
-
-  protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
-
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
+    // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+
+    // collection
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -65,13 +72,22 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     );
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
+
+    // model-wide props (see cnx-2722)
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Optional model-wide properties to attach to the root collection",
+      GH_ParamAccess.item
+    );
+    pManager[3].Optional = true;
+
     pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
-  }
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
@@ -93,10 +109,20 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     da.GetData(2, ref versionMessage);
     VersionMessage = versionMessage;
 
-    bool run = false;
-    da.GetData(3, ref run);
+    SpecklePropertyGroupGoo? rootPropsGoo = null;
+    da.GetData(3, ref rootPropsGoo);
 
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run);
+    // validate single properties group
+    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
+    if (Params.Input[3].VolatileData.DataCount > 1)
+    {
+      throw new SpeckleException("Only one Model Properties group is allowed");
+    }
+
+    bool run = false;
+    da.GetData(4, ref run);
+
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
   }
 
   protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
@@ -121,7 +147,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, "View created model online ↗", (s, e) => Open(Url));
     }
 
     static void Open(string url)
@@ -166,6 +192,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       return new(null);
     }
 
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
+    // constructed here from the Collection + Model Properties inputs.
+    // if this changes, then we need to update below!
+    var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
+    var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
+
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
@@ -173,7 +205,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     Account? account = input.Resource.Account.GetAccount(scope);
     if (account is null)
     {
-      throw new SpeckleAccountManagerException($"No default account was found");
+      throw new SpeckleAccountManagerException("No default account was found");
     }
 
     var progress = new Progress<CardProgress>(_ =>
@@ -186,7 +218,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     await sendOperation
       .Execute(
-        new List<SpeckleCollectionWrapperGoo>() { input.Input },
+        new List<SpeckleCollectionWrapperGoo> { collectionToSend },
         sendInfo,
         VersionMessage,
         progress,
@@ -195,7 +227,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object>() { { "isAsync", false } };
+    var customProperties = new Dictionary<string, object> { { "isAsync", false } };
     if (sendInfo.WorkspaceId != null)
     {
       customProperties.Add("workspace_id", sendInfo.WorkspaceId);

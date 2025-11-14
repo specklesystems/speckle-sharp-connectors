@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Rhino.Extensions;
+using Speckle.Converters.Common.ToHost;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -22,18 +23,21 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
   private readonly RhinoLayerBaker _layerBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly ILogger<RhinoInstanceBaker> _logger;
+  private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
 
   public RhinoInstanceBaker(
     RhinoLayerBaker layerBaker,
     RhinoMaterialBaker rhinoMaterialBaker,
     RhinoColorBaker colorBaker,
-    ILogger<RhinoInstanceBaker> logger
+    ILogger<RhinoInstanceBaker> logger,
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry
   )
   {
     _layerBaker = layerBaker;
     _materialBaker = rhinoMaterialBaker;
     _colorBaker = colorBaker;
     _logger = logger;
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
   }
 
   /// <summary>
@@ -155,6 +159,9 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
           applicationIdMap[instanceProxyId] = new List<string>() { id.ToString() };
           createdObjectIds.Add(id.ToString());
           conversionResults.Add(new(Status.SUCCESS, instanceProxy, id.ToString(), "Instance (Block)"));
+
+          // link this baked instance back to its DataObject if it came from one (the method handles the check)
+          _dataObjectInstanceRegistry.LinkInstanceToDataObject(instanceProxyId, id.ToString());
         }
       }
       catch (Exception ex) when (!ex.IsFatal())

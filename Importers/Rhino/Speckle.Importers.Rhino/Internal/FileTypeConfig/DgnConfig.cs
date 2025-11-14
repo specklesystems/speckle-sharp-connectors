@@ -4,15 +4,9 @@ using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
-internal sealed class FbxConfig : IFileTypeConfig
+internal sealed class DgnConfig : IFileTypeConfig
 {
-  private readonly FileFbxReadOptions _readOptions =
-    new()
-    {
-      MapFbxYtoRhinoZ = true,
-      ImportLights = false, // Speckle doesn't support LightObject s
-      ImportCameras = true,
-    };
+  private readonly FileDgnReadOptions _readOptions = new() { ImportViews = true };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
@@ -21,6 +15,7 @@ internal sealed class FbxConfig : IFileTypeConfig
     {
       throw new SpeckleException("Rhino could not open this file");
     }
+
     return doc;
   }
 
