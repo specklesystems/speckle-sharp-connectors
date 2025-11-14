@@ -3,13 +3,8 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.Navisworks.Services;
 
-/// <summary>
-/// Singleton service that stores mesh objects with HashSet-like behavior for deduplication.
-/// First discovered geometry on conversion will add, subsequent conversions can check
-/// for existence and skip if needed.
-/// </summary>
 [GenerateAutoInterface]
-public class SharedGeometryStores : ISharedGeometryStore
+public class SharedGeometryStore : ISharedGeometryStore
 {
   private readonly HashSet<Base> _geometries = new();
   private readonly Dictionary<string, Base> _geometriesByApplicationId = new();
@@ -77,7 +72,9 @@ public class SharedGeometryStores : ISharedGeometryStore
 
     lock (_lock)
     {
-      return _geometriesByApplicationId.ContainsKey(applicationId);
+      var contains = _geometriesByApplicationId.ContainsKey(applicationId);
+
+      return contains;
     }
   }
 
