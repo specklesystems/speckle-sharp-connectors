@@ -77,15 +77,8 @@ public class GeometryToSpeckleConverter(
           var firstPath = paths.Cast<InwOaPath>().First();
           var fragmentsCollection = firstPath.Fragments();
 
-          _logger.LogDebug(
-            "Instancing check: PathCount={PathCount}, FragmentCount={FragmentCount}",
-            paths.Count,
-            fragmentsCollection.Count
-          );
-
           if (fragmentsCollection.Count > 1)
           {
-            _logger.LogDebug("Detected shared geometry - processing as instanced");
             // Shared geometry - extract base geometry once and return instance reference
             return ProcessSharedGeometry(paths, fragmentStack);
           }
@@ -101,7 +94,7 @@ public class GeometryToSpeckleConverter(
           CollectFragments(path, fragmentStack);
         }
 
-        return ProcessFragments(fragmentStack, paths);
+        return ProcessFragments(fragmentStack, paths, true);
       }
       finally
       {
@@ -148,8 +141,6 @@ public class GeometryToSpeckleConverter(
         paths.Cast<InwOaPath>().Sum(p => p.Fragments().Count)
       );
 
-      // Debug the paths collection to understand why ID generation failed
-      DebugPathsCollection(paths, "ProcessSharedGeometry - ID generation failed");
       // Fallback to normal processing if we can't generate ID
       foreach (InwOaPath path in paths)
       {
@@ -205,7 +196,11 @@ public class GeometryToSpeckleConverter(
     // Fallback to normal processing if store failed
   }
 
-  private List<Base> ProcessFragments(Stack<InwOaFragment3> fragmentStack, InwSelectionPathsColl paths)
+  private List<Base> ProcessFragments(
+    Stack<InwOaFragment3> fragmentStack,
+    InwSelectionPathsColl paths,
+    bool isSingleObject = true
+  )
   {
     var callbackListeners = new List<PrimitiveProcessor>();
 
@@ -222,10 +217,22 @@ public class GeometryToSpeckleConverter(
           continue;
         }
 
-        double[] makeNoChange = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        var fragmentCount = path.Fragments().Count;
 
-        processor.LocalToWorldTransformation =
-          path.Fragments().Count == 1 ? makeNoChange : ConvertArrayToDouble(matrixArray);
+        double[] makeNoChange = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        double[] transformMatrix = ConvertArrayToDouble(matrixArray);
+
+        if (isSingleObject || fragmentCount == 1)
+        {
+          // Apply coordinate system transformation
+          processor.LocalToWorldTransformation = transformMatrix;
+          _logger.LogDebug("Applied full transform for single object processing.");
+        }
+        else
+        {
+          // For multiple objects, process geometry without transforms
+          processor.LocalToWorldTransformation = makeNoChange;
+        }
 
         fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
       }
@@ -338,42 +345,28 @@ public class GeometryToSpeckleConverter(
 
       foreach (InwOaPath path in paths)
       {
-        _logger.LogDebug("Processing path {PathIndex}", pathIndex);
-
         var fragments = path.Fragments();
-        _logger.LogDebug("Path {PathIndex} has {FragmentCount} fragments", pathIndex, fragments.Count);
 
         var fragmentIndex = 0;
         foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
         {
-          _logger.LogDebug("Processing fragment {FragmentIndex} in path {PathIndex}", fragmentIndex, pathIndex);
-
           if (fragment.path?.ArrayData is not Array pathData)
           {
-            _logger.LogDebug("Fragment {FragmentIndex} has no path data, skipping", fragmentIndex);
             fragmentIndex++;
             continue;
           }
 
-          _logger.LogDebug("Fragment {FragmentIndex} path data length: {Length}", fragmentIndex, pathData.Length);
-
           if (pathData.Length == 0)
           {
-            _logger.LogDebug("Fragment {FragmentIndex} has empty path data, skipping", fragmentIndex);
             fragmentIndex++;
             continue;
           }
 
           try
           {
-            // Check array rank first - COM arrays might be multi-dimensional
+            // Check array rank first - COM arrays might be multidimensional
             if (pathData.Rank != 1)
             {
-              _logger.LogDebug(
-                "Fragment {FragmentIndex} has multi-dimensional array (Rank={Rank}), trying simple enumeration",
-                fragmentIndex,
-                pathData.Rank
-              );
               // Try simple enumeration fallback
               var fragmentHashFallback = TrySimpleArrayEnumeration(pathData, fragmentIndex);
               if (!string.IsNullOrEmpty(fragmentHashFallback))
@@ -388,14 +381,6 @@ public class GeometryToSpeckleConverter(
             var lowerBound = pathData.GetLowerBound(0);
             var upperBound = pathData.GetUpperBound(0);
 
-            _logger.LogDebug(
-              "Fragment {FragmentIndex} array bounds: LowerBound={Lower}, UpperBound={Upper}, Rank={Rank}",
-              fragmentIndex,
-              lowerBound,
-              upperBound,
-              pathData.Rank
-            );
-
             var arrayLength = upperBound - lowerBound + 1;
             var pathInts = new int[arrayLength];
 
@@ -406,23 +391,14 @@ public class GeometryToSpeckleConverter(
                 var value = pathData.GetValue(i);
                 var arrayIndex = i - lowerBound;
                 pathInts[arrayIndex] = System.Convert.ToInt32(value);
-                _logger.LogDebug(
-                  "Fragment {FragmentIndex} path[{ArrayIndex}] = {Value} (COM index: {ComIndex})",
-                  fragmentIndex,
-                  arrayIndex,
-                  value,
-                  i
-                );
               }
               catch (Exception ex)
               {
                 _logger.LogDebug(ex, "Failed to get array value at COM index {Index}, skipping", i);
-                continue;
               }
             }
 
             var fragmentHash = string.Join("_", pathInts);
-            _logger.LogDebug("Fragment {FragmentIndex} raw hash: {Hash}", fragmentIndex, fragmentHash);
             fragmentHashes.Add(fragmentHash);
           }
           catch (Exception ex)
@@ -449,20 +425,12 @@ public class GeometryToSpeckleConverter(
         pathIndex++;
       }
 
-      _logger.LogDebug("Collected {HashCount} fragment hashes total", fragmentHashes.Count);
-
       if (fragmentHashes.Count > 0)
       {
         // Sort to ensure consistent ordering
         fragmentHashes.Sort();
         var rawData = string.Join("__", fragmentHashes);
         var fragmentId = HashRawData(rawData);
-        _logger.LogDebug(
-          "Generated fragment ID: {FragmentId} (SHA256 of shared_geometry_{RawData}) from {HashCount} fragment hashes",
-          fragmentId,
-          rawData,
-          fragmentHashes.Count
-        );
         return fragmentId;
       }
       else
@@ -495,220 +463,6 @@ public class GeometryToSpeckleConverter(
     {
       _logger.LogWarning(ex, "COM exception when generating fragment ID - fragment access failed");
       return string.Empty;
-    }
-  }
-
-  /// <summary>
-  /// Fallback method for fragment ID generation using alternative fragment properties.
-  /// </summary>
-  private string GenerateFragmentIdFallback(InwSelectionPathsColl paths)
-  {
-    try
-    {
-      var fallbackHashes = new List<string>();
-
-      foreach (InwOaPath path in paths)
-      {
-        var fragments = path.Fragments();
-
-        foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
-        {
-          // Try using fragment's internal ID or hash code as fallback
-          var fragmentHashCode = fragment.GetHashCode().ToString();
-          fallbackHashes.Add(fragmentHashCode);
-
-          _logger.LogDebug("Fallback: Using fragment hash code: {HashCode}", fragmentHashCode);
-        }
-      }
-
-      if (fallbackHashes.Count > 0)
-      {
-        fallbackHashes.Sort();
-        var rawData = string.Join("_", fallbackHashes);
-        var fallbackId = HashRawData(rawData);
-        _logger.LogDebug(
-          "Generated fallback fragment ID: {FallbackId} (SHA256 of fallback_geometry_{RawData})",
-          fallbackId,
-          rawData
-        );
-        return fallbackId;
-      }
-
-      // Try geometry-based approach as final fallback
-      _logger.LogDebug("Fallback fragment ID generation also failed, trying geometry-based approach");
-      return GenerateGeometryBasedFragmentId(paths);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Fallback fragment ID generation failed");
-      // Try geometry-based approach as final fallback
-      return GenerateGeometryBasedFragmentId(paths);
-    }
-  }
-
-  /// <summary>
-  /// Final fallback: Generate ID based on geometry characteristics when fragment paths fail.
-  /// Uses vertex counts, triangle counts, and bounding box data to create a semi-stable ID.
-  /// </summary>
-  private string GenerateGeometryBasedFragmentId(InwSelectionPathsColl paths)
-  {
-    try
-    {
-      var geometryHashes = new List<string>();
-
-      foreach (InwOaPath path in paths)
-      {
-        var fragments = path.Fragments();
-
-        foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
-        {
-          // Create a processor to analyze the geometry characteristics
-          var processor = new PrimitiveProcessor(_isUpright);
-          double[] identityTransform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-          processor.LocalToWorldTransformation = identityTransform;
-
-          try
-          {
-            fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
-
-            // Create a hash based on geometry characteristics
-            var triangleCount = processor.Triangles.Count;
-            var lineCount = processor.Lines.Count;
-            var pointCount = processor.Points.Count;
-
-            // Get bounding box if possible
-            var minX =
-              processor.Triangles.Count > 0
-                ? processor.Triangles.Min(t => Math.Min(Math.Min(t.Vertex1.X, t.Vertex2.X), t.Vertex3.X))
-                : 0;
-            var maxX =
-              processor.Triangles.Count > 0
-                ? processor.Triangles.Max(t => Math.Max(Math.Max(t.Vertex1.X, t.Vertex2.X), t.Vertex3.X))
-                : 0;
-
-            var geometrySignature =
-              $"{triangleCount}t_{lineCount}l_{pointCount}p_{(int)(minX * 1000)}_{(int)(maxX * 1000)}";
-            geometryHashes.Add(geometrySignature);
-
-            _logger.LogDebug(
-              "Geometry-based hash: {Hash} (T:{TriangleCount}, L:{LineCount}, P:{PointCount})",
-              geometrySignature,
-              triangleCount,
-              lineCount,
-              pointCount
-            );
-          }
-          catch (Exception ex)
-          {
-            _logger.LogDebug(ex, "Could not analyze fragment geometry for ID generation");
-            // Use a generic hash for this fragment
-            geometryHashes.Add($"frag_{fragment.GetHashCode()}");
-          }
-        }
-      }
-
-      if (geometryHashes.Count > 0)
-      {
-        geometryHashes.Sort();
-        var rawData = string.Join("_", geometryHashes);
-        var geometryId = HashRawData(rawData);
-        _logger.LogDebug(
-          "Generated geometry-based fragment ID: {GeometryId} (SHA256 of geometry_based_{RawData})",
-          geometryId,
-          rawData
-        );
-        return geometryId;
-      }
-
-      return string.Empty;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Geometry-based fragment ID generation failed");
-      return string.Empty;
-    }
-  }
-
-  /// <summary>
-  /// Debug helper to log detailed information about paths collection structure.
-  /// </summary>
-  private void DebugPathsCollection(InwSelectionPathsColl paths, string context)
-  {
-    try
-    {
-      _logger.LogDebug("=== Debugging paths collection for {Context} ===", context);
-      _logger.LogDebug("Paths collection count: {Count}", paths.Count);
-
-      var pathIndex = 0;
-      foreach (InwOaPath path in paths)
-      {
-        _logger.LogDebug("Path {Index}:", pathIndex);
-
-        try
-        {
-          var fragments = path.Fragments();
-          _logger.LogDebug("  - Fragment count: {Count}", fragments.Count);
-
-          var fragmentIndex = 0;
-          foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
-          {
-            _logger.LogDebug("  - Fragment {Index}:", fragmentIndex);
-            _logger.LogDebug("    - Fragment hash code: {HashCode}", fragment.GetHashCode());
-
-            if (fragment.path?.ArrayData is Array pathData)
-            {
-              _logger.LogDebug("    - Path data length: {Length}", pathData.Length);
-              _logger.LogDebug(
-                "    - Array bounds: LowerBound={Lower}, UpperBound={Upper}, Rank={Rank}",
-                pathData.GetLowerBound(0),
-                pathData.GetUpperBound(0),
-                pathData.Rank
-              );
-
-              var arrayLength = pathData.GetUpperBound(0) - pathData.GetLowerBound(0) + 1;
-              if (arrayLength <= 10) // Only log small arrays to avoid spam
-              {
-                var values = new List<object>();
-                for (int i = pathData.GetLowerBound(0); i <= pathData.GetUpperBound(0); i++)
-                {
-                  try
-                  {
-                    values.Add(pathData.GetValue(i));
-                  }
-                  catch (Exception ex)
-                  {
-                    values.Add($"ERROR_at_{i}: {ex.Message}");
-                  }
-                }
-
-                _logger.LogDebug("    - Path data values: [{Values}]", string.Join(", ", values));
-              }
-              else
-              {
-                _logger.LogDebug("    - Path data too large to log (array length: {Length})", arrayLength);
-              }
-            }
-            else
-            {
-              _logger.LogDebug("    - No path data available");
-            }
-
-            fragmentIndex++;
-          }
-        }
-        catch (Exception ex)
-        {
-          _logger.LogDebug(ex, "Error analyzing path {Index}", pathIndex);
-        }
-
-        pathIndex++;
-      }
-
-      _logger.LogDebug("=== End paths collection debug ===");
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Failed to debug paths collection for {Context}", context);
     }
   }
 
@@ -747,18 +501,17 @@ public class GeometryToSpeckleConverter(
         catch (Exception ex)
         {
           _logger.LogDebug(ex, "Fragment {FragmentIndex} failed to convert value at index {Index}", fragmentIndex, i);
-          continue;
         }
       }
 
-      if (values.Count > 0)
+      if (values.Count <= 0)
       {
-        var hash = string.Join("_", values);
-        _logger.LogDebug("Fragment {FragmentIndex} simple enumeration raw hash: {Hash}", fragmentIndex, hash);
-        return hash;
+        return string.Empty;
       }
 
-      return string.Empty;
+      var hash = string.Join("_", values);
+      _logger.LogDebug("Fragment {FragmentIndex} simple enumeration raw hash: {Hash}", fragmentIndex, hash);
+      return hash;
     }
     catch (Exception ex)
     {
