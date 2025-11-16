@@ -5,6 +5,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
+using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
@@ -490,7 +491,8 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       colorUnpacker,
       materialUnpacker,
       registry,
-      unpackedRoot.DefinitionProxies
+      unpackedRoot.DefinitionProxies,
+      scope.Get<ILogger<LocalToGlobalMapHandler>>()
     );
 
     // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies

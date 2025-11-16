@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -30,6 +31,7 @@ internal sealed class LocalToGlobalMapHandler
   private readonly GrasshopperMaterialUnpacker _materialUnpacker;
   private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
   private readonly IReadOnlyCollection<InstanceDefinitionProxy>? _definitionProxies;
+  private readonly ILogger<LocalToGlobalMapHandler> _logger;
 
   public LocalToGlobalMapHandler(
     TraversalContextUnpacker traversalContextUnpacker,
@@ -37,7 +39,8 @@ internal sealed class LocalToGlobalMapHandler
     GrasshopperColorUnpacker colorUnpacker,
     GrasshopperMaterialUnpacker materialUnpacker,
     IDataObjectInstanceRegistry dataObjectInstanceRegistry,
-    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
+    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies,
+    ILogger<LocalToGlobalMapHandler> logger
   )
   {
     _traversalContextUnpacker = traversalContextUnpacker;
@@ -45,6 +48,7 @@ internal sealed class LocalToGlobalMapHandler
     _materialUnpacker = materialUnpacker;
     _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
     _definitionProxies = definitionProxies;
+    _logger = logger;
     CollectionRebuilder = collectionRebuilder;
   }
 
@@ -164,7 +168,8 @@ internal sealed class LocalToGlobalMapHandler
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      // TODO: throw?
+      // don't throw - continue processing other objects
+      _logger.LogError(ex, "Failed to convert object {objectId} of type {objectType}", objId, obj.speckle_type);
     }
   }
 
@@ -203,7 +208,8 @@ internal sealed class LocalToGlobalMapHandler
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      // TODO: throw?
+      // don't throw - continue processing other DataObjects
+      _logger.LogError(ex, "Failed to resolve DataObject {dataObjectId} with InstanceProxies", dataObjectId);
     }
   }
 
