@@ -33,76 +33,60 @@ public static class ElementExtensions
     return ids;
   }
 
-  public static IEnumerable<ElementId> GetKnownChildrenElements(this Element element)
-  {
-    switch (element)
+  public static IEnumerable<ElementId> GetKnownChildrenElements(this Element element) =>
+    element switch
     {
-      // could this be Typed? <T> GetChildren() ?
-      case Wall wall:
-        var wallChildren = GetWallChildren(wall);
-        foreach (var child in wallChildren)
-        {
-          yield return child;
-        }
-
-        break;
-
-      case FootPrintRoof footPrintRoof:
-        var footPrintRoofChildren = GetFootPrintRoofChildren(footPrintRoof);
-        foreach (var child in footPrintRoofChildren)
-        {
-          yield return child;
-        }
-
-        break;
-
-      case DBA.Railing railing:
-        var railingChildren = GetRailingTopRail(railing);
-        foreach (var child in railingChildren)
-        {
-          yield return child;
-        }
-
-        break;
-    }
-  }
+      Wall wall => GetWallChildren(wall),
+      FootPrintRoof roof => GetFootPrintRoofChildren(roof),
+      DBA.Railing railing => GetRailingChildren(railing),
+      _ => []
+    };
 
   private static IEnumerable<ElementId> GetWallChildren(Wall wall)
   {
-    List<ElementId> wallChildrenIds = new();
     if (wall.CurtainGrid is CurtainGrid grid)
     {
-      wallChildrenIds.AddRange(grid.GetMullionIds());
-      wallChildrenIds.AddRange(grid.GetPanelIds());
+      foreach (var id in grid.GetMullionIds())
+      {
+        yield return id;
+      }
+
+      foreach (var id in grid.GetPanelIds())
+      {
+        yield return id;
+      }
     }
     else if (wall.IsStackedWall)
     {
-      wallChildrenIds.AddRange(wall.GetStackedWallMemberIds());
-    }
-
-    return wallChildrenIds;
-  }
-
-  // Shockingly, roofs can have curtain grids on them. I guess it makes sense: https://en.wikipedia.org/wiki/Louvre_Pyramid
-  private static IEnumerable<ElementId> GetFootPrintRoofChildren(FootPrintRoof footPrintRoof)
-  {
-    List<ElementId> footPrintRoofChildrenIds = new();
-    if (footPrintRoof.CurtainGrids is { } gs)
-    {
-      foreach (CurtainGrid grid in gs)
+      foreach (var id in wall.GetStackedWallMemberIds())
       {
-        footPrintRoofChildrenIds.AddRange(grid.GetMullionIds());
-        footPrintRoofChildrenIds.AddRange(grid.GetPanelIds());
+        yield return id;
       }
     }
-
-    return footPrintRoofChildrenIds;
   }
 
-  // Railings should also include toprail which need to be retrieved separately
-  private static IEnumerable<ElementId> GetRailingTopRail(DBA.Railing railing)
+  private static IEnumerable<ElementId> GetFootPrintRoofChildren(FootPrintRoof footPrintRoof)
   {
-    // TODO: investigate difference between .TopRail prop and GetHandrails method
+    if (footPrintRoof.CurtainGrids is { } grids)
+    {
+      foreach (CurtainGrid grid in grids)
+      {
+        foreach (var id in grid.GetMullionIds())
+        {
+          yield return id;
+        }
+
+        foreach (var id in grid.GetPanelIds())
+        {
+          yield return id;
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<ElementId> GetRailingChildren(DBA.Railing railing)
+  {
+    // TODO: Consider adding HandRail support (railing.GetHandRails())
     if (railing.TopRail != ElementId.InvalidElementId)
     {
       yield return railing.TopRail;

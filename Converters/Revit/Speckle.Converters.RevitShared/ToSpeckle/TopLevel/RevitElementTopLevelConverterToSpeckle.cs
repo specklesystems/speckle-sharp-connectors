@@ -155,7 +155,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   /// </returns>
   /// <remarks>
   /// <para>
-  /// This is a bit of a code smell. This method is doing to much, "this ... AND this...".
+  /// This is a bit of a code smell. This method is doing too much, "this ... AND this...".
   /// </para>
   /// <para>
   /// But, given a mesh:
