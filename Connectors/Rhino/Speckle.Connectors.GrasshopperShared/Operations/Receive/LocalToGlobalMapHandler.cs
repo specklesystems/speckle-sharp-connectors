@@ -94,7 +94,7 @@ internal sealed class LocalToGlobalMapHandler
 
     // Skip registered DataObjects - they'll be processed in second pass
     if (
-      obj is Speckle.Objects.Data.DataObject dataObject
+      obj is DataObject dataObject
       && _dataObjectInstanceRegistry.IsRegistered(dataObject.applicationId ?? dataObject.id.NotNull())
     )
     {
@@ -120,7 +120,7 @@ internal sealed class LocalToGlobalMapHandler
       }
 
       // handle normal DataObject (has converted geometry)
-      if (obj is Speckle.Objects.Data.DataObject normalDataObject)
+      if (obj is DataObject normalDataObject)
       {
         var geometries = ConvertToGeometryWrappers(converted);
         var dataObjectWrapper = CreateDataObjectWrapper(normalDataObject, geometries, path, objectCollection);
@@ -214,21 +214,28 @@ internal sealed class LocalToGlobalMapHandler
   /// </summary>
   public void ConvertBlockInstances(IReadOnlyCollection<TraversalContext> blockInstances)
   {
+    // build set of registered InstanceProxy IDs for fast lookup
+    var registeredProxyIds = new HashSet<string>();
+    foreach (var entry in _dataObjectInstanceRegistry.GetEntries().Values)
+    {
+      foreach (var proxy in entry.InstanceProxies)
+      {
+        var proxyId = proxy.applicationId ?? proxy.id;
+        if (proxyId != null)
+        {
+          registeredProxyIds.Add(proxyId);
+        }
+      }
+    }
+
     // filter out InstanceProxies that belong to registered DataObjects
     var filteredBlockInstances = blockInstances
       .Where(tc =>
       {
-        if (tc.Current is InstanceProxy)
+        if (tc.Current is InstanceProxy proxy)
         {
-          var parent = tc.Parent?.Current;
-          if (parent is DataObject dataObject)
-          {
-            var dataObjectId = dataObject.applicationId ?? dataObject.id;
-            if (dataObjectId != null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
-            {
-              return false; // skip - handled by DataObject conversion
-            }
-          }
+          var proxyId = proxy.applicationId ?? proxy.id;
+          return proxyId == null || !registeredProxyIds.Contains(proxyId);
         }
         return true;
       })
