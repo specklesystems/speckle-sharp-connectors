@@ -350,7 +350,7 @@ internal sealed class LocalToGlobalMapHandler
         {
           // deep copy and transform the geometry
           var transformedWrapper = definitionObject.DeepCopy();
-          if (transformedWrapper.GeometryBase != null)
+          if (transformedWrapper.GeometryBase is not null)
           {
             transformedWrapper.GeometryBase.Transform(transform);
           }
