@@ -137,61 +137,11 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
 
   private IEnumerable<RevitObject> GetElementChildren(DB.Element element)
   {
-    switch (element)
+    var childrenIds = element.GetKnownChildrenElements();
+    foreach (var childrenId in childrenIds)
     {
-      case DB.Wall wall:
-        var wallChildren = GetWallChildren(wall);
-        foreach (var child in wallChildren)
-        {
-          yield return child;
-        }
-        break;
-
-      case DB.FootPrintRoof footPrintRoof:
-        var footPrintRoofChildren = GetFootPrintRoofChildren(footPrintRoof);
-        foreach (var child in footPrintRoofChildren)
-        {
-          yield return child;
-        }
-        break;
-    }
-  }
-
-  private IEnumerable<RevitObject> GetWallChildren(DB.Wall wall)
-  {
-    List<DB.ElementId> wallChildrenIds = new();
-    if (wall.CurtainGrid is DB.CurtainGrid grid)
-    {
-      wallChildrenIds.AddRange(grid.GetMullionIds());
-      wallChildrenIds.AddRange(grid.GetPanelIds());
-    }
-    else if (wall.IsStackedWall)
-    {
-      wallChildrenIds.AddRange(wall.GetStackedWallMemberIds());
-    }
-
-    foreach (var childId in wallChildrenIds)
-    {
-      yield return Convert(_converterSettings.Current.Document.GetElement(childId));
-    }
-  }
-
-  // Shockingly, roofs can have curtain grids on them. I guess it makes sense: https://en.wikipedia.org/wiki/Louvre_Pyramid
-  private IEnumerable<RevitObject> GetFootPrintRoofChildren(DB.FootPrintRoof footPrintRoof)
-  {
-    List<DB.ElementId> footPrintRoofChildrenIds = new();
-    if (footPrintRoof.CurtainGrids is { } gs)
-    {
-      foreach (DB.CurtainGrid grid in gs)
-      {
-        footPrintRoofChildrenIds.AddRange(grid.GetMullionIds());
-        footPrintRoofChildrenIds.AddRange(grid.GetPanelIds());
-      }
-    }
-
-    foreach (var childId in footPrintRoofChildrenIds)
-    {
-      yield return Convert(_converterSettings.Current.Document.GetElement(childId));
+      var childElement = _converterSettings.Current.Document.GetElement(childrenId);
+      yield return Convert(childElement);
     }
   }
 
