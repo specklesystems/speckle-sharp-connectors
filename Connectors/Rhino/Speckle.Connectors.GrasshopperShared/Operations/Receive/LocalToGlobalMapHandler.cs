@@ -74,7 +74,7 @@ internal sealed class LocalToGlobalMapHandler
       if (atomicContext.Current is DataObject dataObject)
       {
         var dataObjectId = dataObject.applicationId ?? dataObject.id;
-        if (dataObjectId != null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+        if (dataObjectId is not null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
         {
           ResolveDataObjectInstanceProxies(atomicContext);
         }
@@ -91,18 +91,19 @@ internal sealed class LocalToGlobalMapHandler
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
 
-    if (objId == null || ConvertedObjectsMap.ContainsKey(objId))
+    if (objId is null || ConvertedObjectsMap.ContainsKey(objId))
     {
       return;
     }
 
-    // Skip registered DataObjects - they'll be processed in second pass
-    if (
-      obj is DataObject dataObject
-      && _dataObjectInstanceRegistry.IsRegistered(dataObject.applicationId ?? dataObject.id.NotNull())
-    )
+    // skip registered DataObjects - they'll be processed in second pass
+    if (obj is DataObject dataObject)
     {
-      return;
+      var id = dataObject.applicationId ?? dataObject.id.NotNull();
+      if (_dataObjectInstanceRegistry.IsRegistered(id))
+      {
+        return;
+      }
     }
 
     try
@@ -227,7 +228,7 @@ internal sealed class LocalToGlobalMapHandler
       foreach (var proxy in entry.InstanceProxies)
       {
         var proxyId = proxy.applicationId ?? proxy.id;
-        if (proxyId != null)
+        if (proxyId is not null)
         {
           registeredProxyIds.Add(proxyId);
         }
@@ -241,7 +242,7 @@ internal sealed class LocalToGlobalMapHandler
         if (tc.Current is InstanceProxy proxy)
         {
           var proxyId = proxy.applicationId ?? proxy.id;
-          return proxyId == null || !registeredProxyIds.Contains(proxyId);
+          return proxyId is null || !registeredProxyIds.Contains(proxyId);
         }
         return true;
       })
@@ -320,12 +321,12 @@ internal sealed class LocalToGlobalMapHandler
 
     // build a lookup of definitionId -> definition objects for quick access
     var definitionObjectsMap = new Dictionary<string, List<string>>();
-    if (_definitionProxies != null)
+    if (_definitionProxies is not null)
     {
       foreach (var defProxy in _definitionProxies)
       {
         var defId = defProxy.applicationId ?? defProxy.id;
-        if (defId != null)
+        if (defId is not null)
         {
           definitionObjectsMap[defId] = defProxy.objects;
         }
