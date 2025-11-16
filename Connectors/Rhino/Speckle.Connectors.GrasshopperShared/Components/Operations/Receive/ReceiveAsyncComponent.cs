@@ -23,7 +23,6 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
-using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
@@ -494,51 +493,13 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       unpackedRoot.DefinitionProxies
     );
 
-    // First pass: convert all atomic objects to populate ConvertedObjectsMap
-    // (this ensures definition objects are available for DataObject resolution)
-    foreach (var atomicContext in atomicObjects)
-    {
-      mapHandler.ConvertAtomicObject(atomicContext);
-    }
-
-    // Second pass: process registered DataObjects with InstanceProxies
-    // (now that all definition objects are in ConvertedObjectsMap)
-    foreach (var atomicContext in atomicObjects)
-    {
-      if (atomicContext.Current is Speckle.Objects.Data.DataObject dataObject)
-      {
-        var dataObjectId = dataObject.applicationId ?? dataObject.id;
-        if (dataObjectId != null && registry.IsRegistered(dataObjectId))
-        {
-          mapHandler.ConvertRegisteredDataObject(atomicContext);
-        }
-      }
-    }
-
-    // filter out InstanceProxies that belong to registered DataObjects
-    var filteredBlockInstances = blockInstances
-      .Where(tc =>
-      {
-        if (tc.Current is InstanceProxy proxy)
-        {
-          // check if this proxy's parent is a registered DataObject
-          var parent = tc.Parent?.Current;
-          if (parent is Speckle.Objects.Data.DataObject dataObject)
-          {
-            var dataObjectId = dataObject.applicationId ?? dataObject.id;
-            if (dataObjectId != null && registry.IsRegistered(dataObjectId))
-            {
-              return false; // skip this proxy - it's handled by DataObject conversion
-            }
-          }
-        }
-        return true; // keep all other instance components
-      })
-      .ToList();
+    // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies
+    mapHandler.ConvertAtomicObjects(atomicObjects);
 
     // process block instances using converted atomic objects
+    // internally filters out InstanceProxies that belong to registered DataObjects
     // block processing needs converted objects, but object filtering needs block definitions.
-    mapHandler.ConvertBlockInstances(filteredBlockInstances, unpackedRoot.DefinitionProxies);
+    mapHandler.ConvertBlockInstances(blockInstances);
 
     Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
     RootProperties = rootPropertiesGoo;

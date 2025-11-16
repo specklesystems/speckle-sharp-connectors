@@ -17,7 +17,6 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 
@@ -227,35 +226,13 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       unpackedRoot.DefinitionProxies
     );
 
-    foreach (var atomicContext in atomicObjects)
-    {
-      mapHandler.ConvertAtomicObject(atomicContext);
-    }
-
-    // filter out InstanceProxies that belong to registered DataObjects
-    var filteredBlockInstances = blockInstances
-      .Where(tc =>
-      {
-        if (tc.Current is InstanceProxy proxy)
-        {
-          // check if this proxy's parent is a registered DataObject
-          var parent = tc.Parent?.Current;
-          if (parent is Speckle.Objects.Data.DataObject dataObject)
-          {
-            var dataObjectId = dataObject.applicationId ?? dataObject.id;
-            if (dataObjectId != null && registry.IsRegistered(dataObjectId))
-            {
-              return false; // skip this proxy - it's handled by DataObject conversion
-            }
-          }
-        }
-        return true; // keep all other instance components
-      })
-      .ToList();
+    // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies
+    mapHandler.ConvertAtomicObjects(atomicObjects);
 
     // process block instances using converted atomic objects
+    // internally filters out InstanceProxies that belong to registered DataObjects
     // block processing needs converted objects, but object filtering needs block definitions.
-    mapHandler.ConvertBlockInstances(filteredBlockInstances, unpackedRoot.DefinitionProxies);
+    mapHandler.ConvertBlockInstances(blockInstances);
 
     // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
     var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);

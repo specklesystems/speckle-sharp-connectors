@@ -10,6 +10,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
+using DataObject = Speckle.Objects.Data.DataObject;
 
 /// <summary>
 /// Handles conversion of atomic objects from TraversalContexts into Grasshopper wrapper objects.
@@ -48,13 +49,40 @@ internal sealed class LocalToGlobalMapHandler
   }
 
   /// <summary>
-  /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
+  /// Converts all atomic objects in two passes:
+  /// Pass 1 - Convert normal objects and populate ConvertedObjectsMap
+  /// Pass 2 - Resolve registered DataObjects with InstanceProxies using the populated map
   /// </summary>
+  public void ConvertAtomicObjects(IEnumerable<TraversalContext> atomicContexts)
+  {
+    // Cache to avoid re-iterating for registered check
+    var atomicList = atomicContexts as IList<TraversalContext> ?? atomicContexts.ToList();
+
+    // Pass 1: Convert all non-registered DataObjects to populate ConvertedObjectsMap
+    foreach (var atomicContext in atomicList)
+    {
+      ConvertObjectToCache(atomicContext);
+    }
+
+    // Pass 2: Process registered DataObjects (definitions now available in ConvertedObjectsMap)
+    foreach (var atomicContext in atomicList)
+    {
+      if (atomicContext.Current is DataObject dataObject)
+      {
+        var dataObjectId = dataObject.applicationId ?? dataObject.id;
+        if (dataObjectId != null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+        {
+          ResolveDataObjectInstanceProxies(atomicContext);
+        }
+      }
+    }
+  }
+
   /// <summary>
-  /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
-  /// Skips registered DataObjects - those are handled in ConvertRegisteredDataObject.
+  /// Converts and caches an atomic object for later lookup.
+  /// Skips registered DataObjects (displayValue is InstanceProxy) - they are resolved in ResolveDataObjectInstanceProxies.
   /// </summary>
-  public void ConvertAtomicObject(TraversalContext atomicContext)
+  private void ConvertObjectToCache(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
@@ -141,10 +169,10 @@ internal sealed class LocalToGlobalMapHandler
   }
 
   /// <summary>
-  /// Processes a registered DataObject with InstanceProxy displayValues.
-  /// Should be called AFTER all atomic objects are converted so definition objects are available.
+  /// Resolves a registered DataObject by transforming its InstanceProxy definition objects.
+  /// Requires definition objects to exist in ConvertedObjectsMap (populated by ConvertObjectToCache).
   /// </summary>
-  public void ConvertRegisteredDataObject(TraversalContext atomicContext)
+  private void ResolveDataObjectInstanceProxies(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
     if (obj is not Speckle.Objects.Data.DataObject dataObject)
@@ -181,29 +209,42 @@ internal sealed class LocalToGlobalMapHandler
 
   /// <summary>
   /// Converts block instances and definitions from traversal contexts into Grasshopper wrapper objects.
+  /// Automatically filters out InstanceProxies belonging to registered DataObjects.
   /// Automatically handles cleanup of consumed objects from the collection hierarchy.
   /// </summary>
-  /// <remarks>
-  /// Deliberately handles both block conversion AND consumed object cleanup in a single operation.
-  /// Too much, I know, BUT it ensures the cleanup always occurs immediately after block processing without
-  /// requiring receive components to call a separate cleanup method in the correct order.
-  /// </remarks>
-  public void ConvertBlockInstances(
-    IReadOnlyCollection<TraversalContext> blocks,
-    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
-  )
+  public void ConvertBlockInstances(IReadOnlyCollection<TraversalContext> blockInstances)
   {
+    // filter out InstanceProxies that belong to registered DataObjects
+    var filteredBlockInstances = blockInstances
+      .Where(tc =>
+      {
+        if (tc.Current is InstanceProxy)
+        {
+          var parent = tc.Parent?.Current;
+          if (parent is DataObject dataObject)
+          {
+            var dataObjectId = dataObject.applicationId ?? dataObject.id;
+            if (dataObjectId != null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+            {
+              return false; // skip - handled by DataObject conversion
+            }
+          }
+        }
+        return true;
+      })
+      .ToList();
+
     var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
 
-    // Get consumed object IDs from unpacker
+    // get consumed object IDs from unpacker
     var consumedObjectIds = blockUnpacker.UnpackBlocks(
-      blocks,
-      definitionProxies,
+      filteredBlockInstances,
+      _definitionProxies,
       ConvertedObjectsMap,
       CollectionRebuilder
     );
 
-    // Clean up consumed objects from collections
+    // clean up consumed objects from collections
     CollectionRebuilder.RemoveConsumedObjects(consumedObjectIds);
   }
 
@@ -278,25 +319,13 @@ internal sealed class LocalToGlobalMapHandler
       }
     }
 
-    // DEBUG: Check what's in ConvertedObjectsMap
-    Console.WriteLine($"ConvertedObjectsMap has {ConvertedObjectsMap.Count} entries");
-    foreach (var key in ConvertedObjectsMap.Keys.Take(5))
-    {
-      Console.WriteLine($"  - {key}");
-    }
-
     foreach (var instanceProxy in instanceProxies)
     {
-      Console.WriteLine($"Processing InstanceProxy with definitionId: {instanceProxy.definitionId}");
-
       // get the definition objects for this instance
       if (!definitionObjectsMap.TryGetValue(instanceProxy.definitionId, out var definitionObjectIds))
       {
-        Console.WriteLine($"  Definition not found in definitionObjectsMap");
         continue; // definition not found, skip this proxy
       }
-
-      Console.WriteLine($"  Definition has {definitionObjectIds.Count} objects");
 
       // get transform from the instance proxy
       var transform = GrasshopperHelpers.MatrixToTransform(instanceProxy.transform, instanceProxy.units);
@@ -304,10 +333,8 @@ internal sealed class LocalToGlobalMapHandler
       // apply transform to each definition object
       foreach (var objectId in definitionObjectIds)
       {
-        Console.WriteLine($"    Looking for object: {objectId}");
         if (ConvertedObjectsMap.TryGetValue(objectId, out var definitionObject))
         {
-          Console.WriteLine($"      Found! Creating transformed copy");
           // deep copy and transform the geometry
           var transformedWrapper = definitionObject.DeepCopy();
           if (transformedWrapper.GeometryBase != null)
@@ -316,14 +343,9 @@ internal sealed class LocalToGlobalMapHandler
           }
           resolvedGeometries.Add(transformedWrapper);
         }
-        else
-        {
-          Console.WriteLine($"      NOT FOUND in ConvertedObjectsMap");
-        }
       }
     }
 
-    Console.WriteLine($"Resolved {resolvedGeometries.Count} total geometries");
     return resolvedGeometries;
   }
 
