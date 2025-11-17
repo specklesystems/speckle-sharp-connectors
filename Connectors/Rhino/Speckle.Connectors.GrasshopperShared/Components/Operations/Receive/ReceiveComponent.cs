@@ -37,6 +37,7 @@ public class ReceiveComponentOutput
   /// Made nullable as output can be null when Run = false or on error
   /// </remarks>
   public SpeckleCollectionWrapperGoo? RootObject { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; set; }
 }
 
 public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>
@@ -69,6 +70,14 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       "Collection",
       "collection",
       "The model collection of the loaded version",
+      GH_ParamAccess.item
+    );
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Model-wide properties from the root collection",
       GH_ParamAccess.item
     );
   }
@@ -106,6 +115,8 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     else
     {
       da.SetData(0, result.RootObject);
+      da.SetData(1, result.RootProperties);
+
       Message = _apiClient != null ? "Loaded" : "Done";
     }
   }
@@ -132,88 +143,102 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
 
-    // Do the thing 👇🏼
-
-    Account? account = input.Resource.Account.GetAccount(scope);
-    if (account is null)
+    try
     {
-      throw new SpeckleAccountManagerException($"No default account was found");
+      var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
+      var receiveOperation = scope.ServiceProvider.GetRequiredService<GrasshopperReceiveOperation>();
+
+      // Do the thing 👇🏼
+
+      Account? account = input.Resource.Account.GetAccount(scope);
+      if (account is null)
+      {
+        throw new SpeckleAccountManagerException("No default account was found");
+      }
+
+      using var client = clientFactory.Create(account);
+      var receiveInfo = await input.Resource.GetReceiveInfo(client, cancellationToken).ConfigureAwait(false);
+
+      // store version id for tracking
+      _lastVersionId = receiveInfo.SelectedVersionId;
+
+      var progress = new Progress<CardProgress>(_ =>
+      {
+        // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
+        // Message = $"{progress.Status}: {progress.Progress}";
+      });
+
+      var root = await receiveOperation
+        .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
+        .ConfigureAwait(false);
+
+      // extract model-wide root properties (see cnx-2722)
+      SpecklePropertyGroupGoo? rootPropertiesGoo = null;
+      if (root is RootCollection rootCollection && rootCollection.properties.Count > 0)
+      {
+        rootPropertiesGoo = new SpecklePropertyGroupGoo(rootCollection.properties);
+      }
+
+      // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+      var customProperties = new Dictionary<string, object>
+      {
+        { "isAsync", false },
+        { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }
+      };
+      if (receiveInfo.WorkspaceId != null)
+      {
+        customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+      }
+      if (receiveInfo.SelectedVersionUserId != null)
+      {
+        customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
+      }
+      var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
+      await mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
+
+      // Setup conversion context BEFORE unpacking (which triggers DataObjectConverter)
+      SpeckleConversionContext.SetupCurrent(scope);
+
+      var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
+      var unpackedRoot = rootObjectUnpacker.Unpack(root);
+
+      // split atomic objects from block components before conversion
+      var (atomicObjects, blockInstances) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+        unpackedRoot.ObjectsToConvert
+      );
+
+      // Initialize unpackers and collection builder (data holders - created with new)
+      var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
+      var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
+      var collectionRebuilder = new GrasshopperCollectionRebuilder(
+        (root as Collection) ?? new Collection { name = "unnamed" }
+      );
+
+      // get handler from DI and initialize with per-operation data
+      var mapHandler = scope
+        .ServiceProvider.GetRequiredService<LocalToGlobalMapHandler>()
+        .Initialize(
+          scope.ServiceProvider.GetRequiredService<TraversalContextUnpacker>(),
+          colorUnpacker,
+          materialUnpacker,
+          collectionRebuilder,
+          unpackedRoot.DefinitionProxies
+        );
+
+      // two-pass conversion: normal objects first, then DataObjects with InstanceProxies
+      mapHandler.ConvertAtomicObjects(atomicObjects);
+
+      // process block instances (internally filters InstanceProxies belonging to registered DataObjects)
+      mapHandler.ConvertBlockInstances(blockInstances);
+
+      var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+      return new ReceiveComponentOutput { RootObject = goo, RootProperties = rootPropertiesGoo };
     }
-
-    using var client = clientFactory.Create(account);
-    var receiveInfo = await input.Resource.GetReceiveInfo(client, cancellationToken).ConfigureAwait(false);
-
-    // store version id for tracking
-    _lastVersionId = receiveInfo.SelectedVersionId;
-
-    var progress = new Progress<CardProgress>(_ =>
+    finally
     {
-      // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
-      // Message = $"{progress.Status}: {progress.Progress}";
-    });
-
-    var root = await receiveOperation
-      .ReceiveCommitObject(receiveInfo, progress, cancellationToken)
-      .ConfigureAwait(false);
-
-    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object>()
-    {
-      { "isAsync", false },
-      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }
-    };
-    if (receiveInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+      SpeckleConversionContext.EndCurrent();
     }
-    if (receiveInfo.SelectedVersionUserId != null)
-    {
-      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
-    }
-    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-    await mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
-
-    // We need to rethink these lovely unpackers, there's a bit too many of 'em
-    var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
-    var traversalContextUnpacker = new TraversalContextUnpacker();
-
-    var unpackedRoot = rootObjectUnpacker.Unpack(root);
-
-    // split atomic objects from block components before conversion
-    var (atomicObjects, blockInstances) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
-      unpackedRoot.ObjectsToConvert
-    );
-
-    // Initialize unpackers and collection builder
-    var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
-    var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
-    var collectionRebuilder = new GrasshopperCollectionRebuilder(
-      (root as Collection) ?? new Collection { name = "unnamed" }
-    );
-
-    // convert atomic objects directly
-    var mapHandler = new LocalToGlobalMapHandler(
-      traversalContextUnpacker,
-      collectionRebuilder,
-      colorUnpacker,
-      materialUnpacker
-    );
-
-    foreach (var atomicContext in atomicObjects)
-    {
-      mapHandler.ConvertAtomicObject(atomicContext);
-    }
-
-    // process block instances using converted atomic objects
-    // block processing needs converted objects, but object filtering needs block definitions.
-    mapHandler.ConvertBlockInstances(blockInstances, unpackedRoot.DefinitionProxies);
-
-    // var x = new SpeckleCollectionGoo { Value = collGen.RootCollection };
-    var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-    return new ReceiveComponentOutput { RootObject = goo };
   }
 
   private void SetupSubscription(SpeckleUrlModelResource resource)

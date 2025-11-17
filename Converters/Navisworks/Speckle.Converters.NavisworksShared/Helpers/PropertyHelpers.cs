@@ -47,24 +47,15 @@ public static class PropertyHelpers
       return handler(value, units);
     }
 
-    // Default case for unsupported types
-    return value.DataType == NAV.VariantDataType.None || value.DataType == NAV.VariantDataType.Point2D
-      ? null
-      : value.ToString();
+    return value.DataType is NAV.VariantDataType.None or NAV.VariantDataType.Point2D ? null : value.ToString();
   }
 
-  /// <summary>
-  /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
-  /// </summary>
-  /// <param name="baseObject">The object to which the property is to be added. Can be either a Base object or a Dictionary.</param>
-  /// <param name="propertyName">The name of the property to add.</param>
-  /// <param name="value">The value of the property.</param>
   internal static void AddPropertyIfNotNullOrEmpty(object baseObject, string propertyName, object? value)
   {
     switch (value)
     {
       case null:
-        break; // Do not add null values
+        break;
       case string stringValue:
       {
         if (!string.IsNullOrEmpty(stringValue))
@@ -80,9 +71,6 @@ public static class PropertyHelpers
     }
   }
 
-  /// <summary>
-  /// Helper method to assign the property to the base object or dictionary.
-  /// </summary>
   private static void AssignProperty(object baseObject, string propertyName, object value)
   {
     switch (baseObject)
@@ -98,16 +86,9 @@ public static class PropertyHelpers
     }
   }
 
-  /// <summary>
-  /// Sanitizes property names by replacing invalid characters with underscores.
-  /// </summary>
   internal static string SanitizePropertyName(string name) =>
-    // Regex pattern from speckle-sharp/Core/Core/Models/DynamicBase.cs IsPropNameValid
-    name == "Item"
-      // Item is a reserved term for Indexed Properties: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
-      ? "Item"
-      : Regex.Replace(name, @"[\.\/\s]", "_");
+    name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
 
-  internal static bool IsCategoryToBeSkipped(NAV.PropertyCategory propertyCategory) =>
+  internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);
 }

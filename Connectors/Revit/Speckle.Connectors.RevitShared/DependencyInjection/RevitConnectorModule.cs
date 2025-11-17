@@ -74,7 +74,6 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
-
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();
 
     // operation progress manager

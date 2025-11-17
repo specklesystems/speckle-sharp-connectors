@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
@@ -6,6 +6,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
@@ -25,7 +26,8 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  IElementSelectionService elementSelectionService
+  IElementSelectionService elementSelectionService,
+  InstanceStoreManager instanceStoreManager
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -40,32 +42,45 @@ public class NavisworksRootObjectBuilder(
   )
   {
 #if DEBUG
-    // This is a temporary workaround to disable node merging for debugging purposes - false is default, true is for debugging
-    SkipNodeMerging = false;
+    SkipNodeMerging = true;
 #endif
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
-    // 2. Initialize root collection
     var rootCollection = InitializeRootCollection();
 
-    // 3. Convert all model items and store results
-    var (convertedElements, conversionResults) = await ConvertModelItemsAsync(
-      navisworksModelItems,
-      projectId,
-      onOperationProgressed,
-      cancellationToken
-    );
+    (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
+      await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
 
     ValidateConversionResults(conversionResults);
 
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
+    List<Base> geometryDefinitions = instanceStoreManager.GetGeometryDefinitions();
 
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
-    rootCollection.elements = finalElements;
+    var geometryDefinitionsCollection = new Collection
+    {
+      name = "Geometry Definitions",
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
+      elements = geometryDefinitions
+    };
+
+    var mainElementsCollection = new Collection
+    {
+      name = rootCollection.name,
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
+      elements = finalElements
+    };
+
+    rootCollection.elements = [mainElementsCollection];
+    if (geometryDefinitions.Count > 0)
+    {
+      rootCollection.elements.Add(geometryDefinitionsCollection);
+    }
+
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
 
@@ -137,12 +152,10 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    // First build the grouped nodes as before
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
     AddGroupedElements(finalElements, convertedBases, groupedNodes, processedPaths);
 
-    // If hierarchy mode is enabled, reorganize into proper nested structure
     if (converterSettings.Current.User.PreserveModelHierarchy)
     {
       var hierarchyBuilder = new NavisworksHierarchyBuilder(
@@ -151,12 +164,9 @@ public class NavisworksRootObjectBuilder(
         elementSelectionService
       );
 
-      var hierarchy = hierarchyBuilder.BuildHierarchy();
-
-      return hierarchy;
+      return hierarchyBuilder.BuildHierarchy();
     }
 
-    // Otherwise continue with flat mode
     AddRemainingElements(finalElements, convertedBases, processedPaths);
     return finalElements;
   }
@@ -213,24 +223,17 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  private (string name, string path) GetContext(string applicationId)
+  private (string name, string path) GetElementNameAndPath(string applicationId)
   {
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
     return (context.Name, context.Path);
   }
 
-  /// <summary>
-  /// Processes and adds any remaining non-grouped elements.
-  /// </summary>
-  /// <remarks>
-  /// Handles both Collection and Base type elements differently.
-  /// Only processes elements that weren't handled in grouped processing.
-  /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
-    (string name, string path) = GetContext(cleanParentPath);
+    (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
     return new NavisworksObject
     {
@@ -238,16 +241,11 @@ public class NavisworksRootObjectBuilder(
       displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = groupKey, // Use the full composite key as applicationId to preserve uniqueness
+      applicationId = groupKey,
       ["path"] = path
     };
   }
 
-  /// <summary>
-  /// Creates a NavisworksObject from a single converted base.
-  /// </summary>
-  /// <param name="convertedBase">The converted Speckle Base object.</param>
-  /// <returns>A new NavisworksObject containing the converted data.</returns>
   private NavisworksObject? CreateNavisworksObject(Base convertedBase)
   {
     if (convertedBase.applicationId == null)
@@ -255,7 +253,7 @@ public class NavisworksRootObjectBuilder(
       return null;
     }
 
-    (string name, string path) = GetContext(convertedBase.applicationId);
+    (string name, string path) = GetElementNameAndPath(convertedBase.applicationId);
 
     return new NavisworksObject
     {
@@ -288,18 +286,16 @@ public class NavisworksRootObjectBuilder(
       rootCollection[ProxyKeys.COLOR] = colors;
     }
 
+    var instanceDefinitionProxies = instanceStoreManager.GetInstanceDefinitionProxies();
+
+    if (instanceDefinitionProxies.Count > 0)
+    {
+      rootCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies.ToList();
+    }
+
     return Task.CompletedTask;
   }
 
-  /// <summary>
-  /// Converts a single Navisworks item to a Speckle object.
-  /// </summary>
-  /// <remarks>
-  /// Attempts to retrieve from cache first.
-  /// Falls back to fresh conversion if not cached.
-  /// Logs errors but doesn't throw exceptions.
-  /// </remarks>
-  /// <returns>A SendConversionResult indicating success or failure.</returns>
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases,
