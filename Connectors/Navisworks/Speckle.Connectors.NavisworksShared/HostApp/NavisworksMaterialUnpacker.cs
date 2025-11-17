@@ -20,7 +20,12 @@ public class NavisworksMaterialUnpacker(
 )
 {
   private static T SelectByRepresentationMode<T>(
-    RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+    RepresentationMode mode,
+    T active,
+    T permanent,
+    T original,
+    T defaultValue
+  ) =>
     mode switch
     {
       RepresentationMode.Active => active,
@@ -70,51 +75,63 @@ public class NavisworksMaterialUnpacker(
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
         string hashId = "";
-        var item = selectionService.GetModelItemFromPath(finalId);
-        var comSelection = ComApiBridge.ToInwOpSelection([item]);
         try
         {
-          var paths = comSelection.Paths();
+          var item = selectionService.GetModelItemFromPath(finalId);
+          var comSelection = ComApiBridge.ToInwOpSelection([item]);
           try
           {
-            if (paths.Count > 0)
+            var paths = comSelection.Paths();
+            try
             {
-              var firstPath = paths.OfType<InwOaPath>().FirstOrDefault();
-              if (firstPath != null)
+              if (paths.Count > 0)
               {
-                var fragments = firstPath.Fragments();
-                try
+                var firstPath = paths.OfType<InwOaPath>().FirstOrDefault();
+                if (firstPath != null)
                 {
-                  if (fragments.Count > 1)
+                  var fragments = firstPath.Fragments();
+                  try
                   {
-                    var fragmentId = converter.GenerateFragmentId(paths);
-                    hashId = $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}";
+                    if (fragments.Count > 1)
+                    {
+                      var fragmentId = converter.GenerateFragmentId(paths);
+                      hashId = $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}";
+                    }
+                  }
+                  finally
+                  {
+                    if (fragments != null)
+                    {
+                      System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
+                    }
                   }
                 }
-                finally
-                {
-                  if (fragments != null)
-                  {
-                    System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
-                  }
-                }
+              }
+            }
+            finally
+            {
+              if (paths != null)
+              {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
               }
             }
           }
           finally
           {
-            if (paths != null)
+            if (comSelection != null)
             {
-              System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
+              System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
             }
           }
         }
-        finally
-        {
-          if (comSelection != null)
-          {
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
-          }
+        catch (Exception ex) when (!ex.IsFatal())
+        { // If COM interop fails during hash generation, fall back to using finalId
+          logger.LogWarning(
+            ex,
+            "Failed to generate fragment hash ID for item {ItemId}, using finalId as fallback",
+            finalId
+          );
+          hashId = "";
         }
 
         var geometry = navisworksObject.Geometry;
@@ -177,12 +194,7 @@ public class NavisworksMaterialUnpacker(
         {
           renderMaterialProxies[renderMaterialId.ToString()] = new RenderMaterialProxy()
           {
-            value = CreateRenderMaterial(
-              materialName,
-              renderTransparency,
-              renderColor,
-              renderMaterialId
-            ),
+            value = CreateRenderMaterial(materialName, renderTransparency, renderColor, renderMaterialId),
             objects = [!string.IsNullOrEmpty(hashId) ? hashId : finalId]
           };
         }
@@ -207,7 +219,9 @@ public class NavisworksMaterialUnpacker(
 
     var speckleRenderMaterial = new RenderMaterial()
     {
-      name = !string.IsNullOrEmpty(name) ? name : $"{MaterialConstants.DEFAULT_MATERIAL_NAME_PREFIX}{Math.Abs(color.ToArgb())}",
+      name = !string.IsNullOrEmpty(name)
+        ? name
+        : $"{MaterialConstants.DEFAULT_MATERIAL_NAME_PREFIX}{Math.Abs(color.ToArgb())}",
       opacity = 1 - transparency,
       metalness = 0,
       roughness = 1,
