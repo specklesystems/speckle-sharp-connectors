@@ -17,7 +17,12 @@ public class NavisworksColorUnpacker(
 )
 {
   private static T SelectByRepresentationMode<T>(
-    RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+    RepresentationMode mode,
+    T active,
+    T permanent,
+    T original,
+    T defaultValue
+  ) =>
     mode switch
     {
       RepresentationMode.Active => active,
