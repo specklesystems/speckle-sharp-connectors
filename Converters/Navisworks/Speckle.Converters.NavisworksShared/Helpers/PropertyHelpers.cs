@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
+using Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
@@ -9,9 +11,6 @@ public static class PropertyHelpers
   /// <summary>
   /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
   /// </summary>
-  /// <param name="baseObject">The object to which the property is to be added. Can be either a Base object or a Dictionary.</param>
-  /// <param name="propertyName">The name of the property to add.</param>
-  /// <param name="value">The value of the property.</param>
   private static readonly Dictionary<NAV.VariantDataType, Func<NAV.VariantData, string, dynamic?>> s_typeHandlers =
     new()
     {

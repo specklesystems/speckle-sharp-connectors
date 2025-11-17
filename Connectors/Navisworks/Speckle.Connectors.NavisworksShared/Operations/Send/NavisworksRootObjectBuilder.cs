@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
@@ -27,7 +27,7 @@ public class NavisworksRootObjectBuilder(
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache
+  IUiUnitsCache uiUnitsCache,
   InstanceStoreManager instanceStoreManager
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
