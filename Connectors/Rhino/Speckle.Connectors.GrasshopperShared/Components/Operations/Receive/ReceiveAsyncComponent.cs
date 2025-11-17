@@ -5,7 +5,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
-using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
@@ -16,7 +15,6 @@ using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
-using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
@@ -449,80 +447,89 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    Root = await scope
-      .Get<GrasshopperReceiveOperation>()
-      .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
-      .ConfigureAwait(false);
-
-    CancellationToken.ThrowIfCancellationRequested();
-
-    SpecklePropertyGroupGoo? rootPropertiesGoo = null;
-    if (Root is RootCollection rootCollection && rootCollection.properties.Count > 0)
+    try
     {
-      rootPropertiesGoo = new SpecklePropertyGroupGoo(rootCollection.properties);
+      Root = await scope
+        .Get<GrasshopperReceiveOperation>()
+        .ReceiveCommitObject(receiveInfo, progress, CancellationToken)
+        .ConfigureAwait(false);
+
+      CancellationToken.ThrowIfCancellationRequested();
+
+      SpecklePropertyGroupGoo? rootPropertiesGoo = null;
+      if (Root is RootCollection rootCollection && rootCollection.properties.Count > 0)
+      {
+        rootPropertiesGoo = new SpecklePropertyGroupGoo(rootCollection.properties);
+      }
+
+      // Step 2 - CONVERT
+      //receiveComponent.Message = $"Unpacking...";
+      SpeckleConversionContext.SetupCurrent(scope);
+
+      var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
+
+      // separate atomic objects from block instances
+      var (atomicObjects, blockInstances) = scope
+        .Get<RootObjectUnpacker>()
+        .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
+
+      // initialize unpackers and collection builder (data holders - created with new)
+      var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
+      var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
+      var collectionRebuilder = new GrasshopperCollectionRebuilder(
+        (Root as Collection) ?? new Collection { name = "unnamed" }
+      );
+
+      // get handler from DI and initialize with per-operation data
+      var mapHandler = scope
+        .Get<LocalToGlobalMapHandler>()
+        .Initialize(
+          scope.Get<TraversalContextUnpacker>(),
+          colorUnpacker,
+          materialUnpacker,
+          collectionRebuilder,
+          unpackedRoot.DefinitionProxies
+        );
+
+      // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies
+      mapHandler.ConvertAtomicObjects(atomicObjects);
+
+      // process block instances using converted atomic objects
+      // internally filters out InstanceProxies that belong to registered DataObjects
+      // block processing needs converted objects, but object filtering needs block definitions.
+      mapHandler.ConvertBlockInstances(blockInstances);
+
+      Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
+      RootProperties = rootPropertiesGoo;
+
+      // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+      var customProperties = new Dictionary<string, object>()
+      {
+        { "isAsync", true },
+        { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+        { "auto", Parent.AutoReceive }
+      };
+      if (receiveInfo.WorkspaceId != null)
+      {
+        customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+      }
+
+      if (receiveInfo.SelectedVersionUserId != null)
+      {
+        customProperties.Add(
+          "isMultiplayer",
+          receiveInfo.SelectedVersionUserId != Parent.ApiClient.Account.userInfo.id
+        );
+      }
+
+      await scope
+        .Get<IMixPanelManager>()
+        .TrackEvent(MixPanelEvents.Receive, Parent.ApiClient.Account, customProperties);
     }
-
-    // Step 2 - CONVERT
-    //receiveComponent.Message = $"Unpacking...";
-
-    SpeckleConversionContext.SetupCurrent(scope);
-    TraversalContextUnpacker traversalContextUnpacker = new();
-    var unpackedRoot = scope.Get<RootObjectUnpacker>().Unpack(Root);
-
-    // separate atomic objects from block instances
-    var (atomicObjects, blockInstances) = scope
-      .Get<RootObjectUnpacker>()
-      .SplitAtomicObjectsAndInstances(unpackedRoot.ObjectsToConvert);
-
-    // initialize unpackers and collection builder
-    var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
-    var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
-    var collectionRebuilder = new GrasshopperCollectionRebuilder(
-      (Root as Collection) ?? new Collection { name = "unnamed" }
-    );
-
-    // get registry from DI
-    var registry = scope.Get<IDataObjectInstanceRegistry>();
-
-    // convert atomic objects directly
-    var mapHandler = new LocalToGlobalMapHandler(
-      traversalContextUnpacker,
-      collectionRebuilder,
-      colorUnpacker,
-      materialUnpacker,
-      registry,
-      unpackedRoot.DefinitionProxies,
-      scope.Get<ILogger<LocalToGlobalMapHandler>>()
-    );
-
-    // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies
-    mapHandler.ConvertAtomicObjects(atomicObjects);
-
-    // process block instances using converted atomic objects
-    // internally filters out InstanceProxies that belong to registered DataObjects
-    // block processing needs converted objects, but object filtering needs block definitions.
-    mapHandler.ConvertBlockInstances(blockInstances);
-
-    Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
-    RootProperties = rootPropertiesGoo;
-
-    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object>()
+    finally
     {
-      { "isAsync", true },
-      { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
-      { "auto", Parent.AutoReceive }
-    };
-    if (receiveInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
+      SpeckleConversionContext.EndCurrent();
     }
-
-    if (receiveInfo.SelectedVersionUserId != null)
-    {
-      customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != Parent.ApiClient.Account.userInfo.id);
-    }
-    await scope.Get<IMixPanelManager>().TrackEvent(MixPanelEvents.Receive, Parent.ApiClient.Account, customProperties);
   }
 }
 

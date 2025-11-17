@@ -60,6 +60,7 @@ public class PriorityLoader : GH_AssemblyPriority
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
       services.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();
+      services.AddTransient<LocalToGlobalMapHandler>();
 
       // send
       services.AddTransient<IRootObjectBuilder<SpeckleCollectionWrapperGoo>, GrasshopperRootObjectBuilder>();

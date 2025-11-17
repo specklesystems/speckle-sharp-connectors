@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
@@ -12,6 +11,8 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using DataObject = Speckle.Objects.Data.DataObject;
+
+namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 /// <summary>
 /// Handles conversion of atomic objects from TraversalContexts into Grasshopper wrapper objects.
@@ -24,32 +25,48 @@ using DataObject = Speckle.Objects.Data.DataObject;
 internal sealed class LocalToGlobalMapHandler
 {
   public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = new();
-  public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
 
-  private readonly TraversalContextUnpacker _traversalContextUnpacker;
-  private readonly GrasshopperColorUnpacker _colorUnpacker;
-  private readonly GrasshopperMaterialUnpacker _materialUnpacker;
+  // injected via constructor (DI-managed)
   private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
-  private readonly IReadOnlyCollection<InstanceDefinitionProxy>? _definitionProxies;
   private readonly ILogger<LocalToGlobalMapHandler> _logger;
 
+  // set via Initialize() method (per-operation data)
+  private TraversalContextUnpacker _traversalContextUnpacker = null!;
+  private GrasshopperColorUnpacker _colorUnpacker = null!;
+  private GrasshopperMaterialUnpacker _materialUnpacker = null!;
+  private IReadOnlyCollection<InstanceDefinitionProxy>? _definitionProxies;
+
+  // auto property (fixes IDE0032)
+  public GrasshopperCollectionRebuilder CollectionRebuilder { get; private set; } = null!;
+
   public LocalToGlobalMapHandler(
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry,
+    ILogger<LocalToGlobalMapHandler> logger
+  )
+  {
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
+    _logger = logger;
+  }
+
+  /// <summary>
+  /// Initializes the handler with per-operation data.
+  /// Must be called before using ConvertAtomicObjects or ConvertBlockInstances.
+  /// </summary>
+  public LocalToGlobalMapHandler Initialize(
     TraversalContextUnpacker traversalContextUnpacker,
-    GrasshopperCollectionRebuilder collectionRebuilder,
     GrasshopperColorUnpacker colorUnpacker,
     GrasshopperMaterialUnpacker materialUnpacker,
-    IDataObjectInstanceRegistry dataObjectInstanceRegistry,
-    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies,
-    ILogger<LocalToGlobalMapHandler> logger
+    GrasshopperCollectionRebuilder collectionRebuilder,
+    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
   )
   {
     _traversalContextUnpacker = traversalContextUnpacker;
     _colorUnpacker = colorUnpacker;
     _materialUnpacker = materialUnpacker;
-    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
-    _definitionProxies = definitionProxies;
-    _logger = logger;
     CollectionRebuilder = collectionRebuilder;
+    _definitionProxies = definitionProxies;
+
+    return this;
   }
 
   /// <summary>
@@ -181,7 +198,7 @@ internal sealed class LocalToGlobalMapHandler
   private void ResolveDataObjectInstanceProxies(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
-    if (obj is not Speckle.Objects.Data.DataObject dataObject)
+    if (obj is not DataObject dataObject)
     {
       return;
     }
@@ -267,7 +284,7 @@ internal sealed class LocalToGlobalMapHandler
   /// Handles color/material inheritance and property extraction.
   /// </summary>
   private SpeckleDataObjectWrapper CreateDataObjectWrapper(
-    Speckle.Objects.Data.DataObject dataObject,
+    DataObject dataObject,
     List<SpeckleGeometryWrapper> geometries,
     List<Collection> path,
     SpeckleCollectionWrapper objectCollection

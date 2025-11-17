@@ -1,6 +1,5 @@
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
@@ -12,7 +11,6 @@ using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
-using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
@@ -144,7 +142,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       return new ReceiveComponentOutput();
     }
 
-    var scope = PriorityLoader.CreateScopeForActiveDocument();
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
     try
     {
@@ -202,10 +200,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       // Setup conversion context BEFORE unpacking (which triggers DataObjectConverter)
       SpeckleConversionContext.SetupCurrent(scope);
 
-      // We need to rethink these lovely unpackers, there's a bit too many of 'em
       var rootObjectUnpacker = scope.ServiceProvider.GetService<RootObjectUnpacker>();
-      var traversalContextUnpacker = new TraversalContextUnpacker();
-
       var unpackedRoot = rootObjectUnpacker.Unpack(root);
 
       // split atomic objects from block components before conversion
@@ -213,32 +208,28 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
         unpackedRoot.ObjectsToConvert
       );
 
-      // Initialize unpackers and collection builder
+      // Initialize unpackers and collection builder (data holders - created with new)
       var colorUnpacker = new GrasshopperColorUnpacker(unpackedRoot);
       var materialUnpacker = new GrasshopperMaterialUnpacker(unpackedRoot);
       var collectionRebuilder = new GrasshopperCollectionRebuilder(
         (root as Collection) ?? new Collection { name = "unnamed" }
       );
 
-      // get registry from DI
-      var registry = scope.ServiceProvider.GetRequiredService<IDataObjectInstanceRegistry>();
+      // get handler from DI and initialize with per-operation data
+      var mapHandler = scope
+        .ServiceProvider.GetRequiredService<LocalToGlobalMapHandler>()
+        .Initialize(
+          scope.ServiceProvider.GetRequiredService<TraversalContextUnpacker>(),
+          colorUnpacker,
+          materialUnpacker,
+          collectionRebuilder,
+          unpackedRoot.DefinitionProxies
+        );
 
-      // convert atomic objects directly
-      var mapHandler = new LocalToGlobalMapHandler(
-        traversalContextUnpacker,
-        collectionRebuilder,
-        colorUnpacker,
-        materialUnpacker,
-        registry,
-        unpackedRoot.DefinitionProxies,
-        scope.Get<ILogger<LocalToGlobalMapHandler>>()
-      );
-
-      // handler deals with two-pass conversion: normal objects first, then DataObjects with InstanceProxies
+      // two-pass conversion: normal objects first, then DataObjects with InstanceProxies
       mapHandler.ConvertAtomicObjects(atomicObjects);
 
-      // process block instances using converted atomic objects
-      // internally filters out InstanceProxies that belong to registered DataObjects
+      // process block instances (internally filters InstanceProxies belonging to registered DataObjects)
       mapHandler.ConvertBlockInstances(blockInstances);
 
       var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
@@ -246,7 +237,6 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     }
     finally
     {
-      // Clean up the static context (which will dispose the scope)
       SpeckleConversionContext.EndCurrent();
     }
   }
