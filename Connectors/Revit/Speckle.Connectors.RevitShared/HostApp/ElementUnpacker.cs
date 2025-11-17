@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using Speckle.Converters.RevitShared.Extensions;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -23,11 +24,11 @@ public class ElementUnpacker
     // Step 1: unpack groups
     var atomicObjects = UnpackElements(selectionElements, doc);
 
-    // Step 2: pack curtain wall elements, once we know the full extent of our flattened item list.
-    // The behaviour we're looking for:
-    // If parent wall is part of selection, does not select individual elements out. Otherwise, selects individual elements (Panels, Mullions) as atomic objects.
-    // NOTE: this also conditionally "packs" stacked wall elements if their parent is present. See detailed note inside the function.
-    return PackCurtainWallElementsAndStackedWalls(atomicObjects, doc);
+    // Step 2: Deduplicate parent-child elements in selection
+    // Removes child elements (mullions, panels, top rails, stacked wall members) when
+    // their parent element is also selected, since parents include children in their conversion.
+    // Children are only converted independently when their parent is NOT in the selection.
+    return RemoveKnownChildElementsWhenParentPresent(atomicObjects, doc);
   }
 
   /// <summary>
@@ -108,7 +109,7 @@ public class ElementUnpacker
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
   // 1- RootObjectBuilder with linked model document - otherwise we cannot unpack elements from correct document.
   // 2- Evicting the cache while introducing the settings
-  private List<Element> PackCurtainWallElementsAndStackedWalls(List<Element> elements, Document doc)
+  private List<Element> RemoveKnownChildElementsWhenParentPresent(List<Element> elements, Document doc)
   {
     //just used for contains so use ToHashSet
     var ids = elements.Select(el => el.Id).ToHashSet();
@@ -131,64 +132,37 @@ public class ElementUnpacker
       // If you wonder why revit is driving people to insanity, this is one of those moments.
       // See [CNX-851: Stacked Wall Duplicate Geometry or Materials not applied](https://linear.app/speckle/issue/CNX-851/stacked-wall-duplicate-geometry-or-materials-not-applied)
       || (element is Wall { IsStackedWallMember: true } wall && ids.Contains(wall.StackedWallOwnerId))
+      // Railings: Remove TopRail when parent railing is selected
+      // Prevents duplication since railing converter includes TopRail as a child element
+      // TODO: Consider adding HandRail support (also inherits from ContinuousRail)
+      || (
+        element is TopRail topRail
+        && doc.GetElement(topRail.HostRailingId) is Railing railing
+        && ids.Contains(railing.Id)
+      )
     );
     return elements;
   }
 
   /// <summary>
-  /// Given a set of atomic elements, it will return a list of all their ids as well as their subelements. This currently handles <b>curtain walls</b> and <b>stacked walls</b>.
-  /// This might not be an exhaustive list of valid objects with "subelements" in revit, and will need revisiting.
+  /// Returns element IDs and their known child element IDs for cache tracking.
+  /// Uses <see cref="ElementExtensions.GetKnownChildrenElements"/> to determine which children to include.
   /// </summary>
-  /// <param name="elements"></param>
-  /// <returns></returns>
+  /// <param name="elements">Elements to process</param>
+  /// <returns>Flattened list of parent and child element IDs</returns>
   public List<string> GetElementsAndSubelementIdsFromAtomicObjects(List<Element> elements)
   {
     var ids = new HashSet<string>();
     foreach (var element in elements)
     {
-      switch (element)
-      {
-        case Wall wall:
-          if (wall.CurtainGrid is { } grid)
-          {
-            foreach (var mullionId in grid.GetMullionIds())
-            {
-              ids.Add(mullionId.ToString());
-            }
-            foreach (var panelId in grid.GetPanelIds())
-            {
-              ids.Add(panelId.ToString());
-            }
-          }
-          else if (wall.IsStackedWall)
-          {
-            foreach (var stackedWallId in wall.GetStackedWallMemberIds())
-            {
-              ids.Add(stackedWallId.ToString());
-            }
-          }
-          break;
-        case FootPrintRoof footPrintRoof:
-          if (footPrintRoof.CurtainGrids is { } gs)
-          {
-            foreach (CurtainGrid roofGrid in gs)
-            {
-              foreach (var mullionId in roofGrid.GetMullionIds())
-              {
-                ids.Add(mullionId.ToString());
-              }
-              foreach (var panelId in roofGrid.GetPanelIds())
-              {
-                ids.Add(panelId.ToString());
-              }
-            }
-          }
-          break;
-        default:
-          break;
-      }
-
+      // add the element's own ID
       ids.Add(element.Id.ToString());
+
+      // add all known children IDs using the extension method. trying to consolidate duplication here with converter
+      foreach (var childId in element.GetKnownChildrenElements())
+      {
+        ids.Add(childId.ToString());
+      }
     }
 
     return ids.ToList();

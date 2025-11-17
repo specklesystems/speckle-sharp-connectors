@@ -87,15 +87,6 @@ public sealed class DisplayValueExtractor
       // curtain and stacked walls should have their display values in their children
       case DB.Wall wall:
         return wall.CurtainGrid is not null || wall.IsStackedWall ? new() : GetGeometryDisplayValue(element);
-      // railings should also include toprail which need to be retrieved separately
-      case DBA.Railing railing:
-        List<DisplayValueResult> railingDisplay = GetGeometryDisplayValue(railing);
-        if (railing.TopRail != DB.ElementId.InvalidElementId)
-        {
-          var topRail = _converterSettings.Current.Document.GetElement(railing.TopRail);
-          railingDisplay.AddRange(GetGeometryDisplayValue(topRail));
-        }
-        return railingDisplay;
 
       // POC: footprint roofs can have curtain walls in them. Need to check if they can also have non-curtain wall parts, bc currently not skipping anything.
       // case DB.FootPrintRoof footPrintRoof:
