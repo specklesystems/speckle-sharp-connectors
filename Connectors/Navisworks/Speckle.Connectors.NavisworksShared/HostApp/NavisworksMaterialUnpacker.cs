@@ -67,16 +67,52 @@ public class NavisworksMaterialUnpacker(
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
-        var item = selectionService.GetModelItemFromPath(finalId);
         string hashId = "";
+        var item = selectionService.GetModelItemFromPath(finalId);
         var comSelection = ComApiBridge.ToInwOpSelection([item]);
-        var paths = comSelection.Paths();
-        var path = paths.OfType<InwOaPath>().First();
-        var fragments = path.Fragments();
-        if (fragments.Count > 1)
+        try
         {
-          var fragmentId = converter.GenerateFragmentId(paths);
-          hashId = $"geom_{fragmentId}";
+          var paths = comSelection.Paths();
+          try
+          {
+            if (paths.Count > 0)
+            {
+              var firstPath = paths.OfType<InwOaPath>().FirstOrDefault();
+              if (firstPath != null)
+              {
+                var fragments = firstPath.Fragments();
+                try
+                {
+                  if (fragments.Count > 1)
+                  {
+                    var fragmentId = converter.GenerateFragmentId(paths);
+                    hashId = $"geom_{fragmentId}";
+                  }
+                }
+                finally
+                {
+                  if (fragments != null)
+                  {
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
+                  }
+                }
+              }
+            }
+          }
+          finally
+          {
+            if (paths != null)
+            {
+              System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
+            }
+          }
+        }
+        finally
+        {
+          if (comSelection != null)
+          {
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
+          }
         }
 
         var geometry = navisworksObject.Geometry;

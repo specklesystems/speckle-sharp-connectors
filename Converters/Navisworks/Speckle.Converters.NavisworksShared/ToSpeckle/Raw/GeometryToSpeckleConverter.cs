@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,7 +15,11 @@ using ComApiBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-[SuppressMessage("Design", "CA1031:Do not catch general exception types")]
+/// <remarks>
+/// Memory Safety: All COM objects (InwSelectionPathsColl, InwOaPath, InwOaFragmentList) are explicitly
+/// released using Marshal.ReleaseComObject in try-finally blocks to prevent memory leaks.
+/// NAV.Color objects are disposed using 'using' statements as they implement IDisposable.
+/// </remarks>
 public class GeometryToSpeckleConverter(
   NavisworksConversionSettings settings,
   InstanceStoreManager instanceStoreManager,
@@ -59,10 +62,19 @@ public class GeometryToSpeckleConverter(
         {
           var firstPath = paths.Cast<InwOaPath>().First();
           var fragmentsCollection = firstPath.Fragments();
-
-          if (fragmentsCollection.Count > 1)
+          try
           {
-            return ProcessSharedGeometry(paths, fragmentStack);
+            if (fragmentsCollection.Count > 1)
+            {
+              return ProcessSharedGeometry(paths, fragmentStack);
+            }
+          }
+          finally
+          {
+            if (fragmentsCollection != null)
+            {
+              Marshal.ReleaseComObject(fragmentsCollection);
+            }
           }
         }
 
@@ -93,12 +105,21 @@ public class GeometryToSpeckleConverter(
   private static void CollectFragments(InwOaPath path, Stack<InwOaFragment3> fragmentStack)
   {
     var fragments = path.Fragments();
-
-    foreach (var fragment in fragments.OfType<InwOaFragment3>())
+    try
     {
-      if (AreFragmentPathsEqual(fragment, path))
+      foreach (var fragment in fragments.OfType<InwOaFragment3>())
       {
-        fragmentStack.Push(fragment);
+        if (AreFragmentPathsEqual(fragment, path))
+        {
+          fragmentStack.Push(fragment);
+        }
+      }
+    }
+    finally
+    {
+      if (fragments != null)
+      {
+        Marshal.ReleaseComObject(fragments);
       }
     }
   }
@@ -163,7 +184,19 @@ public class GeometryToSpeckleConverter(
           continue;
         }
 
-        var fragmentCount = path.Fragments().Count;
+        var fragmentsForCount = path.Fragments();
+        int fragmentCount;
+        try
+        {
+          fragmentCount = fragmentsForCount.Count;
+        }
+        finally
+        {
+          if (fragmentsForCount != null)
+          {
+            Marshal.ReleaseComObject(fragmentsForCount);
+          }
+        }
 
         double[] makeNoChange = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
         double[] transformMatrix = ConvertArrayToDouble(matrixArray);
@@ -276,81 +309,84 @@ public class GeometryToSpeckleConverter(
       }
 
       var fragmentHashes = new List<string>();
-      var pathIndex = 0;
 
-      foreach (InwOaPath path in paths)
+      foreach (var fragments in from InwOaPath path in paths select path.Fragments())
       {
-        var fragments = path.Fragments();
-
-        var fragmentIndex = 0;
-        foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+        try
         {
-          if (fragment.path?.ArrayData is not Array pathData)
+          var fragmentIndex = 0;
+          foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
           {
-            fragmentIndex++;
-            continue;
-          }
-
-          if (pathData.Length == 0)
-          {
-            fragmentIndex++;
-            continue;
-          }
-
-          try
-          {
-            if (pathData.Rank != 1)
+            if (fragment.path?.ArrayData is not Array pathData || pathData.Length == 0)
             {
-              var fragmentHashFallback = TrySimpleArrayEnumeration(pathData, fragmentIndex);
-              if (!string.IsNullOrEmpty(fragmentHashFallback))
+              fragmentIndex++;
+              continue;
+            }
+
+            try
+            {
+              if (pathData.Rank != 1)
               {
-                fragmentHashes.Add(fragmentHashFallback);
+                var fragmentHashFallback = TrySimpleArrayEnumeration(pathData, fragmentIndex);
+                if (!string.IsNullOrEmpty(fragmentHashFallback))
+                {
+                  fragmentHashes.Add(fragmentHashFallback);
+                }
+
+                fragmentIndex++;
+                continue;
+              }
+
+              var lowerBound = pathData.GetLowerBound(0);
+              var upperBound = pathData.GetUpperBound(0);
+
+              var arrayLength = upperBound - lowerBound + 1;
+              var pathInts = new int[arrayLength];
+
+              for (int i = lowerBound; i <= upperBound; i++)
+              {
+                try
+                {
+                  var value = pathData.GetValue(i);
+                  var arrayIndex = i - lowerBound;
+                  pathInts[arrayIndex] = System.Convert.ToInt32(value);
+                }
+                catch (Exception ex)
+                {
+                  _logger.LogDebug(ex, "Failed to get array value at COM index {Index}", i);
+                }
+              }
+
+              var fragmentHash = string.Join("_", pathInts);
+              fragmentHashes.Add(fragmentHash);
+            }
+            catch (Exception ex)
+            {
+              _logger.LogDebug(
+                ex,
+                "Failed to process fragment {FragmentIndex}, trying simple enumeration",
+                fragmentIndex
+              );
+              var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
+              if (!string.IsNullOrEmpty(fragmentHash))
+              {
+                fragmentHashes.Add(fragmentHash);
               }
 
               fragmentIndex++;
               continue;
             }
 
-            var lowerBound = pathData.GetLowerBound(0);
-            var upperBound = pathData.GetUpperBound(0);
-
-            var arrayLength = upperBound - lowerBound + 1;
-            var pathInts = new int[arrayLength];
-
-            for (int i = lowerBound; i <= upperBound; i++)
-            {
-              try
-              {
-                var value = pathData.GetValue(i);
-                var arrayIndex = i - lowerBound;
-                pathInts[arrayIndex] = System.Convert.ToInt32(value);
-              }
-              catch (Exception ex)
-              {
-                _logger.LogDebug(ex, "Failed to get array value at COM index {Index}", i);
-              }
-            }
-
-            var fragmentHash = string.Join("_", pathInts);
-            fragmentHashes.Add(fragmentHash);
-          }
-          catch (Exception ex)
-          {
-            _logger.LogDebug(ex, "Failed to process fragment {FragmentIndex}, trying simple enumeration", fragmentIndex);
-            var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
-            if (!string.IsNullOrEmpty(fragmentHash))
-            {
-              fragmentHashes.Add(fragmentHash);
-            }
-
             fragmentIndex++;
-            continue;
           }
-
-          fragmentIndex++;
         }
-
-        pathIndex++;
+        finally
+        {
+          if (fragments != null)
+          {
+            Marshal.ReleaseComObject(fragments);
+          }
+        }
       }
 
       if (fragmentHashes.Count > 0)
@@ -479,62 +515,69 @@ public class GeometryToSpeckleConverter(
         return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       }
 
-      var pathsEnum = paths.Cast<InwOaPath>();
-
       var firstPath = paths.Cast<InwOaPath>().First();
       var fragments = firstPath.Fragments();
-
-      if (fragments.Count == 0)
+      try
       {
-        return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-      }
-
-      var fragmentStack = new Stack<InwOaFragment3>();
-
-      foreach (var frag in fragments.OfType<InwOaFragment3>())
-      {
-        if (frag.path?.ArrayData is not Array pathData1 || firstPath.ArrayData is not Array pathData2)
+        if (fragments.Count == 0)
         {
-          continue;
+          return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         }
 
-        var pathArray1 = pathData1.Cast<int>().ToArray<int>();
-        var pathArray2 = pathData2.Cast<int>().ToArray<int>();
+        var fragmentStack = new Stack<InwOaFragment3>();
 
-        if (pathArray1.Length == pathArray2.Length && pathArray1.SequenceEqual(pathArray2))
+        foreach (var frag in fragments.OfType<InwOaFragment3>())
         {
-          fragmentStack.Push(frag);
+          if (frag.path?.ArrayData is not Array pathData1 || firstPath.ArrayData is not Array pathData2)
+          {
+            continue;
+          }
+
+          var pathArray1 = pathData1.Cast<int>().ToArray();
+          var pathArray2 = pathData2.Cast<int>().ToArray();
+
+          if (pathArray1.Length == pathArray2.Length && pathArray1.SequenceEqual(pathArray2))
+          {
+            fragmentStack.Push(frag);
+          }
+        }
+
+        var fragment = fragmentStack.First();
+        var matrix = fragment.GetLocalToWorldMatrix();
+
+        if (matrix is InwLTransform3f3 { Matrix: Array matrixArray })
+        {
+          var transformArray = ConvertArrayToDouble(matrixArray);
+          var transformedMatrix = ApplyCoordinateTransform(transformArray);
+
+          var newMatrix = new Matrix4x4(
+            transformedMatrix[0],
+            transformedMatrix[1],
+            transformedMatrix[2],
+            transformedMatrix[3],
+            transformedMatrix[4],
+            transformedMatrix[5],
+            transformedMatrix[6],
+            transformedMatrix[7],
+            transformedMatrix[8],
+            transformedMatrix[9],
+            transformedMatrix[10],
+            transformedMatrix[11],
+            transformedMatrix[12],
+            transformedMatrix[13],
+            transformedMatrix[14],
+            transformedMatrix[15]
+          );
+
+          return Matrix4x4.Transpose(newMatrix);
         }
       }
-
-      var fragment = fragmentStack.First();
-      var matrix = fragment.GetLocalToWorldMatrix();
-
-      if (matrix is InwLTransform3f3 { Matrix: Array matrixArray })
+      finally
       {
-        var transformArray = ConvertArrayToDouble(matrixArray);
-        var transformedMatrix = ApplyCoordinateTransform(transformArray);
-
-        var newMatrix = new Matrix4x4(
-          transformedMatrix[0],
-          transformedMatrix[1],
-          transformedMatrix[2],
-          transformedMatrix[3],
-          transformedMatrix[4],
-          transformedMatrix[5],
-          transformedMatrix[6],
-          transformedMatrix[7],
-          transformedMatrix[8],
-          transformedMatrix[9],
-          transformedMatrix[10],
-          transformedMatrix[11],
-          transformedMatrix[12],
-          transformedMatrix[13],
-          transformedMatrix[14],
-          transformedMatrix[15]
-        );
-
-        return Matrix4x4.Transpose(newMatrix);
+        if (fragments != null)
+        {
+          Marshal.ReleaseComObject(fragments);
+        }
       }
     }
     catch (COMException ex)
