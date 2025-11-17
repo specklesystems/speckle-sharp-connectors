@@ -292,6 +292,13 @@
       "speckle.connectors.logging": {
         "type": "Project"
       },
+      "speckle.converters.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
+          "Speckle.Objects": "[3.9.0, )"
+        }
+      },
       "Microsoft.Extensions.Logging": {
         "type": "CentralTransitive",
         "requested": "[2.2.0, )",
@@ -556,6 +563,13 @@
       },
       "speckle.connectors.logging": {
         "type": "Project"
+      },
+      "speckle.converters.common": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
+          "Speckle.Objects": "[3.9.0, )"
+        }
       },
       "Microsoft.Extensions.Logging": {
         "type": "CentralTransitive",
