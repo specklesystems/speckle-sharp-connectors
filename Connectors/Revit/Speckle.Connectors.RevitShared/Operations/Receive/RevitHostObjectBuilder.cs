@@ -66,8 +66,8 @@ public sealed class RevitHostObjectBuilder(
     // TODO: formalise getting transform info from rootObject. this dict access is gross.
     Autodesk.Revit.DB.Transform? referencePointTransformFromRootObject = null;
     if (
-      rootObject.DynamicPropertyKeys.Contains(ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY)
-      && rootObject[ReferencePointHelper.REFERENCE_POINT_TRANSFORM_KEY] is Dictionary<string, object> transformDict
+      rootObject.DynamicPropertyKeys.Contains(RootKeys.REFERENCE_POINT_TRANSFORM)
+      && rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] is Dictionary<string, object> transformDict
       && transformDict.TryGetValue("transform", out var transformValue)
     )
     {

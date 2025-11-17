@@ -116,7 +116,7 @@ public class ReceiveOperationTests : MoqTest
 
     receiveProgress.Setup(x => x.Begin());
     operations
-      .Setup(x => x.Receive2(serverUrl, projectId, referencedObject, token, It.IsAny<PassthroughProgress>(), ct))
+      .Setup(x => x.Receive2(serverUrl, projectId, referencedObject, token, It.IsAny<PassthroughProgress>(), ct, null))
       .ReturnsAsync(@base);
 
     var sp = CreateServices(Assembly.GetExecutingAssembly()).BuildServiceProvider();

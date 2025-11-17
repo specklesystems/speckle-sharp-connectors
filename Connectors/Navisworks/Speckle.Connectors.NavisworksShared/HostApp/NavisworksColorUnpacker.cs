@@ -16,7 +16,13 @@ public class NavisworksColorUnpacker(
   IElementSelectionService selectionService
 )
 {
-  private static T Select<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+  private static T SelectByRepresentationMode<T>(
+    RepresentationMode mode,
+    T active,
+    T permanent,
+    T original,
+    T defaultValue
+  ) =>
     mode switch
     {
       RepresentationMode.Active => active,
@@ -71,14 +77,14 @@ public class NavisworksColorUnpacker(
 
         using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
 
-        var representationColor = Select(
+        var representationColor = SelectByRepresentationMode(
           mode,
           geometry.ActiveColor,
           geometry.PermanentColor,
           geometry.OriginalColor,
           defaultColor
         );
-        var colorId = Select(
+        var colorId = SelectByRepresentationMode(
           mode,
           $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),
           $"{geometry.PermanentColor.GetHashCode()}_{geometry.PermanentTransparency}".GetHashCode(),
@@ -124,30 +130,49 @@ public class NavisworksColorUnpacker(
     var comSelection = ComBridge.ToInwOpSelection([modelItem]);
     try
     {
-      foreach (ComApi.InwOaPath path in comSelection.Paths())
+      var pathsCollection = comSelection.Paths();
+      try
       {
-        GC.KeepAlive(path);
-
-        foreach (ComApi.InwOaFragment3 fragment in path.Fragments())
+        foreach (ComApi.InwOaPath path in pathsCollection)
         {
-          GC.KeepAlive(fragment);
-
-          fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
-
-          // Exit early if triangles are found
-          if (primitiveChecker.HasTriangles)
+          var fragmentsCollection = path.Fragments();
+          try
           {
-            return false;
+            foreach (ComApi.InwOaFragment3 fragment in fragmentsCollection.OfType<ComApi.InwOaFragment3>())
+            {
+              fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
+
+              if (primitiveChecker.HasTriangles)
+              {
+                return false;
+              }
+            }
+          }
+          finally
+          {
+            if (fragmentsCollection != null)
+            {
+              System.Runtime.InteropServices.Marshal.ReleaseComObject(fragmentsCollection);
+            }
           }
         }
-      }
 
-      // Return true if any 2D primitives are found
-      return primitiveChecker.HasLines || primitiveChecker.HasPoints || primitiveChecker.HasSnapPoints;
+        return primitiveChecker.HasLines || primitiveChecker.HasPoints || primitiveChecker.HasSnapPoints;
+      }
+      finally
+      {
+        if (pathsCollection != null)
+        {
+          System.Runtime.InteropServices.Marshal.ReleaseComObject(pathsCollection);
+        }
+      }
     }
     finally
     {
-      System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
+      if (comSelection != null)
+      {
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
+      }
     }
   }
 }

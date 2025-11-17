@@ -9,15 +9,12 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointHelper
 {
-  public const string REFERENCE_POINT_TRANSFORM_KEY = "referencePointTransform";
-
   /// <summary>
   /// Changes Revit Transform to a double array.
   /// Uses a 16-element column-major matrix representation. See https://speckle.guide/dev/objects.html
   /// </summary>
-  public static Dictionary<string, object> CreateTransformDataForRootObject(Transform transform)
-  {
-    return new Dictionary<string, object>
+  public static Dictionary<string, object> CreateTransformDataForRootObject(Transform transform) =>
+    new()
     {
       {
         "transform", // TODO: it would also be nice to include the key-value pair for reference point type as a string
@@ -42,7 +39,6 @@ public static class ReferencePointHelper
         }
       }
     };
-  }
 
   public static Matrix4x4 TransformToMatrix(Transform transform) =>
     new()
