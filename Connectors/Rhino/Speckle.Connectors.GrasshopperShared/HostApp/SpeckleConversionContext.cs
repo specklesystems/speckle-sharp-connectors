@@ -29,13 +29,13 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     }
   }
 
-  public static void SetupCurrent()
+  public static void SetupCurrent(IServiceScope? scope = null)
   {
     if (s_currentContext != null)
     {
       return;
     }
-    s_scope = PriorityLoader.CreateScopeForActiveDocument();
+    s_scope = scope ?? PriorityLoader.CreateScopeForActiveDocument();
     s_currentContext = s_scope.Get<SpeckleConversionContext>();
   }
 
@@ -60,6 +60,7 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     {
       GeometryBase geometry => [(geometry, input)],
       List<GeometryBase> geometryList => geometryList.Select(o => ((object)o, input)).ToList(),
+      List<(GeometryBase, Base)> pairList when pairList.Count == 0 => [],
       IEnumerable<(GeometryBase, Base)> fallbackConversionResult
         => fallbackConversionResult.Select(o => ((object)o.Item1, o.Item2)).ToList(),
       object obj => [(obj, input)],
