@@ -103,23 +103,6 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
     // Add instance definition proxy if not exists
     if (!InstanceDefinitionProxiesStore.Contains(definitionId))
     {
-      if (geometry.applicationId == null)
-      {
-        _logger.LogWarning(
-          "Cannot create instance definition proxy - geometry.id is null for FragmentId={FragmentId}",
-          fragmentId
-        );
-        var result = geometryAdded || proxyAdded;
-        _logger.LogDebug(
-          "AddSharedGeometry completed: FragmentId={FragmentId}, Result={Result}, GeometryAdded={GeometryAdded}, ProxyAdded={ProxyAdded}",
-          fragmentId,
-          result,
-          geometryAdded,
-          proxyAdded
-        );
-        return result;
-      }
-
       var definitionProxy = new InstanceDefinitionProxy
       {
         applicationId = definitionId,
