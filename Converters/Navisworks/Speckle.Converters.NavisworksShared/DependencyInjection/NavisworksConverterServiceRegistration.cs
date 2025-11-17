@@ -52,7 +52,8 @@ public static class NavisworksConverterServiceRegistration
 
     // Register ISharedGeometryStore interface using the geometry definitions store for backward compatibility
     serviceCollection.AddScoped<ISharedGeometryStore>(provider =>
-      provider.GetRequiredService<InstanceStoreManager>().GeometryDefinitionsStore);
+      provider.GetRequiredService<InstanceStoreManager>().GeometryDefinitionsStore
+    );
 
     // Register settings resolved from factory
     serviceCollection.AddScoped<NavisworksConversionSettings>(sp =>
