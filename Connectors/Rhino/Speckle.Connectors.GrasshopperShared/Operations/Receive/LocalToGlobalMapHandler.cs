@@ -351,7 +351,7 @@ internal sealed class LocalToGlobalMapHandler
         {
           // deep copy and transform the geometry
           var transformedWrapper = definitionObject.DeepCopy();
-            transformedWrapper.GeometryBase.NotNull().Transform(transform);
+          transformedWrapper.GeometryBase.NotNull().Transform(transform);
           resolvedGeometries.Add(transformedWrapper);
         }
       }
