@@ -91,6 +91,6 @@ public static class PropertyHelpers
       ? "Item"
       : Regex.Replace(name, @"[\.\/\s]", "_");
 
-  internal static bool IsCategoryToBeSkipped(NAV.PropertyCategory propertyCategory) =>
+  internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);
 }

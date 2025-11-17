@@ -18,7 +18,7 @@ public class NavisworksMaterialUnpacker(
   GeometryToSpeckleConverter converter
 )
 {
-  private static T Select<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+  private static T SelectByRepresentationMode<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
     mode switch
     {
       RepresentationMode.Active => active,
@@ -84,21 +84,21 @@ public class NavisworksMaterialUnpacker(
 
         using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
 
-        var renderColor = Select(
+        var renderColor = SelectByRepresentationMode(
           mode,
           geometry.ActiveColor,
           geometry.PermanentColor,
           geometry.OriginalColor,
           defaultColor
         );
-        var renderTransparency = Select(
+        var renderTransparency = SelectByRepresentationMode(
           mode,
           geometry.ActiveTransparency,
           geometry.PermanentTransparency,
           geometry.OriginalTransparency,
           0.0
         );
-        var renderMaterialId = Select(
+        var renderMaterialId = SelectByRepresentationMode(
           mode,
           $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),
           $"{geometry.PermanentColor.GetHashCode()}_{geometry.PermanentTransparency}".GetHashCode(),
@@ -139,7 +139,7 @@ public class NavisworksMaterialUnpacker(
         {
           renderMaterialProxies[renderMaterialId.ToString()] = new RenderMaterialProxy()
           {
-            value = ConvertRenderColorAndTransparencyToSpeckle(
+            value = CreateRenderMaterial(
               materialName,
               renderTransparency,
               renderColor,
@@ -158,7 +158,7 @@ public class NavisworksMaterialUnpacker(
     return renderMaterialProxies.Values.ToList();
   }
 
-  private static RenderMaterial ConvertRenderColorAndTransparencyToSpeckle(
+  private static RenderMaterial CreateRenderMaterial(
     string name,
     double transparency,
     NAV.Color navisworksColor,

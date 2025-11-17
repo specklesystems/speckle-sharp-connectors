@@ -96,7 +96,7 @@ public class GeometryToSpeckleConverter(
 
     foreach (var fragment in fragments.OfType<InwOaFragment3>())
     {
-      if (ValidateFragmentPath(fragment, path))
+      if (AreFragmentPathsEqual(fragment, path))
       {
         fragmentStack.Push(fragment);
       }
@@ -186,10 +186,10 @@ public class GeometryToSpeckleConverter(
     return ProcessGeometries(callbackListeners);
   }
 
-  private static bool ValidateFragmentPath(InwOaFragment3 fragment, InwOaPath path) =>
+  private static bool AreFragmentPathsEqual(InwOaFragment3 fragment, InwOaPath path) =>
     fragment.path?.ArrayData is Array fragmentPathData
     && path.ArrayData is Array pathData
-    && IsSameFragmentPath(fragmentPathData, pathData);
+    && AreFragmentPathsEqual(fragmentPathData, pathData);
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
@@ -589,6 +589,6 @@ public class GeometryToSpeckleConverter(
     return doubleArray;
   }
 
-  private static bool IsSameFragmentPath(Array a1, Array a2) =>
+  private static bool AreFragmentPathsEqual(Array a1, Array a2) =>
     a1.Length == a2.Length && a1.Cast<int>().SequenceEqual(a2.Cast<int>());
 }

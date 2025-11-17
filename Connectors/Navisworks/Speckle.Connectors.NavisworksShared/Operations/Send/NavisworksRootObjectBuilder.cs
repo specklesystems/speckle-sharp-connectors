@@ -223,7 +223,7 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  private (string name, string path) GetContext(string applicationId)
+  private (string name, string path) GetElementNameAndPath(string applicationId)
   {
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
@@ -233,7 +233,7 @@ public class NavisworksRootObjectBuilder(
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
-    (string name, string path) = GetContext(cleanParentPath);
+    (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
     return new NavisworksObject
     {
@@ -253,7 +253,7 @@ public class NavisworksRootObjectBuilder(
       return null;
     }
 
-    (string name, string path) = GetContext(convertedBase.applicationId);
+    (string name, string path) = GetElementNameAndPath(convertedBase.applicationId);
 
     return new NavisworksObject
     {
