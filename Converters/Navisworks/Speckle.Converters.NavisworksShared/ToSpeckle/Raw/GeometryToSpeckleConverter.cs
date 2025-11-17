@@ -292,7 +292,7 @@ public class GeometryToSpeckleConverter(
       })
       .ToList();
 
-  internal string GenerateFragmentId(InwSelectionPathsColl paths)
+  public string GenerateFragmentId(InwSelectionPathsColl paths)
   {
     try
     {
