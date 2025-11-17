@@ -18,8 +18,6 @@ public class NavisworksMaterialUnpacker(
   GeometryToSpeckleConverter converter
 )
 {
-  // Helper function to select a property based on the representation mode
-  // Selector method for individual properties
   private static T Select<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
     mode switch
     {
@@ -111,7 +109,6 @@ public class NavisworksMaterialUnpacker(
         var materialName =
           $"NavisworksMaterial_{Math.Abs(ColorConverter.NavisworksColorToColor(renderColor).ToArgb())}";
 
-        // Check Item category for material name
         var itemCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Item");
         if (itemCategory != null)
         {
@@ -123,7 +120,6 @@ public class NavisworksMaterialUnpacker(
           }
         }
 
-        // Check Material category for material name
         var materialPropertyCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Material");
         if (materialPropertyCategory != null)
         {

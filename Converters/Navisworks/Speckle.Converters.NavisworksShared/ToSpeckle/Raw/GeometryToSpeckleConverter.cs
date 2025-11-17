@@ -16,17 +16,6 @@ using ComApiBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-/// <summary>
-/// Converts Navisworks geometry to Speckle displayable geometry.
-///
-/// Note: This class does not implement ITypedConverter{ModelGeometry, Base} because Navisworks geometry
-/// conversion requires COM interop access that isn't available through the public ModelGeometry class.
-/// The conversion process requires:
-/// 1. Convert ModelItem to InwOaPath3 via ComApiBridge
-/// 2. Use that to get InwOaFragmentList
-/// 3. Process each InwOaFragment3 to generate primitives
-/// 4. Convert those primitives to Speckle geometry with appropriate transforms
-/// </summary>
 [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
 public class GeometryToSpeckleConverter(
   NavisworksConversionSettings settings,
@@ -39,7 +28,7 @@ public class GeometryToSpeckleConverter(
 
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
-  private const double SCALE = 1.0; // Default scale factor
+  private const double SCALE = 1.0;
 
   private readonly InstanceStoreManager _instanceStoreManager =
     instanceStoreManager ?? throw new ArgumentNullException(nameof(instanceStoreManager));
@@ -47,11 +36,6 @@ public class GeometryToSpeckleConverter(
   private readonly ILogger<GeometryToSpeckleConverter> _logger =
     logger ?? throw new ArgumentNullException(nameof(logger));
 
-  /// <summary>
-  /// Converts a ModelItem's geometry to Speckle display geometry by accessing the underlying COM objects.
-  /// When path.Fragments().Count > 1, extracts untransformed base geometry once, stores in SharedGeometryStore,
-  /// and returns instance references. Otherwise, returns transformed geometry directly.
-  /// </summary>
   internal List<Base> Convert(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
@@ -71,7 +55,6 @@ public class GeometryToSpeckleConverter(
       var paths = comSelection.Paths();
       try
       {
-        // Check if this geometry is shared across multiple instances
         if (paths.Count > 0)
         {
           var firstPath = paths.Cast<InwOaPath>().First();
@@ -79,16 +62,10 @@ public class GeometryToSpeckleConverter(
 
           if (fragmentsCollection.Count > 1)
           {
-            // Shared geometry - extract base geometry once and return instance reference
             return ProcessSharedGeometry(paths, fragmentStack);
-          }
-          else
-          {
-            _logger.LogDebug("Single fragment detected - processing as regular geometry");
           }
         }
 
-        // Single instance geometry - process normally with transforms
         foreach (InwOaPath path in paths)
         {
           CollectFragments(path, fragmentStack);
@@ -128,12 +105,10 @@ public class GeometryToSpeckleConverter(
 
   private List<Base> ProcessSharedGeometry(InwSelectionPathsColl paths, Stack<InwOaFragment3> fragmentStack)
   {
-    // Generate ID from fragment data for shared geometry
     var fragmentId = GenerateFragmentId(paths);
 
     if (string.IsNullOrEmpty(fragmentId))
     {
-      // Fallback to normal processing if we can't generate ID
       foreach (InwOaPath path in paths)
       {
         CollectFragments(path, fragmentStack);
@@ -142,14 +117,11 @@ public class GeometryToSpeckleConverter(
       return ProcessFragments(fragmentStack, paths, true);
     }
 
-    // Check if shared geometry already exists in store
     if (_instanceStoreManager.ContainsSharedGeometry(fragmentId))
     {
-      // Return instance reference to existing geometry
       return CreateInstanceReference(fragmentId, paths);
     }
 
-    // Extract untransformed base geometry
     foreach (InwOaPath path in paths)
     {
       CollectFragments(path, fragmentStack);
@@ -162,16 +134,12 @@ public class GeometryToSpeckleConverter(
       return ProcessFragments(fragmentStack, paths);
     }
 
-    // Store both the geometry definition and create the instance definition proxy
     if (!_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry))
     {
       return ProcessFragments(fragmentStack, paths);
     }
 
-    // Return instance reference to the newly stored geometry
     return CreateInstanceReference(fragmentId, paths);
-
-    // Fallback to normal processing if store failed
   }
 
   private List<Base> ProcessFragments(
@@ -202,13 +170,10 @@ public class GeometryToSpeckleConverter(
 
         if (isSingleObject || fragmentCount == 1)
         {
-          // Apply coordinate system transformation
           processor.LocalToWorldTransformation = transformMatrix;
-          _logger.LogDebug("Applied full transform for single object processing.");
         }
         else
         {
-          // For multiple objects, process geometry without transforms
           processor.LocalToWorldTransformation = makeNoChange;
         }
 
@@ -257,7 +222,6 @@ public class GeometryToSpeckleConverter(
     {
       var triangle = triangles[t];
 
-      // No need to worry about disposal of COM across boundaries - we're working with our safe structs
       vertices.AddRange(
         [
           (triangle.Vertex1.X + _transformVector.X) * SCALE,
@@ -302,19 +266,12 @@ public class GeometryToSpeckleConverter(
       })
       .ToList();
 
-  /// <summary>
-  /// Generates an idempotent ID from fragment path data for shared geometry.
-  /// Uses the path.Fragments() collection to create a reproducible hash.
-  /// </summary>
   public string GenerateFragmentId(InwSelectionPathsColl paths)
   {
     try
     {
-      _logger.LogDebug("Starting fragment ID generation from {PathCount} paths", paths.Count);
-
       if (paths.Count == 0)
       {
-        _logger.LogDebug("No paths available for fragment ID generation");
         return string.Empty;
       }
 
@@ -342,10 +299,8 @@ public class GeometryToSpeckleConverter(
 
           try
           {
-            // Check array rank first - COM arrays might be multidimensional
             if (pathData.Rank != 1)
             {
-              // Try simple enumeration fallback
               var fragmentHashFallback = TrySimpleArrayEnumeration(pathData, fragmentIndex);
               if (!string.IsNullOrEmpty(fragmentHashFallback))
               {
@@ -372,7 +327,7 @@ public class GeometryToSpeckleConverter(
               }
               catch (Exception ex)
               {
-                _logger.LogDebug(ex, "Failed to get array value at COM index {Index}, skipping", i);
+                _logger.LogDebug(ex, "Failed to get array value at COM index {Index}", i);
               }
             }
 
@@ -381,12 +336,7 @@ public class GeometryToSpeckleConverter(
           }
           catch (Exception ex)
           {
-            _logger.LogDebug(
-              ex,
-              "Failed to process fragment {FragmentIndex} with bounds access, trying simple enumeration",
-              fragmentIndex
-            );
-            // Try simple enumeration as fallback
+            _logger.LogDebug(ex, "Failed to process fragment {FragmentIndex}, trying simple enumeration", fragmentIndex);
             var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
             if (!string.IsNullOrEmpty(fragmentHash))
             {
@@ -405,7 +355,6 @@ public class GeometryToSpeckleConverter(
 
       if (fragmentHashes.Count > 0)
       {
-        // Sort to ensure consistent ordering
         fragmentHashes.Sort();
         var rawData = string.Join("__", fragmentHashes);
         var fragmentId = HashRawData(rawData);
@@ -413,53 +362,42 @@ public class GeometryToSpeckleConverter(
       }
       else
       {
-        _logger.LogDebug("No valid fragment hashes collected, returning empty string");
         return string.Empty;
       }
     }
     catch (InvalidCastException ex)
     {
-      _logger.LogWarning(ex, "Invalid cast when generating fragment ID - fragment path data type unexpected");
+      _logger.LogWarning(ex, "Invalid cast when generating fragment ID");
       return string.Empty;
     }
     catch (IndexOutOfRangeException ex)
     {
-      _logger.LogWarning(ex, "Array index out of range when generating fragment ID - path data structure unexpected");
+      _logger.LogWarning(ex, "Array index out of range when generating fragment ID");
       return string.Empty;
     }
     catch (OverflowException ex)
     {
-      _logger.LogWarning(ex, "Overflow when generating fragment ID - path data values too large");
+      _logger.LogWarning(ex, "Overflow when generating fragment ID");
       return string.Empty;
     }
     catch (ArgumentException ex)
     {
-      _logger.LogWarning(ex, "Invalid argument when generating fragment ID - array or string operations failed");
+      _logger.LogWarning(ex, "Invalid argument when generating fragment ID");
       return string.Empty;
     }
     catch (COMException ex)
     {
-      _logger.LogWarning(ex, "COM exception when generating fragment ID - fragment access failed");
+      _logger.LogWarning(ex, "COM exception when generating fragment ID");
       return string.Empty;
     }
   }
 
-  /// <summary>
-  /// Simple array enumeration fallback when bounds access fails.
-  /// Tries to enumerate array by simple sequential access.
-  /// </summary>
   private string TrySimpleArrayEnumeration(Array pathData, int fragmentIndex)
   {
     try
     {
       var values = new List<string>();
-      var maxAttempts = Math.Min(pathData.Length, 20); // Limit attempts to avoid infinite loops
-
-      _logger.LogDebug(
-        "Fragment {FragmentIndex} trying simple enumeration (max {MaxAttempts} attempts)",
-        fragmentIndex,
-        maxAttempts
-      );
+      var maxAttempts = Math.Min(pathData.Length, 20);
 
       for (int i = 0; i < maxAttempts; i++)
       {
@@ -468,17 +406,14 @@ public class GeometryToSpeckleConverter(
           var value = pathData.GetValue(i);
           var convertedValue = System.Convert.ToInt32(value);
           values.Add(convertedValue.ToString());
-          _logger.LogDebug("Fragment {FragmentIndex} simple enum[{Index}] = {Value}", fragmentIndex, i, convertedValue);
         }
         catch (IndexOutOfRangeException)
         {
-          // Hit the end of valid indices
-          _logger.LogDebug("Fragment {FragmentIndex} reached end of array at index {Index}", fragmentIndex, i);
           break;
         }
         catch (Exception ex)
         {
-          _logger.LogDebug(ex, "Fragment {FragmentIndex} failed to convert value at index {Index}", fragmentIndex, i);
+          _logger.LogDebug(ex, "Failed to convert value at index {Index}", i);
         }
       }
 
@@ -487,21 +422,15 @@ public class GeometryToSpeckleConverter(
         return string.Empty;
       }
 
-      var hash = string.Join("_", values);
-      _logger.LogDebug("Fragment {FragmentIndex} simple enumeration raw hash: {Hash}", fragmentIndex, hash);
-      return hash;
+      return string.Join("_", values);
     }
     catch (Exception ex)
     {
-      _logger.LogDebug(ex, "Fragment {FragmentIndex} simple enumeration completely failed", fragmentIndex);
+      _logger.LogDebug(ex, "Simple enumeration failed for fragment {FragmentIndex}", fragmentIndex);
       return string.Empty;
     }
   }
 
-  /// <summary>
-  /// Creates a SHA256 hash of the raw fragment data to ensure consistent, secure identifiers.
-  /// </summary>
-  /// <returns>SHA256 hash as lowercase hex string (64 characters)</returns>
   private static string HashRawData(string rawData)
   {
     using var sha256 = SHA256.Create();
@@ -510,32 +439,21 @@ public class GeometryToSpeckleConverter(
     return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
   }
 
-  /// <summary>
-  /// Extracts untransformed base geometry from fragments.
-  /// This geometry will be stored once and referenced by instances.
-  /// </summary>
   private Base? ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
   {
     var processor = new PrimitiveProcessor(_isUpright);
 
-    // Process fragments without transforms to get base geometry
     foreach (var fragment in fragmentStack)
     {
-      // Use identity transform to get untransformed geometry
       double[] identityTransform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
       processor.LocalToWorldTransformation = identityTransform;
 
       fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
     }
 
-    // Create mesh from untransformed geometry
     return processor.Triangles.Count > 0 ? CreateMesh(processor.Triangles) : null;
   }
 
-  /// <summary>
-  /// Creates an instance reference to shared geometry stored in the InstanceStoreManager.
-  /// This is returned instead of full geometry for shared instances.
-  /// </summary>
   private List<Base> CreateInstanceReference(string fragmentId, InwSelectionPathsColl paths)
   {
     var transform = ExtractInstanceTransform(paths);
@@ -552,9 +470,6 @@ public class GeometryToSpeckleConverter(
     return [instanceReference];
   }
 
-  /// <summary>
-  /// Extracts the transform matrix from the first path's fragments for instance placement.
-  /// </summary>
   private Matrix4x4 ExtractInstanceTransform(InwSelectionPathsColl paths)
   {
     try
@@ -564,7 +479,6 @@ public class GeometryToSpeckleConverter(
         return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
       }
 
-      // cast the com object collextion to enumerable
       var pathsEnum = paths.Cast<InwOaPath>();
 
       var firstPath = paths.Cast<InwOaPath>().First();
@@ -576,7 +490,7 @@ public class GeometryToSpeckleConverter(
       }
 
       var fragmentStack = new Stack<InwOaFragment3>();
-      // Get the first fragment's transform matrix
+
       foreach (var frag in fragments.OfType<InwOaFragment3>())
       {
         if (frag.path?.ArrayData is not Array pathData1 || firstPath.ArrayData is not Array pathData2)
@@ -599,8 +513,6 @@ public class GeometryToSpeckleConverter(
       if (matrix is InwLTransform3f3 { Matrix: Array matrixArray })
       {
         var transformArray = ConvertArrayToDouble(matrixArray);
-
-        // Apply coordinate system transformation
         var transformedMatrix = ApplyCoordinateTransform(transformArray);
 
         var newMatrix = new Matrix4x4(
@@ -627,44 +539,33 @@ public class GeometryToSpeckleConverter(
     }
     catch (COMException ex)
     {
-      _logger.LogWarning(
-        ex,
-        "COM object access failed while extracting instance transform - returning identity matrix"
-      );
+      _logger.LogWarning(ex, "COM object access failed while extracting instance transform");
     }
     catch (InvalidCastException ex)
     {
-      _logger.LogWarning(ex, "Transform matrix cast failed (not a valid InwLTransform3f3) - returning identity matrix");
+      _logger.LogWarning(ex, "Transform matrix cast failed");
     }
     catch (IndexOutOfRangeException ex)
     {
-      _logger.LogWarning(
-        ex,
-        "Array access out of bounds - matrix array structure unexpected - returning identity matrix"
-      );
+      _logger.LogWarning(ex, "Array access out of bounds");
     }
     catch (ArgumentException ex)
     {
-      _logger.LogWarning(ex, "Invalid array dimensions or other argument issues - returning identity matrix");
+      _logger.LogWarning(ex, "Invalid array dimensions");
     }
     catch (NullReferenceException ex)
     {
-      _logger.LogWarning(ex, "Null fragment, matrix, or array reference - returning identity matrix");
+      _logger.LogWarning(ex, "Null fragment, matrix, or array reference");
     }
 
     return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
   }
 
-  /// <summary>
-  /// Applies coordinate system transformation to the matrix array.
-  /// </summary>
   private double[] ApplyCoordinateTransform(double[] matrixArray)
   {
-    // Apply scale and coordinate transformation
     var result = new double[16];
     Array.Copy(matrixArray, result, 16);
 
-    // Apply translation transformation
     result[12] = (result[12] + _transformVector.X) * SCALE;
     result[13] = (result[13] + _transformVector.Y) * SCALE;
     result[14] = (result[14] + _transformVector.Z) * SCALE;
