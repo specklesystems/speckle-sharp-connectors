@@ -19,7 +19,8 @@ public class NavisworksMaterialUnpacker(
   GeometryToSpeckleConverter converter
 )
 {
-  private static T SelectByRepresentationMode<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+  private static T SelectByRepresentationMode<T>(
+    RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
     mode switch
     {
       RepresentationMode.Active => active,
