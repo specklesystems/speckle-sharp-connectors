@@ -59,6 +59,10 @@ public class GeometryToSpeckleConverter(
     {
       var fragmentStack = new Stack<InwOaFragment3>();
       var paths = comSelection.Paths();
+      if (paths == null)
+      {
+        return [];
+      }
       try
       {
         if (paths.Count > 0)
@@ -153,17 +157,9 @@ public class GeometryToSpeckleConverter(
 
     var baseGeometry = ExtractUntransformedGeometry(fragmentStack);
 
-    if (baseGeometry == null)
-    {
-      return ProcessFragments(fragmentStack, paths);
-    }
-
-    if (!_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry))
-    {
-      return ProcessFragments(fragmentStack, paths);
-    }
-
-    return CreateInstanceReference(fragmentId, paths);
+    return baseGeometry == null || !_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry)
+      ? ProcessFragments(fragmentStack, paths, false)
+      : CreateInstanceReference(fragmentId, paths);
   }
 
   private List<Base> ProcessFragments(
@@ -191,7 +187,7 @@ public class GeometryToSpeckleConverter(
         int fragmentCount;
         try
         {
-          fragmentCount = fragmentsForCount.Count;
+          fragmentCount = fragmentsForCount?.Count ?? 0;
         }
         finally
         {
@@ -204,14 +200,8 @@ public class GeometryToSpeckleConverter(
         double[] makeNoChange = s_identityTransform;
         double[] transformMatrix = ConvertArrayToDouble(matrixArray);
 
-        if (isSingleObject || fragmentCount == 1)
-        {
-          processor.LocalToWorldTransformation = transformMatrix;
-        }
-        else
-        {
-          processor.LocalToWorldTransformation = makeNoChange;
-        }
+        processor.LocalToWorldTransformation =
+          isSingleObject || fragmentCount == 1 ? transformMatrix : (IEnumerable<double>)makeNoChange;
 
         fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
       }
@@ -302,7 +292,7 @@ public class GeometryToSpeckleConverter(
       })
       .ToList();
 
-  public string GenerateFragmentId(InwSelectionPathsColl paths)
+  internal string GenerateFragmentId(InwSelectionPathsColl paths)
   {
     try
     {
@@ -373,7 +363,12 @@ public class GeometryToSpeckleConverter(
                 RankException => "Array rank mismatch",
                 _ => "Error"
               };
-              _logger.LogDebug(ex, "{ErrorType} processing fragment {FragmentIndex}, trying simple enumeration", errorType, fragmentIndex);
+              _logger.LogDebug(
+                ex,
+                "{ErrorType} processing fragment {FragmentIndex}, trying simple enumeration",
+                errorType,
+                fragmentIndex
+              );
 
               var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
               if (!string.IsNullOrEmpty(fragmentHash))
