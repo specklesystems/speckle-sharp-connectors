@@ -24,6 +24,7 @@ public class RevitRootObjectBuilder(
   ISendConversionCache sendConversionCache,
   ElementUnpacker elementUnpacker,
   LevelUnpacker levelUnpacker,
+  ViewUnpacker viewUnpacker,
   IThreadContext threadContext,
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
@@ -240,6 +241,7 @@ public class RevitRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
+    // STEP 5: Unpack proxies to attach to root collection
     var flatElements = atomicObjectsByDocumentAndTransform.SelectMany(t => t.Elements).ToList();
     var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
 
@@ -259,6 +261,13 @@ public class RevitRootObjectBuilder(
         name = "revitInstancedObjects"
       }
     );
+
+    // STEP 6: Unpack all other objects to attach to root collection
+    List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
+    if (views.Count > 0)
+    {
+      rootObject[RootKeys.VIEW] = views;
+    }
 
     // NOTE: these are currently not used anywhere, we'll skip them until someone calls for it back
     // rootObject[ProxyKeys.PARAMETER_DEFINITIONS] = _parameterDefinitionHandler.Definitions;
