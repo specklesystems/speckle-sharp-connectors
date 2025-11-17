@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Constants;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converter.Navisworks.Services;
 
@@ -56,7 +55,9 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   /// </summary>
   /// <returns>The geometry if found, null otherwise.</returns>
   public Base? GetGeometryDefinition(string fragmentId) =>
-    GeometryDefinitionsStore.Geometries.FirstOrDefault(g => g.applicationId == $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}");
+    GeometryDefinitionsStore.Geometries.FirstOrDefault(g =>
+      g.applicationId == $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}"
+    );
 
   /// <summary>
   /// Gets an instance definition proxy by its application ID.
@@ -150,7 +151,8 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   /// </summary>
   /// <param name="fragmentId">The fragment-based application ID.</param>
   /// <returns>True if geometry definition exists in both stores.</returns>
-  public bool ContainsSharedGeometry(string fragmentId) => GeometryDefinitionsStore.Contains($"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}")
+  public bool ContainsSharedGeometry(string fragmentId) =>
+    GeometryDefinitionsStore.Contains($"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}")
   // && InstanceDefinitionProxiesStore.Contains($"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}")
   ;
 }
