@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using Speckle.Objects.Geometry;
 
@@ -87,9 +87,7 @@ public static class PropertyHelpers
   }
 
   internal static string SanitizePropertyName(string name) =>
-    name == "Item"
-      ? "Item"
-      : Regex.Replace(name, @"[\.\/\s]", "_");
+    name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
 
   internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);
