@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
@@ -27,6 +27,7 @@ public class NavisworksRootObjectBuilder(
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
   IElementSelectionService elementSelectionService,
+  IUiUnitsCache uiUnitsCache,
   InstanceStoreManager instanceStoreManager
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
@@ -255,12 +256,14 @@ public class NavisworksRootObjectBuilder(
 
     (string name, string path) = GetElementNameAndPath(convertedBase.applicationId);
 
+    var units = uiUnitsCache.Ensure();
+
     return new NavisworksObject
     {
       name = name,
       displayValue = convertedBase["displayValue"] as List<Base> ?? [],
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
-      units = converterSettings.Current.Derived.SpeckleUnits,
+      units = units.ToString(),
       applicationId = convertedBase.applicationId,
       ["path"] = path
     };
