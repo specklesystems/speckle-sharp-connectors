@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
@@ -8,9 +8,6 @@ using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-/// <summary>
-/// Converts Navisworks ModelItem objects to Speckle Base objects.
-/// </summary>
 public class NavisworksRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
@@ -41,11 +38,8 @@ public class NavisworksRootToSpeckleConverter : IRootToSpeckleConverter
     }
 
     Type type = target.GetType();
-
     var objectConverter = _toSpeckle.ResolveConverter(type, true);
-
     Base result = objectConverter.Convert(modelItem);
-
     result.applicationId = ElementSelectionHelper.ResolveModelItemToIndexPath(modelItem);
 
     return result;

@@ -46,6 +46,20 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<GeometryToSpeckleConverter>();
 
+    // Register dual shared geometry stores for instancing pattern (.NET Framework compatible)
+    // Store 1: For geometry definitions (Mesh, Curve, etc.) - Store 2: For InstanceDefinitionProxy objects
+    serviceCollection.AddScoped<InstanceStoreManager>();
+
+    // Register ISharedGeometryStore interface using the geometry definitions store for backward compatibility
+    serviceCollection.AddScoped<ISharedGeometryStore>(provider =>
+      provider.GetRequiredService<InstanceStoreManager>().GeometryDefinitionsStore
+    );
+
+    // Register settings resolved from factory
+    serviceCollection.AddScoped<NavisworksConversionSettings>(sp =>
+      sp.GetRequiredService<INavisworksConversionSettingsFactory>().Current
+    );
+
     return serviceCollection;
   }
 }

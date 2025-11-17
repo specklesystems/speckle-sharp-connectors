@@ -92,6 +92,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RhinoColorBaker>();
     serviceCollection.AddScoped<RhinoColorUnpacker>();
 
+    serviceCollection.AddScoped<RhinoViewUnpacker>();
+
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<RevitMappingResolver>();
 
