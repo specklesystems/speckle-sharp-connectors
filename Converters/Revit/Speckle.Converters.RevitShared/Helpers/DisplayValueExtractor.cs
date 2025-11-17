@@ -191,20 +191,51 @@ public sealed class DisplayValueExtractor
       );
     }
 
-    // add rest of geometry (always without transform)
+    // transform curves, polylines, and points to world coordinates before conversion.
+    // Unlike meshes/solids which are proxified with transform matrices, these geometry
+    // types must have their final world coordinates baked directly into their geometry.
     foreach (var curve in collections.Curves)
     {
-      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      if (localToWorld is not null)
+      {
+        using var transformedCurve = curve.CreateTransformed(localToWorld);
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      }
     }
 
+    // Note: Creating new polyline/point instances for transformation isn't ideal for perf,
+    // but Revit API doesn't provide in-place transform methods. Trade-off is acceptable since
+    // family instances typically don't have massive numbers of raw polylines/points in their geometry.
     foreach (var polyline in collections.Polylines)
     {
-      displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
+      if (localToWorld is not null)
+      {
+        var coords = polyline.GetCoordinates();
+        var transformedCoords = coords.Select(coord => localToWorld.OfPoint(coord)).ToList();
+        using var transformedPolyline = DB.PolyLine.Create(transformedCoords);
+        displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
+      }
     }
 
     foreach (var point in collections.Points)
     {
-      displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
+      if (localToWorld is not null)
+      {
+        using var transformedPoint = DB.Point.Create(localToWorld.OfPoint(point.Coord));
+        displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
+      }
     }
 
     return displayValue;
@@ -346,7 +377,8 @@ public sealed class DisplayValueExtractor
           collections.Meshes.Add(mesh);
           break;
 
-        //Note, we're not applying transforms to curves/polylines/points because ProcessGeometryCollections expects them in world coordinates
+        // curves, polylines, and points are transformed to world space in ProcessGeometryCollections,
+        // not here, because they cannot be proxified like meshes.
         case DB.Curve curve:
           collections.Curves.Add(curve);
           break;
@@ -573,8 +605,9 @@ public sealed class DisplayValueExtractor
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
   /// <remarks>
-  /// <see cref="Solids"/> and <see cref="Meshes"/> potentially in local coordinate space.
-  /// For now, <see cref="Curves"/>, <see cref="Polylines"/>, <see cref="Points"/> will always be in world space
+  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to local coordinate space in SortGeometry.
+  /// <see cref="Curves"/>, <see cref="Polylines"/>, and <see cref="Points"/> remain in their original coordinate space
+  /// and are transformed to world space during processing in ProcessGeometryCollections.
   /// </remarks>
   private sealed record GeometryCollections
   {
