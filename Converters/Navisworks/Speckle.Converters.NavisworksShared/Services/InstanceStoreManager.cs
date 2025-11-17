@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converter.Navisworks.Constants;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Models.Proxies;
 
 namespace Speckle.Converter.Navisworks.Services;
 
@@ -54,7 +56,7 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   /// </summary>
   /// <returns>The geometry if found, null otherwise.</returns>
   public Base? GetGeometryDefinition(string fragmentId) =>
-    GeometryDefinitionsStore.Geometries.FirstOrDefault(g => g.applicationId == $"geom_{fragmentId}");
+    GeometryDefinitionsStore.Geometries.FirstOrDefault(g => g.applicationId == $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}");
 
   /// <summary>
   /// Gets an instance definition proxy by its application ID.
@@ -63,7 +65,7 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   public InstanceDefinitionProxy? GetInstanceDefinitionProxy(string fragmentId) =>
     InstanceDefinitionProxiesStore
       .Geometries.OfType<InstanceDefinitionProxy>()
-      .FirstOrDefault(p => p.applicationId == $"def_{fragmentId}");
+      .FirstOrDefault(p => p.applicationId == $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}");
 
   /// <summary>
   /// Adds a geometry definition and corresponding instance definition proxy for shared geometry.
@@ -80,8 +82,8 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
     bool proxyAdded = false;
 
     // Create prefixed IDs for 1:1:1 relationship using base fragment hash
-    var geometryId = $"geom_{fragmentId}";
-    var definitionId = $"def_{fragmentId}";
+    var geometryId = $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}";
+    var definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}";
 
     _logger.LogDebug("Using GeometryId={GeometryId}, DefinitionId={DefinitionId}", geometryId, definitionId);
 
@@ -148,7 +150,7 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   /// </summary>
   /// <param name="fragmentId">The fragment-based application ID.</param>
   /// <returns>True if geometry definition exists in both stores.</returns>
-  public bool ContainsSharedGeometry(string fragmentId) => GeometryDefinitionsStore.Contains($"geom_{fragmentId}")
-  // && InstanceDefinitionProxiesStore.Contains($"def_{fragmentId}")
+  public bool ContainsSharedGeometry(string fragmentId) => GeometryDefinitionsStore.Contains($"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}")
+  // && InstanceDefinitionProxiesStore.Contains($"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}")
   ;
 }

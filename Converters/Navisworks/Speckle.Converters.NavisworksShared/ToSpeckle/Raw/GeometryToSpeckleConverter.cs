@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Microsoft.Extensions.Logging;
+using Speckle.Converter.Navisworks.Constants;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
@@ -32,6 +33,8 @@ public class GeometryToSpeckleConverter(
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
+  private static readonly Matrix4x4 s_identityMatrix = new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  private static readonly double[] s_identityTransform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
   private readonly InstanceStoreManager _instanceStoreManager =
     instanceStoreManager ?? throw new ArgumentNullException(nameof(instanceStoreManager));
@@ -198,7 +201,7 @@ public class GeometryToSpeckleConverter(
           }
         }
 
-        double[] makeNoChange = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        double[] makeNoChange = s_identityTransform;
         double[] transformMatrix = ConvertArrayToDouble(matrixArray);
 
         if (isSingleObject || fragmentCount == 1)
@@ -351,22 +354,27 @@ public class GeometryToSpeckleConverter(
                   var arrayIndex = i - lowerBound;
                   pathInts[arrayIndex] = System.Convert.ToInt32(value);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is COMException or InvalidCastException)
                 {
-                  _logger.LogDebug(ex, "Failed to get array value at COM index {Index}", i);
+                  var errorType = ex is COMException ? "COM array access failed" : "Type conversion failed";
+                  _logger.LogDebug(ex, "{ErrorType} at index {Index}", errorType, i);
                 }
               }
 
               var fragmentHash = string.Join("_", pathInts);
               fragmentHashes.Add(fragmentHash);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is COMException or IndexOutOfRangeException or RankException)
             {
-              _logger.LogDebug(
-                ex,
-                "Failed to process fragment {FragmentIndex}, trying simple enumeration",
-                fragmentIndex
-              );
+              var errorType = ex switch
+              {
+                COMException => "COM access failed",
+                IndexOutOfRangeException => "Array bounds exceeded",
+                RankException => "Array rank mismatch",
+                _ => "Error"
+              };
+              _logger.LogDebug(ex, "{ErrorType} processing fragment {FragmentIndex}, trying simple enumeration", errorType, fragmentIndex);
+
               var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
               if (!string.IsNullOrEmpty(fragmentHash))
               {
@@ -401,29 +409,16 @@ public class GeometryToSpeckleConverter(
         return string.Empty;
       }
     }
-    catch (InvalidCastException ex)
+    catch (Exception ex) when (ex is COMException or InvalidCastException or IndexOutOfRangeException)
     {
-      _logger.LogWarning(ex, "Invalid cast when generating fragment ID");
-      return string.Empty;
-    }
-    catch (IndexOutOfRangeException ex)
-    {
-      _logger.LogWarning(ex, "Array index out of range when generating fragment ID");
-      return string.Empty;
-    }
-    catch (OverflowException ex)
-    {
-      _logger.LogWarning(ex, "Overflow when generating fragment ID");
-      return string.Empty;
-    }
-    catch (ArgumentException ex)
-    {
-      _logger.LogWarning(ex, "Invalid argument when generating fragment ID");
-      return string.Empty;
-    }
-    catch (COMException ex)
-    {
-      _logger.LogWarning(ex, "COM exception when generating fragment ID");
+      var errorType = ex switch
+      {
+        COMException => "COM access failed",
+        InvalidCastException => "Type conversion failed",
+        IndexOutOfRangeException => "Array bounds exceeded",
+        _ => "Error"
+      };
+      _logger.LogWarning(ex, "{ErrorType} generating fragment ID", errorType);
       return string.Empty;
     }
   }
@@ -447,9 +442,9 @@ public class GeometryToSpeckleConverter(
         {
           break;
         }
-        catch (Exception ex)
+        catch (InvalidCastException ex)
         {
-          _logger.LogDebug(ex, "Failed to convert value at index {Index}", i);
+          _logger.LogDebug(ex, "Type conversion failed at index {Index}", i);
         }
       }
 
@@ -460,9 +455,9 @@ public class GeometryToSpeckleConverter(
 
       return string.Join("_", values);
     }
-    catch (Exception ex)
+    catch (COMException ex)
     {
-      _logger.LogDebug(ex, "Simple enumeration failed for fragment {FragmentIndex}", fragmentIndex);
+      _logger.LogDebug(ex, "COM enumeration failed for fragment {FragmentIndex}", fragmentIndex);
       return string.Empty;
     }
   }
@@ -481,8 +476,7 @@ public class GeometryToSpeckleConverter(
 
     foreach (var fragment in fragmentStack)
     {
-      double[] identityTransform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-      processor.LocalToWorldTransformation = identityTransform;
+      processor.LocalToWorldTransformation = s_identityTransform;
 
       fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
     }
@@ -496,7 +490,7 @@ public class GeometryToSpeckleConverter(
 
     var instanceReference = new InstanceProxy
     {
-      definitionId = $"def_{fragmentId}",
+      definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}",
       transform = transform,
       units = _settings.Derived.SpeckleUnits,
       maxDepth = 0,
@@ -512,7 +506,7 @@ public class GeometryToSpeckleConverter(
     {
       if (paths.Count == 0)
       {
-        return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        return s_identityMatrix;
       }
 
       var firstPath = paths.Cast<InwOaPath>().First();
@@ -521,7 +515,7 @@ public class GeometryToSpeckleConverter(
       {
         if (fragments.Count == 0)
         {
-          return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+          return s_identityMatrix;
         }
 
         var fragmentStack = new Stack<InwOaFragment3>();
@@ -580,28 +574,19 @@ public class GeometryToSpeckleConverter(
         }
       }
     }
-    catch (COMException ex)
+    catch (Exception ex) when (ex is COMException or InvalidCastException or NullReferenceException)
     {
-      _logger.LogWarning(ex, "COM object access failed while extracting instance transform");
-    }
-    catch (InvalidCastException ex)
-    {
-      _logger.LogWarning(ex, "Transform matrix cast failed");
-    }
-    catch (IndexOutOfRangeException ex)
-    {
-      _logger.LogWarning(ex, "Array access out of bounds");
-    }
-    catch (ArgumentException ex)
-    {
-      _logger.LogWarning(ex, "Invalid array dimensions");
-    }
-    catch (NullReferenceException ex)
-    {
-      _logger.LogWarning(ex, "Null fragment, matrix, or array reference");
+      var errorType = ex switch
+      {
+        COMException => "COM access failed",
+        InvalidCastException => "Transform matrix type conversion failed",
+        NullReferenceException => "Null reference",
+        _ => "Error"
+      };
+      _logger.LogWarning(ex, "{ErrorType} extracting instance transform", errorType);
     }
 
-    return new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    return s_identityMatrix;
   }
 
   private double[] ApplyCoordinateTransform(double[] matrixArray)

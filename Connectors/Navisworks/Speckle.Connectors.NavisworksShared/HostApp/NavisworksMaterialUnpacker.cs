@@ -2,6 +2,7 @@ using Autodesk.Navisworks.Api.ComApi;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
+using Speckle.Converter.Navisworks.Constants;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle;
@@ -86,7 +87,7 @@ public class NavisworksMaterialUnpacker(
                   if (fragments.Count > 1)
                   {
                     var fragmentId = converter.GenerateFragmentId(paths);
-                    hashId = $"geom_{fragmentId}";
+                    hashId = $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}";
                   }
                 }
                 finally
@@ -143,7 +144,7 @@ public class NavisworksMaterialUnpacker(
         );
 
         var materialName =
-          $"NavisworksMaterial_{Math.Abs(ColorConverter.NavisworksColorToColor(renderColor).ToArgb())}";
+          $"{MaterialConstants.DEFAULT_MATERIAL_NAME_PREFIX}{Math.Abs(ColorConverter.NavisworksColorToColor(renderColor).ToArgb())}";
 
         var itemCategory = navisworksObject.PropertyCategories.FindCategoryByDisplayName("Item");
         if (itemCategory != null)
@@ -205,7 +206,7 @@ public class NavisworksMaterialUnpacker(
 
     var speckleRenderMaterial = new RenderMaterial()
     {
-      name = !string.IsNullOrEmpty(name) ? name : $"NavisworksMaterial_{Math.Abs(color.ToArgb())}",
+      name = !string.IsNullOrEmpty(name) ? name : $"{MaterialConstants.DEFAULT_MATERIAL_NAME_PREFIX}{Math.Abs(color.ToArgb())}",
       opacity = 1 - transparency,
       metalness = 0,
       roughness = 1,
