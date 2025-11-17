@@ -74,12 +74,13 @@ public class DataObjectConverter
   {
     var resultPairs = new List<(RG.GeometryBase, Base)>();
 
-    // check if display value contains InstanceProxies - register for special handling
-    if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
+    // check if displayValue contains ANY InstanceProxies - register for special handling
+    var instanceProxies = target.displayValue.OfType<InstanceProxy>().ToList();
+    if (instanceProxies.Count > 0)
     {
-      var instanceProxies = target.displayValue.Cast<InstanceProxy>().ToList();
       _dataObjectInstanceRegistry.Register(target.applicationId ?? target.id.NotNull(), target, instanceProxies);
-      return resultPairs; // empty - will be handled by instance baker
+
+      return resultPairs;
     }
 
     // normal display value conversion
