@@ -10,7 +10,6 @@ using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
-using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
 
@@ -42,7 +41,7 @@ public class GeometryToSpeckleConverter(
   private readonly ILogger<GeometryToSpeckleConverter> _logger =
     logger ?? throw new ArgumentNullException(nameof(logger));
 
-  internal List<Base> Convert(NAV.ModelItem modelItem)
+  internal List<SSM.Base> Convert(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
@@ -94,10 +93,7 @@ public class GeometryToSpeckleConverter(
       }
       finally
       {
-        if (paths != null)
-        {
-          Marshal.ReleaseComObject(paths);
-        }
+        Marshal.ReleaseComObject(paths);
       }
     }
     finally
@@ -131,7 +127,7 @@ public class GeometryToSpeckleConverter(
     }
   }
 
-  private List<Base> ProcessSharedGeometry(InwSelectionPathsColl paths, Stack<InwOaFragment3> fragmentStack)
+  private List<SSM.Base> ProcessSharedGeometry(InwSelectionPathsColl paths, Stack<InwOaFragment3> fragmentStack)
   {
     var fragmentId = GenerateFragmentId(paths);
 
@@ -158,11 +154,11 @@ public class GeometryToSpeckleConverter(
     var baseGeometry = ExtractUntransformedGeometry(fragmentStack);
 
     return baseGeometry == null || !_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry)
-      ? ProcessFragments(fragmentStack, paths, false)
+      ? ProcessFragments(fragmentStack, paths) // default false flag for isSingleObject
       : CreateInstanceReference(fragmentId, paths);
   }
 
-  private List<Base> ProcessFragments(
+  private List<SSM.Base> ProcessFragments(
     Stack<InwOaFragment3> fragmentStack,
     InwSelectionPathsColl paths,
     bool isSingleObject = false
@@ -217,9 +213,9 @@ public class GeometryToSpeckleConverter(
     && path.ArrayData is Array pathData
     && AreFragmentPathsEqual(fragmentPathData, pathData);
 
-  private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
+  private List<SSM.Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
-    var baseGeometries = new List<Base>();
+    var baseGeometries = new List<SSM.Base>();
 
     foreach (var processor in processors)
     {
@@ -399,10 +395,8 @@ public class GeometryToSpeckleConverter(
         var fragmentId = HashRawData(rawData);
         return fragmentId;
       }
-      else
-      {
-        return string.Empty;
-      }
+
+      return string.Empty;
     }
     catch (Exception ex) when (ex is COMException or InvalidCastException or IndexOutOfRangeException)
     {
@@ -465,7 +459,7 @@ public class GeometryToSpeckleConverter(
     return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
   }
 
-  private Base? ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
+  private SSM.Base? ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
   {
     var processor = new PrimitiveProcessor(_isUpright);
 
@@ -479,7 +473,7 @@ public class GeometryToSpeckleConverter(
     return processor.Triangles.Count > 0 ? CreateMesh(processor.Triangles) : null;
   }
 
-  private List<Base> CreateInstanceReference(string fragmentId, InwSelectionPathsColl paths)
+  private List<SSM.Base> CreateInstanceReference(string fragmentId, InwSelectionPathsColl paths)
   {
     var transform = ExtractInstanceTransform(paths);
 
