@@ -32,6 +32,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)PathConstants.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\InstanceStoreManager.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GeometryToSpeckleConverter.cs"/>
     <Folder Include="$(MSBuildThisFileDirectory)Models\"/>
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs"/>

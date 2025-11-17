@@ -32,4 +32,64 @@ public static class ElementExtensions
 
     return ids;
   }
+
+  public static IEnumerable<ElementId> GetKnownChildrenElements(this Element element) =>
+    element switch
+    {
+      Wall wall => GetWallChildren(wall),
+      FootPrintRoof roof => GetFootPrintRoofChildren(roof),
+      DBA.Railing railing => GetRailingChildren(railing),
+      _ => []
+    };
+
+  private static IEnumerable<ElementId> GetWallChildren(Wall wall)
+  {
+    if (wall.CurtainGrid is CurtainGrid grid)
+    {
+      foreach (var id in grid.GetMullionIds())
+      {
+        yield return id;
+      }
+
+      foreach (var id in grid.GetPanelIds())
+      {
+        yield return id;
+      }
+    }
+    else if (wall.IsStackedWall)
+    {
+      foreach (var id in wall.GetStackedWallMemberIds())
+      {
+        yield return id;
+      }
+    }
+  }
+
+  private static IEnumerable<ElementId> GetFootPrintRoofChildren(FootPrintRoof footPrintRoof)
+  {
+    if (footPrintRoof.CurtainGrids is { } grids)
+    {
+      foreach (CurtainGrid grid in grids)
+      {
+        foreach (var id in grid.GetMullionIds())
+        {
+          yield return id;
+        }
+
+        foreach (var id in grid.GetPanelIds())
+        {
+          yield return id;
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<ElementId> GetRailingChildren(DBA.Railing railing)
+  {
+    // TODO: Consider adding HandRail support (railing.GetHandRails())
+    if (railing.TopRail != ElementId.InvalidElementId)
+    {
+      yield return railing.TopRail;
+    }
+  }
 }

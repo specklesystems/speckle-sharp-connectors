@@ -49,7 +49,7 @@ public class PropertySetsExtractor(
 
     foreach (var propertyCategory in modelItem.PropertyCategories)
     {
-      if (IsCategoryToBeSkipped(propertyCategory))
+      if (ShouldSkipCategory(propertyCategory))
       {
         continue;
       }
