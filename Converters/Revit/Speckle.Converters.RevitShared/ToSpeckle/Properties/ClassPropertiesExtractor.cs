@@ -88,6 +88,17 @@ public class ClassPropertiesExtractor
         {
           elementProperties.Add("spaceId", familyInstance.Space.Id.ToString());
         }
+
+        // get toRoom and fromRoom for FamilyInstance elements with those properties (e.g. Doors)
+        if (familyInstance.ToRoom is not null)
+        {
+          elementProperties.Add("toRoomId", familyInstance.ToRoom.Id.ToString());
+        }
+
+        if (familyInstance.FromRoom is not null)
+        {
+          elementProperties.Add("fromRoomId", familyInstance.FromRoom.Id.ToString());
+        }
       }
       catch (Exception e) when (!e.IsFatal())
       {
