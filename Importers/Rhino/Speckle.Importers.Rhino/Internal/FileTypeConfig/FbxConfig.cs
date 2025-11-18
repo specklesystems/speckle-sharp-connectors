@@ -4,7 +4,7 @@ using Speckle.Sdk;
 
 namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
-public sealed class FbxConfig : IFileTypeConfig
+internal sealed class FbxConfig : IFileTypeConfig
 {
   private readonly FileFbxReadOptions _readOptions =
     new()
@@ -16,20 +16,12 @@ public sealed class FbxConfig : IFileTypeConfig
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
-    var doc = RhinoDoc.CreateHeadless(null);
-    try
+    RhinoDoc? doc = RhinoDoc.OpenHeadless(filePath, _readOptions.ToDictionary());
+    if (doc is null)
     {
-      if (!doc.Import(filePath, _readOptions.ToDictionary()))
-      {
-        throw new SpeckleException("Rhino could not import this file");
-      }
-      return doc;
+      throw new SpeckleException("Rhino could not open this file");
     }
-    catch
-    {
-      doc.Dispose();
-      throw;
-    }
+    return doc;
   }
 
   public void Dispose() { }

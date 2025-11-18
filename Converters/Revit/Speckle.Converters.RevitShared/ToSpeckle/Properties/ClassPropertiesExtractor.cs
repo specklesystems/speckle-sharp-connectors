@@ -73,6 +73,39 @@ public class ClassPropertiesExtractor
       elementProperties.Add("worksetName", worksetName);
     }
 
+    if (element is DB.FamilyInstance familyInstance)
+    {
+      try
+      {
+        // get room id if applicable (only for FamilyInstance elements)
+        if (familyInstance.Room is not null)
+        {
+          elementProperties.Add("roomId", familyInstance.Room.Id.ToString());
+        }
+
+        // get space id if applicable (only for FamilyInstance elements)
+        if (familyInstance.Space is not null)
+        {
+          elementProperties.Add("spaceId", familyInstance.Space.Id.ToString());
+        }
+
+        // get toRoom and fromRoom for FamilyInstance elements with those properties (e.g. Doors)
+        if (familyInstance.ToRoom is not null)
+        {
+          elementProperties.Add("toRoomId", familyInstance.ToRoom.Id.ToString());
+        }
+
+        if (familyInstance.FromRoom is not null)
+        {
+          elementProperties.Add("fromRoomId", familyInstance.FromRoom.Id.ToString());
+        }
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        // silently ignore - not critical
+      }
+    }
+
     // get group name if applicable
     // TODO: in in group proxies separate issue. Below comments from PR #1081
     // We're using group proxies in Rhino etc. Groups should be handled similarly in Revit, unless there's a good

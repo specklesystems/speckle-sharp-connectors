@@ -2,7 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
 using Speckle.Converters.CSiShared.Utils;
 
-namespace Speckle.Connectors.ETABSShared.HostApp.Helpers;
+namespace Speckle.Converters.ETABSShared.ToSpeckle.Helpers;
 
 /// <summary>
 /// Attempts to resolve the section type and retrieve its properties by trying different section resolvers.

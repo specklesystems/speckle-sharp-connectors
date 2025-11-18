@@ -1,9 +1,11 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
@@ -27,6 +29,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Region, RG.Hatch> _regionConverter;
   private readonly ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> _subdConverter;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
+  private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
 
   public DataObjectConverter(
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
@@ -43,7 +46,8 @@ public class DataObjectConverter
     ITypedConverter<SOG.Polycurve, RG.PolyCurve> polycurveConverter,
     ITypedConverter<SOG.Region, RG.Hatch> regionConverter,
     ITypedConverter<SOG.SubDX, List<RG.GeometryBase>> subdConverter,
-    IConverterSettingsStore<RhinoConversionSettings> settingsStore
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore,
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry
   )
   {
     _arcConverter = arcConverter;
@@ -61,13 +65,40 @@ public class DataObjectConverter
     _regionConverter = regionConverter;
     _subdConverter = subdConverter;
     _settingsStore = settingsStore;
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
 
-  private List<RG.GeometryBase> GetConvertedGeometry(Base b)
+  public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
   {
-    return b switch
+    var resultPairs = new List<(RG.GeometryBase, Base)>();
+
+    // check if displayValue contains ANY InstanceProxies - register for special handling
+    var instanceProxies = target.displayValue.OfType<InstanceProxy>().ToList();
+    if (instanceProxies.Count > 0)
+    {
+      _dataObjectInstanceRegistry.Register(target.applicationId ?? target.id.NotNull(), target, instanceProxies);
+
+      return resultPairs;
+    }
+
+    // normal display value conversion
+    foreach (var item in target.displayValue)
+    {
+      var converted = GetConvertedGeometry(item);
+      foreach (var geom in converted)
+      {
+        geom.Transform(GetUnitsTransform(item));
+        resultPairs.Add((geom, item));
+      }
+    }
+
+    return resultPairs;
+  }
+
+  private List<RG.GeometryBase> GetConvertedGeometry(Base b) =>
+    b switch
     {
       SOG.Arc arc => new() { _arcConverter.Convert(arc) },
       SOG.BrepX brep => _brepConverter.Convert(brep),
@@ -85,23 +116,6 @@ public class DataObjectConverter
       SOG.SubDX subd => _subdConverter.Convert(subd),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
-  }
-
-  public List<(RG.GeometryBase a, Base b)> Convert(DataObject target)
-  {
-    var result = new List<RG.GeometryBase>();
-    foreach (var item in target.displayValue)
-    {
-      var converted = GetConvertedGeometry(item);
-      foreach (var x in converted)
-      {
-        x.Transform(GetUnitsTransform(item));
-        result.Add(x);
-      }
-    }
-
-    return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
-  }
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
   {

@@ -1,12 +1,18 @@
+using Microsoft.Extensions.Logging;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Connectors.GrasshopperShared.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
+using DataObject = Speckle.Objects.Data.DataObject;
+
+namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
 /// <summary>
 /// Handles conversion of atomic objects from TraversalContexts into Grasshopper wrapper objects.
@@ -19,184 +25,388 @@ using Speckle.Sdk.Models.Instances;
 internal sealed class LocalToGlobalMapHandler
 {
   public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = new();
-  public readonly GrasshopperCollectionRebuilder CollectionRebuilder;
 
-  private readonly TraversalContextUnpacker _traversalContextUnpacker;
-  private readonly GrasshopperColorUnpacker _colorUnpacker;
-  private readonly GrasshopperMaterialUnpacker _materialUnpacker;
+  // injected via constructor (DI-managed)
+  private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
+  private readonly ILogger<LocalToGlobalMapHandler> _logger;
+
+  // set via Initialize() method (per-operation data)
+  private TraversalContextUnpacker _traversalContextUnpacker = null!;
+  private GrasshopperColorUnpacker _colorUnpacker = null!;
+  private GrasshopperMaterialUnpacker _materialUnpacker = null!;
+  private IReadOnlyCollection<InstanceDefinitionProxy>? _definitionProxies;
+
+  // auto property (fixes IDE0032)
+  public GrasshopperCollectionRebuilder CollectionRebuilder { get; private set; } = null!;
 
   public LocalToGlobalMapHandler(
+    IDataObjectInstanceRegistry dataObjectInstanceRegistry,
+    ILogger<LocalToGlobalMapHandler> logger
+  )
+  {
+    _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
+    _logger = logger;
+  }
+
+  /// <summary>
+  /// Initializes the handler with per-operation data.
+  /// Must be called before using ConvertAtomicObjects or ConvertBlockInstances.
+  /// </summary>
+  public LocalToGlobalMapHandler Initialize(
     TraversalContextUnpacker traversalContextUnpacker,
-    GrasshopperCollectionRebuilder collectionRebuilder,
     GrasshopperColorUnpacker colorUnpacker,
-    GrasshopperMaterialUnpacker materialUnpacker
+    GrasshopperMaterialUnpacker materialUnpacker,
+    GrasshopperCollectionRebuilder collectionRebuilder,
+    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
   )
   {
     _traversalContextUnpacker = traversalContextUnpacker;
     _colorUnpacker = colorUnpacker;
     _materialUnpacker = materialUnpacker;
     CollectionRebuilder = collectionRebuilder;
+    _definitionProxies = definitionProxies;
+
+    return this;
   }
 
   /// <summary>
-  /// Converts atomic object from TraversalContext to SpeckleObjectWrapper.
+  /// Converts all atomic objects in two passes:
+  /// Pass 1 - Convert normal objects and populate ConvertedObjectsMap
+  /// Pass 2 - Resolve registered DataObjects with InstanceProxies using the populated map
   /// </summary>
-  public void ConvertAtomicObject(TraversalContext atomicContext)
+  public void ConvertAtomicObjects(IEnumerable<TraversalContext> atomicContexts)
+  {
+    // Cache to avoid re-iterating for registered check
+    var atomicList = atomicContexts as IList<TraversalContext> ?? atomicContexts.ToList();
+
+    // Pass 1: Convert all non-registered DataObjects to populate ConvertedObjectsMap
+    foreach (var atomicContext in atomicList)
+    {
+      ConvertObjectToCache(atomicContext);
+    }
+
+    // Pass 2: Process registered DataObjects (definitions now available in ConvertedObjectsMap)
+    foreach (var atomicContext in atomicList)
+    {
+      if (atomicContext.Current is DataObject dataObject)
+      {
+        var dataObjectId = dataObject.applicationId ?? dataObject.id;
+        if (dataObjectId is not null && _dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+        {
+          ResolveDataObjectInstanceProxies(atomicContext);
+        }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Converts and caches an atomic object for later lookup.
+  /// Skips registered DataObjects (displayValue is InstanceProxy) - they are resolved in ResolveDataObjectInstanceProxies.
+  /// </summary>
+  private void ConvertObjectToCache(TraversalContext atomicContext)
   {
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
 
-    if (objId == null || ConvertedObjectsMap.ContainsKey(objId))
+    if (objId is null || ConvertedObjectsMap.ContainsKey(objId))
     {
       return;
+    }
+
+    // skip registered DataObjects - they'll be processed in second pass
+    if (obj is DataObject dataObject)
+    {
+      var id = dataObject.applicationId ?? dataObject.id.NotNull();
+      if (_dataObjectInstanceRegistry.IsRegistered(id))
+      {
+        return;
+      }
     }
 
     try
     {
       List<(object, Base)> converted = SpeckleConversionContext.Current.ConvertToHost(obj);
 
-      if (converted.Count == 0)
-      {
-        return;
-      }
-
+      // get path and collection
       var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
-
-      // Always create collection - consumed objects will be cleaned up later
       var objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
         path,
         _colorUnpacker,
         _materialUnpacker
       );
 
-      if (obj is Speckle.Objects.Data.DataObject dataObject)
+      // nothing converted - nothing to do
+      if (converted.Count == 0)
       {
-        // get color and mat on dataobject first
-        Color? dataObjColor = _colorUnpacker.Cache.TryGetValue(
-          dataObject.applicationId ?? "",
-          out var cachedDataObjColor
-        )
-          ? cachedDataObjColor
-          : null;
-
-        SpeckleMaterialWrapper? dataObjMat = _materialUnpacker.Cache.TryGetValue(
-          dataObject.applicationId ?? "",
-          out var cachedDataObjMaterial
-        )
-          ? cachedDataObjMaterial
-          : null;
-
-        // get geometries
-        List<SpeckleGeometryWrapper> geometries = new();
-        foreach ((object convertedObj, Base original) in converted)
-        {
-          if (convertedObj is GeometryBase geometryBase)
-          {
-            SpeckleGeometryWrapper wrapper =
-              new()
-              {
-                Base = original,
-                GeometryBase = geometryBase,
-                Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-                  ? cachedObjColor
-                  : dataObjColor,
-                Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-                  ? cachedObjMaterial
-                  : dataObjMat,
-              };
-
-            geometries.Add(wrapper);
-          }
-        }
-
-        SpecklePropertyGroupGoo propertyGroup = new();
-        propertyGroup.CastFrom(dataObject.properties);
-
-        // remove the displayvalue of the original dataobject since these are now processed and stored on the wrapper
-        // to prevent storing of duplicate Base
-        dataObject.displayValue.Clear();
-
-        var dataObjectWrapper = new SpeckleDataObjectWrapper()
-        {
-          Base = dataObject,
-          Geometries = geometries,
-          Path = path.Select(p => p.name).ToList(),
-          Parent = objectCollection,
-          Name = dataObject.name,
-          Properties = propertyGroup,
-          ApplicationId = dataObject.applicationId,
-        };
-
-        // Add to collections (not to map since these won't be definition objects)
-        CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
+        return;
       }
-      else
+
+      // handle normal DataObject (has converted geometry)
+      if (obj is DataObject normalDataObject)
       {
-        SpecklePropertyGroupGoo propertyGroup = new();
-        if (obj[Constants.PROPERTIES_PROP] is Dictionary<string, object?> props)
-        {
-          propertyGroup.CastFrom(props);
-        }
+        var geometries = ConvertToGeometryWrappers(converted);
+        var dataObjectWrapper = CreateDataObjectWrapper(normalDataObject, geometries, path, objectCollection);
 
-        foreach ((object convertedObj, Base original) in converted)
+        CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
+        return;
+      }
+
+      // handle normal geometry (not DataObject)
+      SpecklePropertyGroupGoo propertyGroup = new();
+      if (obj[Constants.PROPERTIES_PROP] is Dictionary<string, object?> props)
+      {
+        propertyGroup.CastFrom(props);
+      }
+
+      foreach ((object convertedObj, Base original) in converted)
+      {
+        if (convertedObj is GeometryBase geometryBase)
         {
-          if (convertedObj is GeometryBase geometryBase)
+          var wrapper = new SpeckleGeometryWrapper()
           {
-            var wrapper = new SpeckleGeometryWrapper()
-            {
-              Base = original,
-              Path = path.Select(p => p.name).ToList(),
-              Parent = objectCollection,
-              GeometryBase = geometryBase,
-              Properties = propertyGroup,
-              Name = obj[Constants.NAME_PROP] as string ?? "",
-              Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-                ? cachedObjColor
-                : null,
-              Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-                ? cachedObjMaterial
-                : null,
-              ApplicationId = objId
-            };
+            Base = original,
+            Path = path.Select(p => p.name).ToList(),
+            Parent = objectCollection,
+            GeometryBase = geometryBase,
+            Properties = propertyGroup,
+            Name = obj[Constants.NAME_PROP] as string ?? "",
+            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+              ? cachedObjColor
+              : null,
+            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+              ? cachedObjMaterial
+              : null,
+            ApplicationId = objId
+          };
 
-            // Always add to both map and collections
-            ConvertedObjectsMap[objId] = wrapper;
-            CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
-          }
+          ConvertedObjectsMap[objId] = wrapper;
+          CollectionRebuilder.AppendSpeckleGrasshopperObject(wrapper, path, _colorUnpacker, _materialUnpacker);
         }
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      // TODO: throw?
+      // don't throw - continue processing other objects
+      _logger.LogError(ex, "Failed to convert object {objectId} of type {objectType}", objId, obj.speckle_type);
+    }
+  }
+
+  /// <summary>
+  /// Resolves a registered DataObject by transforming its InstanceProxy definition objects.
+  /// Requires definition objects to exist in ConvertedObjectsMap (populated by ConvertObjectToCache).
+  /// </summary>
+  private void ResolveDataObjectInstanceProxies(TraversalContext atomicContext)
+  {
+    var obj = atomicContext.Current;
+    if (obj is not DataObject dataObject)
+    {
+      return;
+    }
+
+    var dataObjectId = dataObject.applicationId ?? dataObject.id.NotNull();
+    if (!_dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+    {
+      return;
+    }
+
+    try
+    {
+      var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
+      var objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
+        path,
+        _colorUnpacker,
+        _materialUnpacker
+      );
+
+      var entry = _dataObjectInstanceRegistry.GetEntries()[dataObjectId];
+      var resolvedGeometries = ResolveInstanceProxiesToGeometries(entry.InstanceProxies);
+      var dataObjectWrapper = CreateDataObjectWrapper(dataObject, resolvedGeometries, path, objectCollection);
+
+      CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      // don't throw - continue processing other DataObjects
+      _logger.LogError(ex, "Failed to resolve DataObject {dataObjectId} with InstanceProxies", dataObjectId);
     }
   }
 
   /// <summary>
   /// Converts block instances and definitions from traversal contexts into Grasshopper wrapper objects.
+  /// Automatically filters out InstanceProxies belonging to registered DataObjects.
   /// Automatically handles cleanup of consumed objects from the collection hierarchy.
   /// </summary>
-  /// <remarks>
-  /// Deliberately handles both block conversion AND consumed object cleanup in a single operation.
-  /// Too much, I know, BUT it ensures the cleanup always occurs immediately after block processing without
-  /// requiring receive components to call a separate cleanup method in the correct order.
-  /// </remarks>
-  public void ConvertBlockInstances(
-    IReadOnlyCollection<TraversalContext> blocks,
-    IReadOnlyCollection<InstanceDefinitionProxy>? definitionProxies
-  )
+  public void ConvertBlockInstances(IReadOnlyCollection<TraversalContext> blockInstances)
   {
+    // build set of registered InstanceProxy IDs for fast lookup
+    var registeredProxyIds = new HashSet<string>();
+    foreach (var entry in _dataObjectInstanceRegistry.GetEntries().Values)
+    {
+      foreach (var proxy in entry.InstanceProxies)
+      {
+        var proxyId = proxy.applicationId ?? proxy.id;
+        if (proxyId is not null)
+        {
+          registeredProxyIds.Add(proxyId);
+        }
+      }
+    }
+
+    // filter out InstanceProxies that belong to registered DataObjects
+    var filteredBlockInstances = blockInstances
+      .Where(tc =>
+      {
+        if (tc.Current is InstanceProxy proxy)
+        {
+          var proxyId = proxy.applicationId ?? proxy.id;
+          return proxyId is null || !registeredProxyIds.Contains(proxyId);
+        }
+        return true;
+      })
+      .ToList();
+
     var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
 
-    // Get consumed object IDs from unpacker
+    // get consumed object IDs from unpacker
     var consumedObjectIds = blockUnpacker.UnpackBlocks(
-      blocks,
-      definitionProxies,
+      filteredBlockInstances,
+      _definitionProxies,
       ConvertedObjectsMap,
       CollectionRebuilder
     );
 
-    // Clean up consumed objects from collections
+    // clean up consumed objects from collections
     CollectionRebuilder.RemoveConsumedObjects(consumedObjectIds);
+  }
+
+  /// <summary>
+  /// Creates a DataObjectWrapper from a DataObject and its geometries.
+  /// Handles color/material inheritance and property extraction.
+  /// </summary>
+  private SpeckleDataObjectWrapper CreateDataObjectWrapper(
+    DataObject dataObject,
+    List<SpeckleGeometryWrapper> geometries,
+    List<Collection> path,
+    SpeckleCollectionWrapper objectCollection
+  )
+  {
+    // Get color and material on DataObject
+    Color? dataObjColor = _colorUnpacker.Cache.TryGetValue(dataObject.applicationId ?? "", out var cachedDataObjColor)
+      ? cachedDataObjColor
+      : null;
+
+    SpeckleMaterialWrapper? dataObjMat = _materialUnpacker.Cache.TryGetValue(
+      dataObject.applicationId ?? "",
+      out var cachedDataObjMaterial
+    )
+      ? cachedDataObjMaterial
+      : null;
+
+    // Apply DataObject color/material to geometries that don't have their own
+    foreach (var geometry in geometries)
+    {
+      geometry.Color ??= dataObjColor;
+      geometry.Material ??= dataObjMat;
+    }
+
+    // Create property group
+    SpecklePropertyGroupGoo propertyGroup = new();
+    propertyGroup.CastFrom(dataObject.properties);
+
+    // Clear the displayValue to prevent storing duplicate Base
+    dataObject.displayValue.Clear();
+
+    return new SpeckleDataObjectWrapper()
+    {
+      Base = dataObject,
+      Geometries = geometries,
+      Path = path.Select(p => p.name).ToList(),
+      Parent = objectCollection,
+      Name = dataObject.name,
+      Properties = propertyGroup,
+      ApplicationId = dataObject.applicationId,
+    };
+  }
+
+  /// <summary>
+  /// Resolves InstanceProxy displayValues to transformed geometries.
+  /// Returns the list of resolved geometries that can be used as DataObject displayValue replacements.
+  /// </summary>
+  private List<SpeckleGeometryWrapper> ResolveInstanceProxiesToGeometries(List<InstanceProxy> instanceProxies)
+  {
+    var resolvedGeometries = new List<SpeckleGeometryWrapper>();
+
+    // build a lookup of definitionId -> definition objects for quick access
+    var definitionObjectsMap = new Dictionary<string, List<string>>();
+    if (_definitionProxies is not null)
+    {
+      foreach (var defProxy in _definitionProxies)
+      {
+        var defId = defProxy.applicationId ?? defProxy.id;
+        if (defId is not null)
+        {
+          definitionObjectsMap[defId] = defProxy.objects;
+        }
+      }
+    }
+
+    foreach (var instanceProxy in instanceProxies)
+    {
+      // get the definition objects for this instance
+      if (!definitionObjectsMap.TryGetValue(instanceProxy.definitionId, out var definitionObjectIds))
+      {
+        continue; // definition not found, skip this proxy
+      }
+
+      // get transform from the instance proxy
+      var transform = GrasshopperHelpers.MatrixToTransform(instanceProxy.transform, instanceProxy.units);
+
+      // apply transform to each definition object
+      foreach (var objectId in definitionObjectIds)
+      {
+        if (ConvertedObjectsMap.TryGetValue(objectId, out var definitionObject))
+        {
+          // deep copy and transform the geometry
+          var transformedWrapper = definitionObject.DeepCopy();
+          transformedWrapper.GeometryBase.NotNull().Transform(transform);
+          resolvedGeometries.Add(transformedWrapper);
+        }
+      }
+    }
+
+    return resolvedGeometries;
+  }
+
+  /// <summary>
+  /// Converts the raw converted objects to SpeckleGeometryWrappers for DataObject display values.
+  /// Does NOT apply DataObject-level colors/materials - that's handled by CreateDataObjectWrapper.
+  /// </summary>
+  private List<SpeckleGeometryWrapper> ConvertToGeometryWrappers(List<(object, Base)> converted)
+  {
+    var geometries = new List<SpeckleGeometryWrapper>();
+
+    foreach ((object convertedObj, Base original) in converted)
+    {
+      if (convertedObj is GeometryBase geometryBase)
+      {
+        SpeckleGeometryWrapper wrapper =
+          new()
+          {
+            Base = original,
+            GeometryBase = geometryBase,
+            // try to get color/material from the individual geometry first
+            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+              ? cachedObjColor
+              : null,
+            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+              ? cachedObjMaterial
+              : null,
+          };
+
+        geometries.Add(wrapper);
+      }
+    }
+
+    return geometries;
   }
 }

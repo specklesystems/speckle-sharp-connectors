@@ -58,7 +58,7 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
     {
       ".skp" => new SketchupConfig(),
       ".obj" => new ObjConfig(),
-      ".3dm" => new Rhino3dmConfig(),
+      ".dgn" => new DgnConfig(),
       ".fbx" => new FbxConfig(),
       _ => new DefaultConfig(),
     };
