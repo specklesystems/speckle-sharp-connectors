@@ -55,6 +55,8 @@ public class NavisworksColorUnpacker(
 
     foreach (NAV.ModelItem navisworksObject in navisworksObjects)
     {
+      GC.KeepAlive(navisworksObject);
+
       try
       {
         if (!Is2DElement(navisworksObject))

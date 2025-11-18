@@ -5,7 +5,6 @@ using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -258,7 +257,7 @@ public class RhinoMaterialUnpacker
     return speckleRenderMaterial;
   }
 
-  private static Blob? GetEncodedTexture(PhysicallyBasedMaterial pbRenderMaterial, TextureType kind)
+  private static string? GetEncodedTexture(PhysicallyBasedMaterial pbRenderMaterial, TextureType kind)
   {
     var texture = pbRenderMaterial.GetTexture(kind);
     string? path = texture?.FileName;
@@ -266,6 +265,8 @@ public class RhinoMaterialUnpacker
     {
       return null;
     }
-    return new Blob(path!);
+
+    byte[] bytes = File.ReadAllBytes(path);
+    return Convert.ToBase64String(bytes);
   }
 }
