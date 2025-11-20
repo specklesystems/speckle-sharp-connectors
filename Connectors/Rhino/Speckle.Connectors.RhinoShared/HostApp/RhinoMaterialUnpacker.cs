@@ -2,6 +2,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.FileIO;
 using Rhino.Render;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -20,7 +21,6 @@ public class RhinoMaterialUnpacker
   /// For send operations
   /// </summary>
   private Dictionary<string, RenderMaterialProxy> RenderMaterialProxies { get; } = new();
-  private Dictionary<string, string> Textures { get; } = new();
 
   public RhinoMaterialUnpacker(ILogger<RhinoMaterialUnpacker> logger)
   {
@@ -227,7 +227,7 @@ public class RhinoMaterialUnpacker
     if (roughness < 0 || roughness > 1)
     {
       _logger.LogWarning("Material '{Name}' has invalid roughness value of {Value}", renderMaterial.Name, roughness);
-      roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from C# 8.0
+      roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from .NET 8.0
     }
 
     SpeckleRenderMaterial speckleRenderMaterial =
@@ -259,14 +259,30 @@ public class RhinoMaterialUnpacker
 
   private static string? GetEncodedTexture(PhysicallyBasedMaterial pbRenderMaterial, TextureType kind)
   {
-    var texture = pbRenderMaterial.GetTexture(kind);
-    string? path = texture?.FileName;
-    if (string.IsNullOrEmpty(path) || !File.Exists(path))
+    using Texture? texture = pbRenderMaterial.GetTexture(kind);
+
+    using FileReference? file = texture?.FileReference;
+    if (file is null)
     {
       return null;
     }
 
-    byte[] bytes = File.ReadAllBytes(path);
+    FileInfo filePath = new(file.FullPath);
+    if (!filePath.Exists)
+    {
+      // The texture does not exist as a file on disk, but is instead embedded int he .3dm file
+      // Rhino API will show a virtual (X drive) path
+      // Using `Find` with `createFile: true` will copy the file to disk
+      string fileName = filePath.Name;
+      using var _ = RhinoDoc.ActiveDoc.Bitmaps.Find(fileName, true, out string newFilePath);
+      filePath = new(newFilePath);
+      if (!filePath.Exists)
+      {
+        return null;
+      }
+    }
+
+    byte[] bytes = File.ReadAllBytes(filePath.FullName);
     return Convert.ToBase64String(bytes);
   }
 }
