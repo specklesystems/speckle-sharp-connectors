@@ -49,7 +49,7 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     }
 
     AssignMeshFaces(target, m);
-    
+
     return m;
   }
 
