@@ -27,8 +27,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   protected override Bitmap Icon => Resources.speckle_properties_expand;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
-  {
+  protected override void RegisterInputParams(GH_InputParamManager pManager) =>
     pManager.AddParameter(
       new SpecklePropertyGroupParam(),
       "Properties",
@@ -36,7 +35,6 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       "Speckle Properties to expand",
       GH_ParamAccess.item
     );
-  }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) { }
 
