@@ -42,7 +42,7 @@ internal sealed class JobProcessorInstance(
     catch (Exception ex)
     {
       logger.LogError(ex, "Job Processor crashed");
-      Environment.FailFast("Job Processor crashed", ex);
+      Environment.Exit(1);
       throw;
     }
   }
