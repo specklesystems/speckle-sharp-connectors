@@ -8,11 +8,25 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Encoding;
 /// </summary>
 internal static class RawEncodingCreator
 {
-  public static RawEncoding Encode(ADB.Solid3d target, ADB.Database sourceDb)
-  {
-    ArgumentNullException.ThrowIfNull(target);
+  /// <summary>
+  /// Encodes an AutoCAD Solid3d to DWG binary format.
+  /// </summary>
+  public static RawEncoding Encode(ADB.Solid3d target, ADB.Database sourceDb) => Encode((ADB.Entity)target, sourceDb);
 
-    ArgumentNullException.ThrowIfNull(sourceDb);
+  /// <summary>
+  /// Encodes any AutoCAD/Civil3D Entity to DWG binary format.
+  /// </summary>
+  public static RawEncoding Encode(ADB.Entity target, ADB.Database sourceDb)
+  {
+    if (target == null)
+    {
+      throw new ArgumentNullException(nameof(target));
+    }
+
+    if (sourceDb == null)
+    {
+      throw new ArgumentNullException(nameof(sourceDb));
+    }
 
     string tempFile = System.IO.Path.GetTempFileName();
     string tempDwgFile = System.IO.Path.ChangeExtension(tempFile, ".dwg");
@@ -48,7 +62,7 @@ internal static class RawEncodingCreator
     }
     catch (System.Exception ex)
     {
-      throw new ConversionException($"Failed to encode Solid3d to DWG format: {ex.Message}", ex);
+      throw new ConversionException($"Failed to encode Entity to DWG format: {ex.Message}", ex);
     }
     finally
     {

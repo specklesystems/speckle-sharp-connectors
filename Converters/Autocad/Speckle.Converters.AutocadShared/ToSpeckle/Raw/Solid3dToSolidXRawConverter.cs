@@ -24,7 +24,10 @@ public class Solid3dToSolidXRawConverter : ITypedConverter<ADB.Solid3d, SOG.Soli
 
   public SOG.SolidX Convert(ADB.Solid3d target)
   {
-    ArgumentNullException.ThrowIfNull(target);
+    if (target == null)
+    {
+      throw new ArgumentNullException(nameof(target));
+    }
 
     var database = target.Database ?? throw new ConversionException("Solid3d entity must belong to a database.");
 

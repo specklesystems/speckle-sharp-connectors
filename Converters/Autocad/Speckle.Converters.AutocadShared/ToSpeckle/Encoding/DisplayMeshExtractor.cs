@@ -11,9 +11,15 @@ internal static class DisplayMeshExtractor
 {
   public static List<SOG.Mesh> GetSpeckleMeshes(ADB.Solid3d solid, ITypedConverter<ABR.Brep, SOG.Mesh> meshConverter)
   {
-    ArgumentNullException.ThrowIfNull(solid);
+    if (solid == null)
+    {
+      throw new ArgumentNullException(nameof(solid));
+    }
 
-    ArgumentNullException.ThrowIfNull(meshConverter);
+    if (meshConverter == null)
+    {
+      throw new ArgumentNullException(nameof(meshConverter));
+    }
 
     // Extract Brep from Solid3d
     using ABR.Brep brep = new(solid);
