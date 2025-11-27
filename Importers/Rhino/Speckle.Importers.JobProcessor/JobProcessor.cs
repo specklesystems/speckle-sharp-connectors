@@ -35,11 +35,13 @@ internal sealed class JobProcessorInstance(
     {
       await RunJobProcessorLoop(cancellationToken);
     }
+    catch (OperationCanceledException)
+    {
+      throw;
+    }
     catch (Exception ex)
     {
-      const int EXIT_CODE = 1;
-      logger.LogError(ex, "Background service failed, returning {ExitCode}", EXIT_CODE);
-      Environment.ExitCode = EXIT_CODE;
+      Environment.FailFast("Worker crashed", ex);
       throw;
     }
   }

@@ -10,7 +10,7 @@ namespace Speckle.Importers.JobProcessor;
 
 public static class Program
 {
-  public static async Task<int> Main(string[] args)
+  public static async Task Main(string[] args)
   {
     // Dapper doesn't understand how to handle JSON deserialization, so we need to tell it what types can be deserialzied
     SqlMapper.AddTypeHandler(new JsonHandler<FileimportPayload>());
@@ -18,8 +18,6 @@ public static class Program
     var host = ConfigureAppHost(args);
 
     await host.RunAsync();
-
-    return Environment.ExitCode;
   }
 
   private static IHost ConfigureAppHost(string[] args)
