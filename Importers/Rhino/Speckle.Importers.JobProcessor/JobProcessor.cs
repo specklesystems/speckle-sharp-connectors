@@ -37,8 +37,9 @@ internal sealed class JobProcessorInstance(
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Background service failed");
-      Environment.ExitCode = 1;
+      const int EXIT_CODE = 1;
+      logger.LogError(ex, "Background service failed, returning {ExitCode}", EXIT_CODE);
+      Environment.ExitCode = EXIT_CODE;
       throw;
     }
   }
