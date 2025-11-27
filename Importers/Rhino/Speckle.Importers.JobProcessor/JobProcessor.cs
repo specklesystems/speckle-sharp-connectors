@@ -42,7 +42,7 @@ internal sealed class JobProcessorInstance(
     catch (Exception ex)
     {
       logger.LogError(ex, "Job Processor crashed");
-      Environment.Exit(1);
+      Environment.Exit(1); //This is the only reliable way I've managed to figure out how to get windows services retry policy to actually kick in (see https://github.com/dotnet/runtime/issues/67146)
       throw;
     }
   }
