@@ -17,20 +17,9 @@ public static class Program
 
     var host = ConfigureAppHost(args);
 
-    var backgroundServiceTasks = host
-      .Services.GetServices<IHostedService>()
-      .OfType<BackgroundService>()
-      .Select(s => s.ExecuteTask);
-
     await host.RunAsync();
 
-    if (backgroundServiceTasks.Any(t => t?.IsFaulted == true))
-    {
-      //https://github.com/dotnet/runtime/issues/67146
-      return -1;
-    }
-
-    return 0;
+    return Environment.ExitCode;
   }
 
   private static IHost ConfigureAppHost(string[] args)
@@ -49,16 +38,5 @@ public static class Program
     });
 
     return builder.Build();
-  }
-
-  private static void ConfigureTopLevelLogs(ILogger logger)
-  {
-    TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
-      logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
-
-    AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
-    {
-      logger.LogCritical(eventArgs.ExceptionObject as Exception, "Unhandled exception occurred in the AppDomain");
-    };
   }
 }
