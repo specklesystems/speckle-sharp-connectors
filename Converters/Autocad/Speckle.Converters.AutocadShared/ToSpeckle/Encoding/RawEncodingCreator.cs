@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Objects.Other;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Encoding;
@@ -16,17 +18,10 @@ internal static class RawEncodingCreator
   /// <summary>
   /// Encodes any AutoCAD/Civil3D Entity to DWG binary format.
   /// </summary>
-  public static RawEncoding Encode(ADB.Entity target, ADB.Database sourceDb)
+  public static RawEncoding Encode([NotNull] ADB.Entity? target, [NotNull] ADB.Database? sourceDb)
   {
-    if (target == null)
-    {
-      throw new ArgumentNullException(nameof(target));
-    }
-
-    if (sourceDb == null)
-    {
-      throw new ArgumentNullException(nameof(sourceDb));
-    }
+    target.NotNull();
+    sourceDb.NotNull();
 
     string tempFile = System.IO.Path.GetTempFileName();
     string tempDwgFile = System.IO.Path.ChangeExtension(tempFile, ".dwg");
