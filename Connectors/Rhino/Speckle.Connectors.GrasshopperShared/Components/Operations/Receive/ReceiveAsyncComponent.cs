@@ -130,7 +130,7 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     {
       var autoReceiveMi = Menu_AppendItem(
         menu,
-        "Load automatically",
+        "Load new versions automatically",
         (s, e) =>
         {
           AutoReceive = !AutoReceive;
