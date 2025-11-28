@@ -547,8 +547,9 @@ public sealed class DisplayValueExtractor
 
     if (geometryElements != null)
     {
+      DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
       SortGeometry(rebar, collections, geometryElements, null);
-      return ProcessGeometryCollections(rebar, collections, null);
+      return ProcessGeometryCollections(rebar, collections, documentToWorld);
     }
 
     // Return empty list if no geometry is found - imo not critical
@@ -589,11 +590,20 @@ public sealed class DisplayValueExtractor
         )
       );
     }
+    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
 
     List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      if (documentToWorld is not null)
+      {
+        using var transformedCurve = curve.CreateTransformed(documentToWorld);
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      }
     }
 
     return displayValue;
