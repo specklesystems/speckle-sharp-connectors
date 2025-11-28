@@ -74,14 +74,17 @@ public sealed class DisplayValueExtractor
         }
         return areaDisplay;
 
-      // NOTE: this is only for Rebar and not AreaReinforcement, RebarInSystem
-      // AreaReinforcement and RebarInSystem pass through GetGeometryDisplayValue which get DisplayValues as per hostApp
-      // Rebar elements need special handling as get_Geometry() doesn't work properly
-      // We either represent them as centerlines or as solids based on settings
+      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView + apply reference point transform
       case DB.Structure.Rebar rebar:
         return _converterSettings.Current.SendRebarsAsVolumetric
           ? GetRebarVolumetricDisplayValue(rebar)
           : GetRebarCenterlineDisplayValue(rebar);
+
+      // AreaReinforcement/PathReinforcement get_Geometry() returns curves in document coordinates
+      // unlike Rebar which needs reference point transform applied, these are already correct
+      case DB.Structure.AreaReinforcement:
+      case DB.Structure.PathReinforcement:
+        return GetAreaReinforcementDisplayValue(element);
 
       // handle specific types of objects with multiple parts or children
       // curtain and stacked walls should have their display values in their children
@@ -107,7 +110,7 @@ public sealed class DisplayValueExtractor
     using DB.Transform? compoundTransform =
       localToDocument is not null && documentToWorld is not null
         ? documentToWorld.Multiply(localToDocument)
-        : localToDocument; // don't want to accidentally dispose of the ReferencePointTransform
+        : localToDocument;
 
     DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
 
@@ -423,7 +426,7 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+    DB.GraphicsStyle? bjk; // ask ogu why this variable is named like this
 
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
@@ -607,6 +610,21 @@ public sealed class DisplayValueExtractor
     }
 
     return displayValue;
+  }
+
+  /// <summary>
+  /// Gets display value for AreaReinforcement and PathReinforcement.
+  /// </summary>
+  /// <remarks>
+  /// These elements' get_Geometry() returns curves already in document coordinates.
+  /// Unlike Rebar.GetTransformedCenterlineCurves() which requires reference point transform,
+  /// these curves should not be transformed - they're already in the correct space.
+  /// </remarks>
+  private List<DisplayValueResult> GetAreaReinforcementDisplayValue(DB.Element element)
+  {
+    var collections = GetSortedGeometryFromElement(element, null, null);
+    // pass null for transform - curves are already in correct document coordinates
+    return ProcessGeometryCollections(element, collections, null);
   }
 
   /// <summary>
