@@ -8,6 +8,7 @@ using Speckle.Connectors.Logging;
 using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Importers.JobProcessor.JobHandlers;
 using Speckle.Importers.JobProcessor.JobQueue;
+using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Common;
@@ -29,6 +30,24 @@ internal sealed class JobProcessorInstance(
   private static readonly TimeSpan s_idleTimeout = TimeSpan.FromSeconds(1);
 
   protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+  {
+    try
+    {
+      await RunJobProcessorLoop(cancellationToken);
+    }
+    catch (OperationCanceledException)
+    {
+      throw;
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Job Processor crashed");
+      Environment.Exit(1); //This is the only reliable way I've managed to figure out how to get windows services retry policy to actually kick in (see https://github.com/dotnet/runtime/issues/67146)
+      throw;
+    }
+  }
+
+  private async Task RunJobProcessorLoop(CancellationToken cancellationToken)
   {
     await using var connection = await repository.SetupConnection(cancellationToken).ConfigureAwait(false);
 
@@ -180,6 +199,11 @@ internal sealed class JobProcessorInstance(
       {
         logger.LogError(new AggregateException(ex, ex2), "Failed to report failure status");
         await repository.ReturnJobToQueued(connection, job.Id, cancellationToken);
+
+        if (ex2.IsFatal())
+        {
+          throw;
+        }
       }
     }
     finally

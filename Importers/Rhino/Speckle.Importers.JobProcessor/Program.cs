@@ -10,27 +10,14 @@ namespace Speckle.Importers.JobProcessor;
 
 public static class Program
 {
-  public static async Task<int> Main(string[] args)
+  public static async Task Main(string[] args)
   {
     // Dapper doesn't understand how to handle JSON deserialization, so we need to tell it what types can be deserialzied
     SqlMapper.AddTypeHandler(new JsonHandler<FileimportPayload>());
 
     var host = ConfigureAppHost(args);
 
-    var backgroundServiceTasks = host
-      .Services.GetServices<IHostedService>()
-      .OfType<BackgroundService>()
-      .Select(s => s.ExecuteTask);
-
     await host.RunAsync();
-
-    if (backgroundServiceTasks.Any(t => t?.IsFaulted == true))
-    {
-      //https://github.com/dotnet/runtime/issues/67146
-      return -1;
-    }
-
-    return 0;
   }
 
   private static IHost ConfigureAppHost(string[] args)
@@ -49,16 +36,5 @@ public static class Program
     });
 
     return builder.Build();
-  }
-
-  private static void ConfigureTopLevelLogs(ILogger logger)
-  {
-    TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
-      logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
-
-    AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
-    {
-      logger.LogCritical(eventArgs.ExceptionObject as Exception, "Unhandled exception occurred in the AppDomain");
-    };
   }
 }
