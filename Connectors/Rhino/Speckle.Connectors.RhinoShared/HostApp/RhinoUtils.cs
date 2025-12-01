@@ -1,27 +1,41 @@
+using System.Text;
+
 namespace Speckle.Connectors.Rhino.HostApp;
 
 public static class RhinoUtils
 {
-  public static string CleanBlockDefinitionName(string str)
-  {
-    return ReplaceChars(str, @"\/", "_");
-  }
+  private static readonly HashSet<char> s_skipChars = ['[', ']', '(', ')', '{', '}'];
+  private static readonly HashSet<char> s_replaceWithHyphen = [':', ';'];
+
+  public static string CleanBlockDefinitionName(string str) => str.Replace('/', '_').Replace('\\', '_');
 
   // Cleans up layer names to be "rhino" proof. Note this can be improved, as "()[] and {}" are illegal only at the start.
   // https://docs.mcneel.com/rhino/6/help/en-us/index.htm#information/namingconventions.htm?Highlight=naming
   public static string CleanLayerName(string str)
   {
-    str = ReplaceChars(str, @"[](){}", "");
-    return ReplaceChars(str, @":;", "-");
-  }
+    var sb = new StringBuilder(str.Length);
 
-  private static string ReplaceChars(string str, string invalidChars, string replaceString)
-  {
-    foreach (char c in invalidChars)
+    foreach (char c in str)
     {
-      str = str.Replace(c.ToString(), replaceString);
+      if (char.IsControl(c))
+      {
+        continue; // skip control characters (shoutout cnx-2809)
+      }
+
+      if (s_skipChars.Contains(c))
+      {
+        continue; // skip brackets
+      }
+
+      if (s_replaceWithHyphen.Contains(c))
+      {
+        sb.Append('-');
+        continue;
+      }
+
+      sb.Append(c);
     }
 
-    return str;
+    return sb.ToString();
   }
 }

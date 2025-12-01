@@ -79,6 +79,9 @@ public class SpecklePropertyGoo : GH_Goo<object>, ISpecklePropertyGoo
       case int i:
         Value = i;
         return true;
+      case long l:
+        Value = l;
+        return true;
       case string s:
         Value = s;
         return true;

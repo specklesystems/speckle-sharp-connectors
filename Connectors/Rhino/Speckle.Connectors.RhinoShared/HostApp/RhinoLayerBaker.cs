@@ -123,6 +123,12 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       var cleanNewLayerName = RhinoUtils.CleanLayerName(collection.name);
+
+      if (!ModelComponent.IsValidComponentName(cleanNewLayerName))
+      {
+        throw new SpeckleException($"Layer name '{currentLayerName}' is not valid");
+      }
+
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
 
       // set material
@@ -150,7 +156,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       int index = currentDocument.Layers.Add(newLayer);
       if (index == -1)
       {
-        throw new SpeckleException($"Could not create layer '{currentLayerName}'.");
+        throw new SpeckleException($"Could not create layer '{currentLayerName}'");
       }
 
       _hostLayerCache.Add(currentLayerName, index);
