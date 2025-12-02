@@ -137,6 +137,11 @@ public static class GrasshopperHelpers
   {
     foreach (var element in coll.Elements)
     {
+      if (element is null)
+      {
+        continue; // Skip nulls (CNX-2855)
+      }
+
       switch (element)
       {
         case SpeckleDataObjectWrapper dataObject:
@@ -270,7 +275,10 @@ public static class GrasshopperHelpers
 
         for (int i = 0; i < elCount; i++)
         {
-          tree.EnsurePath(myPath).Add(new Grasshopper.Kernel.Types.GH_ObjectWrapper(subset[subsetCount + i]));
+          var item = subset[subsetCount + i];
+          // preserve nulls in tree structure (CNX-2855)
+          // GH_ObjectWrapper accepts null despite the signature not indicating it
+          tree.EnsurePath(myPath).Add(new GH_ObjectWrapper(item!));
         }
 
         subsetCount += elCount;
