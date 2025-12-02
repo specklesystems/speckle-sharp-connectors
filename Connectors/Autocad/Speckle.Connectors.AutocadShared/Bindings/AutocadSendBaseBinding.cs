@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
@@ -40,6 +41,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   /// </summary>
   private ConcurrentBag<string> ChangedObjectIds { get; set; } = new();
 
+  private readonly List<string> _docSubsTracker = new();
+  private readonly Dictionary<string, Matrix3d> _docUcsTracker = new();
+
   protected AutocadSendBaseBinding(
     DocumentModelStore store,
     IBrowserBridge parent,
@@ -71,14 +75,16 @@ public abstract class AutocadSendBaseBinding : ISendBinding
       // catches the case when autocad just opens up with a blank new doc
       SubscribeToObjectChanges(Application.DocumentManager.CurrentDocument);
     }
+
+    Application.SystemVariableChanged += (_, e) =>
+      _topLevelExceptionHandler.CatchUnhandled(() => OnSystemVariableChanged(e));
+
     // Since ids of the objects generates from same seed, we should clear the cache always whenever doc swapped.
     _store.DocumentChanged += (_, _) =>
     {
       _sendConversionCache.ClearCache();
     };
   }
-
-  private readonly List<string> _docSubsTracker = new();
 
   private void SubscribeToObjectChanges(Document doc)
   {
@@ -88,9 +94,56 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     }
 
     _docSubsTracker.Add(doc.Name);
+    _docUcsTracker[doc.Name] = doc.Editor.CurrentUserCoordinateSystem;
+
     doc.Database.ObjectAppended += (_, e) => OnObjectChanged(e.DBObject);
     doc.Database.ObjectErased += (_, e) => OnObjectChanged(e.DBObject);
     doc.Database.ObjectModified += (_, e) => OnObjectChanged(e.DBObject);
+  }
+
+  /// <summary>
+  /// Handles system variable changes to detect UCS modifications.
+  /// When UCS changes, clears the conversion cache and expires all sender model cards.
+  /// </summary>
+  private void OnSystemVariableChanged(Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e)
+  {
+    // check if this is a UCS-defining system variable
+    string varName = e.Name.ToUpperInvariant();
+    bool isUcsChange = varName == "UCSNAME" || varName == "UCSORG" || varName == "UCSXDIR" || varName == "UCSYDIR";
+
+    if (!isUcsChange)
+    {
+      return;
+    }
+
+    // get the currently active document
+    Document doc = Application.DocumentManager.MdiActiveDocument;
+    if (doc == null)
+    {
+      return;
+    }
+
+    var currentUcs = doc.Editor.CurrentUserCoordinateSystem;
+
+    // first time tracking this document's UCS
+    if (!_docUcsTracker.TryGetValue(doc.Name, out Matrix3d storedUcs))
+    {
+      _docUcsTracker[doc.Name] = currentUcs;
+      return;
+    }
+
+    // ucs hasn't actually changed (multiple variables fire for single UCS change)
+    if (currentUcs.IsEqualTo(storedUcs))
+    {
+      return;
+    }
+
+    // ucs has changed - all cached conversions invalid
+    _sendConversionCache.ClearCache();
+    _docUcsTracker[doc.Name] = currentUcs;
+
+    // expire all sender model cards
+    _idleManager.SubscribeToIdle(nameof(ExpireAllSenders), async () => await ExpireAllSenders());
   }
 
   private void OnObjectChanged(DBObject dbObject) =>
@@ -121,6 +174,19 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
     await Commands.SetModelsExpired(expiredSenderIds);
     ChangedObjectIds = new();
+  }
+
+  /// <summary>
+  /// Expires all sender model cards when a global change occurs (like UCS change).
+  /// </summary>
+  private async Task ExpireAllSenders()
+  {
+    var senders = _store.GetSenders();
+    var expiredSenderIds = senders.Select(s => s.ModelCardId.NotNull()).ToList();
+    if (expiredSenderIds.Count > 0)
+    {
+      await Commands.SetModelsExpired(expiredSenderIds);
+    }
   }
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
