@@ -6,7 +6,7 @@ using Speckle.Sdk.Common.Exceptions;
 namespace Speckle.Converters.Autocad.ToSpeckle.Encoding;
 
 /// <summary>
-/// Creates raw encoded representations of AutoCAD geometry using DWG binary format.
+/// Creates raw encoded representations of AutoCAD geometry using DWG format.
 /// </summary>
 internal static class RawEncodingCreator
 {

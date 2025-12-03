@@ -1,7 +1,9 @@
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Objects.Data;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -48,6 +50,25 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     {
       return []; // return empty - defer to instance baker
     }
+
+    // Check for DWG encoding first
+    if (target["encodedValue"] is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_DWG)
+    {
+      try
+      {
+        var entities = RawEncodingToHost.Convert(encoding);
+        if (entities.Count > 0)
+        {
+          return entities.Select(e => (e, (Base)target)).ToList();
+        }
+      }
+      catch (ConversionException)
+      {
+        // Fall through to displayValue conversion
+      }
+    }
+
+    // Fallback: convert displayValue geometry
     foreach (var item in target.displayValue)
     {
       result.AddRange(ConvertDisplayObject(item));

@@ -4,7 +4,7 @@ using Speckle.Sdk.Common.Exceptions;
 namespace Speckle.Converters.Autocad.ToHost.Helpers;
 
 /// <summary>
-/// Handler for decoding raw-encoded objects (SolidX) back to ACAD/Civil entities.
+/// Handler for decoding raw-encoded objects (SolidX, DataObject with encoding) back to ACAD/Civil entities.
 /// </summary>
 public static class RawEncodingToHost
 {
@@ -17,14 +17,27 @@ public static class RawEncodingToHost
       throw new ArgumentNullException(nameof(target), "Raw encoded object or its encodedValue cannot be null.");
     }
 
+    return Convert(target.encodedValue);
+  }
+
+  /// <summary>
+  /// Converts a RawEncoding directly to AutoCAD entities.
+  /// </summary>
+  public static List<ADB.Entity> Convert(RawEncoding encoding)
+  {
+    if (encoding == null)
+    {
+      throw new ArgumentNullException(nameof(encoding), "RawEncoding cannot be null.");
+    }
+
     // Route to appropriate handler based on format
-    switch (target.encodedValue.format)
+    switch (encoding.format)
     {
       case RawEncodingFormats.ACAD_DWG:
-        return HandleDwg(target);
+        return HandleDwg(encoding);
       default:
         throw new ConversionException(
-          $"Unsupported raw encoding format: {target.encodedValue.format}. Expected '{RawEncodingFormats.ACAD_DWG}'."
+          $"Unsupported raw encoding format: {encoding.format}. Expected '{RawEncodingFormats.ACAD_DWG}'."
         );
     }
   }
@@ -32,12 +45,12 @@ public static class RawEncodingToHost
   /// <summary>
   /// Handles decoding of DWG binary format.
   /// </summary>
-  private static List<ADB.Entity> HandleDwg(SOG.IRawEncodedObject target)
+  private static List<ADB.Entity> HandleDwg(RawEncoding encoding)
   {
     try
     {
       // Decode base64 to bytes
-      var dwgBytes = System.Convert.FromBase64String(target.encodedValue.contents);
+      var dwgBytes = System.Convert.FromBase64String(encoding.contents);
 
       // Create a temporary file for the DWG data
       // (AutoCAD API requires a file path for reading DWG databases)
