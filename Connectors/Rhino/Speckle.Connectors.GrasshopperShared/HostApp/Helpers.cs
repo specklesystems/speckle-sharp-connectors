@@ -107,17 +107,14 @@ public static class GrasshopperHelpers
       M12 = rhinoTransform.M01,
       M13 = rhinoTransform.M02,
       M14 = rhinoTransform.M03 * conversionFactor,
-
       M21 = rhinoTransform.M10,
       M22 = rhinoTransform.M11,
       M23 = rhinoTransform.M12,
       M24 = rhinoTransform.M13 * conversionFactor,
-
       M31 = rhinoTransform.M20,
       M32 = rhinoTransform.M21,
       M33 = rhinoTransform.M22,
       M34 = rhinoTransform.M23 * conversionFactor,
-
       M41 = rhinoTransform.M30,
       M42 = rhinoTransform.M31,
       M43 = rhinoTransform.M32,
@@ -158,6 +155,7 @@ public static class GrasshopperHelpers
               yield return subElement;
             }
           }
+
           break;
         default:
           break;
@@ -276,9 +274,8 @@ public static class GrasshopperHelpers
         for (int i = 0; i < elCount; i++)
         {
           var item = subset[subsetCount + i];
-          // preserve nulls in tree structure (CNX-2855)
-          // GH_ObjectWrapper accepts null despite the signature not indicating it
-          tree.EnsurePath(myPath).Add(new GH_ObjectWrapper(item!));
+          // GH_ObjectWrapper accepts null to preserve tree structure for failed conversions (CNX-2855)
+          tree.EnsurePath(myPath).Add(item != null ? new GH_ObjectWrapper(item) : new GH_ObjectWrapper(null!));
         }
 
         subsetCount += elCount;
@@ -301,6 +298,13 @@ public static class GrasshopperHelpers
     {
       topology += myPath.ToString(false) + "-" + param.VolatileData.get_Branch(myPath).Count + " ";
     }
+
     return topology;
   }
+
+  /// <summary>
+  /// Converts Elements to Goo list, converting nulls to GH_ObjectWrapper(null) for topology preservation (CNX-2855)
+  /// </summary>
+  public static List<IGH_Goo> ToGooListWithNulls(this SpeckleCollectionWrapper coll) =>
+    coll.Elements.Select(e => e == null ? new GH_ObjectWrapper(null!) : ((SpeckleWrapper)e).CreateGoo()).ToList();
 }
