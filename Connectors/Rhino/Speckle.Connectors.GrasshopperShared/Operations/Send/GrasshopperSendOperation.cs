@@ -80,10 +80,12 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
     // iterate through this wrapper's elements to unwrap children
     // HashSet<string> collObjectIds = new();
-    foreach (ISpeckleCollectionObject element in wrapper.Elements)
+    foreach (ISpeckleCollectionObject? element in wrapper.Elements)
     {
       switch (element)
       {
+        case null:
+          continue; // skip nulls (CNX-2855)
         case SpeckleCollectionWrapper collWrapper:
           // create an application id for this collection if none exists. This will be used for color and render material proxies
           collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();

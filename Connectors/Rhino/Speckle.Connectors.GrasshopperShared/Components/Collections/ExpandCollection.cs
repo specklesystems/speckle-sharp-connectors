@@ -55,7 +55,10 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     // Note: SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper,
     // so it will be included in objects
     List<SpeckleWrapper> objects = wrapper.GetAtomicObjects().ToList();
-    List<SpeckleCollectionWrapper> collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
+    List<SpeckleCollectionWrapper> collections = wrapper
+      .Elements.Where(e => e != null) // skip nulls (CNX-2855)
+      .OfType<SpeckleCollectionWrapper>()
+      .ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -77,14 +80,9 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
 
     foreach (SpeckleCollectionWrapper childWrapper in collections)
     {
-      /* POC: we shouldn't skip empty, people would probably expect to see what they see in browser.
-      if (childWrapper.Elements.Count == 0)
-      {
-        continue;
-      }
-      */
-
-      var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
+      var hasInnerCollections = childWrapper
+        .Elements.Where(e => e != null) // Skip nulls (CNX-2855)
+        .Any(el => el is SpeckleCollectionWrapper);
       var topology = childWrapper.Topology;
       var nickName = childWrapper.Name;
       if (nickName.Length > 16)
