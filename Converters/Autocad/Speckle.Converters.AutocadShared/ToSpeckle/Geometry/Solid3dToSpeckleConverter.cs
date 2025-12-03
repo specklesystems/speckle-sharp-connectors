@@ -2,13 +2,12 @@ using Speckle.Converters.Autocad.ToSpeckle.Encoding;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Data;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
 /// <summary>
-/// Converts AutoCAD Solid3d entities to DataObject with DWG encoding for lossless round-trip.
+/// Converts AutoCAD Solid3d entities to DataObject with SAT encoding for lossless round-trip.
 /// </summary>
 [NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK + 1)]
 public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
@@ -34,9 +33,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       throw new ArgumentNullException(nameof(target));
     }
 
-    var database = target.Database ?? throw new ConversionException("Solid3d entity must belong to a database.");
-
-    var encoding = RawEncodingCreator.Encode(target, database);
+    var encoding = RawEncodingCreator.Encode(target);
 
     // Generate display meshes for viewer
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
@@ -51,7 +48,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       applicationId = target.Handle.Value.ToString()
     };
 
-    // Attach DWG encoding to DataObject
+    // Attach SAT encoding to DataObject
     dataObject["encodedValue"] = encoding;
     dataObject["units"] = _settingsStore.Current.SpeckleUnits;
 

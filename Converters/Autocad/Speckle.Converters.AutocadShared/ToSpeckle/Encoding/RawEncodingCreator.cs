@@ -1,72 +1,54 @@
-using System.Diagnostics.CodeAnalysis;
 using Speckle.Objects.Other;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Autocad.ToSpeckle.Encoding;
 
 /// <summary>
-/// Creates raw encoded representations of AutoCAD geometry using DWG format.
+/// Creates raw encoded representations of AutoCAD geometry using SAT format.
 /// </summary>
 internal static class RawEncodingCreator
 {
   /// <summary>
-  /// Encodes an AutoCAD Solid3d to DWG binary format.
+  /// Encodes an AutoCAD Solid3d to SAT (ACIS) format.
+  /// SAT format is smaller than DWG as it only contains geometry data.
   /// </summary>
-  public static RawEncoding Encode(ADB.Solid3d target, ADB.Database sourceDb) => Encode((ADB.Entity)target, sourceDb);
-
-  /// <summary>
-  /// Encodes any AutoCAD/Civil3D Entity to DWG binary format.
-  /// </summary>
-  public static RawEncoding Encode([NotNull] ADB.Entity? target, [NotNull] ADB.Database? sourceDb)
+  public static RawEncoding Encode(ADB.Solid3d target)
   {
-    target.NotNull();
-    sourceDb.NotNull();
+    if (target == null)
+    {
+      throw new ArgumentNullException(nameof(target));
+    }
 
     string tempFile = System.IO.Path.GetTempFileName();
-    string tempDwgFile = System.IO.Path.ChangeExtension(tempFile, ".dwg");
+    string tempSatFile = System.IO.Path.ChangeExtension(tempFile, ".sat");
 
     try
     {
-      // Create a new in-memory database
-      using var tempDb = new ADB.Database(true, false);
+      // Create collection with the solid
+      using var collection = new ADB.DBObjectCollection();
+      collection.Add(target);
 
-      // Copy unit settings from source database to preserve scale
-      tempDb.Insunits = sourceDb.Insunits;
-
-      // Open ModelSpace for write
-      using var tr = tempDb.TransactionManager.StartTransaction();
-      var bt = (ADB.BlockTable)tr.GetObject(tempDb.BlockTableId, ADB.OpenMode.ForRead);
-      var btr = (ADB.BlockTableRecord)tr.GetObject(bt[ADB.BlockTableRecord.ModelSpace], ADB.OpenMode.ForWrite);
-
-      // Clone the solid to the new database
-      var idMapping = new ADB.IdMapping();
-      var objectIds = new ADB.ObjectIdCollection { target.ObjectId };
-      sourceDb.WblockCloneObjects(objectIds, btr.ObjectId, idMapping, ADB.DuplicateRecordCloning.Replace, false);
-
-      tr.Commit();
-
-      // Save database to temp file as DWG
-      tempDb.SaveAs(tempDwgFile, ADB.DwgVersion.Current);
+      // Export to SAT using Body.AcisOut
+      ADB.Body.AcisOut(tempSatFile, collection);
 
       // Read file bytes and convert to base64
-      var dwgBytes = System.IO.File.ReadAllBytes(tempDwgFile);
-      var dwgString = System.Convert.ToBase64String(dwgBytes);
+      var satBytes = System.IO.File.ReadAllBytes(tempSatFile);
+      var satString = System.Convert.ToBase64String(satBytes);
 
-      return new RawEncoding { contents = dwgString, format = RawEncodingFormats.ACAD_DWG };
+      return new RawEncoding { contents = satString, format = RawEncodingFormats.ACAD_SAT };
     }
     catch (System.Exception ex)
     {
-      throw new ConversionException($"Failed to encode Entity to DWG format: {ex.Message}", ex);
+      throw new ConversionException($"Failed to encode Solid3d to SAT format: {ex.Message}", ex);
     }
     finally
     {
       // Clean up temporary files
       try
       {
-        if (System.IO.File.Exists(tempDwgFile))
+        if (System.IO.File.Exists(tempSatFile))
         {
-          System.IO.File.Delete(tempDwgFile);
+          System.IO.File.Delete(tempSatFile);
         }
         if (System.IO.File.Exists(tempFile))
         {

@@ -9,7 +9,7 @@ using Speckle.Sdk.Models;
 namespace Speckle.Converters.Autocad.Geometry;
 
 /// <summary>
-/// Converts a SolidX to AutoCAD Solid3d entities with lossless round-tripping via DWG encoding.
+/// Converts a SolidX to AutoCAD Solid3d entities with lossless round-tripping via SAT encoding.
 /// </summary>
 [NameAndRankValue(typeof(SOG.SolidX), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.SolidX, List<(ADB.Entity a, Base b)>>
@@ -34,7 +34,7 @@ public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
   public List<(ADB.Entity a, Base b)> Convert(SOG.SolidX target)
   {
     // Try to decode raw encoding first for lossless conversion
-    if (target.encodedValue?.format == RawEncodingFormats.ACAD_DWG)
+    if (target.encodedValue?.format == RawEncodingFormats.ACAD_SAT)
     {
       try
       {

@@ -51,8 +51,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
       return []; // return empty - defer to instance baker
     }
 
-    // Check for DWG encoding first
-    if (target["encodedValue"] is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_DWG)
+    // Check for SAT encoding first for lossless round-trip
+    if (target["encodedValue"] is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_SAT)
     {
       try
       {

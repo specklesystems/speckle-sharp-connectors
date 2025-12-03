@@ -2,13 +2,12 @@ using Speckle.Converters.Autocad.ToSpeckle.Encoding;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Data;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
 
 /// <summary>
-/// Converts AutoCAD Solid3d entities to Civil3dObject with DWG encoding for round-trip.
+/// Converts AutoCAD Solid3d entities to Civil3dObject with SAT encoding for round-trip.
 /// This Civil3D-specific converter overrides the base AutoCAD converter to include property sets.
 /// </summary>
 [NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK + 2)]
@@ -38,10 +37,8 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       throw new ArgumentNullException(nameof(target));
     }
 
-    var database = target.Database ?? throw new ConversionException("Solid3d entity must belong to a database.");
-
     // Create raw encoding for round-tripping
-    var encoding = RawEncodingCreator.Encode(target, database);
+    var encoding = RawEncodingCreator.Encode(target);
 
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
 
@@ -61,7 +58,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       applicationId = target.Handle.Value.ToString()
     };
 
-    // Attach DWG encoding for round-trip
+    // Attach SAT encoding for round-trip
     civilObject["encodedValue"] = encoding;
 
     return civilObject;

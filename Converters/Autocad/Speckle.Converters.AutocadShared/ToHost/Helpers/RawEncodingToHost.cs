@@ -33,57 +33,50 @@ public static class RawEncodingToHost
     // Route to appropriate handler based on format
     switch (encoding.format)
     {
-      case RawEncodingFormats.ACAD_DWG:
-        return HandleDwg(encoding);
+      case RawEncodingFormats.ACAD_SAT:
+        return HandleSat(encoding);
       default:
         throw new ConversionException(
-          $"Unsupported raw encoding format: {encoding.format}. Expected '{RawEncodingFormats.ACAD_DWG}'."
+          $"Unsupported raw encoding format: {encoding.format}. Expected '{RawEncodingFormats.ACAD_SAT}'."
         );
     }
   }
 
   /// <summary>
-  /// Handles decoding of DWG binary format.
+  /// Handles decoding of SAT (ACIS) format.
   /// </summary>
-  private static List<ADB.Entity> HandleDwg(RawEncoding encoding)
+  private static List<ADB.Entity> HandleSat(RawEncoding encoding)
   {
     try
     {
       // Decode base64 to bytes
-      var dwgBytes = System.Convert.FromBase64String(encoding.contents);
+      var satBytes = System.Convert.FromBase64String(encoding.contents);
 
-      // Create a temporary file for the DWG data
-      // (AutoCAD API requires a file path for reading DWG databases)
+      // Create a temporary file for the SAT data
       string tempFile = System.IO.Path.GetTempFileName();
-      string tempDwgFile = System.IO.Path.ChangeExtension(tempFile, ".dwg");
+      string tempSatFile = System.IO.Path.ChangeExtension(tempFile, ".sat");
 
       try
       {
-        // Write DWG bytes to temp file
-        System.IO.File.WriteAllBytes(tempDwgFile, dwgBytes);
+        // Write SAT bytes to temp file
+        System.IO.File.WriteAllBytes(tempSatFile, satBytes);
 
-        // Read the DWG database
-        using var sourceDb = new ADB.Database(false, true);
-        sourceDb.ReadDwgFile(tempDwgFile, System.IO.FileShare.Read, true, null);
+        // Import SAT file using Body.AcisIn
+        ADB.DBObjectCollection importedObjects = ADB.Body.AcisIn(tempSatFile);
 
-        // Extract entities from ModelSpace
+        // Extract entities
         var entities = new List<ADB.Entity>();
-
-        using var tr = sourceDb.TransactionManager.StartTransaction();
-        var bt = (ADB.BlockTable)tr.GetObject(sourceDb.BlockTableId, ADB.OpenMode.ForRead);
-        var btr = (ADB.BlockTableRecord)tr.GetObject(bt[ADB.BlockTableRecord.ModelSpace], ADB.OpenMode.ForRead);
-
-        foreach (ADB.ObjectId objId in btr)
+        foreach (ADB.DBObject obj in importedObjects)
         {
-          if (tr.GetObject(objId, ADB.OpenMode.ForRead) is ADB.Entity entity)
+          if (obj is ADB.Entity entity)
           {
-            // Clone the entity to ensure it's not tied to the source database
+            // Clone the entity to ensure it's detached
             var clonedEntity = (ADB.Entity)entity.Clone();
             entities.Add(clonedEntity);
           }
+          // Dispose the original object from the collection
+          obj.Dispose();
         }
-
-        tr.Commit();
 
         return entities;
       }
@@ -92,9 +85,9 @@ public static class RawEncodingToHost
         // Clean up temporary files
         try
         {
-          if (System.IO.File.Exists(tempDwgFile))
+          if (System.IO.File.Exists(tempSatFile))
           {
-            System.IO.File.Delete(tempDwgFile);
+            System.IO.File.Delete(tempSatFile);
           }
           if (System.IO.File.Exists(tempFile))
           {
@@ -111,7 +104,7 @@ public static class RawEncodingToHost
     }
     catch (System.Exception ex)
     {
-      throw new ConversionException($"Failed to decode DWG format: {ex.Message}", ex);
+      throw new ConversionException($"Failed to decode SAT format: {ex.Message}", ex);
     }
   }
 }

@@ -6,7 +6,7 @@ using Speckle.Sdk.Common.Exceptions;
 namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 /// <summary>
-/// Converts AutoCAD Solid3d entities to SolidX with DWG encoding.
+/// Converts AutoCAD Solid3d entities to SolidX with SAT encoding.
 /// </summary>
 public class Solid3dToSolidXRawConverter : ITypedConverter<ADB.Solid3d, SOG.SolidX>
 {
@@ -29,10 +29,8 @@ public class Solid3dToSolidXRawConverter : ITypedConverter<ADB.Solid3d, SOG.Soli
       throw new ArgumentNullException(nameof(target));
     }
 
-    var database = target.Database ?? throw new ConversionException("Solid3d entity must belong to a database.");
-
     // Create raw encoding for round-tripping
-    var solidEncoding = RawEncodingCreator.Encode(target, database);
+    var solidEncoding = RawEncodingCreator.Encode(target);
 
     // Generate display meshes for viewer
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
