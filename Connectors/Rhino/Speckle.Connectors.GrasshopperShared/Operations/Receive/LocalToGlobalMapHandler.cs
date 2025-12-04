@@ -3,7 +3,9 @@ using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Converters.Common;
 using Speckle.Converters.Common.ToHost;
+using Speckle.Converters.Rhino;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
@@ -29,6 +31,7 @@ internal sealed class LocalToGlobalMapHandler
   // injected via constructor (DI-managed)
   private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
   private readonly ILogger<LocalToGlobalMapHandler> _logger;
+  private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   // set via Initialize() method (per-operation data)
   private TraversalContextUnpacker _traversalContextUnpacker = null!;
@@ -41,11 +44,13 @@ internal sealed class LocalToGlobalMapHandler
 
   public LocalToGlobalMapHandler(
     IDataObjectInstanceRegistry dataObjectInstanceRegistry,
-    ILogger<LocalToGlobalMapHandler> logger
+    ILogger<LocalToGlobalMapHandler> logger,
+    IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
     _logger = logger;
+    _settingsStore = settingsStore;
   }
 
   /// <summary>
@@ -368,7 +373,17 @@ internal sealed class LocalToGlobalMapHandler
         {
           // deep copy and transform the geometry
           var transformedWrapper = definitionObject.DeepCopy();
+
+          // transform the GeometryBase
           transformedWrapper.GeometryBase.NotNull().Transform(transform);
+
+          // keep Base and GeometryBase in sync (fixed as of CNX-2847)
+          transformedWrapper.Base = SpeckleConversionContext.Current.ConvertToSpeckle(transformedWrapper.GeometryBase);
+
+          // preserve metadata from original Base
+          transformedWrapper.Base.applicationId = definitionObject.Base.applicationId;
+          transformedWrapper.Base["units"] = _settingsStore.Current.SpeckleUnits;
+
           resolvedGeometries.Add(transformedWrapper);
         }
       }

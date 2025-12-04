@@ -161,12 +161,7 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
       else
       {
         SpecklePropertyGoo entry = new();
-        if (!entry.CastFrom(kvp.Value))
-        {
-          throw new ArgumentException(
-            $"Property '{kvp.Key}' has unsupported type '{kvp.Value?.GetType().Name ?? "null"}'"
-          );
-        }
+        entry.CastFrom(kvp.Value);
         val = entry;
       }
 

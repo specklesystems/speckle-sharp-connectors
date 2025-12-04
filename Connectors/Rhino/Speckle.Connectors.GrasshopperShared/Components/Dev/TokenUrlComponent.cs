@@ -15,7 +15,7 @@ public class TokenUrlComponent : GH_Component
 {
   public TokenUrlComponent()
     : base(
-      "Speckle Model URL",
+      "Speckle Model URL with Token",
       "URL",
       "Create a Speckle model link using URL and developer token",
       ComponentCategories.PRIMARY_RIBBON,
