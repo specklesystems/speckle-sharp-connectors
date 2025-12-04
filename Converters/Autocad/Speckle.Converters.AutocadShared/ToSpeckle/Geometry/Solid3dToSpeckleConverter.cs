@@ -1,13 +1,13 @@
 using Speckle.Converters.Autocad.ToSpeckle.Encoding;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Objects.Data;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Autocad.Geometry;
 
 /// <summary>
-/// Converts AutoCAD Solid3d entities to DataObject with SAT encoding for lossless round-trip.
+/// Converts AutoCAD Solid3d entities to SolidX with SAT encoding for lossless round-trip.
 /// </summary>
 [NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK + 1)]
 public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
@@ -26,32 +26,51 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 
   public Base Convert(object target) => RawConvert((ADB.Solid3d)target);
 
-  public DataObject RawConvert(ADB.Solid3d target)
+  public SOG.SolidX RawConvert(ADB.Solid3d target)
   {
     if (target == null)
     {
       throw new ArgumentNullException(nameof(target));
     }
 
+    // Create raw encoding for round-tripping
     var encoding = RawEncodingCreator.Encode(target);
 
     // Generate display meshes for viewer
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
 
-    string typeName = target.GetType().Name;
+    // Calculate geometric properties
+    double volume = 0;
+    double area = 0;
 
-    var dataObject = new DataObject
+    try
     {
-      name = typeName,
-      displayValue = displayValue.Cast<Base>().ToList(),
-      properties = new Dictionary<string, object?>(),
-      applicationId = target.Handle.Value.ToString()
+      using ABR.Brep brep = new(target);
+      if (!brep.IsNull)
+      {
+        area = brep.GetSurfaceArea();
+        try
+        {
+          volume = brep.GetVolume();
+        }
+        catch (ABR.Exception)
+        {
+          // Volume calculation can fail for non-volumetric solids
+        }
+      }
+    }
+    catch (System.Exception ex)
+    {
+      throw new ConversionException($"Failed to calculate geometric properties: {ex.Message}", ex);
+    }
+
+    return new SOG.SolidX
+    {
+      displayValue = displayValue,
+      encodedValue = encoding,
+      volume = volume,
+      area = area,
+      units = _settingsStore.Current.SpeckleUnits
     };
-
-    // Attach SAT encoding to DataObject
-    dataObject["encodedValue"] = encoding;
-    dataObject["units"] = _settingsStore.Current.SpeckleUnits;
-
-    return dataObject;
   }
 }
