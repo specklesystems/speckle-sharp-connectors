@@ -134,13 +134,10 @@ public static class GrasshopperHelpers
   {
     foreach (var element in coll.Elements)
     {
-      if (element is null)
-      {
-        continue; // Skip nulls (CNX-2855)
-      }
-
       switch (element)
       {
+        case null:
+          break; // skip nulls (CNX-2855)
         case SpeckleDataObjectWrapper dataObject:
           yield return dataObject;
           break;
@@ -156,8 +153,6 @@ public static class GrasshopperHelpers
             }
           }
 
-          break;
-        default:
           break;
       }
     }
@@ -176,11 +171,9 @@ public static class GrasshopperHelpers
     {
       return instanceGoo.Value;
     }
-    else
-    {
-      SpeckleGeometryWrapperGoo objGoo = new();
-      return objGoo.CastFrom(goo) ? objGoo.Value : null;
-    }
+
+    SpeckleGeometryWrapperGoo objGoo = new();
+    return objGoo.CastFrom(goo) ? objGoo.Value : null;
   }
 
   /// <summary>

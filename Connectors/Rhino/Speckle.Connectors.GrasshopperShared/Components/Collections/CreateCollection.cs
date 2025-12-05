@@ -264,13 +264,10 @@ public class CreateCollection : VariableParameterComponentBase
   {
     foreach (var element in collection.Elements)
     {
-      if (element is null)
-      {
-        continue; // skip nulls (CNX-2855)
-      }
-
       switch (element)
       {
+        case null:
+          break; // skip nulls (CNX-2855)
         case SpeckleCollectionWrapper childCollection:
           // recurse into child collections
           ProcessAndCheckForDuplicateApplicationIds(childCollection, seenIds, duplicateIds);
