@@ -42,7 +42,6 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 
     // Create raw encoding for round-tripping
     var encoding = RawEncodingCreator.Encode(target);
-    var encoding = RawEncodingCreator.Encode(target);
 
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
 
