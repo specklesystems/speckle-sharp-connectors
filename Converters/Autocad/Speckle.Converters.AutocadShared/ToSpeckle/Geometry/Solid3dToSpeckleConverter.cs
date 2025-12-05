@@ -33,13 +33,10 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       throw new ArgumentNullException(nameof(target));
     }
 
-    // Create raw encoding for round-tripping
-    var encoding = RawEncodingCreator.Encode(target);
-
     // Generate display meshes for viewer
     List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
 
-    // Calculate geometric properties
+    // Calculate geometric properties - tbd
     double volume = 0;
     double area = 0;
 
@@ -63,6 +60,9 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       throw new ConversionException($"Failed to calculate geometric properties: {ex.Message}", ex);
     }
+
+    // Create raw encoding for round-tripping
+    var encoding = RawEncodingCreator.Encode(target);
 
     return new SOG.SolidX
     {

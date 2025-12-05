@@ -37,10 +37,12 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       throw new ArgumentNullException(nameof(target));
     }
 
+    // Generate display meshes for viewer
+    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
+
     // Create raw encoding for round-tripping
     var encoding = RawEncodingCreator.Encode(target);
-
-    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
+    var encoding = RawEncodingCreator.Encode(target);
 
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
 
