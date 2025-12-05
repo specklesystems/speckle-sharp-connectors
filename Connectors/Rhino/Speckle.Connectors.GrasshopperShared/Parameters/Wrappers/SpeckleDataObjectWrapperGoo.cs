@@ -192,6 +192,11 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
     SpeckleGeometryWrapperGoo geoGoo = new();
     if (geoGoo.CastFrom(geometricGoo))
     {
+      // check if the geometry wrapper is valid before using it (CNX-2855)
+      if (!geoGoo.IsValid)
+      {
+        return false;
+      }
       return CastFromSpeckleGeometryWrapper(geoGoo.Value);
     }
     return false;

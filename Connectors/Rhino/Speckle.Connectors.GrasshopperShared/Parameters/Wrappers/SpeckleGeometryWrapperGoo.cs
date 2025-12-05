@@ -60,7 +60,13 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         return CastFromDataObject(dataObjectWrapper);
       case IGH_GeometricGoo geometricGoo:
         GeometryBase gb = geometricGoo.ToGeometryBase();
-        Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(gb);
+        Base? converted = SpeckleConversionContext.Current.ConvertToSpeckle(gb);
+
+        if (converted is null)
+        {
+          return false; // gh deals with false return from casting as warning 😎
+        }
+
         string appId = Guid.NewGuid().ToString();
         Value = gb is InstanceReferenceGeometry instance
           ? new SpeckleBlockInstanceWrapper()

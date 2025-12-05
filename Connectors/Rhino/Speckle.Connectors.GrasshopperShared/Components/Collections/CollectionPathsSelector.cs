@@ -47,6 +47,11 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
       // note: we are skipping the input collection, to make the output paths more intuitive
       foreach (var element in wrapper.Elements)
       {
+        if (element is null)
+        {
+          continue; // skip nulls (CNX-2855)
+        }
+
         if (element is SpeckleCollectionWrapper childCollectionWrapper)
         {
           paths.AddRange(GetPaths(childCollectionWrapper));
@@ -70,11 +75,15 @@ public class CollectionPathsSelector : ValueSet<IGH_Goo>
     void GetPathsInternal(SpeckleCollectionWrapper w)
     {
       currentPath.Add(w.Name);
-      var subCols = w.Elements.OfType<SpeckleCollectionWrapper>().ToList();
+      var subCols = w
+        .Elements.Where(e => e != null) // skip nulls (CNX-2855)
+        .OfType<SpeckleCollectionWrapper>()
+        .ToList();
 
       // NOTE: here we're basically outputting only paths that correspond to a collection
       // that has values inside of it.
-      if (subCols.Count != w.Elements.Count)
+      var nonNullElementCount = w.Elements.Count(e => e != null);
+      if (subCols.Count != nonNullElementCount)
       {
         allPaths.Add(string.Join(Constants.LAYER_PATH_DELIMITER, currentPath));
       }

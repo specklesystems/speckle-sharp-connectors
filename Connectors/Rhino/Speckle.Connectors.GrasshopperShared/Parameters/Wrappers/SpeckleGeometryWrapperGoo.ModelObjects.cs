@@ -42,7 +42,12 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
     }
 
     GeometryBase geometryBase = geometryGoo.ToGeometryBase();
-    Base converted = SpeckleConversionContext.Current.ConvertToSpeckle(geometryBase);
+    Base? converted = SpeckleConversionContext.Current.ConvertToSpeckle(geometryBase);
+
+    if (converted is null)
+    {
+      return false; // gh deals with false return from casting as warning 😎
+    }
 
     // get layer, props, color, and mat
     SpeckleCollectionWrapper? collection = GetLayerCollectionFromModelObject(modelObject);

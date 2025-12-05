@@ -113,16 +113,18 @@ public class SpeckleCollectionParam : GH_Param<SpeckleCollectionWrapperGoo>, IGH
   {
     foreach (var element in collWrapper.Elements)
     {
-      if (element is SpeckleCollectionWrapper subCollWrapper)
+      switch (element)
       {
-        FlattenForPreview(subCollWrapper);
-      }
-
-      if (element is SpeckleGeometryWrapper objWrapper)
-      {
-        _previewObjects.Add(objWrapper);
-        var box = objWrapper.GeometryBase is null ? new() : objWrapper.GeometryBase.GetBoundingBox(false);
-        _clippingBox.Union(box);
+        case null:
+          continue; // skip nulls (CNX-2855)
+        case SpeckleCollectionWrapper subCollWrapper:
+          FlattenForPreview(subCollWrapper);
+          break;
+        case SpeckleGeometryWrapper objWrapper:
+          _previewObjects.Add(objWrapper);
+          var box = objWrapper.GeometryBase?.GetBoundingBox(false) ?? new BoundingBox();
+          _clippingBox.Union(box);
+          break;
       }
     }
   }

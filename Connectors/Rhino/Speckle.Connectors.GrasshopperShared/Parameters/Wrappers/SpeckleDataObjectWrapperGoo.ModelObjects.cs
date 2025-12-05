@@ -19,8 +19,8 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
     switch (source)
     {
       case ModelObject modelObject:
-        var geometryWrapperGoo = new SpeckleGeometryWrapperGoo(modelObject);
-        if (geometryWrapperGoo.IsValid)
+        var geometryWrapperGoo = new SpeckleGeometryWrapperGoo();
+        if (geometryWrapperGoo.CastFrom(modelObject))
         {
           return CastFromSpeckleGeometryWrapper(geometryWrapperGoo.Value);
         }
