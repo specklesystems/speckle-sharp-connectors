@@ -36,8 +36,8 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
     SOG.Mesh displayMesh = _meshConverter.Convert(target);
 
     // Calculate geometric properties
-    double volume = 0;
-    double area = 0;
+    double? volume = null;
+    double? area = null;
 
     try
     {

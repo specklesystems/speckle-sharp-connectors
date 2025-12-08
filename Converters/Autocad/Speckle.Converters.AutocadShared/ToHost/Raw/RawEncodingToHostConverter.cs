@@ -32,7 +32,7 @@ public class RawEncodingToHostConverter : ITypedConverter<RawEncoding, List<ADB.
   /// <summary>
   /// Handles decoding of SAT (ACIS) format.
   /// </summary>
-  private static List<ADB.Entity> HandleSat(RawEncoding encoding)
+  private List<ADB.Entity> HandleSat(RawEncoding encoding)
   {
     try
     {
