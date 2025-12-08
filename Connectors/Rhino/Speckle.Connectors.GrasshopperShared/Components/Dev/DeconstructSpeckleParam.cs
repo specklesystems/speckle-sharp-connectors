@@ -115,7 +115,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       SpeckleCollectionWrapperGoo collectionGoo when collectionGoo.Value != null
         => ParseSpeckleWrapper(
           collectionGoo.Value,
-          collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o).CreateGoo()).ToList()
+          collectionGoo.Value.Elements.Select(o => ((SpeckleWrapper)o!).CreateGoo()).ToList()
         ),
 
       // get geometries from wrapper to override displayValue prop while parsing

@@ -51,7 +51,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     }
   }
 
-  public List<ISpeckleCollectionObject> Elements { get; set; } = new();
+  public List<ISpeckleCollectionObject?> Elements { get; set; } = new();
 
   /// <summary>
   /// The Grasshopper Topology of this collection. This setter also sets the "topology" prop dynamically on <see cref="Collection"/>
@@ -92,6 +92,8 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     {
       switch (element)
       {
+        case null:
+          continue; // skip nulls (CNX-2855)
         case SpeckleGeometryWrapper o:
           o.Path = newPath;
           o.Parent = this;
@@ -120,6 +122,7 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
         .Select(e =>
           e switch
           {
+            null => null, // preserve nulls (CNX-2855)
             SpeckleCollectionWrapper c => c.DeepCopy(),
             SpeckleBlockInstanceWrapper b => b.DeepCopy(),
             SpeckleGeometryWrapper o => o.DeepCopy(),
@@ -156,6 +159,11 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
     // then bake elements in this collection
     foreach (var obj in Elements)
     {
+      if (obj is null)
+      {
+        continue; // skip nulls (CNX-2855)
+      }
+
       if (obj is SpeckleGeometryWrapper so)
       {
         if (bakeObjects)
