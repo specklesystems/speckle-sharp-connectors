@@ -22,8 +22,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\ExtrusionXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\SubDXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\BrepXToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\SolidXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\MeshToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\DataObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Helpers\EntityUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RawEncodingToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline2dRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline3dRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolylineRawConverter.cs" />
@@ -58,6 +61,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\IPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Solid3dToRawEncodingConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BrepToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CircularArc2dToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBArcToSpeckleRawConverter.cs" />
@@ -87,5 +91,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBSplineToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\VectorToSpeckleRawConverter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)ToHost\Helpers\" />
   </ItemGroup>
 </Project>

@@ -151,9 +151,9 @@ public class GeometryToSpeckleConverter(
       CollectFragments(path, fragmentStack);
     }
 
-    var baseGeometry = ExtractUntransformedGeometry(fragmentStack);
+    var baseGeometries = ExtractUntransformedGeometry(fragmentStack);
 
-    return baseGeometry == null || !_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometry)
+    return baseGeometries.Count == 0 || !_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometries)
       ? ProcessFragments(fragmentStack, paths) // default false flag for isSingleObject
       : CreateInstanceReference(fragmentId, paths);
   }
@@ -230,6 +230,12 @@ public class GeometryToSpeckleConverter(
         var lines = CreateLines(processor.Lines);
         baseGeometries.AddRange(lines);
       }
+
+      if (processor.Points.Count > 0)
+      {
+        var points = CreatePoints(processor.Points);
+        baseGeometries.AddRange(points);
+      }
     }
 
     return baseGeometries;
@@ -286,6 +292,16 @@ public class GeometryToSpeckleConverter(
         ),
         units = _settings.Derived.SpeckleUnits
       })
+      .ToList();
+
+  private List<Point> CreatePoints(IReadOnlyList<SafePoint> points) =>
+    points
+      .Select(point => new Point(
+        (point.Vertex.X + _transformVector.X) * SCALE,
+        (point.Vertex.Y + _transformVector.Y) * SCALE,
+        (point.Vertex.Z + _transformVector.Z) * SCALE,
+        _settings.Derived.SpeckleUnits
+      ))
       .ToList();
 
   public string GenerateFragmentId(InwSelectionPathsColl paths)
@@ -459,7 +475,7 @@ public class GeometryToSpeckleConverter(
     return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
   }
 
-  private SSM.Base? ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
+  private List<SSM.Base> ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
   {
     var processor = new PrimitiveProcessor(_isUpright);
 
@@ -470,7 +486,24 @@ public class GeometryToSpeckleConverter(
       fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
     }
 
-    return processor.Triangles.Count > 0 ? CreateMesh(processor.Triangles) : null;
+    var geometries = new List<SSM.Base>();
+
+    if (processor.Triangles.Count > 0)
+    {
+      geometries.Add(CreateMesh(processor.Triangles));
+    }
+
+    if (processor.Lines.Count > 0)
+    {
+      geometries.AddRange(CreateLines(processor.Lines));
+    }
+
+    if (processor.Points.Count > 0)
+    {
+      geometries.AddRange(CreatePoints(processor.Points));
+    }
+
+    return geometries;
   }
 
   private List<SSM.Base> CreateInstanceReference(string fragmentId, InwSelectionPathsColl paths)
@@ -583,12 +616,69 @@ public class GeometryToSpeckleConverter(
     var result = new double[16];
     Array.Copy(matrixArray, result, 16);
 
+    // Apply Y-up to Z-up basis correction for non-upright models.
+    // When meshes are converted, vertices undergo the transformation (x, y, z) -> (x, -z, y)
+    // via TransformVectorToOrientation in PrimitiveProcessor. Instance transforms must be
+    // converted to the same basis using the conjugation: T_zup = C * T_yup * C^(-1)
+    // where C is the Y-up to Z-up change of basis matrix.
+    if (!_isUpright)
+    {
+      result = ApplyYUpToZUpBasisChange(result);
+    }
+
     result[12] = (result[12] + _transformVector.X) * SCALE;
     result[13] = (result[13] + _transformVector.Y) * SCALE;
     result[14] = (result[14] + _transformVector.Z) * SCALE;
 
     return result;
   }
+
+  /// <summary>
+  /// Applies the Y-up to Z-up basis change to a 4x4 transformation matrix.
+  /// This performs the conjugation T_zup = C * T_yup * C^(-1) where C represents
+  /// the coordinate transformation (x, y, z) -> (x, -z, y).
+  /// </summary>
+  /// <remarks>
+  /// The change of basis matrix C and its inverse C^(-1) for (x, y, z) -> (x, -z, y):
+  /// C = | 1  0  0  0 |    C^(-1) = | 1  0  0  0 |
+  ///     | 0  0 -1  0 |             | 0  0  1  0 |
+  ///     | 0  1  0  0 |             | 0 -1  0  0 |
+  ///     | 0  0  0  1 |             | 0  0  0  1 |
+  ///
+  /// For a matrix T with elements [m0...m15] in row-major order:
+  /// | m0  m1  m2  m3  |
+  /// | m4  m5  m6  m7  |
+  /// | m8  m9  m10 m11 |
+  /// | m12 m13 m14 m15 |
+  ///
+  /// The result of C * T * C^(-1) transforms the basis while preserving
+  /// the geometric meaning of the transformation in the new coordinate system.
+  /// </remarks>
+  private static double[] ApplyYUpToZUpBasisChange(double[] m) =>
+    // Compute C * T * C^(-1) where:
+    // C converts Y-up to Z-up: (x, y, z) -> (x, -z, y)
+    // This ensures instance transforms operate correctly on Z-up geometry.
+    //
+    // The multiplication is performed analytically for efficiency.
+    // Given input matrix m (row-major), the result is:
+    [
+      m[0],
+      -m[2],
+      m[1],
+      m[3], // Row 0: unchanged x, swapped and negated y/z
+      -m[8],
+      m[10],
+      -m[9],
+      -m[11], // Row 1: from row 2, with sign changes
+      m[4],
+      -m[6],
+      m[5],
+      m[7], // Row 2: from row 1, with sign changes
+      m[12],
+      -m[14],
+      m[13],
+      m[15] // Row 3 (translation): swap y/z, negate new y
+    ];
 
   private static double[] ConvertArrayToDouble(Array arr)
   {

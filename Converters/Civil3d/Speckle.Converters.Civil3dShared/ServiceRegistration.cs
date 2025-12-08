@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Converters.Autocad;
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
@@ -47,5 +48,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<CorridorHandler>();
     serviceCollection.AddScoped<CorridorDisplayValueExtractor>();
+    serviceCollection.AddScoped<EntityUnitConverter>();
   }
 }
