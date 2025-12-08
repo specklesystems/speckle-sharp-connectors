@@ -1,4 +1,3 @@
-using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
@@ -20,6 +19,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
+  private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
 
   public DataObjectConverter(
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
@@ -28,7 +28,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
-    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter,
+    ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter
   )
   {
     _curveConverter = curveConverter;
@@ -38,6 +39,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _pointConverter = pointConverter;
     _subDXConverter = subDXConverter;
     _regionConverter = regionConverter;
+    _rawEncodingConverter = rawEncodingConverter;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -56,7 +58,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     {
       try
       {
-        var entities = RawEncodingToHost.Convert(encoding);
+        var entities = _rawEncodingConverter.Convert(encoding);
         if (entities.Count > 0)
         {
           return entities.Select(e => (e, (Base)target)).ToList();

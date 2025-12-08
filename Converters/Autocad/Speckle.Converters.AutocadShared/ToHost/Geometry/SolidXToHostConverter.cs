@@ -1,4 +1,3 @@
-using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
@@ -15,17 +14,17 @@ namespace Speckle.Converters.Autocad.Geometry;
 public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.SolidX, List<(ADB.Entity a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
-  private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
+  private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
   private readonly ISdkActivityFactory _activityFactory;
 
   public SolidXToHostConverter(
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
-    IConverterSettingsStore<AutocadConversionSettings> settingsStore,
+    ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter,
     ISdkActivityFactory activityFactory
   )
   {
     _meshConverter = meshConverter;
-    _settingsStore = settingsStore;
+    _rawEncodingConverter = rawEncodingConverter;
     _activityFactory = activityFactory;
   }
 
@@ -38,8 +37,7 @@ public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
     {
       try
       {
-        var database = _settingsStore.Current.Document.Database;
-        List<ADB.Entity> entities = RawEncodingToHost.Convert(target, database);
+        List<ADB.Entity> entities = _rawEncodingConverter.Convert(target.encodedValue);
 
         if (entities.Count > 0)
         {
