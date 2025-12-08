@@ -69,35 +69,52 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
       .FirstOrDefault(p => p.applicationId == $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}");
 
   /// <summary>
-  /// Adds a geometry definition and corresponding instance definition proxy for shared geometry.
+  /// Adds geometry definitions and corresponding instance definition proxy for shared geometry.
   /// This is a convenience method that handles both stores in one call.
+  /// Supports all geometry primitive types (Mesh, Lines, Points).
   /// </summary>
   /// <param name="fragmentId">The fragment-based application ID.</param>
-  /// <param name="geometry">The untransformed base geometry.</param>
-  /// <returns>True if both were added (new geometry), false if they already existed.</returns>
-  public bool AddSharedGeometry(string fragmentId, Base geometry)
+  /// <param name="geometries">The untransformed base geometries (meshes, lines, points).</param>
+  /// <returns>True if geometries were added (new geometry), false if they already existed.</returns>
+  public bool AddSharedGeometry(string fragmentId, List<Base> geometries)
   {
-    _logger.LogDebug("AddSharedGeometry called for FragmentId={FragmentId}", fragmentId);
+    _logger.LogDebug("AddSharedGeometry called for FragmentId={FragmentId}, GeometryCount={Count}", fragmentId, geometries.Count);
 
-    bool geometryAdded = false;
-    bool proxyAdded = false;
-
-    // Create prefixed IDs for 1:1:1 relationship using base fragment hash
-    var geometryId = $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}";
-    var definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}";
-
-    _logger.LogDebug("Using GeometryId={GeometryId}, DefinitionId={DefinitionId}", geometryId, definitionId);
-
-    // Add geometry definition if not exists
-    if (!GeometryDefinitionsStore.Contains(geometryId))
+    if (geometries.Count == 0)
     {
-      geometry.applicationId = geometryId;
-      geometryAdded = GeometryDefinitionsStore.Add(geometry);
-      _logger.LogDebug("Added geometry definition: {GeometryId}, Success={Success}", geometryId, geometryAdded);
+      return false;
     }
-    else
+
+    var geometriesAdded = false;
+    var proxyAdded = false;
+
+    // Create prefixed IDs using base fragment hash
+    var definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}";
+    var geometryApplicationIds = new List<string>();
+
+    _logger.LogDebug("Using DefinitionId={DefinitionId}", definitionId);
+
+    // Add each geometry definition with a unique index suffix
+    for (var i = 0; i < geometries.Count; i++)
     {
-      _logger.LogDebug("Geometry definition already exists: {GeometryId}", geometryId);
+      var geometry = geometries[i];
+      var geometryId = geometries.Count == 1
+        ? $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}"
+        : $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}_{i}";
+
+      if (!GeometryDefinitionsStore.Contains(geometryId))
+      {
+        geometry.applicationId = geometryId;
+        var added = GeometryDefinitionsStore.Add(geometry);
+        geometriesAdded = geometriesAdded || added;
+        _logger.LogDebug("Added geometry definition: {GeometryId}, Type={Type}, Success={Success}", geometryId, geometry.GetType().Name, added);
+      }
+      else
+      {
+        _logger.LogDebug("Geometry definition already exists: {GeometryId}", geometryId);
+      }
+
+      geometryApplicationIds.Add(geometryId);
     }
 
     // Add instance definition proxy if not exists
@@ -107,35 +124,34 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
       {
         applicationId = definitionId,
         name = $"Shared Geometry {fragmentId[..8]}...", // Show first 8 chars for readability
-        objects = [geometry.applicationId],
+        objects = geometryApplicationIds,
         maxDepth = 0
       };
       proxyAdded = InstanceDefinitionProxiesStore.Add(definitionProxy);
-      _logger.LogDebug("Added instance definition proxy: {DefinitionId}, Success={Success}", definitionId, proxyAdded);
+      _logger.LogDebug("Added instance definition proxy: {DefinitionId}, ObjectCount={Count}, Success={Success}", definitionId, geometryApplicationIds.Count, proxyAdded);
     }
     else
     {
       _logger.LogDebug("Instance definition proxy already exists: {DefinitionId}", definitionId);
     }
 
-    var conversionSucceededResult = geometryAdded || proxyAdded;
+    var conversionSucceededResult = geometriesAdded || proxyAdded;
     _logger.LogDebug(
-      "AddSharedGeometry completed: FragmentId={FragmentId}, Result={Result}, GeometryAdded={GeometryAdded}, ProxyAdded={ProxyAdded}",
+      "AddSharedGeometry completed: FragmentId={FragmentId}, Result={Result}, GeometriesAdded={GeometriesAdded}, ProxyAdded={ProxyAdded}",
       fragmentId,
       conversionSucceededResult,
-      geometryAdded,
+      geometriesAdded,
       proxyAdded
     );
     return conversionSucceededResult;
   }
 
   /// <summary>
-  /// Checks if shared geometry already exists in both stores.
+  /// Checks if shared geometry already exists in the stores.
+  /// Uses the instance definition proxy as the authoritative check since it references all geometries.
   /// </summary>
   /// <param name="fragmentId">The fragment-based application ID.</param>
-  /// <returns>True if geometry definition exists in both stores.</returns>
+  /// <returns>True if the instance definition proxy exists for this fragment.</returns>
   public bool ContainsSharedGeometry(string fragmentId) =>
-    GeometryDefinitionsStore.Contains($"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}")
-  // && InstanceDefinitionProxiesStore.Contains($"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}")
-  ;
+    InstanceDefinitionProxiesStore.Contains($"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}");
 }
