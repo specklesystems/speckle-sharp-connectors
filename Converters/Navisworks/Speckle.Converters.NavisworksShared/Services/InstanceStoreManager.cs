@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+// using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Constants;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
@@ -9,9 +9,11 @@ namespace Speckle.Converter.Navisworks.Services;
 /// Simple wrapper class that manages two SharedGeometryStores instances for dual instancing pattern.
 /// Provides easy access to both mesh definitions store and instance definition proxies store.
 /// </summary>
-public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
+public class InstanceStoreManager(
+// ILogger<InstanceStoreManager> logger
+)
 {
-  private readonly ILogger<InstanceStoreManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  // private readonly ILogger<InstanceStoreManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
   /// <summary>
   /// Store for geometry definitions (geometry data) - untransformed base geometries.
@@ -40,7 +42,7 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   public IReadOnlyCollection<InstanceDefinitionProxy> GetInstanceDefinitionProxies()
   {
     var proxies = InstanceDefinitionProxiesStore.Geometries.OfType<InstanceDefinitionProxy>().ToList().AsReadOnly();
-    _logger.LogDebug("GetInstanceDefinitionProxies returning {Count} proxies", proxies.Count);
+    // _logger.LogDebug("GetInstanceDefinitionProxies returning {Count} proxies", proxies.Count);
     return proxies;
   }
 
@@ -78,7 +80,7 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
   /// <returns>True if geometries were added (new geometry), false if they already existed.</returns>
   public bool AddSharedGeometry(string fragmentId, List<Base> geometries)
   {
-    _logger.LogDebug("AddSharedGeometry called for FragmentId={FragmentId}, GeometryCount={Count}", fragmentId, geometries.Count);
+    // _logger.LogDebug("AddSharedGeometry called for FragmentId={FragmentId}, GeometryCount={Count}", fragmentId, geometries.Count);
 
     if (geometries.Count == 0)
     {
@@ -92,26 +94,27 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
     var definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}";
     var geometryApplicationIds = new List<string>();
 
-    _logger.LogDebug("Using DefinitionId={DefinitionId}", definitionId);
+    // _logger.LogDebug("Using DefinitionId={DefinitionId}", definitionId);
 
     // Add each geometry definition with a unique index suffix
     for (var i = 0; i < geometries.Count; i++)
     {
       var geometry = geometries[i];
-      var geometryId = geometries.Count == 1
-        ? $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}"
-        : $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}_{i}";
+      var geometryId =
+        geometries.Count == 1
+          ? $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}"
+          : $"{InstanceConstants.GEOMETRY_ID_PREFIX}{fragmentId}_{i}";
 
       if (!GeometryDefinitionsStore.Contains(geometryId))
       {
         geometry.applicationId = geometryId;
         var added = GeometryDefinitionsStore.Add(geometry);
         geometriesAdded = geometriesAdded || added;
-        _logger.LogDebug("Added geometry definition: {GeometryId}, Type={Type}, Success={Success}", geometryId, geometry.GetType().Name, added);
+        // _logger.LogDebug("Added geometry definition: {GeometryId}, Type={Type}, Success={Success}", geometryId, geometry.GetType().Name, added);
       }
       else
       {
-        _logger.LogDebug("Geometry definition already exists: {GeometryId}", geometryId);
+        // _logger.LogDebug("Geometry definition already exists: {GeometryId}", geometryId);
       }
 
       geometryApplicationIds.Add(geometryId);
@@ -128,21 +131,13 @@ public class InstanceStoreManager(ILogger<InstanceStoreManager> logger)
         maxDepth = 0
       };
       proxyAdded = InstanceDefinitionProxiesStore.Add(definitionProxy);
-      _logger.LogDebug("Added instance definition proxy: {DefinitionId}, ObjectCount={Count}, Success={Success}", definitionId, geometryApplicationIds.Count, proxyAdded);
     }
     else
     {
-      _logger.LogDebug("Instance definition proxy already exists: {DefinitionId}", definitionId);
+      // _logger.LogDebug("Instance definition proxy already exists: {DefinitionId}", definitionId);
     }
 
     var conversionSucceededResult = geometriesAdded || proxyAdded;
-    _logger.LogDebug(
-      "AddSharedGeometry completed: FragmentId={FragmentId}, Result={Result}, GeometriesAdded={GeometriesAdded}, ProxyAdded={ProxyAdded}",
-      fragmentId,
-      conversionSucceededResult,
-      geometriesAdded,
-      proxyAdded
-    );
     return conversionSucceededResult;
   }
 
