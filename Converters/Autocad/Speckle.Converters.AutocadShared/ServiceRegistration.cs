@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -30,5 +31,6 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<XDataExtractor>();
+    serviceCollection.AddScoped<EntityUnitConverter>();
   }
 }
