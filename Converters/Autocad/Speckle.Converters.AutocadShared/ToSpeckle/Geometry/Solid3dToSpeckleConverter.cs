@@ -67,8 +67,8 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       displayValue = [displayMesh],
       encodedValue = encoding,
-      volume = volume,
-      area = area,
+      volume = volume ?? 0,
+      area = area ?? 0,
       units = _settingsStore.Current.SpeckleUnits
     };
   }
