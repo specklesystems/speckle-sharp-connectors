@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
@@ -20,6 +21,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
   private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
+  private readonly EntityUnitConverter _entityUnitConverter;
 
   public DataObjectConverter(
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
@@ -29,7 +31,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
     ITypedConverter<SOG.Region, ADB.Entity> regionConverter,
-    ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter
+    ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter,
+    EntityUnitConverter entityUnitConverter
   )
   {
     _curveConverter = curveConverter;
@@ -40,6 +43,7 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _subDXConverter = subDXConverter;
     _regionConverter = regionConverter;
     _rawEncodingConverter = rawEncodingConverter;
+    _entityUnitConverter = entityUnitConverter;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -61,6 +65,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
         var entities = _rawEncodingConverter.Convert(encoding);
         if (entities.Count > 0)
         {
+          // SAT format is unitless - scale entities if source and target units differ
+          _entityUnitConverter.ScaleIfNeeded(entities, target["units"] as string);
           return entities.Select(e => (e, (Base)target)).ToList();
         }
       }

@@ -25,6 +25,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\SolidXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\MeshToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\DataObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Helpers\EntityUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RawEncodingToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline2dRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline3dRawConverter.cs" />
@@ -90,5 +91,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\PointToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBSplineToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\VectorToSpeckleRawConverter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)ToHost\Helpers\" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
@@ -15,16 +16,19 @@ public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
 {
   private readonly ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> _meshConverter;
   private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
+  private readonly EntityUnitConverter _entityUnitConverter;
   private readonly ISdkActivityFactory _activityFactory;
 
   public SolidXToHostConverter(
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter,
+    EntityUnitConverter entityUnitConverter,
     ISdkActivityFactory activityFactory
   )
   {
     _meshConverter = meshConverter;
     _rawEncodingConverter = rawEncodingConverter;
+    _entityUnitConverter = entityUnitConverter;
     _activityFactory = activityFactory;
   }
 
@@ -41,8 +45,8 @@ public class SolidXToHostConverter : IToHostTopLevelConverter, ITypedConverter<S
 
         if (entities.Count > 0)
         {
-          // Successfully decoded - return the native entities
-          // Map all entities to the same source SolidX for tracking
+          // SAT format is unitless - scale entities if source and target units differ
+          _entityUnitConverter.ScaleIfNeeded(entities, target.units);
           return entities.Select(entity => ((ADB.Entity)entity, (Base)target)).ToList();
         }
       }
