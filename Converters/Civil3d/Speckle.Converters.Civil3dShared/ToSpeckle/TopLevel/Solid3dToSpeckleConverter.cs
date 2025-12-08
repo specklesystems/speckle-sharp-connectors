@@ -1,7 +1,7 @@
-using Speckle.Converters.Autocad.ToSpeckle.Encoding;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Data;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
@@ -13,17 +13,20 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.TopLevel;
 [NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK + 2)]
 public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _meshConverter;
+  private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _meshConverter;
+  private readonly ITypedConverter<ADB.Solid3d, RawEncoding> _encodingConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly PropertiesExtractor _propertiesExtractor;
 
   public Solid3dToSpeckleConverter(
-    ITypedConverter<ABR.Brep, SOG.Mesh> meshConverter,
+    ITypedConverter<ADB.Solid3d, SOG.Mesh> meshConverter,
+    ITypedConverter<ADB.Solid3d, RawEncoding> encodingConverter,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     PropertiesExtractor propertiesExtractor
   )
   {
     _meshConverter = meshConverter;
+    _encodingConverter = encodingConverter;
     _settingsStore = settingsStore;
     _propertiesExtractor = propertiesExtractor;
   }
@@ -32,16 +35,11 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 
   public Civil3dObject RawConvert(ADB.Solid3d target)
   {
-    if (target == null)
-    {
-      throw new ArgumentNullException(nameof(target));
-    }
-
-    // Generate display meshes for viewer
-    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
+    // Generate display mesh for viewer
+    SOG.Mesh displayMesh = _meshConverter.Convert(target);
 
     // Create raw encoding for round-tripping
-    var encoding = RawEncodingCreator.Encode(target);
+    RawEncoding encoding = _encodingConverter.Convert(target);
 
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
 
@@ -51,7 +49,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       name = typeName,
       type = typeName,
-      displayValue = displayValue.Cast<Base>().ToList(),
+      displayValue = [displayMesh],
       properties = properties,
       baseCurves = null,
       elements = [],

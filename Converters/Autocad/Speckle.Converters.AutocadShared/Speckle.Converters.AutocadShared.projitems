@@ -60,8 +60,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\IPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Encoding\RawEncodingCreator.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Encoding\DisplayMeshExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Solid3dToRawEncodingConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BrepToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CircularArc2dToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBArcToSpeckleRawConverter.cs" />

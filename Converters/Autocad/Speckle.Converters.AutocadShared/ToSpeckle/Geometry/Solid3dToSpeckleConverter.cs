@@ -1,6 +1,7 @@
-using Speckle.Converters.Autocad.ToSpeckle.Encoding;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Objects.Other;
+using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -12,15 +13,18 @@ namespace Speckle.Converters.Autocad.Geometry;
 [NameAndRankValue(typeof(ADB.Solid3d), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK + 1)]
 public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _meshConverter;
+  private readonly ITypedConverter<ADB.Solid3d, SOG.Mesh> _meshConverter;
+  private readonly ITypedConverter<ADB.Solid3d, RawEncoding> _encodingConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Solid3dToSpeckleConverter(
-    ITypedConverter<ABR.Brep, SOG.Mesh> meshConverter,
+    ITypedConverter<ADB.Solid3d, SOG.Mesh> meshConverter,
+    ITypedConverter<ADB.Solid3d, RawEncoding> encodingConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _meshConverter = meshConverter;
+    _encodingConverter = encodingConverter;
     _settingsStore = settingsStore;
   }
 
@@ -28,15 +32,10 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
 
   public SOG.SolidX RawConvert(ADB.Solid3d target)
   {
-    if (target == null)
-    {
-      throw new ArgumentNullException(nameof(target));
-    }
+    // Generate display mesh for viewer
+    SOG.Mesh displayMesh = _meshConverter.Convert(target);
 
-    // Generate display meshes for viewer
-    List<SOG.Mesh> displayValue = DisplayMeshExtractor.GetSpeckleMeshes(target, _meshConverter);
-
-    // Calculate geometric properties - tbd
+    // Calculate geometric properties
     double volume = 0;
     double area = 0;
 
@@ -56,17 +55,17 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
         }
       }
     }
-    catch (System.Exception ex)
+    catch (Exception ex) when (!ex.IsFatal())
     {
       throw new ConversionException($"Failed to calculate geometric properties: {ex.Message}", ex);
     }
 
     // Create raw encoding for round-tripping
-    var encoding = RawEncodingCreator.Encode(target);
+    RawEncoding encoding = _encodingConverter.Convert(target);
 
     return new SOG.SolidX
     {
-      displayValue = displayValue,
+      displayValue = [displayMesh],
       encodedValue = encoding,
       volume = volume,
       area = area,

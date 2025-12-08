@@ -1,18 +1,16 @@
+using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
+using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 
-namespace Speckle.Converters.Autocad.ToSpeckle.Encoding;
+namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 /// <summary>
-/// Creates raw encoded representations of AutoCAD geometry using SAT format.
+/// Converts AutoCAD Solid3d to SAT (ACIS) raw encoding for lossless round-trip.
 /// </summary>
-internal static class RawEncodingCreator
+public class Solid3dToRawEncodingConverter : ITypedConverter<ADB.Solid3d, RawEncoding>
 {
-  /// <summary>
-  /// Encodes an AutoCAD Solid3d to SAT (ACIS) format.
-  /// SAT format is smaller than DWG as it only contains geometry data.
-  /// </summary>
-  public static RawEncoding Encode(ADB.Solid3d target)
+  public RawEncoding Convert(ADB.Solid3d target)
   {
     if (target == null)
     {
@@ -37,30 +35,21 @@ internal static class RawEncodingCreator
 
       return new RawEncoding { contents = satString, format = RawEncodingFormats.ACAD_SAT };
     }
-    catch (System.Exception ex)
+    catch (System.Exception ex) when (!ex.IsFatal())
     {
       throw new ConversionException($"Failed to encode Solid3d to SAT format: {ex.Message}", ex);
     }
     finally
     {
       // Clean up temporary files
-      try
+      if (System.IO.File.Exists(tempSatFile))
       {
-        if (System.IO.File.Exists(tempSatFile))
-        {
-          System.IO.File.Delete(tempSatFile);
-        }
-        if (System.IO.File.Exists(tempFile))
-        {
-          System.IO.File.Delete(tempFile);
-        }
+        System.IO.File.Delete(tempSatFile);
       }
-#pragma warning disable CA1031 // Catching general exception for cleanup - failures are intentionally ignored
-      catch
+      if (System.IO.File.Exists(tempFile))
       {
-        // Ignore cleanup errors
+        System.IO.File.Delete(tempFile);
       }
-#pragma warning restore CA1031
     }
   }
 }
