@@ -377,8 +377,11 @@ internal sealed class LocalToGlobalMapHandler
           // transform the GeometryBase
           transformedWrapper.GeometryBase.NotNull().Transform(transform);
 
-          // keep Base and GeometryBase in sync (fixed as of CNX-2847)
-          transformedWrapper.Base = SpeckleConversionContext.Current.ConvertToSpeckle(transformedWrapper.GeometryBase);
+          // keep Base and GeometryBase in sync (CNX-2847)
+          // Exception shouldn't ever happen for objects in ConvertedObjectsMap
+          transformedWrapper.Base =
+            SpeckleConversionContext.Current.ConvertToSpeckle(transformedWrapper.GeometryBase)
+            ?? throw new InvalidOperationException($"Failed to convert transformed geometry for object {objectId}");
 
           // preserve metadata from original Base
           transformedWrapper.Base.applicationId = definitionObject.Base.applicationId;

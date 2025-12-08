@@ -155,10 +155,11 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
       var outputGoos = outputValues.Select(o => o.CreateGoo()).ToList();
 
-      // only use topology for the first output when we have a path
       if (i == 0 && targetCollectionWrapper?.Topology is string topology && !string.IsNullOrEmpty(topology))
       {
-        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputGoos);
+        // include nulls to match topology count (CNX-2855)
+        var outputGoosWithNulls = targetCollectionWrapper.ToGooListWithNulls();
+        var tree = GrasshopperHelpers.CreateDataTreeFromTopologyAndItems(topology, outputGoosWithNulls);
         dataAccess.SetDataTree(i, tree);
       }
       else
