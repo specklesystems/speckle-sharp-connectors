@@ -254,13 +254,35 @@ internal sealed class JobProcessorInstance(
     int jobTimeout = Math.Max(0, Math.Min(job.Payload.TimeOutSeconds, job.RemainingComputeBudgetSeconds));
     using CancellationTokenSource timeout = new();
     timeout.CancelAfter(TimeSpan.FromSeconds(jobTimeout));
+    using CancellationTokenSource userCancellation = new();
+
+    using var subscription = client.Subscription.CreateProjectModelIngestionCancellationRequestedSubscription(
+      job.Payload.ModelIngestionId,
+      job.Payload.ProjectId
+    );
+    subscription.Listeners += (_, e) =>
+    {
+      logger.LogInformation(
+        "Cancellation of {ModelIngestionId} has been requested via {Type} update ({IsCancellationRequested})",
+        e.modelIngestion.id,
+        e.type,
+        e.modelIngestion.cancellationRequested
+      );
+      userCancellation.Cancel();
+    };
+
     using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(
       timeout.Token,
+      userCancellation.Token,
       cancellationToken
     );
     try
     {
       return await jobHandler.ProcessJob(job, client, ingestion, linkedSource.Token);
+    }
+    catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
+    {
+      throw new OperationCanceledException("Ingestion cancellation was requested", ex);
     }
     catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
     {
