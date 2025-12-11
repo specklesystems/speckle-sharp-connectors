@@ -1,7 +1,6 @@
 ﻿using Speckle.Sdk;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
@@ -14,13 +13,13 @@ internal readonly struct ImporterArgs
   public required int Attempt { get; init; }
   public required string ResultsPath { get; init; }
   public required Project Project { get; init; }
-  public required string ModelId { get; init; }
+  public required ModelIngestion Ingestion { get; init; }
   public required Account Account { get; init; }
   public required Application HostApplication { get; init; }
 }
 
 public readonly struct ImporterResponse
 {
-  public Version? Version { get; init; }
+  public string? RootObjectId { get; init; }
   public string? ErrorMessage { get; init; }
 }

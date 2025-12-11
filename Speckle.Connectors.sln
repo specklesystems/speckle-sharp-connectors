@@ -13,6 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{85A13E
 		.config\dotnet-tools.json = .config\dotnet-tools.json
 		global.json = global.json
 		README.md = README.md
+		Directory.Build.targets = Directory.Build.targets
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Revit", "Revit", "{D92751C8-1039-4005-90B2-913E55E0B8BD}"
