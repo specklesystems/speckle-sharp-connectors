@@ -91,6 +91,7 @@ public class SendOperationTests : MoqTest
     var sendConversionCache = Create<ISendConversionCache>();
     var sendProgress = Create<ISendProgress>();
     var sendOperationExecutor = Create<ISendOperationExecutor>();
+    var sendOperationVersionRecorder = Create<ISendOperationVersionRecorder>();
     var activityFactory = Create<ISdkActivityFactory>();
     var threadContext = Create<IThreadContext>();
 
@@ -114,7 +115,7 @@ public class SendOperationTests : MoqTest
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
-    activityFactory.Setup(x => x.Start("SendOperation", "Send")).Returns((ISdkActivity?)null);
+    activityFactory.Setup(x => x.Start("SendOperation", "SendObjects")).Returns((ISdkActivity?)null);
 
     sendOperationExecutor
       .Setup(x => x.Send(url, projectId, token, commitObject, It.IsAny<PassthroughProgress>(), ct))
@@ -131,6 +132,7 @@ public class SendOperationTests : MoqTest
       sendConversionCache.Object,
       sendProgress.Object,
       sendOperationExecutor.Object,
+      sendOperationVersionRecorder.Object,
       activityFactory.Object,
       threadContext.Object
     );

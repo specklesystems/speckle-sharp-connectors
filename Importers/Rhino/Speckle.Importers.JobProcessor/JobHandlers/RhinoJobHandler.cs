@@ -14,8 +14,11 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJobFileDownloader fileDownloader)
-  : IJobHandler
+internal sealed class RhinoJobHandler(
+  ILogger<RhinoJobHandler> logger,
+  ImportJobFileDownloader fileDownloader,
+  ISpeckleApplication application
+) : IJobHandler
 {
   private readonly JsonSerializerSettings _settings =
     new() { TypeNameHandling = TypeNameHandling.All, MissingMemberHandling = MissingMemberHandling.Error, };
@@ -31,14 +34,14 @@ internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJob
     Project project = await client.Project.Get(job.Payload.ProjectId, cancellationToken);
 
     string fileType = file.FileInfo.Extension.TrimStart('.');
-    Application application = new($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer");
+    Application handlerApplication = new($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer");
 
     ingestion = await client.Ingestion.StartProcessing(
       new ModelIngestionStartProcessingInput(
         ingestionId: ingestion.id,
         projectId: job.Payload.ProjectId,
         progressMessage: "Starting Up Importer",
-        sourceData: new(application.Slug, "1.0.0", file.FileInfo.Name, file.FileInfo.Length)
+        sourceData: new(application.Slug, application.HostApplicationVersion, file.FileInfo.Name, file.FileInfo.Length)
       ),
       cancellationToken
     );
@@ -53,7 +56,7 @@ internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJob
       JobId = job.Id,
       BlobId = job.Payload.BlobId,
       Attempt = job.Attempt,
-      HostApplication = application,
+      HostApplication = handlerApplication,
     };
     await RunSubProcess(importerArgs, cancellationToken);
     var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);
