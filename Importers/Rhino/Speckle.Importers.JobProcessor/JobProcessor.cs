@@ -136,7 +136,7 @@ internal sealed class JobProcessorInstance(
       ),
       CancellationToken.None
     );
-    logger.LogError(
+    logger.LogInformation(
       ex,
       "Attempt {Attempt} to process {JobId} cancelled after {ElapsedSeconds}",
       job.Attempt,
