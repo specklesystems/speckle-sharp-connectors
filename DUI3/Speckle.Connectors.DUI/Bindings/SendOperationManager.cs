@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
@@ -83,6 +84,7 @@ public sealed class SendOperationManager(
       }
 
       var sendInfo = GetSendInfo(modelCard);
+      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
       var sendResult = await serviceScope
         .ServiceProvider.GetRequiredService<ISendOperation<T>>()

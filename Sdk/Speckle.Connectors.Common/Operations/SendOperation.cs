@@ -1,7 +1,6 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Credentials;
@@ -36,20 +35,28 @@ public sealed class SendOperation<T>(
     var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
     // base object handler is separated, so we can do some testing on non-production databases
     // exact interface may want to be tweaked when we implement this
-    var (results, version) = await threadContext.RunOnWorkerAsync(
-      () =>
-        Send(
-          buildResult.RootObject,
-          sendInfo.ProjectId,
-          sendInfo.ModelId,
-          sendInfo.SourceApplication,
-          versionMessage,
-          sendInfo.Account,
-          onOperationProgressed,
-          ct
-        )
-    );
-    ct.ThrowIfCancellationRequested();
+    var (results, version) = await threadContext.RunOnWorkerAsync(async () =>
+    {
+      SerializeProcessResults results = await SendObjects(
+        buildResult.RootObject,
+        sendInfo.ProjectId,
+        sendInfo.Account,
+        onOperationProgressed,
+        ct
+      );
+
+      onOperationProgressed.Report(new("Linking version to model...", null));
+      Version version = await sendOperationVersionRecorder.RecordVersion(
+        results.RootId,
+        sendInfo.ModelId,
+        sendInfo.ProjectId,
+        sendInfo.SourceApplication,
+        versionMessage,
+        sendInfo.Account,
+        ct
+      );
+      return (results, version);
+    });
     return new(results.RootId, version.id, results.ConvertedReferences, buildResult.ConversionResults);
   }
 
@@ -57,33 +64,27 @@ public sealed class SendOperation<T>(
     IReadOnlyList<T> objects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken cancellationToken
   )
   {
-    var buildResult = await rootObjectBuilder.Build(objects, projectId, onOperationProgressed, ct);
-    ct.ThrowIfCancellationRequested();
+    var buildResult = await rootObjectBuilder.Build(objects, projectId, onOperationProgressed, cancellationToken);
     // POC: Jonathon asks on behalf of willow twin - let's explore how this can work
     // buildResult.RootObject["@report"] = new Report { ConversionResults = buildResult.ConversionResults };
     buildResult.RootObject["version"] = 3;
     return buildResult;
   }
 
-  public async Task<(SerializeProcessResults, Version)> Send(
+  public async Task<SerializeProcessResults> SendObjects(
     Base commitObject,
     string projectId,
-    string modelId,
-    string sourceApplication,
-    string? versionMessage,
     Account account,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken cancellationToken
   )
   {
-    ct.ThrowIfCancellationRequested();
+    cancellationToken.ThrowIfCancellationRequested();
 
     onOperationProgressed.Report(new("Uploading...", null));
-
-    using var userScope = UserActivityScope.AddUserScope(account);
     using var activity = activityFactory.Start("SendOperation");
 
     sendProgress.Begin();
@@ -93,27 +94,14 @@ public sealed class SendOperation<T>(
       account.token,
       commitObject,
       onProgressAction: new PassthroughProgress(args => sendProgress.Report(onOperationProgressed, args)),
-      ct
+      cancellationToken
     );
 
     sendConversionCache.StoreSendResult(projectId, sendResult.ConvertedReferences);
 
-    ct.ThrowIfCancellationRequested();
+    cancellationToken.ThrowIfCancellationRequested();
 
-    onOperationProgressed.Report(new("Linking version to model...", null));
-
-    // 8 - Create the version (commit)
-    var version = await sendOperationVersionRecorder.RecordVersion(
-      sendResult.RootId,
-      modelId,
-      projectId,
-      sourceApplication,
-      versionMessage,
-      account,
-      ct
-    );
-
-    return (sendResult, version);
+    return sendResult;
   }
 }
 
