@@ -227,12 +227,12 @@ internal sealed class JobProcessorInstance(
             // Windows service shut down, re-queue job
             logger.LogWarning(
               ex,
-              "Requeueing {JobId} because it was interrupted by the windows service is stopping",
+              "Re-enqueueing {JobId} because it was interrupted by the windows service is stopping",
               job.Id
             );
             await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None); //this behaviour needs to be kept aligned with the server's GC behaviour
             await speckleClient.Ingestion.Requeue(
-              new(job.Payload.ModelIngestionId, job.Payload.ProjectId, "Requeued"),
+              new(job.Payload.ModelIngestionId, job.Payload.ProjectId, "Re-enqueuing job"),
               CancellationToken.None
             );
             break;
