@@ -10,6 +10,7 @@ using Speckle.Importers.JobProcessor.JobHandlers;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Enums;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
@@ -47,19 +48,19 @@ internal sealed class JobProcessorInstance(
     }
   }
 
-  private async Task RunJobProcessorLoop(CancellationToken cancellationToken)
+  private async Task RunJobProcessorLoop(CancellationToken serviceCancellationToken)
   {
-    await using var connection = await repository.SetupConnection(cancellationToken).ConfigureAwait(false);
+    await using var connection = await repository.SetupConnection(serviceCancellationToken).ConfigureAwait(false);
 
     logger.LogInformation("Listening for jobs...");
 
     while (true)
     {
-      FileimportJob? job = await repository.GetNextJob(connection, cancellationToken);
+      FileimportJob? job = await repository.GetNextJob(connection, serviceCancellationToken);
       if (job == null)
       {
         logger.LogDebug("No job found, sleeping for {Timeout}", s_idleTimeout);
-        await Task.Delay(s_idleTimeout, cancellationToken);
+        await Task.Delay(s_idleTimeout, serviceCancellationToken);
         continue;
       }
       logger.LogInformation(
@@ -82,7 +83,7 @@ internal sealed class JobProcessorInstance(
 
       try
       {
-        await AttemptJob(job, connection, cancellationToken);
+        await AttemptJob(job, connection, serviceCancellationToken);
         activity?.SetStatus(SdkActivityStatusCode.Ok);
       }
       catch (Exception ex)
@@ -125,6 +126,25 @@ internal sealed class JobProcessorInstance(
     await client.FileImport.FinishFileImportJob(input, CancellationToken.None);
   }
 
+  private async Task ReportCancelled(FileimportJob job, IClient client, Exception ex, double elapsedSeconds)
+  {
+    await client.Ingestion.FailWithCancel(
+      new ModelIngestionCancelledInput(
+        job.Payload.ModelIngestionId,
+        job.Payload.ProjectId,
+        "The ingestion handler observed a cancellation request, and has cancelled the ingestion before its completion"
+      ),
+      CancellationToken.None
+    );
+    logger.LogError(
+      ex,
+      "Attempt {Attempt} to process {JobId} cancelled after {ElapsedSeconds}",
+      job.Attempt,
+      job.Id,
+      elapsedSeconds
+    );
+  }
+
   private async Task ReportFailed(
     FileimportJob job,
     IClient client,
@@ -133,25 +153,10 @@ internal sealed class JobProcessorInstance(
     CancellationToken cancellationToken
   )
   {
-    if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
-    {
-      await client.Ingestion.FailWithCancel(
-        new ModelIngestionCancelledInput(
-          job.Payload.ModelIngestionId,
-          job.Payload.ProjectId,
-          "The ingestion handler observed a cancellation request, and has cancelled the ingestion before its completion"
-        ),
-        CancellationToken.None
-      );
-    }
-    else
-    {
-      await client.Ingestion.FailWithError(
-        ModelIngestionFailedInput.FromException(job.Payload.ModelIngestionId, job.Payload.ProjectId, ex),
-        cancellationToken
-      );
-    }
-
+    await client.Ingestion.FailWithError(
+      ModelIngestionFailedInput.FromException(job.Payload.ModelIngestionId, job.Payload.ProjectId, ex),
+      cancellationToken
+    );
     logger.LogError(
       ex,
       "Attempt {Attempt} to process {JobId} failed after {ElapsedSeconds}",
@@ -173,7 +178,7 @@ internal sealed class JobProcessorInstance(
   }
 
   [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
-  private async Task AttemptJob(FileimportJob job, IDbConnection connection, CancellationToken cancellationToken)
+  private async Task AttemptJob(FileimportJob job, IDbConnection connection, CancellationToken serviceCancellationToken)
   {
     using var activity = activityFactory.Start();
     IClient? speckleClient = null;
@@ -181,7 +186,7 @@ internal sealed class JobProcessorInstance(
     double totalElapsedSeconds = 0;
     try
     {
-      speckleClient = await SetupClient(job, cancellationToken);
+      speckleClient = await SetupClient(job, serviceCancellationToken);
       using var userScope = UserActivityScope.AddUserScope(speckleClient.Account);
 
       if (job.Attempt > job.MaxAttempt)
@@ -190,12 +195,20 @@ internal sealed class JobProcessorInstance(
         throw new MaxAttemptsExceededException("Unhandled error silently failed the job multiple times");
       }
 
-      string rootObjectId = await ExecuteJobWithTimeout(job, speckleClient, cancellationToken);
+      string rootObjectId = await ExecuteJobWithTimeout(job, speckleClient, serviceCancellationToken);
       totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
 
-      await ReportSuccess(job, rootObjectId, speckleClient, totalElapsedSeconds, cancellationToken);
+      await ReportSuccess(job, rootObjectId, speckleClient, totalElapsedSeconds, serviceCancellationToken);
 
       activity?.SetStatus(SdkActivityStatusCode.Ok);
+    }
+    catch (OperationCanceledException ex) when (serviceCancellationToken.IsCancellationRequested)
+    {
+      logger.LogInformation(
+        ex,
+        "Service cancellation has interrupted a processing job, returning the job to the queue"
+      );
+      await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
     }
     catch (Exception ex)
     {
@@ -206,11 +219,36 @@ internal sealed class JobProcessorInstance(
 
       try
       {
-        await ReportFailed(job, speckleClient.NotNull(), ex, totalElapsedSeconds, cancellationToken);
+        speckleClient.NotNull();
+
+        switch (ex)
+        {
+          case OperationCanceledException when serviceCancellationToken.IsCancellationRequested:
+            logger.LogWarning(
+              ex,
+              "Requeueing {JobId} because it was interrupted by the windows service is stopping",
+              job.Id
+            );
+            await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
+            break;
+          case IngestionCancelledException { Ingestion.statusData.status: ModelIngestionStatus.failed }:
+            break;
+          case IngestionCancelledException:
+            await ReportCancelled(job, speckleClient, ex, totalElapsedSeconds);
+            break;
+          default:
+            await ReportFailed(job, speckleClient, ex, totalElapsedSeconds, serviceCancellationToken);
+            break;
+        }
       }
       catch (Exception ex2)
       {
         logger.LogError(new AggregateException(ex, ex2), "Failed to report failure status");
+        // somehow we're in a weird state,
+        // let's return the job to the queued state where it will get picked up again until one of total timeout,
+        // max attempts, or exhausted compute budget is reached.
+        // The server is responsible for garbage collecting jobs which have reached these error conditions and moving
+        // them to a failed status.
         await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
 
         if (ex2.IsFatal())
@@ -227,7 +265,7 @@ internal sealed class JobProcessorInstance(
       {
         totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
       }
-      await repository.DeductFromComputeBudget(connection, job.Id, (long)totalElapsedSeconds, cancellationToken);
+      await repository.DeductFromComputeBudget(connection, job.Id, (long)totalElapsedSeconds, CancellationToken.None);
     }
   }
 
@@ -254,7 +292,7 @@ internal sealed class JobProcessorInstance(
     int jobTimeout = Math.Max(0, Math.Min(job.Payload.TimeOutSeconds, job.RemainingComputeBudgetSeconds));
     using CancellationTokenSource timeout = new();
     timeout.CancelAfter(TimeSpan.FromSeconds(jobTimeout));
-    using CancellationTokenSource userCancellation = new();
+    using CancellationTokenSource ingestionCancelled = new();
 
     using var subscription = client.Subscription.CreateProjectModelIngestionCancellationRequestedSubscription(
       job.Payload.ModelIngestionId,
@@ -268,21 +306,22 @@ internal sealed class JobProcessorInstance(
         e.type,
         e.modelIngestion.cancellationRequested
       );
-      userCancellation.Cancel();
+      ingestion = e.modelIngestion;
+      ingestionCancelled.Cancel();
     };
 
     using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(
       timeout.Token,
-      userCancellation.Token,
+      ingestionCancelled.Token,
       cancellationToken
     );
     try
     {
       return await jobHandler.ProcessJob(job, client, ingestion, linkedSource.Token);
     }
-    catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
+    catch (OperationCanceledException ex) when (ingestionCancelled.IsCancellationRequested)
     {
-      throw new OperationCanceledException("Ingestion cancellation was requested", ex);
+      throw new IngestionCancelledException("Ingestion cancellation was requested", ex) { Ingestion = ingestion };
     }
     catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
     {
