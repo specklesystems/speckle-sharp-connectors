@@ -202,14 +202,6 @@ internal sealed class JobProcessorInstance(
 
       activity?.SetStatus(SdkActivityStatusCode.Ok);
     }
-    catch (OperationCanceledException ex) when (serviceCancellationToken.IsCancellationRequested)
-    {
-      logger.LogInformation(
-        ex,
-        "Service cancellation has interrupted a processing job, returning the job to the queue"
-      );
-      await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
-    }
     catch (Exception ex)
     {
       activity?.RecordException(ex);
