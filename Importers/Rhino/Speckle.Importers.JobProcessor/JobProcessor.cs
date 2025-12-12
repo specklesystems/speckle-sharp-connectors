@@ -290,8 +290,7 @@ internal sealed class JobProcessorInstance(
 
     //respect the remaining compute budget
     int jobTimeout = Math.Max(0, Math.Min(job.Payload.TimeOutSeconds, job.RemainingComputeBudgetSeconds));
-    using CancellationTokenSource timeout = new();
-    timeout.CancelAfter(TimeSpan.FromSeconds(jobTimeout));
+    using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(jobTimeout));
     using CancellationTokenSource ingestionCancelled = new();
 
     using var subscription = client.Subscription.CreateProjectModelIngestionCancellationRequestedSubscription(
