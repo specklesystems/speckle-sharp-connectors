@@ -224,14 +224,21 @@ internal sealed class JobProcessorInstance(
         switch (ex)
         {
           case OperationCanceledException when serviceCancellationToken.IsCancellationRequested:
+            // Windows service shut down, re-queue job
             logger.LogWarning(
               ex,
               "Requeueing {JobId} because it was interrupted by the windows service is stopping",
               job.Id
             );
-            await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
+            await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None); //this behaviour needs to be kept aligned with the server's GC behaviour
+            await speckleClient.Ingestion.Requeue(
+              new(job.Payload.ModelIngestionId, job.Payload.ProjectId, "Requeued"),
+              CancellationToken.None
+            );
             break;
           case IngestionCancelledException { Ingestion.statusData.status: ModelIngestionStatus.failed }:
+            // Server GC will fail inactive jobs AND request cancel (despite it not being an explicit user cancel request)
+            // since the job is already in failed status, we don't need to try and move it to Canceled status
             break;
           case IngestionCancelledException:
             await ReportCancelled(job, speckleClient, ex, totalElapsedSeconds);
