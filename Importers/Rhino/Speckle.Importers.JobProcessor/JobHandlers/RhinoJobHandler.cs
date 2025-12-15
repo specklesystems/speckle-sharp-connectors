@@ -41,7 +41,12 @@ internal sealed class RhinoJobHandler(
         ingestionId: ingestion.id,
         projectId: job.Payload.ProjectId,
         progressMessage: "Starting Up Importer",
-        sourceData: new(application.Slug, application.HostApplicationVersion, file.FileInfo.Name, file.FileInfo.Length)
+        sourceData: new(
+          application.Slug,
+          application.HostApplicationVersion,
+          job.Payload.FileName,
+          file.FileInfo.Length
+        )
       ),
       cancellationToken
     );
