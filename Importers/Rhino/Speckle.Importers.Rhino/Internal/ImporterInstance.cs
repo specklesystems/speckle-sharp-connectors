@@ -5,11 +5,17 @@ using Rhino.Runtime.InProcess;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Logging;
 using Speckle.Importers.Rhino.Internal.FileTypeConfig;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Importers.Rhino.Internal;
 
-internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger<ImporterInstance> logger) : IDisposable
+internal sealed class ImporterInstance(
+  ImporterArgs args,
+  Sender sender,
+  IClient speckleClient,
+  ILogger<ImporterInstance> logger
+) : IDisposable
 {
   private readonly RhinoCore _rhinoInstance = new(["/netcore-8"], WindowStyle.NoWindow);
 
@@ -22,22 +28,22 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
     // ActivityScope.SetTag("jobType", args.JobType),
     ActivityScope.SetTag("serverUrl", args.Account.serverInfo.url),
     ActivityScope.SetTag("projectId", args.Project.id),
-    ActivityScope.SetTag("modelId", args.ModelId),
+    ActivityScope.SetTag("ingestionId", args.Ingestion.id),
+    ActivityScope.SetTag("modelId", args.Ingestion.modelId),
     ActivityScope.SetTag("blobId", args.BlobId),
     ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.')),
     UserActivityScope.AddUserScope(args.Account),
   ];
 
-  public async Task<Version> RunRhinoImport(CancellationToken cancellationToken)
+  public async Task<SerializeProcessResults> RunRhinoImport(CancellationToken cancellationToken)
   {
     try
     {
       RhinoDoc.ActiveDoc = _rhinoDoc;
-
-      var version = await sender
-        .Send(args.Project, args.ModelId, args.Account, cancellationToken)
+      var results = await sender
+        .Send(args.Project, args.Ingestion, speckleClient, cancellationToken)
         .ConfigureAwait(false);
-      return version;
+      return results;
     }
     finally
     {
@@ -74,5 +80,6 @@ internal sealed class ImporterInstance(ImporterArgs args, Sender sender, ILogger
     {
       scope.Dispose();
     }
+    speckleClient.Dispose();
   }
 }

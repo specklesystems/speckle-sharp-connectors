@@ -7,47 +7,72 @@ using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
 using JsonSerializer = System.Text.Json.JsonSerializer;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-internal sealed class RhinoJobHandler(ILogger<RhinoJobHandler> logger, ImportJobFileDownloader fileDownloader)
-  : IJobHandler
+internal sealed class RhinoJobHandler(
+  ILogger<RhinoJobHandler> logger,
+  ImportJobFileDownloader fileDownloader,
+  ISpeckleApplication application
+) : IJobHandler
 {
   private readonly JsonSerializerSettings _settings =
     new() { TypeNameHandling = TypeNameHandling.All, MissingMemberHandling = MissingMemberHandling.Error, };
 
-  public async Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken)
+  public async Task<string> ProcessJob(
+    FileimportJob job,
+    IClient client,
+    ModelIngestion ingestion,
+    CancellationToken cancellationToken
+  )
   {
     using var file = await fileDownloader.DownloadFile(job, client, cancellationToken);
-
     Project project = await client.Project.Get(job.Payload.ProjectId, cancellationToken);
+
     string fileType = file.FileInfo.Extension.TrimStart('.');
+    Application handlerApplication = new($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer");
+
+    ingestion = await client.Ingestion.StartProcessing(
+      new ModelIngestionStartProcessingInput(
+        ingestionId: ingestion.id,
+        projectId: job.Payload.ProjectId,
+        progressMessage: "Starting Up Importer",
+        sourceData: new(
+          application.Slug,
+          application.HostApplicationVersion,
+          job.Payload.FileName,
+          file.FileInfo.Length
+        )
+      ),
+      cancellationToken
+    );
+
     var importerArgs = new ImporterArgs
     {
       FilePath = file.FileInfo.FullName,
       ResultsPath = $"{file.FileInfo.DirectoryName}/results.json",
       Account = client.Account,
       Project = project,
-      ModelId = job.Payload.ModelId,
+      Ingestion = ingestion,
       JobId = job.Id,
       BlobId = job.Payload.BlobId,
       Attempt = job.Attempt,
-      HostApplication = new Application($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer")
+      HostApplication = handlerApplication,
     };
     await RunSubProcess(importerArgs, cancellationToken);
     var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);
 
-    if (response.Version is null)
+    if (response.RootObjectId is null)
     {
       string message = response.ErrorMessage ?? "Import job failed without a message";
       throw new SpeckleException(message);
     }
 
-    return response.Version;
+    return response.RootObjectId;
   }
 
   private async Task RunSubProcess(ImporterArgs args, CancellationToken cancellationToken)

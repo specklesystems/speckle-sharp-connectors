@@ -22,12 +22,11 @@ namespace Speckle.Connectors.Common.Tests.Operations;
 
 public class SendOperationTests : MoqTest
 {
-#pragma warning disable CA1034
   [SpeckleType("TestBase")]
   public class TestBase : Base;
-#pragma warning restore CA1034
+
   [Test]
-#pragma warning disable CA1506
+#pragma warning disable CA1506 // Avoid excessive class coupling
   public async Task Execute()
 #pragma warning restore CA1506
   {
@@ -81,7 +80,7 @@ public class SendOperationTests : MoqTest
   }
 
   [Test]
-#pragma warning disable CA1506
+#pragma warning disable CA1506 // Avoid excessive class coupling
   public async Task Send()
 #pragma warning restore CA1506
   {
@@ -98,17 +97,14 @@ public class SendOperationTests : MoqTest
 
     var commitObject = new TestBase();
     var projectId = "projectId";
-    var modelId = "modelId";
     var url = new Uri("https://localhost");
     var token = "token";
-    var sourceApplication = "sourceApplication";
     var account = new Account()
     {
       userInfo = new UserInfo() { email = "test_user@example.com" },
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };
-    var sendInfo = new SendInfo(account, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
@@ -116,7 +112,7 @@ public class SendOperationTests : MoqTest
     var rootId = "rootId";
     var refs = new Dictionary<Id, ObjectReference>();
     var serializeProcessResults = new SerializeProcessResults(rootId, refs);
-    activityFactory.Setup(x => x.Start("SendOperation", "Send")).Returns((ISdkActivity?)null);
+    activityFactory.Setup(x => x.Start("SendOperation", "SendObjects")).Returns((ISdkActivity?)null);
 
     sendOperationExecutor
       .Setup(x => x.Send(url, projectId, token, commitObject, It.IsAny<PassthroughProgress>(), ct))
@@ -124,10 +120,6 @@ public class SendOperationTests : MoqTest
 
     sendConversionCache.Setup(x => x.StoreSendResult(projectId, refs));
     sendProgress.Setup(x => x.Begin());
-    const string EXPECTED_ID = "version123";
-    sendOperationVersionRecorder
-      .Setup(x => x.RecordVersion(rootId, modelId, projectId, sourceApplication, null, account, ct))
-      .ReturnsAsync(new Version() { id = EXPECTED_ID });
 
     var sp = services.BuildServiceProvider();
 
@@ -141,17 +133,7 @@ public class SendOperationTests : MoqTest
       activityFactory.Object,
       threadContext.Object
     );
-    var (result, version) = await sendOperation.Send(
-      commitObject,
-      projectId,
-      modelId,
-      sourceApplication,
-      null,
-      account,
-      progress.Object,
-      ct
-    );
+    var result = await sendOperation.SendObjects(commitObject, projectId, account, progress.Object, ct);
     result.Should().Be(serializeProcessResults);
-    version.id.Should().Be(EXPECTED_ID);
   }
 }

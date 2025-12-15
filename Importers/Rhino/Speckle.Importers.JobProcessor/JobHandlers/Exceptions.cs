@@ -1,4 +1,6 @@
-﻿namespace Speckle.Importers.JobProcessor.JobHandlers;
+﻿using Speckle.Sdk.Api.GraphQL.Models;
+
+namespace Speckle.Importers.JobProcessor.JobHandlers;
 
 public sealed class MaxAttemptsExceededException : Exception
 {
@@ -19,5 +21,18 @@ public sealed class JobTimeoutException : Exception
     : base(message) { }
 
   public JobTimeoutException(string? message, Exception? innerException)
+    : base(message, innerException) { }
+}
+
+public class IngestionCancelledException : Exception
+{
+  public required ModelIngestion Ingestion { get; init; }
+
+  public IngestionCancelledException() { }
+
+  public IngestionCancelledException(string? message)
+    : base(message) { }
+
+  public IngestionCancelledException(string? message, Exception? innerException)
     : base(message, innerException) { }
 }

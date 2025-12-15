@@ -60,7 +60,15 @@ public class SendOperationManagerTests : MoqTest
     var cancellationManager = Create<ICancellationManager>();
     var cancellationItem = Create<ICancellationItem>();
     var accountService = Create<IAccountManager>();
-    accountService.Setup(x => x.GetAccount(modelCard.AccountId)).Returns(new Account());
+    accountService
+      .Setup(x => x.GetAccount(modelCard.AccountId))
+      .Returns(
+        new Account()
+        {
+          userInfo = new() { email = "test@example.com" },
+          serverInfo = new() { url = "http://example.com" }
+        }
+      );
     cancellationItem.Setup(x => x.Token).Returns(CancellationToken.None);
     cancellationItem.Setup(x => x.Dispose());
     cancellationManager.Setup(x => x.GetCancellationItem(modelCard.ModelCardId)).Returns(cancellationItem.Object);
