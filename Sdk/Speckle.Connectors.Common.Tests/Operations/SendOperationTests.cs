@@ -97,17 +97,14 @@ public class SendOperationTests : MoqTest
 
     var commitObject = new TestBase();
     var projectId = "projectId";
-    var modelId = "modelId";
     var url = new Uri("https://localhost");
     var token = "token";
-    var sourceApplication = "sourceApplication";
     var account = new Account()
     {
       userInfo = new UserInfo() { email = "test_user@example.com" },
       serverInfo = new ServerInfo() { url = url.ToString() },
       token = token
     };
-    var sendInfo = new SendInfo(account, projectId, modelId, sourceApplication);
     var progress = Create<IProgress<CardProgress>>(MockBehavior.Loose);
 
     var ct = new CancellationToken();
