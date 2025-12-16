@@ -42,7 +42,7 @@ internal sealed class RhinoJobHandler(
         projectId: job.Payload.ProjectId,
         progressMessage: "Starting Up Importer",
         sourceData: new(
-          application.Slug,
+          handlerApplication.Slug,
           application.HostApplicationVersion,
           job.Payload.FileName,
           file.FileInfo.Length
