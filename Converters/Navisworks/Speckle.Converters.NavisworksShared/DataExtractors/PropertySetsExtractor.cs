@@ -1,10 +1,14 @@
-﻿using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
+public class PropertySetsExtractor(
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  IPropertyConverter propertyConverter
+)
 {
   internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
@@ -18,6 +22,17 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
     return propertyDictionary;
   }
 
+  private static NAV.Units GetModelUnits(NAV.ModelItem modelItem)
+  {
+    NAV.ModelItem? ancestor = modelItem;
+    while (ancestor != null && !ancestor.HasModel)
+    {
+      ancestor = ancestor.Parent;
+    }
+
+    return ancestor != null ? ancestor.Model.Units : NAV.Units.Meters;
+  }
+
   /// <summary>
   /// Extracts property sets from a NAV.ModelItem and adds them to a dictionary,
   /// PropertySets are specific to the host application source appended to Navisworks and therefore
@@ -28,6 +43,9 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
   private Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
   {
     var propertySetDictionary = new Dictionary<string, object?>();
+    var modelUnits = GetModelUnits(modelItem);
+
+    propertyConverter.Reset();
 
     foreach (var propertyCategory in modelItem.PropertyCategories)
     {
@@ -40,23 +58,18 @@ public class PropertySetsExtractor(IConverterSettingsStore<NavisworksConversionS
 
       foreach (var property in propertyCategory.Properties)
       {
-        string sanitizedName = SanitizePropertyName(property.DisplayName);
-        var propertyValue = ConvertPropertyValue(property.Value, settingsStore.Current.Derived.SpeckleUnits);
-
+        var sanitizedName = SanitizePropertyName(property.DisplayName);
+        var propertyValue = propertyConverter.ConvertPropertyValue(property.Value, modelUnits, property.DisplayName);
         if (propertyValue != null)
         {
           propertySet[sanitizedName] = propertyValue;
         }
       }
 
-      if (propertySet.Count <= 0)
+      if (propertySet.Count > 0)
       {
-        continue;
+        propertySetDictionary[SanitizePropertyName(propertyCategory.DisplayName)] = propertySet;
       }
-
-      string categoryName = SanitizePropertyName(propertyCategory.DisplayName);
-
-      propertySetDictionary[categoryName] = propertySet;
     }
 
     return propertySetDictionary;

@@ -11,7 +11,8 @@ public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor,
   ClassPropertiesExtractor classPropertiesExtractor,
-  IConverterSettingsStore<NavisworksConversionSettings> settingsStore
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  IRevitBuiltInCategoryExtractor revitCategoryExtractor
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
@@ -22,7 +23,7 @@ public class HierarchicalPropertyHandler(
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem) ?? [];
 
     // Interop-lite mapping for Revit built-in categories
-    if (_mapRevit && RevitBuiltInCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
+    if (_mapRevit && revitCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
     {
       PropertyHelpers.AddPropertyIfNotNullOrEmpty(
         propertyDict,
