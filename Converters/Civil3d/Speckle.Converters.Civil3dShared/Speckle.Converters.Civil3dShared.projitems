@@ -15,6 +15,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Civil3dToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\SpeckleApplicationIdExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\Civil3DBuiltInCategoryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\CorridorDisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\CorridorHandler.cs" />
