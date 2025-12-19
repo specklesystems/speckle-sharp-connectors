@@ -7,8 +7,8 @@ namespace Speckle.Converters.Civil3dShared;
 public class Civil3dConversionSettingsFactory(IHostToSpeckleUnitConverter<AAEC.BuiltInUnit> unitsConverter)
   : ICivil3dConversionSettingsFactory
 {
-  public Civil3dConversionSettings Create(Document document) =>
-    new(document, unitsConverter.ConvertOrThrow(GetDocBuiltInUnit(document)));
+  public Civil3dConversionSettings Create(Document document, bool mappingToRevitCategories = false) =>
+    new(document, unitsConverter.ConvertOrThrow(GetDocBuiltInUnit(document)), mappingToRevitCategories);
 
   private static AAEC.BuiltInUnit GetDocBuiltInUnit(Document doc)
   {
