@@ -1,3 +1,6 @@
+using Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Converters.Common;
+
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
 /// <summary>
@@ -9,24 +12,39 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   private readonly PartDataExtractor _partDataExtractor;
   private readonly PropertySetExtractor _propertySetExtractor;
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly ICivil3DBuiltInCategoryExtractor _builtInCategoryExtractor;
+  private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public PropertiesExtractor(
     ClassPropertiesExtractor classPropertiesExtractor,
     PartDataExtractor partDataExtractor,
     PropertySetExtractor propertySetExtractor,
-    ExtensionDictionaryExtractor extensionDictionaryExtractor
+    ExtensionDictionaryExtractor extensionDictionaryExtractor,
+    ICivil3DBuiltInCategoryExtractor builtInCategoryExtractor,
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
     _classPropertiesExtractor = classPropertiesExtractor;
     _partDataExtractor = partDataExtractor;
     _propertySetExtractor = propertySetExtractor;
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _builtInCategoryExtractor = builtInCategoryExtractor;
+    _settingsStore = settingsStore;
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
   {
     // first get all class properties, which will be at the root level of props dictionary
     Dictionary<string, object?> properties = _classPropertiesExtractor.GetClassProperties(entity);
+
+    // add built-in category if setting enabled and mapping available
+    if (
+      _settingsStore.Current.MappingToRevitCategories
+      && _builtInCategoryExtractor.TryGetBuiltInCategory(entity, out string builtInCategory)
+    )
+    {
+      properties[Civil3DBuiltInCategoryExtractor.DEFAULT_DICT_KEY] = builtInCategory;
+    }
 
     // add part data, property sets, and extension dictionaries to the properties dict
     AddDictionaryToPropertyDictionary(_partDataExtractor.GetPartData(entity), "Part Data", properties);
