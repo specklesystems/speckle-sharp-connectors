@@ -14,6 +14,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\PropertySetBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\Civil3dHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Civil3dRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\RevitCategoryMappingSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManagerCivil3d.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\Civil3dSendBinding.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -21,5 +23,6 @@
     <Folder Include="$(MSBuildThisFileDirectory)HostApp\" />
     <Folder Include="$(MSBuildThisFileDirectory)Operations\Receive\" />
     <Folder Include="$(MSBuildThisFileDirectory)Operations\Send\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\" />
   </ItemGroup>
 </Project>
