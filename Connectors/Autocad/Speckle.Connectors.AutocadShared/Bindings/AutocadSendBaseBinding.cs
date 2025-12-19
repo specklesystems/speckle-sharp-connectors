@@ -125,7 +125,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   public List<ISendFilter> GetSendFilters() => _sendFilters;
 
-  public List<ICardSetting> GetSendSettings() => [];
+  public virtual List<ICardSetting> GetSendSettings() => [];
 
   public async Task Send(string modelCardId) =>
     await _threadContext.RunOnMainAsync(async () => await SendInternal(modelCardId));
