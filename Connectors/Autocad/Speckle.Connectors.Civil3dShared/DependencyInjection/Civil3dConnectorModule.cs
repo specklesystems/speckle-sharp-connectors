@@ -6,6 +6,7 @@ using Speckle.Connectors.Civil3dShared.Bindings;
 using Speckle.Connectors.Civil3dShared.HostApp;
 using Speckle.Connectors.Civil3dShared.Operations.Receive;
 using Speckle.Connectors.Civil3dShared.Operations.Send;
+using Speckle.Connectors.Civil3dShared.Operations.Send.Settings;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -23,6 +24,9 @@ public static class Civil3dConnectorModule
     serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dSendBinding>();
+
+    // send settings
+    serviceCollection.AddSingleton<ToSpeckleSettingsManagerCivil3d>();
 
     // add receive
     serviceCollection.LoadReceive();
