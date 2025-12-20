@@ -11,6 +11,9 @@ using Speckle.Converters.Autocad;
 #elif CIVIL3D
 using Speckle.Converters.Civil3dShared;
 using Speckle.Connectors.Civil3dShared.DependencyInjection;
+#elif PLANT3D
+using Speckle.Connectors.Plant3dShared.DependencyInjection;
+using Speckle.Converters.Autocad;
 #endif
 namespace Speckle.Connectors.Autocad.Plugin;
 
@@ -46,6 +49,9 @@ public class AutocadCommand
 #elif CIVIL3D
     services.AddCivil3d();
     services.AddCivil3dConverters();
+#elif PLANT3D
+    services.AddPlant3d();
+    services.AddAutocadConverters();
 #endif
     Container = services.BuildServiceProvider();
     Container.UseDUI();

@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <PropertyGroup Condition="'$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != ''">
+  <PropertyGroup Condition="'$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != '' Or '$(Plant3DVersion)' != ''">
     <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.AutoCAD.bundle</PluginBundleTarget>
     <PluginVersionContentTarget Condition="'$(AutoCADVersion)' != ''">$(PluginBundleTarget)\Contents\$(AutoCADVersion)</PluginVersionContentTarget>
     <PluginVersionContentTarget Condition="'$(Civil3DVersion)' != ''">$(PluginBundleTarget)\Contents\$(Civil3DVersion)</PluginVersionContentTarget>
+    <PluginVersionContentTarget Condition="'$(Plant3DVersion)' != ''">$(PluginBundleTarget)\Contents\$(Plant3DVersion)</PluginVersionContentTarget>
   </PropertyGroup>
 
-  <Target AfterTargets="Clean" Name="CleanAddinAutoCAD" Condition="('$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != '') And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+  <Target AfterTargets="Clean" Name="CleanAddinAutoCAD" Condition="('$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != '' Or '$(Plant3DVersion)' != '') And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
   </Target>
 
-  <Target AfterTargets="Build" Name="AfterBuildAutoCAD" Condition="('$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != '') And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
-    <Message Text="AutoCAD/Civil3D Version $(AutoCADVersion)$(Civil3DVersion)" Importance="high"/>
+  <Target AfterTargets="Build" Name="AfterBuildAutoCAD" Condition="('$(AutoCADVersion)' != '' Or '$(Civil3DVersion)' != '' Or '$(Plant3DVersion)' != '') And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <Message Text="AutoCAD/Civil3D/Plant3D Version $(AutoCADVersion)$(Civil3DVersion)$(Plant3DVersion)" Importance="high"/>
 
     <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
 
@@ -44,5 +45,10 @@
     <StartAction>Program</StartAction>
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
     <StartArguments>/product C3D</StartArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Plant3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <StartAction>Program</StartAction>
+    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Plant3DVersion)\acad.exe</StartProgram>
+    <StartArguments>/product PLT3D</StartArguments>
   </PropertyGroup>
 </Project>

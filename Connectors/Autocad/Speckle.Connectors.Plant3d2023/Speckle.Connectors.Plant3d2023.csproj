@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWpf>true</UseWpf>
+    <Plant3DVersion>2023</Plant3DVersion>
+    <DefineConstants>$(DefineConstants);PLANT3D;PLANT3D2023;PLANT3D2022_OR_GREATER;PLANT3D2023_OR_GREATER</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2023.0.0" ExcludeAssets="runtime"/>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Autocad\Speckle.Converters.Autocad2023\Speckle.Converters.Autocad2023.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+  
+  <Import Project="..\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />
+  <Import Project="..\Speckle.Connectors.Plant3dShared\Speckle.Connectors.Plant3dShared.projitems" Label="Shared" />
+</Project>
