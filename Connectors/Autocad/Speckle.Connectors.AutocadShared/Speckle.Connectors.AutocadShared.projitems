@@ -53,4 +53,9 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\s2logo16.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\PackageContents.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

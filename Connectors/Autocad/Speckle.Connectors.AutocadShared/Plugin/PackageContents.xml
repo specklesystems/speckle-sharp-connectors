@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="AutoCAD*" Name="Speckle for AutoCAD"
+                    Description="Welcome to Multiplayer BIM." AppVersion="0.1.0" FriendlyVersion="0.1.0">
+    <CompanyDetails Name="Speckle"/>
+    
+    <!-- AutoCAD 2022 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R22.0" SeriesMax="R22.0"/>
+        <ComponentEntry AppName="SpeckleAutoCAD" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2022/Speckle.Connectors.Autocad2022.dll"
+                        AppDescription="Speckle.Connector.Autocad2022"/>
+    </Components>
+    
+    <!-- AutoCAD 2023 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R23.0" SeriesMax="R23.0"/>
+        <ComponentEntry AppName="SpeckleAutoCAD" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2023/Speckle.Connectors.Autocad2023.dll"
+                        AppDescription="Speckle.Connector.Autocad2023"/>
+    </Components>
+    
+    <!-- AutoCAD 2024 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.0"/>
+        <ComponentEntry AppName="SpeckleAutoCAD" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2024/Speckle.Connectors.Autocad2024.dll"
+                        AppDescription="Speckle.Connector.Autocad2024"/>
+    </Components>
+    
+    <!-- AutoCAD 2025 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.0"/>
+        <ComponentEntry AppName="SpeckleAutoCAD" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2025/Speckle.Connectors.Autocad2025.dll"
+                        AppDescription="Speckle.Connector.Autocad2025"/>
+    </Components>
+    
+    <!-- AutoCAD 2026 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R26.0" SeriesMax="R26.0"/>
+        <ComponentEntry AppName="SpeckleAutoCAD" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2026/Speckle.Connectors.Autocad2026.dll"
+                        AppDescription="Speckle.Connector.Autocad2026"/>
+    </Components>
+    
+    <!-- Civil3D 2022 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R22.0" SeriesMax="R22.0"/>
+        <ComponentEntry AppName="SpeckleCivil3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2022/Speckle.Connectors.Civil3d2022.dll"
+                        AppDescription="Speckle.Connector.Civil3d2022"/>
+    </Components>
+    
+    <!-- Civil3D 2023 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R23.0" SeriesMax="R23.0"/>
+        <ComponentEntry AppName="SpeckleCivil3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2023/Speckle.Connectors.Civil3d2023.dll"
+                        AppDescription="Speckle.Connector.Civil3d2023"/>
+    </Components>
+    
+    <!-- Civil3D 2024 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R24.0" SeriesMax="R24.0"/>
+        <ComponentEntry AppName="SpeckleCivil3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2024/Speckle.Connectors.Civil3d2024.dll"
+                        AppDescription="Speckle.Connector.Civil3d2024"/>
+    </Components>
+    
+    <!-- Civil3D 2025 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R25.0" SeriesMax="R25.0"/>
+        <ComponentEntry AppName="SpeckleCivil3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2025/Speckle.Connectors.Civil3d2025.dll"
+                        AppDescription="Speckle.Connector.Civil3d2025"/>
+    </Components>
+    
+    <!-- Civil3D 2026 -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R26.0" SeriesMax="R26.0"/>
+        <ComponentEntry AppName="SpeckleCivil3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2026/Speckle.Connectors.Civil3d2026.dll"
+                        AppDescription="Speckle.Connector.Civil3d2026"/>
+    </Components>
+    
+    <!-- Plant3D 2022 - Currently uses AutoCAD DLL. When P&ID support is added, will need separate Plant3d2022 project and DLL -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R22.0" SeriesMax="R22.0"/>
+        <ComponentEntry AppName="SpecklePlant3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2022/Speckle.Connectors.Autocad2022.dll"
+                        AppDescription="Speckle.Connector.Plant3d2022"/>
+    </Components>
+    
+    <!-- Plant3D 2023 - Currently uses AutoCAD DLL. When P&ID support is added, will need separate Plant3d2023 project and DLL -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R23.0" SeriesMax="R23.0"/>
+        <ComponentEntry AppName="SpecklePlant3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2023/Speckle.Connectors.Autocad2023.dll"
+                        AppDescription="Speckle.Connector.Plant3d2023"/>
+    </Components>
+    
+    <!-- Plant3D 2024 - Currently uses AutoCAD DLL. When P&ID support is added, will need separate Plant3d2024 project and DLL -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.0"/>
+        <ComponentEntry AppName="SpecklePlant3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2024/Speckle.Connectors.Autocad2024.dll"
+                        AppDescription="Speckle.Connector.Plant3d2024"/>
+    </Components>
+    
+    <!-- Plant3D 2025 - Currently uses AutoCAD DLL. When P&ID support is added, will need separate Plant3d2025 project and DLL -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.0"/>
+        <ComponentEntry AppName="SpecklePlant3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2025/Speckle.Connectors.Autocad2025.dll"
+                        AppDescription="Speckle.Connector.Plant3d2025"/>
+    </Components>
+    
+    <!-- Plant3D 2026 - Currently uses AutoCAD DLL. When P&ID support is added, will need separate Plant3d2026 project and DLL -->
+    <Components>
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R26.0" SeriesMax="R26.0"/>
+        <ComponentEntry AppName="SpecklePlant3D" AppType="ManagedPlugin" Version="0.1.0"
+                        ModuleName="./Contents/2026/Speckle.Connectors.Autocad2026.dll"
+                        AppDescription="Speckle.Connector.Plant3d2026"/>
+    </Components>
+
+</ApplicationPackage>
