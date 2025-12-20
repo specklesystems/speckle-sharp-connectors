@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Converters\Autocad\Speckle.Converters.Autocad2022\Speckle.Converters.Autocad2022.csproj" />
+    <ProjectReference Include="..\..\..\Converters\Plant3d\Speckle.Converters.Plant3d2022\Speckle.Converters.Plant3d2022.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>

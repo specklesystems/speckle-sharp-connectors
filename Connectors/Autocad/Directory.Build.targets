@@ -30,8 +30,14 @@
           DestinationFolder="$(PluginBundleTarget)\"
           SkipUnchangedFiles="true"/>
 
-    <Copy SourceFiles="@(AllFiles)"
-          DestinationFiles="@(AllFiles->'$(PluginVersionContentTarget)\%(RecursiveDir)%(Filename)%(Extension)')"
+    <ItemGroup>
+      <FilesToCopy Include="@(AllFiles)">
+        <TargetPath>$([System.String]::Copy('%(RecursiveDir)').Replace('net8.0-windows\', '').Replace('net48\', '').Replace('net472\', ''))%(Filename)%(Extension)</TargetPath>
+      </FilesToCopy>
+    </ItemGroup>
+
+    <Copy SourceFiles="@(FilesToCopy)"
+          DestinationFiles="@(FilesToCopy->'$(PluginVersionContentTarget)\%(TargetPath)')"
           SkipUnchangedFiles="true"/>
 
     <Message Text="Copied build to $(PluginVersionContentTarget)" Importance="high"/>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>a2b3c4d5-e6f7-8901-2345-6789abcdef01</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converters.Plant3dShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Plant3dConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plant3dConversionSettingsFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plant3dRootToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Plant3dToSpeckleUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+  </ItemGroup>
+</Project>
+
