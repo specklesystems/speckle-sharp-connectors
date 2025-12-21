@@ -4,6 +4,7 @@ using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Sdk;
@@ -163,6 +164,13 @@ public sealed class DisplayValueExtractor
     return collections;
   }
 
+  /// <summary>
+  /// Converts sorted geometry into DisplayValueResults <see cref="ElementTopLevelConverterToSpeckle"/>.
+  /// </summary>
+  /// <remarks>
+  /// Applies localToWorld only to curves, points, polylines.
+  /// Meshes remain in symbol space to generate correct instance proxies and avoid duplicates.
+  /// </remarks>
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
     GeometryCollections collections,
@@ -307,6 +315,13 @@ public sealed class DisplayValueExtractor
       { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
     };
 
+  /// <summary>
+  /// Sorts element geometry into solids, meshes, curves, polylines, points.
+  /// </summary>
+  /// <remarks>
+  /// GeometryInstances are processed via GetSymbolGeometry() with accumulated transforms,
+  /// keeping meshes in symbol space and avoiding double transforms.
+  /// </remarks>
   private void SortGeometry(
     DB.Element element,
     GeometryCollections collections,
@@ -329,9 +344,10 @@ public sealed class DisplayValueExtractor
             continue;
           }
 
-          // apply accumulated forward transform to bring symbol geometry into document space.
           if (accumulatedTransform != null)
           {
+            // apply transform to bring solid into document/world space
+            // only apply once to avoid double-transform bugs
             solid = DB.SolidUtils.CreateTransformed(solid, accumulatedTransform);
           }
 
@@ -341,6 +357,8 @@ public sealed class DisplayValueExtractor
         case DB.Mesh mesh:
           if (accumulatedTransform != null)
           {
+            // apply accumulated transform to mesh
+            // prevents geometry from being incorrectly transformed later [Ref: CNX-2875]
             mesh = mesh.get_Transformed(accumulatedTransform);
           }
 
@@ -348,28 +366,34 @@ public sealed class DisplayValueExtractor
           break;
 
         case DB.Curve curve:
+          // curves are stored as-is; transforms are applied later in ProcessGeometryCollections
           collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
+          // polylines also handled later during display value processing
           collections.Polylines.Add(polyline);
           break;
 
         case DB.Point point:
+          // points remain in local space; transformed later if needed
           collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
+          // GeometryInstance.Transform: symbol → parent coordinate system
+          // multiply with accumulatedTransform to handle nested instances
           var instanceTransform = instance.Transform;
           var nextTransform =
             accumulatedTransform != null ? accumulatedTransform.Multiply(instanceTransform) : instanceTransform;
 
-          // always use symbol geometry, never GetInstanceGeometry() [Ref: CNX-2875].
+          // always use symbol geometry, never GetInstanceGeometry() [Ref: CNX-2875]
           SortGeometry(element, collections, instance.GetSymbolGeometry(), nextTransform);
           break;
 
         case DB.GeometryElement geometryElement:
-          // recurse without transform because this is a raw GeometryElement
+          // raw GeometryElement: it has no transform of its own
+          // pass accumulatedTransform from parent if present
           SortGeometry(element, collections, geometryElement, accumulatedTransform);
           break;
       }
