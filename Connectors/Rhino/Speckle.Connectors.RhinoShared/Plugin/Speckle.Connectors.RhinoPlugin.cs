@@ -51,8 +51,8 @@ public class SpeckleConnectorsRhinoPlugin : PlugIn
 
       // but the Rhino connector has `.rhp` as it is extension.
       Container = services.BuildServiceProvider();
-      // FORCE INITIALIZATION to register event handlers for BeginOpenDocument and EndOpenDocument
-      // this is needed when we open a Rhino file by double clicking the file,
+      // FORCE INITIALIZATION RhinoDocumentStore to register event handlers for BeginOpenDocument and EndOpenDocument
+      // this is needed when the user opens a Rhino file by double clicking the file,
       // instead of opening a file in an already running Rhino instance
       Container.GetRequiredService<DocumentModelStore>();
       Container.UseDUI();
