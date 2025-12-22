@@ -500,6 +500,26 @@ public sealed class DisplayValueExtractor
       return currentOptions;
     }
 
+    // cable trays (and fittings) are MEP system families whose geometry detail is effectively view-driven.
+    // So, we've seen that, Options.DetailLevel is ignored by get_Geometry() for these categories unless a View is
+    // explicitly supplied, and Revit will always return a medium-detail representation otherwise [Ref: CNX-2735]
+    // We force extraction through the active view here (if there is one!)
+    if (
+      elementBuiltInCategory == DB.BuiltInCategory.OST_CableTray
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_CableTrayFitting
+    )
+    {
+      try
+      {
+        return new DB.Options { View = _converterSettings.Current.Document.NotNull().ActiveView };
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // linked docs or invalid view context – fall back to non-view-specific options
+        return currentOptions;
+      }
+    }
+
     // NOTE: On steel elements. This is an incomplete solution.
     // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
     // I'm inclined to go with this as a semi-permanent limitation. See:
