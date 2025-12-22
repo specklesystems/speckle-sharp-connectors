@@ -196,35 +196,17 @@ public sealed class DisplayValueExtractor
 
     foreach (var curve in collections.Curves)
     {
-      var transformedCurve = localToWorld != null ? curve.CreateTransformed(localToWorld) : curve;
-      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     foreach (var polyline in collections.Polylines)
     {
-      if (localToWorld != null)
-      {
-        var coords = polyline.GetCoordinates().Select(p => localToWorld.OfPoint(p)).ToList();
-        using var transformedPolyline = DB.PolyLine.Create(coords);
-        displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
-      }
+      displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(polyline)));
     }
 
     foreach (var point in collections.Points)
     {
-      if (localToWorld != null)
-      {
-        using var transformedPoint = DB.Point.Create(localToWorld.OfPoint(point.Coord));
-        displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
-      }
+      displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(point)));
     }
 
     return displayValue;
@@ -366,17 +348,32 @@ public sealed class DisplayValueExtractor
           break;
 
         case DB.Curve curve:
-          // curves are stored as-is; transforms are applied later in ProcessGeometryCollections
+          if (accumulatedTransform is not null)
+          {
+            curve = curve.CreateTransformed(accumulatedTransform);
+          }
           collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
-          // polylines also handled later during display value processing
-          collections.Polylines.Add(polyline);
+          if (accumulatedTransform is not null)
+          {
+            var coords = polyline.GetCoordinates().Select(p => accumulatedTransform.OfPoint(p)).ToList();
+            using var transformedPolyline = DB.PolyLine.Create(coords);
+            collections.Polylines.Add(transformedPolyline);
+          }
+          else
+          {
+            collections.Polylines.Add(polyline);
+          }
           break;
 
         case DB.Point point:
-          // points remain in local space; transformed later if needed
+          if (accumulatedTransform is not null)
+          {
+            point = DB.Point.Create(accumulatedTransform.OfPoint(point.Coord));
+          }
+
           collections.Points.Add(point);
           break;
 
