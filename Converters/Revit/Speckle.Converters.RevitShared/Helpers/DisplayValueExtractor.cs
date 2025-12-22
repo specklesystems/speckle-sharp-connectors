@@ -4,6 +4,7 @@ using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Sdk;
@@ -164,11 +165,11 @@ public sealed class DisplayValueExtractor
   }
 
   /// <summary>
-  /// Processes collections of different geometry types and converts them to display values.
-  /// Extracted as a common method to reduce code duplication between regular geometry processing and special cases like rebar.
+  /// Converts sorted geometry into DisplayValueResults <see cref="ElementTopLevelConverterToSpeckle"/>.
   /// </summary>
   /// <remarks>
-  /// Essentially all the ensuing steps after the common get_Geometry element method
+  /// Applies localToWorld only to curves, points, polylines.
+  /// Meshes remain in symbol space to generate correct instance proxies and avoid duplicates.
   /// </remarks>
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
@@ -176,50 +177,35 @@ public sealed class DisplayValueExtractor
     DB.Transform? localToWorld
   )
   {
-    // handle all solids and meshes by their material
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
-    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
+    var displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
 
     List<DisplayValueResult> displayValue = new(collections.TotalCount);
-    Matrix4x4? matrix = localToWorld is not null ? TransformToMatrix(localToWorld) : null;
 
-    foreach (SOG.Mesh mesh in displayMeshes)
+    foreach (var mesh in displayMeshes)
     {
+      // if we have a transform, keep mesh in symbol space and attach transform
       displayValue.Add(
-        matrix.HasValue
-          ? DisplayValueResult.WithTransform(mesh, matrix.Value)
+        localToWorld != null
+          ? DisplayValueResult.WithTransform(mesh, TransformToMatrix(localToWorld))
           : DisplayValueResult.WithoutTransform(mesh)
       );
     }
 
-    // transform curves, polylines, and points to world coordinates before conversion.
-    // Unlike meshes/solids which are proxified with transform matrices, these geometry
-    // types must have their final world coordinates baked directly into their geometry.
     foreach (var curve in collections.Curves)
     {
-      if (localToWorld is not null)
-      {
-        using var transformedCurve = curve.CreateTransformed(localToWorld);
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
-      }
+      var transformedCurve = localToWorld != null ? curve.CreateTransformed(localToWorld) : curve;
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
     }
 
-    // Note: Creating new polyline/point instances for transformation isn't ideal for perf,
-    // but Revit API doesn't provide in-place transform methods. Trade-off is acceptable since
-    // family instances typically don't have massive numbers of raw polylines/points in their geometry.
     foreach (var polyline in collections.Polylines)
     {
-      if (localToWorld is not null)
+      if (localToWorld != null)
       {
-        var coords = polyline.GetCoordinates();
-        var transformedCoords = coords.Select(coord => localToWorld.OfPoint(coord)).ToList();
-        using var transformedPolyline = DB.PolyLine.Create(transformedCoords);
+        var coords = polyline.GetCoordinates().Select(p => localToWorld.OfPoint(p)).ToList();
+        using var transformedPolyline = DB.PolyLine.Create(coords);
         displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
       }
       else
@@ -230,7 +216,7 @@ public sealed class DisplayValueExtractor
 
     foreach (var point in collections.Points)
     {
-      if (localToWorld is not null)
+      if (localToWorld != null)
       {
         using var transformedPoint = DB.Point.Create(localToWorld.OfPoint(point.Coord));
         displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
@@ -330,23 +316,17 @@ public sealed class DisplayValueExtractor
     };
 
   /// <summary>
-  /// According to the remarks on the GeometryInstance class in the RevitAPIDocs,
-  /// https://www.revitapidocs.com/2024/fe25b14f-5866-ca0f-a660-c157484c3a56.htm,
-  /// a family instance geometryElement should have a top-level geometry instance when the symbol
-  /// does not have modified geometry (the docs say that modified geometry will not have a geom instance,
-  /// however in my experience, all family instances have a top-level geom instance, but if the family instance
-  /// is modified, then the geom instance won't contain any geometry.)
-  ///
-  /// This remark also leads me to think that a family instance will not have top-level solids and geom instances.
-  /// We are logging cases where this is not true.
-  ///
-  /// Note: this is basically a geometry unpacker for all types of geometry
+  /// Sorts element geometry into solids, meshes, curves, polylines, points.
   /// </summary>
+  /// <remarks>
+  /// GeometryInstances are processed via GetSymbolGeometry() with accumulated transforms,
+  /// keeping meshes in symbol space and avoiding double transforms.
+  /// </remarks>
   private void SortGeometry(
     DB.Element element,
     GeometryCollections collections,
     DB.GeometryElement geom,
-    DB.Transform? worldToLocal
+    DB.Transform? accumulatedTransform
   )
   {
     foreach (DB.GeometryObject geomObj in geom)
@@ -359,56 +339,62 @@ public sealed class DisplayValueExtractor
       switch (geomObj)
       {
         case DB.Solid solid:
-          // skip invalid solid
           if (solid.Faces.Size == 0)
           {
             continue;
           }
 
-          if (worldToLocal is not null)
+          if (accumulatedTransform != null)
           {
-            solid = DB.SolidUtils.CreateTransformed(solid, worldToLocal);
+            // apply transform to bring solid into document/world space
+            // only apply once to avoid double-transform bugs
+            solid = DB.SolidUtils.CreateTransformed(solid, accumulatedTransform);
           }
+
           collections.Solids.Add(solid);
           break;
 
         case DB.Mesh mesh:
-          if (worldToLocal is not null)
+          if (accumulatedTransform != null)
           {
-            mesh = mesh.get_Transformed(worldToLocal);
+            // apply accumulated transform to mesh
+            // prevents geometry from being incorrectly transformed later [Ref: CNX-2875]
+            mesh = mesh.get_Transformed(accumulatedTransform);
           }
+
           collections.Meshes.Add(mesh);
           break;
 
-        // curves, polylines, and points are transformed to world space in ProcessGeometryCollections,
-        // not here, because they cannot be proxified like meshes.
         case DB.Curve curve:
+          // curves are stored as-is; transforms are applied later in ProcessGeometryCollections
           collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
+          // polylines also handled later during display value processing
           collections.Polylines.Add(polyline);
           break;
 
         case DB.Point point:
+          // points remain in local space; transformed later if needed
           collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
-          // element transforms should not be carried down into nested geometryInstances.
-          // Nested geomInstances should have their geom retrieved with GetInstanceGeom, not GetSymbolGeom
-          if (worldToLocal == null) //see remark on method for why this is safe to do...
-          {
-            SortGeometry(element, collections, instance.GetInstanceGeometry(), null);
-          }
-          else
-          {
-            SortGeometry(element, collections, instance.GetSymbolGeometry(), null);
-          }
+          // GeometryInstance.Transform: symbol → parent coordinate system
+          // multiply with accumulatedTransform to handle nested instances
+          var instanceTransform = instance.Transform;
+          var nextTransform =
+            accumulatedTransform != null ? accumulatedTransform.Multiply(instanceTransform) : instanceTransform;
+
+          // always use symbol geometry, never GetInstanceGeometry() [Ref: CNX-2875]
+          SortGeometry(element, collections, instance.GetSymbolGeometry(), nextTransform);
           break;
 
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, collections, geometryElement, null);
+          // raw GeometryElement: it has no transform of its own
+          // pass accumulatedTransform from parent if present
+          SortGeometry(element, collections, geometryElement, accumulatedTransform);
           break;
       }
     }
