@@ -567,6 +567,8 @@ public sealed class DisplayValueExtractor
   /// </summary>
   /// <remarks>
   /// This method extracts the centerlines of rebar elements when a simplified representation is preferred.
+  /// GetTransformedCenterlineCurves already returns curves in document coordinates. Applying any additional transform
+  /// here will result in double transforms, especially for linked models.
   /// </remarks>
   private List<DisplayValueResult> GetRebarCenterlineDisplayValue(DB.Structure.Rebar rebar)
   {
@@ -596,20 +598,12 @@ public sealed class DisplayValueExtractor
         )
       );
     }
-    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
 
     List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      if (documentToWorld is not null)
-      {
-        using var transformedCurve = curve.CreateTransformed(documentToWorld);
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
-      }
+      // see remarks above method for explanation
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     return displayValue;
