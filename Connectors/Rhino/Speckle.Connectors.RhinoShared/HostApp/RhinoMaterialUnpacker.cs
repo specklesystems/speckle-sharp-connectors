@@ -1,6 +1,8 @@
+using System.IO;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.FileIO;
 using Rhino.Render;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
@@ -225,7 +227,7 @@ public class RhinoMaterialUnpacker
     if (roughness < 0 || roughness > 1)
     {
       _logger.LogWarning("Material '{Name}' has invalid roughness value of {Value}", renderMaterial.Name, roughness);
-      roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from C# 8.0
+      roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from .NET 8.0
     }
 
     SpeckleRenderMaterial speckleRenderMaterial =
@@ -237,14 +239,50 @@ public class RhinoMaterialUnpacker
         roughness = roughness,
         diffuse = diffuse.ToArgb(),
         emissive = emissive.ToArgb(),
-        applicationId = renderMaterial.Id.ToString()
+        applicationId = renderMaterial.Id.ToString(),
+        ["diffuseTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_BaseColor),
+        ["metallicTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Metallic),
+        ["specularTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Specular),
+        ["shineTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Sheen),
+        ["roughnessTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Roughness),
+        ["opacityTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.Opacity),
+        ["bumpTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.Bump),
+        ["emissionTexture"] = GetEncodedTexture(pbRenderMaterial, TextureType.PBR_Emission),
+        ["typeName"] = renderMaterial.TypeName,
+        ["ior"] = pbRenderMaterial.ReflectiveIOR,
+        ["shine"] = pbRenderMaterial.Material.Shine,
+        ["specular"] = pbRenderMaterial.Specular
       };
 
-    // add additional dynamic props for rhino material receive
-    speckleRenderMaterial["typeName"] = renderMaterial.TypeName;
-    speckleRenderMaterial["ior"] = pbRenderMaterial.Material.IndexOfRefraction;
-    speckleRenderMaterial["shine"] = pbRenderMaterial.Material.Shine;
-
     return speckleRenderMaterial;
+  }
+
+  private static string? GetEncodedTexture(PhysicallyBasedMaterial pbRenderMaterial, TextureType kind)
+  {
+    using Texture? texture = pbRenderMaterial.GetTexture(kind);
+
+    using FileReference? file = texture?.FileReference;
+    if (file is null)
+    {
+      return null;
+    }
+
+    FileInfo filePath = new(file.FullPath);
+    if (!filePath.Exists)
+    {
+      // The texture does not exist as a file on disk, but is instead embedded int he .3dm file
+      // Rhino API will show a virtual (X drive) path
+      // Using `Find` with `createFile: true` will copy the file to disk
+      string fileName = filePath.Name;
+      using var _ = RhinoDoc.ActiveDoc.Bitmaps.Find(fileName, true, out string newFilePath);
+      filePath = new(newFilePath);
+      if (!filePath.Exists)
+      {
+        return null;
+      }
+    }
+
+    byte[] bytes = File.ReadAllBytes(filePath.FullName);
+    return Convert.ToBase64String(bytes);
   }
 }
