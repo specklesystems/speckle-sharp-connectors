@@ -99,7 +99,7 @@ public class ClassPropertiesExtractor
         {
           elementProperties.Add("fromRoomId", familyInstance.FromRoom.Id.ToString());
         }
-        
+
         // get parent element id for FamilyInstance elements with that property (e.g. Nested Families)
         if (familyInstance.SuperComponent is not null)
         {
