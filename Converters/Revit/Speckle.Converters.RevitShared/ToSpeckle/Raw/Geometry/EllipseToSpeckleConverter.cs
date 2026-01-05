@@ -9,40 +9,40 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly ITypedConverter<DB.Plane, SOG.Plane> _planeConverter;
+  private readonly ITypedConverter<
+    (DB.XYZ origin, DB.XYZ xDir, DB.XYZ yDir, DB.XYZ normal),
+    SOG.Plane
+  > _curveOriginToPlaneConverter;
   private readonly ScalingServiceToSpeckle _scalingService;
 
   public EllipseToSpeckleConverter(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITypedConverter<DB.Plane, SOG.Plane> planeConverter,
+    ITypedConverter<(DB.XYZ origin, DB.XYZ xDir, DB.XYZ yDir, DB.XYZ normal), SOG.Plane> curveOriginToPlaneConverter,
     ScalingServiceToSpeckle scalingService
   )
   {
     _converterSettings = converterSettings;
-    _planeConverter = planeConverter;
+    _curveOriginToPlaneConverter = curveOriginToPlaneConverter;
     _scalingService = scalingService;
   }
 
   public SOG.Ellipse Convert(DB.Ellipse target)
   {
-    using (DB.Plane basePlane = DB.Plane.CreateByOriginAndBasis(target.Center, target.XDirection, target.YDirection))
-    {
-      var trim = target.IsBound
-        ? new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) }
-        : null;
+    var trim = target.IsBound
+      ? new Interval { start = target.GetEndParameter(0), end = target.GetEndParameter(1) }
+      : null;
 
-      return new SOG.Ellipse()
-      {
-        plane = _planeConverter.Convert(basePlane),
-        // POC: scale length correct? seems right?
-        firstRadius = _scalingService.ScaleLength(target.RadiusX),
-        secondRadius = _scalingService.ScaleLength(target.RadiusY),
-        // POC: original EllipseToSpeckle() method was setting this twice
-        domain = Interval.UnitInterval,
-        trimDomain = trim,
-        length = _scalingService.ScaleLength(target.Length),
-        units = _converterSettings.Current.SpeckleUnits
-      };
-    }
+    return new SOG.Ellipse()
+    {
+      plane = _curveOriginToPlaneConverter.Convert(
+        (target.Center, target.XDirection, target.YDirection, target.Normal)
+      ),
+      firstRadius = _scalingService.ScaleLength(target.RadiusX),
+      secondRadius = _scalingService.ScaleLength(target.RadiusY),
+      domain = Interval.UnitInterval,
+      trimDomain = trim,
+      length = _scalingService.ScaleLength(target.Length),
+      units = _converterSettings.Current.SpeckleUnits
+    };
   }
 }
