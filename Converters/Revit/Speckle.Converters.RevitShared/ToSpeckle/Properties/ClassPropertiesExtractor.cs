@@ -80,30 +80,30 @@ public class ClassPropertiesExtractor
         // get room id if applicable (only for FamilyInstance elements)
         if (familyInstance.Room is not null)
         {
-          elementProperties.Add("roomId", familyInstance.Room.Id.ToString());
+          elementProperties.Add("roomApplicationId", familyInstance.Room.UniqueId.ToString());
         }
 
         // get space id if applicable (only for FamilyInstance elements)
         if (familyInstance.Space is not null)
         {
-          elementProperties.Add("spaceId", familyInstance.Space.Id.ToString());
+          elementProperties.Add("spaceApplicationId", familyInstance.Space.UniqueId.ToString());
         }
 
         // get toRoom and fromRoom for FamilyInstance elements with those properties (e.g. Doors)
         if (familyInstance.ToRoom is not null)
         {
-          elementProperties.Add("toRoomId", familyInstance.ToRoom.Id.ToString());
+          elementProperties.Add("toRoomApplicationId", familyInstance.ToRoom.UniqueId.ToString());
         }
 
         if (familyInstance.FromRoom is not null)
         {
-          elementProperties.Add("fromRoomId", familyInstance.FromRoom.Id.ToString());
+          elementProperties.Add("fromRoomApplicationId", familyInstance.FromRoom.UniqueId.ToString());
         }
 
         // get parent element id for FamilyInstance elements with that property (e.g. Nested Families)
         if (familyInstance.SuperComponent is not null)
         {
-          elementProperties.Add("parentId", familyInstance.SuperComponent.Id.ToString());
+          elementProperties.Add("parentApplicationId", familyInstance.SuperComponent.UniqueId.ToString());
         }
       }
       catch (Exception e) when (!e.IsFatal())
