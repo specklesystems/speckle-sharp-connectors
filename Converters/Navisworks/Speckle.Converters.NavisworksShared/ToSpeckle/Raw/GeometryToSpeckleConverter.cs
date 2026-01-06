@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Extensions;
 using Speckle.Converter.Navisworks.Geometry;
@@ -85,18 +85,23 @@ public class GeometryToSpeckleConverter
 
   private static void CollectFragments(InwOaPath path, Stack<InwOaFragment3> fragmentStack)
   {
-    var fragments = path.Fragments();
-    foreach (var fragment in fragments.OfType<InwOaFragment3>())
+    if (path.ArrayData is not Array identityPath)
     {
-      if (fragment.path?.ArrayData is not Array pathData1 || path.ArrayData is not Array pathData2)
+      return;
+    }
+
+    var identityPathArray = identityPath.ToArray<int>();
+    int identityLength = identityPathArray.Length;
+
+    foreach (var fragment in path.Fragments().OfType<InwOaFragment3>())
+    {
+      if (fragment.path?.ArrayData is not Array fragmentPath || fragmentPath.Length != identityLength)
       {
         continue;
       }
 
-      var pathArray1 = pathData1.ToArray<int>();
-      var pathArray2 = pathData2.ToArray<int>();
-
-      if (pathArray1.Length == pathArray2.Length && pathArray1.SequenceEqual(pathArray2))
+      var fragmentPathArray = fragmentPath.ToArray<int>();
+      if (identityPathArray.SequenceEqual(fragmentPathArray))
       {
         fragmentStack.Push(fragment);
       }
