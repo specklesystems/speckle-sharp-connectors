@@ -91,17 +91,11 @@ public class GeometryToSpeckleConverter
     }
 
     var identityPathArray = identityPath.ToArray<int>();
-    int identityLength = identityPathArray.Length;
+    int identityLength = identityPathArray.Length; // ← Cache once
 
     foreach (var fragment in path.Fragments().OfType<InwOaFragment3>())
     {
-      if (fragment.path?.ArrayData is not Array fragmentPath || fragmentPath.Length != identityLength)
-      {
-        continue;
-      }
-
-      var fragmentPathArray = fragmentPath.ToArray<int>();
-      if (identityPathArray.SequenceEqual(fragmentPathArray))
+      if (ValidateFragmentPath(fragment, identityPathArray, identityLength))
       {
         fragmentStack.Push(fragment);
       }
@@ -111,46 +105,41 @@ public class GeometryToSpeckleConverter
   private List<Base> ProcessFragments(Stack<InwOaFragment3> fragmentStack, InwSelectionPathsColl paths)
   {
     var callbackListeners = new List<PrimitiveProcessor>();
-
     foreach (InwOaPath path in paths)
     {
-      var processor = new PrimitiveProcessor(_isUpright);
+      if (path.ArrayData is not Array pathData)
+      {
+        continue; // Skip paths without valid array data
+      }
 
+      var pathArray = pathData.ToArray<int>(); // ← Convert once per path
+      int pathLength = pathArray.Length; // ← Cache length once per path
+
+      var processor = new PrimitiveProcessor(_isUpright);
       foreach (var fragment in fragmentStack)
       {
-        if (!ValidateFragmentPath(fragment, path))
+        if (!ValidateFragmentPath(fragment, pathArray, pathLength)) // ← Use cached values
         {
           continue;
         }
-
         var matrix = fragment.GetLocalToWorldMatrix();
         var transform = matrix as InwLTransform3f3;
         if (transform?.Matrix is not Array matrixArray)
         {
           continue;
         }
-
         processor.LocalToWorldTransformation = ConvertArrayToDouble(matrixArray);
         fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
       }
-
       callbackListeners.Add(processor);
     }
-
     var baseGeometries = ProcessGeometries(callbackListeners);
-
     return baseGeometries;
   }
 
-  private static bool ValidateFragmentPath(InwOaFragment3 fragment, InwOaPath path)
-  {
-    if (fragment.path?.ArrayData is not Array fragmentPathData || path.ArrayData is not Array pathData)
-    {
-      return false;
-    }
-
-    return IsSameFragmentPath(fragmentPathData, pathData);
-  }
+  private static bool ValidateFragmentPath(InwOaFragment3 fragment, int[] identityPath, int identityLength) =>
+    fragment.path?.ArrayData is Array fragmentPathData
+    && IsSameFragmentPath(identityPath, identityLength, fragmentPathData);
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
@@ -164,11 +153,13 @@ public class GeometryToSpeckleConverter
         baseGeometries.Add(mesh);
       }
 
-      if (processor.Lines.Count > 0)
+      if (processor.Lines.Count <= 0)
       {
-        var lines = CreateLines(processor.Lines);
-        baseGeometries.AddRange(lines);
+        continue;
       }
+
+      var lines = CreateLines(processor.Lines);
+      baseGeometries.AddRange(lines);
     }
 
     return baseGeometries;
@@ -229,7 +220,7 @@ public class GeometryToSpeckleConverter
       }
     ).ToList();
 
-  private static double[]? ConvertArrayToDouble(Array arr)
+  private static double[] ConvertArrayToDouble(Array arr)
   {
     if (arr.Rank != 1)
     {
@@ -245,6 +236,14 @@ public class GeometryToSpeckleConverter
     return doubleArray;
   }
 
-  private static bool IsSameFragmentPath(Array a1, Array a2) =>
-    a1.Length == a2.Length && a1.Cast<int>().SequenceEqual(a2.Cast<int>());
+  private static bool IsSameFragmentPath(int[] identityPath, int identityLength, Array fragmentPath)
+  {
+    if (identityLength != fragmentPath.Length)
+    {
+      return false;
+    }
+
+    var fragmentPathArray = fragmentPath.ToArray<int>();
+    return identityPath.SequenceEqual(fragmentPathArray);
+  }
 }
