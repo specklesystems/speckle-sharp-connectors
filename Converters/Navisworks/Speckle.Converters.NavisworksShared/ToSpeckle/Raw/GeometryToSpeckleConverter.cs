@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Extensions;
 using Speckle.Converter.Navisworks.Geometry;
@@ -21,19 +21,13 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 /// 3. Process each InwOaFragment3 to generate primitives
 /// 4. Convert those primitives to Speckle geometry with appropriate transforms
 /// </summary>
-public class GeometryToSpeckleConverter
+public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
 {
-  private readonly NavisworksConversionSettings _settings;
-  private readonly bool _isUpright;
-  private readonly SafeVector _transformVector;
+  private readonly NavisworksConversionSettings _settings =
+    settings ?? throw new ArgumentNullException(nameof(settings));
+  private readonly bool _isUpright = settings.Derived.IsUpright;
+  private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0; // Default scale factor
-
-  public GeometryToSpeckleConverter(NavisworksConversionSettings settings)
-  {
-    _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-    _isUpright = settings.Derived.IsUpright;
-    _transformVector = settings.Derived.TransformVector;
-  }
 
   /// <summary>
   /// Converts a ModelItem's geometry to Speckle display geometry by accessing the underlying COM objects.
@@ -58,7 +52,7 @@ public class GeometryToSpeckleConverter
       var paths = comSelection.Paths();
       try
       {
-        // Populate fragment stack with all fragments
+        // Populate the fragment stack with all fragments
         foreach (InwOaPath path in paths)
         {
           CollectFragments(path, fragmentStack);
@@ -83,6 +77,13 @@ public class GeometryToSpeckleConverter
     }
   }
 
+  /// <summary>
+  /// This collects fragments for the object path. The `path.Fragments()` call from the path also matches
+  /// to effective duplicates of the geometry used for this object and therefore the paths of the other
+  /// instances of this object.
+  /// </summary>
+  /// <param name="path"></param>
+  /// <param name="fragmentStack"></param>
   private static void CollectFragments(InwOaPath path, Stack<InwOaFragment3> fragmentStack)
   {
     if (path.ArrayData is not Array identityPath)
