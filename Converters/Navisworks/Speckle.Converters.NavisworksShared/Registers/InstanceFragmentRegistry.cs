@@ -1,12 +1,39 @@
-﻿using Speckle.Converter.Navisworks.Paths;
+﻿using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Paths;
 
 namespace Speckle.Converter.Navisworks.Constants.Registers;
+
+public interface IInstanceFragmentRegistry
+{
+  bool TryGetGroup(PathKey instancePath, out PathKey groupKey);
+  void RegisterGroup(PathKey groupKey, HashSet<PathKey> instancePaths);
+  void MarkConverted(PathKey instancePath);
+
+  IEnumerable<PathKey> GetConvertedPaths();
+  Dictionary<PathKey, List<PathKey>> BuildGroupToConvertedPaths();
+
+  bool TryGetDefinitionWorld(PathKey groupKey, out double[] definitionWorld);
+  void EnsureDefinitionWorld(PathKey groupKey, double[] definitionWorld);
+
+  bool TryGetInstanceWorld(PathKey instancePath, out double[] instanceWorld);
+  void SetInstanceWorld(PathKey instancePath, double[] instanceWorld);
+
+  void RegisterInstanceObservation(
+    PathKey groupKey,
+    PathKey instancePath,
+    double[] instanceWorld,
+    PrimitiveProcessor processor
+  );
+}
 
 public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
 {
   private readonly Dictionary<PathKey, PathKey> _pathToGroup = new(PathKey.Comparer);
-
   private readonly HashSet<PathKey> _converted = new(PathKey.Comparer);
+
+  private readonly Dictionary<PathKey, double[]> _groupToDefinitionWorld = new(PathKey.Comparer);
+  private readonly Dictionary<PathKey, double[]> _pathToInstanceWorld = new(PathKey.Comparer);
+  private readonly Dictionary<PathKey, Aabb> _groupSignature = new(PathKey.Comparer);
 
   public bool TryGetGroup(PathKey instancePath, out PathKey groupKey) =>
     _pathToGroup.TryGetValue(instancePath, out groupKey);
@@ -45,14 +72,54 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
 
     return map;
   }
-}
 
-public interface IInstanceFragmentRegistry
-{
-  bool TryGetGroup(PathKey instancePath, out PathKey groupKey);
-  void RegisterGroup(PathKey groupKey, HashSet<PathKey> instancePaths);
-  void MarkConverted(PathKey instancePath);
+  public bool TryGetDefinitionWorld(PathKey groupKey, out double[] definitionWorld) =>
+    _groupToDefinitionWorld.TryGetValue(groupKey, out definitionWorld);
 
-  IEnumerable<PathKey> GetConvertedPaths();
-  Dictionary<PathKey, List<PathKey>> BuildGroupToConvertedPaths();
+  public void EnsureDefinitionWorld(PathKey groupKey, double[] definitionWorld)
+  {
+    if (!_groupToDefinitionWorld.ContainsKey(groupKey))
+    {
+      _groupToDefinitionWorld[groupKey] = definitionWorld;
+    }
+  }
+
+  public bool TryGetInstanceWorld(PathKey instancePath, out double[] instanceWorld) =>
+    _pathToInstanceWorld.TryGetValue(instancePath, out instanceWorld);
+
+  public void SetInstanceWorld(PathKey instancePath, double[] instanceWorld) =>
+    _pathToInstanceWorld[instancePath] = instanceWorld;
+
+  public void RegisterInstanceObservation(
+    PathKey groupKey,
+    PathKey instancePath,
+    double[]? instanceWorld,
+    PrimitiveProcessor processor
+  )
+  {
+    if (instanceWorld == null || instanceWorld.Length != 16)
+    {
+      return;
+    }
+
+    _pathToInstanceWorld[instancePath] = instanceWorld;
+
+    var inv = GeometryHelpers.InvertRigid(instanceWorld);
+    var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
+
+    if (!_groupSignature.TryGetValue(groupKey, out var firstSig))
+    {
+      _groupSignature[groupKey] = sig;
+      _groupToDefinitionWorld[groupKey] = instanceWorld;
+      return;
+    }
+
+#if DEBUG
+    const double EPS = 1e-6;
+    if (!GeometryHelpers.NearlyEqual(firstSig, sig, EPS))
+    {
+      System.Diagnostics.Debug.Fail("Instance signature mismatch for group; unbaked AABB differs.");
+    }
+#endif
+  }
 }
