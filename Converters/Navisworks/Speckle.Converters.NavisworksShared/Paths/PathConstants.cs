@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converter.Navisworks.Constants;
+﻿namespace Speckle.Converter.Navisworks.Paths;
 
 public static class PathConstants
 {
