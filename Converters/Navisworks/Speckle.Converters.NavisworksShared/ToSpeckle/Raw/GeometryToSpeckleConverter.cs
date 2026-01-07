@@ -73,8 +73,15 @@ public sealed class GeometryToSpeckleConverter(
           }
 
           var processor = new PrimitiveProcessor(_isUpright);
-          ProcessPathFragments(path, itemPathKey, processor); // only current instance
+          var instanceWorld = ProcessPathFragments(path, itemPathKey, processor);
           processors.Add(processor);
+          ProcessPathFragments(path, itemPathKey, processor); // only current instance
+
+          if (instanceWorld != null)
+          {
+            _registry.SetInstanceWorld(itemPathKey, instanceWorld);
+            _registry.EnsureDefinitionWorld(groupKey, instanceWorld);
+          }
 
           _registry.MarkConverted(itemPathKey); // optional for later
         }
@@ -115,12 +122,9 @@ public sealed class GeometryToSpeckleConverter(
     return set;
   }
 
-  private static void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PrimitiveProcessor processor)
+  private static double[]? ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PrimitiveProcessor processor)
   {
-    bool captured = false;
-#pragma warning disable IDE0059
     double[]? instanceWorld = null;
-#pragma warning restore IDE0059
 
     foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
@@ -145,16 +149,13 @@ public sealed class GeometryToSpeckleConverter(
         continue;
       }
 
-      if (!captured)
-      {
-        // ReSharper disable once RedundantAssignment
-        instanceWorld = ConvertArrayToDouble(matrixArray);
-        captured = true;
-        // breakpoint here
-      }
+      instanceWorld ??= ConvertArrayToDouble(matrixArray);
+
       processor.LocalToWorldTransformation = ConvertArrayToDouble(matrixArray);
       fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
     }
+
+    return instanceWorld;
   }
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
