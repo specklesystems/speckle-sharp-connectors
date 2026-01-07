@@ -1,4 +1,4 @@
-﻿using Speckle.Converter.Navisworks.Constants;
+﻿using Speckle.Converter.Navisworks.Paths;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 

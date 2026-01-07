@@ -1,8 +1,9 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
-using Speckle.Converter.Navisworks.Extensions;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Paths;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
@@ -21,18 +22,18 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 /// 3. Process each InwOaFragment3 to generate primitives
 /// 4. Convert those primitives to Speckle geometry with appropriate transforms
 /// </summary>
-public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
+public sealed class GeometryToSpeckleConverter(
+  NavisworksConversionSettings settings,
+  IInstanceFragmentRegistry registry
+)
 {
   private readonly NavisworksConversionSettings _settings =
     settings ?? throw new ArgumentNullException(nameof(settings));
+  private readonly IInstanceFragmentRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
-  private const double SCALE = 1.0; // Default scale factor
+  private const double SCALE = 1.0;
 
-  /// <summary>
-  /// Converts a ModelItem's geometry to Speckle display geometry by accessing the underlying COM objects.
-  /// Applies necessary transformations and unit scaling.
-  /// </summary>
   internal List<Base> Convert(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
@@ -45,20 +46,40 @@ public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
       return [];
     }
 
-    var comSelection = ComApiBridge.ToInwOpSelection([modelItem]);
+    var comSelection = ComApiBridge.ToInwOpSelection(new() { modelItem });
     try
     {
-      var fragmentStack = new Stack<InwOaFragment3>();
       var paths = comSelection.Paths();
       try
       {
-        // Populate the fragment stack with all fragments
+        var processors = new List<PrimitiveProcessor>();
+
         foreach (InwOaPath path in paths)
         {
-          CollectFragments(path, fragmentStack);
+          if (path.ArrayData is not Array pathArr)
+          {
+            continue;
+          }
+
+          var itemPathKey = PathKey.FromComArray(pathArr);
+
+          // discovery: populate registry for this group if first time
+          if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
+          {
+            var members = DiscoverInstancePathsFromFragments(path);
+            members.Add(itemPathKey); // defensive
+            groupKey = itemPathKey; // first seen
+            _registry.RegisterGroup(groupKey, members);
+          }
+
+          var processor = new PrimitiveProcessor(_isUpright);
+          ProcessPathFragments(path, itemPathKey, processor); // only current instance
+          processors.Add(processor);
+
+          _registry.MarkConverted(itemPathKey); // optional for later
         }
 
-        return ProcessFragments(fragmentStack, paths);
+        return ProcessGeometries(processors);
       }
       finally
       {
@@ -77,70 +98,64 @@ public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
     }
   }
 
-  /// <summary>
-  /// This collects fragments for the object path. The `path.Fragments()` call from the path also matches
-  /// to effective duplicates of the geometry used for this object and therefore the paths of the other
-  /// instances of this object.
-  /// </summary>
-  /// <param name="path"></param>
-  /// <param name="fragmentStack"></param>
-  private static void CollectFragments(InwOaPath path, Stack<InwOaFragment3> fragmentStack)
+  private static HashSet<PathKey> DiscoverInstancePathsFromFragments(InwOaPath path)
   {
-    if (path.ArrayData is not Array identityPath)
-    {
-      return;
-    }
+    var set = new HashSet<PathKey>(PathKey.Comparer);
 
-    var identityPathArray = identityPath.ToArray<int>();
-    int identityLength = identityPathArray.Length; // ← Cache once
-
-    foreach (var fragment in path.Fragments().OfType<InwOaFragment3>())
+    foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
-      if (ValidateFragmentPath(fragment, identityPathArray, identityLength))
+      if (fragment.path?.ArrayData is not Array fragPathArr)
       {
-        fragmentStack.Push(fragment);
+        continue;
       }
+
+      set.Add(PathKey.FromComArray(fragPathArr));
     }
+
+    return set;
   }
 
-  private List<Base> ProcessFragments(Stack<InwOaFragment3> fragmentStack, InwSelectionPathsColl paths)
+  private static void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PrimitiveProcessor processor)
   {
-    var callbackListeners = new List<PrimitiveProcessor>();
-    foreach (InwOaPath path in paths)
+    bool captured = false;
+#pragma warning disable IDE0059
+    double[]? instanceWorld = null;
+#pragma warning restore IDE0059
+
+    foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
-      if (path.ArrayData is not Array pathData)
+      if (fragment.path?.ArrayData is not Array fragPathArr)
       {
-        continue; // Skip paths without valid array data
+        continue;
       }
 
-      var pathArray = pathData.ToArray<int>(); // ← Convert once per path
-      int pathLength = pathArray.Length; // ← Cache length once per path
-
-      var processor = new PrimitiveProcessor(_isUpright);
-      foreach (var fragment in fragmentStack)
+      if (!itemPathKey.MatchesComArray(fragPathArr))
       {
-        if (!ValidateFragmentPath(fragment, pathArray, pathLength)) // ← Use cached values
-        {
-          continue;
-        }
-        var matrix = fragment.GetLocalToWorldMatrix();
-        var transform = matrix as InwLTransform3f3;
-        if (transform?.Matrix is not Array matrixArray)
-        {
-          continue;
-        }
-        processor.LocalToWorldTransformation = ConvertArrayToDouble(matrixArray);
-        fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
+        continue;
       }
-      callbackListeners.Add(processor);
+
+      var matrix = fragment.GetLocalToWorldMatrix();
+      if (matrix is not InwLTransform3f3 transform)
+      {
+        continue;
+      }
+
+      if (transform.Matrix is not Array matrixArray)
+      {
+        continue;
+      }
+
+      if (!captured)
+      {
+        // ReSharper disable once RedundantAssignment
+        instanceWorld = ConvertArrayToDouble(matrixArray);
+        captured = true;
+        // breakpoint here
+      }
+      processor.LocalToWorldTransformation = ConvertArrayToDouble(matrixArray);
+      fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
     }
-    var baseGeometries = ProcessGeometries(callbackListeners);
-    return baseGeometries;
   }
-
-  private static bool ValidateFragmentPath(InwOaFragment3 fragment, int[] identityPath, int identityLength) =>
-    fragment.path?.ArrayData is Array fragmentPathData
-    && IsSameFragmentPath(identityPath, identityLength, fragmentPathData);
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
@@ -166,6 +181,7 @@ public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
     return baseGeometries;
   }
 
+  // ProcessGeometries, CreateMesh, CreateLines, ConvertArrayToDouble remain as-is
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
     var vertices = new List<double>();
@@ -235,16 +251,5 @@ public class GeometryToSpeckleConverter(NavisworksConversionSettings settings)
     }
 
     return doubleArray;
-  }
-
-  private static bool IsSameFragmentPath(int[] identityPath, int identityLength, Array fragmentPath)
-  {
-    if (identityLength != fragmentPath.Length)
-    {
-      return false;
-    }
-
-    var fragmentPathArray = fragmentPath.ToArray<int>();
-    return identityPath.SequenceEqual(fragmentPathArray);
   }
 }

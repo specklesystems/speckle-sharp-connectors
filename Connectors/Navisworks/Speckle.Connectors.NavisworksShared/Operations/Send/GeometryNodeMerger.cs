@@ -1,5 +1,5 @@
 ﻿using Speckle.Connector.Navisworks.Services;
-using Speckle.Converter.Navisworks.Constants;
+using Speckle.Converter.Navisworks.Paths;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
