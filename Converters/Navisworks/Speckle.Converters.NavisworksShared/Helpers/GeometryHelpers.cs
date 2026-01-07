@@ -2,24 +2,9 @@
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
-internal readonly struct Aabb
+public readonly record struct Aabb(double MinX, double MinY, double MinZ, double MaxX, double MaxY, double MaxZ)
 {
-  internal readonly double MinX,
-    MinY,
-    MinZ,
-    MaxX,
-    MaxY,
-    MaxZ;
-
-  internal Aabb(double minX, double minY, double minZ, double maxX, double maxY, double maxZ)
-  {
-    MinX = minX;
-    MinY = minY;
-    MinZ = minZ;
-    MaxX = maxX;
-    MaxY = maxY;
-    MaxZ = maxZ;
-  }
+  public bool IsValid => !(MinX == 0 && MinY == 0 && MinZ == 0 && MaxX == 0 && MaxY == 0 && MaxZ == 0);
 }
 
 public static class GeometryHelpers
@@ -178,6 +163,8 @@ public static class GeometryHelpers
 
   internal static Aabb ComputeUnbakedAabb(PrimitiveProcessor processor, double[] invWorld)
   {
+    var hasAny = false;
+
     double minX = double.PositiveInfinity,
       minY = double.PositiveInfinity,
       minZ = double.PositiveInfinity;
@@ -185,25 +172,56 @@ public static class GeometryHelpers
       maxY = double.NegativeInfinity,
       maxZ = double.NegativeInfinity;
 
-    // triangles
-    var tris = processor.Triangles;
-    foreach (var t in tris)
+    void AddPoint(double x, double y, double z)
     {
-      Acc(invWorld, t.Vertex1.X, t.Vertex1.Y, t.Vertex1.Z, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
-      Acc(invWorld, t.Vertex2.X, t.Vertex2.Y, t.Vertex2.Z, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
-      Acc(invWorld, t.Vertex3.X, t.Vertex3.Y, t.Vertex3.Z, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
+      TransformPointInPlace(invWorld, ref x, ref y, ref z);
+
+      hasAny = true;
+      if (x < minX)
+      {
+        minX = x;
+      }
+
+      if (y < minY)
+      {
+        minY = y;
+      }
+
+      if (z < minZ)
+      {
+        minZ = z;
+      }
+
+      if (x > maxX)
+      {
+        maxX = x;
+      }
+
+      if (y > maxY)
+      {
+        maxY = y;
+      }
+
+      if (z > maxZ)
+      {
+        maxZ = z;
+      }
     }
 
-    // lines
-    var lines = processor.Lines;
-    foreach (var l in lines)
+    foreach (var t in processor.Triangles)
     {
-      Acc(invWorld, l.Start.X, l.Start.Y, l.Start.Z, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
-      Acc(invWorld, l.End.X, l.End.Y, l.End.Z, ref minX, ref minY, ref minZ, ref maxX, ref maxY, ref maxZ);
+      AddPoint(t.Vertex1.X, t.Vertex1.Y, t.Vertex1.Z);
+      AddPoint(t.Vertex2.X, t.Vertex2.Y, t.Vertex2.Z);
+      AddPoint(t.Vertex3.X, t.Vertex3.Y, t.Vertex3.Z);
     }
 
-    // if no geometry, return zero box (or throw if you prefer)
-    return double.IsPositiveInfinity(minX) ? new Aabb(0, 0, 0, 0, 0, 0) : new Aabb(minX, minY, minZ, maxX, maxY, maxZ);
+    foreach (var l in processor.Lines)
+    {
+      AddPoint(l.Start.X, l.Start.Y, l.Start.Z);
+      AddPoint(l.End.X, l.End.Y, l.End.Z);
+    }
+
+    return hasAny ? new Aabb(minX, minY, minZ, maxX, maxY, maxZ) : default;
   }
 
   private static void Acc(
@@ -255,5 +273,11 @@ public static class GeometryHelpers
     }
   }
 
-  internal static bool NearlyEqual(Aabb a, Aabb b, double eps = 1e-6) => AabbEqual(a, b, eps);
+  internal static bool NearlyEqual(Aabb a, Aabb b, double eps) =>
+    Math.Abs(a.MinX - b.MinX) <= eps
+    && Math.Abs(a.MinY - b.MinY) <= eps
+    && Math.Abs(a.MinZ - b.MinZ) <= eps
+    && Math.Abs(a.MaxX - b.MaxX) <= eps
+    && Math.Abs(a.MaxY - b.MaxY) <= eps
+    && Math.Abs(a.MaxZ - b.MaxZ) <= eps;
 }

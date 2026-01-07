@@ -93,21 +93,36 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
   public void RegisterInstanceObservation(
     PathKey groupKey,
     PathKey instancePath,
-    double[]? instanceWorld,
+    double[] instanceWorld,
     PrimitiveProcessor processor
   )
   {
-    if (instanceWorld == null || instanceWorld.Length != 16)
+    if (instanceWorld == null)
+    {
+      throw new ArgumentNullException(nameof(instanceWorld));
+    }
+
+    if (instanceWorld.Length != 16)
+    {
+      throw new ArgumentException("Expected 16 doubles for a 4x4 matrix.", nameof(instanceWorld));
+    }
+
+    var inv = Speckle.Converter.Navisworks.Helpers.GeometryHelpers.InvertRigid(instanceWorld);
+    if (inv == null)
+    {
+      throw new InvalidOperationException(
+        "InvertRigid returned null. You are calling a different method than expected."
+      );
+    }
+
+    var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
+
+    if (!sig.IsValid)
     {
       return;
     }
 
-    _pathToInstanceWorld[instancePath] = instanceWorld;
-
-    var inv = GeometryHelpers.InvertRigid(instanceWorld);
-    var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
-
-    if (!_groupSignature.TryGetValue(groupKey, out var firstSig))
+    if (!_groupSignature.TryGetValue(groupKey, out var first))
     {
       _groupSignature[groupKey] = sig;
       _groupToDefinitionWorld[groupKey] = instanceWorld;
@@ -115,10 +130,10 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
     }
 
 #if DEBUG
-    const double EPS = 1e-6;
-    if (!GeometryHelpers.NearlyEqual(firstSig, sig, EPS))
+    const double EPS = 1e-6; // tune, maybe relative later
+    if (!GeometryHelpers.NearlyEqual(first, sig, EPS))
     {
-      System.Diagnostics.Debug.Fail("Instance signature mismatch for group; unbaked AABB differs.");
+      System.Diagnostics.Debug.Fail($"Group {groupKey} signature mismatch. First {first} vs current {sig}");
     }
 #endif
   }

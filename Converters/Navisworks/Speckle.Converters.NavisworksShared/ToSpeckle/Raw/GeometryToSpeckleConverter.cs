@@ -73,15 +73,8 @@ public sealed class GeometryToSpeckleConverter(
           }
 
           var processor = new PrimitiveProcessor(_isUpright);
-          var instanceWorld = ProcessPathFragments(path, itemPathKey, processor);
+          ProcessPathFragments(path, itemPathKey, groupKey, processor); // only current instance
           processors.Add(processor);
-          ProcessPathFragments(path, itemPathKey, processor); // only current instance
-
-          if (instanceWorld != null)
-          {
-            _registry.SetInstanceWorld(itemPathKey, instanceWorld);
-            _registry.EnsureDefinitionWorld(groupKey, instanceWorld);
-          }
 
           _registry.MarkConverted(itemPathKey); // optional for later
         }
@@ -122,9 +115,9 @@ public sealed class GeometryToSpeckleConverter(
     return set;
   }
 
-  private static double[]? ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PrimitiveProcessor processor)
+  private void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PathKey groupKey, PrimitiveProcessor processor)
   {
-    double[]? instanceWorld = null;
+    var observed = false;
 
     foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
@@ -138,8 +131,7 @@ public sealed class GeometryToSpeckleConverter(
         continue;
       }
 
-      var matrix = fragment.GetLocalToWorldMatrix();
-      if (matrix is not InwLTransform3f3 transform)
+      if (fragment.GetLocalToWorldMatrix() is not InwLTransform3f3 transform)
       {
         continue;
       }
@@ -149,13 +141,27 @@ public sealed class GeometryToSpeckleConverter(
         continue;
       }
 
-      instanceWorld ??= ConvertArrayToDouble(matrixArray);
+      var instanceWorld = ConvertArrayToDouble(matrixArray);
+      if (instanceWorld.Length != 16)
+      {
+        continue;
+      }
 
-      processor.LocalToWorldTransformation = ConvertArrayToDouble(matrixArray);
+      processor.LocalToWorldTransformation = instanceWorld;
       fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
-    }
 
-    return instanceWorld;
+      if (observed)
+      {
+        continue;
+      }
+
+      // Observe only once, and only after we actually have some geometry
+      if (processor.Triangles.Count > 0 || processor.Lines.Count > 0)
+      {
+        _registry.RegisterInstanceObservation(groupKey, itemPathKey, instanceWorld, processor);
+        observed = true;
+      }
+    }
   }
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
