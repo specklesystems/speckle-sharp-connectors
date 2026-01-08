@@ -75,7 +75,8 @@ public sealed class DisplayValueExtractor
         }
         return areaDisplay;
 
-      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView + apply reference point transform
+      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
+      // Reference point transform is handled by point converters during conversion
       case DB.Structure.Rebar rebar:
         return _converterSettings.Current.SendRebarsAsVolumetric
           ? GetRebarVolumetricDisplayValue(rebar)
@@ -169,8 +170,9 @@ public sealed class DisplayValueExtractor
   /// Converts sorted geometry into DisplayValueResults <see cref="ElementTopLevelConverterToSpeckle"/>.
   /// </summary>
   /// <remarks>
-  /// Applies localToWorld only to curves, points, polylines.
-  /// Meshes remain in symbol space to generate correct instance proxies and avoid duplicates.
+  /// Meshes get localToWorld attached as transform metadata (for instancing).
+  /// Curves, polylines, and points get curveTransform applied (instance transform only) -
+  /// reference point transform is handled by the point converters.
   /// </remarks>
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
@@ -640,9 +642,10 @@ public sealed class DisplayValueExtractor
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
   /// <remarks>
-  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to local coordinate space in SortGeometry.
+  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to symbol space in SortGeometry.
   /// <see cref="Curves"/>, <see cref="Polylines"/>, and <see cref="Points"/> remain in their original coordinate space
-  /// and are transformed to world space during processing in ProcessGeometryCollections.
+  /// and receive only the instance transform (if any) in ProcessGeometryCollections - reference point
+  /// transform is handled by the point converters during conversion.
   /// </remarks>
   private sealed record GeometryCollections
   {
