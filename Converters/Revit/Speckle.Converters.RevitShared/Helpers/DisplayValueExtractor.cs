@@ -176,7 +176,7 @@ public sealed class DisplayValueExtractor
     DB.Element element,
     GeometryCollections collections,
     DB.Transform? localToWorld,
-    DB.Transform? localToDocument
+    DB.Transform? curveTransform
   )
   {
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
@@ -198,18 +198,24 @@ public sealed class DisplayValueExtractor
 
     foreach (var curve in collections.Curves)
     {
-      // apply instance transform only (if present), NOT reference point transform
-      // point converters will handle the reference point transform
-      var transformedCurve = localToDocument != null ? curve.CreateTransformed(localToDocument) : curve;
-      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      if (curveTransform is not null)
+      {
+        using var transformedCurve = curve.CreateTransformed(curveTransform);
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      }
     }
 
     foreach (var polyline in collections.Polylines)
     {
-      if (localToDocument != null)
+      if (curveTransform is not null)
       {
-        var coords = polyline.GetCoordinates().Select(p => localToDocument.OfPoint(p)).ToList();
-        using var transformedPolyline = DB.PolyLine.Create(coords);
+        var coords = polyline.GetCoordinates();
+        var transformedCoords = coords.Select(coord => curveTransform.OfPoint(coord)).ToList();
+        using var transformedPolyline = DB.PolyLine.Create(transformedCoords);
         displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
       }
       else
@@ -220,9 +226,9 @@ public sealed class DisplayValueExtractor
 
     foreach (var point in collections.Points)
     {
-      if (localToDocument != null)
+      if (curveTransform is not null)
       {
-        using var transformedPoint = DB.Point.Create(localToDocument.OfPoint(point.Coord));
+        using var transformedPoint = DB.Point.Create(curveTransform.OfPoint(point.Coord));
         displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
       }
       else
@@ -603,20 +609,11 @@ public sealed class DisplayValueExtractor
         )
       );
     }
-    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
 
     List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      if (documentToWorld is not null)
-      {
-        using var transformedCurve = curve.CreateTransformed(documentToWorld);
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
-      }
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     return displayValue;
