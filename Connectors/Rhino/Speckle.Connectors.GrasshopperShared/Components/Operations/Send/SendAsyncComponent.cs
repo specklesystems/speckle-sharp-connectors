@@ -87,6 +87,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+    pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -321,6 +322,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
   private Stopwatch? _stopwatch;
   public SpeckleUrlModelResource? OutputParam { get; set; }
+  public string? OutputVersionId { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance<SendAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
@@ -332,6 +334,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
   {
     _stopwatch = new Stopwatch();
     _stopwatch.Start();
+    OutputVersionId = null;
   }
 
   public override void SetData(IGH_DataAccess da)
@@ -342,6 +345,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     {
       Parent.JustPastedIn = false;
       da.SetData(0, Parent.OutputParam);
+      da.SetData(1, OutputVersionId);
       return;
     }
 
@@ -357,6 +361,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
 
     da.SetData(0, OutputParam);
+    da.SetData(1, OutputVersionId);
 
     Parent.CurrentComponentState = ComponentState.UpToDate;
     Parent.OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
@@ -373,7 +378,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       */
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully published to Speckle. Right-click on the component to view online."
+        "Successfully published to Speckle. Right-click on the component to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
@@ -471,6 +476,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
         result.VersionId
       );
     OutputParam = createdVersion;
+    OutputVersionId = result.VersionId;
     Parent.Url = $"{createdVersion.Account.Server}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }

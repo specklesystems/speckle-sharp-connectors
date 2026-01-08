@@ -36,9 +36,10 @@ public class SendComponentInput
   }
 }
 
-public class SendComponentOutput(SpeckleUrlModelResource? resource)
+public class SendComponentOutput(SpeckleUrlModelResource? resource, string? versionId = null)
 {
   public SpeckleUrlModelResource? Resource { get; } = resource;
+  public string? VersionId { get; } = versionId;
 }
 
 public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
@@ -86,8 +87,11 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+  {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+    pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
+  }
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
@@ -134,6 +138,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     else
     {
       da.SetData(0, result.Resource);
+      da.SetData(1, result.VersionId);
       Message = "Done";
     }
   }
@@ -216,7 +221,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    await sendOperation
+    var result = await sendOperation
       .Execute(
         new List<SpeckleCollectionWrapperGoo> { collectionToSend },
         sendInfo,
@@ -244,6 +249,6 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
         sendInfo.ModelId
       );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-    return new SendComponentOutput(createdVersionResource);
+    return new SendComponentOutput(createdVersionResource, result.VersionId);
   }
 }
