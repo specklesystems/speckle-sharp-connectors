@@ -108,15 +108,16 @@ public sealed class DisplayValueExtractor
     using DB.Transform? documentToLocal = localToDocument?.Inverse;
 
     DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
-    using DB.Transform? compoundTransform =
-      localToDocument is not null && documentToWorld is not null
-        ? documentToWorld.Multiply(localToDocument)
-        : localToDocument;
-
-    DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
+    DB.Transform? localToWorld = (localToDocument, documentToWorld) switch
+    {
+      (not null, not null) => documentToWorld.Multiply(localToDocument), // instance + RefPoint
+      (not null, null) => localToDocument, // instance + InternalOrigin
+      (null, not null) => documentToWorld, // non-Instance + RefPoint
+      (null, null) => null // non-Instance + InternalOrigin
+    };
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
-    return ProcessGeometryCollections(element, collections, localToWorld);
+    return ProcessGeometryCollections(element, collections, localToWorld, localToDocument);
   }
 
   /// <summary>
@@ -174,7 +175,8 @@ public sealed class DisplayValueExtractor
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
     GeometryCollections collections,
-    DB.Transform? localToWorld
+    DB.Transform? localToWorld,
+    DB.Transform? localToDocument
   )
   {
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
@@ -196,7 +198,14 @@ public sealed class DisplayValueExtractor
 
     foreach (var curve in collections.Curves)
     {
+<<<<<<< Updated upstream
       displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+=======
+      // Apply instance transform only (if present), NOT reference point transform
+      // Point converters will handle the reference point transform
+      var transformedCurve = localToDocument != null ? curve.CreateTransformed(localToDocument) : curve;
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+>>>>>>> Stashed changes
     }
 
     foreach (var polyline in collections.Polylines)
@@ -555,7 +564,7 @@ public sealed class DisplayValueExtractor
     {
       DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
       SortGeometry(rebar, collections, geometryElements, null);
-      return ProcessGeometryCollections(rebar, collections, documentToWorld);
+      return ProcessGeometryCollections(rebar, collections, documentToWorld, null);
     }
 
     // Return empty list if no geometry is found - imo not critical
@@ -621,7 +630,7 @@ public sealed class DisplayValueExtractor
   {
     var collections = GetSortedGeometryFromElement(element, null, null);
     // pass null for transform - curves are already in correct document coordinates
-    return ProcessGeometryCollections(element, collections, null);
+    return ProcessGeometryCollections(element, collections, null, null);
   }
 
   /// <summary>
