@@ -14,6 +14,7 @@ public static class RhinoUtils
   public static string CleanLayerName(string str)
   {
     var sb = new StringBuilder(str.Length);
+    bool lastWasSpace = true;
 
     foreach (char c in str)
     {
@@ -30,10 +31,27 @@ public static class RhinoUtils
       if (s_replaceWithHyphen.Contains(c))
       {
         sb.Append('-');
+        lastWasSpace = false;
+        continue;
+      }
+
+      if (c == ' ')
+      {
+        if (!lastWasSpace)
+        {
+          sb.Append(c);
+          lastWasSpace = true;
+        }
         continue;
       }
 
       sb.Append(c);
+      lastWasSpace = false;
+    }
+
+    if (sb.Length > 0 && sb[^1] == ' ')
+    {
+      sb.Length--;
     }
 
     return sb.ToString();

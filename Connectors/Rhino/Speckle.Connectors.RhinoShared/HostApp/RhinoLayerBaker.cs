@@ -122,7 +122,9 @@ public class RhinoLayerBaker : TraversalContextUnpacker
         continue;
       }
 
-      var cleanNewLayerName = RhinoUtils.CleanLayerName(collection.name);
+      var cleanNewLayerName = string.IsNullOrWhiteSpace(collection.name)
+        ? "unnamed"
+        : RhinoUtils.CleanLayerName(collection.name);
 
       if (!ModelComponent.IsValidComponentName(cleanNewLayerName))
       {
