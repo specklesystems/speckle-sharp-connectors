@@ -35,6 +35,8 @@ public static class RhinoUtils
         continue;
       }
 
+      // Collapse double spaces into one and skip leading spaces.
+      // e.g. "  Items  Name " -> "Items Name"
       if (c == ' ')
       {
         if (!lastWasSpace)
