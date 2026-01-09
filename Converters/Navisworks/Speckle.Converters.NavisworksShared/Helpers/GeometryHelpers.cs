@@ -54,6 +54,28 @@ public static class GeometryHelpers
     return inv;
   }
 
+  /// <summary>
+  /// Multiplies two 4x4 matrices in row-major order.
+  /// Used to compute instance transforms: inverse(definitionWorld) × instanceWorld
+  /// </summary>
+  internal static double[] MultiplyMatrices4x4(double[] a, double[] b)
+  {
+    var result = new double[16];
+    for (int row = 0; row < 4; row++)
+    {
+      for (int col = 0; col < 4; col++)
+      {
+        double sum = 0;
+        for (int k = 0; k < 4; k++)
+        {
+          sum += a[row * 4 + k] * b[k * 4 + col];
+        }
+        result[row * 4 + col] = sum;
+      }
+    }
+    return result;
+  }
+
   private static void TransformPointInPlace(double[] m, ref double x, ref double y, ref double z)
   {
     var nx = x * m[0] + y * m[4] + z * m[8] + m[12];
@@ -64,8 +86,8 @@ public static class GeometryHelpers
     z = nz;
   }
 
-  // ReSharper disable once UnusedMember.Local
-  private static void UnbakeMeshVertices(Mesh mesh, double[] invWorld)
+  // Used, for instance, validation - unbakes geometry from world space to definition space
+  internal static void UnbakeMeshVertices(Mesh mesh, double[] invWorld)
   {
     for (int i = 0; i < mesh.vertices.Count; i += 3)
     {
@@ -81,8 +103,8 @@ public static class GeometryHelpers
     }
   }
 
-  // ReSharper disable once UnusedMember.Local
-  private static void UnbakeLine(Line line, double[] invWorld)
+  // Used, for instance, validation - unbakes geometry from world space to definition space
+  internal static void UnbakeLine(Line line, double[] invWorld)
   {
     double sx = line.start.x,
       sy = line.start.y,

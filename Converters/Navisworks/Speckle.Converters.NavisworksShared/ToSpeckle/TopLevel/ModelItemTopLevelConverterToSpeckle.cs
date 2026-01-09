@@ -52,14 +52,20 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
   }
 
   // There are in fact only two types of objects: geometry and non-geometry, the latter being collections of other objects
-  private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
-    new()
+  private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler)
+  {
+    var displayValue = _displayValueExtractor.GetDisplayValue(target);
+
+    var geometryObject = new NavisworksObject
     {
-      name = name,
-      displayValue = _displayValueExtractor.GetDisplayValue(target),
-      properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
       units = _settingsStore.Current.Derived.SpeckleUnits,
+      name = name,
+      properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      displayValue = displayValue
     };
+
+    return geometryObject;
+  }
 
   private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
     new()

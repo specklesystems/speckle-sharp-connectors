@@ -1,5 +1,6 @@
-﻿using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Paths;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.Navisworks.Constants.Registers;
 
@@ -18,6 +19,15 @@ public interface IInstanceFragmentRegistry
   bool TryGetInstanceWorld(PathKey instancePath, out double[] instanceWorld);
   void SetInstanceWorld(PathKey instancePath, double[] instanceWorld);
 
+  // Definition geometry storage for instancing
+  bool HasDefinitionGeometry(PathKey groupKey);
+  void StoreDefinitionGeometry(PathKey groupKey, List<Base> geometry);
+  bool TryGetDefinitionGeometry(PathKey groupKey, out List<Base> geometry);
+
+  // Helper methods for building instance structure
+  Dictionary<PathKey, List<Base>> GetAllDefinitionGeometries();
+  List<PathKey> GetAllGroupKeys();
+
   void RegisterInstanceObservation(
     PathKey groupKey,
     PathKey instancePath,
@@ -34,6 +44,7 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
   private readonly Dictionary<PathKey, double[]> _groupToDefinitionWorld = new(PathKey.Comparer);
   private readonly Dictionary<PathKey, double[]> _pathToInstanceWorld = new(PathKey.Comparer);
   private readonly Dictionary<PathKey, Aabb> _groupSignature = new(PathKey.Comparer);
+  private readonly Dictionary<PathKey, List<Base>> _groupDefinitions = new(PathKey.Comparer);
 
   public bool TryGetGroup(PathKey instancePath, out PathKey groupKey) =>
     _pathToGroup.TryGetValue(instancePath, out groupKey);
@@ -90,6 +101,21 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
   public void SetInstanceWorld(PathKey instancePath, double[] instanceWorld) =>
     _pathToInstanceWorld[instancePath] = instanceWorld;
 
+  public bool HasDefinitionGeometry(PathKey groupKey) =>
+    _groupDefinitions.ContainsKey(groupKey);
+
+  public void StoreDefinitionGeometry(PathKey groupKey, List<Base> geometry) =>
+    _groupDefinitions[groupKey] = geometry;
+
+  public bool TryGetDefinitionGeometry(PathKey groupKey, out List<Base> geometry) =>
+    _groupDefinitions.TryGetValue(groupKey, out geometry);
+
+  public Dictionary<PathKey, List<Base>> GetAllDefinitionGeometries() =>
+    new Dictionary<PathKey, List<Base>>(_groupDefinitions, PathKey.Comparer);
+
+  public List<PathKey> GetAllGroupKeys() =>
+    _groupDefinitions.Keys.ToList();
+
   public void RegisterInstanceObservation(
     PathKey groupKey,
     PathKey instancePath,
@@ -106,6 +132,9 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
     {
       throw new ArgumentException("Expected 16 doubles for a 4x4 matrix.", nameof(instanceWorld));
     }
+
+    // Store instanceWorld for later retrieval (needed for unbaking validation)
+    SetInstanceWorld(instancePath, instanceWorld);
 
     var inv = Speckle.Converter.Navisworks.Helpers.GeometryHelpers.InvertRigid(instanceWorld);
     if (inv == null)

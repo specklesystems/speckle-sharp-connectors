@@ -34,6 +34,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSelectionFilter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\NavisworksSavedSetsFilter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Diagnostics\InstanceGroupingDiagnostics.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\BrowserPane.xaml.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\DockableConnectorPane.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\NavisworksRibbon.xaml.cs"/>

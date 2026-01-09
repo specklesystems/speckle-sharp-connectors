@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
@@ -43,12 +42,6 @@ public sealed class GeometryToSpeckleConverter(
   // First instance becomes the definition, later instances return InstanceReference objects
   private const bool ENABLE_INSTANCING = true;
 
-  // DIAGNOSTICS: Track grouping behavior
-  private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
-  private int _totalPathsProcessed;
-  private int _singleMemberGroups;
-  private int _multiMemberGroups;
-
   internal List<Base> Convert(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
@@ -86,34 +79,15 @@ public sealed class GeometryToSpeckleConverter(
             groupKey = itemPathKey; // first seen
             _registry.RegisterGroup(groupKey, members);
 
-            // DIAGNOSTICS: Track grouping statistics
-            _totalPathsProcessed++;
-
+#if DEBUG
+            // Diagnostic: Log instance group discovery
             if (members.Count > 1)
             {
-              _multiMemberGroups++;
+              System.Diagnostics.Debug.WriteLine($"[Instance Discovery] Group {groupKey.ToHashString()} has {members.Count} members (instances detected)");
             }
             else
             {
-              _singleMemberGroups++;
-            }
-
-            _groupMemberCounts[groupKey] = members.Count;
-
-#if DEBUG
-            // Diagnostic: Log instance group discovery
-            System.Diagnostics.Debug.WriteLine(
-              members.Count > 1
-                ? $"[Instance Discovery] ✓ Group {groupKey.ToHashString()} has {members.Count} members (instances detected)"
-                : $"[Instance Discovery] ⚠️  Group {groupKey.ToHashString()} has only 1 member (no instances found)"
-            );
-
-            // Periodic summary every 100 groups
-            if (_totalPathsProcessed % 100 == 0)
-            {
-              System.Diagnostics.Debug.WriteLine(
-                $"[Instance Discovery] Progress: {_totalPathsProcessed} paths processed, {_multiMemberGroups} multi-member groups, {_singleMemberGroups} single-member groups"
-              );
+              System.Diagnostics.Debug.WriteLine($"[Instance Discovery] Group {groupKey.ToHashString()} has only 1 member (no instances found)");
             }
 #endif
           }
@@ -130,23 +104,6 @@ public sealed class GeometryToSpeckleConverter(
             var geometries = ProcessGeometries([processor]);
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
-            continue;
-          }
-
-          // OPTIMIZATION: Skip instancing for single-member groups
-          // If this group only has 1 member, just return baked geometry directly
-          if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
-          {
-            // Single member group - no benefit to instancing
-            // Return the already-baked geometry (with transforms applied)
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine(
-              $"[Instance Optimization] Group {groupKey.ToHashString()} has only 1 member - returning baked geometry directly (skipping instance creation)"
-            );
-#endif
             continue;
           }
 
@@ -217,47 +174,15 @@ public sealed class GeometryToSpeckleConverter(
   {
     var set = new HashSet<PathKey>(PathKey.Comparer);
 
-#if DEBUG
-    System.Diagnostics.Debug.WriteLine($"[Fragment Discovery] Starting discovery for path");
-    int fragmentCount = 0;
-    int skippedFragments = 0;
-#endif
-
     foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
-#if DEBUG
-      fragmentCount++;
-#endif
-
       if (fragment.path?.ArrayData is not Array fragPathArr)
       {
-#if DEBUG
-        skippedFragments++;
-        System.Diagnostics.Debug.WriteLine($"  [Fragment {fragmentCount}] Skipped - no path data");
-#endif
         continue;
       }
 
-      var fragmentPathKey = PathKey.FromComArray(fragPathArr);
-      set.Add(fragmentPathKey);
-
-#if DEBUG
-      System.Diagnostics.Debug.WriteLine($"  [Fragment {fragmentCount}] Found path: {fragmentPathKey.ToHashString()}");
-#endif
+      set.Add(PathKey.FromComArray(fragPathArr));
     }
-
-#if DEBUG
-    System.Diagnostics.Debug.WriteLine(
-      $"[Fragment Discovery] Processed {fragmentCount} total fragments, skipped {skippedFragments}, found {set.Count} unique fragment paths"
-    );
-
-    if (set.Count == 1 && fragmentCount > 1)
-    {
-      System.Diagnostics.Debug.WriteLine(
-        $"  ⚠️  WARNING: Multiple fragments but only 1 unique path - possible grouping issue"
-      );
-    }
-#endif
 
     return set;
   }
@@ -303,13 +228,11 @@ public sealed class GeometryToSpeckleConverter(
       }
 
       // Observe only once, and only after we actually have some geometry
-      if (processor.Triangles.Count <= 0 && processor.Lines.Count <= 0)
+      if (processor.Triangles.Count > 0 || processor.Lines.Count > 0)
       {
-        continue;
+        _registry.RegisterInstanceObservation(groupKey, itemPathKey, instanceWorld, processor);
+        observed = true;
       }
-
-      _registry.RegisterInstanceObservation(groupKey, itemPathKey, instanceWorld, processor);
-      observed = true;
     }
   }
 
@@ -483,69 +406,4 @@ public sealed class GeometryToSpeckleConverter(
         }
       )
       : throw new ArgumentException("Matrix must have exactly 16 elements", nameof(matrix));
-
-  /// <summary>
-  /// DIAGNOSTICS: Gets grouping statistics for analysis.
-  /// Used to diagnose why grouping may fail with large selections.
-  /// </summary>
-  public (
-    int totalGroups,
-    int singleMember,
-    int multiMember,
-    int largestGroup,
-    Dictionary<PathKey, int> groupCounts
-  ) GetGroupingStatistics()
-  {
-    var largestGroup = _groupMemberCounts.Values.Count != 0 ? _groupMemberCounts.Values.Max() : 0;
-    return (
-      _groupMemberCounts.Count,
-      _singleMemberGroups,
-      _multiMemberGroups,
-      largestGroup,
-      new Dictionary<PathKey, int>(_groupMemberCounts, PathKey.Comparer)
-    );
-  }
-
-  /// <summary>
-  /// DIAGNOSTICS: Generates a summary report of grouping behavior.
-  /// </summary>
-  public string GetGroupingSummary()
-  {
-    if (_groupMemberCounts.Count == 0)
-    {
-      return "No grouping data collected yet.";
-    }
-
-    var sb = new StringBuilder();
-    sb.AppendLine("=== Grouping Summary ===");
-    sb.AppendLine($"Total Groups: {_groupMemberCounts.Count}");
-    sb.AppendLine(
-      $"Single-Member Groups: {_singleMemberGroups} ({GetPercentage(_singleMemberGroups, _groupMemberCounts.Count):F1}%)"
-    );
-    sb.AppendLine(
-      $"Multi-Member Groups: {_multiMemberGroups} ({GetPercentage(_multiMemberGroups, _groupMemberCounts.Count):F1}%)"
-    );
-    sb.AppendLine(
-      $"Largest Group: {(_groupMemberCounts.Values.Count != 0 ? _groupMemberCounts.Values.Max() : 0)} instances"
-    );
-
-    if (_multiMemberGroups <= 0)
-    {
-      return sb.ToString();
-    }
-
-    sb.AppendLine("\nTop 5 Groups:");
-    var top5 = _groupMemberCounts.Where(kvp => kvp.Value > 1).OrderByDescending(kvp => kvp.Value).Take(5);
-
-    int rank = 1;
-    foreach (var kvp in top5)
-    {
-      sb.AppendLine($"  {rank}. Group {kvp.Key.ToHashString()}: {kvp.Value} instances");
-      rank++;
-    }
-
-    return sb.ToString();
-  }
-
-  private static double GetPercentage(int part, int total) => total == 0 ? 0 : (double)part / total * 100.0;
 }
