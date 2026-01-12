@@ -124,26 +124,46 @@ public class NavisworksColorUnpacker(
     var comSelection = ComBridge.ToInwOpSelection([modelItem]);
     try
     {
-      foreach (ComApi.InwOaPath path in comSelection.Paths())
+      var paths = comSelection.Paths();
+      try
       {
-        GC.KeepAlive(path);
-
-        foreach (ComApi.InwOaFragment3 fragment in path.Fragments())
+        foreach (ComApi.InwOaPath path in paths)
         {
-          GC.KeepAlive(fragment);
+          GC.KeepAlive(path);
 
-          fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
-
-          // Exit early if triangles are found
-          if (primitiveChecker.HasTriangles)
+          var fragments = path.Fragments();
+          try
           {
-            return false;
+            foreach (ComApi.InwOaFragment3 fragment in fragments)
+            {
+              GC.KeepAlive(fragment);
+
+              fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
+
+              if (primitiveChecker.HasTriangles)
+              {
+                return false;
+              }
+            }
+          }
+          finally
+          {
+            if (fragments != null)
+            {
+              System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
+            }
           }
         }
-      }
 
-      // Return true if any 2D primitives are found
-      return primitiveChecker.HasLines || primitiveChecker.HasPoints || primitiveChecker.HasSnapPoints;
+        return primitiveChecker.HasLines || primitiveChecker.HasPoints || primitiveChecker.HasSnapPoints;
+      }
+      finally
+      {
+        if (paths != null)
+        {
+          System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
+        }
+      }
     }
     finally
     {
