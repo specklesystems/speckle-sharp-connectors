@@ -92,13 +92,14 @@ public class CollectionsByName : GH_Component
       var nameBranch = namesTree.get_Branch(path);
       var elementsBranch = elementsTree.get_Branch(path);
 
-      // validate name branch has exactly one name
+      // validate name branch - throw if empty
       if (nameBranch.Count == 0)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Name branch at path {path} is empty");
         return;
       }
 
+      // validate name branch - just warn if multiple, use first
       if (nameBranch.Count > 1)
       {
         AddRuntimeMessage(
@@ -122,9 +123,17 @@ public class CollectionsByName : GH_Component
         continue;
       }
 
-      // create child collection from this branch
-      var childCollection = CreateCollectionFromBranch(collectionName, elementsBranch, path, rootCollection.Name);
-      rootCollection.Elements.Add(childCollection);
+      // parse nested collection path (e.g. parent::child)
+      var collectionNames = collectionName.Split(
+        new[] { Constants.LAYER_PATH_DELIMITER },
+        StringSplitOptions.RemoveEmptyEntries
+      );
+
+      // create or get nested collection structure
+      var targetCollection = GetOrCreateNestedCollection(rootCollection, collectionNames, elementsBranch, path);
+
+      // add elements to deepest collection
+      AddElementsToCollection(targetCollection, elementsBranch, path);
     }
 
     // validate collection has content
@@ -187,35 +196,76 @@ public class CollectionsByName : GH_Component
     };
 
   /// <summary>
-  /// Creates a collection wrapper from a branch of elements
+  /// Gets or creates a nested collection structure based on the collection names.
   /// </summary>
-  private SpeckleCollectionWrapper CreateCollectionFromBranch(
-    string collectionName,
+  /// <remarks>
+  /// Handles paths like "parent::child::grandchild" by creating intermediate collections.
+  /// </remarks>
+  private SpeckleCollectionWrapper GetOrCreateNestedCollection(
+    SpeckleCollectionWrapper rootCollection,
+    string[] collectionNames,
     System.Collections.IList elementsBranch,
-    Grasshopper.Kernel.Data.GH_Path path,
-    string rootName
+    Grasshopper.Kernel.Data.GH_Path path
   )
   {
-    var childPath = new List<string> { rootName, collectionName };
+    SpeckleCollectionWrapper currentCollection = rootCollection;
+    var currentPath = new List<string>(rootCollection.Path);
 
-    var childCollection = new SpeckleCollectionWrapper
+    foreach (var collectionName in collectionNames)
     {
-      Base = new Collection(),
-      Name = collectionName,
-      Path = childPath,
-      Color = null,
-      Material = null,
-      Topology = GetBranchTopology(path, elementsBranch.Count),
-      ApplicationId = Guid.NewGuid().ToString()
-    };
+      // build path for this level
+      currentPath.Add(collectionName);
 
-    // process elements in this branch
+      // check if child collection already exists
+      var existingChild = currentCollection
+        .Elements.OfType<SpeckleCollectionWrapper>()
+        .FirstOrDefault(c => c.Name == collectionName);
+
+      if (existingChild != null)
+      {
+        // use existing collection
+        currentCollection = existingChild;
+      }
+      else
+      {
+        // create new child collection
+        var newChild = new SpeckleCollectionWrapper
+        {
+          Base = new Collection(),
+          Name = collectionName,
+          Path = currentPath.ToList(),
+          Color = null,
+          Material = null,
+          Topology = null, // only set topology on leaf collections
+          ApplicationId = Guid.NewGuid().ToString()
+        };
+
+        currentCollection.Elements.Add(newChild);
+        currentCollection = newChild;
+      }
+    }
+
+    // set topology on the final (leaf) collection
+    currentCollection.Topology = GetBranchTopology(path, elementsBranch.Count);
+
+    return currentCollection;
+  }
+
+  /// <summary>
+  /// Adds elements from a branch to the target collection
+  /// </summary>
+  private void AddElementsToCollection(
+    SpeckleCollectionWrapper targetCollection,
+    System.Collections.IList elementsBranch,
+    Grasshopper.Kernel.Data.GH_Path path
+  )
+  {
     foreach (var item in elementsBranch)
     {
       if (item == null)
       {
         // preserve nulls for topology (CNX-2855 pattern)
-        childCollection.Elements.Add(null);
+        targetCollection.Elements.Add(null);
         continue;
       }
 
@@ -241,7 +291,7 @@ public class CollectionsByName : GH_Component
 
       if (wrapper is ISpeckleCollectionObject collectionObject)
       {
-        childCollection.Elements.Add(collectionObject);
+        targetCollection.Elements.Add(collectionObject);
       }
       else
       {
@@ -251,8 +301,6 @@ public class CollectionsByName : GH_Component
         );
       }
     }
-
-    return childCollection;
   }
 
   /// <summary>
