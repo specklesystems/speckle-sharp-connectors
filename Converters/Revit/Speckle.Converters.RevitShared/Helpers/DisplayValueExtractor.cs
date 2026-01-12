@@ -75,7 +75,8 @@ public sealed class DisplayValueExtractor
         }
         return areaDisplay;
 
-      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView + apply reference point transform
+      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
+      // Reference point transform is handled by point converters during conversion
       case DB.Structure.Rebar rebar:
         return _converterSettings.Current.SendRebarsAsVolumetric
           ? GetRebarVolumetricDisplayValue(rebar)
@@ -108,15 +109,16 @@ public sealed class DisplayValueExtractor
     using DB.Transform? documentToLocal = localToDocument?.Inverse;
 
     DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
-    using DB.Transform? compoundTransform =
-      localToDocument is not null && documentToWorld is not null
-        ? documentToWorld.Multiply(localToDocument)
-        : localToDocument;
-
-    DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
+    DB.Transform? localToWorld = (localToDocument, documentToWorld) switch
+    {
+      (not null, not null) => documentToWorld.Multiply(localToDocument),
+      (not null, null) => localToDocument,
+      (null, not null) => documentToWorld,
+      (null, null) => null
+    };
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
-    return ProcessGeometryCollections(element, collections, localToWorld);
+    return ProcessGeometryCollections(element, collections, localToWorld, localToDocument);
   }
 
   /// <summary>
@@ -168,13 +170,15 @@ public sealed class DisplayValueExtractor
   /// Converts sorted geometry into DisplayValueResults <see cref="ElementTopLevelConverterToSpeckle"/>.
   /// </summary>
   /// <remarks>
-  /// Applies localToWorld only to curves, points, polylines.
-  /// Meshes remain in symbol space to generate correct instance proxies and avoid duplicates.
+  /// Meshes get localToWorld attached as transform metadata (for instancing).
+  /// Curves, polylines, and points get curveTransform applied (instance transform only) -
+  /// reference point transform is handled by the point converters.
   /// </remarks>
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
     GeometryCollections collections,
-    DB.Transform? localToWorld
+    DB.Transform? localToWorld,
+    DB.Transform? curveTransform
   )
   {
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
@@ -196,16 +200,24 @@ public sealed class DisplayValueExtractor
 
     foreach (var curve in collections.Curves)
     {
-      var transformedCurve = localToWorld != null ? curve.CreateTransformed(localToWorld) : curve;
-      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      if (curveTransform is not null)
+      {
+        using var transformedCurve = curve.CreateTransformed(curveTransform);
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
+      }
+      else
+      {
+        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
+      }
     }
 
     foreach (var polyline in collections.Polylines)
     {
-      if (localToWorld != null)
+      if (curveTransform is not null)
       {
-        var coords = polyline.GetCoordinates().Select(p => localToWorld.OfPoint(p)).ToList();
-        using var transformedPolyline = DB.PolyLine.Create(coords);
+        var coords = polyline.GetCoordinates();
+        var transformedCoords = coords.Select(coord => curveTransform.OfPoint(coord)).ToList();
+        using var transformedPolyline = DB.PolyLine.Create(transformedCoords);
         displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
       }
       else
@@ -216,9 +228,9 @@ public sealed class DisplayValueExtractor
 
     foreach (var point in collections.Points)
     {
-      if (localToWorld != null)
+      if (curveTransform is not null)
       {
-        using var transformedPoint = DB.Point.Create(localToWorld.OfPoint(point.Coord));
+        using var transformedPoint = DB.Point.Create(curveTransform.OfPoint(point.Coord));
         displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
       }
       else
@@ -558,7 +570,7 @@ public sealed class DisplayValueExtractor
     {
       DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
       SortGeometry(rebar, collections, geometryElements, null);
-      return ProcessGeometryCollections(rebar, collections, documentToWorld);
+      return ProcessGeometryCollections(rebar, collections, documentToWorld, null);
     }
 
     // Return empty list if no geometry is found - imo not critical
@@ -599,20 +611,11 @@ public sealed class DisplayValueExtractor
         )
       );
     }
-    DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
 
     List<DisplayValueResult> displayValue = new();
     foreach (var curve in curves)
     {
-      if (documentToWorld is not null)
-      {
-        using var transformedCurve = curve.CreateTransformed(documentToWorld);
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
-      }
-      else
-      {
-        displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
-      }
+      displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(curve)));
     }
 
     return displayValue;
@@ -630,7 +633,7 @@ public sealed class DisplayValueExtractor
   {
     var collections = GetSortedGeometryFromElement(element, null, null);
     // pass null for transform - curves are already in correct document coordinates
-    return ProcessGeometryCollections(element, collections, null);
+    return ProcessGeometryCollections(element, collections, null, null);
   }
 
   /// <summary>
@@ -639,9 +642,10 @@ public sealed class DisplayValueExtractor
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
   /// <remarks>
-  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to local coordinate space in SortGeometry.
+  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to symbol space in SortGeometry.
   /// <see cref="Curves"/>, <see cref="Polylines"/>, and <see cref="Points"/> remain in their original coordinate space
-  /// and are transformed to world space during processing in ProcessGeometryCollections.
+  /// and receive only the instance transform (if any) in ProcessGeometryCollections - reference point
+  /// transform is handled by the point converters during conversion.
   /// </remarks>
   private sealed record GeometryCollections
   {
