@@ -157,13 +157,5 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
       _groupToDefinitionWorld[groupKey] = instanceWorld;
       return;
     }
-
-#if DEBUG
-    const double EPS = 1e-6; // tune, maybe relative later
-    if (!GeometryHelpers.NearlyEqual(first, sig, EPS))
-    {
-      System.Diagnostics.Debug.Fail($"Group {groupKey} signature mismatch. First {first} vs current {sig}");
-    }
-#endif
   }
 }

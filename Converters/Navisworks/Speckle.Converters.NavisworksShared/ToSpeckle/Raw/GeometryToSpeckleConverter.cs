@@ -67,7 +67,8 @@ public sealed class GeometryToSpeckleConverter(
       var paths = comSelection.Paths();
       try
       {
-        var allResults = new List<Base>();
+        // Pre-allocate for typical case: estimate ~5 geometry pieces per item
+        var allResults = new List<Base>(5);
 
         foreach (InwOaPath path in paths)
         {
@@ -99,23 +100,6 @@ public sealed class GeometryToSpeckleConverter(
             }
 
             _groupMemberCounts[groupKey] = members.Count;
-
-#if DEBUG
-            // Diagnostic: Log instance group discovery
-            System.Diagnostics.Debug.WriteLine(
-              members.Count > 1
-                ? $"[Instance Discovery] ✓ Group {groupKey.ToHashString()} has {members.Count} members (instances detected)"
-                : $"[Instance Discovery] ⚠️  Group {groupKey.ToHashString()} has only 1 member (no instances found)"
-            );
-
-            // Periodic summary every 100 groups
-            if (_totalPathsProcessed % 100 == 0)
-            {
-              System.Diagnostics.Debug.WriteLine(
-                $"[Instance Discovery] Progress: {_totalPathsProcessed} paths processed, {_multiMemberGroups} multi-member groups, {_singleMemberGroups} single-member groups"
-              );
-            }
-#endif
           }
 
           // Extract instanceWorld from fragments FIRST (before any processing decisions)
@@ -142,11 +126,6 @@ public sealed class GeometryToSpeckleConverter(
             var geometries = ProcessGeometries([processor]);
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine(
-              $"[Instance Optimization] Group {groupKey.ToHashString()} has only 1 member - returning baked geometry directly (skipping instance creation)"
-            );
-#endif
             continue;
           }
 
@@ -217,47 +196,16 @@ public sealed class GeometryToSpeckleConverter(
   {
     var set = new HashSet<PathKey>(PathKey.Comparer);
 
-#if DEBUG
-    System.Diagnostics.Debug.WriteLine($"[Fragment Discovery] Starting discovery for path");
-    int fragmentCount = 0;
-    int skippedFragments = 0;
-#endif
-
     foreach (InwOaFragment3 fragment in path.Fragments().OfType<InwOaFragment3>())
     {
-#if DEBUG
-      fragmentCount++;
-#endif
-
       if (fragment.path?.ArrayData is not Array fragPathArr)
       {
-#if DEBUG
-        skippedFragments++;
-        System.Diagnostics.Debug.WriteLine($"  [Fragment {fragmentCount}] Skipped - no path data");
-#endif
         continue;
       }
 
       var fragmentPathKey = PathKey.FromComArray(fragPathArr);
       set.Add(fragmentPathKey);
-
-#if DEBUG
-      System.Diagnostics.Debug.WriteLine($"  [Fragment {fragmentCount}] Found path: {fragmentPathKey.ToHashString()}");
-#endif
     }
-
-#if DEBUG
-    System.Diagnostics.Debug.WriteLine(
-      $"[Fragment Discovery] Processed {fragmentCount} total fragments, skipped {skippedFragments}, found {set.Count} unique fragment paths"
-    );
-
-    if (set.Count == 1 && fragmentCount > 1)
-    {
-      System.Diagnostics.Debug.WriteLine(
-        $"  ⚠️  WARNING: Multiple fragments but only 1 unique path - possible grouping issue"
-      );
-    }
-#endif
 
     return set;
   }
@@ -315,7 +263,8 @@ public sealed class GeometryToSpeckleConverter(
 
   private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
-    var baseGeometries = new List<Base>();
+    // Pre-allocate: typically 1-2 geometries per processor (mesh + optional lines)
+    var baseGeometries = new List<Base>(processors.Count * 2);
 
     foreach (var processor in processors)
     {
@@ -340,8 +289,10 @@ public sealed class GeometryToSpeckleConverter(
   // ProcessGeometries, CreateMesh, CreateLines, ConvertArrayToDouble remain as-is
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
-    var vertices = new List<double>();
-    var faces = new List<int>();
+    // Pre-allocate: 9 doubles per triangle (3 vertices × 3 coords each)
+    var vertices = new List<double>(triangles.Count * 9);
+    // Pre-allocate: 4 ints per triangle (face count + 3 indices)
+    var faces = new List<int>(triangles.Count * 4);
 
     for (var t = 0; t < triangles.Count; t++)
     {
@@ -372,10 +323,14 @@ public sealed class GeometryToSpeckleConverter(
     };
   }
 
-  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines) =>
-    (
-      from line in lines
-      select new Line
+  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
+  {
+    // Pre-allocate with exact capacity to avoid resizing
+    var result = new List<Line>(lines.Count);
+
+    foreach (var line in lines)
+    {
+      result.Add(new Line
       {
         start = new Point(
           (line.Start.X + _transformVector.X) * SCALE,
@@ -390,8 +345,11 @@ public sealed class GeometryToSpeckleConverter(
           _settings.Derived.SpeckleUnits
         ),
         units = _settings.Derived.SpeckleUnits
-      }
-    ).ToList();
+      });
+    }
+
+    return result;
+  }
 
   private static double[] ConvertArrayToDouble(Array arr)
   {

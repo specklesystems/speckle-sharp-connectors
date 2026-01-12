@@ -80,7 +80,8 @@ public abstract class BasePropertyHandler(
 
   private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties)
   {
-    var propertyDict = new Dictionary<string, object?>();
+    // Most properties are valid, so use source capacity as hint to avoid resizing
+    var propertyDict = new Dictionary<string, object?>(properties.Count);
     foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
     {
       propertyDict[prop.Key] = prop.Value;

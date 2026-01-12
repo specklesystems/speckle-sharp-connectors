@@ -20,11 +20,26 @@ public class ElementSelectionService : IElementSelectionService
       return isVisible;
     }
     //same as ElementSelectionHelper.IsElementVisible
+    // Check and cache ancestors, short-circuit on first hidden
     foreach (var item in modelItem.AncestorsAndSelf)
     {
-      _visibleCache[item.InstanceGuid] = !item.IsHidden;
+      if (!_visibleCache.TryGetValue(item.InstanceGuid, out var visible))
+      {
+        visible = !item.IsHidden;
+        _visibleCache[item.InstanceGuid] = visible;
+      }
+
+      if (!visible) // Ancestor is hidden, item must be hidden
+      {
+        // Cache the result for this item too
+        _visibleCache[key] = false;
+        return false;
+      }
     }
-    return _visibleCache[key];
+
+    // All ancestors visible
+    _visibleCache[key] = true;
+    return true;
   }
 
   public IEnumerable<NAV.ModelItem> GetGeometryNodes(NAV.ModelItem modelItem) => ResolveGeometryLeafNodes(modelItem);

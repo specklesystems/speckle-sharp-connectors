@@ -223,7 +223,7 @@ public class NavisworksRootObjectBuilder(
   {
     foreach (var group in groupedNodes)
     {
-      var siblingBases = new List<Base>();
+      var siblingBases = new List<Base>(group.Value.Count);
       foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
       {
         processedPaths.Add(itemPath);
@@ -285,7 +285,16 @@ public class NavisworksRootObjectBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetContext(cleanParentPath);
 
-    var displayValues = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList();
+    // Pre-calculate capacity to avoid list resizing during SelectMany
+    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
+    var displayValues = new List<Base>(estimatedCapacity);
+    foreach (var sibling in siblingBases)
+    {
+      if (sibling["displayValue"] is List<Base> displayValueList)
+      {
+        displayValues.AddRange(displayValueList);
+      }
+    }
 
     // Diagnostic: count InstanceProxy objects in merged group
     var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
@@ -384,8 +393,11 @@ public class NavisworksRootObjectBuilder(
     }
 
     // Build InstanceDefinitionProxy objects
-    var instanceDefinitionProxies = new List<InstanceDefinitionProxy>();
-    var allDefinitionGeometries = new List<Base>();
+    var instanceDefinitionProxies = new List<InstanceDefinitionProxy>(allDefinitions.Count);
+
+    // Estimate total geometry count for capacity hint (reduces list resizing)
+    int estimatedGeometryCount = allDefinitions.Sum(kvp => kvp.Value.Count);
+    var allDefinitionGeometries = new List<Base>(estimatedGeometryCount);
 
     foreach (var kvp in allDefinitions)
     {
@@ -422,7 +434,7 @@ public class NavisworksRootObjectBuilder(
     {
       name = "",
       // collectionType = "GeometryDefinitions", // Deprecated
-      elements = finalElements.ToList()
+      elements = finalElements
     };
 
     // Prepend Geometry Definitions Collection to finalElements
@@ -541,11 +553,6 @@ public class NavisworksRootObjectBuilder(
           diagnostics.MultiMemberGroups
         );
       }
-
-      // Write full report to debug output
-      System.Diagnostics.Debug.WriteLine("");
-      System.Diagnostics.Debug.WriteLine(diagnostics.GenerateReport());
-      System.Diagnostics.Debug.WriteLine("");
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

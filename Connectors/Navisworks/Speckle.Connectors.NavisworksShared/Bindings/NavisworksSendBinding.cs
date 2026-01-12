@@ -118,14 +118,25 @@ public class NavisworksSendBinding : ISendBinding
     onOperationProgressed.Report(new CardProgress("Getting selection...", null));
     await Task.CompletedTask;
 
-    var modelItems = new List<NAV.ModelItem>();
+    // Estimate ~10 geometry nodes per path on average to avoid list resizing
+    int estimatedCapacity = selectedPaths.Count * 10;
+    var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
     double count = 0;
     foreach (var path in selectedPaths)
     {
       onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
       await Task.CompletedTask;
       var modelItem = _selectionService.GetModelItemFromPath(path);
-      modelItems.AddRange(_selectionService.GetGeometryNodes(modelItem).Where(_selectionService.IsVisible));
+
+      // Single-pass filter: check both HasGeometry AND IsVisible
+      // ElementSelectionService.IsVisible already caches ancestor checks
+      foreach (var descendant in modelItem.DescendantsAndSelf)
+      {
+        if (descendant.HasGeometry && _selectionService.IsVisible(descendant))
+        {
+          modelItems.Add(descendant);
+        }
+      }
       count++;
     }
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
