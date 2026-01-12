@@ -45,20 +45,14 @@ public class NavisworksRootObjectBuilder(
   )
   {
 #if DEBUG
-    // This is a temporary workaround to disable node merging for debugging purposes - false is default, true is for debugging
     SkipNodeMerging = false;
-
-    // Set to true to disable grouping routines and test if they're interfering with instancing
     DisableGroupingForInstanceTesting = false;
 #endif
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
-    // 2. Initialize the root collection
     var rootCollection = InitializeRootCollection();
-
-    // 3. Convert all model items and store results
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
 
@@ -69,20 +63,14 @@ public class NavisworksRootObjectBuilder(
 
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
-    // Add an instance definitions and geometry definitions collection
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
-
-    // Diagnostic: Count InstanceProxy objects in the final output
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
     logger.LogInformation(
       "Final output contains {count} InstanceProxy objects in displayValues",
       finalInstanceProxyCount
     );
 
-    // DIAGNOSTICS: Generate and log an instance grouping report
     LogInstanceGroupingDiagnostics(navisworksModelItems.Count);
-
-    // DIAGNOSTICS: Generate and log geometry cache statistics
     LogGeometryCacheStatistics();
 
     rootCollection.elements = finalElements;
@@ -139,7 +127,6 @@ public class NavisworksRootObjectBuilder(
       var converted = ConvertNavisworksItem(item, convertedBases, projectId);
       results.Add(converted);
 
-      // Count InstanceProxy objects for diagnostics
       if (
         converted.Status == Status.SUCCESS
         && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
@@ -177,7 +164,6 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    // First, build the grouped nodes as before (unless disabled for testing)
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
 
@@ -195,7 +181,6 @@ public class NavisworksRootObjectBuilder(
       logger.LogInformation("Grouping disabled for instance testing");
     }
 
-    // If hierarchy mode is enabled, reorganize into a proper nested structure
     if (converterSettings.Current.User.PreserveModelHierarchy)
     {
       logger.LogInformation("Building hierarchy (PreserveModelHierarchy=true)");
@@ -210,7 +195,6 @@ public class NavisworksRootObjectBuilder(
       return hierarchy;
     }
 
-    // Otherwise continue with flat mode
     logger.LogInformation("Adding remaining elements (flat mode)");
     AddRemainingElements(finalElements, convertedBases, processedPaths);
 
@@ -277,19 +261,11 @@ public class NavisworksRootObjectBuilder(
     return (context.Name, context.Path);
   }
 
-  /// <summary>
-  /// Processes and adds any remaining non-grouped elements.
-  /// </summary>
-  /// <remarks>
-  /// Handles both Collection and Base type elements differently.
-  /// Only processes elements not handled in grouped processing.
-  /// </remarks>
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetContext(cleanParentPath);
 
-    // Pre-calculate capacity to avoid list resizing during SelectMany
     int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
     var displayValues = new List<Base>(estimatedCapacity);
     foreach (var sibling in siblingBases)
@@ -300,7 +276,6 @@ public class NavisworksRootObjectBuilder(
       }
     }
 
-    // Diagnostic: count InstanceProxy objects in a merged group
     var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
     if (instanceProxyCount > 0)
     {
@@ -318,16 +293,11 @@ public class NavisworksRootObjectBuilder(
       displayValue = displayValues,
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
-      applicationId = groupKey, // Use the full composite key as applicationId to preserve uniqueness
+      applicationId = groupKey,
       ["path"] = path
     };
   }
 
-  /// <summary>
-  /// Creates a NavisworksObject from a single converted base.
-  /// </summary>
-  /// <param name="convertedBase">The converted Speckle Base object.</param>
-  /// <returns>A new NavisworksObject containing the converted data.</returns>
   private NavisworksObject? CreateNavisworksObject(Base convertedBase)
   {
     if (convertedBase.applicationId == null)
@@ -380,14 +350,12 @@ public class NavisworksRootObjectBuilder(
 
     if (allDefinitions.Count == 0)
     {
-      // No instancing - return early
       logger.LogInformation("No instance definitions found - instancing may be disabled");
       return;
     }
 
     logger.LogInformation("Building instance structure for {count} definition groups", allDefinitions.Count);
 
-    // DIAGNOSTICS: Warn if we have too many definitions (indicates grouping failure)
     if (allDefinitions.Count > 100)
     {
       logger.LogWarning(
@@ -396,10 +364,8 @@ public class NavisworksRootObjectBuilder(
       );
     }
 
-    // Build InstanceDefinitionProxy objects
     var instanceDefinitionProxies = new List<InstanceDefinitionProxy>(allDefinitions.Count);
 
-    // Estimate total geometry count for the capacity hint (reduces list resizing)
     int estimatedGeometryCount = allDefinitions.Sum(kvp => kvp.Value.Count);
     var allDefinitionGeometries = new List<Base>(estimatedGeometryCount);
 
@@ -409,7 +375,6 @@ public class NavisworksRootObjectBuilder(
       var geometries = kvp.Value;
       var groupKeyHash = groupKey.ToHashString();
 
-      // Create InstanceDefinitionProxy
       var defProxy = new InstanceDefinitionProxy
       {
         name = $"Shared Geometry {groupKeyHash}",
@@ -422,26 +387,19 @@ public class NavisworksRootObjectBuilder(
       allDefinitionGeometries.AddRange(geometries);
     }
 
-    // Add instanceDefinitionProxies to the root collection
     rootCollection["instanceDefinitionProxies"] = instanceDefinitionProxies;
-
-    // Create a "Geometry Definitions" Collection
     var geometryDefinitionsCollection = new Collection
     {
       name = "Geometry Definitions",
-      // collectionType = "GeometryDefinitions", // Deprecated
       elements = allDefinitionGeometries
     };
 
-    // Create a bare Collection for the NavisworksObjects
     var objectCollection = new Collection
     {
       name = "",
-      // collectionType = "GeometryDefinitions", // Deprecated
       elements = finalElements
     };
 
-    // Prepend Geometry Definitions Collection to finalElements
     finalElements = [geometryDefinitionsCollection, objectCollection];
 
     logger.LogInformation(
@@ -451,9 +409,6 @@ public class NavisworksRootObjectBuilder(
     );
   }
 
-  /// <summary>
-  /// Recursively counts InstanceProxy objects in a collection hierarchy.
-  /// </summary>
   private int CountInstanceProxiesRecursive(List<Base> elements)
   {
     int count = 0;
@@ -472,15 +427,6 @@ public class NavisworksRootObjectBuilder(
     return count;
   }
 
-  /// <summary>
-  /// Converts a single Navisworks item to a Speckle object.
-  /// </summary>
-  /// <remarks>
-  /// Attempts to retrieve from the cache first.
-  /// Falls back to fresh conversion if not cached.
-  /// Logs errors but doesn't throw exceptions.
-  /// </remarks>
-  /// <returns>A SendConversionResult indicating success or failure.</returns>
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases,
@@ -507,16 +453,11 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  /// <summary>
-  /// DIAGNOSTICS: Collects and logs instance grouping statistics from the registry.
-  /// Helps diagnose why large selections may not be grouping correctly.
-  /// </summary>
   private void LogInstanceGroupingDiagnostics(int totalItemsSelected)
   {
 #if DEBUG
     try
     {
-      // Collect statistics from the registry
       var groupToConvertedPaths = instanceRegistry.BuildGroupToConvertedPaths();
       var diagnosticsBuilder = new InstanceGroupingDiagnosticsBuilder();
 
@@ -527,7 +468,6 @@ public class NavisworksRootObjectBuilder(
 
       var diagnostics = diagnosticsBuilder.Build();
 
-      // Log summary
       logger.LogInformation("╔════════════════════════════════════════════════════════════════╗");
       logger.LogInformation("║  INSTANCE GROUPING DIAGNOSTICS                                ║");
       logger.LogInformation("╚════════════════════════════════════════════════════════════════╝");
@@ -538,7 +478,6 @@ public class NavisworksRootObjectBuilder(
       );
       logger.LogInformation("{summary}", diagnostics.GenerateSummary());
 
-      // Check if grouping is effective
       if (!diagnostics.IsGroupingEffective())
       {
         logger.LogWarning("⚠️  Instance grouping appears to be INEFFECTIVE!");
@@ -565,10 +504,6 @@ public class NavisworksRootObjectBuilder(
 #endif
   }
 
-  /// <summary>
-  /// Logs geometry cache performance statistics.
-  /// Shows how effectively the geometry signature cache is avoiding expensive COM calls.
-  /// </summary>
   private void LogGeometryCacheStatistics()
   {
 #if DEBUG
@@ -580,7 +515,6 @@ public class NavisworksRootObjectBuilder(
       logger.LogInformation("║  GEOMETRY CACHE PERFORMANCE                                   ║");
       logger.LogInformation("╚════════════════════════════════════════════════════════════════╝");
 
-      // Log performance timing statistics
       var (comMs, geometryMs, itemCount) = geometryConverter.GetPerformanceStatistics();
       if (itemCount > 0)
       {

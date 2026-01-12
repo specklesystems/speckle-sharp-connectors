@@ -59,8 +59,7 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  // Do not change the behavior/scope of this class on the Send binding unless make sure the behavior is the same.
-  // Otherwise, we might not be able to update a list of saved sets.
+  // WARNING: Changes to filter behavior here must match everywhere filters are used, or saved sets won't update correctly
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
@@ -128,10 +127,10 @@ public class NavisworksSendBinding : ISendBinding
     {
       throw new SpeckleSendFilterException(message);
     }
+
     onOperationProgressed.Report(new CardProgress("Getting selection...", null));
     await Task.CompletedTask;
 
-    // DIAGNOSTICS: Track timing for each phase
     var totalStopwatch = Stopwatch.StartNew();
     long pathResolutionTicks = 0;
     long treeWalkTicks = 0;
@@ -139,56 +138,42 @@ public class NavisworksSendBinding : ISendBinding
     long progressReportTicks = 0;
     long listOperationTicks = 0;
     int totalDescendantsProcessed = 0;
-
-    // Track the slowest paths for diagnostics
     var pathTimings = new List<(string path, long ticks, int descendants)>();
-
-    // Estimate ~10 geometry nodes per path on average to avoid list resizing
     int estimatedCapacity = selectedPaths.Count * 10;
     var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
     double count = 0;
     foreach (var path in selectedPaths)
     {
-      // Time progress reporting
       var progressTimer = Stopwatch.StartNew();
       onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
       await Task.CompletedTask;
       progressTimer.Stop();
       progressReportTicks += progressTimer.ElapsedTicks;
 
-      // Time entire path processing
       var perPathTimer = Stopwatch.StartNew();
-
-      // Time path resolution
       var pathTimer = Stopwatch.StartNew();
       var modelItem = _selectionService.GetModelItemFromPath(path);
       pathTimer.Stop();
       pathResolutionTicks += pathTimer.ElapsedTicks;
 
-      // OPTIMIZATION: Use DFS with visibility pruning for any node with children
-      // Leaf geometry nodes can skip DFS and be added directly
       var hasChildren = modelItem.Children.Any();
+      // ReSharper disable once UnusedVariable
       var isLeafGeometry = !hasChildren && modelItem.HasGeometry;
-      var useDfsWithProgress = hasChildren; // Use DFS for any non-leaf node
 
-      // Time tree walking
       var treeWalkTimer = Stopwatch.StartNew();
       var visibilityTimer = Stopwatch.StartNew();
-      visibilityTimer.Stop(); // Start stopped, we'll start/stop as needed
+      visibilityTimer.Stop();
 
-      if (useDfsWithProgress)
+      if (hasChildren)
       {
-        // Large tree - use DFS with visibility pruning and progress reporting
-        // This skips entire hidden branches and only collects geometry nodes
         int nodesVisited = 0;
         int hiddenBranchesPruned = 0;
-        const int REPORT_INTERVAL = 1000; // Report every 1000 nodes
+        const int REPORT_INTERVAL = 1000;
 
         void TraverseWithProgress(NAV.ModelItem node)
         {
           nodesVisited++;
 
-          // Report progress periodically to keep the UI responsive
           if (nodesVisited % REPORT_INTERVAL == 0)
           {
             onOperationProgressed.Report(
@@ -197,10 +182,9 @@ public class NavisworksSendBinding : ISendBinding
                 null
               )
             );
-            Task.Delay(1).Wait(); // Yield to UI thread
+            Task.Delay(1).Wait();
           }
 
-          // Check visibility - if hidden, skip the entire branch (huge optimization!)
           visibilityTimer.Start();
           bool isVisible = _selectionService.IsVisible(node);
           visibilityTimer.Stop();
@@ -208,10 +192,9 @@ public class NavisworksSendBinding : ISendBinding
           if (!isVisible)
           {
             hiddenBranchesPruned++;
-            return; // Prune this entire branch
+            return;
           }
 
-          // If visible and has geometry, add it directly
           if (node.HasGeometry)
           {
             var listTimer = Stopwatch.StartNew();
@@ -220,7 +203,6 @@ public class NavisworksSendBinding : ISendBinding
             listOperationTicks += listTimer.ElapsedTicks;
           }
 
-          // Recursively traverse visible children
           foreach (var child in node.Children)
           {
             TraverseWithProgress(child);
@@ -232,7 +214,6 @@ public class NavisworksSendBinding : ISendBinding
       }
       else
       {
-        // Leaf geometry node - add directly if visible
         totalDescendantsProcessed = 1;
         visibilityTimer.Start();
         if (modelItem.HasGeometry && _selectionService.IsVisible(modelItem))
@@ -260,7 +241,6 @@ public class NavisworksSendBinding : ISendBinding
 
     totalStopwatch.Stop();
 
-    // DIAGNOSTICS: Log timing breakdown
 #if DEBUG
     var pathResolutionMs = pathResolutionTicks / (double)TimeSpan.TicksPerMillisecond;
     var treeWalkMs = treeWalkTicks / (double)TimeSpan.TicksPerMillisecond;
@@ -312,12 +292,6 @@ public class NavisworksSendBinding : ISendBinding
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  /// <summary>
-  /// Cancels all outstanding send operations for the current document.
-  /// This method is called when the active document changes, to ensure
-  /// that any in-progress send operations are properly canceled before
-  /// the new document is loaded.
-  /// </summary>
   public void CancelAllSendOperations()
   {
     foreach (var modelCardId in _store.GetSenders().Select(m => m.ModelCardId))
