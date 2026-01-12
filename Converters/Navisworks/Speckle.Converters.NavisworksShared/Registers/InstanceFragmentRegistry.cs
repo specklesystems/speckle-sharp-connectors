@@ -19,12 +19,10 @@ public interface IInstanceFragmentRegistry
   bool TryGetInstanceWorld(PathKey instancePath, out double[] instanceWorld);
   void SetInstanceWorld(PathKey instancePath, double[] instanceWorld);
 
-  // Definition geometry storage for instancing
   bool HasDefinitionGeometry(PathKey groupKey);
   void StoreDefinitionGeometry(PathKey groupKey, List<Base> geometry);
   bool TryGetDefinitionGeometry(PathKey groupKey, out List<Base> geometry);
 
-  // Helper methods for building instance structure
   Dictionary<PathKey, List<Base>> GetAllDefinitionGeometries();
   List<PathKey> GetAllGroupKeys();
 

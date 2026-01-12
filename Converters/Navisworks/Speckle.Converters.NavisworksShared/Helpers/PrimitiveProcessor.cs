@@ -7,49 +7,8 @@ namespace Speckle.Converter.Navisworks.Helpers;
 
 /// <summary>
 /// Callback processor for Navisworks COM primitive generation.
-///
-/// PERFORMANCE ANALYSIS (Based on profiling: COM = 99.5%, Geometry = 0.5%):
-///
-/// The bottleneck is NOT in this class's logic, but in the COM interop itself:
-///
-/// 1. fragment.GenerateSimplePrimitives() - The COM API call that invokes these callbacks
-///    - This is controlled by Navisworks, not us
-///    - Each callback invocation has COM marshaling overhead
-///    - For 687 items: ~13.7ms per item just in COM overhead
-///
-/// 2. InwSimpleVertex.coord property access - Returns Array (COM object)
-///    - COM marshaling converts native array to .NET Array
-///    - Each vertex requires 3 GetValue() calls (X, Y, Z)
-///    - For complex geometry: thousands of vertices = thousands of COM calls
-///
-/// 3. NAV.Vector3D constructor - Creates COM object
-///    - Using 'using' to dispose immediately (good practice)
-///    - But still has allocation/disposal overhead per vertex
-///
-/// POTENTIAL OPTIMIZATIONS (in order of impact):
-///
-/// A. CACHE GEOMETRY SIGNATURES (Likely already implemented elsewhere)
-///    - If same geometry processed multiple times, cache the result
-///    - Avoid calling GenerateSimplePrimitives() at all for duplicates
-///    - This is the ONLY way to avoid the COM overhead
-///
-/// B. REDUCE COM VERTEX PROPERTY ACCESSES
-///    - Current: 3 GetValue() calls per vertex (X, Y, Z)
-///    - Optimization: Use unsafe code to access array buffer directly
-///    - Risk: Breaks if Navisworks changes COM object layout
-///    - Benefit: ~30-40% reduction in COM marshaling overhead
-///
-/// C. REUSE NAV.Vector3D OBJECTS (Marginal benefit, breaks 'using' pattern)
-///    - Object pooling for Vector3D instances
-///    - Complex to implement correctly with COM
-///    - Minimal benefit compared to option B
-///
-/// D. BATCH PROCESSING (Already tested - doesn't help)
-///    - Parallelizing geometry creation saves less than 1 percent of total time - COM calls must remain serial
-///
-/// RECOMMENDATION:
-/// Focus on caching at a higher level (geometry signature cache).
-/// The COM API itself is the bottleneck - we can't make it faster from C#.
+/// WARNING: COM interop bottleneck - fragment.GenerateSimplePrimitives() has significant marshaling overhead.
+/// WARNING: InwSimpleVertex.coord returns Array (COM object) requiring 3 GetValue() calls per vertex.
 /// </summary>
 public class PrimitiveProcessor : InwSimplePrimitivesCB
 {
@@ -124,7 +83,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
     AddPoint(safePoint);
   }
 
-  // TODO: Needed for Splines
+
   public void SnapPoint(InwSimpleVertex? v1) => Point(v1);
 
   public void Triangle(InwSimpleVertex? v1, InwSimpleVertex? v2, InwSimpleVertex? v3)
@@ -147,7 +106,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       IsUpright
     );
 
-    // Capture values immediately in our safe struct
+
     var safeTriangle = new SafeTriangle(vD1, vD2, vD3);
 
     var indexPointer = Faces.Count;
@@ -202,7 +161,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 
   private static NAV.Vector3D ApplyTransformation(Vector3 vector3, IEnumerable<double>? matrixStore)
   {
-    // NOTE: This math is fast (~0.064ms per item). Not the bottleneck.
+
     var matrix = matrixStore!.ToList();
     var t1 = matrix[3] * vector3.X + matrix[7] * vector3.Y + matrix[11] * vector3.Z + matrix[15];
     var vectorDoubleX = (matrix[0] * vector3.X + matrix[4] * vector3.Y + matrix[8] * vector3.Z + matrix[12]) / t1;
@@ -213,22 +172,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
   }
 
   /// <summary>
-  /// Extracts vertex coordinates from the COM object.
-  ///
-  /// PERFORMANCE HOTSPOT: This is called for EVERY vertex in EVERY triangle/line.
-  /// For 687 items with complex geometry, this could be called 100 thousand+ times.
-  ///
-  /// Each call involves:
-  /// 1. Cast v.coord to Array (COM property access)
-  /// 2. Three GetValue() calls (COM marshaling for each coordinate)
-  ///
-  /// Total COM overhead per vertex: ~0.02-0.05ms
-  /// Multiply by thousands of vertices = most of the 13.7ms per item
-  ///
-  /// OPTIMIZATION OPPORTUNITY (unsafe, risky):
-  /// Could use Marshal.Copy to get array buffer directly, avoiding GetValue() calls.
-  /// But this breaks if Navisworks changes COM object layout.
-  /// Not recommended unless profiling shows this specific method is >50% of the time.
+  /// WARNING: Called for every vertex - COM marshaling overhead from Array cast and 3 GetValue() calls.
   /// </summary>
   private static Vector3 VectorFromVertex(InwSimpleVertex v)
   {
