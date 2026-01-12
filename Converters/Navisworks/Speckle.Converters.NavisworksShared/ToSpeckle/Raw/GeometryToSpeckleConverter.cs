@@ -21,7 +21,7 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 /// WARNING: Uses COM interop - cannot use public ModelGeometry API.
 /// Process: ModelItem → InwOaPath3 → InwOaFragmentList → InwOaFragment3 → primitives → Speckle geometry
 ///
-/// COM overhead: ~13.7ms per item (99.5% of time) - cannot be optimized from C#
+/// COM overhead: ~13.7ms per item (99.5% of the time) - cannot be optimized from C#
 /// All COM objects are properly released in try-finally blocks to prevent memory leaks.
 /// </summary>
 public sealed class GeometryToSpeckleConverter(
@@ -40,10 +40,11 @@ public sealed class GeometryToSpeckleConverter(
   private int _totalModelItemsProcessed;
   private const bool ENABLE_INSTANCING = true;
   private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
+
+  // ReSharper disable once NotAccessedField.Local
   private int _totalPathsProcessed;
   private int _singleMemberGroups;
   private int _multiMemberGroups;
-
 
 #pragma warning disable CA1024
   public (double comMs, double geometryMs, int itemCount) GetPerformanceStatistics()
@@ -209,7 +210,7 @@ public sealed class GeometryToSpeckleConverter(
       {
         GC.KeepAlive(fragment);
 
-        var fragPath = fragment.path;
+        InwOaPath? fragPath = fragment.path;
         if (fragPath?.ArrayData is not Array fragPathArr)
         {
           continue;
@@ -218,10 +219,7 @@ public sealed class GeometryToSpeckleConverter(
         var fragmentPathKey = PathKey.FromComArray(fragPathArr);
         set.Add(fragmentPathKey);
 
-        if (fragPath != null)
-        {
-          Marshal.ReleaseComObject(fragPath);
-        }
+        Marshal.ReleaseComObject(fragPath);
       }
     }
     finally
@@ -246,7 +244,7 @@ public sealed class GeometryToSpeckleConverter(
       {
         GC.KeepAlive(fragment);
 
-        InwOaPath3? fragPath = null;
+        InwOaPath? fragPath = null;
         InwLTransform3f3? transform = null;
 
         try
@@ -419,9 +417,9 @@ public sealed class GeometryToSpeckleConverter(
   }
 
   /// <summary>
-  /// VALIDATION HELPER: Unbakes geometry from world space to definition space.
-  /// Creates copies of the geometry and applies inverse transform to move from world coordinates
-  /// back to definition/local space. Used for visual validation of instance detection.
+  /// VALIDATION HELPER: Unbakes geometry from world space to definition space. Creates copies of the geometry and
+  /// applies inverse transform to move from world coordinates back to definition/local space.
+  /// Used for visual validation of instance detection.
   /// </summary>
   private static List<Base> UnbakeGeometry(List<Base> bakedGeometry, double[] invWorld)
   {
