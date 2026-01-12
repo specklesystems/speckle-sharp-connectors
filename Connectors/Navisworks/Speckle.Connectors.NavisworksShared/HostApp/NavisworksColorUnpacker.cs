@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Settings;
@@ -16,7 +16,13 @@ public class NavisworksColorUnpacker(
   IElementSelectionService selectionService
 )
 {
-  private static T Select<T>(RepresentationMode mode, T active, T permanent, T original, T defaultValue) =>
+  private static T SelectByRepresentationMode<T>(
+    RepresentationMode mode,
+    T active,
+    T permanent,
+    T original,
+    T defaultValue
+  ) =>
     mode switch
     {
       RepresentationMode.Active => active,
@@ -71,14 +77,14 @@ public class NavisworksColorUnpacker(
 
         using var defaultColor = new NAV.Color(1.0, 1.0, 1.0);
 
-        var representationColor = Select(
+        var representationColor = SelectByRepresentationMode(
           mode,
           geometry.ActiveColor,
           geometry.PermanentColor,
           geometry.OriginalColor,
           defaultColor
         );
-        var colorId = Select(
+        var colorId = SelectByRepresentationMode(
           mode,
           $"{geometry.ActiveColor.GetHashCode()}_{geometry.ActiveTransparency}".GetHashCode(),
           $"{geometry.PermanentColor.GetHashCode()}_{geometry.PermanentTransparency}".GetHashCode(),
@@ -167,7 +173,10 @@ public class NavisworksColorUnpacker(
     }
     finally
     {
-      System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
+      if (comSelection != null)
+      {
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
+      }
     }
   }
 }

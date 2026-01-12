@@ -49,11 +49,20 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     switch (target)
     {
       case DBA.Railing railing:
-        // railings can have subelements including top rails, hand rails, and balusters.
+        // railings can have sub-elements including top rails, handrails, and balusters.
         // they also do *not* have any materials associated with their category.
-        List<DB.ElementId> railingElementIds = [railing.GetTypeId(), railing.TopRail, .. railing.GetHandRails()];
+        // TopRail is now a separate child element with its own material quantities (see CNX-2806)
+        List<DB.ElementId> railingElementIds = [railing.GetTypeId(), .. railing.GetHandRails()];
         ProcessMaterialsByElementTypes(railingElementIds, quantities);
         break;
+
+      case DBA.TopRail topRail:
+        // TopRail/HandRail doesn't expose materials via HasMaterialQuantities
+        // must extract materials from the type parameters instead
+        List<DB.ElementId> railElementIds = [topRail.GetTypeId()];
+        ProcessMaterialsByElementTypes(railElementIds, quantities);
+        break;
+
       default:
         ProcessMaterialsByCategory(target, quantities);
         break;

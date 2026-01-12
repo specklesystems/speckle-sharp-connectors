@@ -8,6 +8,7 @@
     <StartProgram>$(ProgramFiles)\Rhino $(RhinoVersion)\System\Rhino.exe</StartProgram>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWpf>true</UseWpf>
+    <PlatformTarget>x64</PlatformTarget>
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>

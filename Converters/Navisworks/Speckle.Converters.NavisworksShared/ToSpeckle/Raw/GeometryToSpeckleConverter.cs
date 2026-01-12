@@ -73,6 +73,10 @@ public sealed class GeometryToSpeckleConverter(
     try
     {
       var paths = comSelection.Paths();
+      if (paths == null)
+      {
+        return [];
+      }
       try
       {
         var allResults = new List<Base>(5);
@@ -184,10 +188,7 @@ public sealed class GeometryToSpeckleConverter(
       }
       finally
       {
-        if (paths != null)
-        {
-          Marshal.ReleaseComObject(paths);
-        }
+        Marshal.ReleaseComObject(paths);
       }
     }
     finally
@@ -228,6 +229,8 @@ public sealed class GeometryToSpeckleConverter(
       {
         Marshal.ReleaseComObject(fragments);
       }
+
+      return ProcessFragments(fragmentStack, paths, true);
     }
 
     return set;

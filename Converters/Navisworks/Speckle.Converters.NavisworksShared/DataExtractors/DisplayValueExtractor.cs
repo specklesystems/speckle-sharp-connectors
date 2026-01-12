@@ -1,4 +1,4 @@
-﻿using Speckle.Sdk.Models;
+using Speckle.Sdk.Models;
 using static Speckle.Converter.Navisworks.Helpers.ElementSelectionHelper;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;

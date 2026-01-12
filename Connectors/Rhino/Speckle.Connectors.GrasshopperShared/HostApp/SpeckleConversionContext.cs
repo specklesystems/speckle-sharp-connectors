@@ -4,6 +4,7 @@ using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.GrasshopperShared.HostApp;
@@ -29,13 +30,13 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     }
   }
 
-  public static void SetupCurrent()
+  public static void SetupCurrent(IServiceScope? scope = null)
   {
     if (s_currentContext != null)
     {
       return;
     }
-    s_scope = PriorityLoader.CreateScopeForActiveDocument();
+    s_scope = scope ?? PriorityLoader.CreateScopeForActiveDocument();
     s_currentContext = s_scope.Get<SpeckleConversionContext>();
   }
 
@@ -50,7 +51,21 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     s_scope = null;
   }
 
-  public Base ConvertToSpeckle(object geo) => speckleConverter.Convert(geo);
+  public Base? ConvertToSpeckle(object geo)
+  {
+    try
+    {
+      return speckleConverter.Convert(geo);
+    }
+    catch (ConversionException ex)
+    {
+      // changed as of CNX-2855
+      // log for debugging but don't throw - let caller handle null return
+      // we don't want to throw and fail whole operation, but want a way to signal to component that sumting wong
+      System.Diagnostics.Debug.WriteLine($"Conversion failed for {geo.GetType().Name}: {ex.Message}");
+      return null;
+    }
+  }
 
   public List<(object, Base)> ConvertToHost(Base input)
   {
@@ -60,6 +75,7 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
     {
       GeometryBase geometry => [(geometry, input)],
       List<GeometryBase> geometryList => geometryList.Select(o => ((object)o, input)).ToList(),
+      List<(GeometryBase, Base)> pairList when pairList.Count == 0 => [],
       IEnumerable<(GeometryBase, Base)> fallbackConversionResult
         => fallbackConversionResult.Select(o => ((object)o.Item1, o.Item2)).ToList(),
       object obj => [(obj, input)],

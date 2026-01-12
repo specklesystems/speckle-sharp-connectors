@@ -51,6 +51,10 @@ public static class NavisworksConverterServiceRegistration
       var registry = sp.GetRequiredService<IInstanceFragmentRegistry>();
       return new GeometryToSpeckleConverter(settingsStore.Current, registry);
     });
+    // Register settings resolved from factory
+    serviceCollection.AddScoped<NavisworksConversionSettings>(sp =>
+      sp.GetRequiredService<INavisworksConversionSettingsFactory>().Current
+    );
 
     return serviceCollection;
   }

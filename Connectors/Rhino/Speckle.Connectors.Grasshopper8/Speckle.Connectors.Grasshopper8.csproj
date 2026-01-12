@@ -29,8 +29,8 @@
 
   <ItemGroup>
     <PackageReference Include="GrasshopperAsyncComponent" />
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 

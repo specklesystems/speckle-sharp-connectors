@@ -1,9 +1,12 @@
+using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Objects.Data;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Converters.AutocadShared.ToHost.Geometry;
 
@@ -17,6 +20,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   private readonly ITypedConverter<SOG.Point, ADB.DBPoint> _pointConverter;
   private readonly ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> _subDXConverter;
   private readonly ITypedConverter<SOG.Region, ADB.Entity> _regionConverter;
+  private readonly ITypedConverter<RawEncoding, List<ADB.Entity>> _rawEncodingConverter;
+  private readonly EntityUnitConverter _entityUnitConverter;
 
   public DataObjectConverter(
     ITypedConverter<ICurve, List<(ADB.Entity, Base)>> curveConverter,
@@ -25,7 +30,9 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     ITypedConverter<SOG.Mesh, ADB.PolyFaceMesh> meshConverter,
     ITypedConverter<SOG.Point, ADB.DBPoint> pointConverter,
     ITypedConverter<SOG.SubDX, List<(ADB.Entity a, Base b)>> subDXConverter,
-    ITypedConverter<SOG.Region, ADB.Entity> regionConverter
+    ITypedConverter<SOG.Region, ADB.Entity> regionConverter,
+    ITypedConverter<RawEncoding, List<ADB.Entity>> rawEncodingConverter,
+    EntityUnitConverter entityUnitConverter
   )
   {
     _curveConverter = curveConverter;
@@ -35,6 +42,8 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     _pointConverter = pointConverter;
     _subDXConverter = subDXConverter;
     _regionConverter = regionConverter;
+    _rawEncodingConverter = rawEncodingConverter;
+    _entityUnitConverter = entityUnitConverter;
   }
 
   public object Convert(Base target) => Convert((DataObject)target);
@@ -42,14 +51,41 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
   public List<(ADB.Entity a, Base b)> Convert(DataObject target)
   {
     var result = new List<(ADB.Entity a, Base b)>();
+
+    if (target.displayValue.Count > 0 && target.displayValue[0] is InstanceProxy)
+    {
+      return []; // return empty - defer to instance baker
+    }
+
+    // Check for SAT encoding first for lossless round-trip
+    if (target["encodedValue"] is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_SAT)
+    {
+      try
+      {
+        var entities = _rawEncodingConverter.Convert(encoding);
+        if (entities.Count > 0)
+        {
+          // SAT format is unitless - scale entities if source and target units differ
+          _entityUnitConverter.ScaleIfNeeded(entities, target["units"] as string);
+          return entities.Select(e => (e, (Base)target)).ToList();
+        }
+      }
+      catch (ConversionException)
+      {
+        // Fall through to displayValue conversion
+      }
+    }
+
+    // Fallback: convert displayValue geometry
     foreach (var item in target.displayValue)
     {
       result.AddRange(ConvertDisplayObject(item));
     }
+
     return result;
   }
 
-  public IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
+  private IEnumerable<(ADB.Entity a, Base b)> ConvertDisplayObject(Base displayObject)
   {
     switch (displayObject)
     {

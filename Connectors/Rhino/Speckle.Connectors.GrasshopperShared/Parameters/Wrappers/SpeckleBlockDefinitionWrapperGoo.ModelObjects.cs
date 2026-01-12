@@ -13,47 +13,59 @@ public partial class SpeckleBlockDefinitionWrapperGoo
     switch (source)
     {
       case InstanceDefinition instanceDefinition:
-        List<SpeckleGeometryWrapper> objects = new();
-        foreach (var defObj in instanceDefinition.GetObjects())
-        {
-          SpeckleGeometryWrapperGoo defObjGoo = new();
-          if (defObjGoo.CastFrom(defObj))
-          {
-            objects.Add(defObjGoo.Value);
-          }
-        }
-
-        if (objects.Count == 0)
-        {
-          return false;
-        }
-
-        SetValueFromDefinitionProps(objects, instanceDefinition.Name, instanceDefinition.Id.ToString());
-        return true;
+        return TryConvertDefinition(
+          instanceDefinition.GetObjects().Cast<object>(),
+          instanceDefinition.Name,
+          instanceDefinition.Id.ToString()
+        );
 
       case ModelInstanceDefinition modelInstanceDef:
-        List<SpeckleGeometryWrapper> defObjs = new();
-        foreach (var defObj in modelInstanceDef.Objects)
-        {
-          SpeckleGeometryWrapperGoo geoWrapperGoo = new();
-          if (geoWrapperGoo.CastFrom(defObj))
-          {
-            defObjs.Add(geoWrapperGoo.Value);
-          }
-        }
+        return TryConvertDefinition(
+          modelInstanceDef.Objects.Cast<object>(),
+          modelInstanceDef.Name,
+          modelInstanceDef.Id.ToString()
+        );
 
-        if (defObjs.Count == 0)
-        {
-          throw new InvalidOperationException(
-            $"Block definition '{modelInstanceDef.Name}' did not have any valid geometry."
-          );
-        }
-
-        SetValueFromDefinitionProps(defObjs, modelInstanceDef.Name, modelInstanceDef.Id.ToString());
-        return true;
       default:
         return false;
     }
+  }
+
+  /// <summary>
+  /// Attempts to convert block definition objects to SpeckleGeometryWrappers.
+  /// Returns false if all objects are unsupported, true if at least one converts.
+  /// </summary>
+  private bool TryConvertDefinition(IEnumerable<object> definitionObjects, string definitionName, string definitionId)
+  {
+    var objects = definitionObjects as object[] ?? definitionObjects.ToArray();
+    int totalCount = objects.Length;
+    List<SpeckleGeometryWrapper> converted = new();
+
+    foreach (var defObj in objects)
+    {
+      SpeckleGeometryWrapperGoo defObjGoo = new();
+      if (defObjGoo.CastFrom(defObj))
+      {
+        converted.Add(defObjGoo.Value);
+      }
+    }
+
+    int skippedCount = totalCount - converted.Count;
+
+    // return false if nothing converted - Grasshopper handles this as warning (CNX-2855)
+    if (converted.Count == 0)
+    {
+      return false;
+    }
+
+    // show debug info if some objects skipped (CNX-2855)
+    if (skippedCount > 0)
+    {
+      System.Diagnostics.Debug.WriteLine($"Block '{definitionName}' skipped {skippedCount} unsupported object(s)");
+    }
+
+    SetValueFromDefinitionProps(converted, definitionName, definitionId);
+    return true;
   }
 
   private void SetValueFromDefinitionProps(List<SpeckleGeometryWrapper> objs, string name, string id)

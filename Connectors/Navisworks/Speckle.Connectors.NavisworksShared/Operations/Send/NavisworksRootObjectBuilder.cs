@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
@@ -30,6 +31,8 @@ public class NavisworksRootObjectBuilder(
   IElementSelectionService elementSelectionService,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor displayValueExtractor
+  IElementSelectionService elementSelectionService,
+  IUiUnitsCache uiUnitsCache,
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -190,9 +193,7 @@ public class NavisworksRootObjectBuilder(
         elementSelectionService
       );
 
-      var hierarchy = hierarchyBuilder.BuildHierarchy();
-
-      return hierarchy;
+      return hierarchyBuilder.BuildHierarchy();
     }
 
     logger.LogInformation("Adding remaining elements (flat mode)");
@@ -254,7 +255,7 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  private (string name, string path) GetContext(string applicationId)
+  private (string name, string path) GetElementNameAndPath(string applicationId)
   {
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
@@ -264,7 +265,7 @@ public class NavisworksRootObjectBuilder(
   private NavisworksObject CreateNavisworksObject(string groupKey, List<Base> siblingBases)
   {
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
-    (string name, string path) = GetContext(cleanParentPath);
+    (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
     int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
     var displayValues = new List<Base>(estimatedCapacity);
@@ -305,14 +306,16 @@ public class NavisworksRootObjectBuilder(
       return null;
     }
 
-    (string name, string path) = GetContext(convertedBase.applicationId);
+    (string name, string path) = GetElementNameAndPath(convertedBase.applicationId);
+
+    var units = uiUnitsCache.Ensure();
 
     return new NavisworksObject
     {
       name = name,
       displayValue = convertedBase["displayValue"] as List<Base> ?? [],
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
-      units = converterSettings.Current.Derived.SpeckleUnits,
+      units = units.ToString(),
       applicationId = convertedBase.applicationId,
       ["path"] = path
     };

@@ -51,6 +51,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public IClient ApiClient { get; set; }
   public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
+  public SpecklePropertyGroupGoo? RootProperties { get; private set; }
   public SpeckleUrlModelResource? OutputParam { get; set; }
   public bool HasMultipleInputs { get; set; }
 
@@ -58,7 +59,10 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
+    // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+
+    // collection
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -68,11 +72,22 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     );
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
+
+    // model-wide props (see cnx-2722)
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Optional model-wide properties to attach to the root collection",
+      GH_ParamAccess.item
+    );
+    pManager[3].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
+    pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -280,6 +295,19 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     string? versionMessage = null;
     da.GetData(2, ref versionMessage);
     VersionMessage = versionMessage;
+
+    SpecklePropertyGroupGoo? rootPropsGoo = null;
+    da.GetData(3, ref rootPropsGoo);
+
+    // validate single properties group
+    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
+    if (Params.Input[3].VolatileData.DataCount > 1)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Only one Model Properties group is allowed");
+      return;
+    }
+
+    RootProperties = rootPropsGoo;
   }
 }
 
@@ -294,6 +322,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
   private Stopwatch? _stopwatch;
   public SpeckleUrlModelResource? OutputParam { get; set; }
+  public string? OutputVersionId { get; set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance<SendAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
@@ -305,6 +334,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
   {
     _stopwatch = new Stopwatch();
     _stopwatch.Start();
+    OutputVersionId = null;
   }
 
   public override void SetData(IGH_DataAccess da)
@@ -315,6 +345,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     {
       Parent.JustPastedIn = false;
       da.SetData(0, Parent.OutputParam);
+      da.SetData(1, OutputVersionId);
       return;
     }
 
@@ -330,6 +361,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     }
 
     da.SetData(0, OutputParam);
+    da.SetData(1, OutputVersionId);
 
     Parent.CurrentComponentState = ComponentState.UpToDate;
     Parent.OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
@@ -346,7 +378,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       */
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
-        $"Successfully published to Speckle. Right-click on the component to view online."
+        "Successfully published to Speckle. Right-click on the component to view online."
       );
       Parent.AddRuntimeMessage(
         GH_RuntimeMessageLevel.Remark,
@@ -395,6 +427,13 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       throw new InvalidOperationException("Root Collection was null");
     }
 
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
+    // constructed here from the Collection + Model Properties inputs.
+    // if this changes, then we need to update below!
+    var rootWrapper = new SpeckleRootCollectionWrapper(rootCollectionWrapper.Value, Parent.RootProperties?.Unwrap());
+
+    rootCollectionWrapper = new SpeckleRootCollectionWrapperGoo(rootWrapper);
+
     // Step 1 - SEND TO SERVER
     var sendInfo = await urlModelResource.GetSendInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
 
@@ -408,7 +447,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     SendOperationResult? result = await sendOperation
       .Execute(
-        new List<SpeckleCollectionWrapperGoo>() { rootCollectionWrapper },
+        new List<SpeckleCollectionWrapperGoo> { rootCollectionWrapper },
         sendInfo,
         Parent.VersionMessage,
         progress,
@@ -437,6 +476,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
         result.VersionId
       );
     OutputParam = createdVersion;
+    OutputVersionId = result.VersionId;
     Parent.Url = $"{createdVersion.Account.Server}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }

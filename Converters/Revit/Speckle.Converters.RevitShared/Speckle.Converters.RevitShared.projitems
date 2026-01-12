@@ -61,6 +61,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\CurveArrArrayToSpecklePolycurveConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\CurveArrayConversionToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\CurveConversionToSpeckle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\CurveOriginToPlaneConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\EllipseToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\HermiteSplineToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Geometry\LineConversionToSpeckle.cs" />
@@ -81,6 +82,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\RevitElementTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\ParameterValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\RevitContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\View3DTopLevelConverterToSpeckle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)\Helpers\SendSelection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\RevitToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RevitRootToSpeckleConverter.cs" />

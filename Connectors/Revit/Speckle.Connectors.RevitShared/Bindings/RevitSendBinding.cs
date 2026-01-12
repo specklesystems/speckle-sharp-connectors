@@ -94,7 +94,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   public List<ISendFilter> GetSendFilters() =>
     [
-      new RevitSelectionFilter() { IsDefault = true },
+      new RevitSelectionFilter { IsDefault = true },
       new RevitViewsFilter(_revitContext),
       new RevitCategoriesFilter(_revitContext)
     ];

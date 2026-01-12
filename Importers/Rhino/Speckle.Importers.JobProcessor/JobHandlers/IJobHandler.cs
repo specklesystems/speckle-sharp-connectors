@@ -1,10 +1,19 @@
 ﻿using Speckle.Importers.JobProcessor.Domain;
 using Speckle.Sdk.Api;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
+using Speckle.Sdk.Api.GraphQL.Models;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
 internal interface IJobHandler
 {
-  public Task<Version> ProcessJob(FileimportJob job, IClient client, CancellationToken cancellationToken);
+  /// <param name="job"></param>
+  /// <param name="client"></param>
+  /// <param name="cancellationToken"></param>
+  /// <returns>root object id</returns>
+  public Task<string> ProcessJob(
+    FileimportJob job,
+    IClient client,
+    ModelIngestion ingestion,
+    CancellationToken cancellationToken
+  );
 }

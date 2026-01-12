@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RhinoInside;
 using Speckle.Importers.Rhino.Internal;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 
 namespace Speckle.Importers.Rhino;
 
@@ -58,8 +57,8 @@ public static class Program
         {
           try
           {
-            Version result = await importer.RunRhinoImport(CancellationToken.None).ConfigureAwait(false);
-            WriteResult(new() { Version = result }, importerArgs.ResultsPath);
+            var results = await importer.RunRhinoImport(CancellationToken.None).ConfigureAwait(false);
+            WriteResult(new() { RootObjectId = results.RootId }, importerArgs.ResultsPath);
           }
           catch (Exception ex)
           {
