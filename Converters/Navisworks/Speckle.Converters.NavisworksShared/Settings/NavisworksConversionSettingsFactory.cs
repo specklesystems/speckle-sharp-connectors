@@ -7,28 +7,18 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Converter.Navisworks.Settings;
 
 [GenerateAutoInterface]
-public class NavisworksConversionSettingsFactory : INavisworksConversionSettingsFactory
+public class NavisworksConversionSettingsFactory(
+  IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  ILogger<NavisworksConversionSettingsFactory> logger)
+  : INavisworksConversionSettingsFactory
 {
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-  private readonly ILogger<NavisworksConversionSettingsFactory> _logger;
-  private readonly IHostToSpeckleUnitConverter<NAV.Units> _unitsConverter;
-
   private NAV.Document? _document;
   private SafeBoundingBox _modelBoundingBox;
   private bool _convertHiddenElements;
 
-  public NavisworksConversionSettingsFactory(
-    IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
-    IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-    ILogger<NavisworksConversionSettingsFactory> logger
-  )
-  {
-    _logger = logger;
-    _settingsStore = settingsStore;
-    _unitsConverter = unitsConverter;
-  }
 
-  public NavisworksConversionSettings Current => _settingsStore.Current;
+  public NavisworksConversionSettings Current => settingsStore.Current;
 
   private static readonly NAV.Vector3D s_canonicalUp = new(0, 0, 1);
 
@@ -60,7 +50,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
       throw new InvalidOperationException("No active document found.");
     }
 
-    var units = _unitsConverter.ConvertOrThrow(_document.Units);
+    var units = unitsConverter.ConvertOrThrow(_document.Units);
     if (string.IsNullOrEmpty(units))
     {
       throw new InvalidOperationException("Document units could not be converted.");
@@ -96,7 +86,7 @@ public class NavisworksConversionSettingsFactory : INavisworksConversionSettings
   private void InitializeDocument()
   {
     _document = NavisworksApp.ActiveDocument ?? throw new InvalidOperationException("No active document found.");
-    _logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
+    logger.LogInformation("Creating settings for document: {DocumentName}", _document.Title);
     _modelBoundingBox = new SafeBoundingBox(_document.GetBoundingBox(_convertHiddenElements));
   }
 

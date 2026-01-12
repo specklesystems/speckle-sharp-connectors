@@ -51,6 +51,7 @@ public sealed class GeometryToSpeckleConverter(
 
   // DIAGNOSTICS: Track grouping behavior
   private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
+  // ReSharper disable once NotAccessedField.Local
   private int _totalPathsProcessed;
   private int _singleMemberGroups;
   private int _multiMemberGroups;

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
@@ -58,7 +59,8 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
+  // Do not change the behavior/scope of this class on the Send binding unless make sure the behavior is the same.
+  // Otherwise, we might not be able to update a list of saved sets.
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
@@ -104,7 +106,18 @@ public class NavisworksSendBinding : ISendBinding
     IProgress<CardProgress> onOperationProgressed
   )
   {
+#if DEBUG
+    var methodEntryTime = Stopwatch.GetTimestamp();
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] GetNavisworksModelItems ENTRY");
+#endif
+
+    var refreshTimer = Stopwatch.StartNew();
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    refreshTimer.Stop();
+
+#if DEBUG
+    Console.WriteLine($"RefreshObjectIds took {refreshTimer.ElapsedMilliseconds}ms for {selectedPaths.Count} paths");
+#endif
     var convertHiddenElementsSetting =
       modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
     var message = convertHiddenElementsSetting
@@ -118,27 +131,182 @@ public class NavisworksSendBinding : ISendBinding
     onOperationProgressed.Report(new CardProgress("Getting selection...", null));
     await Task.CompletedTask;
 
+    // DIAGNOSTICS: Track timing for each phase
+    var totalStopwatch = Stopwatch.StartNew();
+    long pathResolutionTicks = 0;
+    long treeWalkTicks = 0;
+    long visibilityCheckTicks = 0;
+    long progressReportTicks = 0;
+    long listOperationTicks = 0;
+    int totalDescendantsProcessed = 0;
+
+    // Track the slowest paths for diagnostics
+    var pathTimings = new List<(string path, long ticks, int descendants)>();
+
     // Estimate ~10 geometry nodes per path on average to avoid list resizing
     int estimatedCapacity = selectedPaths.Count * 10;
     var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
     double count = 0;
     foreach (var path in selectedPaths)
     {
+      // Time progress reporting
+      var progressTimer = Stopwatch.StartNew();
       onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
       await Task.CompletedTask;
-      var modelItem = _selectionService.GetModelItemFromPath(path);
+      progressTimer.Stop();
+      progressReportTicks += progressTimer.ElapsedTicks;
 
-      // Single-pass filter: check both HasGeometry AND IsVisible
-      // ElementSelectionService.IsVisible already caches ancestor checks
-      foreach (var descendant in modelItem.DescendantsAndSelf)
+      // Time entire path processing
+      var perPathTimer = Stopwatch.StartNew();
+
+      // Time path resolution
+      var pathTimer = Stopwatch.StartNew();
+      var modelItem = _selectionService.GetModelItemFromPath(path);
+      pathTimer.Stop();
+      pathResolutionTicks += pathTimer.ElapsedTicks;
+
+      // OPTIMIZATION: Use DFS with visibility pruning for any node with children
+      // Leaf geometry nodes can skip DFS and be added directly
+      var hasChildren = modelItem.Children.Any();
+      var isLeafGeometry = !hasChildren && modelItem.HasGeometry;
+      var useDfsWithProgress = hasChildren; // Use DFS for any non-leaf node
+
+      // Time tree walking
+      var treeWalkTimer = Stopwatch.StartNew();
+      var visibilityTimer = Stopwatch.StartNew();
+      visibilityTimer.Stop(); // Start stopped, we'll start/stop as needed
+
+      if (useDfsWithProgress)
       {
-        if (descendant.HasGeometry && _selectionService.IsVisible(descendant))
+        // Large tree - use DFS with visibility pruning and progress reporting
+        // This skips entire hidden branches and only collects geometry nodes
+        int nodesVisited = 0;
+        int hiddenBranchesPruned = 0;
+        const int REPORT_INTERVAL = 1000; // Report every 1000 nodes
+
+        void TraverseWithProgress(NAV.ModelItem node)
         {
-          modelItems.Add(descendant);
+          nodesVisited++;
+
+          // Report progress periodically to keep the UI responsive
+          if (nodesVisited % REPORT_INTERVAL == 0)
+          {
+            onOperationProgressed.Report(
+              new CardProgress(
+                $"Expanding tree: {nodesVisited} visited, {modelItems.Count} with geometry, {hiddenBranchesPruned} hidden",
+                null
+              )
+            );
+            Task.Delay(1).Wait(); // Yield to UI thread
+          }
+
+          // Check visibility - if hidden, skip the entire branch (huge optimization!)
+          visibilityTimer.Start();
+          bool isVisible = _selectionService.IsVisible(node);
+          visibilityTimer.Stop();
+
+          if (!isVisible)
+          {
+            hiddenBranchesPruned++;
+            return; // Prune this entire branch
+          }
+
+          // If visible and has geometry, add it directly
+          if (node.HasGeometry)
+          {
+            var listTimer = Stopwatch.StartNew();
+            modelItems.Add(node);
+            listTimer.Stop();
+            listOperationTicks += listTimer.ElapsedTicks;
+          }
+
+          // Recursively traverse visible children
+          foreach (var child in node.Children)
+          {
+            TraverseWithProgress(child);
+          }
+        }
+
+        TraverseWithProgress(modelItem);
+        totalDescendantsProcessed = nodesVisited;
+      }
+      else
+      {
+        // Leaf geometry node - add directly if visible
+        totalDescendantsProcessed = 1;
+        visibilityTimer.Start();
+        if (modelItem.HasGeometry && _selectionService.IsVisible(modelItem))
+        {
+          visibilityTimer.Stop();
+          var listTimer = Stopwatch.StartNew();
+          modelItems.Add(modelItem);
+          listTimer.Stop();
+          listOperationTicks += listTimer.ElapsedTicks;
+        }
+        else
+        {
+          visibilityTimer.Stop();
         }
       }
+
+      treeWalkTimer.Stop();
+      treeWalkTicks += treeWalkTimer.ElapsedTicks;
+      visibilityCheckTicks += visibilityTimer.ElapsedTicks;
+
+      perPathTimer.Stop();
+      pathTimings.Add((path, perPathTimer.ElapsedTicks, totalDescendantsProcessed));
       count++;
     }
+
+    totalStopwatch.Stop();
+
+    // DIAGNOSTICS: Log timing breakdown
+#if DEBUG
+    var pathResolutionMs = pathResolutionTicks / (double)TimeSpan.TicksPerMillisecond;
+    var treeWalkMs = treeWalkTicks / (double)TimeSpan.TicksPerMillisecond;
+    var visibilityMs = visibilityCheckTicks / (double)TimeSpan.TicksPerMillisecond;
+    var progressMs = progressReportTicks / (double)TimeSpan.TicksPerMillisecond;
+    var listOpsMs = listOperationTicks / (double)TimeSpan.TicksPerMillisecond;
+    var totalMs = totalStopwatch.ElapsedMilliseconds;
+
+    var accountedMs = pathResolutionMs + treeWalkMs + visibilityMs + progressMs + listOpsMs;
+    var unaccountedMs = totalMs - accountedMs;
+
+    Console.WriteLine("=== GetNavisworksModelItems Performance ===");
+    Console.WriteLine($"Selected Paths: {selectedPaths.Count}");
+    Console.WriteLine($"Total Descendants Processed: {totalDescendantsProcessed}");
+    Console.WriteLine($"Final Geometry Items: {modelItems.Count}");
+    Console.WriteLine($"Total Time: {totalMs}ms");
+    Console.WriteLine($"  Path Resolution: {pathResolutionMs:F2}ms ({pathResolutionMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"  Tree Walking: {treeWalkMs:F2}ms ({treeWalkMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"  Visibility Checks: {visibilityMs:F2}ms ({visibilityMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"  Progress Reporting: {progressMs:F2}ms ({progressMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"  List Operations: {listOpsMs:F2}ms ({listOpsMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"  Unaccounted Overhead: {unaccountedMs:F2}ms ({unaccountedMs / totalMs * 100:F1}%)");
+    Console.WriteLine($"Avg per path: {totalMs / selectedPaths.Count:F2}ms");
+    Console.WriteLine($"Avg descendants per path: {totalDescendantsProcessed / selectedPaths.Count:F0}");
+
+    // Show the slowest paths (top 5)
+    var slowestPaths = pathTimings.OrderByDescending(x => x.ticks).Take(5).ToList();
+    if (slowestPaths.Count != 0)
+    {
+      Console.WriteLine("\nSlowest 5 paths:");
+      for (int i = 0; i < slowestPaths.Count; i++)
+      {
+        (string path, long ticks, int descendants) = slowestPaths[i];
+        var ms = ticks / (double)TimeSpan.TicksPerMillisecond;
+        Console.WriteLine(
+          $"  {i + 1}. {ms:F2}ms - {descendants} descendants - Path: {(path.Length > 50 ? path[..50] + "..." : path)}"
+        );
+      }
+    }
+
+    var methodTotalMs = (Stopwatch.GetTimestamp() - methodEntryTime) / (double)TimeSpan.TicksPerMillisecond;
+    Console.WriteLine(
+      $"\n[{DateTime.Now:HH:mm:ss.fff}] GetNavisworksModelItems EXIT - Total method time: {methodTotalMs:F2}ms"
+    );
+#endif
+
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 

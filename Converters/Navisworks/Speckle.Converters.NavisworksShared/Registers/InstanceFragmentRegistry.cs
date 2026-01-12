@@ -132,7 +132,7 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
     // Store instanceWorld for later retrieval (needed for unbaking validation)
     SetInstanceWorld(instancePath, instanceWorld);
 
-    var inv = Speckle.Converter.Navisworks.Helpers.GeometryHelpers.InvertRigid(instanceWorld);
+    var inv = GeometryHelpers.InvertRigid(instanceWorld);
     {
       var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
 
@@ -148,7 +148,6 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
 
       _groupSignature[groupKey] = sig;
       _groupToDefinitionWorld[groupKey] = instanceWorld;
-      return;
     }
   }
 }
