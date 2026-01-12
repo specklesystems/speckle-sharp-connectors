@@ -19,7 +19,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
   protected abstract int FixedInputCount { get; }
   protected abstract int FixedOutputCount { get; }
 
-  protected bool HasApplicationIdParam => Params.Input.Count > FixedInputCount;
+  private bool HasApplicationIdParam => Params.Input.Count > FixedInputCount;
 
   protected SpecklePassthroughComponentBase(
     string name,
