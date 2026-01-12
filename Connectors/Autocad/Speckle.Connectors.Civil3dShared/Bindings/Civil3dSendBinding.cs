@@ -43,7 +43,7 @@ public sealed class Civil3dSendBinding(
 {
   private readonly DocumentModelStore _store = store;
 
-  public override List<ICardSetting> GetSendSettings() => [new RevitCategoryMappingSetting(false)];
+  public override List<ICardSetting> GetSendSettings() => [new RevitCategoryMappingSetting(true)];
 
   // POC: we're registering the conversion settings for autocad here because we need the autocad conversion settings to be able to use the autocad typed converters.
   // POC: We need a separate a send binding for Civil3d due to using a different unit converter (needed for conversion settings construction)

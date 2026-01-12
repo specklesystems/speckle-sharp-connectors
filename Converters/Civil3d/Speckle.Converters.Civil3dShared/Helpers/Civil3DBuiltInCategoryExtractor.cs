@@ -23,10 +23,12 @@ public class Civil3DBuiltInCategoryExtractor : ICivil3DBuiltInCategoryExtractor
 
     if (string.Equals(builtInCategory, name, StringComparison.OrdinalIgnoreCase))
     {
+      Console.WriteLine($"{name}: {builtInCategory}");
       return false; // no mapping
     }
 
     mapped = builtInCategory;
+    Console.WriteLine($"{name}: {builtInCategory} -> {mapped}");
 
     return true;
   }
@@ -34,7 +36,9 @@ public class Civil3DBuiltInCategoryExtractor : ICivil3DBuiltInCategoryExtractor
   private static readonly Dictionary<string, string> s_civil3dClassMap =
     new(StringComparer.OrdinalIgnoreCase)
     {
-      ["Pipe"] = "OST_PlaceHolderPipes",
+      ["AeccDbSurfaceTin"] = "OST_Topography",
+      ["AeccDbPipe"] = "OST_PlaceHolderPipes",
+      ["AeccDbStructure"] = "OST_GenericModel"
       // ["Structure"] = "OST_PipeFitting"
     };
 
