@@ -47,7 +47,7 @@ public class CreateCollection : VariableParameterComponentBase
 
   protected override void SolveInstance(IGH_DataAccess dataAccess)
   {
-    var rootCollection = CreateRootCollection();
+    var rootCollection = CollectionHelpers.CreateRootCollection(InstanceGuid.ToString());
     bool hasAnyInput = false;
 
     foreach (var inputParam in Params.Input)
@@ -73,14 +73,14 @@ public class CreateCollection : VariableParameterComponentBase
     }
 
     // validate for duplicate application IDs across the entire collection hierarchy
-    if (HasDuplicateApplicationIds(rootCollection))
+    if (CollectionHelpers.HasDuplicateApplicationIds(rootCollection))
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The same object(s) cannot appear in multiple collections");
       return;
     }
 
     // validate collection isn't empty (CNX-2855)
-    if (rootCollection.Elements.Count == 0 || !rootCollection.Elements.Any(HasAnyValidContent))
+    if (rootCollection.Elements.Count == 0 || !rootCollection.Elements.Any(CollectionHelpers.HasAnyValidContent))
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
@@ -230,56 +230,6 @@ public class CreateCollection : VariableParameterComponentBase
         GH_RuntimeMessageLevel.Warning,
         $"Skipped {skippedCount} unsupported object(s) (Leaders, TextDots, Dimensions, etc.)"
       );
-    }
-  }
-
-  /// <summary>
-  /// Validates that all application IDs are unique across the entire collection hierarchy.
-  /// Shows an error if duplicates are found, indicating objects appear in multiple collections.
-  /// </summary>
-  /// <returns>True if duplicates exist, false if all IDs are unique</returns>
-  private bool HasDuplicateApplicationIds(SpeckleCollectionWrapper rootCollection)
-  {
-    // args to CheckForDuplicateApplicationIds passed in since the method can recursively check
-    var seenIds = new HashSet<string>();
-    var duplicateIds = new HashSet<string>();
-
-    // iterate, create hash set and check all application IDs
-    ProcessAndCheckForDuplicateApplicationIds(rootCollection, seenIds, duplicateIds);
-
-    return duplicateIds.Count > 0;
-  }
-
-  /// <summary>
-  /// Recursively collects application IDs from all in the collection hierarchy.
-  /// </summary>
-  /// <remarks>
-  /// Only checks the wrapper's ApplicationId, not for example geometries within DataObjects.
-  /// </remarks>
-  private void ProcessAndCheckForDuplicateApplicationIds(
-    SpeckleCollectionWrapper collection,
-    HashSet<string> seenIds,
-    HashSet<string> duplicateIds
-  )
-  {
-    foreach (var element in collection.Elements)
-    {
-      switch (element)
-      {
-        case null:
-          break; // skip nulls (CNX-2855)
-        case SpeckleCollectionWrapper childCollection:
-          // recurse into child collections
-          ProcessAndCheckForDuplicateApplicationIds(childCollection, seenIds, duplicateIds);
-          break;
-
-        case SpeckleWrapper wrapper:
-          if (wrapper.ApplicationId != null && !seenIds.Add(wrapper.ApplicationId))
-          {
-            duplicateIds.Add(wrapper.ApplicationId);
-          }
-          break;
-      }
     }
   }
 
