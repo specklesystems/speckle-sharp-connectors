@@ -28,7 +28,8 @@ public class NavisworksRootObjectBuilder(
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
   IElementSelectionService elementSelectionService,
-  Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry
+  Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
+  Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor displayValueExtractor
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -68,18 +69,21 @@ public class NavisworksRootObjectBuilder(
 
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
-    // Add instance definitions and geometry definitions collection
+    // Add an instance definitions and geometry definitions collection
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
 
-    // Diagnostic: Count InstanceProxy objects in final output
+    // Diagnostic: Count InstanceProxy objects in the final output
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
     logger.LogInformation(
       "Final output contains {count} InstanceProxy objects in displayValues",
       finalInstanceProxyCount
     );
 
-    // DIAGNOSTICS: Generate and log instance grouping report
+    // DIAGNOSTICS: Generate and log an instance grouping report
     LogInstanceGroupingDiagnostics(navisworksModelItems.Count);
+
+    // DIAGNOSTICS: Generate and log geometry cache statistics
+    LogGeometryCacheStatistics();
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -173,7 +177,7 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    // First build the grouped nodes as before (unless disabled for testing)
+    // First, build the grouped nodes as before (unless disabled for testing)
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
 
@@ -191,7 +195,7 @@ public class NavisworksRootObjectBuilder(
       logger.LogInformation("Grouping disabled for instance testing");
     }
 
-    // If hierarchy mode is enabled, reorganize into proper nested structure
+    // If hierarchy mode is enabled, reorganize into a proper nested structure
     if (converterSettings.Current.User.PreserveModelHierarchy)
     {
       logger.LogInformation("Building hierarchy (PreserveModelHierarchy=true)");
@@ -296,7 +300,7 @@ public class NavisworksRootObjectBuilder(
       }
     }
 
-    // Diagnostic: count InstanceProxy objects in merged group
+    // Diagnostic: count InstanceProxy objects in a merged group
     var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
     if (instanceProxyCount > 0)
     {
@@ -371,7 +375,7 @@ public class NavisworksRootObjectBuilder(
   {
     using var _ = activityFactory.Start("BuildInstanceDefinitions");
 
-    // Get all definition geometries from registry
+    // Get all definition geometries from the registry
     var allDefinitions = instanceRegistry.GetAllDefinitionGeometries();
 
     if (allDefinitions.Count == 0)
@@ -395,7 +399,7 @@ public class NavisworksRootObjectBuilder(
     // Build InstanceDefinitionProxy objects
     var instanceDefinitionProxies = new List<InstanceDefinitionProxy>(allDefinitions.Count);
 
-    // Estimate total geometry count for capacity hint (reduces list resizing)
+    // Estimate total geometry count for the capacity hint (reduces list resizing)
     int estimatedGeometryCount = allDefinitions.Sum(kvp => kvp.Value.Count);
     var allDefinitionGeometries = new List<Base>(estimatedGeometryCount);
 
@@ -460,7 +464,7 @@ public class NavisworksRootObjectBuilder(
         count += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
       }
 
-      if (element is Collection collection && collection.elements != null)
+      if (element is Collection { elements: not null } collection)
       {
         count += CountInstanceProxiesRecursive(collection.elements);
       }
@@ -512,7 +516,7 @@ public class NavisworksRootObjectBuilder(
 #if DEBUG
     try
     {
-      // Collect statistics from registry
+      // Collect statistics from the registry
       var groupToConvertedPaths = instanceRegistry.BuildGroupToConvertedPaths();
       var diagnosticsBuilder = new InstanceGroupingDiagnosticsBuilder();
 
@@ -557,6 +561,42 @@ public class NavisworksRootObjectBuilder(
     catch (Exception ex) when (!ex.IsFatal())
     {
       logger.LogWarning(ex, "Failed to generate instance grouping diagnostics");
+    }
+#endif
+  }
+
+  /// <summary>
+  /// Logs geometry cache performance statistics.
+  /// Shows how effectively the geometry signature cache is avoiding expensive COM calls.
+  /// </summary>
+  private void LogGeometryCacheStatistics()
+  {
+#if DEBUG
+    try
+    {
+      var geometryConverter = displayValueExtractor.GeometryConverter;
+
+      logger.LogInformation("╔════════════════════════════════════════════════════════════════╗");
+      logger.LogInformation("║  GEOMETRY CACHE PERFORMANCE                                   ║");
+      logger.LogInformation("╚════════════════════════════════════════════════════════════════╝");
+
+      // Log performance timing statistics
+      var (comMs, geometryMs, itemCount) = geometryConverter.GetPerformanceStatistics();
+      if (itemCount > 0)
+      {
+        logger.LogInformation("Performance Timing:");
+        logger.LogInformation("  Items Processed: {count}", itemCount);
+        logger.LogInformation("  COM Extraction: {comMs:F2} ms ({percent:F1}%)",
+          comMs, comMs / (comMs + geometryMs) * 100);
+        logger.LogInformation("  Geometry Creation: {geomMs:F2} ms ({percent:F1}%)",
+          geometryMs, geometryMs / (comMs + geometryMs) * 100);
+        logger.LogInformation("  Avg per item: {avgCom:F3} ms COM, {avgGeom:F3} ms Geometry",
+          comMs / itemCount, geometryMs / itemCount);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(ex, "Failed to generate geometry cache statistics");
     }
 #endif
   }

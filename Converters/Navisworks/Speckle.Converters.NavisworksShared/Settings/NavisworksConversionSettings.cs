@@ -13,7 +13,7 @@ public record Derived(
   SafeBoundingBox ModelBoundingBox, // The bounding box of the model.
   SafeVector TransformVector, // Transformation vector applied to the model.
   bool IsUpright, // Indicates if the model's orientation is upright relative to canonical up.
-  string SpeckleUnits // Units used in Speckle for standardised measurements.
+  string SpeckleUnits // Units used in Speckle for standardized measurements.
 );
 
 // Optional settings for conversion to be offered in UI
@@ -25,5 +25,5 @@ public record User(
   bool CoalescePropertiesFromFirstObjectAncestor, // Whether to merge properties from the first object ancestor.
   bool ExcludeProperties, // Whether to exclude properties from the output.
   bool PreserveModelHierarchy, // Whether to maintain the full model hierarchy during conversion.
-  bool RevitCategoryMapping // Optional mapping to Revit categories (if applicable).
+  bool RevitCategoryMapping = true // Optional mapping to Revit categories (if applicable).
 );

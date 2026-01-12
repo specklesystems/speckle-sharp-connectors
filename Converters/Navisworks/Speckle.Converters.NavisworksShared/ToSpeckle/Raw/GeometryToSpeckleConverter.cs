@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
@@ -39,6 +40,11 @@ public sealed class GeometryToSpeckleConverter(
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
 
+  // DIAGNOSTICS: Performance timing
+  private long _comExtractionTicks;
+  private long _geometryCreationTicks;
+  private int _totalModelItemsProcessed;
+
   // INSTANCING: Set to true to skip geometry conversion for later instances
   // First instance becomes the definition, later instances return InstanceReference objects
   private const bool ENABLE_INSTANCING = true;
@@ -48,6 +54,19 @@ public sealed class GeometryToSpeckleConverter(
   private int _totalPathsProcessed;
   private int _singleMemberGroups;
   private int _multiMemberGroups;
+
+  /// <summary>
+  /// Gets performance statistics for COM extraction vs geometry creation.
+  /// Returns (comMs, geometryMs, itemCount)
+  /// </summary>
+#pragma warning disable CA1024
+  public (double comMs, double geometryMs, int itemCount) GetPerformanceStatistics()
+#pragma warning restore CA1024
+  {
+    double comMs = _comExtractionTicks / (double)TimeSpan.TicksPerMillisecond;
+    double geometryMs = _geometryCreationTicks / (double)TimeSpan.TicksPerMillisecond;
+    return (comMs, geometryMs, _totalModelItemsProcessed);
+  }
 
   internal List<Base> Convert(NAV.ModelItem modelItem)
   {
@@ -60,6 +79,8 @@ public sealed class GeometryToSpeckleConverter(
     {
       return [];
     }
+
+    _totalModelItemsProcessed++;
 
     var comSelection = ComApiBridge.ToInwOpSelection(new() { modelItem });
     try
@@ -105,13 +126,23 @@ public sealed class GeometryToSpeckleConverter(
           // Extract instanceWorld from fragments FIRST (before any processing decisions)
           // This must happen before we can check if a definition exists or emit instance proxies
           var processor = new PrimitiveProcessor(_isUpright);
+
+          // DIAGNOSTICS: Time COM extraction
+          var comStopwatch = Stopwatch.StartNew();
           ProcessPathFragments(path, itemPathKey, groupKey, processor);
+          comStopwatch.Stop();
+          _comExtractionTicks += comStopwatch.ElapsedTicks;
 
           // Now instanceWorld should be stored via RegisterInstanceObservation
           if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
           {
             // No valid instanceWorld found - process geometry normally without instancing
+            // DIAGNOSTICS: Time geometry creation
+            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
+            geomStopwatch.Stop();
+            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
+
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
             continue;
@@ -123,7 +154,12 @@ public sealed class GeometryToSpeckleConverter(
           {
             // Single member group - no benefit to instancing
             // Return the already-baked geometry (with transforms applied)
+            // DIAGNOSTICS: Time geometry creation
+            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
+            geomStopwatch.Stop();
+            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
+
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
             continue;
@@ -133,7 +169,11 @@ public sealed class GeometryToSpeckleConverter(
           if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
           {
             // This is the first instance - convert and store as definition
+            // DIAGNOSTICS: Time geometry creation
+            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
+            geomStopwatch.Stop();
+            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
 
             // Unbake geometry to definition space and store
             var invDefWorld = GeometryHelpers.InvertRigid(instanceWorld);
@@ -167,7 +207,12 @@ public sealed class GeometryToSpeckleConverter(
           else
           {
             // Non-instancing mode: return the converted geometry
+            // DIAGNOSTICS: Time geometry creation
+            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
+            geomStopwatch.Stop();
+            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
+
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
           }
@@ -330,22 +375,24 @@ public sealed class GeometryToSpeckleConverter(
 
     foreach (var line in lines)
     {
-      result.Add(new Line
-      {
-        start = new Point(
-          (line.Start.X + _transformVector.X) * SCALE,
-          (line.Start.Y + _transformVector.Y) * SCALE,
-          (line.Start.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
-        end = new Point(
-          (line.End.X + _transformVector.X) * SCALE,
-          (line.End.Y + _transformVector.Y) * SCALE,
-          (line.End.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
-        units = _settings.Derived.SpeckleUnits
-      });
+      result.Add(
+        new Line
+        {
+          start = new Point(
+            (line.Start.X + _transformVector.X) * SCALE,
+            (line.Start.Y + _transformVector.Y) * SCALE,
+            (line.Start.Z + _transformVector.Z) * SCALE,
+            _settings.Derived.SpeckleUnits
+          ),
+          end = new Point(
+            (line.End.X + _transformVector.X) * SCALE,
+            (line.End.Y + _transformVector.Y) * SCALE,
+            (line.End.Z + _transformVector.Z) * SCALE,
+            _settings.Derived.SpeckleUnits
+          ),
+          units = _settings.Derived.SpeckleUnits
+        }
+      );
     }
 
     return result;
@@ -506,4 +553,30 @@ public sealed class GeometryToSpeckleConverter(
   }
 
   private static double GetPercentage(int part, int total) => total == 0 ? 0 : (double)part / total * 100.0;
+
+  /// <summary>
+  /// DIAGNOSTICS: Generates a performance timing report.
+  /// </summary>
+  public string GetPerformanceSummary()
+  {
+    var (comMs, geometryMs, itemCount) = GetPerformanceStatistics();
+    var totalMs = comMs + geometryMs;
+
+    if (itemCount == 0)
+    {
+      return "No performance data collected yet.";
+    }
+
+    var sb = new StringBuilder();
+    sb.AppendLine("=== Performance Timing Summary ===");
+    sb.AppendLine($"Total Items Processed: {itemCount}");
+    sb.AppendLine($"Total Time: {totalMs:F2} ms");
+    sb.AppendLine($"  COM Extraction: {comMs:F2} ms ({GetPercentage((int)comMs, (int)totalMs):F1}%)");
+    sb.AppendLine($"  Geometry Creation: {geometryMs:F2} ms ({GetPercentage((int)geometryMs, (int)totalMs):F1}%)");
+    sb.AppendLine($"Average per item:");
+    sb.AppendLine($"  COM: {comMs / itemCount:F2} ms");
+    sb.AppendLine($"  Geometry: {geometryMs / itemCount:F2} ms");
+
+    return sb.ToString();
+  }
 }

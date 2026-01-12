@@ -101,20 +101,16 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
   public void SetInstanceWorld(PathKey instancePath, double[] instanceWorld) =>
     _pathToInstanceWorld[instancePath] = instanceWorld;
 
-  public bool HasDefinitionGeometry(PathKey groupKey) =>
-    _groupDefinitions.ContainsKey(groupKey);
+  public bool HasDefinitionGeometry(PathKey groupKey) => _groupDefinitions.ContainsKey(groupKey);
 
-  public void StoreDefinitionGeometry(PathKey groupKey, List<Base> geometry) =>
-    _groupDefinitions[groupKey] = geometry;
+  public void StoreDefinitionGeometry(PathKey groupKey, List<Base> geometry) => _groupDefinitions[groupKey] = geometry;
 
   public bool TryGetDefinitionGeometry(PathKey groupKey, out List<Base> geometry) =>
     _groupDefinitions.TryGetValue(groupKey, out geometry);
 
-  public Dictionary<PathKey, List<Base>> GetAllDefinitionGeometries() =>
-    new Dictionary<PathKey, List<Base>>(_groupDefinitions, PathKey.Comparer);
+  public Dictionary<PathKey, List<Base>> GetAllDefinitionGeometries() => new(_groupDefinitions, PathKey.Comparer);
 
-  public List<PathKey> GetAllGroupKeys() =>
-    _groupDefinitions.Keys.ToList();
+  public List<PathKey> GetAllGroupKeys() => _groupDefinitions.Keys.ToList();
 
   public void RegisterInstanceObservation(
     PathKey groupKey,
@@ -137,22 +133,19 @@ public sealed class InstanceFragmentRegistry : IInstanceFragmentRegistry
     SetInstanceWorld(instancePath, instanceWorld);
 
     var inv = Speckle.Converter.Navisworks.Helpers.GeometryHelpers.InvertRigid(instanceWorld);
-    if (inv == null)
     {
-      throw new InvalidOperationException(
-        "InvertRigid returned null. You are calling a different method than expected."
-      );
-    }
+      var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
 
-    var sig = GeometryHelpers.ComputeUnbakedAabb(processor, inv);
+      if (!sig.IsValid)
+      {
+        return;
+      }
 
-    if (!sig.IsValid)
-    {
-      return;
-    }
+      if (_groupSignature.TryGetValue(groupKey, out Aabb _))
+      {
+        return;
+      }
 
-    if (!_groupSignature.TryGetValue(groupKey, out var first))
-    {
       _groupSignature[groupKey] = sig;
       _groupToDefinitionWorld[groupKey] = instanceWorld;
       return;
