@@ -41,6 +41,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\VersionMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\WorkspaceMenuHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Wizard\SpeckleOperationWizard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\SpecklePassthroughComponentBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\SpeckleSolveInstance.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Extras\StateTag.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\KeyWatcher.cs" />

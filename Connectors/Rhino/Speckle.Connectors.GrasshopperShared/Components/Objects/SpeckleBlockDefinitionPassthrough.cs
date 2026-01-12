@@ -9,7 +9,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("8D2E3F4A-1B5C-4E7F-9A8B-3C6D9E2F1A4B")]
 public class SpeckleBlockDefinitionPassthrough()
-  : SpeckleSolveInstance(
+  : SpecklePassthroughComponentBase(
     "Speckle Block Definition",
     "SBD",
     "Create or modify a Speckle Block Definition",
@@ -20,6 +20,9 @@ public class SpeckleBlockDefinitionPassthrough()
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_def;
   public override GH_Exposure Exposure => GH_Exposure.tertiary;
+
+  protected override int FixedInputCount => 3;
+  protected override int FixedOutputCount => 3;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -122,12 +125,16 @@ public class SpeckleBlockDefinitionPassthrough()
       result.Value.Name = inputName;
     }
 
-    // no need to process application Id.
-    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
+    // process application id (only if user provided one, otherwise preserve existing)
+    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    {
+      result.Value.ApplicationId = inputAppId;
+    }
 
     // set outputs
     da.SetData(0, result);
     da.SetDataList(1, result.Value.Objects.Select(o => o.CreateGoo()));
     da.SetData(2, result.Value.Name);
+    SetApplicationIdOutput(da, result.Value.ApplicationId);
   }
 }
