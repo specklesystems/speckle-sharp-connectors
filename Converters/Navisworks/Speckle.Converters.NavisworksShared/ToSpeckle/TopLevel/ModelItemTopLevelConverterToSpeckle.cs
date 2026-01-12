@@ -8,9 +8,6 @@ using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-/// <summary>
-/// Converts Navisworks ModelItem objects to Speckle Base objects.
-/// </summary>
 [NameAndRankValue(typeof(NAV.ModelItem), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 {
@@ -32,15 +29,9 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
     _displayValueExtractor = displayValueExtractor;
   }
 
-  /// <summary>
-  /// Converts a Navisworks object to a Speckle Base object.
-  /// </summary>
-  /// <param name="target">The object to convert.</param>
-  /// <returns>The converted Speckle Base object.</returns>
   public Base Convert(object target) =>
     target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
-  // Converts a Navisworks ModelItem into a Speckle Base object
   private Base Convert(NAV.ModelItem target)
   {
     IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
@@ -51,7 +42,6 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       : CreateNonGeometryObject(target, name, handler);
   }
 
-  // There are in fact only two types of objects: geometry and non-geometry, the latter being collections of other objects
   private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler)
   {
     var displayValue = _displayValueExtractor.GetDisplayValue(target);
@@ -75,10 +65,6 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
       ["properties"] = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
     };
 
-  /// <summary>
-  /// Determines whether properties should be merged from ancestors.
-  /// Only geometry objects should have their properties merged.... For now.
-  /// </summary>
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
 
   private static string GetObjectName(NAV.ModelItem target)
@@ -86,8 +72,6 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
     var targetName = target.DisplayName;
 
     var firstObjectAncestor = target.FindFirstObjectAncestor();
-
-    // while the target node name is null keep cycling through parent objects until displayname is not null or empty OR object is firstObjectAncestor
 
     while (string.IsNullOrEmpty(targetName) && target != firstObjectAncestor)
     {
