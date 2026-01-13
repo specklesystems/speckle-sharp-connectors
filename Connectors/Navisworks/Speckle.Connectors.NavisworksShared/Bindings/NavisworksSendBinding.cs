@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
-using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -13,9 +12,11 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
+using ElementSelectionService = Speckle.Connector.Navisworks.Services.ElementSelectionService;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 

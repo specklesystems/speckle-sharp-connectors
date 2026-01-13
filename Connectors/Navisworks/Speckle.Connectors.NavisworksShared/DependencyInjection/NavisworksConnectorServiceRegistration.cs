@@ -73,6 +73,6 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
     serviceCollection.AddScoped<ISendFilter, NavisworksSavedSetsFilter>();
     serviceCollection.AddScoped<ISendFilter, NavisworksSavedViewsFilter>();
-    serviceCollection.AddScoped<IElementSelectionService, ElementSelectionService>();
+    serviceCollection.AddScoped<Converter.Navisworks.Services.IElementSelectionService, ElementSelectionService>();
   }
 }
