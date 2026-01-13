@@ -10,8 +10,8 @@ namespace Speckle.Converter.Navisworks.Settings;
 public class NavisworksConversionSettingsFactory(
   IHostToSpeckleUnitConverter<NAV.Units> unitsConverter,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-  ILogger<NavisworksConversionSettingsFactory> logger)
-  : INavisworksConversionSettingsFactory
+  ILogger<NavisworksConversionSettingsFactory> logger
+) : INavisworksConversionSettingsFactory
 {
   private NAV.Document? _document;
   private SafeBoundingBox _modelBoundingBox;
@@ -21,6 +21,7 @@ public class NavisworksConversionSettingsFactory(
   public NavisworksConversionSettings Current => settingsStore.Current;
 
   private static readonly NAV.Vector3D s_canonicalUp = new(0, 0, 1);
+
   public NavisworksConversionSettings Create(
     OriginMode originMode,
     RepresentationMode visualRepresentationMode,

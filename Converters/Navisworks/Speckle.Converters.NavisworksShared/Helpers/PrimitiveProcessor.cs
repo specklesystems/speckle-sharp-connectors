@@ -83,7 +83,6 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
     AddPoint(safePoint);
   }
 
-
   public void SnapPoint(InwSimpleVertex? v1) => Point(v1);
 
   public void Triangle(InwSimpleVertex? v1, InwSimpleVertex? v2, InwSimpleVertex? v3)
@@ -105,7 +104,6 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       ApplyTransformation(VectorFromVertex(v3), LocalToWorldTransformation),
       IsUpright
     );
-
 
     var safeTriangle = new SafeTriangle(vD1, vD2, vD3);
 
@@ -161,7 +159,6 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
 
   private static NAV.Vector3D ApplyTransformation(Vector3 vector3, IEnumerable<double>? matrixStore)
   {
-
     var matrix = matrixStore!.ToList();
     var t1 = matrix[3] * vector3.X + matrix[7] * vector3.Y + matrix[11] * vector3.Z + matrix[15];
     var vectorDoubleX = (matrix[0] * vector3.X + matrix[4] * vector3.Y + matrix[8] * vector3.Z + matrix[12]) / t1;

@@ -1,5 +1,4 @@
 ﻿using Speckle.Converter.Navisworks.Geometry;
-// ReSharper disable NotAccessedPositionalProperty.Global
 
 namespace Speckle.Converter.Navisworks.Settings;
 
