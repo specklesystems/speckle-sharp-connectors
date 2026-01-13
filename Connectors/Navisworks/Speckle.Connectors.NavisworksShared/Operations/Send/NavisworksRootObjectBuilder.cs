@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
-using Speckle.Connector.Navisworks.Operations.Diagnostics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -18,6 +17,9 @@ using Speckle.Sdk.Models.Instances;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 using static Speckle.Connectors.Common.Operations.ProxyKeys;
 using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
+#if DEBUG
+using Speckle.Connector.Navisworks.Operations.Diagnostics;
+#endif
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -35,6 +37,10 @@ public class NavisworksRootObjectBuilder(
   IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
+#pragma warning disable CA1823
+  private readonly Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor _displayValueExtractor =
+    displayValueExtractor;
+#pragma warning restore CA1823
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
 
@@ -508,7 +514,7 @@ public class NavisworksRootObjectBuilder(
 #if DEBUG
     try
     {
-      var geometryConverter = displayValueExtractor.GeometryConverter;
+      var geometryConverter = _displayValueExtractor.GeometryConverter;
 
       logger.LogInformation("╔════════════════════════════════════════════════════════════════╗");
       logger.LogInformation("║  GEOMETRY CACHE PERFORMANCE                                   ║");
