@@ -272,13 +272,11 @@ public class NavisworksRootObjectBuilder(
 
     int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
     var displayValues = new List<Base>(estimatedCapacity);
-    foreach (var sibling in siblingBases)
-    {
-      if (sibling["displayValue"] is List<Base> displayValueList)
-      {
-        displayValues.AddRange(displayValueList);
-      }
-    }
+    displayValues.AddRange(
+      siblingBases
+        .Where(sibling => sibling["displayValue"] is List<Base>)
+        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
+    );
 
     var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
     if (instanceProxyCount > 0)
