@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -9,6 +9,9 @@
     <Import_RootNamespace>Speckle.Converters.NavisworksShared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Constants\InstanceConstants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Constants\MaterialConstants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Constants\PathConstants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
@@ -30,11 +33,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PropertyHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\GeometryHelpers.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Paths\PathConstants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Paths\PathKey.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registers\InstanceFragmentRegistry.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\ElementSelectionService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GeometryToSpeckleConverter.cs" />
-    <Folder Include="$(MSBuildThisFileDirectory)Models\" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\NavisworksToSpeckleUnitConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ConversionModes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\NavisworksConversionSettings.cs" />

@@ -1,5 +1,5 @@
 ﻿using Speckle.Connector.Navisworks.Services;
-using Speckle.Converter.Navisworks.Paths;
+using static Speckle.Converter.Navisworks.Constants.PathConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -10,7 +10,7 @@ public static class GeometryNodeMerger
 {
   /// <summary>
   /// Groups sibling geometry nodes based on material properties for merging.
-  /// Only merges nodes that share the same parent and have identical material properties.
+  /// This only merges nodes that share the same parent and have identical material properties.
   /// </summary>
   /// <param name="nodes">The collection of ModelItems to process</param>
   /// <returns>Dictionary mapping parent paths (with material signature suffix) to their mergeable child nodes</returns>
@@ -23,16 +23,16 @@ public static class GeometryNodeMerger
       .Where(node => node.HasGeometry && string.IsNullOrEmpty(node.DisplayName)) // Only anonymous geometry nodes
       .GroupBy(node =>
       {
-        // Get parent path
+        // Get the parent path
         var path = selectionService.GetModelItemPath(node);
-        var lastSeparatorIndex = path.LastIndexOf(PathConstants.SEPARATOR);
+        var lastSeparatorIndex = path.LastIndexOf(SEPARATOR);
         var parentPath = lastSeparatorIndex == -1 ? path : path[..lastSeparatorIndex];
 
         // Generate material signature
         string signature = GenerateSignature(node);
 
         // Combine parent path with signature
-        return $"{parentPath}{PathConstants.MATERIAL_SEPARATOR}{signature}";
+        return $"{parentPath}{MATERIAL_SEPARATOR}{signature}";
       })
       .Where(group => group.Count() > 1) // Only include groups with multiple children
       .ToDictionary(group => group.Key, group => group.ToList());
@@ -95,7 +95,7 @@ public static class GeometryNodeMerger
     // Build a consistent string representation of all properties
     var hashInput = new System.Text.StringBuilder();
 
-    // Sort keys to ensure consistent order
+    // Sort keys to ensure a consistent order
     var sortedKeys = properties.Keys.OrderBy(k => k).ToList();
 
     foreach (var key in sortedKeys)
@@ -139,7 +139,7 @@ public static class GeometryNodeMerger
   /// </summary>
   private static string GetMaterialName(NAV.ModelItem node)
   {
-    // Check Item category for material name
+    // Check the Item category for material name
     var itemCategory = node.PropertyCategories.FindCategoryByDisplayName("Item");
     if (itemCategory != null)
     {

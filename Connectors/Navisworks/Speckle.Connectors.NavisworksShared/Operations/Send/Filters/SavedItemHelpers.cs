@@ -1,4 +1,4 @@
-﻿using Speckle.Converter.Navisworks.Paths;
+﻿using static Speckle.Converter.Navisworks.Constants.PathConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
@@ -15,6 +15,6 @@ public static class SavedItemHelpers
       current = current.Parent;
     }
 
-    return string.Join(PathConstants.SET_SEPARATOR, pathParts);
+    return string.Join(SET_SEPARATOR, pathParts);
   }
 }

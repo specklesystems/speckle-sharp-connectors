@@ -78,16 +78,8 @@ public abstract class BasePropertyHandler(
     }
   }
 
-  private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties)
-  {
-    // Most properties are valid, so use source capacity as hint to avoid resizing
-    var propertyDict = new Dictionary<string, object?>(properties.Count);
-    foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
-    {
-      propertyDict[prop.Key] = prop.Value;
-    }
-    return propertyDict;
-  }
+  private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties) =>
+    properties.Where(prop => IsValidPropertyValue(prop.Value)).ToDictionary(prop => prop.Key, prop => prop.Value);
 
   protected static bool IsValidPropertyValue(object? value) => value != null && !string.IsNullOrEmpty(value.ToString());
 }

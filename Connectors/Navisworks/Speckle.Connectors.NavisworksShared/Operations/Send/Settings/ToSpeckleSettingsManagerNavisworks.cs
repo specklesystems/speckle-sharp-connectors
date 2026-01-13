@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Speckle.Connectors.Common.Caching;
+﻿using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.InterfaceGenerator;
@@ -8,158 +7,106 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connector.Navisworks.Operations.Send.Settings;
 
 [GenerateAutoInterface]
-public class ToSpeckleSettingsManagerNavisworks : IToSpeckleSettingsManagerNavisworks
+public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConversionCache)
+  : IToSpeckleSettingsManagerNavisworks
 {
-  private readonly ISendConversionCache _sendConversionCache;
-
-  // cache invalidation process run with ModelCardId since the settings are model specific
+  // cache invalidation process run with ModelCardId since the settings are model-specific
   private readonly Dictionary<string, RepresentationMode> _visualRepresentationCache = [];
   private readonly Dictionary<string, OriginMode> _originModeCache = [];
-  private readonly Dictionary<string, bool?> _convertHiddenElementsCache = [];
-  private readonly Dictionary<string, bool?> _includeInternalPropertiesCache = [];
-  private readonly Dictionary<string, bool?> _preserveModelHierarchyCache = [];
-  private readonly Dictionary<string, bool?> _revitCategoryMappingCache = [];
+  private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
+  private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
+  private readonly Dictionary<string, bool> _preserveModelHierarchyCache = [];
+  private readonly Dictionary<string, bool> _revitCategoryMappingCache = [];
 
-  public ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConversionCache)
-  {
-    _sendConversionCache = sendConversionCache;
-  }
-
-  public RepresentationMode GetVisualRepresentationMode(SenderModelCard modelCard)
+  /// <summary>
+  /// Generic helper to get a setting value with caching and cache invalidation.
+  /// </summary>
+  private T GetCachedSetting<T>(
+    SenderModelCard modelCard,
+    string settingId,
+    Dictionary<string, T> cache,
+    Func<object?, T> valueExtractor,
+    T defaultValue
+  )
   {
     if (modelCard == null)
     {
       throw new ArgumentNullException(nameof(modelCard));
     }
 
-    var representationString = modelCard.Settings?.First(s => s.Id == "visualRepresentation").Value as string;
+    var settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value;
+    var returnValue = settingValue != null ? valueExtractor(settingValue) : defaultValue;
 
-    if (
-      representationString is not null
-      && VisualRepresentationSetting.VisualRepresentationMap.TryGetValue(
-        representationString,
-        out RepresentationMode representation
-      )
-    )
+    if (cache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
     {
-      if (_visualRepresentationCache.TryGetValue(modelCard.ModelCardId.NotNull(), out RepresentationMode previousType))
+      if (!EqualityComparer<T>.Default.Equals(previousValue, returnValue))
       {
-        if (previousType != representation)
+        EvictCacheForModelCard(modelCard);
+      }
+    }
+
+    cache[modelCard.ModelCardId.NotNull()] = returnValue;
+    return returnValue;
+  }
+
+  public RepresentationMode GetVisualRepresentationMode(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "visualRepresentation",
+      _visualRepresentationCache,
+      value =>
+      {
+        var representationString = value as string;
+        return
+          representationString is not null
+          && VisualRepresentationSetting.VisualRepresentationMap.TryGetValue(
+            representationString,
+            out RepresentationMode representation
+          )
+          ? representation
+          : throw new ArgumentException($"Invalid visual representation value: {representationString}");
+      },
+      RepresentationMode.Active // default value if setting not found
+    );
+
+  public OriginMode GetOriginMode(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "originMode",
+      _originModeCache,
+      value =>
+      {
+        var originString = value as string;
+        if (OriginModeSetting.OriginModeMap.TryGetValue(originString ?? string.Empty, out var origin))
         {
-          EvictCacheForModelCard(modelCard);
+          return origin;
         }
-      }
+        return OriginMode.ModelOrigin;
+      },
+      OriginMode.ModelOrigin
+    );
 
-      _visualRepresentationCache[modelCard.ModelCardId.NotNull()] = representation;
-      return representation;
-    }
+  public bool GetMappingToRevitCategories(SenderModelCard modelCard) =>
+    GetCachedSetting(modelCard, "mappingToRevitCategories", _revitCategoryMappingCache, value => value is true, false);
 
-    throw new ArgumentException($"Invalid visual representation value: {representationString}");
-  }
+  public bool GetConvertHiddenElements(SenderModelCard modelCard) =>
+    GetCachedSetting(modelCard, "convertHiddenElements", _convertHiddenElementsCache, value => value is true, false);
 
-  public OriginMode GetOriginMode(SenderModelCard modelCard)
-  {
-    if (modelCard == null)
-    {
-      throw new ArgumentNullException(nameof(modelCard));
-    }
+  public bool GetIncludeInternalProperties(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "includeInternalProperties",
+      _includeInternalPropertiesCache,
+      value => value is true,
+      false
+    );
 
-    var originString = modelCard.Settings?.FirstOrDefault(s => s.Id == "originMode")?.Value as string;
-    if (!OriginModeSetting.OriginModeMap.TryGetValue(originString ?? string.Empty, out var origin))
-    {
-      return OriginMode.ModelOrigin; // Default to ModelOrigin if not specified or invalid
-    }
-
-    if (_originModeCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousType) && previousType != origin)
-    {
-      EvictCacheForModelCard(modelCard);
-    }
-
-    _originModeCache[modelCard.ModelCardId.NotNull()] = origin;
-    return origin;
-  }
-
-  public bool GetMappingToRevitCategories(SenderModelCard modelCard)
-  {
-    if (modelCard == null)
-    {
-      throw new ArgumentNullException(nameof(modelCard));
-    }
-
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "mappingToRevitCategories")?.Value as bool?;
-
-    var returnValue = value != null && value.NotNull();
-    if (_revitCategoryMappingCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-
-    _revitCategoryMappingCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
-
-  public bool GetConvertHiddenElements(SenderModelCard modelCard)
-  {
-    if (modelCard == null)
-    {
-      throw new ArgumentNullException(nameof(modelCard));
-    }
-
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool?;
-
-    var returnValue = value != null && value.NotNull();
-    if (_convertHiddenElementsCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-
-    _convertHiddenElementsCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
-
-  public bool GetIncludeInternalProperties([NotNull] SenderModelCard modelCard)
-  {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "includeInternalProperties")?.Value as bool?;
-
-    var returnValue = value != null && value.NotNull();
-    if (_includeInternalPropertiesCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-
-    _includeInternalPropertiesCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
-
-  public bool GetPreserveModelHierarchy([NotNull] SenderModelCard modelCard)
-  {
-    var value = modelCard.Settings?.FirstOrDefault(s => s.Id == "preserveModelHierarchy")?.Value as bool?;
-
-    var returnValue = value != null && value.NotNull();
-    if (_preserveModelHierarchyCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
-    {
-      if (previousValue != returnValue)
-      {
-        EvictCacheForModelCard(modelCard);
-      }
-    }
-
-    _preserveModelHierarchyCache[modelCard.ModelCardId] = returnValue;
-    return returnValue;
-  }
+  public bool GetPreserveModelHierarchy(SenderModelCard modelCard) =>
+    GetCachedSetting(modelCard, "preserveModelHierarchy", _preserveModelHierarchyCache, value => value is true, false);
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
   {
     var objectIds = modelCard.SendFilter != null ? modelCard.SendFilter.NotNull().SelectedObjectIds : [];
-    _sendConversionCache.EvictObjects(objectIds);
+    sendConversionCache.EvictObjects(objectIds);
   }
 }

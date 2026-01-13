@@ -43,6 +43,9 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
 
+    // Register element selection service
+    serviceCollection.AddScoped<ElementSelectionService>();
+
     // Register geometry conversion
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<GeometryToSpeckleConverter>(sp =>

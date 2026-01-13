@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
+using Speckle.Converter.Navisworks.Constants;
 using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
@@ -11,6 +12,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
 // ReSharper disable HeuristicUnreachableCode
 #pragma warning disable CS0162 // Unreachable code detected
@@ -152,7 +154,7 @@ public sealed class GeometryToSpeckleConverter(
             var groupKeyHash = groupKey.ToHashString();
             for (int i = 0; i < definitionGeometry.Count; i++)
             {
-              definitionGeometry[i].applicationId = $"geom_{groupKeyHash}_{i}";
+              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyHash}_{i}";
             }
 
             _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
@@ -162,10 +164,10 @@ public sealed class GeometryToSpeckleConverter(
           {
             var instanceProxy = new InstanceProxy
             {
-              definitionId = $"def_{groupKey.ToHashString()}",
+              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToHashString()}",
               transform = ConvertToMatrix4X4(instanceWorld),
               units = _settings.Derived.SpeckleUnits,
-              applicationId = $"instance_{itemPathKey.ToHashString()}",
+              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToHashString()}",
               maxDepth = 0
             };
 
@@ -229,8 +231,6 @@ public sealed class GeometryToSpeckleConverter(
       {
         Marshal.ReleaseComObject(fragments);
       }
-
-      return ProcessFragments(fragmentStack, paths, true);
     }
 
     return set;

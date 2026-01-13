@@ -1,7 +1,6 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connector.Navisworks.Operations.Diagnostics;
-using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -17,6 +16,8 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
+using static Speckle.Connectors.Common.Operations.ProxyKeys;
+using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -28,11 +29,10 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  IElementSelectionService elementSelectionService,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
-  Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor displayValueExtractor
+  Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor displayValueExtractor,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache,
+  IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -332,13 +332,13 @@ public class NavisworksRootObjectBuilder(
     var renderMaterials = materialUnpacker.UnpackRenderMaterial(navisworksModelItems, groupedNodes);
     if (renderMaterials.Count > 0)
     {
-      rootCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterials;
+      rootCollection[RENDER_MATERIAL] = renderMaterials;
     }
 
     var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes);
     if (colors.Count > 0)
     {
-      rootCollection[ProxyKeys.COLOR] = colors;
+      rootCollection[COLOR] = colors;
     }
 
     return Task.CompletedTask;
@@ -382,7 +382,7 @@ public class NavisworksRootObjectBuilder(
       {
         name = $"Shared Geometry {groupKeyHash}",
         objects = geometries.Select(g => g.applicationId ?? "").Where(id => !string.IsNullOrEmpty(id)).ToList(),
-        applicationId = $"def_{groupKeyHash}",
+        applicationId = $"{DEFINITION_ID_PREFIX}{groupKeyHash}",
         maxDepth = 0
       };
 
@@ -390,18 +390,14 @@ public class NavisworksRootObjectBuilder(
       allDefinitionGeometries.AddRange(geometries);
     }
 
-    rootCollection["instanceDefinitionProxies"] = instanceDefinitionProxies;
+    rootCollection[INSTANCE_DEFINITION] = instanceDefinitionProxies;
     var geometryDefinitionsCollection = new Collection
     {
       name = "Geometry Definitions",
       elements = allDefinitionGeometries
     };
 
-    var objectCollection = new Collection
-    {
-      name = "",
-      elements = finalElements
-    };
+    var objectCollection = new Collection { name = "", elements = finalElements };
 
     finalElements = [geometryDefinitionsCollection, objectCollection];
 
@@ -523,12 +519,21 @@ public class NavisworksRootObjectBuilder(
       {
         logger.LogInformation("Performance Timing:");
         logger.LogInformation("  Items Processed: {count}", itemCount);
-        logger.LogInformation("  COM Extraction: {comMs:F2} ms ({percent:F1}%)",
-          comMs, comMs / (comMs + geometryMs) * 100);
-        logger.LogInformation("  Geometry Creation: {geomMs:F2} ms ({percent:F1}%)",
-          geometryMs, geometryMs / (comMs + geometryMs) * 100);
-        logger.LogInformation("  Avg per item: {avgCom:F3} ms COM, {avgGeom:F3} ms Geometry",
-          comMs / itemCount, geometryMs / itemCount);
+        logger.LogInformation(
+          "  COM Extraction: {comMs:F2} ms ({percent:F1}%)",
+          comMs,
+          comMs / (comMs + geometryMs) * 100
+        );
+        logger.LogInformation(
+          "  Geometry Creation: {geomMs:F2} ms ({percent:F1}%)",
+          geometryMs,
+          geometryMs / (comMs + geometryMs) * 100
+        );
+        logger.LogInformation(
+          "  Avg per item: {avgCom:F3} ms COM, {avgGeom:F3} ms Geometry",
+          comMs / itemCount,
+          geometryMs / itemCount
+        );
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
