@@ -16,7 +16,7 @@ public static class GeometryNodeMerger
   /// <returns>Dictionary mapping parent paths (with material signature suffix) to their mergeable child nodes</returns>
   public static Dictionary<string, List<NAV.ModelItem>> GroupSiblingGeometryNodes(IReadOnlyList<NAV.ModelItem> nodes)
   {
-    var selectionService = new ElementSelectionService();
+    var selectionService = new ConnectorElementSelectionService();
 
     // Group nameless geometry nodes by parent path and material signature
     var mergeableGroups = nodes

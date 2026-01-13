@@ -37,12 +37,12 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
     var settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value;
     var returnValue = settingValue != null ? valueExtractor(settingValue) : defaultValue;
 
-    if (cache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue))
+    if (
+      cache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue)
+      && !EqualityComparer<T>.Default.Equals(previousValue, returnValue)
+    )
     {
-      if (!EqualityComparer<T>.Default.Equals(previousValue, returnValue))
-      {
-        EvictCacheForModelCard(modelCard);
-      }
+      EvictCacheForModelCard(modelCard);
     }
 
     cache[modelCard.ModelCardId.NotNull()] = returnValue;

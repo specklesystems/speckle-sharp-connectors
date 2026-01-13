@@ -4,7 +4,18 @@ namespace Speckle.Converter.Navisworks.Helpers;
 
 public readonly record struct Aabb(double MinX, double MinY, double MinZ, double MaxX, double MaxY, double MaxZ)
 {
-  public bool IsValid => !(MinX == 0 && MinY == 0 && MinZ == 0 && MaxX == 0 && MaxY == 0 && MaxZ == 0);
+  private static bool IsNearlyZero(double value, double epsilon = 1e-9) => Math.Abs(value) <= epsilon;
+
+  // public bool IsValid => !(MinX == 0 && MinY == 0 && MinZ == 0 && MaxX == 0 && MaxY == 0 && MaxZ == 0);
+  public bool IsValid =>
+    !(
+      IsNearlyZero(MinX)
+      && IsNearlyZero(MinY)
+      && IsNearlyZero(MinZ)
+      && IsNearlyZero(MaxX)
+      && IsNearlyZero(MaxY)
+      && IsNearlyZero(MaxZ)
+    );
 }
 
 public static class GeometryHelpers

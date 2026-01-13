@@ -4,7 +4,7 @@
 /// Connector-specific element selection service that extends the converter's base implementation.
 /// Inherits the cached visibility checking and path resolution from the converter layer.
 /// </summary>
-public class ElementSelectionService : Converter.Navisworks.Services.ElementSelectionService
+public class ConnectorElementSelectionService : Converter.Navisworks.Services.ElementSelectionService
 {
   // This inherits all functionality from the converter's ElementSelectionService
   // including cached IsVisible, GetModelItemPath, GetModelItemFromPath, and GetGeometryNodes

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
+using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -16,7 +17,6 @@ using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
-using ElementSelectionService = Speckle.Connector.Navisworks.Services.ElementSelectionService;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
@@ -64,8 +64,8 @@ public class NavisworksSendBinding : ISendBinding
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
-      new NavisworksSavedSetsFilter(new ElementSelectionService()),
-      new NavisworksSavedViewsFilter(new ElementSelectionService())
+      new NavisworksSavedSetsFilter(new ConnectorElementSelectionService()),
+      new NavisworksSavedViewsFilter(new ConnectorElementSelectionService())
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -158,8 +158,6 @@ public class NavisworksSendBinding : ISendBinding
       pathResolutionTicks += pathTimer.ElapsedTicks;
 
       var hasChildren = modelItem.Children.Any();
-      // ReSharper disable once UnusedVariable
-      var isLeafGeometry = !hasChildren && modelItem.HasGeometry;
 
       var treeWalkTimer = Stopwatch.StartNew();
       var visibilityTimer = Stopwatch.StartNew();

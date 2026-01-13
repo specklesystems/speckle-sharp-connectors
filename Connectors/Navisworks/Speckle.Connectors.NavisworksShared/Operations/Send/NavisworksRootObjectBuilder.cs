@@ -139,13 +139,10 @@ public class NavisworksRootObjectBuilder(
       if (
         converted.Status == Status.SUCCESS
         && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
-        && convertedBase != null
+        && convertedBase?["displayValue"] is List<Base> displayValues
       )
       {
-        if (convertedBase["displayValue"] is List<Base> displayValues)
-        {
-          instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-        }
+        instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
       }
 
       processedCount++;
