@@ -71,7 +71,8 @@ public sealed class GeometryToSpeckleConverter(
 
     _totalModelItemsProcessed++;
 
-    var comSelection = ComApiBridge.ToInwOpSelection(new() { modelItem });
+    NAV.ModelItemCollection collection = new() { modelItem };
+    var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
     try
     {
       var paths = comSelection.Paths();
@@ -200,6 +201,7 @@ public sealed class GeometryToSpeckleConverter(
         Marshal.ReleaseComObject(comSelection);
       }
     }
+    collection.Dispose();
   }
 
   private static HashSet<PathKey> DiscoverInstancePathsFromFragments(InwOaPath path)
