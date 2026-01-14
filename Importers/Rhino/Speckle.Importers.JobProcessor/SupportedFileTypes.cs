@@ -6,7 +6,7 @@ public static class SupportedFileTypes
   /// This is the full list of file extensions that this job processor will look for jobs with that extension
   /// This also happens to be the full list of file types that Rhino 8 supports.,
   /// </summary>
-  public static readonly string[] FileTypes =
+  private static readonly string[] s_fileTypes =
   [
     "3dm", // Rhino 3D Model (except ver 1.x save)
     "3dmbak", // Rhino 3D Model Backup
@@ -62,4 +62,13 @@ public static class SupportedFileTypes
     "gdf", // WAMIT
     "zpr", // Zcorp (3D Systems)
   ];
+
+  // This is very dumb workaround to the fact our server has been enqueuing
+  // mixed type file extensions since we implemented model ingestion API
+  // I'd really rather the server filter this server side,
+  // but for now as a workaround we'll process both lower and upper cases.
+  // https://linear.app/speckle/issue/CXPLA-367
+  public static readonly string[] FileTypes = s_fileTypes
+    .Concat(s_fileTypes.Select(x => x.ToUpperInvariant()))
+    .ToArray();
 }
