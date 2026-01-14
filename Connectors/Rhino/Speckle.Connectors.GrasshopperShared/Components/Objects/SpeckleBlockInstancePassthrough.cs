@@ -9,7 +9,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("2F8A9B1C-3D4E-5F6A-7B8C-9D0E1F2A3B4C")]
 public class SpeckleBlockInstancePassthrough()
-  : SpeckleSolveInstance(
+  : SpecklePassthroughComponentBase(
     "Speckle Block Instance",
     "SBI",
     "Create or modify a Speckle Block Instance",
@@ -20,6 +20,9 @@ public class SpeckleBlockInstancePassthrough()
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_block_inst;
   public override GH_Exposure Exposure => GH_Exposure.tertiary;
+
+  protected override int FixedInputCount => 7;
+  protected override int FixedOutputCount => 7;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -205,8 +208,11 @@ public class SpeckleBlockInstancePassthrough()
       result.Value.Material = inputMaterial.Value;
     }
 
-    // no need to process application id.
-    // new appids are generated if this is a new object, otherwise the input object appID should be preserved for change tracking.
+    // process application id (only if user provided one, otherwise preserve existing)
+    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    {
+      result.Value.ApplicationId = inputAppId;
+    }
 
     // Set outputs
     da.SetData(0, result);
@@ -216,6 +222,7 @@ public class SpeckleBlockInstancePassthrough()
     da.SetData(4, result.Value.Properties);
     da.SetData(5, result.Value.Color);
     da.SetData(6, result.Value.Material);
+    SetApplicationIdOutput(da, result.Value.ApplicationId);
   }
 
   private Transform? ExtractTransform(IGH_Goo input) =>
