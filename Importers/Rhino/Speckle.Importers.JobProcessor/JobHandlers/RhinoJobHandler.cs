@@ -34,7 +34,8 @@ internal sealed class RhinoJobHandler(
     Project project = await client.Project.Get(job.Payload.ProjectId, cancellationToken);
 
     string fileType = file.FileInfo.Extension.TrimStart('.');
-    Application handlerApplication = new($"Rhino .{fileType} File Import ", $"{fileType}-rhino-importer");
+    Application handlerApplication =
+      new($"Rhino .{fileType} File Import ", $"{fileType.ToLowerInvariant()}-rhino-importer");
 
     ingestion = await client.Ingestion.StartProcessing(
       new ModelIngestionStartProcessingInput(
