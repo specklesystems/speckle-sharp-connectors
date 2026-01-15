@@ -104,7 +104,9 @@ public sealed class GeometryToSpeckleConverter(
           {
             var geometries = ProcessGeometries([processor]);
 
-            var invDefWorld = GeometryHelpers.InvertRigid(instanceWorld);
+            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+            var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
             var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
             var groupKeyHash = groupKey.ToHashString();
             for (int i = 0; i < definitionGeometry.Count; i++)
@@ -117,10 +119,12 @@ public sealed class GeometryToSpeckleConverter(
 
           if (ENABLE_INSTANCING)
           {
+            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
             var instanceProxy = new InstanceProxy
             {
               definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToHashString()}",
-              transform = ConvertToMatrix4X4(instanceWorld),
+              transform = ConvertToMatrix4X4(transformedWorld),
               units = _settings.Derived.SpeckleUnits,
               applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToHashString()}",
               maxDepth = 0
@@ -415,6 +419,48 @@ public sealed class GeometryToSpeckleConverter(
       }
     }
 
+    return result;
+  }
+
+  /// <summary>
+  /// Transforms a 4x4 matrix from Y-up to Z-up coordinate system.
+  /// Applies P * M * P^-1 where P is the coordinate transform (x, y, z) -> (x, -z, y).
+  /// </summary>
+  private static double[] TransformMatrixYUpToZUp(double[] m)
+  {
+    // P swaps Y↔Z with sign: (x,y,z) -> (x,-z,y)
+    // P =     | 1  0  0  0 |    P^-1 = | 1  0  0  0 |
+    //         | 0  0 -1  0 |           | 0  0  1  0 |
+    //         | 0  1  0  0 |           | 0 -1  0  0 |
+    //         | 0  0  0  1 |           | 0  0  0  1 |
+    // Result = P * M * P^-1
+    
+    var result = new double[16];
+    
+    // Column 0 (X basis): unchanged in X, swap Y↔Z
+    result[0] = m[0];
+    result[4] = m[8];
+    result[8] = -m[4];
+    result[12] = m[12];
+    
+    // Column 1 (Y basis): comes from -Z
+    result[1] = -m[2];
+    result[5] = -m[10];
+    result[9] = m[6];
+    result[13] = -m[14];
+    
+    // Column 2 (Z basis): comes from Y
+    result[2] = m[1];
+    result[6] = m[9];
+    result[10] = -m[5];
+    result[14] = m[13];
+    
+    // Column 3 (homogeneous): unchanged
+    result[3] = m[3];
+    result[7] = m[7];
+    result[11] = m[11];
+    result[15] = m[15];
+    
     return result;
   }
 
