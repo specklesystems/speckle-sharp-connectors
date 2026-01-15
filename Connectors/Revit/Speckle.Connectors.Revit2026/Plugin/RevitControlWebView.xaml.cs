@@ -2,6 +2,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
+using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.Revit.Plugin;
@@ -12,6 +14,10 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
 {
   private readonly IServiceProvider _serviceProvider;
   private readonly IRevitTask _revitTask;
+#pragma warning disable CA2213
+  private WebView2? _browser;
+#pragma warning restore CA2213
+  private bool _isInitializing;
 
   public RevitControlWebView(IServiceProvider serviceProvider, IRevitTask revitTask)
   {
@@ -19,35 +25,61 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
     _revitTask = revitTask;
     InitializeComponent();
 
-    Browser.CoreWebView2InitializationCompleted += (sender, args) =>
+    // Delay WebView2 creation until the panel is actually visible
+    // This avoids conflicts with other plugins (like pyRevit) during startup
+    IsVisibleChanged += OnIsVisibleChanged;
+  }
+
+  private void OnIsVisibleChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+  {
+    if (e.NewValue is true && _browser == null && !_isInitializing)
+    {
+      _isInitializing = true;
+      Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, CreateWebView2);
+    }
+  }
+
+  private void CreateWebView2()
+  {
+    _browser = new WebView2
+    {
+      CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
+      HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+      VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
+      Source = Url.Netlify
+    };
+
+    _browser.CoreWebView2InitializationCompleted += (sender, args) =>
       _serviceProvider
         .GetRequiredService<ITopLevelExceptionHandler>()
         .CatchUnhandled(() => OnInitialized(sender, args));
+
+    BrowserContainer.Child = _browser;
   }
 
-  public bool IsBrowserInitialized => Browser.IsInitialized;
+  public bool IsBrowserInitialized => _browser?.IsInitialized ?? false;
 
-  public object BrowserElement => Browser;
+  public object BrowserElement => _browser!;
 
   public void ExecuteScript(string script)
   {
-    if (!Browser.IsInitialized)
+    if (_browser == null || !_browser.IsInitialized)
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
-    _revitTask.Run(() => Browser.ExecuteScriptAsync(script));
+    _revitTask.Run(() => _browser.ExecuteScriptAsync(script));
   }
 
   public void SendProgress(string script)
   {
-    if (!Browser.IsInitialized)
+    if (_browser == null || !_browser.IsInitialized)
     {
       throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
     }
     //always invoke even on the main thread because it's better somehow
-    Browser.Dispatcher.Invoke(
+    _browser.Dispatcher.Invoke(
       //fire and forget
-      () => Browser.ExecuteScriptAsync(script),
+      () => _browser.ExecuteScriptAsync(script),
       DispatcherPriority.Background
     );
   }
@@ -74,11 +106,18 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   private void SetupBinding(IBinding binding)
   {
     binding.Parent.AssociateWithBinding(binding);
-    Browser.CoreWebView2.AddHostObjectToScript(binding.Name, binding.Parent);
+    _browser!.CoreWebView2.AddHostObjectToScript(binding.Name, binding.Parent);
   }
 
-  public void ShowDevTools() => Browser.CoreWebView2.OpenDevToolsWindow();
+  public void ShowDevTools() => _browser?.CoreWebView2?.OpenDevToolsWindow();
 
   //https://github.com/MicrosoftEdge/WebView2Feedback/issues/2161
-  public void Dispose() => Browser.Dispatcher.Invoke(() => Browser.Dispose(), DispatcherPriority.Send);
+  public void Dispose()
+  {
+    if (_browser != null)
+    {
+      _browser.Dispatcher.Invoke(() => _browser.Dispose(), DispatcherPriority.Send);
+      _browser = null;
+    }
+  }
 }
