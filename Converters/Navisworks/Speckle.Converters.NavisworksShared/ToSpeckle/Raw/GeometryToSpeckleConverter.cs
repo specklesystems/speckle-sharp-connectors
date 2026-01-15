@@ -1,47 +1,44 @@
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
-using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Constants;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
-using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Paths;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
 using ComApiBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
+// ReSharper disable HeuristicUnreachableCode
+#pragma warning disable CS0162 // Unreachable code detected
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-/// <remarks>
-/// Memory Safety: All COM objects (InwSelectionPathsColl, InwOaPath, InwOaFragmentList) are explicitly
-/// released using Marshal.ReleaseComObject in try-finally blocks to prevent memory leaks.
-/// NAV.Color objects are disposed using 'using' statements as they implement IDisposable.
-/// </remarks>
-public class GeometryToSpeckleConverter(
+/// <summary>
+/// WARNING: Uses COM interop - cannot use public ModelGeometry API.
+/// Process: ModelItem → InwOaPath3 → InwOaFragmentList → InwOaFragment3 → primitives → Speckle geometry
+///
+/// COM overhead: ~13.7ms per item (99.5% of the time) - cannot be optimized from C#
+/// All COM objects are properly released in try-finally blocks to prevent memory leaks.
+/// </summary>
+public sealed class GeometryToSpeckleConverter(
   NavisworksConversionSettings settings,
-  InstanceStoreManager instanceStoreManager,
-  ILogger<GeometryToSpeckleConverter> logger
+  IInstanceFragmentRegistry registry
 )
 {
   private readonly NavisworksConversionSettings _settings =
     settings ?? throw new ArgumentNullException(nameof(settings));
-
+  private readonly IInstanceFragmentRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
-  private static readonly Matrix4x4 s_identityMatrix = new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-  private static readonly double[] s_identityTransform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  private const bool ENABLE_INSTANCING = true;
+  private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
 
-  private readonly InstanceStoreManager _instanceStoreManager =
-    instanceStoreManager ?? throw new ArgumentNullException(nameof(instanceStoreManager));
-
-  private readonly ILogger<GeometryToSpeckleConverter> _logger =
-    logger ?? throw new ArgumentNullException(nameof(logger));
-
-  internal List<SSM.Base> Convert(NAV.ModelItem modelItem)
+  internal List<Base> Convert(NAV.ModelItem modelItem)
   {
     if (modelItem == null)
     {
@@ -53,10 +50,10 @@ public class GeometryToSpeckleConverter(
       return [];
     }
 
-    var comSelection = ComApiBridge.ToInwOpSelection([modelItem]);
+    NAV.ModelItemCollection collection = new() { modelItem };
+    var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
     try
     {
-      var fragmentStack = new Stack<InwOaFragment3>();
       var paths = comSelection.Paths();
       if (paths == null)
       {
@@ -64,32 +61,87 @@ public class GeometryToSpeckleConverter(
       }
       try
       {
-        if (paths.Count > 0)
-        {
-          var firstPath = paths.Cast<InwOaPath>().First();
-          var fragmentsCollection = firstPath.Fragments();
-          try
-          {
-            if (fragmentsCollection.Count > 1)
-            {
-              return ProcessSharedGeometry(paths, fragmentStack);
-            }
-          }
-          finally
-          {
-            if (fragmentsCollection != null)
-            {
-              Marshal.ReleaseComObject(fragmentsCollection);
-            }
-          }
-        }
+        var allResults = new List<Base>(5);
 
         foreach (InwOaPath path in paths)
         {
-          CollectFragments(path, fragmentStack);
+          if (path.ArrayData is not Array pathArr)
+          {
+            continue;
+          }
+
+          var itemPathKey = PathKey.FromComArray(pathArr);
+
+          if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
+          {
+            var members = DiscoverInstancePathsFromFragments(path);
+            members.Add(itemPathKey);
+            groupKey = itemPathKey;
+            _registry.RegisterGroup(groupKey, members);
+            _groupMemberCounts[groupKey] = members.Count;
+          }
+
+          var processor = new PrimitiveProcessor(_isUpright);
+          ProcessPathFragments(path, itemPathKey, groupKey, processor);
+
+          if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
+          {
+            var geometries = ProcessGeometries([processor]);
+            _registry.MarkConverted(itemPathKey);
+            allResults.AddRange(geometries);
+            continue;
+          }
+
+          if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
+          {
+            var geometries = ProcessGeometries([processor]);
+            _registry.MarkConverted(itemPathKey);
+            allResults.AddRange(geometries);
+            continue;
+          }
+
+          if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
+          {
+            var geometries = ProcessGeometries([processor]);
+
+            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+            var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
+            var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
+            var groupKeyHash = groupKey.ToHashString();
+            for (int i = 0; i < definitionGeometry.Count; i++)
+            {
+              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyHash}_{i}";
+            }
+
+            _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
+          }
+
+          if (ENABLE_INSTANCING)
+          {
+            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+            var instanceProxy = new InstanceProxy
+            {
+              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToHashString()}",
+              transform = ConvertToMatrix4X4(transformedWorld),
+              units = _settings.Derived.SpeckleUnits,
+              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToHashString()}",
+              maxDepth = 0
+            };
+
+            _registry.MarkConverted(itemPathKey);
+            allResults.Add(instanceProxy);
+          }
+          else
+          {
+            var geometries = ProcessGeometries([processor]);
+            _registry.MarkConverted(itemPathKey);
+            allResults.AddRange(geometries);
+          }
         }
 
-        return ProcessFragments(fragmentStack, paths, true);
+        return allResults;
       }
       finally
       {
@@ -103,18 +155,113 @@ public class GeometryToSpeckleConverter(
         Marshal.ReleaseComObject(comSelection);
       }
     }
+    collection.Dispose();
   }
 
-  private static void CollectFragments(InwOaPath path, Stack<InwOaFragment3> fragmentStack)
+  private static HashSet<PathKey> DiscoverInstancePathsFromFragments(InwOaPath path)
   {
+    var set = new HashSet<PathKey>(PathKey.Comparer);
     var fragments = path.Fragments();
+
     try
     {
-      foreach (var fragment in fragments.OfType<InwOaFragment3>())
+      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
       {
-        if (AreFragmentPathsEqual(fragment, path))
+        GC.KeepAlive(fragment);
+
+        InwOaPath? fragPath = fragment.path;
+        if (fragPath?.ArrayData is not Array fragPathArr)
         {
-          fragmentStack.Push(fragment);
+          continue;
+        }
+
+        var fragmentPathKey = PathKey.FromComArray(fragPathArr);
+        set.Add(fragmentPathKey);
+
+        Marshal.ReleaseComObject(fragPath);
+      }
+    }
+    finally
+    {
+      if (fragments != null)
+      {
+        Marshal.ReleaseComObject(fragments);
+      }
+    }
+
+    return set;
+  }
+
+  private void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PathKey groupKey, PrimitiveProcessor processor)
+  {
+    var observed = false;
+    var fragments = path.Fragments();
+
+    try
+    {
+      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+      {
+        GC.KeepAlive(fragment);
+
+        InwOaPath? fragPath = null;
+        InwLTransform3f3? transform = null;
+
+        try
+        {
+          fragPath = fragment.path;
+          if (fragPath?.ArrayData is not Array fragPathArr)
+          {
+            continue;
+          }
+
+          if (!itemPathKey.MatchesComArray(fragPathArr))
+          {
+            continue;
+          }
+
+          transform = fragment.GetLocalToWorldMatrix() as InwLTransform3f3;
+          if (transform == null)
+          {
+            continue;
+          }
+
+          if (transform.Matrix is not Array matrixArray)
+          {
+            continue;
+          }
+
+          var instanceWorld = ConvertArrayToDouble(matrixArray);
+          if (instanceWorld.Length != 16)
+          {
+            continue;
+          }
+
+          processor.LocalToWorldTransformation = instanceWorld;
+          fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
+
+          if (observed)
+          {
+            continue;
+          }
+
+          if (processor.Triangles.Count <= 0 && processor.Lines.Count <= 0)
+          {
+            continue;
+          }
+
+          _registry.RegisterInstanceObservation(groupKey, itemPathKey, instanceWorld, processor);
+          observed = true;
+        }
+        finally
+        {
+          if (transform != null)
+          {
+            Marshal.ReleaseComObject(transform);
+          }
+          if (fragPath != null)
+          {
+            Marshal.ReleaseComObject(fragPath);
+          }
         }
       }
     }
@@ -127,95 +274,9 @@ public class GeometryToSpeckleConverter(
     }
   }
 
-  private List<SSM.Base> ProcessSharedGeometry(InwSelectionPathsColl paths, Stack<InwOaFragment3> fragmentStack)
+  private List<Base> ProcessGeometries(List<PrimitiveProcessor> processors)
   {
-    var fragmentId = GenerateFragmentId(paths);
-
-    if (string.IsNullOrEmpty(fragmentId))
-    {
-      foreach (InwOaPath path in paths)
-      {
-        CollectFragments(path, fragmentStack);
-      }
-
-      return ProcessFragments(fragmentStack, paths, true);
-    }
-
-    if (_instanceStoreManager.ContainsSharedGeometry(fragmentId))
-    {
-      return CreateInstanceReference(fragmentId, paths);
-    }
-
-    foreach (InwOaPath path in paths)
-    {
-      CollectFragments(path, fragmentStack);
-    }
-
-    var baseGeometries = ExtractUntransformedGeometry(fragmentStack);
-
-    return baseGeometries.Count == 0 || !_instanceStoreManager.AddSharedGeometry(fragmentId, baseGeometries)
-      ? ProcessFragments(fragmentStack, paths) // default false flag for isSingleObject
-      : CreateInstanceReference(fragmentId, paths);
-  }
-
-  private List<SSM.Base> ProcessFragments(
-    Stack<InwOaFragment3> fragmentStack,
-    InwSelectionPathsColl paths,
-    bool isSingleObject = false
-  )
-  {
-    var callbackListeners = new List<PrimitiveProcessor>();
-
-    foreach (InwOaPath path in paths)
-    {
-      var processor = new PrimitiveProcessor(_isUpright);
-
-      foreach (var fragment in fragmentStack)
-      {
-        var matrix = fragment.GetLocalToWorldMatrix();
-        var transform = matrix as InwLTransform3f3;
-        if (transform?.Matrix is not Array matrixArray)
-        {
-          continue;
-        }
-
-        var fragmentsForCount = path.Fragments();
-        int fragmentCount;
-        try
-        {
-          fragmentCount = fragmentsForCount?.Count ?? 0;
-        }
-        finally
-        {
-          if (fragmentsForCount != null)
-          {
-            Marshal.ReleaseComObject(fragmentsForCount);
-          }
-        }
-
-        double[] makeNoChange = s_identityTransform;
-        double[] transformMatrix = ConvertArrayToDouble(matrixArray);
-
-        processor.LocalToWorldTransformation =
-          isSingleObject || fragmentCount == 1 ? transformMatrix : (IEnumerable<double>)makeNoChange;
-
-        fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
-      }
-
-      callbackListeners.Add(processor);
-    }
-
-    return ProcessGeometries(callbackListeners);
-  }
-
-  private static bool AreFragmentPathsEqual(InwOaFragment3 fragment, InwOaPath path) =>
-    fragment.path?.ArrayData is Array fragmentPathData
-    && path.ArrayData is Array pathData
-    && AreFragmentPathsEqual(fragmentPathData, pathData);
-
-  private List<SSM.Base> ProcessGeometries(List<PrimitiveProcessor> processors)
-  {
-    var baseGeometries = new List<SSM.Base>();
+    var baseGeometries = new List<Base>(processors.Count * 2);
 
     foreach (var processor in processors)
     {
@@ -225,17 +286,13 @@ public class GeometryToSpeckleConverter(
         baseGeometries.Add(mesh);
       }
 
-      if (processor.Lines.Count > 0)
+      if (processor.Lines.Count <= 0)
       {
-        var lines = CreateLines(processor.Lines);
-        baseGeometries.AddRange(lines);
+        continue;
       }
 
-      if (processor.Points.Count > 0)
-      {
-        var points = CreatePoints(processor.Points);
-        baseGeometries.AddRange(points);
-      }
+      var lines = CreateLines(processor.Lines);
+      baseGeometries.AddRange(lines);
     }
 
     return baseGeometries;
@@ -243,13 +300,12 @@ public class GeometryToSpeckleConverter(
 
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
-    var vertices = new List<double>();
-    var faces = new List<int>();
+    var vertices = new List<double>(triangles.Count * 9);
+    var faces = new List<int>(triangles.Count * 4);
 
     for (var t = 0; t < triangles.Count; t++)
     {
       var triangle = triangles[t];
-
       vertices.AddRange(
         [
           (triangle.Vertex1.X + _transformVector.X) * SCALE,
@@ -274,411 +330,34 @@ public class GeometryToSpeckleConverter(
     };
   }
 
-  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines) =>
-    lines
-      .Select(line => new Line
-      {
-        start = new Point(
-          (line.Start.X + _transformVector.X) * SCALE,
-          (line.Start.Y + _transformVector.Y) * SCALE,
-          (line.Start.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
-        end = new Point(
-          (line.End.X + _transformVector.X) * SCALE,
-          (line.End.Y + _transformVector.Y) * SCALE,
-          (line.End.Z + _transformVector.Z) * SCALE,
-          _settings.Derived.SpeckleUnits
-        ),
-        units = _settings.Derived.SpeckleUnits
-      })
-      .ToList();
-
-  private List<Point> CreatePoints(IReadOnlyList<SafePoint> points) =>
-    points
-      .Select(point => new Point(
-        (point.Vertex.X + _transformVector.X) * SCALE,
-        (point.Vertex.Y + _transformVector.Y) * SCALE,
-        (point.Vertex.Z + _transformVector.Z) * SCALE,
-        _settings.Derived.SpeckleUnits
-      ))
-      .ToList();
-
-  public string GenerateFragmentId(InwSelectionPathsColl paths)
+  private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
-    try
+    var result = new List<Line>(lines.Count);
+
+    foreach (var line in lines)
     {
-      if (paths.Count == 0)
-      {
-        return string.Empty;
-      }
-
-      var fragmentHashes = new List<string>();
-
-      foreach (var fragments in from InwOaPath path in paths select path.Fragments())
-      {
-        try
+      result.Add(
+        new Line
         {
-          var fragmentIndex = 0;
-          foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
-          {
-            if (fragment.path?.ArrayData is not Array pathData || pathData.Length == 0)
-            {
-              fragmentIndex++;
-              continue;
-            }
-
-            try
-            {
-              if (pathData.Rank != 1)
-              {
-                var fragmentHashFallback = TrySimpleArrayEnumeration(pathData, fragmentIndex);
-                if (!string.IsNullOrEmpty(fragmentHashFallback))
-                {
-                  fragmentHashes.Add(fragmentHashFallback);
-                }
-
-                fragmentIndex++;
-                continue;
-              }
-
-              var lowerBound = pathData.GetLowerBound(0);
-              var upperBound = pathData.GetUpperBound(0);
-
-              var arrayLength = upperBound - lowerBound + 1;
-              var pathInts = new int[arrayLength];
-
-              for (int i = lowerBound; i <= upperBound; i++)
-              {
-                try
-                {
-                  var value = pathData.GetValue(i);
-                  var arrayIndex = i - lowerBound;
-                  pathInts[arrayIndex] = System.Convert.ToInt32(value);
-                }
-                catch (Exception ex) when (ex is COMException or InvalidCastException)
-                {
-                  var errorType = ex is COMException ? "COM array access failed" : "Type conversion failed";
-                  _logger.LogDebug(ex, "{ErrorType} at index {Index}", errorType, i);
-                }
-              }
-
-              var fragmentHash = string.Join("_", pathInts);
-              fragmentHashes.Add(fragmentHash);
-            }
-            catch (Exception ex) when (ex is COMException or IndexOutOfRangeException or RankException)
-            {
-              var errorType = ex switch
-              {
-                COMException => "COM access failed",
-                IndexOutOfRangeException => "Array bounds exceeded",
-                RankException => "Array rank mismatch",
-                _ => "Error"
-              };
-              _logger.LogDebug(
-                ex,
-                "{ErrorType} processing fragment {FragmentIndex}, trying simple enumeration",
-                errorType,
-                fragmentIndex
-              );
-
-              var fragmentHash = TrySimpleArrayEnumeration(pathData, fragmentIndex);
-              if (!string.IsNullOrEmpty(fragmentHash))
-              {
-                fragmentHashes.Add(fragmentHash);
-              }
-
-              fragmentIndex++;
-              continue;
-            }
-
-            fragmentIndex++;
-          }
+          start = new Point(
+            (line.Start.X + _transformVector.X) * SCALE,
+            (line.Start.Y + _transformVector.Y) * SCALE,
+            (line.Start.Z + _transformVector.Z) * SCALE,
+            _settings.Derived.SpeckleUnits
+          ),
+          end = new Point(
+            (line.End.X + _transformVector.X) * SCALE,
+            (line.End.Y + _transformVector.Y) * SCALE,
+            (line.End.Z + _transformVector.Z) * SCALE,
+            _settings.Derived.SpeckleUnits
+          ),
+          units = _settings.Derived.SpeckleUnits
         }
-        finally
-        {
-          if (fragments != null)
-          {
-            Marshal.ReleaseComObject(fragments);
-          }
-        }
-      }
-
-      if (fragmentHashes.Count > 0)
-      {
-        fragmentHashes.Sort();
-        var rawData = string.Join("__", fragmentHashes);
-        var fragmentId = HashRawData(rawData);
-        return fragmentId;
-      }
-
-      return string.Empty;
+      );
     }
-    catch (Exception ex) when (ex is COMException or InvalidCastException or IndexOutOfRangeException)
-    {
-      var errorType = ex switch
-      {
-        COMException => "COM access failed",
-        InvalidCastException => "Type conversion failed",
-        IndexOutOfRangeException => "Array bounds exceeded",
-        _ => "Error"
-      };
-      _logger.LogWarning(ex, "{ErrorType} generating fragment ID", errorType);
-      return string.Empty;
-    }
-  }
-
-  private string TrySimpleArrayEnumeration(Array pathData, int fragmentIndex)
-  {
-    try
-    {
-      var values = new List<string>();
-      var maxAttempts = Math.Min(pathData.Length, 20);
-
-      for (int i = 0; i < maxAttempts; i++)
-      {
-        try
-        {
-          var value = pathData.GetValue(i);
-          var convertedValue = System.Convert.ToInt32(value);
-          values.Add(convertedValue.ToString());
-        }
-        catch (IndexOutOfRangeException)
-        {
-          break;
-        }
-        catch (InvalidCastException ex)
-        {
-          _logger.LogDebug(ex, "Type conversion failed at index {Index}", i);
-        }
-      }
-
-      if (values.Count <= 0)
-      {
-        return string.Empty;
-      }
-
-      return string.Join("_", values);
-    }
-    catch (COMException ex)
-    {
-      _logger.LogDebug(ex, "COM enumeration failed for fragment {FragmentIndex}", fragmentIndex);
-      return string.Empty;
-    }
-  }
-
-  private static string HashRawData(string rawData)
-  {
-    using var sha256 = SHA256.Create();
-    var inputBytes = Encoding.UTF8.GetBytes(rawData);
-    var hashBytes = sha256.ComputeHash(inputBytes);
-    return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-  }
-
-  private List<SSM.Base> ExtractUntransformedGeometry(Stack<InwOaFragment3> fragmentStack)
-  {
-    var processor = new PrimitiveProcessor(_isUpright);
-
-    foreach (var fragment in fragmentStack)
-    {
-      processor.LocalToWorldTransformation = s_identityTransform;
-
-      fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
-    }
-
-    var geometries = new List<SSM.Base>();
-
-    if (processor.Triangles.Count > 0)
-    {
-      geometries.Add(CreateMesh(processor.Triangles));
-    }
-
-    if (processor.Lines.Count > 0)
-    {
-      geometries.AddRange(CreateLines(processor.Lines));
-    }
-
-    if (processor.Points.Count > 0)
-    {
-      geometries.AddRange(CreatePoints(processor.Points));
-    }
-
-    return geometries;
-  }
-
-  private List<SSM.Base> CreateInstanceReference(string fragmentId, InwSelectionPathsColl paths)
-  {
-    var transform = ExtractInstanceTransform(paths);
-
-    var instanceReference = new InstanceProxy
-    {
-      definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{fragmentId}",
-      transform = transform,
-      units = _settings.Derived.SpeckleUnits,
-      maxDepth = 0,
-      applicationId = Guid.NewGuid().ToString()
-    };
-
-    return [instanceReference];
-  }
-
-  private Matrix4x4 ExtractInstanceTransform(InwSelectionPathsColl paths)
-  {
-    try
-    {
-      if (paths.Count == 0)
-      {
-        return s_identityMatrix;
-      }
-
-      var firstPath = paths.Cast<InwOaPath>().First();
-      var fragments = firstPath.Fragments();
-      try
-      {
-        if (fragments.Count == 0)
-        {
-          return s_identityMatrix;
-        }
-
-        var fragmentStack = new Stack<InwOaFragment3>();
-
-        foreach (var frag in fragments.OfType<InwOaFragment3>())
-        {
-          if (frag.path?.ArrayData is not Array pathData1 || firstPath.ArrayData is not Array pathData2)
-          {
-            continue;
-          }
-
-          var pathArray1 = pathData1.Cast<int>().ToArray();
-          var pathArray2 = pathData2.Cast<int>().ToArray();
-
-          if (pathArray1.Length == pathArray2.Length && pathArray1.SequenceEqual(pathArray2))
-          {
-            fragmentStack.Push(frag);
-          }
-        }
-
-        var fragment = fragmentStack.First();
-        var matrix = fragment.GetLocalToWorldMatrix();
-
-        if (matrix is InwLTransform3f3 { Matrix: Array matrixArray })
-        {
-          var transformArray = ConvertArrayToDouble(matrixArray);
-          var transformedMatrix = ApplyCoordinateTransform(transformArray);
-
-          var newMatrix = new Matrix4x4(
-            transformedMatrix[0],
-            transformedMatrix[1],
-            transformedMatrix[2],
-            transformedMatrix[3],
-            transformedMatrix[4],
-            transformedMatrix[5],
-            transformedMatrix[6],
-            transformedMatrix[7],
-            transformedMatrix[8],
-            transformedMatrix[9],
-            transformedMatrix[10],
-            transformedMatrix[11],
-            transformedMatrix[12],
-            transformedMatrix[13],
-            transformedMatrix[14],
-            transformedMatrix[15]
-          );
-
-          return Matrix4x4.Transpose(newMatrix);
-        }
-      }
-      finally
-      {
-        if (fragments != null)
-        {
-          Marshal.ReleaseComObject(fragments);
-        }
-      }
-    }
-    catch (Exception ex) when (ex is COMException or InvalidCastException or NullReferenceException)
-    {
-      var errorType = ex switch
-      {
-        COMException => "COM access failed",
-        InvalidCastException => "Transform matrix type conversion failed",
-        NullReferenceException => "Null reference",
-        _ => "Error"
-      };
-      _logger.LogWarning(ex, "{ErrorType} extracting instance transform", errorType);
-    }
-
-    return s_identityMatrix;
-  }
-
-  private double[] ApplyCoordinateTransform(double[] matrixArray)
-  {
-    var result = new double[16];
-    Array.Copy(matrixArray, result, 16);
-
-    // Apply Y-up to Z-up basis correction for non-upright models.
-    // When meshes are converted, vertices undergo the transformation (x, y, z) -> (x, -z, y)
-    // via TransformVectorToOrientation in PrimitiveProcessor. Instance transforms must be
-    // converted to the same basis using the conjugation: T_zup = C * T_yup * C^(-1)
-    // where C is the Y-up to Z-up change of basis matrix.
-    if (!_isUpright)
-    {
-      result = ApplyYUpToZUpBasisChange(result);
-    }
-
-    result[12] = (result[12] + _transformVector.X) * SCALE;
-    result[13] = (result[13] + _transformVector.Y) * SCALE;
-    result[14] = (result[14] + _transformVector.Z) * SCALE;
 
     return result;
   }
-
-  /// <summary>
-  /// Applies the Y-up to Z-up basis change to a 4x4 transformation matrix.
-  /// This performs the conjugation T_zup = C * T_yup * C^(-1) where C represents
-  /// the coordinate transformation (x, y, z) -> (x, -z, y).
-  /// </summary>
-  /// <remarks>
-  /// The change of basis matrix C and its inverse C^(-1) for (x, y, z) -> (x, -z, y):
-  /// C = | 1  0  0  0 |    C^(-1) = | 1  0  0  0 |
-  ///     | 0  0 -1  0 |             | 0  0  1  0 |
-  ///     | 0  1  0  0 |             | 0 -1  0  0 |
-  ///     | 0  0  0  1 |             | 0  0  0  1 |
-  ///
-  /// For a matrix T with elements [m0...m15] in row-major order:
-  /// | m0  m1  m2  m3  |
-  /// | m4  m5  m6  m7  |
-  /// | m8  m9  m10 m11 |
-  /// | m12 m13 m14 m15 |
-  ///
-  /// The result of C * T * C^(-1) transforms the basis while preserving
-  /// the geometric meaning of the transformation in the new coordinate system.
-  /// </remarks>
-  private static double[] ApplyYUpToZUpBasisChange(double[] m) =>
-    // Compute C * T * C^(-1) where:
-    // C converts Y-up to Z-up: (x, y, z) -> (x, -z, y)
-    // This ensures instance transforms operate correctly on Z-up geometry.
-    //
-    // The multiplication is performed analytically for efficiency.
-    // Given input matrix m (row-major), the result is:
-    [
-      m[0],
-      -m[2],
-      m[1],
-      m[3], // Row 0: unchanged x, swapped and negated y/z
-      -m[8],
-      m[10],
-      -m[9],
-      -m[11], // Row 1: from row 2, with sign changes
-      m[4],
-      -m[6],
-      m[5],
-      m[7], // Row 2: from row 1, with sign changes
-      m[12],
-      -m[14],
-      m[13],
-      m[15] // Row 3 (translation): swap y/z, negate new y
-    ];
 
   private static double[] ConvertArrayToDouble(Array arr)
   {
@@ -696,6 +375,117 @@ public class GeometryToSpeckleConverter(
     return doubleArray;
   }
 
-  private static bool AreFragmentPathsEqual(Array a1, Array a2) =>
-    a1.Length == a2.Length && a1.Cast<int>().SequenceEqual(a2.Cast<int>());
+  /// <summary>
+  /// VALIDATION HELPER: Unbakes geometry from world space to definition space. Creates copies of the geometry and
+  /// applies inverse transform to move from world coordinates back to definition/local space.
+  /// Used for visual validation of instance detection.
+  /// </summary>
+  private static List<Base> UnbakeGeometry(List<Base> bakedGeometry, double[] invWorld)
+  {
+    var result = new List<Base>(bakedGeometry.Count);
+
+    foreach (var item in bakedGeometry)
+    {
+      switch (item)
+      {
+        case Mesh mesh:
+        {
+          // Create a copy to avoid mutating the original
+          var unbaked = new Mesh
+          {
+            vertices = [.. mesh.vertices],
+            faces = mesh.faces,
+            units = mesh.units
+          };
+          GeometryHelpers.UnbakeMeshVertices(unbaked, invWorld);
+          result.Add(unbaked);
+          break;
+        }
+        case Line line:
+        {
+          var unbaked = new Line
+          {
+            start = new Point(line.start.x, line.start.y, line.start.z, line.start.units),
+            end = new Point(line.end.x, line.end.y, line.end.z, line.end.units),
+            units = line.units
+          };
+          GeometryHelpers.UnbakeLine(unbaked, invWorld);
+          result.Add(unbaked);
+          break;
+        }
+        default:
+          result.Add(item); // Pass through unknown types
+          break;
+      }
+    }
+
+    return result;
+  }
+
+  /// <summary>
+  /// Transforms a 4x4 matrix from Y-up to Z-up coordinate system.
+  /// Applies P * M * P^-1 where P is the coordinate transform (x, y, z) -> (x, -z, y).
+  /// </summary>
+  private static double[] TransformMatrixYUpToZUp(double[] m)
+  {
+    // P swaps Y↔Z with sign: (x,y,z) -> (x,-z,y)
+    // P =     | 1  0  0  0 |    P^-1 = | 1  0  0  0 |
+    //         | 0  0 -1  0 |           | 0  0  1  0 |
+    //         | 0  1  0  0 |           | 0 -1  0  0 |
+    //         | 0  0  0  1 |           | 0  0  0  1 |
+    // Result = P * M * P^-1
+
+    var result = new double[16]; //
+
+    // Column 0 (X basis): unchanged in X, swap Y↔Z
+    result[0] = m[0];
+    result[4] = m[8];
+    result[8] = -m[4];
+    result[12] = m[12];
+
+    // Column 1 (Y basis): comes from -Z
+    result[1] = -m[2];
+    result[5] = -m[10];
+    result[9] = m[6];
+    result[13] = -m[14];
+
+    // Column 2 (Z basis): comes from Y
+    result[2] = m[1];
+    result[6] = m[9];
+    result[10] = -m[5];
+    result[14] = m[13];
+
+    // Column 3 (homogeneous): unchanged
+    result[3] = m[3];
+    result[7] = m[7];
+    result[11] = m[11];
+    result[15] = m[15];
+
+    return result;
+  }
+
+  private static Matrix4x4 ConvertToMatrix4X4(double[] matrix) =>
+    matrix.Length == 16
+      ? Matrix4x4.Transpose(
+        new Matrix4x4
+        {
+          M11 = matrix[0],
+          M12 = matrix[1],
+          M13 = matrix[2],
+          M14 = matrix[3],
+          M21 = matrix[4],
+          M22 = matrix[5],
+          M23 = matrix[6],
+          M24 = matrix[7],
+          M31 = matrix[8],
+          M32 = matrix[9],
+          M33 = matrix[10],
+          M34 = matrix[11],
+          M41 = matrix[12],
+          M42 = matrix[13],
+          M43 = matrix[14],
+          M44 = matrix[15]
+        }
+      )
+      : throw new ArgumentException("Matrix must have exactly 16 elements", nameof(matrix));
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using Speckle.Connector.Navisworks.Services;
 using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
@@ -130,16 +130,20 @@ public class NavisworksColorUnpacker(
     var comSelection = ComBridge.ToInwOpSelection([modelItem]);
     try
     {
-      var pathsCollection = comSelection.Paths();
+      var paths = comSelection.Paths();
       try
       {
-        foreach (ComApi.InwOaPath path in pathsCollection)
+        foreach (ComApi.InwOaPath path in paths)
         {
-          var fragmentsCollection = path.Fragments();
+          GC.KeepAlive(path);
+
+          var fragments = path.Fragments();
           try
           {
-            foreach (ComApi.InwOaFragment3 fragment in fragmentsCollection.OfType<ComApi.InwOaFragment3>())
+            foreach (ComApi.InwOaFragment3 fragment in fragments)
             {
+              GC.KeepAlive(fragment);
+
               fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
 
               if (primitiveChecker.HasTriangles)
@@ -150,9 +154,9 @@ public class NavisworksColorUnpacker(
           }
           finally
           {
-            if (fragmentsCollection != null)
+            if (fragments != null)
             {
-              System.Runtime.InteropServices.Marshal.ReleaseComObject(fragmentsCollection);
+              System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
             }
           }
         }
@@ -161,9 +165,9 @@ public class NavisworksColorUnpacker(
       }
       finally
       {
-        if (pathsCollection != null)
+        if (paths != null)
         {
-          System.Runtime.InteropServices.Marshal.ReleaseComObject(pathsCollection);
+          System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
         }
       }
     }

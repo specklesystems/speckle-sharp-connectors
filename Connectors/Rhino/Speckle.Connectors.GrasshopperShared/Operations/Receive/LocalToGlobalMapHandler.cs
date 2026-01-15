@@ -225,6 +225,14 @@ internal sealed class LocalToGlobalMapHandler
 
       var entry = _dataObjectInstanceRegistry.GetEntries()[dataObjectId];
       var resolvedGeometries = ResolveInstanceProxiesToGeometries(entry.InstanceProxies);
+
+      var primitiveConverted = dataObject
+        .displayValue.Where(item => item is not InstanceProxy)
+        .SelectMany(item => SpeckleConversionContext.Current.ConvertToHost(item))
+        .ToList();
+
+      resolvedGeometries.AddRange(ConvertToGeometryWrappers(primitiveConverted));
+
       var dataObjectWrapper = CreateDataObjectWrapper(dataObject, resolvedGeometries, path, objectCollection);
 
       CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);

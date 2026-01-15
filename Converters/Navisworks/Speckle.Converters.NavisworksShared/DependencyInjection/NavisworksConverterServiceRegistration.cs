@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
@@ -42,19 +43,17 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
 
+    // Register element selection service
+    serviceCollection.AddScoped<ElementSelectionService>();
+
     // Register geometry conversion
     serviceCollection.AddScoped<DisplayValueExtractor>();
-    serviceCollection.AddScoped<GeometryToSpeckleConverter>();
-
-    // Register dual shared geometry stores for instancing pattern (.NET Framework compatible)
-    // Store 1: For geometry definitions (Mesh, Curve, etc.) - Store 2: For InstanceDefinitionProxy objects
-    serviceCollection.AddScoped<InstanceStoreManager>();
-
-    // Register ISharedGeometryStore interface using the geometry definitions store for backward compatibility
-    serviceCollection.AddScoped<ISharedGeometryStore>(provider =>
-      provider.GetRequiredService<InstanceStoreManager>().GeometryDefinitionsStore
-    );
-
+    serviceCollection.AddScoped<GeometryToSpeckleConverter>(sp =>
+    {
+      var settingsStore = sp.GetRequiredService<IConverterSettingsStore<NavisworksConversionSettings>>();
+      var registry = sp.GetRequiredService<IInstanceFragmentRegistry>();
+      return new GeometryToSpeckleConverter(settingsStore.Current, registry);
+    });
     // Register settings resolved from factory
     serviceCollection.AddScoped<NavisworksConversionSettings>(sp =>
       sp.GetRequiredService<INavisworksConversionSettingsFactory>().Current
