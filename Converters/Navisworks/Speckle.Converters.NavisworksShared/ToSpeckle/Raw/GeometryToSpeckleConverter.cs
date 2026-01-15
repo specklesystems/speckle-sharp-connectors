@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Constants;
 using Speckle.Converter.Navisworks.Constants.Registers;
@@ -37,25 +35,8 @@ public sealed class GeometryToSpeckleConverter(
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
-  private long _comExtractionTicks;
-  private long _geometryCreationTicks;
-  private int _totalModelItemsProcessed;
   private const bool ENABLE_INSTANCING = true;
   private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
-
-  // ReSharper disable once NotAccessedField.Local
-  private int _totalPathsProcessed;
-  private int _singleMemberGroups;
-  private int _multiMemberGroups;
-
-#pragma warning disable CA1024
-  public (double comMs, double geometryMs, int itemCount) GetPerformanceStatistics()
-#pragma warning restore CA1024
-  {
-    double comMs = _comExtractionTicks / (double)TimeSpan.TicksPerMillisecond;
-    double geometryMs = _geometryCreationTicks / (double)TimeSpan.TicksPerMillisecond;
-    return (comMs, geometryMs, _totalModelItemsProcessed);
-  }
 
   internal List<Base> Convert(NAV.ModelItem modelItem)
   {
@@ -68,8 +49,6 @@ public sealed class GeometryToSpeckleConverter(
     {
       return [];
     }
-
-    _totalModelItemsProcessed++;
 
     NAV.ModelItemCollection collection = new() { modelItem };
     var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
@@ -99,33 +78,15 @@ public sealed class GeometryToSpeckleConverter(
             members.Add(itemPathKey);
             groupKey = itemPathKey;
             _registry.RegisterGroup(groupKey, members);
-            _totalPathsProcessed++;
-
-            if (members.Count > 1)
-            {
-              _multiMemberGroups++;
-            }
-            else
-            {
-              _singleMemberGroups++;
-            }
-
             _groupMemberCounts[groupKey] = members.Count;
           }
 
           var processor = new PrimitiveProcessor(_isUpright);
-          var comStopwatch = Stopwatch.StartNew();
           ProcessPathFragments(path, itemPathKey, groupKey, processor);
-          comStopwatch.Stop();
-          _comExtractionTicks += comStopwatch.ElapsedTicks;
 
           if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
           {
-            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
-            geomStopwatch.Stop();
-            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
-
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
             continue;
@@ -133,11 +94,7 @@ public sealed class GeometryToSpeckleConverter(
 
           if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
           {
-            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
-            geomStopwatch.Stop();
-            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
-
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
             continue;
@@ -145,10 +102,7 @@ public sealed class GeometryToSpeckleConverter(
 
           if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
           {
-            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
-            geomStopwatch.Stop();
-            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
 
             var invDefWorld = GeometryHelpers.InvertRigid(instanceWorld);
             var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
@@ -177,11 +131,7 @@ public sealed class GeometryToSpeckleConverter(
           }
           else
           {
-            var geomStopwatch = Stopwatch.StartNew();
             var geometries = ProcessGeometries([processor]);
-            geomStopwatch.Stop();
-            _geometryCreationTicks += geomStopwatch.ElapsedTicks;
-
             _registry.MarkConverted(itemPathKey);
             allResults.AddRange(geometries);
           }
@@ -493,84 +443,4 @@ public sealed class GeometryToSpeckleConverter(
       )
       : throw new ArgumentException("Matrix must have exactly 16 elements", nameof(matrix));
 
-  public (
-    int totalGroups,
-    int singleMember,
-    int multiMember,
-    int largestGroup,
-    Dictionary<PathKey, int> groupCounts
-  ) GetGroupingStatistics()
-  {
-    var largestGroup = _groupMemberCounts.Values.Count != 0 ? _groupMemberCounts.Values.Max() : 0;
-    return (
-      _groupMemberCounts.Count,
-      _singleMemberGroups,
-      _multiMemberGroups,
-      largestGroup,
-      new Dictionary<PathKey, int>(_groupMemberCounts, PathKey.Comparer)
-    );
-  }
-
-  public string GetGroupingSummary()
-  {
-    if (_groupMemberCounts.Count == 0)
-    {
-      return "No grouping data collected yet.";
-    }
-
-    var sb = new StringBuilder();
-    sb.AppendLine("=== Grouping Summary ===");
-    sb.AppendLine($"Total Groups: {_groupMemberCounts.Count}");
-    sb.AppendLine(
-      $"Single-Member Groups: {_singleMemberGroups} ({GetPercentage(_singleMemberGroups, _groupMemberCounts.Count):F1}%)"
-    );
-    sb.AppendLine(
-      $"Multi-Member Groups: {_multiMemberGroups} ({GetPercentage(_multiMemberGroups, _groupMemberCounts.Count):F1}%)"
-    );
-    sb.AppendLine(
-      $"Largest Group: {(_groupMemberCounts.Values.Count != 0 ? _groupMemberCounts.Values.Max() : 0)} instances"
-    );
-
-    if (_multiMemberGroups <= 0)
-    {
-      return sb.ToString();
-    }
-
-    sb.AppendLine("\nTop 5 Groups:");
-    var top5 = _groupMemberCounts.Where(kvp => kvp.Value > 1).OrderByDescending(kvp => kvp.Value).Take(5);
-
-    int rank = 1;
-    foreach (var kvp in top5)
-    {
-      sb.AppendLine($"  {rank}. Group {kvp.Key.ToHashString()}: {kvp.Value} instances");
-      rank++;
-    }
-
-    return sb.ToString();
-  }
-
-  private static double GetPercentage(int part, int total) => total == 0 ? 0 : (double)part / total * 100.0;
-
-  public string GetPerformanceSummary()
-  {
-    var (comMs, geometryMs, itemCount) = GetPerformanceStatistics();
-    var totalMs = comMs + geometryMs;
-
-    if (itemCount == 0)
-    {
-      return "No performance data collected yet.";
-    }
-
-    var sb = new StringBuilder();
-    sb.AppendLine("=== Performance Timing Summary ===");
-    sb.AppendLine($"Total Items Processed: {itemCount}");
-    sb.AppendLine($"Total Time: {totalMs:F2} ms");
-    sb.AppendLine($"  COM Extraction: {comMs:F2} ms ({GetPercentage((int)comMs, (int)totalMs):F1}%)");
-    sb.AppendLine($"  Geometry Creation: {geometryMs:F2} ms ({GetPercentage((int)geometryMs, (int)totalMs):F1}%)");
-    sb.AppendLine($"Average per item:");
-    sb.AppendLine($"  COM: {comMs / itemCount:F2} ms");
-    sb.AppendLine($"  Geometry: {geometryMs / itemCount:F2} ms");
-
-    return sb.ToString();
-  }
 }

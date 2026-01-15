@@ -17,9 +17,6 @@ using Speckle.Sdk.Models.Instances;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 using static Speckle.Connectors.Common.Operations.ProxyKeys;
 using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
-#if DEBUG
-using Speckle.Connector.Navisworks.Operations.Diagnostics;
-#endif
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -78,9 +75,6 @@ public class NavisworksRootObjectBuilder(
       "Final output contains {count} InstanceProxy objects in displayValues",
       finalInstanceProxyCount
     );
-
-    LogInstanceGroupingDiagnostics(navisworksModelItems.Count);
-    LogGeometryCacheStatistics();
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -453,94 +447,4 @@ public class NavisworksRootObjectBuilder(
     }
   }
 
-  private void LogInstanceGroupingDiagnostics(int totalItemsSelected)
-  {
-#if DEBUG
-    try
-    {
-      var groupToConvertedPaths = instanceRegistry.BuildGroupToConvertedPaths();
-      var diagnosticsBuilder = new InstanceGroupingDiagnosticsBuilder();
-
-      foreach (var kvp in groupToConvertedPaths)
-      {
-        diagnosticsBuilder.RecordGroup(kvp.Key, kvp.Value.Count);
-      }
-
-      var diagnostics = diagnosticsBuilder.Build();
-
-      logger.LogInformation("╔════════════════════════════════════════════════════════════════╗");
-      logger.LogInformation("║  INSTANCE GROUPING DIAGNOSTICS                                ║");
-      logger.LogInformation("╚════════════════════════════════════════════════════════════════╝");
-      logger.LogInformation(
-        "Items selected: {selected}, Groups created: {groups}",
-        totalItemsSelected,
-        diagnostics.TotalGroupsCreated
-      );
-      logger.LogInformation("{summary}", diagnostics.GenerateSummary());
-
-      if (!diagnostics.IsGroupingEffective())
-      {
-        logger.LogWarning("⚠️  Instance grouping appears to be INEFFECTIVE!");
-        logger.LogWarning("Most items are in single-member groups (no instancing detected).");
-
-        var recommendations = diagnostics.GetRecommendations();
-        foreach (var recommendation in recommendations)
-        {
-          logger.LogWarning("  - {recommendation}", recommendation);
-        }
-      }
-      else
-      {
-        logger.LogInformation(
-          "✓ Instance grouping is working: {multiMember} groups with multiple instances",
-          diagnostics.MultiMemberGroups
-        );
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Failed to generate instance grouping diagnostics");
-    }
-#endif
-  }
-
-  private void LogGeometryCacheStatistics()
-  {
-#if DEBUG
-    try
-    {
-      var geometryConverter = _displayValueExtractor.GeometryConverter;
-
-      logger.LogInformation("╔════════════════════════════════════════════════════════════════╗");
-      logger.LogInformation("║  GEOMETRY CACHE PERFORMANCE                                   ║");
-      logger.LogInformation("╚════════════════════════════════════════════════════════════════╝");
-
-      var (comMs, geometryMs, itemCount) = geometryConverter.GetPerformanceStatistics();
-      if (itemCount > 0)
-      {
-        logger.LogInformation("Performance Timing:");
-        logger.LogInformation("  Items Processed: {count}", itemCount);
-        logger.LogInformation(
-          "  COM Extraction: {comMs:F2} ms ({percent:F1}%)",
-          comMs,
-          comMs / (comMs + geometryMs) * 100
-        );
-        logger.LogInformation(
-          "  Geometry Creation: {geomMs:F2} ms ({percent:F1}%)",
-          geometryMs,
-          geometryMs / (comMs + geometryMs) * 100
-        );
-        logger.LogInformation(
-          "  Avg per item: {avgCom:F3} ms COM, {avgGeom:F3} ms Geometry",
-          comMs / itemCount,
-          geometryMs / itemCount
-        );
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Failed to generate geometry cache statistics");
-    }
-#endif
-  }
 }

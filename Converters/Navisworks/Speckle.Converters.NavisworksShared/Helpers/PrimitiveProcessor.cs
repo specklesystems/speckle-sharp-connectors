@@ -57,13 +57,13 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       var safeLine = new SafeLine(vD1, vD2);
       AddLine(safeLine);
     }
-    catch (ArgumentException ex)
+    catch (ArgumentException)
     {
-      Console.WriteLine($"ArgumentException caught: {ex.Message}");
+      // Invalid line geometry - skip
     }
-    catch (InvalidOperationException ex)
+    catch (InvalidOperationException)
     {
-      Console.WriteLine($"InvalidOperationException caught: {ex.Message}");
+      // Invalid line geometry - skip
     }
   }
 
