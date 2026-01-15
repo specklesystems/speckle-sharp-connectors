@@ -9,32 +9,19 @@ using Speckle.Sdk.Models.Collections;
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 [NameAndRankValue(typeof(NAV.ModelItem), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
+public class ModelItemToToSpeckleConverter(
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  StandardPropertyHandler standardHandler,
+  HierarchicalPropertyHandler hierarchicalHandler,
+  DisplayValueExtractor displayValueExtractor
+) : IToSpeckleTopLevelConverter
 {
-  private readonly StandardPropertyHandler _standardHandler;
-  private readonly HierarchicalPropertyHandler _hierarchicalHandler;
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-  private readonly DisplayValueExtractor _displayValueExtractor;
-
-  public ModelItemToToSpeckleConverter(
-    IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-    StandardPropertyHandler standardHandler,
-    HierarchicalPropertyHandler hierarchicalHandler,
-    DisplayValueExtractor displayValueExtractor
-  )
-  {
-    _settingsStore = settingsStore;
-    _standardHandler = standardHandler;
-    _hierarchicalHandler = hierarchicalHandler;
-    _displayValueExtractor = displayValueExtractor;
-  }
-
   public Base Convert(object target) =>
     target == null ? throw new ArgumentNullException(nameof(target)) : Convert((NAV.ModelItem)target);
 
   private Base Convert(NAV.ModelItem target)
   {
-    IPropertyHandler handler = ShouldMergeProperties(target) ? _hierarchicalHandler : _standardHandler;
+    IPropertyHandler handler = ShouldMergeProperties(target) ? hierarchicalHandler : standardHandler;
     var name = GetObjectName(target);
 
     return target.HasGeometry
@@ -44,13 +31,13 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
 
   private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler)
   {
-    var displayValue = _displayValueExtractor.GetDisplayValue(target);
+    var displayValue = displayValueExtractor.GetDisplayValue(target);
 
     var geometryObject = new NavisworksObject
     {
-      units = _settingsStore.Current.Derived.SpeckleUnits,
+      units = settingsStore.Current.Derived.SpeckleUnits,
       name = name,
-      properties = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      properties = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
       displayValue = displayValue
     };
 
@@ -62,7 +49,7 @@ public class ModelItemToToSpeckleConverter : IToSpeckleTopLevelConverter
     {
       name = name,
       elements = [],
-      ["properties"] = _settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      ["properties"] = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
     };
 
   private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;

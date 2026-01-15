@@ -29,19 +29,16 @@ public class NavisworksRootObjectBuilder(
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
-  Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor displayValueExtractor,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache
+  IUiUnitsCache uiUnitsCache,
+  bool disableGroupingForInstanceTesting,
+  bool skipNodeMerging
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
 #pragma warning disable CA1823
-  private readonly Speckle.Converter.Navisworks.ToSpeckle.DisplayValueExtractor _displayValueExtractor =
-    displayValueExtractor;
 #pragma warning restore CA1823
-  private bool SkipNodeMerging { get; set; }
-  private bool DisableGroupingForInstanceTesting { get; set; }
-
-  internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
+  private bool SkipNodeMerging { get; } = skipNodeMerging;
+  private bool DisableGroupingForInstanceTesting { get; } = disableGroupingForInstanceTesting;
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -446,5 +443,4 @@ public class NavisworksRootObjectBuilder(
       return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", null, ex);
     }
   }
-
 }

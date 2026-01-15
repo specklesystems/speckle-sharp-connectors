@@ -434,7 +434,7 @@ public sealed class GeometryToSpeckleConverter(
     //         | 0  1  0  0 |           | 0 -1  0  0 |
     //         | 0  0  0  1 |           | 0  0  0  1 |
     // Result = P * M * P^-1
-    
+
     var result = new double[16];
     
     // Column 0 (X basis): unchanged in X, swap Y↔Z

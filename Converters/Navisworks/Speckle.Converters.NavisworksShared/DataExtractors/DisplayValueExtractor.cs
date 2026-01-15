@@ -18,6 +18,6 @@ public class DisplayValueExtractor(
   /// <summary>
   /// Gets the underlying geometry converter for accessing cache statistics.
   /// </summary>
-  public GeometryToSpeckleConverter GeometryConverter { get; } =
+  internal GeometryToSpeckleConverter GeometryConverter { get; } =
     geometryConverter ?? throw new ArgumentNullException(nameof(geometryConverter));
 }

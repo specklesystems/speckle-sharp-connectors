@@ -1,5 +1,7 @@
 ﻿using Speckle.Objects.Geometry;
 
+// ReSharper disable UnusedMember.Local
+
 namespace Speckle.Converter.Navisworks.Helpers;
 
 public readonly record struct Aabb(double MinX, double MinY, double MinZ, double MaxX, double MaxY, double MaxZ)
@@ -69,7 +71,7 @@ public static class GeometryHelpers
   /// Multiplies two 4x4 matrices in row-major order.
   /// Used to compute instance transforms: inverse(definitionWorld) × instanceWorld
   /// </summary>
-  internal static double[] MultiplyMatrices4x4(double[] a, double[] b)
+  internal static double[] MultiplyMatrices4X4(double[] a, double[] b)
   {
     var result = new double[16];
     for (int row = 0; row < 4; row++)
