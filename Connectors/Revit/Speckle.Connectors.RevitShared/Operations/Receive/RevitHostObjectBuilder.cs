@@ -350,7 +350,7 @@ public sealed class RevitHostObjectBuilder(
   {
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
-    revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
+    revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it's legit
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);
   }
