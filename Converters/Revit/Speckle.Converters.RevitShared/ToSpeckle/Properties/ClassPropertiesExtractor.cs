@@ -1,3 +1,4 @@
+using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
@@ -100,10 +101,25 @@ public class ClassPropertiesExtractor
           elementProperties.Add("fromRoomApplicationId", familyInstance.FromRoom.UniqueId.ToString());
         }
 
-        // get parent element id for FamilyInstance elements with that property (e.g. Nested Families)
-        if (familyInstance.SuperComponent is not null)
+        Element? parent = null;
+
+#if REVIT2023_OR_GREATER
+        BuiltInCategory bic = familyInstance.Category.BuiltInCategory;
+#else
+        // Cast for 2022 and older
+        BuiltInCategory bic = (BuiltInCategory)familyInstance.Category.Id.IntegerValue;
+#endif
+
+        if (bic == BuiltInCategory.OST_CurtainWallMullions || bic == BuiltInCategory.OST_CurtainWallPanels)
         {
-          elementProperties.Add("parentApplicationId", familyInstance.SuperComponent.UniqueId.ToString());
+          parent = familyInstance.Host;
+        }
+
+        parent ??= familyInstance.SuperComponent;
+
+        if (parent != null)
+        {
+          elementProperties.Add("parentApplicationId", parent.UniqueId);
         }
       }
       catch (Exception e) when (!e.IsFatal())

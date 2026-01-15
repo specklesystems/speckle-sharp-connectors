@@ -78,15 +78,8 @@ public abstract class BasePropertyHandler(
     }
   }
 
-  private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties)
-  {
-    var propertyDict = new Dictionary<string, object?>();
-    foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
-    {
-      propertyDict[prop.Key] = prop.Value;
-    }
-    return propertyDict;
-  }
+  private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties) =>
+    properties.Where(prop => IsValidPropertyValue(prop.Value)).ToDictionary(prop => prop.Key, prop => prop.Value);
 
   protected static bool IsValidPropertyValue(object? value) => value != null && !string.IsNullOrEmpty(value.ToString());
 }

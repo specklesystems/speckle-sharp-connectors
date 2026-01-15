@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
 public class SpeckleGeometryPassthrough()
-  : SpeckleSolveInstance(
+  : SpecklePassthroughComponentBase(
     "Speckle Geometry",
     "SG",
     "Create or modify a Speckle Geometry",
@@ -21,6 +21,9 @@ public class SpeckleGeometryPassthrough()
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_geometry;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
+
+  protected override int FixedInputCount => 6;
+  protected override int FixedOutputCount => 7;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -220,8 +223,11 @@ public class SpeckleGeometryPassthrough()
       result.Material = inputMaterial.Value;
     }
 
-    // no need to process application Id.
-    // New definitions should have a new appID generated in the new() constructor, and we want to preserve old appID otherwise for changetracking.
+    // process application id (only if user provided one, otherwise preserve existing)
+    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    {
+      result.ApplicationId = inputAppId;
+    }
 
     // get the path
     string? path =
@@ -235,6 +241,7 @@ public class SpeckleGeometryPassthrough()
     da.SetData(4, result.Color);
     da.SetData(5, result.Material);
     da.SetData(6, path);
+    SetApplicationIdOutput(da, result.ApplicationId);
   }
 
   // keeps the geometry and wrapped base the same while assigning all other props from the inut wrapper
