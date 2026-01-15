@@ -1,3 +1,4 @@
+using Autodesk.Revit.DB;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Settings;
@@ -80,24 +81,45 @@ public class ClassPropertiesExtractor
         // get room id if applicable (only for FamilyInstance elements)
         if (familyInstance.Room is not null)
         {
-          elementProperties.Add("roomId", familyInstance.Room.Id.ToString());
+          elementProperties.Add("roomApplicationId", familyInstance.Room.UniqueId.ToString());
         }
 
         // get space id if applicable (only for FamilyInstance elements)
         if (familyInstance.Space is not null)
         {
-          elementProperties.Add("spaceId", familyInstance.Space.Id.ToString());
+          elementProperties.Add("spaceApplicationId", familyInstance.Space.UniqueId.ToString());
         }
 
         // get toRoom and fromRoom for FamilyInstance elements with those properties (e.g. Doors)
         if (familyInstance.ToRoom is not null)
         {
-          elementProperties.Add("toRoomId", familyInstance.ToRoom.Id.ToString());
+          elementProperties.Add("toRoomApplicationId", familyInstance.ToRoom.UniqueId.ToString());
         }
 
         if (familyInstance.FromRoom is not null)
         {
-          elementProperties.Add("fromRoomId", familyInstance.FromRoom.Id.ToString());
+          elementProperties.Add("fromRoomApplicationId", familyInstance.FromRoom.UniqueId.ToString());
+        }
+
+        Element? parent = null;
+
+#if REVIT2023_OR_GREATER
+        BuiltInCategory bic = familyInstance.Category.BuiltInCategory;
+#else
+        // Cast for 2022 and older
+        BuiltInCategory bic = (BuiltInCategory)familyInstance.Category.Id.IntegerValue;
+#endif
+
+        if (bic == BuiltInCategory.OST_CurtainWallMullions || bic == BuiltInCategory.OST_CurtainWallPanels)
+        {
+          parent = familyInstance.Host;
+        }
+
+        parent ??= familyInstance.SuperComponent;
+
+        if (parent != null)
+        {
+          elementProperties.Add("parentApplicationId", parent.UniqueId);
         }
       }
       catch (Exception e) when (!e.IsFatal())

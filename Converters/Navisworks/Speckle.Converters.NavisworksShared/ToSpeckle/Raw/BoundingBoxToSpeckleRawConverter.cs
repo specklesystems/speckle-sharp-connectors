@@ -6,28 +6,22 @@ using Speckle.Objects.Primitive;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle.Raw;
 
-public class BoundingBoxToSpeckleRawConverter : ITypedConverter<NAV.BoundingBox3D, Box>
+public class BoundingBoxToSpeckleRawConverter(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
+  : ITypedConverter<NAV.BoundingBox3D, Box>
 {
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-
-  public BoundingBoxToSpeckleRawConverter(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
-
   public Box Convert(object target) => Convert((NAV.BoundingBox3D)target);
 
   public Box Convert(NAV.BoundingBox3D? target)
   {
     if (target == null)
     {
-      return default!; // returns null for reference types (Box is a reference type)
+      return null!; // returns null for reference types (Box is a reference type)
     }
 
     var minPoint = target.Min;
     var maxPoint = target.Max;
 
-    var units = _settingsStore.Current.Derived.SpeckleUnits;
+    var units = settingsStore.Current.Derived.SpeckleUnits;
 
     var basePlane = new Plane
     {
