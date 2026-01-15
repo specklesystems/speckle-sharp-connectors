@@ -435,32 +435,32 @@ public sealed class GeometryToSpeckleConverter(
     //         | 0  0  0  1 |           | 0  0  0  1 |
     // Result = P * M * P^-1
 
-    var result = new double[16];
-    
+    var result = new double[16]; //
+
     // Column 0 (X basis): unchanged in X, swap Y↔Z
     result[0] = m[0];
     result[4] = m[8];
     result[8] = -m[4];
     result[12] = m[12];
-    
+
     // Column 1 (Y basis): comes from -Z
     result[1] = -m[2];
     result[5] = -m[10];
     result[9] = m[6];
     result[13] = -m[14];
-    
+
     // Column 2 (Z basis): comes from Y
     result[2] = m[1];
     result[6] = m[9];
     result[10] = -m[5];
     result[14] = m[13];
-    
+
     // Column 3 (homogeneous): unchanged
     result[3] = m[3];
     result[7] = m[7];
     result[11] = m[11];
     result[15] = m[15];
-    
+
     return result;
   }
 
@@ -488,5 +488,4 @@ public sealed class GeometryToSpeckleConverter(
         }
       )
       : throw new ArgumentException("Matrix must have exactly 16 elements", nameof(matrix));
-
 }
