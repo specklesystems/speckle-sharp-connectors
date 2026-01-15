@@ -1,7 +1,7 @@
-﻿using Speckle.Connector.Navisworks.Services;
-using Speckle.Connectors.DUI.Exceptions;
+﻿using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Utils;
+using Speckle.Converter.Navisworks.Services;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Filters;
 
@@ -48,8 +48,6 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
       return objectIds;
     }
 
-    var savedViews = NavisworksApp.ActiveDocument.SavedViewpoints;
-
     foreach (var savedViewItem in SelectedItems.Select(item => ResolveSavedView(item.Id)))
     {
       // Get the visible elements in the saved view.
@@ -82,12 +80,12 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
   {
     var objectIds = new List<string>();
 
-    // THIS IS COMMENTED OUT AS IT IS LEGACY DEFENSIVE BEHAVIOUR - DISCUSSION REQUIRED
+    // THIS IS COMMENTED OUT AS IT IS LEGACY DEFENSIVE BEHAVIOR - DISCUSSION REQUIRED
     // if (!savedView.ContainsVisibilityOverrides)
     // {
     //   // We check this again as the view settings may have changed in the saved card.
     //   // If the saved view does not contain visibility overrides, this is effectively everything in the model.
-    //   // This will need to be the documented behaviour.
+    //   // This will need to be the documented behavior.
     //   throw new SpeckleSendFilterException(
     //     "Saved view does not contain visibility overrides. This would effectively publish everything in the model."
     //   );
@@ -154,7 +152,7 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
       switch (item)
       {
         // case NAV.SavedViewpoint { ContainsVisibilityOverrides: false }:
-        // Legacy defensive behaviour: skip viewpoints without visibility overrides.
+        // Legacy defensive behavior: skip viewpoints without visibility overrides.
         // Essentially, send everything, or whatever the current view state for hidden elements is.
         // break;
         case NAV.SavedViewpointAnimationCut:

@@ -6,32 +6,22 @@ using Speckle.Sdk;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
-public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
+public class NavisworksBasicConnectorBinding(
+  IBrowserBridge parent,
+  DocumentModelStore store,
+  ISpeckleApplication speckleApplication
+) : IBasicConnectorBinding
 {
   public string Name => "baseBinding";
-  public IBrowserBridge Parent { get; }
-  public BasicConnectorBindingCommands Commands { get; }
+  public IBrowserBridge Parent { get; } = parent;
 
-  private readonly DocumentModelStore _store;
-  private readonly ISpeckleApplication _speckleApplication;
+  public BasicConnectorBindingCommands Commands { get; } = new(parent);
 
-  public NavisworksBasicConnectorBinding(
-    IBrowserBridge parent,
-    DocumentModelStore store,
-    ISpeckleApplication speckleApplication
-  )
-  {
-    Parent = parent;
-    _store = store;
-    _speckleApplication = speckleApplication;
-    Commands = new BasicConnectorBindingCommands(parent);
-  }
+  public string GetSourceApplicationName() => speckleApplication.Slug;
 
-  public string GetSourceApplicationName() => _speckleApplication.Slug;
+  public string GetSourceApplicationVersion() => speckleApplication.HostApplicationVersion;
 
-  public string GetSourceApplicationVersion() => _speckleApplication.HostApplicationVersion;
-
-  public string GetConnectorVersion() => _speckleApplication.SpeckleVersion;
+  public string GetConnectorVersion() => speckleApplication.SpeckleVersion;
 
   public DocumentInfo? GetDocumentInfo() =>
     NavisworksApp.ActiveDocument is null || NavisworksApp.ActiveDocument.Models.Count == 0
@@ -42,15 +32,15 @@ public class NavisworksBasicConnectorBinding : IBasicConnectorBinding
         NavisworksApp.ActiveDocument.GetHashCode().ToString()
       );
 
-  public DocumentModelStore GetDocumentState() => _store;
+  public DocumentModelStore GetDocumentState() => store;
 
-  public void AddModel(ModelCard model) => _store.AddModel(model);
+  public void AddModel(ModelCard model) => store.AddModel(model);
 
-  public void UpdateModel(ModelCard model) => _store.UpdateModel(model);
+  public void UpdateModel(ModelCard model) => store.UpdateModel(model);
 
-  public void RemoveModel(ModelCard model) => _store.RemoveModel(model);
+  public void RemoveModel(ModelCard model) => store.RemoveModel(model);
 
-  public void RemoveModels(List<ModelCard> models) => _store.RemoveModels(models);
+  public void RemoveModels(List<ModelCard> models) => store.RemoveModels(models);
 
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 

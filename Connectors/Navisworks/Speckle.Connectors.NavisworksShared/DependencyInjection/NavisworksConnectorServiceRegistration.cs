@@ -15,7 +15,7 @@ using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.WebView;
-using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models.GraphTraversal;
@@ -53,9 +53,6 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<NavisworksMaterialUnpacker>();
     serviceCollection.AddScoped<NavisworksColorUnpacker>();
 
-    // Register dual shared geometry stores for instancing pattern
-    serviceCollection.AddScoped<InstanceStoreManager>();
-
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
 
     // Sending operations
@@ -63,6 +60,9 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<SendOperation<NAV.ModelItem>>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+
+    // Registers and caches
+    serviceCollection.AddScoped<IInstanceFragmentRegistry, InstanceFragmentRegistry>();
 
     // Register Intercom/interop
     serviceCollection.AddSingleton<NavisworksDocumentModelStore>();
@@ -73,6 +73,9 @@ public static class NavisworksConnectorServiceRegistration
     serviceCollection.AddScoped<ISendFilter, NavisworksSelectionFilter>();
     serviceCollection.AddScoped<ISendFilter, NavisworksSavedSetsFilter>();
     serviceCollection.AddScoped<ISendFilter, NavisworksSavedViewsFilter>();
-    serviceCollection.AddScoped<IElementSelectionService, ElementSelectionService>();
+    serviceCollection.AddScoped<
+      Converter.Navisworks.Services.IElementSelectionService,
+      ConnectorElementSelectionService
+    >();
   }
 }

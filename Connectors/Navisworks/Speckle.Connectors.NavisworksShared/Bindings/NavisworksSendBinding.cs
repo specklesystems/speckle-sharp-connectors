@@ -12,6 +12,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
@@ -58,12 +59,12 @@ public class NavisworksSendBinding : ISendBinding
 
   private static void SubscribeToNavisworksEvents() { }
 
-  // Do not change the behavior/scope of this class on send binding unless make sure the behavior is same. Otherwise, we might not be able to update list of saved sets.
+  // WARNING: Changes to filter behavior here must match everywhere filters are used, or saved sets won't update correctly
   public List<ISendFilter> GetSendFilters() =>
     [
       new NavisworksSelectionFilter() { IsDefault = true },
-      new NavisworksSavedSetsFilter(new ElementSelectionService()),
-      new NavisworksSavedViewsFilter(new ElementSelectionService())
+      new NavisworksSavedSetsFilter(new ConnectorElementSelectionService()),
+      new NavisworksSavedViewsFilter(new ConnectorElementSelectionService())
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -105,6 +106,7 @@ public class NavisworksSendBinding : ISendBinding
   )
   {
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+
     var convertHiddenElementsSetting =
       modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
     var message = convertHiddenElementsSetting
@@ -115,30 +117,78 @@ public class NavisworksSendBinding : ISendBinding
     {
       throw new SpeckleSendFilterException(message);
     }
+
     onOperationProgressed.Report(new CardProgress("Getting selection...", null));
     await Task.CompletedTask;
 
-    var modelItems = new List<NAV.ModelItem>();
+    int estimatedCapacity = selectedPaths.Count * 10;
+    var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
     double count = 0;
+
     foreach (var path in selectedPaths)
     {
       onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
       await Task.CompletedTask;
+
       var modelItem = _selectionService.GetModelItemFromPath(path);
-      modelItems.AddRange(_selectionService.GetGeometryNodes(modelItem).Where(_selectionService.IsVisible));
+      var hasChildren = modelItem.Children.Any();
+
+      if (hasChildren)
+      {
+        int nodesVisited = 0;
+        int hiddenBranchesPruned = 0;
+        const int REPORT_INTERVAL = 1000;
+
+        void TraverseWithProgress(NAV.ModelItem node)
+        {
+          nodesVisited++;
+
+          if (nodesVisited % REPORT_INTERVAL == 0)
+          {
+            onOperationProgressed.Report(
+              new CardProgress(
+                $"Expanding tree: {nodesVisited} visited, {modelItems.Count} with geometry, {hiddenBranchesPruned} hidden",
+                null
+              )
+            );
+            Task.Delay(1).Wait();
+          }
+
+          if (!_selectionService.IsVisible(node))
+          {
+            hiddenBranchesPruned++;
+            return;
+          }
+
+          if (node.HasGeometry)
+          {
+            modelItems.Add(node);
+          }
+
+          foreach (var child in node.Children)
+          {
+            TraverseWithProgress(child);
+          }
+        }
+
+        TraverseWithProgress(modelItem);
+      }
+      else
+      {
+        if (modelItem.HasGeometry && _selectionService.IsVisible(modelItem))
+        {
+          modelItems.Add(modelItem);
+        }
+      }
+
       count++;
     }
+
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
-  /// <summary>
-  /// Cancels all outstanding send operations for the current document.
-  /// This method is called when the active document changes, to ensure
-  /// that any in-progress send operations are properly canceled before
-  /// the new document is loaded.
-  /// </summary>
   public void CancelAllSendOperations()
   {
     foreach (var modelCardId in _store.GetSenders().Select(m => m.ModelCardId))

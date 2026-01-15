@@ -1,5 +1,8 @@
-﻿namespace Speckle.Converter.Navisworks.Geometry;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace Speckle.Converter.Navisworks.Geometry;
+
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
 public readonly struct SafeBoundingBox
 {
   public SafeVertex Center { get; }
@@ -103,6 +106,7 @@ public readonly struct SafeVertex
   }
 }
 
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
 public readonly struct SafePoint
 {
   public SafeVertex Vertex { get; }
