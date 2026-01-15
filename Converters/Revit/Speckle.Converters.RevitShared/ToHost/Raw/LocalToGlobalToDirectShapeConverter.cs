@@ -11,8 +11,8 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
 /// Converts local to global maps to direct shapes.
-/// Spirit of the LocalToGlobalMap, we can't pass that object directly here bc it lives in Connectors.Common which I (ogu) don't want to bother with it.
-/// All this is  poc that should be burned, once we enable proper block support to revit.
+/// When atomicObject comes from an InstanceProxy displayValue, parentDataObject
+/// provides the original DataObject's metadata (category, name) for semantic preservation.
 /// </summary>
 public class LocalToGlobalToDirectShapeConverter
   : ITypedConverter<
@@ -37,30 +37,8 @@ public class LocalToGlobalToDirectShapeConverter
   )
   {
     // 1- set ds category
-    // Prefer parent DataObject properties if available (handles InstanceProxy displayValue case)
-    string? category = null;
-    string? name;
-    if (target.parentDataObject is not null)
-    {
-      // Use parent DataObject's properties for category and name
-      if (target.parentDataObject.properties.TryGetValue("builtInCategory", out var parentCategory))
-      {
-        category = parentCategory?.ToString();
-      }
-      name = target.parentDataObject.name;
-    }
-    else
-    {
-      // Fallback to atomicObject properties
-      if (
-        target.atomicObject["properties"] is Dictionary<string, object?> properties
-        && properties.TryGetValue("builtInCategory", out var builtInCategory)
-      )
-      {
-        category = builtInCategory?.ToString();
-      }
-      name = target.atomicObject.TryGetName();
-    }
+    var category = ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
+    var name = target.parentDataObject?.name ?? target.atomicObject.TryGetName();
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
     if (category is not null)
@@ -133,5 +111,25 @@ public class LocalToGlobalToDirectShapeConverter
 
     result.SetShape(transformedGeometries);
     return result;
+  }
+
+  private static string? ExtractBuiltInCategory(DataObject? parentDataObject, Base atomicObject)
+  {
+    // Try parent DataObject first (for InstanceProxy displayValue case)
+    if (parentDataObject?.properties.TryGetValue("builtInCategory", out var cat) == true)
+    {
+      return cat?.ToString();
+    }
+
+    // Fallback to atomicObject properties
+    if (
+      atomicObject["properties"] is Dictionary<string, object?> props
+      && props.TryGetValue("builtInCategory", out var fallbackCat)
+    )
+    {
+      return fallbackCat?.ToString();
+    }
+
+    return null;
   }
 }

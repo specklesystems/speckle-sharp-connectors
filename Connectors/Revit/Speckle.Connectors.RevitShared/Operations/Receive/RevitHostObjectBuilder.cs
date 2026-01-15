@@ -282,6 +282,13 @@ public sealed class RevitHostObjectBuilder(
             _atomicObjectToParentDataObject[objectId] = parentDataObject;
           }
         }
+        else
+        {
+          logger.LogError(
+            "Could not find parent DataObject for DefinitionProxy {ApplicationId}",
+            defProxy.applicationId
+          );
+        }
       }
     }
   }
