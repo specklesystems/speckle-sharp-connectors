@@ -37,6 +37,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ElementUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveInstancesAsFamiliesSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ToHostSettingsManager.cs" />
