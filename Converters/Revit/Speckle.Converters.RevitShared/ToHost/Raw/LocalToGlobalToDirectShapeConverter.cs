@@ -2,6 +2,7 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -14,7 +15,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// All this is  poc that should be burned, once we enable proper block support to revit.
 /// </summary>
 public class LocalToGlobalToDirectShapeConverter
-  : ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix), DB.DirectShape>
+  : ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject), DB.DirectShape>
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
@@ -28,21 +29,34 @@ public class LocalToGlobalToDirectShapeConverter
     _transformConverter = transformConverter;
   }
 
-  public DB.DirectShape Convert((Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix) target)
+  public DB.DirectShape Convert(
+    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject) target
+  )
   {
     // 1- set ds category
-    // NOTE: previously, builtInCategory was on the atomicObject level. this was subsequently moved to properties
+    // Prefer parent DataObject properties if available (handles InstanceProxy displayValue case)
     string? category = null;
-
-    // NOTE: no longer limited to DataObject since the introduction of mapper
-    // The change from `if (target.atomicObject is DataObject dataObject)` is very hacky, but nothing else to do for now
-    // TODO: better define prop interfaces for different applications
-    if (
-      target.atomicObject["properties"] is Dictionary<string, object?> properties
-      && properties.TryGetValue("builtInCategory", out var builtInCategory)
-    )
+    string? name;
+    if (target.parentDataObject is not null)
     {
-      category = builtInCategory?.ToString();
+      // Use parent DataObject's properties for category and name
+      if (target.parentDataObject.properties.TryGetValue("builtInCategory", out var parentCategory))
+      {
+        category = parentCategory?.ToString();
+      }
+      name = target.parentDataObject.name;
+    }
+    else
+    {
+      // Fallback to atomicObject properties
+      if (
+        target.atomicObject["properties"] is Dictionary<string, object?> properties
+        && properties.TryGetValue("builtInCategory", out var builtInCategory)
+      )
+      {
+        category = builtInCategory?.ToString();
+      }
+      name = target.atomicObject.TryGetName();
     }
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
@@ -62,10 +76,6 @@ public class LocalToGlobalToDirectShapeConverter
     // 2 - init DirectShape
     var result = DB.DirectShape.CreateElement(_converterSettings.Current.Document, new DB.ElementId(dsCategory));
 
-    // NOTE: this should technically be in a property extraction class / helper method
-    // This change is localised to [CNX-1825](https://linear.app/speckle/issue/CNX-1825/set-directshape-name)
-    // TODO: Property extraction is a greater conversation which needs to be had: [CNX-1830](https://linear.app/speckle/issue/CNX-1830/data-exchange-investigations)
-    var name = target.atomicObject.TryGetName();
     if (name is not null)
     {
       result.SetName(name);

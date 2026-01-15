@@ -16,6 +16,7 @@ using Speckle.Connectors.Revit.Operations.Send;
 using Speckle.Connectors.Revit.Operations.Send.Settings;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.ToHost;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
 #if REVIT2026_OR_GREATER
@@ -67,6 +68,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<LinkedModelHandler>();
 
     // receive operation and dependencies
+    serviceCollection.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitGroupBaker>();
