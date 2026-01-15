@@ -9,7 +9,6 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.Common.ToHost;
 using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
@@ -43,12 +42,11 @@ public sealed class RevitHostObjectBuilder(
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject),
     DirectShape
   > localToGlobalDirectShapeConverter,
-  IReceiveConversionHandler conversionHandler,
-  IDataObjectInstanceRegistry dataObjectInstanceRegistry
+  IReceiveConversionHandler conversionHandler
 ) : IHostObjectBuilder, IDisposable
 {
   // Maps atomic object applicationId -> parent DataObject
-  private Dictionary<string, DataObject> _atomicObjectToParentDataObject = new();
+  private readonly Dictionary<string, DataObject> _atomicObjectToParentDataObject = new();
 
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,
@@ -260,12 +258,6 @@ public sealed class RevitHostObjectBuilder(
         var instanceProxies = dataObject.displayValue.OfType<InstanceProxy>().ToList();
         if (instanceProxies.Count > 0)
         {
-          var dataObjectId = dataObject.applicationId ?? dataObject.id;
-          if (dataObjectId is not null)
-          {
-            dataObjectInstanceRegistry.Register(dataObjectId, dataObject, instanceProxies);
-          }
-
           foreach (var ip in instanceProxies)
           {
             definitionToDataObject[ip.definitionId] = dataObject;
@@ -275,7 +267,7 @@ public sealed class RevitHostObjectBuilder(
     }
 
     // Build lookup: definition object applicationId -> parent DataObject
-    _atomicObjectToParentDataObject = new Dictionary<string, DataObject>();
+    _atomicObjectToParentDataObject.Clear();
     if (unpackedRoot.DefinitionProxies is not null)
     {
       foreach (var defProxy in unpackedRoot.DefinitionProxies)
@@ -299,22 +291,31 @@ public sealed class RevitHostObjectBuilder(
   /// </summary>
   private void UpdateAtomicObjectLookupWithModifiedIds(Dictionary<string, List<string>> originalToModifiedIds)
   {
-    var updated = new Dictionary<string, DataObject>();
+    // Build updated entries first to avoid modifying collection during iteration
+    var entriesToAdd = new List<KeyValuePair<string, DataObject>>();
+    var keysToRemove = new List<string>();
+
     foreach (var kvp in _atomicObjectToParentDataObject)
     {
       if (originalToModifiedIds.TryGetValue(kvp.Key, out var modifiedIds))
       {
+        keysToRemove.Add(kvp.Key);
         foreach (var modifiedId in modifiedIds)
         {
-          updated[modifiedId] = kvp.Value;
+          entriesToAdd.Add(new(modifiedId, kvp.Value));
         }
       }
-      else
-      {
-        updated[kvp.Key] = kvp.Value;
-      }
     }
-    _atomicObjectToParentDataObject = updated;
+
+    foreach (var key in keysToRemove)
+    {
+      _atomicObjectToParentDataObject.Remove(key);
+    }
+
+    foreach (var entry in entriesToAdd)
+    {
+      _atomicObjectToParentDataObject[entry.Key] = entry.Value;
+    }
   }
 
   private Autodesk.Revit.DB.Transform? CalculateNewTransform(
@@ -363,7 +364,11 @@ public sealed class RevitHostObjectBuilder(
         {
           // Look up parent DataObject for this atomic object (handles InstanceProxy displayValue)
           var atomicId = localToGlobalMap.AtomicObject.applicationId;
-          _atomicObjectToParentDataObject.TryGetValue(atomicId ?? "", out var parentDataObject);
+          DataObject? parentDataObject = null;
+          if (atomicId is not null)
+          {
+            _atomicObjectToParentDataObject.TryGetValue(atomicId, out parentDataObject);
+          }
 
           // direct shape creation happens here
           DirectShape directShapes = localToGlobalDirectShapeConverter.Convert(
@@ -372,12 +377,6 @@ public sealed class RevitHostObjectBuilder(
 
           bakedObjectIds.Add(directShapes.UniqueId);
           groupManager.AddToTopLevelGroup(directShapes);
-
-          // Link DirectShape to DataObject
-          if (atomicId is not null && parentDataObject is not null)
-          {
-            dataObjectInstanceRegistry.LinkInstanceToDataObject(atomicId, directShapes.UniqueId);
-          }
 
           // we need to establish where the "normal route" is, this targets specifically IRawEncodedObject and
           // processes just IRawEncodedObject in maps to create post base paint targets for solids specifically
@@ -444,7 +443,6 @@ public sealed class RevitHostObjectBuilder(
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
     revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
-    dataObjectInstanceRegistry.Clear();
     _atomicObjectToParentDataObject.Clear();
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);

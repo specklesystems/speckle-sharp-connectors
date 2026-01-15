@@ -15,7 +15,10 @@ namespace Speckle.Converters.RevitShared.ToSpeckle;
 /// All this is  poc that should be burned, once we enable proper block support to revit.
 /// </summary>
 public class LocalToGlobalToDirectShapeConverter
-  : ITypedConverter<(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject), DB.DirectShape>
+  : ITypedConverter<
+    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject),
+    DB.DirectShape
+  >
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
