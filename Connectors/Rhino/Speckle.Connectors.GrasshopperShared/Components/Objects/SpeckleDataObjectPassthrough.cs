@@ -8,7 +8,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 [Guid("5CE8AA40-7706-4893-853D-4C77604548FA")]
 public class SpeckleDataObjectPassthrough()
-  : SpeckleSolveInstance(
+  : SpecklePassthroughComponentBase(
     "Speckle Data Object",
     "SDO",
     "Create or modify a Speckle Data Object",
@@ -19,6 +19,9 @@ public class SpeckleDataObjectPassthrough()
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_dataobject;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
+
+  protected override int FixedInputCount => 4;
+  protected override int FixedOutputCount => 5;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -158,9 +161,17 @@ public class SpeckleDataObjectPassthrough()
       result.Properties = inputProperties;
     }
 
-    // generate application ID for new data objects. Unlike SpeckleGeometry, DataObject wrappers aren't created
-    // through casting (which auto-generates IDs), so we must explicitly ensure an ID exists here
-    result.ApplicationId ??= Guid.NewGuid().ToString();
+    // process application id (only if user provided one)
+    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    {
+      result.ApplicationId = inputAppId;
+    }
+    else
+    {
+      // generate application ID for new data objects. Unlike SpeckleGeometry, DataObject wrappers aren't created
+      // through casting (which auto-generates IDs), so we must explicitly ensure an ID exists here
+      result.ApplicationId ??= Guid.NewGuid().ToString();
+    }
 
     // get the path
     string? path =
@@ -172,5 +183,6 @@ public class SpeckleDataObjectPassthrough()
     da.SetData(2, result.Name);
     da.SetData(3, result.Properties);
     da.SetData(4, path);
+    SetApplicationIdOutput(da, result.ApplicationId);
   }
 }
