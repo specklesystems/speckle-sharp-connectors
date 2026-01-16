@@ -38,6 +38,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private bool _isDocChangedSubscribed;
+  private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -86,10 +88,52 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitTask.Run(() =>
     {
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      // revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      //   _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _documentChangedHandler = (_, e) => _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.ModelCardsChanged += (_, e) => OnModelCardsChanged(e);
       _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
     });
+  }
+
+  private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
+  {
+    if (e.ModelCards.Count > 0 && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard)))
+    {
+      SubscribeDocChanged();
+    }
+    else
+    {
+      UnsubscribeDocChanged();
+    }
+  }
+
+  private void SubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || _isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged += _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = true;
+  }
+
+  private void UnsubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || !_isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged -= _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = false;
   }
 
   public List<ISendFilter> GetSendFilters() =>
