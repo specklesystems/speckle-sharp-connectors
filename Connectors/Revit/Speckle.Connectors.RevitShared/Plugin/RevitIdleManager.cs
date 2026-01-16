@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Speckle.Converters.RevitShared.Helpers;
@@ -15,8 +16,7 @@ public class RevitIdleManager(RevitContext revitContext)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
-  private readonly ConcurrentDictionary<string, Action> _calls = new();
-
+  private readonly ConcurrentDictionary<string, Func<Task>> _calls = new();
   private volatile bool _hasSubscribed;
 
   /// <summary>
@@ -28,8 +28,27 @@ public class RevitIdleManager(RevitContext revitContext)
   public void SubscribeToIdle(string name, Action action)
   {
     // I want to be called back ONCE when the host app has become idle once more
-    _calls[name] = action;
+    _calls[name] = () =>
+    {
+      action();
+      return Task.CompletedTask;
+    };
 
+    if (_hasSubscribed)
+    {
+      return;
+    }
+
+    _hasSubscribed = true;
+    _uiApplication.Idling += RevitAppOnIdle;
+  }
+
+  /// <summary>
+  /// Run once on the next Revit idle tick (deduped by name).
+  /// </summary>
+  public void SubscribeToIdle(string name, Func<Task> action)
+  {
+    _calls[name] = action;
     if (_hasSubscribed)
     {
       return;
@@ -41,8 +60,9 @@ public class RevitIdleManager(RevitContext revitContext)
 
   private void RevitAppOnIdle(object sender, IdlingEventArgs e)
   {
-    foreach (KeyValuePair<string, Action> kvp in _calls)
+    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
     {
+      Debug.WriteLine($"{kvp.Key}");
       kvp.Value();
     }
 

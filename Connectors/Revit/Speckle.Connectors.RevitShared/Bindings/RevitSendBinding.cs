@@ -378,7 +378,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private async void PostSetObjectIds()
+  private async Task PostSetObjectIds()
   {
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     if (document == null)
@@ -394,7 +394,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private async void CheckFilterExpiration()
+  private async Task CheckFilterExpiration()
   {
     // NOTE: below code seems like more make sense in terms of performance, but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -416,7 +416,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async void RunExpirationChecks()
+  private async Task RunExpirationChecks()
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
