@@ -1,43 +1,75 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-public sealed class RevitIdleManager : AppIdleManager
+/// <summary>
+/// OK.
+/// Please do not try to generalize this class with other IdleManagers for whatever reason.
+/// This class is simple, targeted to host app and singleton.
+/// </summary>
+public class RevitIdleManager(RevitContext revitContext)
 {
-  private readonly UIApplication _uiApplication;
-  private readonly IIdleCallManager _idleCallManager;
-  private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
-  private event EventHandler<IdlingEventArgs>? OnIdle;
+  private readonly ConcurrentDictionary<string, Func<Task>> _calls = new();
+  private volatile bool _hasSubscribed;
 
-  public RevitIdleManager(
-    RevitContext revitContext,
-    IIdleCallManager idleCallManager,
-    ITopLevelExceptionHandler topLevelExceptionHandler,
-    IRevitTask revitTask
-  )
-    : base(idleCallManager)
+  /// <summary>
+  /// Subscribe deferred action to Idling event to run it whenever Revit becomes idle.
+  /// </summary>
+  /// <param name="action"> Action to call whenever Revit becomes Idle.</param>
+  /// some events in host app are trigerred many times, we might get 10x per object
+  /// Making this more like a deferred action, so we don't update the UI many times
+  public void SubscribeToIdle(string name, Action action)
   {
-    _topLevelExceptionHandler = topLevelExceptionHandler;
-    _uiApplication = revitContext.UIApplication.NotNull();
-    _idleCallManager = idleCallManager;
-    revitTask.Run(
-      () => _uiApplication.Idling += (s, e) => OnIdle?.Invoke(s, e) // will be called on the main thread always and fixing the Revit exceptions on subscribing/unsubscribing Idle events
-    );
-  }
-
-  protected override void AddEvent()
-  {
-    _topLevelExceptionHandler.CatchUnhandled(() =>
+    // I want to be called back ONCE when the host app has become idle once more
+    _calls[name] = () =>
     {
-      OnIdle += RevitAppOnIdle;
-    });
+      action();
+      return Task.CompletedTask;
+    };
+
+    if (_hasSubscribed)
+    {
+      return;
+    }
+
+    _hasSubscribed = true;
+    _uiApplication.Idling += RevitAppOnIdle;
   }
 
-  private void RevitAppOnIdle(object? sender, IdlingEventArgs e) =>
-    _idleCallManager.AppOnIdle(() => OnIdle -= RevitAppOnIdle);
+  /// <summary>
+  /// Run once on the next Revit idle tick (deduped by name).
+  /// </summary>
+  public void SubscribeToIdle(string name, Func<Task> action)
+  {
+    _calls[name] = action;
+    if (_hasSubscribed)
+    {
+      return;
+    }
+
+    _hasSubscribed = true;
+    _uiApplication.Idling += RevitAppOnIdle;
+  }
+
+  private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
+  {
+    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+    {
+      Debug.WriteLine($"{kvp.Key}");
+      kvp.Value();
+    }
+
+    _calls.Clear();
+    _uiApplication.Idling -= RevitAppOnIdle;
+
+    // setting last will delay entering re-subscritption
+    _hasSubscribed = false;
+  }
 }
