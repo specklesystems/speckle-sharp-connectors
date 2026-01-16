@@ -37,17 +37,6 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
 
   protected void OnDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
-  protected void OnModelCardsChanged()
-  {
-    IReadOnlyList<ModelCard> snapshot;
-    lock (_models)
-    {
-      snapshot = _models.ToList().AsReadOnly();
-    }
-
-    ModelCardsChanged?.Invoke(this, new ModelCardsChangedEventArgs(snapshot));
-  }
-
   public virtual Task OnDocumentStoreInitialized() => Task.CompletedTask;
 
   public virtual bool IsDocumentInit { get; set; }
@@ -164,9 +153,8 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     {
       var state = Serialize();
       HostAppSaveState(state);
+      ModelCardsChanged?.Invoke(this, new ModelCardsChangedEventArgs(_models.ToList().AsReadOnly()));
     }
-
-    OnModelCardsChanged();
   }
 
   /// <summary>
