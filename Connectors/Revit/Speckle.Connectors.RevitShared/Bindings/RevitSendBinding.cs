@@ -24,7 +24,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IAppIdleManager _idleManager;
+  private readonly RevitIdleManager _revitIdleManager;
   private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
@@ -50,7 +50,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentHashSet<ElementId> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IAppIdleManager idleManager,
+    RevitIdleManager revitIdleManager,
     RevitContext revitContext,
     DocumentModelStore store,
     ICancellationManager cancellationManager,
@@ -68,7 +68,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   )
     : base("sendBinding", bridge)
   {
-    _idleManager = idleManager;
+    _revitIdleManager = revitIdleManager;
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
@@ -320,7 +320,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
+      _revitIdleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(doc))
@@ -340,8 +340,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+    _revitIdleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _revitIdleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units
@@ -378,7 +378,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return false;
   }
 
-  private async Task PostSetObjectIds()
+  private async void PostSetObjectIds()
   {
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     if (document == null)
@@ -394,7 +394,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   /// <summary>
   /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
   /// </summary>
-  private async Task CheckFilterExpiration()
+  private async void CheckFilterExpiration()
   {
     // NOTE: below code seems like more make sense in terms of performance, but it causes unmanaged exception on Revit
     // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
@@ -416,7 +416,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
   }
 
-  private async Task RunExpirationChecks()
+  private async void RunExpirationChecks()
   {
     var senders = _store.GetSenders().ToList();
     // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
