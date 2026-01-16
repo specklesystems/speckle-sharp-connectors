@@ -1,8 +1,8 @@
-﻿using Speckle.Connector.Navisworks.Services;
-using Speckle.Converter.Navisworks.Constants;
+﻿using Speckle.Converter.Navisworks.Services;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using static Speckle.Converter.Navisworks.Constants.PathConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -59,8 +59,8 @@ public class NavisworksHierarchyBuilder
     allPaths.Sort(
       (a, b) =>
       {
-        var depthA = a.Count(c => c == PathConstants.SEPARATOR);
-        var depthB = b.Count(c => c == PathConstants.SEPARATOR);
+        var depthA = a.Count(c => c == SEPARATOR);
+        var depthB = b.Count(c => c == SEPARATOR);
         return depthB.CompareTo(depthA); // <- Sort in ascending order of path length
       }
     );
@@ -126,7 +126,7 @@ public class NavisworksHierarchyBuilder
 
   private static string GetParentPath(string path)
   {
-    var idx = path.LastIndexOf(PathConstants.SEPARATOR);
+    var idx = path.LastIndexOf(SEPARATOR);
     return idx == -1 ? string.Empty : path[..idx];
   }
 

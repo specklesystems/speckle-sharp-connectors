@@ -3,18 +3,11 @@ using Speckle.Converters.Common;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
 
-public class ModelPropertiesExtractor
+public class ModelPropertiesExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
 {
-  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore;
-
-  public ModelPropertiesExtractor(IConverterSettingsStore<NavisworksConversionSettings> settingsStore)
-  {
-    _settingsStore = settingsStore;
-  }
-
   internal Dictionary<string, object?>? GetModelProperties(NAV.Model model)
   {
-    if (_settingsStore.Current.User.ExcludeProperties)
+    if (settingsStore.Current.User.ExcludeProperties)
     {
       return null;
     }

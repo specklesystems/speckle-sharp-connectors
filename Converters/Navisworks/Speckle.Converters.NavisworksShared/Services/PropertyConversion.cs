@@ -29,7 +29,7 @@ public class PropertyConverter(IUiUnitsCache uiUnitsCache) : IPropertyConverter
       { NAV.VariantDataType.IdentifierString, (v, _) => v.ToIdentifierString() },
       { NAV.VariantDataType.Int32, (v, _) => v.ToInt32() },
       { NAV.VariantDataType.Double, (v, _) => v.ToDouble() },
-      // Angle as dictionary with units
+      // Angle as a dictionary with units
       { NAV.VariantDataType.DoubleAngle, (v, t) => NumObj(t.name, v.ToDoubleAngle(), "Degrees") },
       // Length → dictionary in UI units
       {

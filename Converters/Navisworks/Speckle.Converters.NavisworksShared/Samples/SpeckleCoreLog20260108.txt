@@ -1,0 +1,191 @@
+2026-01-08 10:51:03.776 +04:00 [INF] Initialized logger inside Navisworks 2024/3.10.0. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 10:51:05.537 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 10:51:05.553 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 10:51:05.553 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 10:51:05.553 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 10:51:05.553 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 10:51:05.554 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 10:51:05.554 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 10:58:37.951 +04:00 [INF] Initialized logger inside Navisworks 2024/3.10.0. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 10:58:39.205 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 10:58:39.216 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 11:02:08.672 +04:00 [INF] Initialized logger inside Navisworks 2024/3.13.2. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 11:02:10.209 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 11:02:10.217 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 11:26:14.925 +04:00 [INF] Initialized logger inside Navisworks 2024/3.13.2. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 11:26:16.553 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 11:26:16.565 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 11:26:16.565 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 11:26:16.565 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 11:26:16.566 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 11:26:16.566 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 11:26:16.566 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 11:37:00.295 +04:00 [INF] Initialized logger inside Navisworks 2024/3.13.2. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 11:37:01.596 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 11:37:01.603 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 11:37:01.603 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 11:37:01.603 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 11:37:01.603 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 11:37:01.604 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 11:37:01.604 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 11:50:22.903 +04:00 [INF] Initialized logger inside Navisworks 2024/3.13.2. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 11:50:26.086 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 11:50:26.106 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 11:50:26.106 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 11:50:26.108 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 11:50:26.108 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 11:50:26.108 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 11:50:26.109 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 12:30:43.116 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:34:11.025 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:35:49.650 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:37:52.006 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:39:59.783 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:40:40.564 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 12:41:30.382 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 13:37:46.631 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 13:41:25.630 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 13:45:17.514 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 13:49:52.715 +04:00 [INF] Creating settings for document: P30339B-ASAB_MERGED_05-JAN-2026.nwd
+2026-01-08 14:13:08.532 +04:00 [INF] Initialized logger inside Navisworks 2024/3.13.2. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 14:13:13.320 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 14:13:13.331 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 14:19:54.036 +04:00 [INF] Initialized logger inside Navisworks 2024/3.10.0. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 14:19:55.983 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 14:19:55.997 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 14:19:55.997 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 14:19:55.997 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 14:19:55.998 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 14:19:55.998 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 14:19:55.998 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 14:20:41.471 +04:00 [INF] Initialized logger inside Navisworks 2024/3.10.0. Path info C:\Users\m.zewita\AppData\Roaming C:\Users\m.zewita\AppData\Roaming.
+2026-01-08 14:20:43.212 +04:00 [INF] Bridge bound to front end name topLevelExceptionHandlerBinding
+2026-01-08 14:20:43.234 +04:00 [INF] Bridge bound to front end name testBinding
+2026-01-08 14:20:43.235 +04:00 [INF] Bridge bound to front end name configBinding
+2026-01-08 14:20:43.235 +04:00 [INF] Bridge bound to front end name accountsBinding
+2026-01-08 14:20:43.235 +04:00 [INF] Bridge bound to front end name selectionBinding
+2026-01-08 14:20:43.235 +04:00 [INF] Bridge bound to front end name sendBinding
+2026-01-08 14:20:43.235 +04:00 [INF] Bridge bound to front end name baseBinding
+2026-01-08 14:21:39.602 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:21:50.199 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:22:09.387 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:22:19.184 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:22:48.117 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:22:50.623 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:22:51.498 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:23:20.216 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:24:33.297 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:24:34.115 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:24:34.619 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:24:40.552 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:25:02.785 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:29:09.648 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:29:57.011 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:30:35.781 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:31:57.387 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
+2026-01-08 14:33:59.100 +04:00 [ERR] Speckle.Connectors.DUI.Bindings.SendOperationManager operation was not successful
+System.InvalidOperationException: Sequence contains no matching element
+   at System.Linq.Enumerable.First[TSource](IEnumerable`1 source, Func`2 predicate)
+   at Speckle.Connector.Navisworks.Operations.Send.Settings.ToSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Operations/Send/Settings/ToSpeckleSettingsManagerNavisworks.cs:line 35
+   at Speckle.Connector.Navisworks.Bindings.NavisworksSendBinding.InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) in /_/Connectors/Navisworks/Speckle.Connectors.NavisworksShared/Bindings/NavisworksSendBinding.cs:line 89
+   at Speckle.Connectors.DUI.Bindings.SendOperationManager.<Process>d__11`1.MoveNext() in /_/DUI3/Speckle.Connectors.DUI/Bindings/SendOperationManager.cs:line 71
