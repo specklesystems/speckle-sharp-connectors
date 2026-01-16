@@ -24,7 +24,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IAppIdleManager _idleManager;
+  private readonly RevitIdleManager _revitIdleManager;
   private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
@@ -38,6 +38,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private bool _isDocChangedSubscribed;
+  private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -48,7 +50,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentHashSet<ElementId> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IAppIdleManager idleManager,
+    RevitIdleManager revitIdleManager,
     RevitContext revitContext,
     DocumentModelStore store,
     ICancellationManager cancellationManager,
@@ -66,7 +68,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   )
     : base("sendBinding", bridge)
   {
-    _idleManager = idleManager;
+    _revitIdleManager = revitIdleManager;
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
@@ -86,10 +88,52 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitTask.Run(() =>
     {
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      // revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      //   _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _documentChangedHandler = (_, e) => _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.ModelCardsChanged += (_, e) => OnModelCardsChanged(e);
       _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
     });
+  }
+
+  private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
+  {
+    if (e.ModelCards.Count > 0 && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard)))
+    {
+      SubscribeDocChanged();
+    }
+    else
+    {
+      UnsubscribeDocChanged();
+    }
+  }
+
+  private void SubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || _isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged += _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = true;
+  }
+
+  private void UnsubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || !_isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged -= _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = false;
   }
 
   public List<ISendFilter> GetSendFilters() =>
@@ -276,7 +320,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
+      _revitIdleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(doc))
@@ -296,8 +340,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+    _revitIdleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _revitIdleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units

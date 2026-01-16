@@ -14,6 +14,7 @@ namespace Speckle.Connectors.DUI.Models;
 public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJsonSerializer serializer)
   : IDocumentModelStore
 {
+  public event EventHandler<ModelCardsChangedEventArgs>? ModelCardsChanged;
   private readonly List<ModelCard> _models = new();
 
   /// <summary>
@@ -152,6 +153,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
     {
       var state = Serialize();
       HostAppSaveState(state);
+      ModelCardsChanged?.Invoke(this, new ModelCardsChangedEventArgs(_models.ToList().AsReadOnly()));
     }
   }
 
