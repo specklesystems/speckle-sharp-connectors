@@ -21,6 +21,8 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 using Transform = Speckle.Objects.Other.Transform;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
@@ -41,7 +43,8 @@ public sealed class RevitHostObjectBuilder(
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
     DirectShape
   > localToGlobalDirectShapeConverter,
-  IReceiveConversionHandler conversionHandler
+  IReceiveConversionHandler conversionHandler,
+  RevitFamilyBaker familyBaker
 ) : IHostObjectBuilder, IDisposable
 {
   public Task<HostObjectBuilderResult> Build(
@@ -97,11 +100,116 @@ public sealed class RevitHostObjectBuilder(
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-      unpackedRoot.DefinitionProxies,
-      unpackedRoot.ObjectsToConvert.ToList()
+
+    // 2 - Determine conversion path based on setting
+    var receiveInstancesAsFamilies = converterSettings.Current.ReceiveInstancesAsFamilies;
+
+    // 3 - Split objects: when receiving as families, separate instances from atomic objects
+    var (localToGlobalMaps, instanceComponentsForFamilies) = UnpackObjects(unpackedRoot, receiveInstancesAsFamilies);
+
+    // 4 - Apply ID modifications and bake materials
+    ApplyIdModificationsAndBakeMaterials(localToGlobalMaps, unpackedRoot, baseGroupName);
+
+    // 5 - Bake objects
+    (
+      HostObjectBuilderResult builderResult,
+      List<(DirectShape res, string applicationId)> postBakePaintTargets
+    ) conversionResults;
+    {
+      using var _ = activityFactory.Start("Baking objects");
+      transactionManager.StartTransaction(true, "Baking objects");
+
+      using (
+        converterSettings.Push(currentSettings =>
+          currentSettings with
+          {
+            ReferencePointTransform = CalculateNewTransform(
+              currentSettings.ReferencePointTransform,
+              referencePointTransformFromRootObject
+            )
+          }
+        )
+      )
+      {
+        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+      }
+      transactionManager.CommitTransaction();
+    }
+
+    // Bakes instances as families (if setting is enabled Count > 0)
+    if (instanceComponentsForFamilies is { Count: > 0 })
+    {
+      conversionResults = BakeInstancesAsFamilies(
+        instanceComponentsForFamilies,
+        conversionResults,
+        baseGroupName,
+        onOperationProgressed
+      );
+    }
+
+    // 6 - Paint solids
+    {
+      using var _ = activityFactory.Start("Painting solids");
+      transactionManager.StartTransaction(true, "Painting solids");
+      PostBakePaint(conversionResults.postBakePaintTargets);
+      transactionManager.CommitTransaction();
+    }
+
+    // 7 - Create group
+    {
+      using var _ = activityFactory.Start("Grouping");
+      transactionManager.StartTransaction(true, "Grouping");
+      groupManager.BakeGroupForTopLevel(baseGroupName);
+      transactionManager.CommitTransaction();
+    }
+
+    return conversionResults.builderResult;
+  }
+
+  private (
+    IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
+    List<(Collection[] path, IInstanceComponent component)>? instanceComponents
+  ) UnpackObjects(RootObjectUnpackerResult unpackedRoot, bool receiveInstancesAsFamilies)
+  {
+    if (!receiveInstancesAsFamilies)
+    {
+      // Flattens everything including instances
+      var maps = localToGlobalUnpacker.Unpack(unpackedRoot.DefinitionProxies, unpackedRoot.ObjectsToConvert.ToList());
+      return (maps, null);
+    }
+
+    // Split atomic objects from instance components
+    var (atomicObjects, instanceComponents) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
+      unpackedRoot.ObjectsToConvert
     );
 
+    // Prepare instance components with path
+    var instanceComponentsWithPath = instanceComponents
+      .Select(tc => (Array.Empty<Collection>(), tc.Current as IInstanceComponent))
+      .Where(x => x.Item2 != null)
+      .Select(x => (x.Item1, x.Item2!))
+      .ToList();
+
+    // Add definition proxies (not captured by traversal)
+    if (unpackedRoot.DefinitionProxies != null)
+    {
+      var definitions = unpackedRoot.DefinitionProxies.Select(proxy =>
+        (Array.Empty<Collection>(), proxy as IInstanceComponent)
+      );
+      instanceComponentsWithPath.AddRange(definitions);
+    }
+
+    // Only unpack atomic objects (no instance flattening)
+    var localToGlobalMaps = localToGlobalUnpacker.Unpack(null, atomicObjects.ToList());
+    return (localToGlobalMaps, instanceComponentsWithPath);
+  }
+
+  private void ApplyIdModificationsAndBakeMaterials(
+    IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
+    RootObjectUnpackerResult unpackedRoot,
+    string baseGroupName
+  )
+  {
     // NOTE: below is 💩... https://github.com/specklesystems/speckle-sharp-connectors/pull/813 broke sketchup to revit workflow
     // ids were modified to fix receiving instances [CNX-1707](https://linear.app/speckle/issue/CNX-1707/revit-curves-and-meshes-in-blocks-come-as-duplicated)
     // but we then broke sketchup to revit because applicationIds in proxies didn't match modified application ids which cam from #813 hack
@@ -176,7 +284,7 @@ public sealed class RevitHostObjectBuilder(
       }
     }
 
-    // 2 - Bake materials (now with the updated IDs)
+    // Bake materials (now with the updated IDs)
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       transactionManager.StartTransaction(true, "Baking materials");
@@ -188,50 +296,53 @@ public sealed class RevitHostObjectBuilder(
       }
       transactionManager.CommitTransaction();
     }
+  }
 
-    // 3 - Bake objects
+  private (
+    HostObjectBuilderResult builderResult,
+    List<(DirectShape res, string applicationId)> postBakePaintTargets
+  ) BakeInstancesAsFamilies(
+    List<(Collection[] path, IInstanceComponent component)> instanceComponents,
     (
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
-    ) conversionResults;
-    {
-      using var _ = activityFactory.Start("Baking objects");
-      transactionManager.StartTransaction(true, "Baking objects");
+    ) currentResults,
+    string baseGroupName,
+    IProgress<CardProgress> onOperationProgressed
+  )
+  {
+    using var _ = activityFactory.Start("Creating families");
+    transactionManager.StartTransaction(true, "Creating families");
 
-      using (
-        converterSettings.Push(currentSettings =>
-          currentSettings with
-          {
-            ReferencePointTransform = CalculateNewTransform(
-              currentSettings.ReferencePointTransform,
-              referencePointTransformFromRootObject
-            )
-          }
-        )
-      )
+    var (familyResults, familyElementIds) = familyBaker.BakeInstances(
+      instanceComponents,
+      baseGroupName,
+      onOperationProgressed
+    );
+
+    // Merge results
+    var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
+    mergedConversionResults.AddRange(familyResults);
+
+    var mergedBakedObjectIds = currentResults.builderResult.BakedObjectIds.ToList();
+    mergedBakedObjectIds.AddRange(familyElementIds);
+
+    // Add created elements to group
+    foreach (var elementId in familyElementIds)
+    {
+      var element = converterSettings.Current.Document.GetElement(elementId);
+      if (element != null)
       {
-        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+        groupManager.AddToTopLevelGroup(element);
       }
-      transactionManager.CommitTransaction();
     }
 
-    // 4 - Paint solids
-    {
-      using var _ = activityFactory.Start("Painting solids");
-      transactionManager.StartTransaction(true, "Painting solids");
-      PostBakePaint(conversionResults.postBakePaintTargets);
-      transactionManager.CommitTransaction();
-    }
+    transactionManager.CommitTransaction();
 
-    // 5 - Create group
-    {
-      using var _ = activityFactory.Start("Grouping");
-      transactionManager.StartTransaction(true, "Grouping");
-      groupManager.BakeGroupForTopLevel(baseGroupName);
-      transactionManager.CommitTransaction();
-    }
-
-    return conversionResults.builderResult;
+    return (
+      new HostObjectBuilderResult(mergedBakedObjectIds, mergedConversionResults),
+      currentResults.postBakePaintTargets
+    );
   }
 
   private Autodesk.Revit.DB.Transform? CalculateNewTransform(
@@ -350,7 +461,7 @@ public sealed class RevitHostObjectBuilder(
   {
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
-    revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it's legit
+    revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);
   }

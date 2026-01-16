@@ -23,6 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LevelUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitFamilyBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ViewUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
