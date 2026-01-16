@@ -58,7 +58,7 @@ public class RevitIdleManager(RevitContext revitContext)
     _uiApplication.Idling += RevitAppOnIdle;
   }
 
-  private void RevitAppOnIdle(object sender, IdlingEventArgs e)
+  private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
   {
     foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
     {
