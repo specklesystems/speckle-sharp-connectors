@@ -30,15 +30,13 @@ public class NavisworksRootObjectBuilder(
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache,
-  bool disableGroupingForInstanceTesting,
-  bool skipNodeMerging
+  IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
 #pragma warning disable CA1823
 #pragma warning restore CA1823
-  private bool SkipNodeMerging { get; } = skipNodeMerging;
-  private bool DisableGroupingForInstanceTesting { get; } = disableGroupingForInstanceTesting;
+  private bool SkipNodeMerging { get; set; }
+  private bool DisableGroupingForInstanceTesting { get; set; }
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
