@@ -43,12 +43,24 @@ public sealed class PointcloudToSpeckleConverter : ITypedConverter<DB.PointCloud
           .Select(o => _xyzToPointConverter.Convert(transform.OfPoint(o))) // these points need to be transformed, since coords are in the pointcloud linked doc
           .SelectMany(o => new List<double>() { o.x, o.y, o.z })
           .ToList(),
-        colors = points.Select(o => o.Color).ToList(),
+        colors = points.Select(o => ConvertAbgrToArgb(o.Color)).ToList(),
         units = _converterSettings.Current.SpeckleUnits,
         bbox = _boundingBoxConverter.Convert(boundingBox)
       };
 
       return specklePointCloud;
     }
+  }
+
+  /// <summary>
+  /// Converts a color from ABGR format (Revit's default) to ARGB format (our expected format).
+  /// </summary>
+  private static int ConvertAbgrToArgb(int abgr)
+  {
+    // ABGR -> ARGB
+    // Alpha and Green stay in place, swap Red and Blue
+    return (abgr & unchecked((int)0xFF00FF00)) // Keep Alpha and Green
+      | ((abgr & 0x00FF0000) >> 16) // Move Blue to Red position
+      | ((abgr & 0x000000FF) << 16); // Move Red to Blue position
   }
 }
