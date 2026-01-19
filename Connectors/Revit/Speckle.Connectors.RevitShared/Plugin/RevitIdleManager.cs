@@ -1,75 +1,79 @@
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.Revit.Plugin;
 
-/// <summary>
-/// OK.
-/// Please do not try to generalize this class with other IdleManagers for whatever reason.
-/// This class is simple, targeted to host app and singleton.
-/// </summary>
-public class RevitIdleManager(RevitContext revitContext)
+/// <remarks>
+/// Please do NOT try and refactor this class.
+/// Whether it's to try and generalize with the <see cref="IdleCallManager"/> class
+/// or to unnecessary try and make this class thread safe.
+/// This class is a simple singleton, targeted to a Revit's host app requirements
+/// where everything happens on the main thread, and we can avoid overly complex threading/thread-safty.
+///
+/// Previous good refactors with good intention have lead to poor debugging experiences, over-engineered threading,
+/// and low confidence in the reliability.
+/// </remarks>
+/// should be registered as singleton
+public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
-  private readonly ConcurrentDictionary<string, Func<Task>> _calls = new();
-  private volatile bool _hasSubscribed;
+  private readonly Dictionary<string, Func<Task>> _calls = new();
+  private bool _hasSubscribed;
 
   /// <summary>
-  /// Subscribe deferred action to Idling event to run it whenever Revit becomes idle.
+  /// Defers the invocation of an <paramref name="action"/> until next Revit idle tick (deduped by name).
+  /// The <paramref name="action"/> will be called only once.
   /// </summary>
-  /// <param name="action"> Action to call whenever Revit becomes Idle.</param>
-  /// some events in host app are trigerred many times, we might get 10x per object
+  /// <param name="name">A key that prevents enqueuing duplicate events</param>
+  /// <param name="action">The action to be invoked</param>
+  /// <example>
+  /// Some events in host app are triggered many times, we might get 10x per object
   /// Making this more like a deferred action, so we don't update the UI many times
+  /// </example>
+  /// <remarks>
+  /// This function must be called on the main thread
+  /// </remarks>
   public void SubscribeToIdle(string name, Action action)
   {
-    // I want to be called back ONCE when the host app has become idle once more
-    _calls[name] = () =>
-    {
-      action();
-      return Task.CompletedTask;
-    };
-
-    if (_hasSubscribed)
-    {
-      return;
-    }
-
-    _hasSubscribed = true;
-    _uiApplication.Idling += RevitAppOnIdle;
+    SubscribeToIdle(
+      name,
+      () =>
+      {
+        action.Invoke();
+        return Task.CompletedTask;
+      }
+    );
   }
 
-  /// <summary>
-  /// Run once on the next Revit idle tick (deduped by name).
-  /// </summary>
+  /// <inheritdoc cref="SubscribeToIdle(string, Action)"/>
   public void SubscribeToIdle(string name, Func<Task> action)
   {
     _calls[name] = action;
+
     if (_hasSubscribed)
     {
       return;
     }
-
     _hasSubscribed = true;
+
     _uiApplication.Idling += RevitAppOnIdle;
   }
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
   {
-    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+    foreach (var (_, func) in _calls)
     {
-      Debug.WriteLine($"{kvp.Key}");
-      kvp.Value();
+      topLevelExceptionHandler.FireAndForget(func);
     }
 
     _calls.Clear();
     _uiApplication.Idling -= RevitAppOnIdle;
 
-    // setting last will delay entering re-subscritption
+    // setting last will delay entering re-subscription
     _hasSubscribed = false;
   }
 }
