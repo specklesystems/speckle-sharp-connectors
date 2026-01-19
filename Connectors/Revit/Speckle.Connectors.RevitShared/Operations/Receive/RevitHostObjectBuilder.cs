@@ -142,7 +142,6 @@ public sealed class RevitHostObjectBuilder(
       conversionResults = BakeInstancesAsFamilies(
         instanceComponentsForFamilies,
         conversionResults,
-        baseGroupName,
         onOperationProgressed
       );
     }
@@ -307,18 +306,13 @@ public sealed class RevitHostObjectBuilder(
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) currentResults,
-    string baseGroupName,
     IProgress<CardProgress> onOperationProgressed
   )
   {
     using var _ = activityFactory.Start("Creating families");
     transactionManager.StartTransaction(true, "Creating families");
 
-    var (familyResults, familyElementIds) = familyBaker.BakeInstances(
-      instanceComponents,
-      baseGroupName,
-      onOperationProgressed
-    );
+    var (familyResults, familyElementIds) = familyBaker.BakeInstances(instanceComponents, onOperationProgressed);
 
     // Merge results
     var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
