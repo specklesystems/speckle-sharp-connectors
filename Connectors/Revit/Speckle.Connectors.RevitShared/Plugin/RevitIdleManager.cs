@@ -17,11 +17,7 @@ namespace Speckle.Connectors.Revit.Plugin;
 /// and low confidence in the reliability.
 /// </remarks>
 /// should be registered as singleton
-public class RevitIdleManager(
-  ILogger<RevitIdleManager> asdf,
-  RevitContext revitContext,
-  ITopLevelExceptionHandler topLevelExceptionHandler
-)
+public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
