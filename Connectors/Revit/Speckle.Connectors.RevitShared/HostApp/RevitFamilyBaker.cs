@@ -332,13 +332,19 @@ public class RevitFamilyBaker
   }
 
   /// <summary>
-  /// Gets the family name for a definition proxy.
+  /// Gets the family name for a definition proxy, sanitized for use as a filename.
   /// </summary>
   private static string GetFamilyName(InstanceDefinitionProxy definitionProxy, string baseLayerName)
   {
-    var baseName = definitionProxy.name;
+    var baseName = definitionProxy.name ?? "UnnamedBlock";
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id ?? Guid.NewGuid().ToString();
-    return $"{baseName}-({definitionId})-{baseLayerName}";
+    var rawName = $"{baseName}-({definitionId})-{baseLayerName}";
+
+    // Remove invalid filename characters
+    var invalidChars = Path.GetInvalidFileNameChars();
+    var sanitized = string.Concat(rawName.Select(c => invalidChars.Contains(c) ? '_' : c));
+
+    return sanitized;
   }
 
   /// <summary>
