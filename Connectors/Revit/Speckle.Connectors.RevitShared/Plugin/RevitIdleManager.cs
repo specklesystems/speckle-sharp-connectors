@@ -17,7 +17,11 @@ namespace Speckle.Connectors.Revit.Plugin;
 /// and low confidence in the reliability.
 /// </remarks>
 /// should be registered as singleton
-public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
+public class RevitIdleManager(
+  ILogger<RevitIdleManager> asdf,
+  RevitContext revitContext,
+  ITopLevelExceptionHandler topLevelExceptionHandler
+)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
@@ -65,15 +69,18 @@ public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandl
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
   {
-    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+    topLevelExceptionHandler.CatchUnhandled(() =>
     {
-      topLevelExceptionHandler.FireAndForget(kvp.Value);
-    }
+      foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+      {
+        topLevelExceptionHandler.FireAndForget(kvp.Value.Invoke);
+      }
 
-    _calls.Clear();
-    _uiApplication.Idling -= RevitAppOnIdle;
+      _calls.Clear();
+      _uiApplication.Idling -= RevitAppOnIdle;
 
-    // setting last will delay entering re-subscription
-    _hasSubscribed = false;
+      // setting last will delay entering re-subscription
+      _hasSubscribed = false;
+    });
   }
 }
