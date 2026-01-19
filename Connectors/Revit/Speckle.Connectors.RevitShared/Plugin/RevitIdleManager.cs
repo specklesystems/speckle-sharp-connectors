@@ -65,9 +65,9 @@ public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandl
 
   private void RevitAppOnIdle(object? sender, IdlingEventArgs e)
   {
-    foreach (var (_, func) in _calls)
+    foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
     {
-      topLevelExceptionHandler.FireAndForget(func);
+      topLevelExceptionHandler.FireAndForget(kvp.Value);
     }
 
     _calls.Clear();
