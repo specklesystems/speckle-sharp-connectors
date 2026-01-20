@@ -315,7 +315,8 @@ public class RevitFamilyBaker
   }
 
   /// <summary>
-  /// Places a FamilyInstance for the given InstanceProxy with full transform support including rotation and mirroring.
+  /// Places a FamilyInstance for the given InstanceProxy using a work-plane-based strategy
+  /// to support full 3D transforms, including rotation and mirroring.
   /// </summary>
   private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
   {
@@ -323,36 +324,26 @@ public class RevitFamilyBaker
 
     if (!_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
     {
-      _logger.LogWarning(
-        "No family symbol found for definition {DefinitionId}. Instance {InstanceId} will be skipped.",
-        definitionId,
-        instanceProxy.applicationId
-      );
+      _logger.LogWarning("No family symbol found for definition {DefinitionId}.", definitionId);
       return null;
     }
 
-    // convert transform and extract mirroring info
     var revitTransform = ConvertTransform(instanceProxy.transform, instanceProxy.units);
-    var mirrorState = GetMirrorState(instanceProxy.transform);
 
-    // get placement plane from transform
-    var position = revitTransform.Origin;
-    var instanceXAxis = revitTransform.BasisX;
-    var instanceYAxis = revitTransform.BasisY;
-    using var plane = Plane.CreateByOriginAndBasis(position, instanceXAxis, instanceYAxis);
+    // create a SketchPlane. This is the 'Work Plane' the instance will sit on.
+    using var plane = Plane.CreateByOriginAndBasis(revitTransform.Origin, revitTransform.BasisX, revitTransform.BasisY);
+    using var sketchPlane = SketchPlane.Create(document, plane);
 
-    // create reference plane for work-plane based placement (matches legacy approach)
-    var refPlane = document.Create.NewReferencePlane2(
-      plane.Origin,
-      plane.Origin + plane.XVec,
-      plane.Origin + plane.YVec,
-      document.ActiveView
+    // use the Face-based/Work-plane-based overload
+    var instance = document.Create.NewFamilyInstance(
+      sketchPlane.GetPlaneReference(), // reference to our new plane
+      revitTransform.Origin,
+      revitTransform.BasisX, // defines the 'rotation' on that plane
+      symbol
     );
 
-    // place the instance on the reference plane
-    var instance = document.Create.NewFamilyInstance(refPlane.GetReference(), plane.Origin, plane.XVec, symbol);
-
-    // apply mirroring if needed
+    // apply mirroring if necessary
+    var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(document, instance.Id, plane, mirrorState);
 
     return instance;
@@ -462,6 +453,7 @@ public class RevitFamilyBaker
   {
     public bool OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
     {
+      // if the family exists, overwrite its parameter values with the incoming ones
       overwriteParameterValues = true;
       return true;
     }
@@ -473,6 +465,8 @@ public class RevitFamilyBaker
       out bool overwriteParameterValues
     )
     {
+      // FamilySource.Family means "Use the version from the RFA file being loaded" (I think)
+      // this ensures shared components update to match the Speckle data.
       source = FamilySource.Family;
       overwriteParameterValues = true;
       return true;
