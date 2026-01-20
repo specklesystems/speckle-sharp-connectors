@@ -328,23 +328,40 @@ public class RevitFamilyBaker
       return null;
     }
 
+    // ensure symbol is active
+    if (!symbol.IsActive)
+    {
+      symbol.Activate();
+      document.Regenerate();
+    }
+
     var revitTransform = ConvertTransform(instanceProxy.transform, instanceProxy.units);
 
-    // create a SketchPlane. This is the 'Work Plane' the instance will sit on.
-    using var plane = Plane.CreateByOriginAndBasis(revitTransform.Origin, revitTransform.BasisX, revitTransform.BasisY);
-    using var sketchPlane = SketchPlane.Create(document, plane);
+    // create a Reference Plane
+    XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
+    XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
 
-    // use the Face-based/Work-plane-based overload
-    var instance = document.Create.NewFamilyInstance(
-      sketchPlane.GetPlaneReference(), // reference to our new plane
+    ReferencePlane refPlane = document.Create.NewReferencePlane2(
+      bubbleEnd,
       revitTransform.Origin,
-      revitTransform.BasisX, // defines the 'rotation' on that plane
+      freeEnd,
+      document.ActiveView
+    );
+
+    // place using the reference from the ReferencePlane
+    var instance = document.Create.NewFamilyInstance(
+      refPlane.GetReference(),
+      revitTransform.Origin,
+      revitTransform.BasisX,
       symbol
     );
 
-    // apply mirroring if necessary
+    // handle mirroring
     var mirrorState = GetMirrorState(instanceProxy.transform);
-    ApplyMirroring(document, instance.Id, plane, mirrorState);
+    ApplyMirroring(document, instance.Id, refPlane.GetPlane(), mirrorState);
+
+    // NOTE: we leave the ReferencePlane for now to ensure stability.
+    // TODO: collect these and delete them at the very end of the BakeInstances loop to keep the file clean
 
     return instance;
   }
