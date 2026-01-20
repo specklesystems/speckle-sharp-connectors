@@ -63,4 +63,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleRevitTaskException.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Templates\$(RevitVersion)\**\*.rft">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Resources\Templates\$(RevitVersion)\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
 </Project>

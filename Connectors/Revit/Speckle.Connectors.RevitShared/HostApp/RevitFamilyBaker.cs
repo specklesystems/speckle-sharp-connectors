@@ -28,6 +28,7 @@ public class RevitFamilyBaker
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _cache;
   private readonly ILogger<RevitFamilyBaker> _logger;
+  private string? _cachedTemplatePath;
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -236,124 +237,46 @@ public class RevitFamilyBaker
   }
 
   /// <summary>
-  /// Gets the path to the Generic Model family template.
-  /// Searches multiple locations including Revit's default template paths and language-specific folders.
+  /// Resolves the physical path to the appropriate Revit family template (.rft) based on the document's unit system and Revit version.
   /// </summary>
-  /// <remarks>
-  /// Watchout for language-specific template names.
-  /// </remarks>
   private string GetFamilyTemplatePath(Document document)
   {
-    // TODO: I (Björn) am not happy with my hack here.
-    // Improve before merging working branch to dev
-
-    // template names to search for (in order of preference)
-    var templateNames = new[]
+    // return cached path if we've already found it during this receive operation
+    if (_cachedTemplatePath != null)
     {
-      "Generic Model.rft",
-      "Metric Generic Model.rft",
-      "Allgemeines Modell.rft", // German
-      "Modèle générique.rft", // French
-      "Modelo genérico.rft", // Spanish
-    };
-
-    // collect all potential template folders
-    var templateFolders = new List<string>();
-
-    // 1. Revit's configured FamilyTemplatePath
-    var configuredPath = document.Application.FamilyTemplatePath;
-    if (!string.IsNullOrEmpty(configuredPath) && Directory.Exists(configuredPath))
-    {
-      templateFolders.Add(configuredPath);
+      return _cachedTemplatePath;
     }
 
-    // 2. Default Revit installation paths based on version
-    var revitVersion = document.Application.VersionNumber;
-    var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-    var defaultPath = Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates");
-    if (Directory.Exists(defaultPath))
+    // read version
+    var version = document.Application.VersionNumber;
+
+    // check if doc is Metric or Imperial
+    var isMetric = document.DisplayUnitSystem == DisplayUnit.METRIC;
+    var templateName = isMetric ? "Metric Generic Model.rft" : "Generic Model.rft";
+
+    // resolve the folder where the DLL lives
+    // typeof() anchors the Resources search to the actual deployment directory of the connector
+    // should be most robust for local and installed state(s)
+    var assemblyLocation = typeof(RevitFamilyBaker).Assembly.Location;
+    var assemblyDir =
+      Path.GetDirectoryName(assemblyLocation) ?? throw new ConversionException("Could not resolve assembly directory.");
+
+    // using the same structure from .projitems creates: Resources/Templates/{Year}/{File}
+    var templatePath = Path.Combine(assemblyDir, "Resources", "Templates", version, templateName);
+
+    // fail loudly if nothing found
+    if (!File.Exists(templatePath))
     {
-      templateFolders.Add(defaultPath);
+      _logger.LogError("Revit Family Template missing. Searched path: {templatePath}", templatePath);
+
+      throw new ConversionException(
+        $"Could not find required family template: {templateName}. "
+          + $"Please ensure the 'Resources' folder exists at {assemblyDir}"
+      );
     }
 
-    // 3. Alternative default paths
-    var altDefaultPaths = new[]
-    {
-      Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates", "English"),
-      Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates", "English-Imperial"),
-      Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates", "English_I"),
-      Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates", "US Imperial"),
-      Path.Combine(programData, "Autodesk", $"RVT {revitVersion}", "Family Templates", "US Metric"),
-    };
-
-    foreach (var path in altDefaultPaths)
-    {
-      if (Directory.Exists(path))
-      {
-        templateFolders.Add(path);
-      }
-    }
-
-    // Search for templates in all folders
-    foreach (var folder in templateFolders)
-    {
-      // Direct match
-      foreach (var templateName in templateNames)
-      {
-        var directPath = Path.Combine(folder, templateName);
-        if (File.Exists(directPath))
-        {
-          _logger.LogDebug("Found family template at {TemplatePath}", directPath);
-          return directPath;
-        }
-      }
-
-      // Search subdirectories
-      foreach (var templateName in templateNames)
-      {
-        try
-        {
-          var files = Directory.GetFiles(folder, templateName, SearchOption.AllDirectories);
-          if (files.Length > 0)
-          {
-            _logger.LogDebug("Found family template at {TemplatePath}", files[0]);
-            return files[0];
-          }
-        }
-        catch (UnauthorizedAccessException)
-        {
-          // Skip folders we can't access
-        }
-      }
-    }
-
-    // Last resort: search any .rft file that contains "generic" in the name
-    foreach (var folder in templateFolders)
-    {
-      try
-      {
-        var genericTemplates = Directory
-          .GetFiles(folder, "*.rft", SearchOption.AllDirectories)
-          .Where(f => Path.GetFileName(f).IndexOf("generic", StringComparison.OrdinalIgnoreCase) >= 0)
-          .ToArray();
-
-        if (genericTemplates.Length > 0)
-        {
-          _logger.LogDebug("Found generic family template at {TemplatePath}", genericTemplates[0]);
-          return genericTemplates[0];
-        }
-      }
-      catch (UnauthorizedAccessException)
-      {
-        // Skip folders we can't access
-      }
-    }
-
-    _logger.LogWarning(
-      "Could not find Generic Model template. Searched folders: {Folders}",
-      string.Join(", ", templateFolders)
-    );
-    return string.Empty;
+    _cachedTemplatePath = templatePath;
+    return templatePath;
   }
 
   /// <summary>
