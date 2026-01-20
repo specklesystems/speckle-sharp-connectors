@@ -83,7 +83,7 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
     {
       if (SupportedCategoriesUtils.IsSupportedCategory(category)
 #if REVIT2023_OR_GREATER
-          && category.BuiltInCategory != BuiltInCategory.INVALID
+        && category.BuiltInCategory != BuiltInCategory.INVALID
 #endif
       )
       {
