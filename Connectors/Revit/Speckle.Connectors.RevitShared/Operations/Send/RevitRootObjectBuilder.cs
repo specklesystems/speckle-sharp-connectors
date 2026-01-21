@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
@@ -44,6 +45,7 @@ public class RevitRootObjectBuilder(
       () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
     );
 
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
@@ -191,8 +193,8 @@ public class RevitRootObjectBuilder(
 
             if (
               !hasTransform
-              && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
               && !config.DocumentChangeListeningDisabled //This is experimental
+              && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
             )
             {
               converted = value;
