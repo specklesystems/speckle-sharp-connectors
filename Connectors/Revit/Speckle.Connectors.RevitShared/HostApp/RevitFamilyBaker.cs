@@ -199,12 +199,7 @@ public class RevitFamilyBaker
   /// </summary>
   private Family? CreateFamily(Document document, string familyName)
   {
-    var templatePath = GetFamilyTemplatePath(document);
-    if (string.IsNullOrEmpty(templatePath) || !File.Exists(templatePath))
-    {
-      throw new ConversionException($"Could not find family template at: {templatePath}");
-    }
-
+    var templatePath = GetFamilyTemplatePath(document); // throws if file doesn't exist
     var famDoc = document.Application.NewFamilyDocument(templatePath);
 
     try
@@ -325,21 +320,13 @@ public class RevitFamilyBaker
   private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
   {
     var definitionId = instanceProxy.definitionId;
+    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
 
     if (!_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
     {
       _logger.LogWarning("No family symbol found for definition {DefinitionId}.", definitionId);
       return null;
     }
-
-    // ensure symbol is active
-    if (!symbol.IsActive)
-    {
-      symbol.Activate();
-      document.Regenerate();
-    }
-
-    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
 
     // create a Reference Plane
     XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
