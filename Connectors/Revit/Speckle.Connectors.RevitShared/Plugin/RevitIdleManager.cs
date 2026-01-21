@@ -1,5 +1,6 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
@@ -17,12 +18,18 @@ namespace Speckle.Connectors.Revit.Plugin;
 /// and low confidence in the reliability.
 /// </remarks>
 /// should be registered as singleton
-public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
+public class RevitIdleManager(
+  RevitContext revitContext,
+  ITopLevelExceptionHandler topLevelExceptionHandler,
+  ILogger<RevitIdleManager> logger
+)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
   private readonly Dictionary<string, Func<Task>> _calls = new();
   private bool _hasSubscribed;
+
+  private bool _isExecutingIdle;
 
   /// <summary>
   /// Defers the invocation of an <paramref name="action"/> until next Revit idle tick (deduped by name).
@@ -52,6 +59,11 @@ public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandl
   /// <inheritdoc cref="SubscribeToIdle(string, Action)"/>
   public void SubscribeToIdle(string name, Func<Task> action)
   {
+    if (_isExecutingIdle)
+    {
+      logger.LogWarning("SubscribeToIdle called while already executing idle events");
+    }
+
     _calls[name] = action;
 
     if (_hasSubscribed)
@@ -67,16 +79,34 @@ public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandl
   {
     topLevelExceptionHandler.CatchUnhandled(() =>
     {
-      foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+      if (_isExecutingIdle)
       {
-        topLevelExceptionHandler.FireAndForget(kvp.Value.Invoke);
+        logger.LogWarning("SubscribeToIdle called while already executing idle events");
       }
 
-      _calls.Clear();
-      _uiApplication.Idling -= RevitAppOnIdle;
+      _isExecutingIdle = true;
+      try
+      {
+        try
+        {
+          foreach (KeyValuePair<string, Func<Task>> kvp in _calls)
+          {
+            topLevelExceptionHandler.FireAndForget(kvp.Value.Invoke);
+          }
+        }
+        finally
+        {
+          _calls.Clear();
+        }
+      }
+      finally
+      {
+        _uiApplication.Idling -= RevitAppOnIdle;
 
-      // setting last will delay entering re-subscription
-      _hasSubscribed = false;
+        _isExecutingIdle = false;
+        // setting last will delay entering re-subscription
+        _hasSubscribed = false;
+      }
     });
   }
 }
