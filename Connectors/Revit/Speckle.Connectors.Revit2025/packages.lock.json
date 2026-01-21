@@ -253,7 +253,8 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Connectors.Common": "[1.0.0, )"
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "System.Threading.Tasks.Dataflow": "[10.0.2, )"
         }
       },
       "speckle.connectors.logging": {
@@ -326,6 +327,12 @@
         "requested": "[2023.0.0, )",
         "resolved": "2025.0.0",
         "contentHash": "Hwf/3Ydc7KxvjgD9pSZKLSJRsFTsxYg95YyTm6f43hcsGjmk49GsLFQt921Z9OcvUVewOggQHcmBgti+P2EPHw=="
+      },
+      "System.Threading.Tasks.Dataflow": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "h1jjCvwBFPXfH4y8KeGXERA+D/oKWUwZ5zX8TXO3YSQRi7zWiNxhvc8GTgFFEW11yTvepjVugDxemtzNDMW7Qw=="
       }
     },
     "net8.0-windows7.0/win-x64": {

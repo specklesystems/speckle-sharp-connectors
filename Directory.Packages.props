@@ -39,6 +39,7 @@
     <PackageVersion Include="Speckle.Triangle" Version="1.0.0" />
     <PackageVersion Include="System.Resources.Extensions" Version="9.0.4" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageVersion Include="System.Threading.Tasks.Dataflow" Version="10.0.2" />
     <PackageVersion Include="Tekla.Structures.Dialog" Version="2024.0.4" PrivateAssets="all" IncludeAssets="compile; build" />
     <PackageVersion Include="Tekla.Structures.Drawing" Version="2024.0.4" />
     <PackageVersion Include="Tekla.Structures.Model" Version="2024.0.4" />

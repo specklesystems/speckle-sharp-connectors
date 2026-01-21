@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -29,6 +30,8 @@ public sealed class BrowserBridge : IBrowserBridge
   /// </summary>
 
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
+  private readonly SynchronizationContext _mainThreadContext;
+  private ActionBlock<RunMethodArgs>? _actionBlock;
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IThreadContext _threadContext;
@@ -58,6 +61,13 @@ public sealed class BrowserBridge : IBrowserBridge
     }
   }
 
+  private struct RunMethodArgs
+  {
+    public string MethodName;
+    public string RequestId;
+    public string MethodArgs;
+  }
+
   public BrowserBridge(
     IThreadContext threadContext,
     IJsonSerializer jsonSerializer,
@@ -71,6 +81,7 @@ public sealed class BrowserBridge : IBrowserBridge
     _logger = logger;
     _browserScriptExecutor = browserScriptExecutor;
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _mainThreadContext = SynchronizationContext.Current.NotNull("No UI thread to capture?");
   }
 
   private async Task OnExceptionEvent(Exception ex) =>
@@ -103,6 +114,24 @@ public sealed class BrowserBridge : IBrowserBridge
     }
     _bindingMethodCache = bindingMethodCache;
     _logger.LogInformation("Bridge bound to front end name {FrontEndName}", binding.Name);
+
+    _actionBlock = new ActionBlock<RunMethodArgs>(
+      OnActionBlock,
+      new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1000 }
+    );
+  }
+
+  private async Task OnActionBlock(RunMethodArgs args)
+  {
+    Result<object?> result = await _topLevelExceptionHandler
+      .CatchUnhandledAsync(async () => await ExecuteMethod(args.MethodName, args.MethodArgs).ConfigureAwait(false))
+      .ConfigureAwait(false);
+
+    string resultJson = result.IsSuccess
+      ? _jsonSerializer.Serialize(result.Value)
+      : SerializeFormattedException(result.Exception);
+
+    await NotifyUIMethodCallResultReady(args.RequestId, resultJson).ConfigureAwait(false);
   }
 
   /// <summary>
@@ -116,26 +145,68 @@ public sealed class BrowserBridge : IBrowserBridge
     return bindingNames;
   }
 
-  //don't wait for browser runs on purpose
-  public void RunMethod(string methodName, string requestId, string methodArgs) =>
-    _threadContext
-      .RunOnWorkerAsync(async () =>
-      {
-        var task = await _topLevelExceptionHandler
-          .CatchUnhandledAsync(async () =>
+  // //don't wait for browser runs on purpose
+  // public void RunMethod(string methodName, string requestId, string methodArgs) =>
+  //   _threadContext
+  //     .RunOnWorkerAsync(async () =>
+  //     {
+  //       var task = await _topLevelExceptionHandler
+  //         .CatchUnhandledAsync(async () =>
+  //         {
+  //           var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
+  //           string resultJson = _jsonSerializer.Serialize(result);
+  //           NotifyUIMethodCallResultReady(requestId, resultJson);
+  //         })
+  //         .ConfigureAwait(false);
+  //       if (task.Exception is not null)
+  //       {
+  //         string resultJson = SerializeFormattedException(task.Exception);
+  //         NotifyUIMethodCallResultReady(requestId, resultJson);
+  //       }
+  //     })
+  //     .FireAndForget();
+
+  /// <summary>
+  /// This method posts the requested call to our action block executor.
+  /// </summary>
+  /// <param name="methodName"></param>
+  /// <param name="requestId"></param>
+  /// <param name="args"></param>
+  public void RunMethod(string methodName, string requestId, string args)
+  {
+    _topLevelExceptionHandler.CatchUnhandled(Post);
+    return;
+
+    void Post()
+    {
+      bool wasAccepted = _actionBlock
+        .NotNull()
+        .Post(
+          new RunMethodArgs
           {
-            var result = await ExecuteMethod(methodName, methodArgs).ConfigureAwait(false);
-            string resultJson = _jsonSerializer.Serialize(result);
-            NotifyUIMethodCallResultReady(requestId, resultJson);
-          })
-          .ConfigureAwait(false);
-        if (task.Exception is not null)
-        {
-          string resultJson = SerializeFormattedException(task.Exception);
-          NotifyUIMethodCallResultReady(requestId, resultJson);
-        }
-      })
-      .FireAndForget();
+            MethodName = methodName,
+            RequestId = requestId,
+            MethodArgs = args
+          }
+        );
+      if (!wasAccepted)
+      {
+        throw new InvalidOperationException($"Action block declined to Post ({methodName} {requestId} {args})");
+      }
+    }
+  }
+
+  public void RunOnMainThread(Action action)
+  {
+    _mainThreadContext.Post(
+      _ =>
+      {
+        // Execute the action on the main thread
+        _topLevelExceptionHandler.CatchUnhandled(action);
+      },
+      null
+    );
+  }
 
   /// <summary>
   /// Used by the action block to invoke the actual method called by the UI.
@@ -228,11 +299,22 @@ public sealed class BrowserBridge : IBrowserBridge
   /// <param name="requestId"></param>
   /// <param name="serializedData"></param>
   /// <exception cref="InvalidOperationException"><inheritdoc cref="IBrowserScriptExecutor.ExecuteScript"/></exception>
-  private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
+  // private void NotifyUIMethodCallResultReady(string requestId, string? serializedData = null)
+  // {
+  //   _resultsStore[requestId] = serializedData;
+  //   string script = $"{FrontendBoundName}.responseReady('{requestId}')";
+  //   _browserScriptExecutor.ExecuteScript(script);
+  // }
+
+  private async Task NotifyUIMethodCallResultReady(
+    string requestId,
+    string? serializedData = null,
+    CancellationToken cancellationToken = default
+  )
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _browserScriptExecutor.ExecuteScript(script);
+    await _browserScriptExecutor.ExecuteScriptAsyncMethod(script, cancellationToken).ConfigureAwait(false);
   }
 
   /// <summary>

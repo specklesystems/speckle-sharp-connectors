@@ -48,6 +48,21 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
     }
   }
 
+  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
+  {
+    if (!Browser.IsInitialized)
+    {
+      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
+    }
+    //always invoke even on the main thread because it's better somehow
+    Browser.Dispatcher.Invoke(
+      //fire and forget
+      () => Browser.ExecuteScriptAsync(script),
+      DispatcherPriority.Background
+    );
+    return Task.CompletedTask;
+  }
+
   public void SendProgress(string script) => ExecuteScript(script);
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)

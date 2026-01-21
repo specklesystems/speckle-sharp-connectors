@@ -294,7 +294,8 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Connectors.Common": "[1.0.0, )"
+          "Speckle.Connectors.Common": "[1.0.0, )",
+          "System.Threading.Tasks.Dataflow": "[10.0.2, )"
         }
       },
       "speckle.connectors.dui.webview": {
@@ -363,6 +364,12 @@
         "dependencies": {
           "Speckle.Sdk": "3.12.0"
         }
+      },
+      "System.Threading.Tasks.Dataflow": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "h1jjCvwBFPXfH4y8KeGXERA+D/oKWUwZ5zX8TXO3YSQRi7zWiNxhvc8GTgFFEW11yTvepjVugDxemtzNDMW7Qw=="
       }
     },
     ".NETFramework,Version=v4.8/win-x64": {

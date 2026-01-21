@@ -39,6 +39,12 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
+      "System.Threading.Tasks.Dataflow": {
+        "type": "Direct",
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "h1jjCvwBFPXfH4y8KeGXERA+D/oKWUwZ5zX8TXO3YSQRi7zWiNxhvc8GTgFFEW11yTvepjVugDxemtzNDMW7Qw=="
+      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -368,6 +374,12 @@
         "requested": "[0.9.6, )",
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
+      },
+      "System.Threading.Tasks.Dataflow": {
+        "type": "Direct",
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "h1jjCvwBFPXfH4y8KeGXERA+D/oKWUwZ5zX8TXO3YSQRi7zWiNxhvc8GTgFFEW11yTvepjVugDxemtzNDMW7Qw=="
       },
       "GraphQL.Client": {
         "type": "Transitive",

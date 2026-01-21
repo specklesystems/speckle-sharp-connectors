@@ -42,6 +42,17 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     }
   }
 
+  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken)
+  {
+    Browser.Dispatcher.Invoke(
+      () => Browser.ExecuteScriptAsync(script),
+      DispatcherPriority.Background,
+      cancellationToken
+    );
+
+    return Task.CompletedTask;
+  }
+
   public void SendProgress(string script) => ExecuteScript(script);
 
   public bool IsBrowserInitialized => Browser.IsBrowserInitialized;

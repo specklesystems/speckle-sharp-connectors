@@ -6,6 +6,8 @@ public interface IBrowserScriptExecutor
   /// <param name="script">The (constant string) script to execute on the browser</param>
   void ExecuteScript(string script);
 
+  public Task ExecuteScriptAsyncMethod(string script, CancellationToken cancellationToken);
+
   void SendProgress(string script);
 
   bool IsBrowserInitialized { get; }
