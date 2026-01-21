@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Settings;
@@ -24,7 +25,8 @@ public sealed class RevitReceiveBinding(
   private IReceiveBindingUICommands Commands { get; } = new ReceiveBindingUICommands(parent);
 
 #pragma warning disable CA1024
-  public List<ICardSetting> GetReceiveSettings() => [new Operations.Receive.Settings.ReceiveReferencePointSetting()];
+  public List<ICardSetting> GetReceiveSettings() =>
+    [new Operations.Receive.Settings.ReceiveReferencePointSetting(), new ReceiveInstancesAsFamiliesSetting()];
 #pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
@@ -44,7 +46,8 @@ public sealed class RevitReceiveBinding(
               toHostSettingsManager.GetReferencePointSetting(card),
               false,
               true,
-              false
+              false,
+              toHostSettingsManager.GetReceiveInstancesAsFamiliesSetting(card)
             )
           );
       },
