@@ -40,13 +40,16 @@ public sealed class RevitHostObjectBuilder(
   IThreadContext threadContext,
   RevitToHostCacheSingleton revitToHostCacheSingleton,
   ITypedConverter<
-    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix),
+    (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject),
     DirectShape
   > localToGlobalDirectShapeConverter,
   IReceiveConversionHandler conversionHandler,
   RevitFamilyBaker familyBaker
 ) : IHostObjectBuilder, IDisposable
 {
+  // Maps atomic object applicationId -> parent DataObject
+  private readonly Dictionary<string, DataObject> _atomicObjectToParentDataObject = new();
+
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
@@ -187,6 +190,9 @@ public sealed class RevitHostObjectBuilder(
       unpackedRoot.ObjectsToConvert
     );
 
+    // Register DataObjects with InstanceProxy displayValues
+    RegisterDataObjectsWithInstanceProxies(unpackedRoot);
+
     // collect object IDs that are consumed by definitions (i.e., definition geometry)
     // these should NOT be converted as standalone DirectShapes
     var consumedObjectIds = unpackedRoot.DefinitionProxies?.SelectMany(dp => dp.objects).ToHashSet() ?? [];
@@ -303,7 +309,10 @@ public sealed class RevitHostObjectBuilder(
       }
     }
 
-    // Bake materials (now with the updated IDs)
+    // Update DataObject lookup IDs
+    UpdateAtomicObjectLookupWithModifiedIds(originalToModifiedIds);
+
+    // 2 - Bake materials (now with the updated IDs)
     if (unpackedRoot.RenderMaterialProxies != null)
     {
       transactionManager.StartTransaction(true, "Baking materials");
@@ -359,6 +368,87 @@ public sealed class RevitHostObjectBuilder(
     );
   }
 
+  /// <summary>
+  /// Registers DataObjects that have InstanceProxy displayValues and builds the lookup.
+  /// </summary>
+  private void RegisterDataObjectsWithInstanceProxies(RootObjectUnpackerResult unpackedRoot)
+  {
+    var definitionToDataObject = new Dictionary<string, DataObject>();
+
+    foreach (var tc in unpackedRoot.ObjectsToConvert)
+    {
+      if (tc.Current is DataObject dataObject)
+      {
+        var instanceProxies = dataObject.displayValue.OfType<InstanceProxy>().ToList();
+        if (instanceProxies.Count > 0)
+        {
+          foreach (var ip in instanceProxies)
+          {
+            definitionToDataObject[ip.definitionId] = dataObject;
+          }
+        }
+      }
+    }
+
+    // Build lookup: definition object applicationId -> parent DataObject
+    _atomicObjectToParentDataObject.Clear();
+    if (unpackedRoot.DefinitionProxies is not null)
+    {
+      foreach (var defProxy in unpackedRoot.DefinitionProxies)
+      {
+        if (
+          defProxy.applicationId is not null
+          && definitionToDataObject.TryGetValue(defProxy.applicationId, out var parentDataObject)
+        )
+        {
+          foreach (var objectId in defProxy.objects)
+          {
+            _atomicObjectToParentDataObject[objectId] = parentDataObject;
+          }
+        }
+        else
+        {
+          logger.LogError(
+            "Could not find parent DataObject for DefinitionProxy {ApplicationId}",
+            defProxy.applicationId
+          );
+        }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Updates the atomic object lookup with modified IDs
+  /// </summary>
+  private void UpdateAtomicObjectLookupWithModifiedIds(Dictionary<string, List<string>> originalToModifiedIds)
+  {
+    // Build updated entries first to avoid modifying collection during iteration
+    var entriesToAdd = new List<KeyValuePair<string, DataObject>>();
+    var keysToRemove = new List<string>();
+
+    foreach (var kvp in _atomicObjectToParentDataObject)
+    {
+      if (originalToModifiedIds.TryGetValue(kvp.Key, out var modifiedIds))
+      {
+        keysToRemove.Add(kvp.Key);
+        foreach (var modifiedId in modifiedIds)
+        {
+          entriesToAdd.Add(new(modifiedId, kvp.Value));
+        }
+      }
+    }
+
+    foreach (var key in keysToRemove)
+    {
+      _atomicObjectToParentDataObject.Remove(key);
+    }
+
+    foreach (var entry in entriesToAdd)
+    {
+      _atomicObjectToParentDataObject[entry.Key] = entry.Value;
+    }
+  }
+
   private Autodesk.Revit.DB.Transform? CalculateNewTransform(
     Autodesk.Revit.DB.Transform? receiveTransform,
     Autodesk.Revit.DB.Transform? rootTransform
@@ -403,9 +493,17 @@ public sealed class RevitHostObjectBuilder(
         onOperationProgressed.Report(new("Converting", (double)++count / localToGlobalMaps.Count));
         if (result is DirectShapeDefinitionWrapper)
         {
+          // Look up parent DataObject for this atomic object (handles InstanceProxy displayValue)
+          var atomicId = localToGlobalMap.AtomicObject.applicationId;
+          DataObject? parentDataObject = null;
+          if (atomicId is not null)
+          {
+            _atomicObjectToParentDataObject.TryGetValue(atomicId, out parentDataObject);
+          }
+
           // direct shape creation happens here
           DirectShape directShapes = localToGlobalDirectShapeConverter.Convert(
-            (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix)
+            (localToGlobalMap.AtomicObject, localToGlobalMap.Matrix, parentDataObject)
           );
 
           bakedObjectIds.Add(directShapes.UniqueId);
@@ -476,6 +574,7 @@ public sealed class RevitHostObjectBuilder(
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
     revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
+    _atomicObjectToParentDataObject.Clear();
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);
   }
