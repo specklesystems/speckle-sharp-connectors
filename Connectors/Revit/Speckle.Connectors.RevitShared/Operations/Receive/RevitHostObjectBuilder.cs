@@ -191,7 +191,7 @@ public sealed class RevitHostObjectBuilder(
     {
       transactionManager.StartTransaction(true, "Baking materials");
       materialBaker.MapLayersRenderMaterials(unpackedRoot);
-      var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseGroupName);
+      var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
       foreach (var kvp in map)
       {
         revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
