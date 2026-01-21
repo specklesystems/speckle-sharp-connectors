@@ -32,6 +32,24 @@ public class RevitMaterialBaker
     _converterSettings = converterSettings;
   }
 
+  private ElementId? FindExistingMaterialByName(string? materialName)
+  {
+    if (string.IsNullOrWhiteSpace(materialName))
+    {
+      return null;
+    }
+
+    string sanitizedName = _revitUtils.RemoveInvalidChars(materialName);
+
+    using var collector = new FilteredElementCollector(_converterSettings.Current.Document);
+    var existingMaterial = collector
+      .OfClass(typeof(Material))
+      .Cast<Material>()
+      .FirstOrDefault(m => string.Equals(m.Name, sanitizedName, StringComparison.OrdinalIgnoreCase));
+
+    return existingMaterial?.Id;
+  }
+
   /// <summary>
   /// Checks the every atomic object has render material or not, if not it tries to find it from its layer tree and mutates
   /// its render material proxy objects list with the traversal current. It will also map displayable objects' display values to their
@@ -120,27 +138,45 @@ public class RevitMaterialBaker
 
       try
       {
-        // all values assumed to be on the 0 - 1 scale need to pass through this validation and logging (if assumption wrong)
-        double roughness = ClampToUnitRange(speckleRenderMaterial.roughness, "roughness", speckleRenderMaterial.name);
-        double opacity = ClampToUnitRange(speckleRenderMaterial.opacity, "opacity", speckleRenderMaterial.name);
-        double metalness = ClampToUnitRange(speckleRenderMaterial.metalness, "metalness", speckleRenderMaterial.name);
+        // first try to match existing material by name
+        ElementId? existingMaterialId = FindExistingMaterialByName(speckleRenderMaterial.name);
 
-        var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
-        double transparency = 1 - opacity;
-        double smoothness = 1 - roughness;
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
-        string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}");
+        ElementId materialIdToUse;
 
-        var newMaterialId = Material.Create(_converterSettings.Current.Document, matName);
-        var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
-        revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
-        revitMaterial.Transparency = (int)(transparency * 100);
-        revitMaterial.Shininess = (int)(metalness * 128);
-        revitMaterial.Smoothness = (int)(smoothness * 128);
+        if (existingMaterialId != null)
+        {
+          // Use existing material
+          materialIdToUse = existingMaterialId;
+        }
+        else
+        {
+          // create new material
+          // all values assumed to be on the 0 - 1 scale need to pass through this validation and logging (if assumption wrong)
+          double roughness = ClampToUnitRange(speckleRenderMaterial.roughness, "roughness", speckleRenderMaterial.name);
+          double opacity = ClampToUnitRange(speckleRenderMaterial.opacity, "opacity", speckleRenderMaterial.name);
+          double metalness = ClampToUnitRange(speckleRenderMaterial.metalness, "metalness", speckleRenderMaterial.name);
+
+          var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
+          double transparency = 1 - opacity;
+          double smoothness = 1 - roughness;
+          string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
+          string matName = _revitUtils.RemoveInvalidChars(
+            $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}"
+          );
+
+          var newMaterialId = Material.Create(_converterSettings.Current.Document, matName);
+          var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
+          revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
+          revitMaterial.Transparency = (int)(transparency * 100);
+          revitMaterial.Shininess = (int)(metalness * 128);
+          revitMaterial.Smoothness = (int)(smoothness * 128);
+
+          materialIdToUse = revitMaterial.Id;
+        }
 
         foreach (var objectId in proxy.objects)
         {
-          objectIdAndMaterialIndexMap[objectId] = revitMaterial.Id;
+          objectIdAndMaterialIndexMap[objectId] = materialIdToUse;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
