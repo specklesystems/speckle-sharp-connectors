@@ -96,20 +96,23 @@ public class RevitFamilyBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        var componentId =
-          (component as InstanceDefinitionProxy)?.applicationId
-          ?? (component as InstanceProxy)?.applicationId
-          ?? "unknown";
+        string componentId = component switch
+        {
+          InstanceDefinitionProxy d => d.applicationId ?? d.id.NotNull(),
+          InstanceProxy i => i.applicationId ?? i.id.NotNull(),
+          _ => "unknown"
+        };
+
         _logger.LogError(ex, "Failed to process instance component {ComponentId}", componentId);
 
-        // only add error result if we have a valid Base object
-        if (component is InstanceDefinitionProxy defProxy)
+        switch (component)
         {
-          results.Add(new ReceiveConversionResult(Status.ERROR, defProxy, null, null, ex));
-        }
-        else if (component is InstanceProxy instProxy)
-        {
-          results.Add(new ReceiveConversionResult(Status.ERROR, instProxy, null, null, ex));
+          case InstanceDefinitionProxy defProxy:
+            results.Add(new ReceiveConversionResult(Status.ERROR, defProxy, null, null, ex));
+            break;
+          case InstanceProxy instProxy:
+            results.Add(new ReceiveConversionResult(Status.ERROR, instProxy, null, null, ex));
+            break;
         }
       }
     }
