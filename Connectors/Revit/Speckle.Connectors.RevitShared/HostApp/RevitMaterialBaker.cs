@@ -39,7 +39,7 @@ public class RevitMaterialBaker
       return null;
     }
 
-    string sanitizedName = _revitUtils.RemoveInvalidChars(materialName);
+    string sanitizedName = _revitUtils.RemoveInvalidChars(materialName!);
 
     using var collector = new FilteredElementCollector(_converterSettings.Current.Document);
     var existingMaterial = collector
