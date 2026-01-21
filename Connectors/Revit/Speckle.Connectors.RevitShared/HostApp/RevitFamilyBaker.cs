@@ -194,7 +194,7 @@ public class RevitFamilyBaker
   private static Family? FindFamilyByName(Document document, string familyName)
   {
     using var collector = new FilteredElementCollector(document);
-    return collector.OfClass(typeof(Family)).Cast<Family>().FirstOrDefault(f => f.Name == familyName);
+    return collector.OfClass(typeof(Family)).OfType<Family>().FirstOrDefault(f => f.Name == familyName);
   }
 
   /// <summary>
