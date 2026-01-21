@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
@@ -28,17 +29,20 @@ public class RevitFamilyBaker
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _cache;
   private readonly ILogger<RevitFamilyBaker> _logger;
+  private readonly ITypedConverter<(Matrix4x4 matrix, string units), Transform> _transformConverter;
   private string? _cachedTemplatePath;
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitToHostCacheSingleton cache,
-    ILogger<RevitFamilyBaker> logger
+    ILogger<RevitFamilyBaker> logger,
+    ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter
   )
   {
     _converterSettings = converterSettings;
     _cache = cache;
     _logger = logger;
+    _transformConverter = transformConverter;
   }
 
   /// <summary>
@@ -335,7 +339,7 @@ public class RevitFamilyBaker
       document.Regenerate();
     }
 
-    var revitTransform = ConvertTransform(instanceProxy.transform, instanceProxy.units);
+    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
 
     // create a Reference Plane
     XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
@@ -417,54 +421,6 @@ public class RevitFamilyBaker
       }
     }
   }
-
-  /// <summary>
-  /// Converts a Speckle Matrix4x4 to a Revit Transform.
-  /// </summary>
-  private Transform ConvertTransform(Matrix4x4 matrix, string units)
-  {
-    var transform = Transform.Identity;
-
-    if (matrix.M44 == 0)
-    {
-      return transform;
-    }
-
-    var scaleFactor = GetScaleFactor(units);
-
-    // Translation (with unit scaling)
-    var tX = (matrix.M14 / matrix.M44) * scaleFactor;
-    var tY = (matrix.M24 / matrix.M44) * scaleFactor;
-    var tZ = (matrix.M34 / matrix.M44) * scaleFactor;
-    transform.Origin = new XYZ(tX, tY, tZ);
-
-    // Basis vectors (normalized)
-    transform.BasisX = new XYZ(matrix.M11, matrix.M21, matrix.M31).Normalize();
-    transform.BasisY = new XYZ(matrix.M12, matrix.M22, matrix.M32).Normalize();
-    transform.BasisZ = new XYZ(matrix.M13, matrix.M23, matrix.M33).Normalize();
-
-    // Apply reference point transform if set
-    var refPointTransform = _converterSettings.Current.ReferencePointTransform;
-    if (refPointTransform != null)
-    {
-      transform = refPointTransform.Multiply(transform);
-    }
-
-    return transform;
-  }
-
-  /// <summary>
-  /// Gets scale factor to convert from source units to Revit internal units (feet).
-  /// </summary>
-  private static double GetScaleFactor(string units) =>
-    units.ToLower() switch
-    {
-      "mm" or "millimeters" or "millimetres" => 1.0 / 304.8,
-      "cm" or "centimeters" or "centimetres" => 1.0 / 30.48,
-      "m" or "meters" or "metres" => 1.0 / 0.3048,
-      "in" or "inches" => 1.0 / 12.0,
-      _ => 1.0
-    };
 
   private sealed class FamilyLoadOptions : IFamilyLoadOptions
   {

@@ -165,6 +165,11 @@ public sealed class RevitHostObjectBuilder(
     return conversionResults.builderResult;
   }
 
+  /// <summary>
+  /// Unpacks root object into atomic objects and optionally instance components.
+  /// When receiveInstancesAsFamilies is true, excludes definition geometry from atomic objects
+  /// so it doesn't appear as standalone DirectShapes in the model.
+  /// </summary>
   private (
     IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
     List<(Collection[] path, IInstanceComponent component)>? instanceComponents
@@ -172,34 +177,49 @@ public sealed class RevitHostObjectBuilder(
   {
     if (!receiveInstancesAsFamilies)
     {
-      // Flattens everything including instances
+      // flattens everything including instances
       var maps = localToGlobalUnpacker.Unpack(unpackedRoot.DefinitionProxies, unpackedRoot.ObjectsToConvert.ToList());
       return (maps, null);
     }
 
-    // Split atomic objects from instance components
+    // split atomic objects from instance components
     var (atomicObjects, instanceComponents) = rootObjectUnpacker.SplitAtomicObjectsAndInstances(
       unpackedRoot.ObjectsToConvert
     );
 
-    // Prepare instance components with path
+    // collect object IDs that are consumed by definitions (i.e., definition geometry)
+    // these should NOT be converted as standalone DirectShapes
+    var consumedObjectIds = unpackedRoot.DefinitionProxies?.SelectMany(dp => dp.objects).ToHashSet() ?? [];
+
+    // filter out consumed objects from atomic objects
+    var filteredAtomicObjects = atomicObjects
+      .Where(tc =>
+      {
+        var appId = tc.Current.applicationId;
+        var id = tc.Current.id;
+        // exclude if this object's ID is in the consumed set
+        return (appId == null || !consumedObjectIds.Contains(appId)) && (id == null || !consumedObjectIds.Contains(id));
+      })
+      .ToList();
+
+    // prepare instance components with path
     var instanceComponentsWithPath = instanceComponents
       .Select(tc => (Array.Empty<Collection>(), tc.Current as IInstanceComponent))
       .Where(x => x.Item2 != null)
       .Select(x => (x.Item1, x.Item2!))
       .ToList();
 
-    // Add definition proxies (not captured by traversal)
+    // add definition proxies (not captured by traversal)
     if (unpackedRoot.DefinitionProxies != null)
     {
       var definitions = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      instanceComponentsWithPath.AddRange(definitions);
+      instanceComponentsWithPath.AddRange(definitions!);
     }
 
-    // Only unpack atomic objects (no instance flattening)
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(null, atomicObjects.ToList());
+    // only unpack filtered atomic objects (no instance flattening, no definition geometry)
+    var localToGlobalMaps = localToGlobalUnpacker.Unpack(null, filteredAtomicObjects.ToList());
     return (localToGlobalMaps, instanceComponentsWithPath);
   }
 
