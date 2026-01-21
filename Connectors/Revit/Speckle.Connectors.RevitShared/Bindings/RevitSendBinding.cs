@@ -102,7 +102,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
   {
     if (
-      !_config.SelectionChangeListeningDisabled
+      !_config.DocumentChangeListeningDisabled
       && e.ModelCards.Count > 0
       && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard))
     )
