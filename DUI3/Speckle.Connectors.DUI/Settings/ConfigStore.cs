@@ -168,7 +168,8 @@ public sealed class ConnectorConfig
   /// <remarks>
   /// Only used by Revit Connector !!
   /// We're exposing some settings to disable event listening inorder to debug app crash issues caused by Revit event handlers
-  /// Normal users are expected to have both enabled
+  /// Normal users are expected to have both enabled.
+  /// We can consider removing this in future once issues are resolved.
   /// </remarks>
   public bool SelectionChangeListeningDisabled { get; init; }
 

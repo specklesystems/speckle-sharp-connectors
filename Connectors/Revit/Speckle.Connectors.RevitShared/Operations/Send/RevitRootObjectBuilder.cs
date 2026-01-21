@@ -7,6 +7,7 @@ using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
@@ -29,7 +30,8 @@ public class RevitRootObjectBuilder(
   SendCollectionManager sendCollectionManager,
   ILogger<RevitRootObjectBuilder> logger,
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
-  LinkedModelHandler linkedModelHandler
+  LinkedModelHandler linkedModelHandler,
+  IConfigStore configStore
 ) : IRootObjectBuilder<DocumentToConvert>
 {
   public Task<RootObjectBuilderResult> Build(
@@ -134,6 +136,8 @@ public class RevitRootObjectBuilder(
     var cacheHitCount = 0;
     var skippedObjectCount = 0;
 
+    var config = configStore.GetConnectorConfig();
+
     foreach (var atomicObjectByDocumentAndTransform in atomicObjectsByDocumentAndTransform)
     {
       string? modelDisplayName = null;
@@ -185,7 +189,11 @@ public class RevitRootObjectBuilder(
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
 
-            if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
+            if (
+              !hasTransform
+              && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value)
+              && !config.DocumentChangeListeningDisabled //This is experimental
+            )
             {
               converted = value;
               cacheHitCount++;
