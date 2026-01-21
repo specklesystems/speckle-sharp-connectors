@@ -157,8 +157,7 @@ public class RevitFamilyBaker
       return null;
     }
 
-    var symbol = document.GetElement(symbolId) as FamilySymbol;
-    if (symbol == null)
+    if (document.GetElement(symbolId) is not FamilySymbol symbol)
     {
       return null;
     }
