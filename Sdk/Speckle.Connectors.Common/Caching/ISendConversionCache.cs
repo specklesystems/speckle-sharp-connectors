@@ -14,6 +14,7 @@ namespace Speckle.Connectors.Common.Caching;
 public interface ISendConversionCache
 {
   void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences);
+  void AppendSendResult(string projectId, string applicationId, ObjectReference convertedReference);
 
   /// <summary>
   /// <para>Call this method whenever you need to invalidate a set of objects that have changed in the host app.</para>

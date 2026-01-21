@@ -42,7 +42,11 @@ public class RevitRootObjectBuilder(
       () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
     );
 
+#pragma warning disable CA1506
+#pragma warning disable CA1502
   private RootObjectBuilderResult BuildSync(
+#pragma warning restore CA1506
+#pragma warning restore CA1502
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
@@ -55,6 +59,9 @@ public class RevitRootObjectBuilder(
     {
       throw new SpeckleException("Family Environment documents are not supported.");
     }
+
+    // create a new send pipeline
+    using var sendPipeline = new Speckle.Sdk.Pipeline.Send();
 
     // init the root
     Collection rootObject =
@@ -184,10 +191,12 @@ public class RevitRootObjectBuilder(
             // non-transformed elements can safely rely on cache
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
-
+            bool wasCached = false;
             if (!hasTransform && sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
             {
+              // TODO: cahce hit
               converted = value;
+              wasCached = true;
               cacheHitCount++;
             }
             // not in cache means we convert
@@ -206,6 +215,12 @@ public class RevitRootObjectBuilder(
               converted.applicationId = applicationId;
             }
 
+            var reference = sendPipeline.Process(converted).Result; // .Wait(cancellationToken);//.ConfigureAwait(false);
+            if (!wasCached)
+            {
+              sendConversionCache.AppendSendResult(projectId, applicationId, reference);
+            }
+
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
               rootObject,
@@ -213,7 +228,7 @@ public class RevitRootObjectBuilder(
               modelDisplayName
             );
 
-            collection.elements.Add(converted);
+            collection.elements.Add(reference);
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
           }
           catch (Exception ex) when (!ex.IsFatal())
@@ -254,13 +269,20 @@ public class RevitRootObjectBuilder(
     rootObject[ProxyKeys.INSTANCE_DEFINITION] = revitToSpeckleCacheSingleton.GetInstanceDefinitionProxiesForObjects(
       idsAndSubElementIds
     );
-    rootObject.elements.Add(
-      new Collection()
-      {
-        elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
-        name = "revitInstancedObjects"
-      }
-    );
+    // NOTE: i might be overdoing things in here, but tldr:
+    // - all instance objects (meshes) are processed individually
+    // - process their collection individually, and then attach it to the root collection
+    // we could, theoretically, just process the collection as a whole (but it can be big?)
+    // note/ask: do these need to go in the conversion cache? or not?
+    var instanceObjects = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds);
+    var instanceReferences = new Collection("revitInstancedObjects");
+    foreach (var instanceObject in instanceObjects)
+    {
+      var referenceInstanceObject = sendPipeline.Process(instanceObject).Result;
+      instanceReferences.elements.Add(referenceInstanceObject);
+    }
+    var instanceReferenceCollection = sendPipeline.Process(instanceReferences).Result;
+    rootObject.elements.Add(instanceReferenceCollection);
 
     // STEP 6: Unpack all other objects to attach to root collection
     List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
@@ -279,6 +301,10 @@ public class RevitRootObjectBuilder(
       rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] = transformMatrix;
     }
 
-    return new RootObjectBuilderResult(rootObject, results);
+    // NOTE: could be
+    sendPipeline.Process(rootObject).Wait(cancellationToken);
+    sendPipeline.WaitForUpload().Wait(cancellationToken);
+
+    return new RootObjectBuilderResult(new Collection() { name = "ignore" }, results);
   }
 }

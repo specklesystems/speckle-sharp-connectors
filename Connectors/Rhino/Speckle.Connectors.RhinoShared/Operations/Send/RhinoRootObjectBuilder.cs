@@ -75,6 +75,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   )
   {
     using var activity = _activityFactory.Start("Build");
+    using var sendPipeline = new Speckle.Sdk.Pipeline.Send();
+
     // 0 - Init the root
     Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
@@ -97,6 +99,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     // 3 - Convert atomic objects
     List<SendConversionResult> results = new(atomicObjects.Count);
     int count = 0;
+
     using (var _ = _activityFactory.Start("Convert all"))
     {
       foreach (RhinoObject rhinoObject in atomicObjects)
@@ -108,9 +111,8 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
-        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId);
+        var result = await ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId, sendPipeline);
         results.Add(result);
-
         ++count;
         onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
         await Task.Yield();
@@ -149,18 +151,23 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
     }
 
-    return new RootObjectBuilderResult(rootObjectCollection, results);
+    await sendPipeline.Process(rootObjectCollection);
+    await sendPipeline.WaitForUpload();
+
+    return new RootObjectBuilderResult(new Collection() { name = "ignore" }, results);
   }
 
-  private SendConversionResult ConvertRhinoObject(
+  private async Task<SendConversionResult> ConvertRhinoObject(
     RhinoObject rhinoObject,
     Collection collectionHost,
     IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
-    string projectId
+    string projectId,
+    Sdk.Pipeline.Send sendPipeline
   )
   {
     string applicationId = rhinoObject.Id.ToString();
     string sourceType = rhinoObject.ObjectType.ToString();
+    bool wasCached = false;
     try
     {
       // get from cache or convert:
@@ -174,6 +181,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
         converted = value;
+        wasCached = true;
       }
       else
       {
@@ -194,10 +202,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         converted["properties"] = properties;
       }
 
-      // add to host
-      collectionHost.elements.Add(converted);
+      // process in pipeline
+      var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
+      if (!wasCached)
+      {
+        _sendConversionCache.AppendSendResult(projectId, applicationId, reference);
+      }
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      // add to host
+      collectionHost.elements.Add(reference);
+
+      return new(Status.SUCCESS, applicationId, sourceType, reference);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

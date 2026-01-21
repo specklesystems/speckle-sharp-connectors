@@ -11,6 +11,8 @@ public class NullSendConversionCache : ISendConversionCache
 {
   public void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences) { }
 
+  public void AppendSendResult(string projectId, string applicationId, ObjectReference convertedReference) { }
+
   public void EvictObjects(IEnumerable<string> objectIds) { }
 
   public void ClearCache() { }
