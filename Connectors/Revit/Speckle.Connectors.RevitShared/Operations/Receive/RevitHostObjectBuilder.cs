@@ -47,8 +47,8 @@ public sealed class RevitHostObjectBuilder(
   RevitFamilyBaker familyBaker
 ) : IHostObjectBuilder, IDisposable
 {
-  // Maps atomic object applicationId -> parent DataObject
-  private readonly Dictionary<string, DataObject> _atomicObjectToParentDataObject = new();
+  private readonly Dictionary<string, DataObject> _atomicObjectToParentDataObject = [];
+  private IReadOnlyDictionary<string, Base>? _definitionGeometryObjects;
 
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,
@@ -197,13 +197,31 @@ public sealed class RevitHostObjectBuilder(
     // these should NOT be converted as standalone DirectShapes
     var consumedObjectIds = unpackedRoot.DefinitionProxies?.SelectMany(dp => dp.objects).ToHashSet() ?? [];
 
+    // build lookup from ALL traversed objects, not just atomicObjects
+    // this is passed to RevitFamilyBaker for geometry conversion
+    var definitionObjects = new Dictionary<string, Base>();
+    foreach (var tc in unpackedRoot.ObjectsToConvert)
+    {
+      var appId = tc.Current.applicationId;
+      var id = tc.Current.id;
+
+      if (appId != null && consumedObjectIds.Contains(appId))
+      {
+        definitionObjects[appId] = tc.Current;
+      }
+      else if (id != null && consumedObjectIds.Contains(id))
+      {
+        definitionObjects[id] = tc.Current;
+      }
+    }
+    _definitionGeometryObjects = definitionObjects;
+
     // filter out consumed objects from atomic objects
     var filteredAtomicObjects = atomicObjects
       .Where(tc =>
       {
         var appId = tc.Current.applicationId;
         var id = tc.Current.id;
-        // exclude if this object's ID is in the consumed set
         return (appId == null || !consumedObjectIds.Contains(appId)) && (id == null || !consumedObjectIds.Contains(id));
       })
       .ToList();
@@ -221,7 +239,7 @@ public sealed class RevitHostObjectBuilder(
       var definitions = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      instanceComponentsWithPath.AddRange(definitions!);
+      instanceComponentsWithPath.AddRange(definitions);
     }
 
     // only unpack filtered atomic objects (no instance flattening, no definition geometry)
@@ -295,7 +313,7 @@ public sealed class RevitHostObjectBuilder(
         var objectIdsToUse = new List<string>();
         foreach (var objectId in proxy.objects)
         {
-          // Use the modified ID if it exists, otherwise keep the original <- this SUCKS and we need to change
+          // Use the modified ID if it exists, otherwise keep the original <- this SUCKS, and we need to change
           if (originalToModifiedIds.TryGetValue(objectId, out var modifiedIds))
           {
             objectIdsToUse.AddRange(modifiedIds);
@@ -341,16 +359,19 @@ public sealed class RevitHostObjectBuilder(
     using var _ = activityFactory.Start("Creating families");
     transactionManager.StartTransaction(true, "Creating families");
 
-    var (familyResults, familyElementIds) = familyBaker.BakeInstances(instanceComponents, onOperationProgressed);
+    var definitionObjects = _definitionGeometryObjects ?? new Dictionary<string, Base>();
+    var (familyResults, familyElementIds) = familyBaker.BakeInstances(
+      instanceComponents,
+      definitionObjects,
+      onOperationProgressed
+    );
 
-    // Merge results
     var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
     mergedConversionResults.AddRange(familyResults);
 
     var mergedBakedObjectIds = currentResults.builderResult.BakedObjectIds.ToList();
     mergedBakedObjectIds.AddRange(familyElementIds);
 
-    // Add created elements to group
     foreach (var elementId in familyElementIds)
     {
       var element = converterSettings.Current.Document.GetElement(elementId);
@@ -579,7 +600,7 @@ public sealed class RevitHostObjectBuilder(
     materialBaker.PurgeMaterials(baseGroupName);
   }
 
-  public void Dispose() => transactionManager?.Dispose();
+  public void Dispose() => transactionManager.Dispose();
 
   // NOTE: temp poc HACK!
   // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.

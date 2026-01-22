@@ -11,9 +11,12 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.Instances;
 using Plane = Autodesk.Revit.DB.Plane;
+using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -30,27 +33,33 @@ public class RevitFamilyBaker
   private readonly RevitToHostCacheSingleton _cache;
   private readonly ILogger<RevitFamilyBaker> _logger;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), Transform> _transformConverter;
+  private readonly ITypedConverter<SOG.Mesh, Solid?> _meshToSolidConverter;
   private string? _cachedTemplatePath;
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitToHostCacheSingleton cache,
     ILogger<RevitFamilyBaker> logger,
-    ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter
+    ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter,
+    ITypedConverter<SOG.Mesh, Solid?> meshToSolidConverter
   )
   {
     _converterSettings = converterSettings;
     _cache = cache;
     _logger = logger;
     _transformConverter = transformConverter;
+    _meshToSolidConverter = meshToSolidConverter;
   }
 
   /// <summary>
   /// Bakes instance definitions as Families and instance proxies as FamilyInstances.
-  /// Processes in depth order (deepest first) to handle nested blocks correctly.
   /// </summary>
+  /// <param name="instanceComponents">Instance definitions and proxies to bake.</param>
+  /// <param name="definitionGeometryObjects">All objects that may be referenced by definitions (by applicationId).</param>
+  /// <param name="onOperationProgressed">Progress callback.</param>
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
+    IReadOnlyDictionary<string, Base> definitionGeometryObjects,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -74,7 +83,7 @@ public class RevitFamilyBaker
       {
         if (component is InstanceDefinitionProxy definitionProxy)
         {
-          var result = CreateFamilyFromDefinition(document, definitionProxy);
+          var result = CreateFamilyFromDefinition(document, definitionProxy, definitionGeometryObjects);
           if (result.HasValue)
           {
             results.Add(
@@ -96,7 +105,7 @@ public class RevitFamilyBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        string componentId = component switch
+        var componentId = component switch
         {
           InstanceDefinitionProxy d => d.applicationId ?? d.id.NotNull(),
           InstanceProxy i => i.applicationId ?? i.id.NotNull(),
@@ -125,7 +134,8 @@ public class RevitFamilyBaker
   /// </summary>
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
     Document document,
-    InstanceDefinitionProxy definitionProxy
+    InstanceDefinitionProxy definitionProxy,
+    IReadOnlyDictionary<string, Base> definitionGeometryObjects
   )
   {
     // NOTE: for this ticket just creates an empty family with placeholder geometry (bounding box).
@@ -141,7 +151,9 @@ public class RevitFamilyBaker
     // check if family already exists in document, creates if doesn't exist
     // TODO: this is where we need to talk about update behavior
     var familyName = GetFamilyName(definitionProxy);
-    var family = FindFamilyByName(document, familyName) ?? CreateFamily(document, familyName);
+    var family =
+      FindFamilyByName(document, familyName)
+      ?? CreateFamily(document, familyName, definitionProxy, definitionGeometryObjects);
 
     if (family == null)
     {
@@ -181,8 +193,6 @@ public class RevitFamilyBaker
   private static string GetFamilyName(InstanceDefinitionProxy definitionProxy)
   {
     var baseName = definitionProxy.name;
-
-    // remove invalid filename characters
     var invalidChars = Path.GetInvalidFileNameChars(); // e.g. :, \, /, *, ?
     return string.Concat(baseName.Select(c => invalidChars.Contains(c) ? '_' : c));
   }
@@ -199,17 +209,22 @@ public class RevitFamilyBaker
   /// <summary>
   /// Creates a new family document, adds placeholder geometry, sets work-plane-based, saves and loads it.
   /// </summary>
-  private Family? CreateFamily(Document document, string familyName)
+  private Family? CreateFamily(
+    Document document,
+    string familyName,
+    InstanceDefinitionProxy definitionProxy,
+    IReadOnlyDictionary<string, Base> definitionGeometryObjects
+  )
   {
     var templatePath = GetFamilyTemplatePath(document); // throws if file doesn't exist
     var famDoc = document.Application.NewFamilyDocument(templatePath);
 
     try
     {
-      using (var t = new Transaction(famDoc, "Create placeholder geometry"))
+      using (var t = new Transaction(famDoc, "Create family geometry"))
       {
         t.Start();
-        CreatePlaceholderGeometry(famDoc);
+        CreateGeometryInFamily(famDoc, definitionProxy, definitionGeometryObjects);
         SetFamilyWorkPlaneBased(famDoc); // enable work-plane-based placement
         t.Commit();
       }
@@ -280,27 +295,101 @@ public class RevitFamilyBaker
     return templatePath;
   }
 
-  /// <summary>
-  /// Creates placeholder geometry (1x1x1 foot box) for the family.
-  /// </summary>
-  private static void CreatePlaceholderGeometry(Document famDoc)
+  private void CreateGeometryInFamily(
+    Document famDoc,
+    InstanceDefinitionProxy definitionProxy,
+    IReadOnlyDictionary<string, Base> definitionGeometryObjects
+  )
   {
-    const double SIZE = 1.0; // 1 foot
+    var solids = new List<Solid>();
+    var skippedTypes = new HashSet<string>();
 
-    var profile = new CurveLoop();
-    var p0 = new XYZ(-SIZE / 2, -SIZE / 2, 0);
-    var p1 = new XYZ(SIZE / 2, -SIZE / 2, 0);
-    var p2 = new XYZ(SIZE / 2, SIZE / 2, 0);
-    var p3 = new XYZ(-SIZE / 2, SIZE / 2, 0);
+    foreach (var objectId in definitionProxy.objects)
+    {
+      if (!definitionGeometryObjects.TryGetValue(objectId, out var baseObject))
+      {
+        _logger.LogWarning(
+          "Could not resolve object {ObjectId} for definition {DefinitionName}",
+          objectId,
+          definitionProxy.name
+        );
+        continue;
+      }
 
-    profile.Append(Line.CreateBound(p0, p1));
-    profile.Append(Line.CreateBound(p1, p2));
-    profile.Append(Line.CreateBound(p2, p3));
-    profile.Append(Line.CreateBound(p3, p0));
+      try
+      {
+        ConvertGeometryForFamily(baseObject, solids, skippedTypes);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed to convert geometry for object {ObjectId}", objectId);
+      }
+    }
 
-    var solid = GeometryCreationUtilities.CreateExtrusionGeometry(new List<CurveLoop> { profile }, XYZ.BasisZ, SIZE);
+    if (skippedTypes.Count > 0)
+    {
+      _logger.LogInformation(
+        "Skipped geometry types for definition {DefinitionName}: {Types}",
+        definitionProxy.name,
+        string.Join(", ", skippedTypes)
+      );
+    }
 
-    using var _ = FreeFormElement.Create(famDoc, solid);
+    foreach (var solid in solids)
+    {
+      try
+      {
+        using var _ = FreeFormElement.Create(famDoc, solid);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed to create FreeFormElement");
+      }
+    }
+
+    if (solids.Count == 0)
+    {
+      _logger.LogWarning("No geometry created for definition {DefinitionName}", definitionProxy.name);
+    }
+  }
+
+  private void ConvertGeometryForFamily(Base target, List<Solid> solids, HashSet<string> skippedTypes)
+  {
+    switch (target)
+    {
+      case SOG.Mesh mesh:
+        var solid = _meshToSolidConverter.Convert(mesh);
+        if (solid != null)
+        {
+          solids.Add(solid);
+        }
+        break;
+
+      case SOG.Line:
+      case SOG.Polyline:
+      case SOG.Curve:
+      case SOG.Arc:
+      case SOG.Circle:
+      case SOG.Ellipse:
+      case SOG.Polycurve:
+        skippedTypes.Add(target.GetType().Name);
+        break;
+
+      case SOG.Point:
+        skippedTypes.Add("Point");
+        break;
+
+      default:
+        var displayValue = target.TryGetDisplayValue<Base>();
+        if (displayValue != null)
+        {
+          foreach (var display in displayValue)
+          {
+            ConvertGeometryForFamily(display, solids, skippedTypes);
+          }
+        }
+        break;
+    }
   }
 
   /// <summary>

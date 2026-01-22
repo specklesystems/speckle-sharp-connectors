@@ -33,6 +33,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Settings\ReferencePointType.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\RevitConversionSettingsFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\BaseToHostGeometryObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\MeshToSolidConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\PlanViewToHostGeometryObjectConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\ArcConverterToHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\Geometry\CircleConverterToHost.cs" />
