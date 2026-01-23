@@ -33,6 +33,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
+  private readonly RhinoViewBaker _viewBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
@@ -49,6 +50,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
+    RhinoViewBaker viewBaker,
     ISdkActivityFactory activityFactory,
     IThreadContext threadContext,
     IReceiveConversionHandler conversionHandler,
@@ -64,6 +66,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _colorBaker = colorBaker;
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
+    _viewBaker = viewBaker;
     _activityFactory = activityFactory;
     _threadContext = threadContext;
     _conversionHandler = conversionHandler;
@@ -124,6 +127,9 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     {
       _colorBaker.ParseColors(unpackedRoot.ColorProxies);
     }
+
+    // 3.1 - Bake views (Named Views)
+    _viewBaker.BakeViews(rootObject);
 
     // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)
