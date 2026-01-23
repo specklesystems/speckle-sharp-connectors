@@ -203,7 +203,7 @@ public sealed class RevitHostObjectBuilder(
     // 2.1 - Bake views
     {
       transactionManager.StartTransaction(true, "Baking views");
-      viewBaker.BakeViews(rootObject);
+      viewBaker.BakeViews(unpackedRoot.Cameras);
       transactionManager.CommitTransaction();
     }
 

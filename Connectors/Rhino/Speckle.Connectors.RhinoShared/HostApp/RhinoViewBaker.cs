@@ -1,13 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Rhino.DocObjects;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Models;
 using RG = Rhino.Geometry;
 
 namespace Speckle.Connectors.Rhino.HostApp;
@@ -36,11 +34,10 @@ public class RhinoViewBaker
   }
 
   /// <summary>
-  /// Bakes view objects from the root object as Named Views in Rhino.
+  /// Bakes Camera objects as Named Views in Rhino.
   /// </summary>
-  public void BakeViews(Base rootObject)
+  public void BakeViews(IReadOnlyCollection<Camera>? cameras)
   {
-    var cameras = TryGetCameras(rootObject);
     if (cameras == null || cameras.Count == 0)
     {
       return;
@@ -70,35 +67,6 @@ public class RhinoViewBaker
         _logger.LogError(ex, "Failed to create Named View '{ViewName}'", viewName);
       }
     }
-  }
-
-  private List<Camera>? TryGetCameras(Base rootObject)
-  {
-    if (!rootObject.DynamicPropertyKeys.Contains(RootKeys.VIEW))
-    {
-      return null;
-    }
-
-    var viewsProperty = rootObject[RootKeys.VIEW];
-    if (viewsProperty is null)
-    {
-      return null;
-    }
-
-    var cameras = new List<Camera>();
-
-    if (viewsProperty is IEnumerable<object> viewsList)
-    {
-      foreach (var item in viewsList)
-      {
-        if (item is Camera camera)
-        {
-          cameras.Add(camera);
-        }
-      }
-    }
-
-    return cameras;
   }
 
   private bool NamedViewExists(string name)

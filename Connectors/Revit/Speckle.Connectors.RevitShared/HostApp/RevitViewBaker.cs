@@ -1,12 +1,10 @@
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
@@ -37,11 +35,10 @@ public class RevitViewBaker
   private static readonly char[] s_invalidViewNameChars = ['{', '}', '[', ']', '|', ';', '<', '>', '?', '`', '~'];
 
   /// <summary>
-  /// Bakes Camera objects from the root object View3D in Revit.
+  /// Bakes Camera objects as View3D elements in Revit.
   /// </summary>
-  public void BakeViews(Base rootObject)
+  public void BakeViews(IReadOnlyCollection<Camera>? cameras)
   {
-    var cameras = TryGetCameras(rootObject);
     if (cameras == null || cameras.Count == 0)
     {
       return;
@@ -103,35 +100,6 @@ public class RevitViewBaker
     }
 
     return restored.Trim();
-  }
-
-  private List<Camera>? TryGetCameras(Base rootObject)
-  {
-    if (!rootObject.DynamicPropertyKeys.Contains(RootKeys.VIEW))
-    {
-      return null;
-    }
-
-    var viewsProperty = rootObject[RootKeys.VIEW];
-    if (viewsProperty is null)
-    {
-      return null;
-    }
-
-    var cameras = new List<Camera>();
-
-    if (viewsProperty is IEnumerable<object> viewsList)
-    {
-      foreach (var item in viewsList)
-      {
-        if (item is Camera camera)
-        {
-          cameras.Add(camera);
-        }
-      }
-    }
-
-    return cameras;
   }
 
   private bool ViewExistsByName(string name)
