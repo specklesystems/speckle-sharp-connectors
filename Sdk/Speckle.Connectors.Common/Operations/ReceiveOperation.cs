@@ -93,7 +93,7 @@ public sealed class ReceiveOperation(
     conversionActivity?.SetTag("receiveInfo.projectId", receiveInfo.ProjectId);
     conversionActivity?.SetTag("receiveInfo.modelId", receiveInfo.ModelId);
     conversionActivity?.SetTag("receiveInfo.selectedVersionId", receiveInfo.SelectedVersionId);
-    conversionActivity?.SetTag("receiveInfo.sourceApplication", receiveInfo.SourceApplication);
+    conversionActivity?.SetTag("receiveInfo.receivingApplicationSlug", receiveInfo.ReceivingApplicationSlug);
 
     try
     {
