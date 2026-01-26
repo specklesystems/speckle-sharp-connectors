@@ -154,7 +154,6 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
       var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
       instanceDefinitionId += materialId;
 
-      //var cacheKey = (instanceDefinitionId, "x");
       if (!InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
       {
         throw new InvalidOperationException(
