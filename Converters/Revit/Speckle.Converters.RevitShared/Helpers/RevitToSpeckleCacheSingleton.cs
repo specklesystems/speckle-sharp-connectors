@@ -1,3 +1,4 @@
+using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Objects.Other;
@@ -121,24 +122,6 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
   /// </remarks>
   public void AddMeshToMaterialProxy(string elementId, SOG.Mesh mesh, bool isInstance)
   {
-    // get mesh-to-material mapping
-    if (!MeshToMaterialMap.TryGetValue(elementId, out var meshMatMap))
-    {
-      logger.LogWarning("No mesh-to-material mapping found for element {ElementId}", elementId);
-      return;
-    }
-
-    // get material ID for this mesh
-    if (!meshMatMap.TryGetValue(mesh.applicationId.NotNull(), out var materialId))
-    {
-      logger.LogError(
-        "Cache inconsistency: Mesh {MeshId} not found in material mapping for element {ElementId}",
-        mesh.applicationId,
-        elementId
-      );
-      return;
-    }
-
     // get material proxy map
     if (!ObjectRenderMaterialProxiesMap.TryGetValue(elementId, out var proxyMap))
     {
@@ -146,10 +129,12 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
       return;
     }
 
+    var materialId = GetMaterialId(elementId, mesh);
+
     // get specific material proxy
     if (!proxyMap.TryGetValue(materialId, out var materialProxy))
     {
-      if (materialId != DB.ElementId.InvalidElementId.ToString())
+      if (materialId != ElementId.InvalidElementId.ToString())
       {
         logger.LogError(
           "Cache inconsistency: Material proxy not found for material {MaterialId} in element {ElementId}",
@@ -167,7 +152,9 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
     if (isInstance)
     {
       var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
+      instanceDefinitionId += materialId;
 
+      //var cacheKey = (instanceDefinitionId, "x");
       if (!InstancedObjects.TryGetValue(instanceDefinitionId, out var instancedObject))
       {
         throw new InvalidOperationException(
@@ -187,6 +174,29 @@ public class RevitToSpeckleCacheSingleton(ILogger<RevitToSpeckleCacheSingleton> 
     {
       materialProxy.objects.Add(meshIdToAdd);
     }
+  }
+
+  public string GetMaterialId(string elementId, SOG.Mesh mesh)
+  {
+    // get mesh-to-material mapping
+    if (!MeshToMaterialMap.TryGetValue(elementId, out var meshMatMap))
+    {
+      logger.LogWarning("No mesh-to-material mapping found for element {ElementId}", elementId);
+      return ElementId.InvalidElementId.ToString();
+    }
+
+    // get material ID for this mesh
+    if (!meshMatMap.TryGetValue(mesh.applicationId.NotNull(), out var materialId))
+    {
+      logger.LogError(
+        "Cache inconsistency: Mesh {MeshId} not found in material mapping for element {ElementId}",
+        mesh.applicationId,
+        elementId
+      );
+      return ElementId.InvalidElementId.ToString();
+    }
+
+    return materialId;
   }
 
   public void ClearCache()
