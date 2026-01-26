@@ -32,7 +32,22 @@ public class RevitViewBaker
   }
 
   // Characters that are not allowed in Revit view names
-  private static readonly char[] s_invalidViewNameChars = ['{', '}', '[', ']', '|', ';', '<', '>', '?', '`', '~'];
+  private static readonly char[] s_invalidViewNameChars =
+  [
+    '{',
+    '}',
+    '[',
+    ']',
+    '|',
+    ';',
+    '<',
+    '>',
+    '?',
+    '`',
+    '~',
+    '\\',
+    ':'
+  ];
 
   /// <summary>
   /// Bakes Camera objects as View3D elements in Revit.
@@ -75,24 +90,11 @@ public class RevitViewBaker
   }
 
   /// <summary>
-  /// Restores the view name by removing prefixes and invalid characters.
+  /// Sanitizes the view name by removing invalid characters.
   /// </summary>
   private static string RestoreViewName(string name)
   {
     var restored = name;
-
-    // Strip common view type prefixes (e.g., "3D View: Kitchen" -> "Kitchen")
-    string[] prefixesToRemove = ["3D View: ", "3D View:", "3D View - ", "3D View-"];
-    foreach (var prefix in prefixesToRemove)
-    {
-      if (restored.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-      {
-        restored = restored[prefix.Length..];
-        break;
-      }
-    }
-
-    restored = restored.Replace(':', '-');
 
     foreach (var c in s_invalidViewNameChars)
     {
