@@ -128,7 +128,6 @@ public sealed class DisplayValueExtractor
       {
         var curve = segment.GetCurve();
         var tessellated = curve.Tessellate();
-        // Add all points except the last to avoid duplicate with next segment's start
         foreach (var pt in tessellated)
         {
           vertices.Add(new Vector3(pt.X, pt.Y, pt.Z));
