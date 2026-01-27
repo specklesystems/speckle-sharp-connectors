@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
@@ -50,6 +51,7 @@ public record SpeckleUrlLatestModelVersionResource(
       model.name,
       version.id,
       version.sourceApplication.NotNull(),
+      HostApplications.Grasshopper.Slug,
       version.authorUser?.id
     );
 
@@ -65,13 +67,7 @@ public record SpeckleUrlLatestModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(
-      client.Account,
-      WorkspaceId,
-      ProjectId,
-      ModelId,
-      "Grasshopper8" // TODO: Grab from the right place!
-    );
+    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId, HostApplications.Grasshopper.Slug);
   }
 }
 
@@ -101,6 +97,7 @@ public record SpeckleUrlModelVersionResource(
       model.name,
       VersionId,
       version.sourceApplication.NotNull(),
+      HostApplications.Grasshopper.Slug,
       version.authorUser?.id
     );
 
@@ -116,13 +113,7 @@ public record SpeckleUrlModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(
-      client.Account,
-      WorkspaceId,
-      ProjectId,
-      ModelId,
-      "Grasshopper8" // TODO: Grab from the right place!
-    );
+    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId, HostApplications.Grasshopper.Slug);
   }
 }
 
