@@ -50,8 +50,7 @@ public static class SupportedCategoriesUtils
         return
 #if REVIT2023_OR_GREATER
           category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
-          && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines
-          && category.BuiltInCategory != BuiltInCategory.INVALID;
+          && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines;
 #else
           category.Name != "OST_AreaSchemeLines" && category.Name != "OST_AreaSchemes";
 #endif
