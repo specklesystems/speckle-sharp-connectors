@@ -1,3 +1,4 @@
+using Speckle.Common.MeshTriangulation;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToSpeckle;
@@ -62,18 +63,7 @@ public sealed class DisplayValueExtractor
       case DB.Grid grid:
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        List<DisplayValueResult> areaDisplay = new();
-        using (var options = new DB.SpatialElementBoundaryOptions())
-        {
-          foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
-          {
-            foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
-            {
-              areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
-            }
-          }
-        }
-        return areaDisplay;
+        return GetAreaDisplayValue(area);
 
       // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
       // Reference point transform is handled by point converters during conversion
@@ -102,6 +92,71 @@ public sealed class DisplayValueExtractor
   }
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
+
+  private List<DisplayValueResult> GetAreaDisplayValue(DB.Area area)
+  {
+    using var options = new DB.SpatialElementBoundaryOptions();
+    var boundaryGroups = area.GetBoundarySegments(options);
+    if (boundaryGroups.Count == 0)
+    {
+      return new List<DisplayValueResult>();
+    }
+
+    var polygons = new List<Poly3>();
+    foreach (var boundaryGroup in boundaryGroups)
+    {
+      var vertices = new List<Vector3>();
+      foreach (var segment in boundaryGroup)
+      {
+        var curve = segment.GetCurve();
+        var tessellated = curve.Tessellate();
+        // Add all points except the last to avoid duplicate with next segment's start
+        for (int i = 0; i < tessellated.Count - 1; i++)
+        {
+          var pt = tessellated[i];
+          vertices.Add(new Vector3(pt.X, pt.Y, pt.Z));
+        }
+      }
+
+      // Revit: outer=CCW, holes=CW; MeshGenerator: outer=CW, holes=CCW
+      var poly = new Poly3(vertices);
+      poly.Reverse();
+      polygons.Add(poly);
+    }
+
+    var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
+    var mesh3 = generator.TriangulateSurface(polygons);
+    var speckleMesh = ConvertMesh3ToSpeckleMesh(mesh3);
+    return [DisplayValueResult.WithoutTransform(speckleMesh)];
+  }
+
+  private SOG.Mesh ConvertMesh3ToSpeckleMesh(Mesh3 mesh3)
+  {
+    var vertices = new List<double>();
+    var faces = new List<int>();
+
+    foreach (var v in mesh3.Vertices)
+    {
+      vertices.Add(_toSpeckleScalingService.ScaleLength(v.X));
+      vertices.Add(_toSpeckleScalingService.ScaleLength(v.Y));
+      vertices.Add(_toSpeckleScalingService.ScaleLength(v.Z));
+    }
+
+    for (int i = 0; i < mesh3.Triangles.Count; i += 3)
+    {
+      faces.Add(3); // Triangle indicator
+      faces.Add(mesh3.Triangles[i]);
+      faces.Add(mesh3.Triangles[i + 1]);
+      faces.Add(mesh3.Triangles[i + 2]);
+    }
+
+    return new SOG.Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _converterSettings.Current.SpeckleUnits,
+    };
+  }
 
   private List<DisplayValueResult> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
