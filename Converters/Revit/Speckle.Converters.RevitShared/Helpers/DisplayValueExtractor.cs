@@ -28,6 +28,7 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IReferencePointConverter _referencePointConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -39,7 +40,8 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    IScalingServiceToSpeckle toSpeckleScalingService
+    IScalingServiceToSpeckle toSpeckleScalingService,
+    IReferencePointConverter referencePointConverter
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
@@ -49,6 +51,7 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
+    _referencePointConverter = referencePointConverter;
   }
 
   public List<DisplayValueResult> GetDisplayValue(DB.Element element)
@@ -140,7 +143,9 @@ public sealed class DisplayValueExtractor
         var tessellated = curve.Tessellate();
         foreach (var pt in tessellated)
         {
-          vertices.Add(new Vector3(pt.X, pt.Y, pt.Z));
+          // Transform to external coordinates based on reference point setting
+          var transformedPt = _referencePointConverter.ConvertToExternalCoordinates(pt, isPoint: true);
+          vertices.Add(new Vector3(transformedPt.X, transformedPt.Y, transformedPt.Z));
         }
       }
 
