@@ -123,10 +123,20 @@ public sealed class DisplayValueExtractor
     var polygons = new List<Poly3>();
     foreach (var boundaryGroup in boundaryGroups)
     {
+      if (boundaryGroup.Count == 0)
+      {
+        continue;
+      }
+
       var vertices = new List<Vector3>();
       foreach (var segment in boundaryGroup)
       {
         var curve = segment.GetCurve();
+        if (curve == null)
+        {
+          continue;
+        }
+
         var tessellated = curve.Tessellate();
         foreach (var pt in tessellated)
         {
@@ -134,10 +144,20 @@ public sealed class DisplayValueExtractor
         }
       }
 
+      if (vertices.Count < 3)
+      {
+        continue;
+      }
+
       // Revit: outer=CCW, holes=CW; MeshGenerator: outer=CW, holes=CCW
       var poly = new Poly3(vertices);
       poly.Reverse();
       polygons.Add(poly);
+    }
+
+    if (polygons.Count == 0)
+    {
+      return new List<DisplayValueResult>();
     }
 
     var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
