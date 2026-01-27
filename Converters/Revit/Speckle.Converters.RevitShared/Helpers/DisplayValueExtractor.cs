@@ -63,7 +63,9 @@ public sealed class DisplayValueExtractor
       case DB.Grid grid:
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        return GetAreaDisplayValue(area);
+        return _converterSettings.Current.SendAreasAsMesh
+          ? GetAreaMeshDisplayValue(area)
+          : GetAreaBoundaryDisplayValue(area);
 
       // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
       // Reference point transform is handled by point converters during conversion
@@ -93,7 +95,23 @@ public sealed class DisplayValueExtractor
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
 
-  private List<DisplayValueResult> GetAreaDisplayValue(DB.Area area)
+  private List<DisplayValueResult> GetAreaBoundaryDisplayValue(DB.Area area)
+  {
+    List<DisplayValueResult> areaDisplay = new();
+    using (var options = new DB.SpatialElementBoundaryOptions())
+    {
+      foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
+      {
+        foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
+        {
+          areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
+        }
+      }
+    }
+    return areaDisplay;
+  }
+
+  private List<DisplayValueResult> GetAreaMeshDisplayValue(DB.Area area)
   {
     using var options = new DB.SpatialElementBoundaryOptions();
     var boundaryGroups = area.GetBoundarySegments(options);
