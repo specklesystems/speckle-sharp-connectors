@@ -97,6 +97,7 @@ public record SpeckleUrlModelVersionResource(
       model.name,
       VersionId,
       version.sourceApplication.NotNull(),
+      HostApplications.Grasshopper.Slug,
       version.authorUser?.id
     );
 
@@ -112,13 +113,7 @@ public record SpeckleUrlModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(
-      client.Account,
-      WorkspaceId,
-      ProjectId,
-      ModelId,
-      "Grasshopper8" // TODO: Grab from the right place!
-    );
+    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId, HostApplications.Grasshopper.Slug);
   }
 }
 

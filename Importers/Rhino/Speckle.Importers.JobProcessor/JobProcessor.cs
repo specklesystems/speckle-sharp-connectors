@@ -105,7 +105,7 @@ internal sealed class JobProcessorInstance(
   )
   {
     string versionId = await client.Ingestion.Complete(
-      new(job.Payload.ModelIngestionId, job.Payload.ProjectId, rootObjectId),
+      new(job.Payload.ModelIngestionId, job.Payload.ProjectId, rootObjectId, null),
       cancellationToken
     );
     logger.LogInformation(
@@ -115,15 +115,6 @@ internal sealed class JobProcessorInstance(
       versionId,
       elapsedSeconds
     );
-
-    var input = new FileImportSuccessInput
-    {
-      projectId = job.Payload.ProjectId,
-      jobId = job.Payload.BlobId,
-      warnings = [],
-      result = new FileImportResult(elapsedSeconds, 0, 0, "Rhino Importer", versionId: versionId)
-    };
-    await client.FileImport.FinishFileImportJob(input, CancellationToken.None);
   }
 
   private async Task ReportCancelled(FileimportJob job, IClient client, Exception ex, double elapsedSeconds)
