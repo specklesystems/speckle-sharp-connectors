@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -23,8 +24,8 @@ public sealed class SendOperationManager(
   IOperationProgressManager operationProgressManager,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
-  ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
+  IClientFactory clientFactory,
   IAccountManager accountManager,
   ILogger<SendOperationManager> logger
 ) : ISendOperationManager
@@ -64,6 +65,8 @@ public sealed class SendOperationManager(
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
       }
+      using SendInfo sendInfo = GetSendInfo(modelCard);
+      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
@@ -83,14 +86,35 @@ public sealed class SendOperationManager(
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = GetSendInfo(modelCard);
-      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
+      var sendOperation = serviceScope.ServiceProvider.GetRequiredService<ISendOperation<T>>();
 
-      var sendResult = await serviceScope
-        .ServiceProvider.GetRequiredService<ISendOperation<T>>()
-        .Execute(objects, sendInfo, null, progress, cancellationItem.Token);
+      SendOperationResult result;
+      string versionId;
+      //If model ingestion is available
+      if ("1" == 1.ToString())
+      {
+        (result, versionId) = await sendOperation.SendViaIngestion(
+          objects,
+          sendInfo,
+          null,
+          null,
+          null,
+          progress,
+          cancellationItem.Token
+        );
+      }
+      else
+      {
+        (result, versionId) = await sendOperation.SendViaVersionCreate(
+          objects,
+          sendInfo,
+          null,
+          progress,
+          cancellationItem.Token
+        );
+      }
 
-      await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
+      await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -109,12 +133,8 @@ public sealed class SendOperationManager(
   private SendInfo GetSendInfo(SenderModelCard modelCard)
   {
     var account = accountManager.GetAccount(modelCard.AccountId.NotNull());
-    return new(
-      account,
-      modelCard.ProjectId.NotNull(),
-      modelCard.ModelId.NotNull(),
-      speckleApplication.ApplicationAndVersion
-    );
+    var client = clientFactory.Create(account);
+    return new(client, modelCard.ProjectId.NotNull(), modelCard.ModelId.NotNull());
   }
 
   [AutoInterfaceIgnore]

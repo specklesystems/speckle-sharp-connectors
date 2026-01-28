@@ -445,8 +445,8 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    SendOperationResult? result = await sendOperation
-      .Execute(
+    (SendOperationResult result, string versionId) = await sendOperation
+      .SendViaVersionCreate(
         new List<SpeckleCollectionWrapperGoo> { rootCollectionWrapper },
         sendInfo,
         Parent.VersionMessage,
@@ -473,10 +473,10 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
         sendInfo.ModelId,
-        result.VersionId
+        versionId
       );
     OutputParam = createdVersion;
-    OutputVersionId = result.VersionId;
+    OutputVersionId = versionId;
     Parent.Url = $"{createdVersion.Account.Server}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
   }
 }
