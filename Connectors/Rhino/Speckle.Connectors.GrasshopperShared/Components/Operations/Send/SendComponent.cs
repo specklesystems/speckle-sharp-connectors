@@ -221,8 +221,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    var result = await sendOperation
-      .Execute(
+    var (result, versionId) = await sendOperation
+      .SendViaVersionCreate(
         new List<SpeckleCollectionWrapperGoo> { collectionToSend },
         sendInfo,
         VersionMessage,
@@ -249,6 +249,6 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
         sendInfo.ModelId
       );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-    return new SendComponentOutput(createdVersionResource, result.VersionId);
+    return new SendComponentOutput(createdVersionResource, versionId);
   }
 }
