@@ -35,7 +35,7 @@ public class ViewInfoToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter, I
       name = target.Name,
       position = _pointConverter.Convert(target.Viewport.CameraLocation),
       up = _vectorConverter.Convert(target.Viewport.CameraY),
-      forward = _vectorConverter.Convert(target.Viewport.CameraZ),
+      forward = _vectorConverter.Convert(target.Viewport.CameraDirection),
     };
   }
 }
