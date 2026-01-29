@@ -275,12 +275,25 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
+      "speckle.common.meshtriangulation": {
+        "type": "Project",
+        "dependencies": {
+          "LibTessDotNet": "[1.1.15, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
           "Speckle.Objects": "[3.12.0, )"
         }
+      },
+      "LibTessDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.15, )",
+        "resolved": "1.1.15",
+        "contentHash": "KuA7N3Nv/lIeawJdQBQJR6oqWD9KETHLbWzBqapwFs+Tby+R5I4crkKujKMm5bXcSuFZ8LNtflFQVadsWCbBjg=="
       },
       "Microsoft.Extensions.Logging": {
         "type": "CentralTransitive",

@@ -44,6 +44,7 @@ public sealed class RevitReceiveBinding(
               toHostSettingsManager.GetReferencePointSetting(card),
               false,
               true,
+              false,
               false
             )
           );
