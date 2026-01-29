@@ -40,7 +40,7 @@ public sealed class SendOperation<T>(
       new(
         sendInfo.ModelId,
         sendInfo.ProjectId,
-        $"Sending from {speckleApplication.HostApplicationVersion}",
+        $"Sending from {speckleApplication.ApplicationAndVersion}",
         new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes)
       ),
       cancellationToken
