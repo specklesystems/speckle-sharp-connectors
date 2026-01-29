@@ -3,10 +3,10 @@ using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 
-namespace Speckle.Importers.Rhino.Internal.Progress;
+namespace Speckle.Connectors.Common.Operations.Send;
 
-[GenerateAutoInterface(VisibilityModifier = "public")]
-internal sealed class IngestionProgressManagerFactory(ILogger<IngestionProgressManager> logger)
+[GenerateAutoInterface]
+public sealed class IngestionProgressManagerFactory(ILogger<IngestionProgressManager> logger)
   : IIngestionProgressManagerFactory
 {
   public IIngestionProgressManager CreateInstance(

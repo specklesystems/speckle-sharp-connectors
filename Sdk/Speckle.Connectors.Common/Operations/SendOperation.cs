@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
@@ -23,7 +24,8 @@ public sealed class SendOperation<T>(
   ISendOperationExecutor sendOperationExecutor,
   ISdkActivityFactory activityFactory,
   IThreadContext threadContext,
-  ISpeckleApplication speckleApplication
+  ISpeckleApplication speckleApplication,
+  IIngestionProgressManagerFactory ingestionProgressManagerFactory
 ) : ISendOperation<T>
 {
   public async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
@@ -32,7 +34,7 @@ public sealed class SendOperation<T>(
     string? fileName,
     long? fileSizeBytes,
     string? versionMessage,
-    IProgress<CardProgress> progress,
+    IProgress<CardProgress> uiProgress,
     CancellationToken cancellationToken
   )
   {
@@ -45,7 +47,13 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
-
+    var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
+      sendInfo.Client,
+      ingestion,
+      sendInfo.ProjectId,
+      cancellationToken
+    );
+    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
     try
     {
       SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, cancellationToken);

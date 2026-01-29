@@ -10,6 +10,7 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -90,8 +91,9 @@ public sealed class SendOperationManager(
 
       SendOperationResult result;
       string versionId;
-      //If model ingestion is available
-      if ("1" == 1.ToString())
+      bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
+
+      if (useModelIngestionSend)
       {
         (result, versionId) = await sendOperation.SendViaIngestion(
           objects,
@@ -128,6 +130,37 @@ public sealed class SendOperationManager(
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
     }
+  }
+
+  /// <summary>
+  /// There are three paths for this function:
+  /// <ul>
+  /// <li>Server Supports ingestion, and the user has permission to create an ingetsion => returns <see langword="true"/></li>
+  /// <li> Server doesn't support ingestions (i.e. public server or old servers) => returns <see langword="false"/></li>
+  /// <li> Server Supports ingestions, but the user doesn't have permission to create ingestion => throws <see cref="WorkspacePermissionException"/></li>
+  /// </ul>
+  /// </summary>
+  /// <param name="sendInfo"></param>
+  /// <returns><see langword="true"/> if we should use model ingestion based send functions, false</returns>
+  /// <exception cref="WorkspacePermissionException">Thrown if the server supports model ingestion, but for other reasons we won't beable to create an ingestion</exception>
+  private static async Task<bool> CheckUseModelIngestionSend(SendInfo sendInfo)
+  {
+    bool useModelIngestionSend = true;
+    try
+    {
+      PermissionCheckResult permissionCheck = await sendInfo.Client.Model.CanCreateModelIngestion(
+        sendInfo.ProjectId,
+        sendInfo.ModelId
+      );
+      permissionCheck.EnsureAuthorised();
+    }
+    catch (SpeckleGraphQLInvalidQueryException)
+    {
+      // CanCreateModelIngestion will throw this if the server is too old and doesn't support model ingestion API
+      useModelIngestionSend = false;
+    }
+
+    return useModelIngestionSend;
   }
 
   private SendInfo GetSendInfo(SenderModelCard modelCard)
