@@ -98,6 +98,7 @@ public sealed class TeklaSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    var (fileName, fileSizeBytes) = GetFileInfo();
     using var manager = _sendOperationManagerFactory.Create();
     await manager.Process(
       Commands,
@@ -113,8 +114,8 @@ public sealed class TeklaSendBinding : ISendBinding
           .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
           .Where(obj => obj != null)
           .ToList(),
-      null, //TODO: file name
-      null
+      fileName,
+      fileSizeBytes
     );
   }
 

@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -77,6 +78,8 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
+    using var ingestionScope = ActivityScope.SetTag("modelIngestionId", ingestion.id);
+
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
       sendInfo.Client,
       ingestion,
