@@ -240,6 +240,13 @@
         "resolved": "4.5.1",
         "contentHash": "Zh8t8oqolRaFa9vmOZfdQm/qKejdqz0J9kr7o2Fu0vPeoH3BL1EOXipKWwkWtLT1JPzjByrF19fGuFlNbmPpiw=="
       },
+      "speckle.common.meshtriangulation": {
+        "type": "Project",
+        "dependencies": {
+          "LibTessDotNet": "[1.1.15, )",
+          "Speckle.DoubleNumerics": "[4.1.0, )"
+        }
+      },
       "speckle.connectors.common": {
         "type": "Project",
         "dependencies": {
@@ -275,9 +282,16 @@
       "speckle.converters.revit2025": {
         "type": "Project",
         "dependencies": {
+          "Speckle.Common.MeshTriangulation": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
           "Speckle.Revit.API": "[2025.0.0, )"
         }
+      },
+      "LibTessDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.15, )",
+        "resolved": "1.1.15",
+        "contentHash": "KuA7N3Nv/lIeawJdQBQJR6oqWD9KETHLbWzBqapwFs+Tby+R5I4crkKujKMm5bXcSuFZ8LNtflFQVadsWCbBjg=="
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",

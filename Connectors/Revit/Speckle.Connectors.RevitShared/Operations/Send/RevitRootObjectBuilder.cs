@@ -268,7 +268,7 @@ public class RevitRootObjectBuilder(
       new Collection()
       {
         elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
-        name = "revitInstancedObjects"
+        name = "definitionGeometry"
       }
     );
 
