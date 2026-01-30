@@ -219,7 +219,7 @@ public sealed class SendOperation<T>(
       );
       permissionCheck.EnsureAuthorised();
     }
-    catch (SpeckleGraphQLInvalidQueryException)
+    catch (AggregateException ex) when (ex.InnerExceptions.OfType<SpeckleGraphQLInvalidQueryException>().Any())
     {
       // CanCreateModelIngestion will throw this if the server is too old and doesn't support model ingestion API
       useModelIngestionSend = false;

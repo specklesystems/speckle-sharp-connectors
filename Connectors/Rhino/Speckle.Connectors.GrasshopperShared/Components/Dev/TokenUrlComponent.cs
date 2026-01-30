@@ -63,7 +63,7 @@ public class TokenUrlComponent : GH_Component
     try
     {
       // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-      var resource = SolveInstanceWithUrAndToken(urlInput, tokenInput, true).Result;
+      var resource = SolveInstanceWithUrAndToken(urlInput, tokenInput, true).GetAwaiter().GetResult();
 
       da.SetData(0, resource);
     }

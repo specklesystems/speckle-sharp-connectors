@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
-using Rhino;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
@@ -223,7 +222,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var (result, versionId) = await sendOperation
-      .Send([collectionToSend], sendInfo, , null, VersionMessage, progress, cancellationToken)
+      .Send([collectionToSend], sendInfo, null, null, VersionMessage, progress, cancellationToken)
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
