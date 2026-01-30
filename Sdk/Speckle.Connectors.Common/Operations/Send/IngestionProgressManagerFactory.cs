@@ -13,9 +13,10 @@ public sealed class IngestionProgressManagerFactory(ILogger<IngestionProgressMan
     IClient speckleClient,
     ModelIngestion ingestion,
     string projectId,
+    TimeSpan updateInterval,
     CancellationToken cancellationToken
   )
   {
-    return new IngestionProgressManager(logger, speckleClient, ingestion, projectId, cancellationToken);
+    return new IngestionProgressManager(logger, speckleClient, ingestion, projectId, updateInterval, cancellationToken);
   }
 }

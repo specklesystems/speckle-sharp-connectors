@@ -23,13 +23,13 @@ public sealed class IngestionProgressManager(
   IClient speckleClient,
   ModelIngestion ingestion,
   string projectId,
+  TimeSpan updateInterval,
   CancellationToken cancellationToken
 ) : IIngestionProgressManager
 {
   /// <remarks>
   /// We've picked quite a coarse throttle window to try and avoid over pressure
   /// </remarks>
-  private static readonly TimeSpan s_maxUpdatePeriod = TimeSpan.FromSeconds(1);
   private Task? _lastUpdate;
   private long _lastUpdatedAt;
   private readonly object _lock = new();
@@ -76,7 +76,7 @@ public sealed class IngestionProgressManager(
     }
 
     TimeSpan msSinceLastUpdate = StopwatchPollyfills.GetElapsedTime(_lastUpdatedAt);
-    return msSinceLastUpdate < s_maxUpdatePeriod;
+    return msSinceLastUpdate < updateInterval;
   }
 
   private void HandleFaultedContinuation(Task updateTask)
