@@ -186,6 +186,19 @@ public sealed class DisplayValueExtractor
       vertices.Add(v.Z);
     }
 
+    // validate triangle count
+    // checking defensively to ensure we never access invalid indices
+    if (mesh3.Triangles.Count % 3 != 0)
+    {
+      // this should never happen due to Mesh3 validation, but handle gracefully if it does
+      return new SOG.Mesh
+      {
+        vertices = vertices,
+        faces = new List<int>(),
+        units = _converterSettings.Current.SpeckleUnits,
+      };
+    }
+
     for (int i = 0; i < mesh3.Triangles.Count; i += 3)
     {
       faces.Add(3); // Triangle indicator
