@@ -72,7 +72,7 @@ public sealed class IngestionProgressManager(
   {
     if (_lastUpdate is not null && !_lastUpdate.IsCompleted)
     {
-      return false;
+      return true;
     }
 
     TimeSpan msSinceLastUpdate = StopwatchPollyfills.GetElapsedTime(_lastUpdatedAt);
