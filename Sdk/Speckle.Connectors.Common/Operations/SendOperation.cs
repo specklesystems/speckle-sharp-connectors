@@ -42,11 +42,19 @@ public sealed class SendOperation<T>(
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
     if (useModelIngestionSend)
     {
-      return await SendViaIngestion(objects, sendInfo, null, null, null, uiProgress, cancellationToken);
+      return await SendViaIngestion(
+        objects,
+        sendInfo,
+        fileName,
+        fileSizeBytes,
+        versionMessage,
+        uiProgress,
+        cancellationToken
+      );
     }
     else
     {
-      return await SendViaVersionCreate(objects, sendInfo, null, uiProgress, cancellationToken);
+      return await SendViaVersionCreate(objects, sendInfo, versionMessage, uiProgress, cancellationToken);
     }
   }
 
