@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Caching;
@@ -97,6 +98,7 @@ public sealed class TeklaSendBinding : ISendBinding
 
   public async Task Send(string modelCardId)
   {
+    var (fileName, fileSizeBytes) = GetFileInfo();
     using var manager = _sendOperationManagerFactory.Create();
     await manager.Process(
       Commands,
@@ -111,11 +113,24 @@ public sealed class TeklaSendBinding : ISendBinding
           .RefreshObjectIds()
           .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
           .Where(obj => obj != null)
-          .ToList()
+          .ToList(),
+      fileName,
+      fileSizeBytes
     );
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
+
+  private (string? fileName, long? fileSizeBytes) GetFileInfo()
+  {
+    string? path = _model.GetInfo()?.ModelPath;
+    if (path is null || !File.Exists(path))
+    {
+      return (null, null);
+    }
+    FileInfo file = new(path);
+    return (file.Name, file.Length);
+  }
 
   private async Task RunExpirationChecks()
   {

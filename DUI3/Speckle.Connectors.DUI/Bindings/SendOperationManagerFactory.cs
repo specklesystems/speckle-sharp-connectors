@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Models;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk;
+using Speckle.Sdk.Api;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
@@ -15,8 +15,8 @@ public class SendOperationManagerFactory(
   IOperationProgressManager operationProgressManager,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
-  ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
+  IClientFactory clientFactory,
   IAccountManager accountManager,
   ILoggerFactory loggerFactory
 ) : ISendOperationManagerFactory
@@ -29,8 +29,8 @@ public class SendOperationManagerFactory(
       operationProgressManager,
       store,
       cancellationManager,
-      speckleApplication,
       activityFactory,
+      clientFactory,
       accountManager,
       loggerFactory.CreateLogger<SendOperationManager>()
     );

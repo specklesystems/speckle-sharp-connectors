@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -7,6 +8,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 
@@ -61,25 +63,23 @@ public class TokenUrlComponent : GH_Component
     try
     {
       // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-      var (resource, hasPermission) = SolveInstanceWithUrAndToken(urlInput, tokenInput, true);
-      if (!hasPermission)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "You do not have enough permission for this project.");
-      }
+      var resource = Task.Run(() => SolveInstanceWithUrAndToken(urlInput, tokenInput)).GetAwaiter().GetResult();
+
       da.SetData(0, resource);
     }
-    catch (SpeckleException e)
+    catch (SpeckleException ex)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex.Message);
+      da.AbortComponentSolution();
+    }
+    catch (AggregateException ex)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex.ToFormattedString());
       da.AbortComponentSolution();
     }
   }
 
-  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrAndToken(
-    string input,
-    string token,
-    bool isSender
-  )
+  private async Task<SpeckleUrlModelResource> SolveInstanceWithUrAndToken(string input, string? token)
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
@@ -89,7 +89,7 @@ public class TokenUrlComponent : GH_Component
     if (resources.Length != 1)
     {
       // POC: this shouldn't ever hit since exceptions are thrown in the FromUrlString method
-      throw new SpeckleException($"FromUrlString parser returned an invalid resource");
+      throw new SpeckleException("FromUrlString parser returned an invalid resource");
     }
 
     var resource = resources.First();
@@ -109,24 +109,25 @@ public class TokenUrlComponent : GH_Component
       throw new SpeckleException("Token requires profile:read and profile:email scopes");
     }
 
+    using var userScope = UserActivityScope.AddUserScope(account);
     IClient client = scope.Get<IClientFactory>().Create(account);
 
-    var project = client.Project.Get(resource.ProjectId).Result;
-    var projectPermissions = client.Project.GetPermissions(resource.ProjectId).Result;
-    if (project != null && project.workspaceId != null)
+    var project = await client.Project.Get(resource.ProjectId);
+    if (project.workspaceId != null)
     {
-      var workspace = client.Workspace.Get(project.workspaceId).Result;
+      _ = await client.Workspace.Get(project.workspaceId);
     }
 
     switch (resource)
     {
-      case SpeckleUrlLatestModelVersionResource latestVersionResource:
-        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
+      case SpeckleUrlLatestModelVersionResource r:
+        _ = await client.Model.Get(r.ModelId, r.ProjectId);
         break;
-      case SpeckleUrlModelVersionResource versionResource:
-        var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
+      case SpeckleUrlModelVersionResource r:
+        _ = await client.Model.Get(r.ModelId, r.ProjectId);
+
         // TODO: this wont be the case when we have separation between send and receive components
-        var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
+        _ = await client.Version.Get(r.VersionId, r.ProjectId);
         break;
       case SpeckleUrlModelObjectResource:
         throw new SpeckleException("Object URLs are not supported");
@@ -134,6 +135,6 @@ public class TokenUrlComponent : GH_Component
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    return (resource, isSender ? projectPermissions.canPublish.authorized : projectPermissions.canLoad.authorized);
+    return resource;
   }
 }
