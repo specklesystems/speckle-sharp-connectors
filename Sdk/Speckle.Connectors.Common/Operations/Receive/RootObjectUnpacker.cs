@@ -27,7 +27,8 @@ public class RootObjectUnpacker
       TryGetGroupProxies(root),
       TryGetRenderMaterialProxies(root),
       TryGetColorProxies(root),
-      TryGetLevelProxies(root)
+      TryGetLevelProxies(root),
+      TryGetCameras(root)
     );
 
   private IReadOnlyCollection<TraversalContext> GetObjectsToConvert(Base root) =>
@@ -47,6 +48,9 @@ public class RootObjectUnpacker
 
   private IReadOnlyCollection<LevelProxy>? TryGetLevelProxies(Base root) =>
     TryGetProxies<LevelProxy>(root, ProxyKeys.LEVEL);
+
+  private IReadOnlyCollection<Camera>? TryGetCameras(Base root) =>
+    (root[RootKeys.VIEW] as IEnumerable<object>)?.OfType<Camera>().ToList();
 
   public (
     IReadOnlyCollection<TraversalContext> atomicObjects,
