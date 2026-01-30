@@ -1,6 +1,6 @@
 namespace Speckle.Connectors.DUI.Models;
 
-public record DocumentInfo(string Location, string Name, string Id)
+public record DocumentInfo(string Location, string Name, string Id, string? CloudFileId = null)
 {
   //?.Replace("\\", "\\\\"); // for some reason, when returning variables from a direct binding call
   //we don't need this. nevertheless, after switching to a post response back to the ui,
