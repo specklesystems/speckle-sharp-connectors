@@ -178,7 +178,7 @@ public sealed class DisplayValueExtractor
   {
     var vertices = new List<double>();
     var faces = new List<int>();
-    
+
     foreach (var v in mesh3.Vertices)
     {
       vertices.Add(v.X);
