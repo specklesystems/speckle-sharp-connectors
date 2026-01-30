@@ -108,7 +108,12 @@ public class SpeckleSelectModelComponent : GH_Component
         try
         {
           // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-          var resource = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true, null);
+          var (resource, permissionCheck) = SpeckleOperationWizard.SolveInstanceWithUrlInput(urlInput, true, null);
+
+          if (!permissionCheck.authorized)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, permissionCheck.message);
+          }
 
           _storedUserId = SpeckleOperationWizard.SelectedAccount?.id;
           _storedServer = resource.Account.Server;

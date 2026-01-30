@@ -67,7 +67,11 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public SpeckleUrlModelResource SolveInstanceWithUrlInput(string input, bool isSender, string? token)
+  public (SpeckleUrlModelResource, PermissionCheckResult) SolveInstanceWithUrlInput(
+    string input,
+    bool isSender,
+    string? token
+  )
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
@@ -129,13 +133,13 @@ public class SpeckleOperationWizard
     {
       case SpeckleUrlLatestModelVersionResource r:
         var model = client.Model.Get(r.ModelId, r.ProjectId).Result;
-        modelPermissions = client.Model.GetPermissions(r.ModelId, r.ProjectId).Result;
+        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
         ModelMenuHandler.RedrawMenuButton(model);
         break;
       case SpeckleUrlModelVersionResource r:
         var m = client.Model.Get(r.ModelId, r.ProjectId).Result;
         ModelMenuHandler.RedrawMenuButton(m);
-        modelPermissions = client.Model.GetPermissions(r.ModelId, r.ProjectId).Result;
+        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
         // TODO: this wont be the case when we have separation between send and receive components
         var v = client.Version.Get(r.VersionId, r.ProjectId).Result;
         VersionMenuHandler?.RedrawMenuButton(v, false);
@@ -146,15 +150,7 @@ public class SpeckleOperationWizard
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    if (isSender)
-    {
-      modelPermissions.canCreateVersion.EnsureAuthorised();
-    }
-    else
-    {
-      projectPermissions.canLoad.EnsureAuthorised();
-    }
-    return resource;
+    return (resource, isSender ? modelPermissions.canCreateVersion : projectPermissions.canLoad);
   }
 
   public void SetAccount(Account? account, bool refreshComponent = true)

@@ -8,7 +8,7 @@ using Speckle.Connectors.GrasshopperShared.Properties;
 using Speckle.Connectors.GrasshopperShared.Registration;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Models.Extensions;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Dev;
 
@@ -63,18 +63,23 @@ public class TokenUrlComponent : GH_Component
     try
     {
       // NOTE: once we split the logic in Sender and Receiver components, we need to set flag correctly
-      var resource = SolveInstanceWithUrAndToken(urlInput, tokenInput, true).GetAwaiter().GetResult();
+      var resource = Task.Run(() => SolveInstanceWithUrAndToken(urlInput, tokenInput)).GetAwaiter().GetResult();
 
       da.SetData(0, resource);
     }
-    catch (SpeckleException e)
+    catch (SpeckleException ex)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex.Message);
+      da.AbortComponentSolution();
+    }
+    catch (AggregateException ex)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, ex.ToFormattedString());
       da.AbortComponentSolution();
     }
   }
 
-  private async Task<SpeckleUrlModelResource> SolveInstanceWithUrAndToken(string input, string? token, bool isSender)
+  private async Task<SpeckleUrlModelResource> SolveInstanceWithUrAndToken(string input, string? token)
   {
     // When input is provided, lock interaction of buttons so only text is shown (no context menu)
     // Should perform validation, fill in all internal data of the component (project, model, version, account)
@@ -108,20 +113,18 @@ public class TokenUrlComponent : GH_Component
     IClient client = scope.Get<IClientFactory>().Create(account);
 
     var project = await client.Project.Get(resource.ProjectId);
-    var projectPermissions = await client.Project.GetPermissions(resource.ProjectId);
     if (project.workspaceId != null)
     {
       _ = await client.Workspace.Get(project.workspaceId);
     }
 
-    ModelPermissionChecks modelPermissions;
     switch (resource)
     {
       case SpeckleUrlLatestModelVersionResource r:
-        modelPermissions = await client.Model.GetPermissions(r.ModelId, r.ProjectId);
+        _ = await client.Model.Get(r.ModelId, r.ProjectId);
         break;
       case SpeckleUrlModelVersionResource r:
-        modelPermissions = await client.Model.GetPermissions(r.ModelId, r.ProjectId);
+        _ = await client.Model.Get(r.ModelId, r.ProjectId);
 
         // TODO: this wont be the case when we have separation between send and receive components
         _ = await client.Version.Get(r.VersionId, r.ProjectId);
@@ -132,14 +135,6 @@ public class TokenUrlComponent : GH_Component
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    if (isSender)
-    {
-      modelPermissions.canCreateVersion.EnsureAuthorised();
-    }
-    else
-    {
-      projectPermissions.canLoad.EnsureAuthorised();
-    }
     return resource;
   }
 }
