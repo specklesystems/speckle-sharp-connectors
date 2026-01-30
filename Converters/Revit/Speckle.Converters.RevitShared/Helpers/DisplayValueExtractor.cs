@@ -29,6 +29,7 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly IReferencePointConverter _referencePointConverter;
+  private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -41,7 +42,8 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle toSpeckleScalingService,
-    IReferencePointConverter referencePointConverter
+    IReferencePointConverter referencePointConverter,
+    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
@@ -52,6 +54,7 @@ public sealed class DisplayValueExtractor
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
     _referencePointConverter = referencePointConverter;
+    _xyzToPointConverter = xyzToPointConverter;
   }
 
   public List<DisplayValueResult> GetDisplayValue(DB.Element element)
@@ -143,9 +146,9 @@ public sealed class DisplayValueExtractor
         var tessellated = curve.Tessellate();
         foreach (var pt in tessellated)
         {
-          // Transform to external coordinates based on reference point setting
-          var transformedPt = _referencePointConverter.ConvertToExternalCoordinates(pt, isPoint: true);
-          vertices.Add(new Vector3(transformedPt.X, transformedPt.Y, transformedPt.Z));
+          // Apply both reference point transformation and scaling
+          var specklePoint = _xyzToPointConverter.Convert(pt);
+          vertices.Add(new Vector3(specklePoint.x, specklePoint.y, specklePoint.z));
         }
       }
 
@@ -175,12 +178,12 @@ public sealed class DisplayValueExtractor
   {
     var vertices = new List<double>();
     var faces = new List<int>();
-
+    
     foreach (var v in mesh3.Vertices)
     {
-      vertices.Add(_toSpeckleScalingService.ScaleLength(v.X));
-      vertices.Add(_toSpeckleScalingService.ScaleLength(v.Y));
-      vertices.Add(_toSpeckleScalingService.ScaleLength(v.Z));
+      vertices.Add(v.X);
+      vertices.Add(v.Y);
+      vertices.Add(v.Z);
     }
 
     for (int i = 0; i < mesh3.Triangles.Count; i += 3)
