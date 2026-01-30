@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.IO;
+using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.CSiShared.HostApp;
 using Speckle.Connectors.CSiShared.Operations.Send.Settings;
@@ -55,6 +56,7 @@ public sealed class CsiSharedSendBinding : ISendBinding
   public async Task Send(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
+    var (fileName, fileSizeBytes) = GetFileInfo();
     await manager.Process(
       Commands,
       modelCardId,
@@ -70,9 +72,21 @@ public sealed class CsiSharedSendBinding : ISendBinding
           );
       },
       card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList(),
-      null, //TODO: TODO file name
-      null
+      fileName,
+      fileSizeBytes
     );
+  }
+
+  private (string? fileName, long? fileBytes) GetFileInfo()
+  {
+    string fullPath = _csiApplicationService.SapModel.GetModelFilename(true);
+    if (!File.Exists(fullPath))
+    {
+      return (null, null);
+    }
+
+    var fileInfo = new FileInfo(fullPath);
+    return (fileInfo.Name, fileInfo.Length);
   }
 
   private ICsiWrapper DecodeObjectIdentifier(string encodedId)
