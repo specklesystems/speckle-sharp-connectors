@@ -5,6 +5,7 @@ using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
@@ -28,7 +29,28 @@ public sealed class SendOperation<T>(
   IIngestionProgressManagerFactory ingestionProgressManagerFactory
 ) : ISendOperation<T>
 {
-  public async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
+  public async Task<(SendOperationResult sendResult, string versionId)> Send(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    string? versionMessage,
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
+    if (useModelIngestionSend)
+    {
+      return await SendViaIngestion(objects, sendInfo, null, null, null, uiProgress, cancellationToken);
+    }
+    else
+    {
+      return await SendViaVersionCreate(objects, sendInfo, null, uiProgress, cancellationToken);
+    }
+  }
+
+  private async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -83,7 +105,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  public async Task<(SendOperationResult sendResult, string versionId)> SendViaVersionCreate(
+  private async Task<(SendOperationResult sendResult, string versionId)> SendViaVersionCreate(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? versionMessage,
@@ -173,6 +195,37 @@ public sealed class SendOperation<T>(
     cancellationToken.ThrowIfCancellationRequested();
 
     return sendResult;
+  }
+
+  /// <summary>
+  /// There are three paths for this function:
+  /// <ul>
+  /// <li>Server Supports ingestion, and the user has permission to create an ingetsion => returns <see langword="true"/></li>
+  /// <li> Server doesn't support ingestions (i.e. public server or old servers) => returns <see langword="false"/></li>
+  /// <li> Server Supports ingestions, but the user doesn't have permission to create ingestion => throws <see cref="WorkspacePermissionException"/></li>
+  /// </ul>
+  /// </summary>
+  /// <param name="sendInfo"></param>
+  /// <returns><see langword="true"/> if we should use model ingestion based send functions, false</returns>
+  /// <exception cref="WorkspacePermissionException">Thrown if the server supports model ingestion, but for other reasons we won't beable to create an ingestion</exception>
+  private static async Task<bool> CheckUseModelIngestionSend(SendInfo sendInfo)
+  {
+    bool useModelIngestionSend = true;
+    try
+    {
+      PermissionCheckResult permissionCheck = await sendInfo.Client.Model.CanCreateModelIngestion(
+        sendInfo.ProjectId,
+        sendInfo.ModelId
+      );
+      permissionCheck.EnsureAuthorised();
+    }
+    catch (SpeckleGraphQLInvalidQueryException)
+    {
+      // CanCreateModelIngestion will throw this if the server is too old and doesn't support model ingestion API
+      useModelIngestionSend = false;
+    }
+
+    return useModelIngestionSend;
   }
 }
 

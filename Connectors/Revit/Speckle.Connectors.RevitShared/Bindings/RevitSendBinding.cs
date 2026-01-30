@@ -188,7 +188,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             )
           );
       },
-      async x => await RefreshElementsIdsOnSender(document, x.NotNull())
+      async x => await RefreshElementsIdsOnSender(document, x.NotNull()),
+      fileName: document.PathName,
+      fileSizeBytes: null
     );
   }
 

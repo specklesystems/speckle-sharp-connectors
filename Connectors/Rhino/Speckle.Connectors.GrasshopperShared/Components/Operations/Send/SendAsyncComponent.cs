@@ -446,13 +446,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     (SendOperationResult result, string versionId) = await sendOperation
-      .SendViaVersionCreate(
-        new List<SpeckleCollectionWrapperGoo> { rootCollectionWrapper },
-        sendInfo,
-        Parent.VersionMessage,
-        progress,
-        CancellationToken
-      )
+      .Send([rootCollectionWrapper], sendInfo, null, null, Parent.VersionMessage, progress, CancellationToken)
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
