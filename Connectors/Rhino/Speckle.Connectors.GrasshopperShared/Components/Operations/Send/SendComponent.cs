@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Grasshopper;
 using Grasshopper.Kernel;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Analytics;
@@ -213,6 +214,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       throw new SpeckleAccountManagerException("No default account was found");
     }
 
+    var (fileName, fileBytes) = GetGrasshopperFileInfo();
+
     var progress = new Progress<CardProgress>(_ =>
     {
       // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
@@ -222,7 +225,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var (result, versionId) = await sendOperation
-      .Send([collectionToSend], sendInfo, null, null, VersionMessage, progress, cancellationToken)
+      .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, cancellationToken)
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
@@ -244,5 +247,18 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource, versionId);
+  }
+
+  public static (string? fileName, long? fileSizeBytes) GetGrasshopperFileInfo()
+  {
+    var doc = Instances.ActiveCanvas?.Document;
+
+    if (doc is null || !File.Exists(doc.FilePath))
+    {
+      return (null, null);
+    }
+    var fileInfo = new FileInfo(doc.FilePath);
+
+    return (fileInfo.Name, fileInfo.Length);
   }
 }

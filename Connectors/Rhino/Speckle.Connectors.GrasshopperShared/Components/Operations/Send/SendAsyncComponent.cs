@@ -437,16 +437,16 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     // Step 1 - SEND TO SERVER
     var sendInfo = await urlModelResource.GetSendInfo(Parent.ApiClient, CancellationToken).ConfigureAwait(false);
 
+    var (fileName, fileBytes) = SendComponent.GetGrasshopperFileInfo();
     var progress = new Progress<CardProgress>(p =>
     {
       reportProgress(Id, p.Progress ?? 0);
       //sendComponent.Message = $"{p.Status}";
     });
-
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     (SendOperationResult result, string versionId) = await sendOperation
-      .Send([rootCollectionWrapper], sendInfo, null, null, Parent.VersionMessage, progress, CancellationToken)
+      .Send([rootCollectionWrapper], sendInfo, fileName, fileBytes, Parent.VersionMessage, progress, CancellationToken)
       .ConfigureAwait(false);
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
