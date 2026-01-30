@@ -69,7 +69,9 @@ public sealed class CsiSharedSendBinding : ISendBinding
             )
           );
       },
-      card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList()
+      card => card.SendFilter.NotNull().RefreshObjectIds().Select(DecodeObjectIdentifier).ToList(),
+      null, //TODO: TODO file name
+      null
     );
   }
 

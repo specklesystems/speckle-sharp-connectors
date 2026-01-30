@@ -83,7 +83,7 @@ public class NavisworksSendBinding : ISendBinding
   private async Task SendInternal(string modelCardId)
   {
     using var manager = _sendOperationManagerFactory.Create();
-    await manager.Process(Commands, modelCardId, InitializeConverterSettings, GetNavisworksModelItems);
+    await manager.Process(Commands, modelCardId, InitializeConverterSettings, GetNavisworksModelItems, null, null); //TODO: file name
   }
 
   private void InitializeConverterSettings(IServiceProvider serviceProvider, SenderModelCard modelCard) =>

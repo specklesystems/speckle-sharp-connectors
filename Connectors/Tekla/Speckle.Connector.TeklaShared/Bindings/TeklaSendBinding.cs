@@ -111,7 +111,9 @@ public sealed class TeklaSendBinding : ISendBinding
           .RefreshObjectIds()
           .Select(id => _model.SelectModelObject(new Identifier(new Guid(id))))
           .Where(obj => obj != null)
-          .ToList()
+          .ToList(),
+      null, //TODO: file name
+      null
     );
   }
 
