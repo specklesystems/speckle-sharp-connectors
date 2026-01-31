@@ -73,6 +73,7 @@ public sealed class SendOperation<T>(
         sendInfo.Account,
         sendInfo.ProjectId,
         sendInfo.ModelId,
+        ingestion.id,
         cancellationToken
       );
       var buildResult = await rootObjectBuilder.Build(
