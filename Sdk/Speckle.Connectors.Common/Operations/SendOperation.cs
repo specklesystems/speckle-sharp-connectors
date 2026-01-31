@@ -62,6 +62,7 @@ public sealed class SendOperation<T>(
       sendInfo.Client,
       ingestion,
       sendInfo.ProjectId,
+      TimeSpan.FromSeconds(5),
       cancellationToken
     );
 

@@ -36,6 +36,7 @@ internal sealed class Sender(
       speckleClient,
       ingestion,
       project.id,
+      TimeSpan.FromSeconds(1.5),
       cancellationToken
     );
     // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
