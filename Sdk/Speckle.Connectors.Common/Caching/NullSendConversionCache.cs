@@ -13,6 +13,8 @@ public class NullSendConversionCache : ISendConversionCache
 
   public void EvictObjects(IEnumerable<string> objectIds) { }
 
+  public void AppendSendResult(string projectId, string applicationId, ObjectReference convertedReference) { }
+
   public void ClearCache() { }
 
   public bool TryGetValue(

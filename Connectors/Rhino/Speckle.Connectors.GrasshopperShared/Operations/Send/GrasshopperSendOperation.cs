@@ -5,6 +5,7 @@ using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines;
 using DataObject = Speckle.Objects.Data.DataObject;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Send;
@@ -32,6 +33,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     IReadOnlyList<SpeckleCollectionWrapperGoo> input,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    SendPipeline sendPipeline,
     CancellationToken ct = default
   )
   {

@@ -56,7 +56,10 @@ internal sealed class Sender(
     }
 
     var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-    var buildResults = await operation.Build(rhinoObjects, project.id, progressManager, cancellationToken);
+    var sendInfo = new SendInfo(speckleClient, project.id, ingestion.modelId);
+
+    var buildResults = await operation.Build(rhinoObjects, project.id, progressManager, sendInfo, cancellationToken);
+
     var results = await operation.SendObjects(
       buildResults.RootObject,
       project.id,

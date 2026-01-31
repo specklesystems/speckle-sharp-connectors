@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 
 namespace Speckle.Connectors.Common.Builders;
 
@@ -10,6 +11,7 @@ public interface IRootObjectBuilder<in T>
     IReadOnlyList<T> objects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    SendPipeline sendPipelinePipeline,
     CancellationToken cancellationToken
   );
 }

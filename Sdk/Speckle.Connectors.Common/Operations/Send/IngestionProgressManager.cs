@@ -29,7 +29,7 @@ public sealed class IngestionProgressManager(
   /// <remarks>
   /// We've picked quite a coarse throttle window to try and avoid over pressure
   /// </remarks>
-  private static readonly TimeSpan s_maxUpdatePeriod = TimeSpan.FromSeconds(1);
+  private static readonly TimeSpan s_maxUpdatePeriod = TimeSpan.FromSeconds(15);
   private Task? _lastUpdate;
   private long _lastUpdatedAt;
   private readonly object _lock = new();

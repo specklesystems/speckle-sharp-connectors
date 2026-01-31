@@ -39,7 +39,8 @@ public class RevitRootObjectBuilder(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct,
+    SendInfo sendInfo
   ) =>
     threadContext.RunOnMainAsync(
       () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
