@@ -1,6 +1,5 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
