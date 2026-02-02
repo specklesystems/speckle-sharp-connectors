@@ -61,6 +61,10 @@ public class ElementUnpacker
         // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
+
+        // filter out internal sketch elements (Stairs sketches, Mass sketches) that GetMemberIds() leaks.
+        // if we don't do this, we convert both the Stair AND its defining lines independently (CNX-2255)
+        groupElements = groupElements.Where(el => !IsSketchElement(el));
         unpackedElements.AddRange(UnpackElements(groupElements, doc));
       }
       else if (element is BaseArray baseArray)
@@ -166,5 +170,39 @@ public class ElementUnpacker
     }
 
     return ids.ToList();
+  }
+
+  /// <summary>
+  /// Checks if an element is an internal sketch line/curve that should be ignored during unpacking.
+  /// </summary>
+  /// <remarks>
+  /// Group.GetMemberIds() leaks internal definition elements (like sketch lines in Stairs or Masses).
+  /// This method filters them out to prevent recursive unpacking from converting these internal lines into duplicate,
+  /// unwanted geometry.
+  /// </remarks>
+  private static bool IsSketchElement(Element element)
+  {
+    if (element.Category == null)
+    {
+      return false;
+    }
+
+    // 'ElementId.IntegerValue' is obsolete in Revit 2024+, using 'Value' instead
+#if REVIT2024_OR_GREATER
+    var bic = (BuiltInCategory)element.Category.Id.Value;
+#else
+    var bic = (BuiltInCategory)element.Category.Id.IntegerValue;
+#endif
+
+    // Filter out generic sketch lines (often from In-Place Masses/Components)
+    // and specific Stair sketch components (Boundaries, Risers, Paths)
+    return bic
+      is BuiltInCategory.OST_SketchLines
+        or BuiltInCategory.OST_StairsSketchBoundaryLines
+        or BuiltInCategory.OST_StairsSketchLandingCenterLines
+        or BuiltInCategory.OST_StairsSketchRiserLines
+        or BuiltInCategory.OST_RebarSketchLines
+        or BuiltInCategory.OST_StairsSketchPathLines
+        or BuiltInCategory.OST_StairsSketchRunLines;
   }
 }
