@@ -162,7 +162,6 @@ public class SpeckleSelectModelComponent : GH_Component
         SpeckleOperationWizard.SetWorkspaceFromSavedIdSync(_storedWorkspaceId!);
       }
 
-      // NOTE FOR LATER: Need to be handled in SDK... and will come later by Jeddward Morgan...
       if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
       {
         var workspaces = SpeckleOperationWizard.FetchWorkspacesSync("");
