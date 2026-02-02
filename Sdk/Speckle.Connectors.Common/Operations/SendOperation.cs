@@ -42,7 +42,9 @@ public sealed class SendOperation<T>(
     SendInfo sendInfo,
     string? fileName,
     long? fileSizeBytes,
+#pragma warning disable IDE0060
     string? versionMessage,
+#pragma warning restore IDE0060
     IProgress<CardProgress> uiProgress,
     CancellationToken cancellationToken
   )
@@ -89,12 +91,13 @@ public sealed class SendOperation<T>(
       SendOperationResult result =
         new(buildResult.RootObject.id!, new Dictionary<Id, ObjectReference>(), buildResult.ConversionResults);
 
-      string createdVersionId = await sendInfo.Client.Ingestion.Complete(
-        new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
-        CancellationToken.None
-      );
+      // NOTE: clients do not need to complete the ingestion - that's going to the be the server's job
+      // string createdVersionId = await sendInfo.Client.Ingestion.Complete(
+      //   new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
+      //   CancellationToken.None
+      // );
 
-      return (result, createdVersionId);
+      return (result, "latest");
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
