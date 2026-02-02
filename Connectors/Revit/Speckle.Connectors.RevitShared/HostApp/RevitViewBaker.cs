@@ -110,7 +110,7 @@ public class RevitViewBaker
     return collector
       .OfClass(typeof(View3D))
       .Cast<View3D>()
-      .Any(v => !v.IsTemplate && string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
+      .Any(v => !v.IsTemplate && string.Equals(v.Name, name, StringComparison.Ordinal));
   }
 
   private void CreatePerspectiveView(Camera camera, string viewName)
