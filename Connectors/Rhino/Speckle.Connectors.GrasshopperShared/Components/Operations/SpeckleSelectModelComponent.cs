@@ -168,7 +168,11 @@ public class SpeckleSelectModelComponent : GH_Component
       if (SpeckleOperationWizard.WorkspaceMenuHandler.Workspaces == null)
       {
         var workspaces = SpeckleOperationWizard.FetchWorkspacesSync("");
-        if (workspaces.items.Count == 0)
+        if (workspaces == null)
+        {
+          _storedWorkspaceId = null;
+        }
+        else if (workspaces.items.Count == 0)
         {
           // Create a workspace flow
           SpeckleOperationWizard.CreateNewWorkspaceUIState();
