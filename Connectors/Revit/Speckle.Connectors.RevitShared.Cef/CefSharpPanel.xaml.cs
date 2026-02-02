@@ -22,9 +22,9 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
       return;
     }
 
-    if (!Browser.IsBrowserInitialized)
+    //avoid exceptions by checking if IBrowser is there
+    if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
     {
-      //Browser initialisation errors are too noisy in seq, so for now we're hiding them
       return;
     }
 
@@ -44,9 +44,9 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     Browser.Dispatcher.Invoke(
       () =>
       {
-        if (!Browser.IsBrowserInitialized)
+        //avoid exceptions by checking if IBrowser is there
+        if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
         {
-          //Browser initialisation errors are too noisy in seq, so for now we're hiding them
           return;
         }
 

@@ -66,7 +66,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   {
     if (_browser == null || !_browser.IsInitialized)
     {
-      throw new InvalidOperationException("Failed to execute script, ChromiumWebBrowser is not initialized yet");
+      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet");
     }
 
     if (!_browser.CheckAccess())
