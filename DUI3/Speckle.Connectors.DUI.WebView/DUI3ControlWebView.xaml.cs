@@ -36,7 +36,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
     if (!Browser.CheckAccess())
     {
-      SendDispatched(script, cancellationToken);
+      ExecuteScriptDispatched(script, cancellationToken);
       return;
     }
 
@@ -44,7 +44,7 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
   }
 
   /// <inheritdoc/>
-  public void SendDispatched(string script, CancellationToken cancellationToken)
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
   {
     if (Browser == null || !Browser.IsInitialized)
     {

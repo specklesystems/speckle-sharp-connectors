@@ -8,7 +8,7 @@ public interface IBrowserScriptExecutor
   /// <remarks>
   /// Safe to call from any thread, will use the dispatcher only if called from not the main thread.
   ///
-  /// Use <see cref="SendDispatched"/> if you wish to always use the dispatched (e.g. to keep UI responsive).
+  /// Use <see cref="ExecuteScriptDispatched"/> if you wish to always use the dispatched (e.g. to keep UI responsive).
   /// </remarks>
   /// <exception cref="InvalidOperationException">thrown when <see cref="IsBrowserInitialized"/> is <see langword="false"/></exception>
   /// <param name="script">The (constant string) script to execute on the browser</param>
@@ -39,7 +39,7 @@ public interface IBrowserScriptExecutor
   /// </remarks>
   /// <param name="script"></param>
   /// <param name="cancellationToken"></param>
-  void SendDispatched(string script, CancellationToken cancellationToken);
+  void ExecuteScriptDispatched(string script, CancellationToken cancellationToken);
 
   bool IsBrowserInitialized { get; }
 

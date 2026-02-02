@@ -79,7 +79,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   }
 
   /// <inheritdoc/>
-  public void SendDispatched(string script, CancellationToken cancellationToken)
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
   {
     if (_browser == null || !_browser.IsInitialized)
     {

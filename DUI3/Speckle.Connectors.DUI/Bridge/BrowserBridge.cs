@@ -307,6 +307,6 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.SendDispatched(script, cancellationToken);
+    _browserScriptExecutor.ExecuteScriptDispatched(script, cancellationToken);
   }
 }

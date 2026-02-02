@@ -18,7 +18,7 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
   {
     if (!Browser.CheckAccess())
     {
-      SendDispatched(script, cancellationToken);
+      ExecuteScriptDispatched(script, cancellationToken);
       return;
     }
 
@@ -32,7 +32,7 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
   }
 
   /// <inheritdoc/>
-  public void SendDispatched(string script, CancellationToken cancellationToken)
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
   {
     if (Browser == null || !Browser.IsInitialized)
     {
