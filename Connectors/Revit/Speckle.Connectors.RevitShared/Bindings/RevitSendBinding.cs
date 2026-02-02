@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
@@ -172,7 +173,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       throw new SpeckleException("No document is active for sending.");
     }
     using var manager = _sendOperationManagerFactory.Create();
-
+    var (fileName, fileBytes) = GetFileInfo(document);
     await manager.Process<DocumentToConvert>(
       Commands,
       modelCardId,
@@ -190,8 +191,24 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             )
           );
       },
-      async x => await RefreshElementsIdsOnSender(document, x.NotNull())
+      async x => await RefreshElementsIdsOnSender(document, x.NotNull()),
+      fileName: fileName,
+      fileSizeBytes: fileBytes
     );
+  }
+
+  private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
+  {
+    string fullPath = document.PathName;
+    if (File.Exists(document.PathName))
+    {
+      var fileInfo = new FileInfo(document.PathName);
+      return (fileInfo.Name, fileInfo.Length);
+    }
+    else
+    {
+      return (fullPath.Split('/').LastOrDefault(), null);
+    }
   }
 
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(Document document, SenderModelCard modelCard)
