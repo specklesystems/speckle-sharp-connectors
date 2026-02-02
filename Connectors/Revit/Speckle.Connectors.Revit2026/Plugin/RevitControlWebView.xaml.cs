@@ -71,7 +71,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
 
     if (!_browser.CheckAccess())
     {
-      SendDispatched(script, cancellationToken);
+      ExecuteScriptDispatched(script, cancellationToken);
       return;
     }
 
