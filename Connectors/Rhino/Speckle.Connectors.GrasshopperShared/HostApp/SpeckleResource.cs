@@ -67,7 +67,7 @@ public record SpeckleUrlLatestModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId, HostApplications.Grasshopper.Slug);
+    return new GrasshopperSendInfo(client, WorkspaceId, ProjectId, ModelId);
   }
 }
 
@@ -113,7 +113,7 @@ public record SpeckleUrlModelVersionResource(
     await client.Project.Get(ProjectId, cancellationToken).ConfigureAwait(false);
     await client.Model.Get(ModelId, ProjectId, cancellationToken).ConfigureAwait(false);
 
-    return new GrasshopperSendInfo(client.Account, WorkspaceId, ProjectId, ModelId, HostApplications.Grasshopper.Slug);
+    return new GrasshopperSendInfo(client, WorkspaceId, ProjectId, ModelId);
   }
 }
 

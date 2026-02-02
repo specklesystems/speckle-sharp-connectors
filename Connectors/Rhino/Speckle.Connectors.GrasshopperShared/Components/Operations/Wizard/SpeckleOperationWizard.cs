@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Registration;
@@ -66,7 +67,7 @@ public class SpeckleOperationWizard
     ModelMenuHandler.ModelSelected += OnModelSelected;
   }
 
-  public (SpeckleUrlModelResource resource, bool hasPermission) SolveInstanceWithUrlInput(
+  public (SpeckleUrlModelResource, PermissionCheckResult) SolveInstanceWithUrlInput(
     string input,
     bool isSender,
     string? token
@@ -114,7 +115,7 @@ public class SpeckleOperationWizard
         $"No appropriate account found for the given '{urlDerivedAccount?.serverInfo.url}' server"
       );
     }
-
+    using var userScope = UserActivityScope.AddUserScope(SelectedAccount);
     IClient client = _clientFactory.Create(SelectedAccount);
 
     var project = client.Project.Get(resource.ProjectId).Result;
@@ -127,18 +128,20 @@ public class SpeckleOperationWizard
 
     ProjectMenuHandler.RedrawMenuButton(project);
 
+    ModelPermissionChecks modelPermissions;
     switch (resource)
     {
-      case SpeckleUrlLatestModelVersionResource latestVersionResource:
-        var model = client.Model.Get(latestVersionResource.ModelId, latestVersionResource.ProjectId).Result;
+      case SpeckleUrlLatestModelVersionResource r:
+        var model = client.Model.Get(r.ModelId, r.ProjectId).Result;
+        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
         ModelMenuHandler.RedrawMenuButton(model);
         break;
-      case SpeckleUrlModelVersionResource versionResource:
-        var m = client.Model.Get(versionResource.ModelId, versionResource.ProjectId).Result;
+      case SpeckleUrlModelVersionResource r:
+        var m = client.Model.Get(r.ModelId, r.ProjectId).Result;
         ModelMenuHandler.RedrawMenuButton(m);
-
+        modelPermissions = client.Model.GetPermissions(r.ProjectId, r.ModelId).Result;
         // TODO: this wont be the case when we have separation between send and receive components
-        var v = client.Version.Get(versionResource.VersionId, versionResource.ProjectId).Result;
+        var v = client.Version.Get(r.VersionId, r.ProjectId).Result;
         VersionMenuHandler?.RedrawMenuButton(v, false);
         break;
       case SpeckleUrlModelObjectResource:
@@ -147,7 +150,7 @@ public class SpeckleOperationWizard
         throw new SpeckleException("Unknown Speckle resource type");
     }
 
-    return (resource, isSender ? projectPermissions.canPublish.authorized : projectPermissions.canLoad.authorized);
+    return (resource, isSender ? modelPermissions.canCreateVersion : projectPermissions.canLoad);
   }
 
   public void SetAccount(Account? account, bool refreshComponent = true)
