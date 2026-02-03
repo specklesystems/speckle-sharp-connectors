@@ -34,6 +34,7 @@ public sealed class RevitHostObjectBuilder(
   ILocalToGlobalUnpacker localToGlobalUnpacker,
   RevitGroupBaker groupManager,
   RevitMaterialBaker materialBaker,
+  RevitViewBaker viewBaker,
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
@@ -196,6 +197,14 @@ public sealed class RevitHostObjectBuilder(
       {
         revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
       }
+      transactionManager.CommitTransaction();
+    }
+
+    // 2.1 - Bake views
+    if (unpackedRoot.Cameras is not null)
+    {
+      transactionManager.StartTransaction(true, "Baking views");
+      viewBaker.BakeViews(unpackedRoot.Cameras);
       transactionManager.CommitTransaction();
     }
 
