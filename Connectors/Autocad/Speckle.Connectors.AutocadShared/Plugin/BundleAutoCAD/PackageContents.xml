@@ -18,7 +18,7 @@
         <!-- AutoCAD 2022 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Autocad2022"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2022\Speckle.Connectors.Autocad2022.dll"
+                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2022/Speckle.Connectors.Autocad2022.dll"
                 AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
@@ -31,7 +31,7 @@
         <!-- AutoCAD 2023 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Autocad2023"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2023\Speckle.Connectors.Autocad2023.dll"
+                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2023/Speckle.Connectors.Autocad2023.dll"
                 AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
@@ -44,7 +44,7 @@
         <!-- AutoCAD 2024 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Autocad2024"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2024\Speckle.Connectors.Autocad2024.dll"
+                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2024/Speckle.Connectors.Autocad2024.dll"
                 AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
@@ -57,7 +57,7 @@
         <!-- AutoCAD 2025 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Autocad2025"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2025\Speckle.Connectors.Autocad2025.dll"
+                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2025/Speckle.Connectors.Autocad2025.dll"
                 AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
@@ -70,7 +70,7 @@
         <!-- AutoCAD 2026 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Autocad2026"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2026\Speckle.Connectors.Autocad2026.dll"
+                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2026/Speckle.Connectors.Autocad2026.dll"
                 AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
