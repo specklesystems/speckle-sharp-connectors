@@ -6,8 +6,8 @@
         Name="Speckle for Civil 3D"
         Description="Speckle for Civil 3D"
         Icon="./Contents/Resources/Logo.ico"
-        ProductCode="{958850b9-3782-4e6f-b9b3-1b570e0fcae1}"
-        UpgradeCode="{274de351-80aa-4972-9b45-6a93f8ce968f}"> <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
+        ProductCode="{cecad7b2-daa9-4a9d-941d-737619ffd999}"
+        UpgradeCode="{ccf4134d-0e24-4e91-8bf4-781ec7313bef}"> <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
 
     <CompanyDetails
             Name="Speckle"
@@ -19,7 +19,6 @@
         <ComponentEntry
                 AppName="Speckle.Connectors.Civil3d2022"
                 ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2022/Speckle.Connectors.Civil3d2022.dll"
-                AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
                     OS="Win64"
@@ -32,7 +31,6 @@
         <ComponentEntry
                 AppName="Speckle.Connectors.Civil3d2023"
                 ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2023/Speckle.Connectors.Civil3d2023.dll"
-                AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
                     OS="Win64"
@@ -45,7 +43,6 @@
         <ComponentEntry
                 AppName="Speckle.Connectors.Civil3d2024"
                 ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2024/Speckle.Connectors.Civil3d2024.dll"
-                AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
                     OS="Win64"
@@ -58,7 +55,6 @@
         <ComponentEntry
                 AppName="Speckle.Connectors.Civil3d2025"
                 ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2025/Speckle.Connectors.Civil3d2025.dll"
-                AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
                     OS="Win64"
@@ -71,7 +67,6 @@
         <ComponentEntry
                 AppName="Speckle.Connectors.Civil3d2026"
                 ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2026/Speckle.Connectors.Civil3d2026.dll"
-                AppType="Managed"
                 LoadOnAutoCADStartup="True">
             <RuntimeRequirements
                     OS="Win64"
