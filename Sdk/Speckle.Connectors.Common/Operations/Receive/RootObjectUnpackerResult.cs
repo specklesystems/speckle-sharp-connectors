@@ -11,5 +11,6 @@ public record RootObjectUnpackerResult(
   IReadOnlyCollection<GroupProxy>? GroupProxies,
   IReadOnlyCollection<RenderMaterialProxy>? RenderMaterialProxies,
   IReadOnlyCollection<ColorProxy>? ColorProxies,
-  IReadOnlyCollection<LevelProxy>? LevelProxies
+  IReadOnlyCollection<LevelProxy>? LevelProxies,
+  IReadOnlyCollection<Camera>? Cameras
 );

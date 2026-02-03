@@ -81,7 +81,11 @@ public class RevitCategoriesFilter : DiscriminatedObject, ISendFilter, IRevitSen
 
     foreach (Category category in _doc.Settings.Categories)
     {
-      if (SupportedCategoriesUtils.IsSupportedCategory(category))
+      if (SupportedCategoriesUtils.IsSupportedCategory(category)
+#if REVIT2023_OR_GREATER
+        && category.BuiltInCategory != BuiltInCategory.INVALID
+#endif
+      )
       {
         categories.Add(new CategoryData(category.Name, category.Id.ToString()));
       }

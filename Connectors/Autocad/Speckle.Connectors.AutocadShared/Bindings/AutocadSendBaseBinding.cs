@@ -145,7 +145,9 @@ public abstract class AutocadSendBaseBinding : ISendBinding
         Commands,
         modelCardId,
         (sp, card) => InitializeSettings(sp),
-        card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds())
+        card => Application.DocumentManager.CurrentDocument.GetObjects(card.SendFilter.NotNull().RefreshObjectIds()),
+        Application.DocumentManager.CurrentDocument.Name,
+        null
       );
     }
     finally

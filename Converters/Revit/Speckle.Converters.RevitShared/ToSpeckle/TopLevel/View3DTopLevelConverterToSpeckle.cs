@@ -40,7 +40,7 @@ public class View3DTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter, ITy
 
     return new()
     {
-      name = target.Title,
+      name = target.Name,
       position = _xyzToPointConverter.Convert(target.Origin),
       forward = _xyzToVectorConverter.Convert(orientation.ForwardDirection),
       up = _xyzToVectorConverter.Convert(orientation.UpDirection)
