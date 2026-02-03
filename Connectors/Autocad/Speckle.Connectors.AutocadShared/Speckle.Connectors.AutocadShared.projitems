@@ -54,7 +54,10 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\s2logo32.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\PackageContents.xml">
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\BundleCivil3D\PackageContents.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\BundleAutoCAD\PackageContents.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

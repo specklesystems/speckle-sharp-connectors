@@ -10,7 +10,7 @@
     </ItemGroup>
     <Message Text="AutoCAD Version $(AutoCADVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\Contents\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
-    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\" SourceFiles="$(TargetDir)\Plugin\PackageContents.xml" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\" SourceFiles="$(TargetDir)\Plugin\BundleAutoCAD\PackageContents.xml" />
   </Target>
 
   <Target AfterTargets="Clean" Name="CleanAddinCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
@@ -23,7 +23,7 @@
     </ItemGroup>
     <Message Text="Civil3D Version $(Civil3DVersion)" Importance="high"/>
     <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\Contents\$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
-    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\" SourceFiles="$(TargetDir)\Plugin\PackageContents.xml" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\" SourceFiles="$(TargetDir)\Plugin\BundleCivil3D\PackageContents.xml" />
   </Target>
 
   <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
