@@ -129,7 +129,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
 
     // 3.1 - Bake views (Named Views)
-    _viewBaker.BakeViews(unpackedRoot.Cameras);
+    if (unpackedRoot.Cameras is not null)
+    {
+      _viewBaker.BakeViews(unpackedRoot.Cameras);
+    }
 
     // 4 - Bake layers
     // See [CNX-325: Rhino: Change receive operation order to increase performance](https://linear.app/speckle/issue/CNX-325/rhino-change-receive-operation-order-to-increase-performance)

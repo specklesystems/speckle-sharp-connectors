@@ -36,9 +36,9 @@ public class RhinoViewBaker
   /// <summary>
   /// Bakes Camera objects as Named Views in Rhino.
   /// </summary>
-  public void BakeViews(IReadOnlyCollection<Camera>? cameras)
+  public void BakeViews(IReadOnlyCollection<Camera> cameras)
   {
-    if (cameras == null || cameras.Count == 0)
+    if (cameras.Count == 0)
     {
       return;
     }

@@ -201,6 +201,7 @@ public sealed class RevitHostObjectBuilder(
     }
 
     // 2.1 - Bake views
+    if (unpackedRoot.Cameras is not null)
     {
       transactionManager.StartTransaction(true, "Baking views");
       viewBaker.BakeViews(unpackedRoot.Cameras);
