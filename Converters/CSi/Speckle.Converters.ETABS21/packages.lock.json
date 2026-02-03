@@ -171,8 +171,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.11.1",
-        "contentHash": "D04pCdleqLeDxthANCb8+X1xfEYr4+Q3GTuHtqOrMQeGHDAVPc5G3M0D6VYEUYbLYav0NBZ6tNuWO2Y/fqfWSw==",
+        "resolved": "3.13.1",
+        "contentHash": "qCKCPT4HeSCJ7S+wnnjF+N+9Sd6lj5+Ra9DfxDHHrFli9rtXdnQRU5UOObyfcbiWQidVXhc2n0kbo3LPCEcvNw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
@@ -182,13 +182,13 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.11.1"
+          "Speckle.Sdk.Dependencies": "3.13.1"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.11.1",
-        "contentHash": "u8lJ+ECslmVPsn4yOCg3hAzj3zh6r+gp2oQh8RDGn22NihIPOsMhBFvoBruL1QVhXdJcS4rI2J6VEAbdvL9FRg=="
+        "resolved": "3.13.1",
+        "contentHash": "McLXS+Hd/bW+AdJifxGUIQi+ftofGY5r6i/X00HmlnbOvHJKZAR6fzJ12E8otMhMd78He8tcyjBD3R2jOR9ctA=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -279,7 +279,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.11.1, )"
+          "Speckle.Objects": "[3.13.1, )"
         }
       },
       "Microsoft.Extensions.Logging": {
@@ -308,11 +308,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.11.1, )",
-        "resolved": "3.11.1",
-        "contentHash": "JUCY3bA6Pa+fa6wZV9uQ9mhLRihvICkF58nIr28Yi94j0th7wSg4l8WeThl3ubKVnHDQE5mdVffVlY1e5ZUkuQ==",
+        "requested": "[3.13.1, )",
+        "resolved": "3.13.1",
+        "contentHash": "VRG8SApTbAYA0YmgWTw0Eb+/AHeE0yOxDuKBTvFj3VipuSnwF29fV479BehnZdg3d8OBh4aP/YEx3vPAafybVw==",
         "dependencies": {
-          "Speckle.Sdk": "3.11.1"
+          "Speckle.Sdk": "3.13.1"
         }
       }
     }

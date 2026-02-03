@@ -1,13 +1,12 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.Contracts;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Extensions;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 
-namespace Speckle.Importers.Rhino.Internal.Progress;
+namespace Speckle.Connectors.Common.Operations.Send;
 
 public partial interface IIngestionProgressManager : IProgress<CardProgress>;
 
@@ -18,19 +17,19 @@ public partial interface IIngestionProgressManager : IProgress<CardProgress>;
 /// <remarks>
 /// The same class exists also in the RVT ODA codebase
 /// </remarks>
-[GenerateAutoInterface(VisibilityModifier = "public")]
-internal sealed class IngestionProgressManager(
+[GenerateAutoInterface]
+public sealed class IngestionProgressManager(
   ILogger<IngestionProgressManager> logger,
   IClient speckleClient,
   ModelIngestion ingestion,
   string projectId,
+  TimeSpan updateInterval,
   CancellationToken cancellationToken
 ) : IIngestionProgressManager
 {
   /// <remarks>
   /// We've picked quite a coarse throttle window to try and avoid over pressure
   /// </remarks>
-  private static readonly TimeSpan s_maxUpdatePeriod = TimeSpan.FromSeconds(1);
   private Task? _lastUpdate;
   private long _lastUpdatedAt;
   private readonly object _lock = new();
@@ -47,8 +46,6 @@ internal sealed class IngestionProgressManager(
       {
         return;
       }
-
-      OverPressureCheck();
 
       _lastUpdatedAt = Stopwatch.GetTimestamp();
 
@@ -70,26 +67,16 @@ internal sealed class IngestionProgressManager(
     logger.LogInformation("Progress update {Message} {Progress}", trimmedMessage, value.Progress);
   }
 
-  /// <remarks>
-  /// I'm concerned that the time it takes for e2e update progress takes longer than MAX_UPDATE_FREQUENCY_MS
-  /// with high enough latency, say during times of high load or with high latency regions
-  /// </remarks>
-  private void OverPressureCheck()
+  /// <returns><see langword="true"/> if the update should be ignored, otherwise <see langword="false"/></returns>
+  private bool ShouldIgnoreProgressUpdate()
   {
     if (_lastUpdate is not null && !_lastUpdate.IsCompleted)
     {
-      logger.LogWarning(
-        "Sending progress updates too quickly! next update ready to send but the last progress is still updating!"
-      );
+      return true;
     }
-  }
 
-  /// <returns><see langword="true"/> if the update should be ignored, otherwise <see langword="false"/></returns>
-  [Pure]
-  private bool ShouldIgnoreProgressUpdate()
-  {
-    TimeSpan msSinceLastUpdate = Stopwatch.GetElapsedTime(_lastUpdatedAt);
-    return msSinceLastUpdate < s_maxUpdatePeriod;
+    TimeSpan msSinceLastUpdate = StopwatchPollyfills.GetElapsedTime(_lastUpdatedAt);
+    return msSinceLastUpdate < updateInterval;
   }
 
   private void HandleFaultedContinuation(Task updateTask)

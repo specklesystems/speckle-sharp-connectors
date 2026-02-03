@@ -1,6 +1,5 @@
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk.Common;
@@ -12,17 +11,13 @@ namespace Speckle.Connectors.Revit.Plugin;
 /// Whether it's to try and generalize with the <see cref="IdleCallManager"/> class
 /// or to unnecessary try and make this class thread safe.
 /// This class is a simple singleton, targeted to a Revit's host app requirements
-/// where everything happens on the main thread, and we can avoid overly complex threading/thread-safty.
+/// where everything happens on the main thread, and we can avoid overly complex threading/thread-safety.
 ///
-/// Previous good refactors with good intention have lead to poor debugging experiences, over-engineered threading,
+/// Previous refactors with good intention have lead to poor debugging experiences, over-engineered threading,
 /// and low confidence in the reliability.
 /// </remarks>
 /// should be registered as singleton
-public class RevitIdleManager(
-  RevitContext revitContext,
-  ITopLevelExceptionHandler topLevelExceptionHandler,
-  ILogger<RevitIdleManager> logger
-)
+public class RevitIdleManager(RevitContext revitContext, ITopLevelExceptionHandler topLevelExceptionHandler)
 {
   private readonly UIApplication _uiApplication = revitContext.UIApplication.NotNull();
 
@@ -61,7 +56,9 @@ public class RevitIdleManager(
   {
     if (_isExecutingIdle)
     {
-      logger.LogWarning("SubscribeToIdle called while already executing idle events");
+      //Either, you're trying to SubscribeToIdle from not the main thread (don't do this)
+      //OR, an OnIdle event handler is calling SubscribeToIdle (re-entry), check the call stack
+      throw new InvalidOperationException("SubscribeToIdle called while already executing idle events");
     }
 
     _calls[name] = action;
@@ -81,7 +78,9 @@ public class RevitIdleManager(
     {
       if (_isExecutingIdle)
       {
-        logger.LogWarning("SubscribeToIdle called while already executing idle events");
+        //Either, you're trying to SubscribeToIdle from not the main thread (don't do this)
+        //OR, an OnIdle event handler is calling SubscribeToIdle (re-entry), check the call stack... avoid this
+        throw new InvalidOperationException("SubscribeToIdle called while already executing idle events");
       }
 
       _isExecutingIdle = true;

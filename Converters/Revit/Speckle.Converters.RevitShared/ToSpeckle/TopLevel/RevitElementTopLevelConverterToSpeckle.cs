@@ -218,6 +218,8 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
   private InstanceProxy CreateOrGetInstanceProxy(string elementId, SOG.Mesh mesh, Matrix4x4 transform)
   {
     var instanceDefinitionId = MeshInstanceIdGenerator.GenerateUntransformedMeshId(mesh);
+    var materialId = _revitToSpeckleCacheSingleton.GetMaterialId(elementId, mesh);
+    instanceDefinitionId += materialId;
 
     // We need to attach element id relationship to proxy singleton for send caching.
     // Send caching skips whole DB.Element that turn into RevitDataObject. since we have instance proxies in RevitDataObject but

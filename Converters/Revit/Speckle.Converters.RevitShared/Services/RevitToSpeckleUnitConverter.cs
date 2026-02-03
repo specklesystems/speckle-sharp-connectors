@@ -28,6 +28,9 @@ public sealed class RevitToSpeckleUnitConverter : IHostToSpeckleUnitConverter<DB
       return value;
     }
 
-    throw new UnitNotSupportedException($"The Unit System \"{hostUnit}\" is unsupported.");
+    string unitLabel = DB.LabelUtils.GetLabelForUnit(hostUnit);
+    throw new UnitNotSupportedException(
+      $"The Unit System \"{unitLabel}\" is unsupported. Please change your document's unit system and try again."
+    );
   }
 }
