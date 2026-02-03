@@ -61,26 +61,37 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
 
   public object BrowserElement => _browser!;
 
-  public void ExecuteScript(string script)
+  /// <inheritdoc/>
+  public void ExecuteScript(string script, CancellationToken cancellationToken)
   {
     if (_browser == null || !_browser.IsInitialized)
     {
-      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
+      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet");
     }
-    _revitTask.Run(() => _browser.ExecuteScriptAsync(script));
+
+    if (!_browser.CheckAccess())
+    {
+      ExecuteScriptDispatched(script, cancellationToken);
+      return;
+    }
+
+    _browser.ExecuteScriptAsync(script);
   }
 
-  public void SendProgress(string script)
+  /// <inheritdoc/>
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
   {
     if (_browser == null || !_browser.IsInitialized)
     {
-      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
+      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet");
     }
-    //always invoke even on the main thread because it's better somehow
+
+    //Intentionally using the dispatcher even from the main thread
+    //As it allows the UI to pump messages, and stay responsive
     _browser.Dispatcher.Invoke(
-      //fire and forget
       () => _browser.ExecuteScriptAsync(script),
-      DispatcherPriority.Background
+      DispatcherPriority.Background,
+      cancellationToken
     );
   }
 
