@@ -26,29 +26,39 @@ public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExec
 
   public object BrowserElement => Browser;
 
-  public void ExecuteScript(string script)
+  /// <inheritdoc/>
+  public void ExecuteScript(string script, CancellationToken cancellationToken)
   {
-    if (!Browser.IsInitialized)
+    if (Browser == null || !Browser.IsInitialized)
     {
-      throw new InvalidOperationException("Failed to execute script, Webview2 is not initialized yet.");
+      throw new InvalidOperationException("Failed to execute script, ChromiumWebBrowser is not initialized yet");
     }
 
-    try
+    if (!Browser.CheckAccess())
     {
-      //always invoke even on the main thread because it's better somehow
-      Browser.Dispatcher.Invoke(
-        //fire and forget
-        () => Browser.ExecuteScriptAsync(script),
-        DispatcherPriority.Background
-      );
+      ExecuteScriptDispatched(script, cancellationToken);
+      return;
     }
-    catch (OperationCanceledException)
-    {
-      //do nothing, happens when closing Revit while a script is being executed
-    }
+
+    Browser.ExecuteScriptAsync(script);
   }
 
-  public void SendProgress(string script) => ExecuteScript(script);
+  /// <inheritdoc/>
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
+  {
+    if (Browser == null || !Browser.IsInitialized)
+    {
+      throw new InvalidOperationException("Failed to execute script, ChromiumWebBrowser is not initialized yet");
+    }
+
+    //Intentionally using the dispatcher even from the main thread
+    //As it allows the UI to pump messages, and stay responsive
+    Browser.Dispatcher.Invoke(
+      () => Browser.ExecuteScriptAsync(script),
+      DispatcherPriority.Background,
+      cancellationToken
+    );
+  }
 
   private void OnInitialized(object? sender, CoreWebView2InitializationCompletedEventArgs e)
   {
