@@ -57,15 +57,18 @@ public class RevitViewBaker
         continue;
       }
 
-      if (ViewExistsByName(restoredName))
-      {
-        _logger.LogInformation("View with name '{ViewName}' already exists, skipping creation", restoredName);
-        continue;
-      }
+      var existingView = FindViewByName(restoredName);
 
       try
       {
-        CreatePerspectiveView(camera, restoredName);
+        if (existingView != null)
+        {
+          UpdatePerspectiveView(existingView, camera);
+        }
+        else
+        {
+          CreatePerspectiveView(camera, restoredName);
+        }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -89,13 +92,23 @@ public class RevitViewBaker
     return restored.Trim();
   }
 
-  private bool ViewExistsByName(string name)
+  private View3D? FindViewByName(string name)
   {
     using var collector = new FilteredElementCollector(_converterSettings.Current.Document);
     return collector
       .OfClass(typeof(View3D))
       .Cast<View3D>()
-      .Any(v => !v.IsTemplate && string.Equals(v.Name, name, StringComparison.Ordinal));
+      .FirstOrDefault(v => !v.IsTemplate && string.Equals(v.Name, name, StringComparison.Ordinal));
+  }
+
+  private void UpdatePerspectiveView(View3D view3D, Camera camera)
+  {
+    var eyePosition = _pointConverter.Convert(camera.position);
+    var forwardDirection = _vectorConverter.Convert(camera.forward).Normalize();
+    var upDirection = _vectorConverter.Convert(camera.up).Normalize();
+
+    var orientation = new ViewOrientation3D(eyePosition, upDirection, forwardDirection);
+    view3D.SetOrientation(orientation);
   }
 
   private void CreatePerspectiveView(Camera camera, string viewName)

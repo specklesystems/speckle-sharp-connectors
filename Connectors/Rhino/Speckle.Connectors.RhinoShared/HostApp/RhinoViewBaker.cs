@@ -52,14 +52,9 @@ public class RhinoViewBaker
 
       var viewName = camera.name.Trim();
 
-      if (NamedViewExists(viewName))
-      {
-        _logger.LogInformation("Named View '{ViewName}' already exists, skipping creation", viewName);
-        continue;
-      }
-
       try
       {
+        RemoveNamedViewIfExists(viewName);
         CreateNamedView(camera, viewName);
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -69,17 +64,17 @@ public class RhinoViewBaker
     }
   }
 
-  private bool NamedViewExists(string name)
+  private void RemoveNamedViewIfExists(string name)
   {
     var doc = _converterSettings.Current.Document;
-    foreach (var view in doc.NamedViews)
+    for (int i = doc.NamedViews.Count - 1; i >= 0; i--)
     {
-      if (string.Equals(view.Name, name, StringComparison.OrdinalIgnoreCase))
+      if (string.Equals(doc.NamedViews[i].Name, name, StringComparison.OrdinalIgnoreCase))
       {
-        return true;
+        doc.NamedViews.Delete(i);
+        break;
       }
     }
-    return false;
   }
 
   private void CreateNamedView(Camera camera, string viewName)
