@@ -61,7 +61,9 @@ public class ElementUnpacker
         // We add null checks to handle cases where elements can't be properly resolved
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(groupElements, doc));
+        // GetMemberIds returns a bunch of noise (sketch lines, form elements etc.) below filter, filters out those noise.
+        var filteredElements = FilterGroupElements(groupElements);
+        unpackedElements.AddRange(UnpackElements(filteredElements, doc));
       }
       else if (element is BaseArray baseArray)
       {
@@ -104,6 +106,34 @@ public class ElementUnpacker
     // Add null check before GroupBy to prevent NullReferenceException when processing linked models with groups
     // This ensures we don't try to access .Id on any null elements that might have been added during the unpacking process
     return unpackedElements.Where(el => el != null).GroupBy(el => el.Id).Select(g => g.First()).ToList(); // no disinctBy in here sadly.
+  }
+
+  /// <summary>
+  /// Filters out elements that should not be sent from groups:
+  /// - Elements whose category parent is OST_Mass or OST_Lines (these are typically construction geometry)
+  /// - FamilySymbol elements (type definitions rather than placed instances)
+  /// </summary>
+  private IEnumerable<Element> FilterGroupElements(IEnumerable<Element> elements)
+  {
+    foreach (var element in elements)
+    {
+      if (element is FamilySymbol)
+      {
+        continue;
+      }
+
+      var category = element.Category;
+      if (category?.Parent != null)
+      {
+        var parentBuiltInCategory = category.Parent.GetBuiltInCategory();
+        if (parentBuiltInCategory == BuiltInCategory.OST_Mass || parentBuiltInCategory == BuiltInCategory.OST_Lines)
+        {
+          continue;
+        }
+      }
+
+      yield return element;
+    }
   }
 
   // We use the nullable document (happiness level 5/10) for the sake of linked models - bc we use this function in 2 different places
