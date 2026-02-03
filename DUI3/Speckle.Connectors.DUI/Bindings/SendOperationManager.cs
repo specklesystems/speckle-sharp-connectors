@@ -9,6 +9,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
+using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
@@ -23,8 +24,8 @@ public sealed class SendOperationManager(
   IOperationProgressManager operationProgressManager,
   DocumentModelStore store,
   ICancellationManager cancellationManager,
-  ISpeckleApplication speckleApplication,
   ISdkActivityFactory activityFactory,
+  IClientFactory clientFactory,
   IAccountManager accountManager,
   ILogger<SendOperationManager> logger
 ) : ISendOperationManager
@@ -33,27 +34,47 @@ public sealed class SendOperationManager(
     ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
-    Func<SenderModelCard, IReadOnlyList<T>> gatherObjects
+    Func<SenderModelCard, IReadOnlyList<T>> gatherObjects,
+    string? fileName,
+    long? fileSizeBytes
   )
   {
-    await Process(commands, modelCardId, initializeScope, (card, _) => Task.FromResult(gatherObjects(card)));
+    await Process(
+      commands,
+      modelCardId,
+      initializeScope,
+      (card, _) => Task.FromResult(gatherObjects(card)),
+      fileName,
+      fileSizeBytes
+    );
   }
 
   public async Task Process<T>(
     ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
-    Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects
+    Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects,
+    string? fileName,
+    long? fileSizeBytes
   )
   {
-    await Process(commands, modelCardId, initializeScope, async (card, _) => await gatherObjects(card));
+    await Process(
+      commands,
+      modelCardId,
+      initializeScope,
+      async (card, _) => await gatherObjects(card),
+      fileName,
+      fileSizeBytes
+    );
   }
 
   public async Task Process<T>(
     ISendBindingUICommands commands,
     string modelCardId,
     Action<IServiceProvider, SenderModelCard> initializeScope,
-    Func<SenderModelCard, IProgress<CardProgress>, Task<IReadOnlyList<T>>> gatherObjects
+    Func<SenderModelCard, IProgress<CardProgress>, Task<IReadOnlyList<T>>> gatherObjects,
+    string? fileName,
+    long? fileSizeBytes
   )
   {
     using var activity = activityFactory.Start();
@@ -64,6 +85,8 @@ public sealed class SendOperationManager(
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
       }
+      using SendInfo sendInfo = GetSendInfo(modelCard);
+      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
@@ -83,14 +106,19 @@ public sealed class SendOperationManager(
         throw new SpeckleSendFilterException("No objects were found to convert. Please update your publish filter!");
       }
 
-      var sendInfo = GetSendInfo(modelCard);
-      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
+      var sendOperation = serviceScope.ServiceProvider.GetRequiredService<ISendOperation<T>>();
 
-      var sendResult = await serviceScope
-        .ServiceProvider.GetRequiredService<ISendOperation<T>>()
-        .Execute(objects, sendInfo, null, progress, cancellationItem.Token);
+      var (result, versionId) = await sendOperation.Send(
+        objects,
+        sendInfo,
+        fileName,
+        fileSizeBytes,
+        null,
+        progress,
+        cancellationItem.Token
+      );
 
-      await commands.SetModelSendResult(modelCardId, sendResult.VersionId, sendResult.ConversionResults);
+      await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults);
     }
     catch (OperationCanceledException)
     {
@@ -109,12 +137,8 @@ public sealed class SendOperationManager(
   private SendInfo GetSendInfo(SenderModelCard modelCard)
   {
     var account = accountManager.GetAccount(modelCard.AccountId.NotNull());
-    return new(
-      account,
-      modelCard.ProjectId.NotNull(),
-      modelCard.ModelId.NotNull(),
-      speckleApplication.ApplicationAndVersion
-    );
+    var client = clientFactory.Create(account);
+    return new(client, modelCard.ProjectId.NotNull(), modelCard.ModelId.NotNull());
   }
 
   [AutoInterfaceIgnore]
