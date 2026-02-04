@@ -35,3 +35,5 @@
 
 # Build
 /Build/* @JR-Morgan @oguzhankoral
+/.github/* @JR-Morgan @oguzhankoral
+/.config/* @JR-Morgan @oguzhankoral
