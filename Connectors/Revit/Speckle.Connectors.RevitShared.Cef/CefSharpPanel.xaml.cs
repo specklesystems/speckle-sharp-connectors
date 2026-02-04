@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Autodesk.Revit.UI;
@@ -14,35 +13,49 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     InitializeComponent();
   }
 
-  public void ExecuteScript(string script)
+  /// <inheritdoc/>
+  public void ExecuteScript(string script, CancellationToken cancellationToken)
   {
-    try
+    if (!Browser.CheckAccess())
     {
-      Browser.Dispatcher.Invoke(
-        () =>
-        {
-          //avoid exceptions by checking if IBrowser is there
-          if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
-          {
-            return;
-          }
+      ExecuteScriptDispatched(script, cancellationToken);
+      return;
+    }
 
-          Browser.ExecuteScriptAsync(script);
-        },
-        DispatcherPriority.Background
-      );
-    }
-    catch (SEHException)
+    //avoid exceptions by checking if IBrowser is there
+    if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
     {
-      //do nothing as we can't control external components
+      return;
     }
-    catch (OperationCanceledException)
-    {
-      //do nothing, happens when closing Revit while a script is being executed
-    }
+
+    Browser.ExecuteScriptAsync(script);
   }
 
-  public void SendProgress(string script) => ExecuteScript(script);
+  /// <inheritdoc/>
+  public void ExecuteScriptDispatched(string script, CancellationToken cancellationToken)
+  {
+    if (Browser == null || !Browser.IsInitialized)
+    {
+      throw new InvalidOperationException("Failed to execute script, ChromiumWebBrowser is not initialized yet");
+    }
+
+    //Intentionally using the dispatcher even from the main thread
+    //As it allows the UI to pump messages, and stay responsive
+    Browser.Dispatcher.Invoke(
+      () =>
+      {
+        //avoid exceptions by checking if IBrowser is there
+        if (!Browser.IsBrowserInitialized || Browser.GetBrowser() is null)
+        {
+          return;
+        }
+
+        Browser.ExecuteScriptAsync(script);
+      },
+      DispatcherPriority.Background,
+      cancellationToken
+    );
+  }
 
   public bool IsBrowserInitialized => Browser.IsBrowserInitialized;
   public object BrowserElement => Browser;
