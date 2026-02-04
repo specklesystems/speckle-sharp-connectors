@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rhino;
@@ -287,6 +288,7 @@ public sealed class RhinoSendBinding : ISendBinding
   {
     using var manager = _sendOperationManagerFactory.Create();
 
+    var (fileName, fileBytes) = GetFileInfo();
     await manager.Process(
       Commands,
       modelCardId,
@@ -307,8 +309,21 @@ public sealed class RhinoSendBinding : ISendBinding
             .Where(obj => obj != null)
             .ToList()
         );
-      }
+      },
+      fileName,
+      fileBytes
     );
+  }
+
+  private static (string? fileName, long? fileBytes) GetFileInfo()
+  {
+    RhinoDoc doc = RhinoDoc.ActiveDoc.NotNull("No active rhino doc");
+    long? fileSize = null;
+    if (File.Exists(doc.Path))
+    {
+      fileSize = new FileInfo(doc.Path).Length;
+    }
+    return (doc.Name, fileSize);
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);

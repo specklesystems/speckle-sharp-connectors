@@ -17,13 +17,16 @@ namespace Speckle.Connectors.Revit.HostApp;
 internal sealed class RevitDocumentStore : DocumentModelStore
 {
   private readonly ILogger<RevitDocumentStore> _logger;
-  private readonly IAppIdleManager _idleManager;
+
+  //private readonly IAppIdleManager _idleManager;
+  private readonly RevitIdleManager _idleManager;
   private readonly RevitContext _revitContext;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
 
   public RevitDocumentStore(
-    IAppIdleManager idleManager,
+    //IAppIdleManager idleManager,
+    RevitIdleManager idleManager,
     RevitContext revitContext,
     IJsonSerializer jsonSerializer,
     ITopLevelExceptionHandler topLevelExceptionHandler,
@@ -34,6 +37,7 @@ internal sealed class RevitDocumentStore : DocumentModelStore
     : base(logger, jsonSerializer)
   {
     _jsonCacheManager = jsonCacheManagerFactory.CreateForUser("ConnectorsFileData");
+    //_idleManager = idleManager;
     _idleManager = idleManager;
     _revitContext = revitContext;
     _topLevelExceptionHandler = topLevelExceptionHandler;

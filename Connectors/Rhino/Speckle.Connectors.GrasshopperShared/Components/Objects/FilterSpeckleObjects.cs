@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -12,7 +13,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 /// Given a list of objects, this component will filter the list for objects that match the queries.
 /// </summary>
 [Guid("26AEA046-4DD4-4F61-8251-E92A6D2AC880")]
-public class FilterSpeckleObjects : GH_Component
+public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_filter;
@@ -49,17 +50,6 @@ public class FilterSpeckleObjects : GH_Component
       GH_ParamAccess.item
     );
     Params.Input[3].Optional = true;
-
-    pManager.AddTextParameter(
-      "Application Id",
-      "aID",
-      "Find objects with a matching applicationId",
-      GH_ParamAccess.item
-    );
-    Params.Input[4].Optional = true;
-
-    pManager.AddTextParameter("Speckle Id", "sID", "Find objects with a matching Speckle id", GH_ParamAccess.item);
-    Params.Input[5].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -103,101 +93,39 @@ public class FilterSpeckleObjects : GH_Component
     dataAccess.GetData(2, ref property);
     string material = "";
     dataAccess.GetData(3, ref material);
+
+    // optional parameters - only read if they've been added via ⊕
     string appId = "";
-    dataAccess.GetData(4, ref appId);
     string speckleId = "";
-    dataAccess.GetData(5, ref speckleId);
+    int? appIdIndex = FindInputIndexByName("Application Id");
+    int? speckleIdIndex = FindInputIndexByName("Speckle Id");
+
+    if (appIdIndex.HasValue)
+    {
+      dataAccess.GetData(appIdIndex.Value, ref appId);
+    }
+
+    if (speckleIdIndex.HasValue)
+    {
+      dataAccess.GetData(speckleIdIndex.Value, ref speckleId);
+    }
+
+    bool filterByAppId = appIdIndex.HasValue;
+    bool filterBySpeckleId = speckleIdIndex.HasValue;
 
     List<SpeckleWrapper> matchedObjects = new();
     List<SpeckleWrapper> removedObjects = new();
-    for (int i = 0; i < objects.Count; i++)
+
+    foreach (SpeckleWrapper wrapper in objects.Cast<SpeckleWrapper>())
     {
-      SpeckleWrapper wrapper = objects[i]!;
-
-      // filter by name
-      if (!MatchesSearchPattern(name, wrapper.Name))
+      if (MatchesAllFilters(wrapper, name, property, material, appId, filterByAppId, speckleId, filterBySpeckleId))
       {
-        removedObjects.Add(wrapper);
-        continue;
-      }
-
-      // filter by property
-      bool foundProperty = false;
-      if (string.IsNullOrEmpty(property))
-      {
-        foundProperty = true;
+        matchedObjects.Add(wrapper);
       }
       else
       {
-        SpecklePropertyGroupGoo? properties = wrapper is SpeckleDataObjectWrapper dataObjPropWrapper
-          ? dataObjPropWrapper.Properties
-          : wrapper is SpeckleGeometryWrapper geoPropWrapper
-            ? geoPropWrapper.Properties
-            : null;
-
-        if (properties is not null)
-        {
-          // use flattened properties to search ALL nested property keys
-          // fix for [CNX-2512](https://linear.app/speckle/issue/CNX-2512/filter-objects-material-and-property-key-inputs-dont-work-as-expected)
-          Dictionary<string, SpecklePropertyGoo> flattenedProps = properties.Flatten();
-          foreach (string key in flattenedProps.Keys)
-          {
-            if (MatchesSearchPattern(property, key))
-            {
-              foundProperty = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!foundProperty)
-      {
         removedObjects.Add(wrapper);
-        continue;
       }
-
-      // filter by material name
-      bool materialMatches = true;
-      if (!string.IsNullOrEmpty(material))
-      {
-        materialMatches = false;
-
-        if (wrapper is SpeckleGeometryWrapper geoWrapper)
-        {
-          materialMatches = MatchesSearchPattern(material, geoWrapper.Material?.Name ?? "");
-        }
-        else if (wrapper is SpeckleDataObjectWrapper dataObjWrapper)
-        {
-          // check if ANY geometry in the data object has a matching material (not sure about this...)
-          // fix for [CNX-2512](https://linear.app/speckle/issue/CNX-2512/filter-objects-material-and-property-key-inputs-dont-work-as-expected)
-          materialMatches = dataObjWrapper.Geometries.Any(geo =>
-            MatchesSearchPattern(material, geo.Material?.Name ?? "")
-          );
-        }
-      }
-
-      if (!materialMatches)
-      {
-        removedObjects.Add(wrapper);
-        continue;
-      }
-
-      // filter by application id
-      if (!MatchesSearchPattern(appId, wrapper.Base.applicationId ?? ""))
-      {
-        removedObjects.Add(wrapper);
-        continue;
-      }
-
-      // filter by speckle id
-      if (!MatchesSearchPattern(speckleId, wrapper.Base.id ?? ""))
-      {
-        removedObjects.Add(wrapper);
-        continue;
-      }
-
-      matchedObjects.Add(wrapper);
     }
 
     // Set output objects
@@ -214,4 +142,190 @@ public class FilterSpeckleObjects : GH_Component
 
     return Operator.IsSymbolNameLike(target, searchPattern);
   }
+
+  /// <summary>
+  /// Determines if a wrapper matches all active filter criteria.
+  /// </summary>
+  private bool MatchesAllFilters(
+    SpeckleWrapper wrapper,
+    string name,
+    string property,
+    string material,
+    string appId,
+    bool filterByAppId,
+    string speckleId,
+    bool filterBySpeckleId
+  )
+  {
+    // filter by name
+    if (!MatchesSearchPattern(name, wrapper.Name))
+    {
+      return false;
+    }
+
+    // filter by property
+    if (!MatchesPropertyFilter(wrapper, property))
+    {
+      return false;
+    }
+
+    // filter by material name
+    if (!MatchesMaterialFilter(wrapper, material))
+    {
+      return false;
+    }
+
+    // filter by application id (only if parameter was added)
+    if (filterByAppId && !MatchesSearchPattern(appId, wrapper.Base.applicationId ?? ""))
+    {
+      return false;
+    }
+
+    // filter by speckle id (only if parameter was added)
+    if (filterBySpeckleId && !MatchesSearchPattern(speckleId, wrapper.Base.id ?? ""))
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  private bool MatchesPropertyFilter(SpeckleWrapper wrapper, string property)
+  {
+    if (string.IsNullOrEmpty(property))
+    {
+      return true;
+    }
+
+    SpecklePropertyGroupGoo? properties = wrapper is SpeckleDataObjectWrapper dataObjPropWrapper
+      ? dataObjPropWrapper.Properties
+      : wrapper is SpeckleGeometryWrapper geoPropWrapper
+        ? geoPropWrapper.Properties
+        : null;
+
+    if (properties is null)
+    {
+      return false;
+    }
+
+    // use flattened properties to search ALL nested property keys
+    return properties.Flatten().Keys.Any(key => MatchesSearchPattern(property, key));
+  }
+
+  private bool MatchesMaterialFilter(SpeckleWrapper wrapper, string material)
+  {
+    if (string.IsNullOrEmpty(material))
+    {
+      return true;
+    }
+
+    if (wrapper is SpeckleGeometryWrapper geoWrapper)
+    {
+      return MatchesSearchPattern(material, geoWrapper.Material?.Name ?? "");
+    }
+
+    if (wrapper is SpeckleDataObjectWrapper dataObjWrapper)
+    {
+      // check if ANY geometry in the data object has a matching material
+      return dataObjWrapper.Geometries.Any(geo => MatchesSearchPattern(material, geo.Material?.Name ?? ""));
+    }
+
+    return false;
+  }
+
+  /// <summary>
+  /// Finds the index of an input parameter by its Name.
+  /// Returns null if the parameter doesn't exist.
+  /// </summary>
+  private int? FindInputIndexByName(string paramName)
+  {
+    for (int i = 0; i < Params.Input.Count; i++)
+    {
+      if (Params.Input[i].Name == paramName)
+      {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  #region IGH_VariableParameterComponent
+
+  public bool CanInsertParameter(GH_ParameterSide side, int index)
+  {
+    if (side != GH_ParameterSide.Input)
+    {
+      return false;
+    }
+
+    // only allow inserting after the fixed parameters (index 4+)
+    if (index < 4)
+    {
+      return false;
+    }
+
+    // check how many optional params are already added (total inputs - 4 fixed)
+    int addedOptionalCount = Params.Input.Count - 4;
+
+    // we have 2 optional parameters available
+    return addedOptionalCount < 2;
+  }
+
+  public bool CanRemoveParameter(GH_ParameterSide side, int index) =>
+    // only allow removing optional input parameters (index 4+)
+    side == GH_ParameterSide.Input
+    && index >= 4;
+
+  /// <remarks>
+  /// The ternary operator for NickName is needed due to a Grasshopper quirk where
+  /// dynamically created parameters don't respect the "Draw Full Names" setting automatically.
+  /// We check CanvasFullNames at creation time to set the appropriate NickName.
+  /// This does not handle the case where the user toggles "Draw Full Names" while the
+  /// component is already on the canvas. Handling that would require subscribing to
+  /// Grasshopper.CentralSettings.CanvasFullNamesChanged event, which is overkill for now.
+  /// </remarks>
+  public IGH_Param CreateParameter(GH_ParameterSide side, int index)
+  {
+    bool hasAppId = FindInputIndexByName("Application Id").HasValue;
+    bool hasSpeckleId = FindInputIndexByName("Speckle Id").HasValue;
+
+    if (!hasAppId)
+    {
+      return new Param_String
+      {
+        Name = "Application Id",
+        NickName = Grasshopper.CentralSettings.CanvasFullNames ? "Application Id" : "aID", // see remarks
+        Description = "Find objects with a matching applicationId",
+        Access = GH_ParamAccess.item,
+        Optional = true
+      };
+    }
+
+    if (!hasSpeckleId)
+    {
+      return new Param_String
+      {
+        Name = "Speckle Id",
+        NickName = Grasshopper.CentralSettings.CanvasFullNames ? "Speckle Id" : "sID", // see remarks
+        Description = "Find objects with a matching Speckle id",
+        Access = GH_ParamAccess.item,
+        Optional = true
+      };
+    }
+
+    return new Param_String();
+  }
+
+  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input && index >= 4;
+
+  public void VariableParameterMaintenance()
+  {
+    // ensure all optional parameters stay marked as optional
+    for (int i = 4; i < Params.Input.Count; i++)
+    {
+      Params.Input[i].Optional = true;
+    }
+  }
+
+  #endregion
 }

@@ -28,6 +28,12 @@ public class RevitBuiltInCategoryExtractor(IPropertyConverter converter) : IRevi
 
     converter.Reset();
 
+    // Check if item.Model is null before accessing Units
+    if (item.Model == null)
+    {
+      return false;
+    }
+
     // Convert using per-object model units and current UI units
     var nameObj = converter.ConvertPropertyValue(v, item.Model.Units, item.DisplayName);
     var name = nameObj?.ToString();

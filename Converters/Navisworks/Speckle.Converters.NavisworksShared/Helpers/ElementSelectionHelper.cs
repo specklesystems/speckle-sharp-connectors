@@ -1,4 +1,4 @@
-﻿using Speckle.Converter.Navisworks.Constants;
+﻿using static Speckle.Converter.Navisworks.Constants.PathConstants;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
@@ -29,7 +29,7 @@ public static class ElementSelectionHelper
     var pathIndex =
       modelItemPathId.PathId == "a"
         ? $"{modelItemPathId.ModelIndex}" // Root-level model item
-        : $"{modelItemPathId.ModelIndex}{PathConstants.SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
+        : $"{modelItemPathId.ModelIndex}{SEPARATOR}{modelItemPathId.PathId}"; // Nested model item
 
     return pathIndex;
   }
@@ -46,7 +46,7 @@ public static class ElementSelectionHelper
       throw new ArgumentNullException(nameof(indexPath));
     }
 
-    int separatorIndex = indexPath.IndexOf(PathConstants.MATERIAL_SEPARATOR, StringComparison.Ordinal);
+    int separatorIndex = indexPath.IndexOf(MATERIAL_SEPARATOR, StringComparison.Ordinal);
     return separatorIndex > 0 ? indexPath[..separatorIndex] : indexPath;
   }
 
@@ -60,33 +60,16 @@ public static class ElementSelectionHelper
     // Extract just the path part if the indexPath contains a material signature
     string pathToResolve = GetCleanPath(indexPath);
 
-    var indexPathParts = pathToResolve.Split(PathConstants.SEPARATOR);
+    var indexPathParts = pathToResolve.Split(SEPARATOR);
 
     var modelIndex = int.Parse(indexPathParts[0]);
-    var pathId = string.Join(PathConstants.SEPARATOR.ToString(), indexPathParts.Skip(1));
+    var pathId = string.Join(SEPARATOR.ToString(), indexPathParts.Skip(1));
 
     // assign the first part of indexPathParts to modelIndex and parse it to int, the second part to pathId string
     NAV.DocumentParts.ModelItemPathId modelItemPathId = new() { ModelIndex = modelIndex, PathId = pathId };
 
     var modelItem = NavisworksApp.ActiveDocument.Models.ResolvePathId(modelItemPathId);
     return modelItem;
-  }
-
-  /// <summary>
-  /// Determines whether a Navisworks <see cref="NAV.ModelItem"/> and all its ancestors are visible.
-  /// </summary>
-  /// <param name="modelItem">The model item to check for visibility.</param>
-  /// <returns>True if the item and all ancestors are visible; otherwise, false.</returns>
-  /// <exception cref="ArgumentNullException">Thrown if <paramref name="modelItem"/> is null.</exception>
-  public static bool IsElementVisible(NAV.ModelItem modelItem)
-  {
-    if (modelItem == null)
-    {
-      throw new ArgumentNullException(nameof(modelItem));
-    }
-
-    // Check visibility status for the item and its ancestors
-    return modelItem.AncestorsAndSelf.All(item => !item.IsHidden);
   }
 
   public static IEnumerable<NAV.ModelItem> ResolveGeometryLeafNodes(NAV.ModelItem modelItem) =>

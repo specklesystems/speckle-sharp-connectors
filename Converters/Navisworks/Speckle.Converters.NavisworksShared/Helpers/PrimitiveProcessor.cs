@@ -5,6 +5,11 @@ using Speckle.DoubleNumerics;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
+/// <summary>
+/// Callback processor for Navisworks COM primitive generation.
+/// WARNING: COM interop bottleneck - fragment.GenerateSimplePrimitives() has significant marshaling overhead.
+/// WARNING: InwSimpleVertex.coord returns Array (COM object) requiring 3 GetValue() calls per vertex.
+/// </summary>
 public class PrimitiveProcessor : InwSimplePrimitivesCB
 {
   private readonly List<double> _coords = [];
@@ -52,13 +57,13 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       var safeLine = new SafeLine(vD1, vD2);
       AddLine(safeLine);
     }
-    catch (ArgumentException ex)
+    catch (ArgumentException)
     {
-      Console.WriteLine($"ArgumentException caught: {ex.Message}");
+      // Invalid line geometry - skip
     }
-    catch (InvalidOperationException ex)
+    catch (InvalidOperationException)
     {
-      Console.WriteLine($"InvalidOperationException caught: {ex.Message}");
+      // Invalid line geometry - skip
     }
   }
 
@@ -78,7 +83,6 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
     AddPoint(safePoint);
   }
 
-  // TODO: Needed for Splines
   public void SnapPoint(InwSimpleVertex? v1) => Point(v1);
 
   public void Triangle(InwSimpleVertex? v1, InwSimpleVertex? v2, InwSimpleVertex? v3)
@@ -101,7 +105,6 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       IsUpright
     );
 
-    // Capture values immediately in our safe struct
     var safeTriangle = new SafeTriangle(vD1, vD2, vD3);
 
     var indexPointer = Faces.Count;
@@ -165,6 +168,9 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
     return new NAV.Vector3D(vectorDoubleX, vectorDoubleY, vectorDoubleZ);
   }
 
+  /// <summary>
+  /// WARNING: Called for every vertex - COM marshaling overhead from Array cast and 3 GetValue() calls.
+  /// </summary>
   private static Vector3 VectorFromVertex(InwSimpleVertex v)
   {
     var arrayV = (Array)v.coord;

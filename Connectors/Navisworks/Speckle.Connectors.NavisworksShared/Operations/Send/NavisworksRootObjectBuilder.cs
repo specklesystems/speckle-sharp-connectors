@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
-using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
@@ -14,7 +13,10 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
+using static Speckle.Connectors.Common.Operations.ProxyKeys;
+using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
@@ -26,14 +28,15 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
+  Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache,
-  InstanceStoreManager instanceStoreManager
+  IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
+#pragma warning disable CA1823
+#pragma warning restore CA1823
   private bool SkipNodeMerging { get; set; }
-
-  internal NavisworksConversionSettings GetCurrentSettings() => converterSettings.Current;
+  private bool DisableGroupingForInstanceTesting { get; set; }
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -43,14 +46,14 @@ public class NavisworksRootObjectBuilder(
   )
   {
 #if DEBUG
-    SkipNodeMerging = true;
+    SkipNodeMerging = false;
+    DisableGroupingForInstanceTesting = false;
 #endif
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
-
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
 
@@ -58,30 +61,17 @@ public class NavisworksRootObjectBuilder(
 
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
-    List<Base> geometryDefinitions = instanceStoreManager.GetGeometryDefinitions();
 
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
-    var geometryDefinitionsCollection = new Collection
-    {
-      name = "Geometry Definitions",
-      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
-      elements = geometryDefinitions
-    };
+    AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
+    int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
+    logger.LogInformation(
+      "Final output contains {count} InstanceProxy objects in displayValues",
+      finalInstanceProxyCount
+    );
 
-    var mainElementsCollection = new Collection
-    {
-      name = rootCollection.name,
-      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
-      elements = finalElements
-    };
-
-    rootCollection.elements = [mainElementsCollection];
-    if (geometryDefinitions.Count > 0)
-    {
-      rootCollection.elements.Add(geometryDefinitionsCollection);
-    }
-
+    rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
 
@@ -127,16 +117,32 @@ public class NavisworksRootObjectBuilder(
     var convertedBases = new Dictionary<string, Base?>();
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
+    int instanceProxyCount = 0;
 
     foreach (var item in navisworksModelItems)
     {
       cancellationToken.ThrowIfCancellationRequested();
       var converted = ConvertNavisworksItem(item, convertedBases, projectId);
       results.Add(converted);
+
+      if (
+        converted.Status == Status.SUCCESS
+        && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
+        && convertedBase?["displayValue"] is List<Base> displayValues
+      )
+      {
+        instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+      }
+
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
     }
 
+    logger.LogInformation(
+      "Converted {total} items, found {instanceProxies} InstanceProxy objects",
+      totalCount,
+      instanceProxyCount
+    );
     return Task.FromResult((convertedBases, results));
   }
 
@@ -155,10 +161,24 @@ public class NavisworksRootObjectBuilder(
   {
     var finalElements = new List<Base>();
     var processedPaths = new HashSet<string>();
-    AddGroupedElements(finalElements, convertedBases, groupedNodes, processedPaths);
+
+    if (!DisableGroupingForInstanceTesting)
+    {
+      AddGroupedElements(finalElements, convertedBases, groupedNodes, processedPaths);
+      logger.LogInformation(
+        "After grouping: {grouped} paths processed, {elements} elements in collection",
+        processedPaths.Count,
+        finalElements.Count
+      );
+    }
+    else
+    {
+      logger.LogInformation("Grouping disabled for instance testing");
+    }
 
     if (converterSettings.Current.User.PreserveModelHierarchy)
     {
+      logger.LogInformation("Building hierarchy (PreserveModelHierarchy=true)");
       var hierarchyBuilder = new NavisworksHierarchyBuilder(
         convertedBases,
         rootToSpeckleConverter,
@@ -168,7 +188,10 @@ public class NavisworksRootObjectBuilder(
       return hierarchyBuilder.BuildHierarchy();
     }
 
+    logger.LogInformation("Adding remaining elements (flat mode)");
     AddRemainingElements(finalElements, convertedBases, processedPaths);
+
+    logger.LogInformation("Final elements count: {count}", finalElements.Count);
     return finalElements;
   }
 
@@ -181,7 +204,7 @@ public class NavisworksRootObjectBuilder(
   {
     foreach (var group in groupedNodes)
     {
-      var siblingBases = new List<Base>();
+      var siblingBases = new List<Base>(group.Value.Count);
       foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
       {
         processedPaths.Add(itemPath);
@@ -236,10 +259,29 @@ public class NavisworksRootObjectBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
+    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
+    var displayValues = new List<Base>(estimatedCapacity);
+    displayValues.AddRange(
+      siblingBases
+        .Where(sibling => sibling["displayValue"] is List<Base>)
+        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
+    );
+
+    var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+    if (instanceProxyCount > 0)
+    {
+      logger.LogDebug(
+        "Group {groupKey} merging {siblings} siblings with {proxies} InstanceProxy objects",
+        groupKey,
+        siblingBases.Count,
+        instanceProxyCount
+      );
+    }
+
     return new NavisworksObject
     {
       name = name,
-      displayValue = siblingBases.SelectMany(b => b["displayValue"] as List<Base> ?? []).ToList(),
+      displayValue = displayValues,
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
@@ -280,23 +322,98 @@ public class NavisworksRootObjectBuilder(
     var renderMaterials = materialUnpacker.UnpackRenderMaterial(navisworksModelItems, groupedNodes);
     if (renderMaterials.Count > 0)
     {
-      rootCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterials;
+      rootCollection[RENDER_MATERIAL] = renderMaterials;
     }
 
     var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes);
     if (colors.Count > 0)
     {
-      rootCollection[ProxyKeys.COLOR] = colors;
-    }
-
-    var instanceDefinitionProxies = instanceStoreManager.GetInstanceDefinitionProxies();
-
-    if (instanceDefinitionProxies.Count > 0)
-    {
-      rootCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies.ToList();
+      rootCollection[COLOR] = colors;
     }
 
     return Task.CompletedTask;
+  }
+
+  private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
+  {
+    using var _ = activityFactory.Start("BuildInstanceDefinitions");
+
+    // Get all definition geometries from the registry
+    var allDefinitions = instanceRegistry.GetAllDefinitionGeometries();
+
+    if (allDefinitions.Count == 0)
+    {
+      logger.LogInformation("No instance definitions found - instancing may be disabled");
+      return;
+    }
+
+    logger.LogInformation("Building instance structure for {count} definition groups", allDefinitions.Count);
+
+    if (allDefinitions.Count > 100)
+    {
+      logger.LogWarning(
+        "Large number of definition groups ({count}) detected - this may indicate instance grouping is not working effectively",
+        allDefinitions.Count
+      );
+    }
+
+    var instanceDefinitionProxies = new List<InstanceDefinitionProxy>(allDefinitions.Count);
+
+    int estimatedGeometryCount = allDefinitions.Sum(kvp => kvp.Value.Count);
+    var allDefinitionGeometries = new List<Base>(estimatedGeometryCount);
+
+    foreach (var kvp in allDefinitions)
+    {
+      var groupKey = kvp.Key;
+      var geometries = kvp.Value;
+      var groupKeyHash = groupKey.ToHashString();
+
+      var defProxy = new InstanceDefinitionProxy
+      {
+        name = $"Shared Geometry {groupKeyHash}",
+        objects = geometries.Select(g => g.applicationId ?? "").Where(id => !string.IsNullOrEmpty(id)).ToList(),
+        applicationId = $"{DEFINITION_ID_PREFIX}{groupKeyHash}",
+        maxDepth = 0
+      };
+
+      instanceDefinitionProxies.Add(defProxy);
+      allDefinitionGeometries.AddRange(geometries);
+    }
+
+    rootCollection[INSTANCE_DEFINITION] = instanceDefinitionProxies;
+    var geometryDefinitionsCollection = new Collection
+    {
+      name = "Geometry Definitions",
+      elements = allDefinitionGeometries
+    };
+
+    var objectCollection = new Collection { name = "", elements = finalElements };
+
+    finalElements = [geometryDefinitionsCollection, objectCollection];
+
+    logger.LogInformation(
+      "Added {proxyCount} instance definition proxies and {geomCount} definition geometries",
+      instanceDefinitionProxies.Count,
+      allDefinitionGeometries.Count
+    );
+  }
+
+  private int CountInstanceProxiesRecursive(List<Base> elements)
+  {
+    int count = 0;
+    foreach (var element in elements)
+    {
+      if (element["displayValue"] is List<Base> displayValues)
+      {
+        count += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+      }
+
+      if (element is Collection { elements: not null } collection)
+      {
+        count += CountInstanceProxiesRecursive(collection.elements);
+      }
+    }
+    return count;
   }
 
   private SendConversionResult ConvertNavisworksItem(

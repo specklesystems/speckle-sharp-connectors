@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +25,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly IAppIdleManager _idleManager;
+  private readonly RevitIdleManager _revitIdleManager;
   private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
@@ -38,6 +39,9 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private bool _isDocChangedSubscribed;
+  private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
+  private readonly ConnectorConfig _config;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -48,7 +52,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private ConcurrentHashSet<ElementId> ChangedObjectIds { get; set; } = new();
 
   public RevitSendBinding(
-    IAppIdleManager idleManager,
+    RevitIdleManager revitIdleManager,
     RevitContext revitContext,
     DocumentModelStore store,
     ICancellationManager cancellationManager,
@@ -62,11 +66,12 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
     : base("sendBinding", bridge)
   {
-    _idleManager = idleManager;
+    _revitIdleManager = revitIdleManager;
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
@@ -79,6 +84,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _config = configStore.GetConnectorConfig();
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -86,10 +92,56 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitTask.Run(() =>
     {
-      revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-        _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      // revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
+      //   _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _documentChangedHandler = (_, e) => _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _store.ModelCardsChanged += (_, e) => OnModelCardsChanged(e);
       _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
     });
+  }
+
+  private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
+  {
+    if (
+      !_config.DocumentChangeListeningDisabled
+      && e.ModelCards.Count > 0
+      && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard))
+    )
+    {
+      SubscribeDocChanged();
+    }
+    else
+    {
+      UnsubscribeDocChanged();
+    }
+  }
+
+  private void SubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || _isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged += _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = true;
+  }
+
+  private void UnsubscribeDocChanged()
+  {
+    if (_documentChangedHandler == null || !_isDocChangedSubscribed)
+    {
+      return;
+    }
+
+    _threadContext.RunOnMain(() =>
+    {
+      _revitContext.UIApplication.NotNull().Application.DocumentChanged -= _documentChangedHandler;
+    });
+    _isDocChangedSubscribed = false;
   }
 
   public List<ISendFilter> GetSendFilters() =>
@@ -105,7 +157,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new SendReferencePointSetting(),
       new SendParameterNullOrEmptyStringsSetting(),
       new LinkedModelsSetting(),
-      new SendRebarsAsVolumetricSetting()
+      new SendRebarsAsVolumetricSetting(),
+      new SendAreasAsMeshSetting()
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -120,7 +173,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       throw new SpeckleException("No document is active for sending.");
     }
     using var manager = _sendOperationManagerFactory.Create();
-
+    var (fileName, fileBytes) = GetFileInfo(document);
     await manager.Process<DocumentToConvert>(
       Commands,
       modelCardId,
@@ -133,12 +186,29 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               _toSpeckleSettingsManager.GetReferencePointSetting(document, card),
               _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(document, card),
               _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
-              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card)
+              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
+              _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card)
             )
           );
       },
-      async x => await RefreshElementsIdsOnSender(document, x.NotNull())
+      async x => await RefreshElementsIdsOnSender(document, x.NotNull()),
+      fileName: fileName,
+      fileSizeBytes: fileBytes
     );
+  }
+
+  private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
+  {
+    string fullPath = document.PathName;
+    if (File.Exists(document.PathName))
+    {
+      var fileInfo = new FileInfo(document.PathName);
+      return (fileInfo.Name, fileInfo.Length);
+    }
+    else
+    {
+      return (fullPath.Split('/').LastOrDefault(), null);
+    }
   }
 
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(Document document, SenderModelCard modelCard)
@@ -276,7 +346,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     if (addedElementIds.Count > 0)
     {
-      _idleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
+      _revitIdleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
     }
 
     if (HaveUnitsChanged(doc))
@@ -296,8 +366,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       _sendConversionCache.EvictObjects(unpackedObjectIds);
     }
 
-    _idleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
+    _revitIdleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
+    _revitIdleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
   }
 
   // Keeps track of doc and current units

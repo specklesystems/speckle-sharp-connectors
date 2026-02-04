@@ -3,6 +3,12 @@ using Speckle.InterfaceGenerator;
 
 namespace Speckle.Connectors.DUI.Bridge;
 
+/// <remarks>
+/// This class was initially designed as an evolution
+/// of hostapp specific idle managers, since they followed a similar logic.
+/// However, has ended up a little over-engineered, so since then, for Revit connector
+/// we've started to prefer a simpler solution that fits only the needs of said host app.
+/// </remarks>
 //should be registered as singleton
 [GenerateAutoInterface]
 public sealed class IdleCallManager(ITopLevelExceptionHandler topLevelExceptionHandler) : IIdleCallManager

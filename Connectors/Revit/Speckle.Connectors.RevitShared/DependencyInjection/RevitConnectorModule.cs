@@ -48,11 +48,12 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, SelectionBinding>();
     serviceCollection.AddSingleton<IBinding, RevitSendBinding>();
     serviceCollection.AddSingleton<IBinding, RevitReceiveBinding>();
+    serviceCollection.AddSingleton<RevitIdleManager>();
 
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
 
-    serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
+    // serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     // send operation and dependencies
     serviceCollection.AddScoped<SendOperation<DocumentToConvert>>();
@@ -71,6 +72,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
+    serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();

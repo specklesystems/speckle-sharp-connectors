@@ -120,17 +120,6 @@ public sealed class NavisworksDocumentEvents
     }
   }
 
-  private void UnsubscribeFromDocumentModelEvents(object _)
-  {
-    var activeDocument = NavisworksApp.ActiveDocument;
-    if (activeDocument != null)
-    {
-      UnsubscribeFromModelEvents(activeDocument);
-    }
-
-    _isSubscribed = false;
-  }
-
   private void UnsubscribeFromModelEvents(NAV.Document document)
   {
     document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
