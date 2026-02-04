@@ -62,9 +62,8 @@ public class ElementUnpacker
         // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
         var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
 
-        // filter out internal sketch elements (Stairs sketches, Mass sketches) that GetMemberIds() leaks.
-        // if we don't do this, we convert both the Stair AND its defining lines independently (CNX-2255)
-        groupElements = groupElements.Where(el => !IsSketchElement(el));
+        // Filter out internal definition elements (FamilySymbols, Sketches, MassForms) that GetMemberIds() leaks.
+        groupElements = groupElements.Where(el => !IsInternalOrDefinitionElement(el));
         unpackedElements.AddRange(UnpackElements(groupElements, doc));
       }
       else if (element is BaseArray baseArray)
@@ -173,15 +172,21 @@ public class ElementUnpacker
   }
 
   /// <summary>
-  /// Checks if an element is an internal sketch line/curve that should be ignored during unpacking.
+  /// Checks if an element is an internal definition (sketch/type/form) that should be ignored during unpacking.
   /// </summary>
   /// <remarks>
-  /// Group.GetMemberIds() leaks internal definition elements (like sketch lines in Stairs or Masses).
-  /// This method filters them out to prevent recursive unpacking from converting these internal lines into duplicate,
+  /// Group.GetMemberIds() leaks internal definition elements (like sketch lines in Stairs or Masses, or FamilySymbols).
+  /// This method filters them out to prevent recursive unpacking from converting these internal definitions into duplicate,
   /// unwanted geometry.
   /// </remarks>
-  private static bool IsSketchElement(Element element)
+  private static bool IsInternalOrDefinitionElement(Element element)
   {
+    // Filter out FamilySymbols (Types) as we only want Instances
+    if (element is FamilySymbol)
+    {
+      return true;
+    }
+
     if (element.Category == null)
     {
       return false;
@@ -198,11 +203,11 @@ public class ElementUnpacker
     // and specific Stair sketch components (Boundaries, Risers, Paths)
     return bic
       is BuiltInCategory.OST_SketchLines
+        or BuiltInCategory.OST_MassForm
         or BuiltInCategory.OST_StairsSketchBoundaryLines
         or BuiltInCategory.OST_StairsSketchLandingCenterLines
         or BuiltInCategory.OST_StairsSketchRiserLines
         or BuiltInCategory.OST_RebarSketchLines
-        or BuiltInCategory.OST_StairsSketchPathLines
         or BuiltInCategory.OST_StairsSketchRunLines;
   }
 }
