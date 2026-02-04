@@ -188,44 +188,4 @@ public class ElementUnpacker
 
     return ids.ToList();
   }
-
-  /// <summary>
-  /// Checks if an element is an internal definition (sketch/type/form) that should be ignored during unpacking.
-  /// </summary>
-  /// <remarks>
-  /// Group.GetMemberIds() leaks internal definition elements (like sketch lines in Stairs or Masses, or FamilySymbols).
-  /// This method filters them out to prevent recursive unpacking from converting these internal definitions into duplicate,
-  /// unwanted geometry.
-  /// </remarks>
-  private static bool IsInternalOrDefinitionElement(Element element)
-  {
-    // Filter out FamilySymbols (Types) as we only want Instances
-    if (element is FamilySymbol)
-    {
-      return true;
-    }
-
-    if (element.Category == null)
-    {
-      return false;
-    }
-
-    // 'ElementId.IntegerValue' is obsolete in Revit 2024+, using 'Value' instead
-#if REVIT2024_OR_GREATER
-    var bic = (BuiltInCategory)element.Category.Id.Value;
-#else
-    var bic = (BuiltInCategory)element.Category.Id.IntegerValue;
-#endif
-
-    // Filter out generic sketch lines (often from In-Place Masses/Components)
-    // and specific Stair sketch components (Boundaries, Risers, Paths)
-    return bic
-      is BuiltInCategory.OST_SketchLines
-        or BuiltInCategory.OST_MassForm
-        or BuiltInCategory.OST_StairsSketchBoundaryLines
-        or BuiltInCategory.OST_StairsSketchLandingCenterLines
-        or BuiltInCategory.OST_StairsSketchRiserLines
-        or BuiltInCategory.OST_RebarSketchLines
-        or BuiltInCategory.OST_StairsSketchRunLines;
-  }
 }
