@@ -1,3 +1,4 @@
+using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
   private bool _isDocChangedSubscribed;
   private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
+  private readonly ConnectorConfig _config;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -64,7 +66,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     LinkedModelHandler linkedModelHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
     : base("sendBinding", bridge)
   {
@@ -81,6 +84,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _config = configStore.GetConnectorConfig();
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -98,7 +102,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
   {
-    if (e.ModelCards.Count > 0 && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard)))
+    if (
+      !_config.DocumentChangeListeningDisabled
+      && e.ModelCards.Count > 0
+      && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard))
+    )
     {
       SubscribeDocChanged();
     }
@@ -149,7 +157,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new SendReferencePointSetting(),
       new SendParameterNullOrEmptyStringsSetting(),
       new LinkedModelsSetting(),
-      new SendRebarsAsVolumetricSetting()
+      new SendRebarsAsVolumetricSetting(),
+      new SendAreasAsMeshSetting()
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -164,7 +173,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       throw new SpeckleException("No document is active for sending.");
     }
     using var manager = _sendOperationManagerFactory.Create();
-
+    var (fileName, fileBytes) = GetFileInfo(document);
     await manager.Process<DocumentToConvert>(
       Commands,
       modelCardId,
@@ -177,12 +186,29 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               _toSpeckleSettingsManager.GetReferencePointSetting(document, card),
               _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(document, card),
               _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
-              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card)
+              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
+              _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card)
             )
           );
       },
-      async x => await RefreshElementsIdsOnSender(document, x.NotNull())
+      async x => await RefreshElementsIdsOnSender(document, x.NotNull()),
+      fileName: fileName,
+      fileSizeBytes: fileBytes
     );
+  }
+
+  private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
+  {
+    string fullPath = document.PathName;
+    if (File.Exists(document.PathName))
+    {
+      var fileInfo = new FileInfo(document.PathName);
+      return (fileInfo.Name, fileInfo.Length);
+    }
+    else
+    {
+      return (fullPath.Split('/').LastOrDefault(), null);
+    }
   }
 
   private async Task<List<DocumentToConvert>> RefreshElementsIdsOnSender(Document document, SenderModelCard modelCard)

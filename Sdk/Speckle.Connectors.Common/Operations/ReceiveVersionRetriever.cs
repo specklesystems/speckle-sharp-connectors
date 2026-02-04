@@ -29,7 +29,7 @@ public class ReceiveVersionRetriever(IClientFactory clientFactory) : IReceiveVer
     using var apiClient = clientFactory.Create(account);
 
     await apiClient.Version.Received(
-      new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication),
+      new(version.id, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug),
       cancellationToken
     );
   }

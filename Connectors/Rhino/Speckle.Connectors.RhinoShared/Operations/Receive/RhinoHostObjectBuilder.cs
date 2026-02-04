@@ -33,6 +33,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   private readonly RhinoMaterialBaker _materialBaker;
   private readonly RhinoColorBaker _colorBaker;
   private readonly RhinoGroupBaker _groupBaker;
+  private readonly RhinoViewBaker _viewBaker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly IThreadContext _threadContext;
@@ -49,6 +50,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     RhinoMaterialBaker materialBaker,
     RhinoColorBaker colorBaker,
     RhinoGroupBaker groupBaker,
+    RhinoViewBaker viewBaker,
     ISdkActivityFactory activityFactory,
     IThreadContext threadContext,
     IReceiveConversionHandler conversionHandler,
@@ -64,6 +66,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     _colorBaker = colorBaker;
     _layerBaker = layerBaker;
     _groupBaker = groupBaker;
+    _viewBaker = viewBaker;
     _activityFactory = activityFactory;
     _threadContext = threadContext;
     _conversionHandler = conversionHandler;
@@ -123,6 +126,12 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     if (unpackedRoot.ColorProxies != null)
     {
       _colorBaker.ParseColors(unpackedRoot.ColorProxies);
+    }
+
+    // 3.1 - Bake views (Named Views)
+    if (unpackedRoot.Cameras is not null)
+    {
+      _viewBaker.BakeViews(unpackedRoot.Cameras);
     }
 
     // 4 - Bake layers

@@ -1,3 +1,4 @@
+using Speckle.Common.MeshTriangulation;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToSpeckle;
@@ -27,6 +28,8 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IReferencePointConverter _referencePointConverter;
+  private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -38,7 +41,9 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    IScalingServiceToSpeckle toSpeckleScalingService
+    IScalingServiceToSpeckle toSpeckleScalingService,
+    IReferencePointConverter referencePointConverter,
+    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
@@ -48,6 +53,8 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
+    _referencePointConverter = referencePointConverter;
+    _xyzToPointConverter = xyzToPointConverter;
   }
 
   public List<DisplayValueResult> GetDisplayValue(DB.Element element)
@@ -62,18 +69,9 @@ public sealed class DisplayValueExtractor
       case DB.Grid grid:
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        List<DisplayValueResult> areaDisplay = new();
-        using (var options = new DB.SpatialElementBoundaryOptions())
-        {
-          foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
-          {
-            foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
-            {
-              areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
-            }
-          }
-        }
-        return areaDisplay;
+        return _converterSettings.Current.SendAreasAsMesh
+          ? GetAreaMeshDisplayValue(area)
+          : GetAreaBoundaryDisplayValue(area);
 
       // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
       // Reference point transform is handled by point converters during conversion
@@ -102,6 +100,120 @@ public sealed class DisplayValueExtractor
   }
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
+
+  private List<DisplayValueResult> GetAreaBoundaryDisplayValue(DB.Area area)
+  {
+    List<DisplayValueResult> areaDisplay = new();
+    using (var options = new DB.SpatialElementBoundaryOptions())
+    {
+      foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
+      {
+        foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
+        {
+          areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
+        }
+      }
+    }
+    return areaDisplay;
+  }
+
+  private List<DisplayValueResult> GetAreaMeshDisplayValue(DB.Area area)
+  {
+    using var options = new DB.SpatialElementBoundaryOptions();
+    var boundaryGroups = area.GetBoundarySegments(options);
+    if (boundaryGroups.Count == 0)
+    {
+      return new List<DisplayValueResult>();
+    }
+
+    var polygons = new List<Poly3>();
+    foreach (var boundaryGroup in boundaryGroups)
+    {
+      if (boundaryGroup.Count == 0)
+      {
+        continue;
+      }
+
+      var vertices = new List<Vector3>();
+      foreach (var segment in boundaryGroup)
+      {
+        var curve = segment.GetCurve();
+        if (curve == null)
+        {
+          continue;
+        }
+
+        var tessellated = curve.Tessellate();
+        foreach (var pt in tessellated)
+        {
+          // Apply both reference point transformation and scaling
+          var specklePoint = _xyzToPointConverter.Convert(pt);
+          vertices.Add(new Vector3(specklePoint.x, specklePoint.y, specklePoint.z));
+        }
+      }
+
+      if (vertices.Count < 3)
+      {
+        continue;
+      }
+
+      // Revit: outer=CCW, holes=CW; MeshGenerator: outer=CW, holes=CCW
+      var poly = new Poly3(vertices);
+      poly.Reverse();
+      polygons.Add(poly);
+    }
+
+    if (polygons.Count == 0)
+    {
+      return new List<DisplayValueResult>();
+    }
+
+    var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
+    var mesh3 = generator.TriangulateSurface(polygons);
+    var speckleMesh = ConvertMesh3ToSpeckleMesh(mesh3);
+    return [DisplayValueResult.WithoutTransform(speckleMesh)];
+  }
+
+  private SOG.Mesh ConvertMesh3ToSpeckleMesh(Mesh3 mesh3)
+  {
+    var vertices = new List<double>();
+    var faces = new List<int>();
+
+    foreach (var v in mesh3.Vertices)
+    {
+      vertices.Add(v.X);
+      vertices.Add(v.Y);
+      vertices.Add(v.Z);
+    }
+
+    // validate triangle count
+    // checking defensively to ensure we never access invalid indices
+    if (mesh3.Triangles.Count % 3 != 0)
+    {
+      // this should never happen due to Mesh3 validation, but handle gracefully if it does
+      return new SOG.Mesh
+      {
+        vertices = vertices,
+        faces = new List<int>(),
+        units = _converterSettings.Current.SpeckleUnits,
+      };
+    }
+
+    for (int i = 0; i < mesh3.Triangles.Count; i += 3)
+    {
+      faces.Add(3); // Triangle indicator
+      faces.Add(mesh3.Triangles[i]);
+      faces.Add(mesh3.Triangles[i + 1]);
+      faces.Add(mesh3.Triangles[i + 2]);
+    }
+
+    return new SOG.Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _converterSettings.Current.SpeckleUnits,
+    };
+  }
 
   private List<DisplayValueResult> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {

@@ -4,9 +4,9 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
-using Speckle.Importers.Rhino.Internal.Progress;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
@@ -36,6 +36,7 @@ internal sealed class Sender(
       speckleClient,
       ingestion,
       project.id,
+      TimeSpan.FromSeconds(1.5),
       cancellationToken
     );
     // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
