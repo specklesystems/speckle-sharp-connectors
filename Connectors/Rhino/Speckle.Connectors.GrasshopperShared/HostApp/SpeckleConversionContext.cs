@@ -79,7 +79,7 @@ public class SpeckleConversionContext(IRootToSpeckleConverter speckleConverter, 
       IEnumerable<(GeometryBase, Base)> fallbackConversionResult
         => fallbackConversionResult.Select(o => ((object)o.Item1, o.Item2)).ToList(),
       object obj => [(obj, input)],
-      _ => throw new SpeckleException("Failed to convert input to grasshopper"),
+      _ => throw new SpeckleException("Failed to convert input to grasshopper")
     };
   }
 }

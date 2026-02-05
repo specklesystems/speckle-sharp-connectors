@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <!-- Select the framework(s) you wish to target.
         Rhino 6: net45
@@ -15,34 +16,29 @@
     <RootNamespace>Speckle.Connectors.GrasshopperShared</RootNamespace>
     <DefineConstants>$(DefineConstants);GRASSHOPPER;RHINO8;RHINO7_OR_GREATER;RHINO8_OR_GREATER</DefineConstants>
   </PropertyGroup>
+
   <PropertyGroup>
     <NeutralLanguage>en-US</NeutralLanguage>
     <GenerateResourceUsePreserializedResources>True</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
+
   <PropertyGroup>
     <Title>Speckle.Connectors.Grasshopper8</Title>
     <Description>Description of Speckle.Connectors.Grasshopper8</Description>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="GrasshopperAsyncComponent" />
-    <PackageReference
-      Include="RhinoCommon"
-      IncludeAssets="compile; build"
-      PrivateAssets="all"
-      VersionOverride="8.9.24194.18121"
-    />
-    <PackageReference
-      Include="Grasshopper"
-      IncludeAssets="compile; build"
-      PrivateAssets="all"
-      VersionOverride="8.9.24194.18121"
-    />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <!--
     *.gh files are copied by the rhino.iss file into %appdata%\Grasshopper\Libraries
@@ -53,8 +49,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <Import
-    Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
-    Label="Shared"
-  />
+  
+  <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
+  
 </Project>

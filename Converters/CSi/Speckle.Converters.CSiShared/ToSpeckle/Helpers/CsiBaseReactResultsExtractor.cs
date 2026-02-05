@@ -72,7 +72,7 @@ public class CsiBaseReactResultsExtractor : IApplicationResultsExtractor
       ["FZ"] = fz,
       ["MX"] = mx,
       ["ParamMy"] = paramMy,
-      ["MZ"] = mz,
+      ["MZ"] = mz
     };
 
     // Step 4: return sorted and processed dictionary

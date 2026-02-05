@@ -128,7 +128,7 @@ public class Polyline3dToSpeckleConverter
         closed = target.Closed,
         length = target.Length,
         bbox = bbox,
-        units = _settingsStore.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

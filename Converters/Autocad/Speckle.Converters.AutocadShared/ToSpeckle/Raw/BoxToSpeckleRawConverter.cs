@@ -39,7 +39,7 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
         xSize = xSize,
         ySize = ySize,
         zSize = zSize,
-        units = _settingsStore.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return box;

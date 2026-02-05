@@ -58,7 +58,7 @@ public class CsiModalPeriodExtractor : IApplicationResultsExtractor
       ["Period"] = period,
       ["Frequency"] = frequency,
       ["CircFreq"] = circFreq,
-      ["Eigenvalue"] = eigenValue,
+      ["Eigenvalue"] = eigenValue
     };
 
     // Step 4: return sorted and processed dictionary

@@ -281,7 +281,7 @@ public class PropertySetBaker
           {
             AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
             AAEC.PropertyData.DataType.AutoIncrement => (int)(long)defaultValue,
-            _ => defaultValue,
+            _ => defaultValue
           };
 
           propDef.DefaultData = convertedValue;

@@ -184,7 +184,7 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       var customProperties = new Dictionary<string, object>
       {
         { "isAsync", false },
-        { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
+        { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) }
       };
       if (receiveInfo.WorkspaceId != null)
       {

@@ -467,7 +467,7 @@ public class SpeckleOperationWizard
       new ProcessStartInfo
       {
         FileName = SelectedAccount?.serverInfo.url + "/workspaces/actions/create",
-        UseShellExecute = true,
+        UseShellExecute = true
       }
     );
     return Task.CompletedTask;

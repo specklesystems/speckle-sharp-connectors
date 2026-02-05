@@ -52,7 +52,7 @@ public class SharedPropertiesExtractor
       Name = wrapper.Name,
       Type = wrapper.ObjectName,
       ApplicationId = string.Empty, // Populated in ExtractProperties
-      Properties = new Dictionary<string, object?>(),
+      Properties = new Dictionary<string, object?>()
     };
 
     switch (wrapper)

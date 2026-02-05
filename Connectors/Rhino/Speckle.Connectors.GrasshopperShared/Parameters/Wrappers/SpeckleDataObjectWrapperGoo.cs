@@ -29,9 +29,9 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
       {
         name = "",
         displayValue = [],
-        properties = new Dictionary<string, object?>(),
+        properties = new Dictionary<string, object?>()
       },
-      Geometries = [],
+      Geometries = []
     };
   }
 
@@ -171,7 +171,7 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
         name = geometryWrapper.Name,
         displayValue = [geometryWrapper.Base],
         properties = geometryWrapper.Properties.Unwrap(),
-        applicationId = geometryWrapper.ApplicationId,
+        applicationId = geometryWrapper.ApplicationId
       };
 
     // create wrapper - Name, ApplicationId and Properties kept in sync with wrapped DataObject through getters/setters
@@ -181,7 +181,7 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
       Base = dataObject,
       Geometries = [geometryWrapper],
       Path = [.. geometryWrapper.Path],
-      Parent = geometryWrapper.Parent,
+      Parent = geometryWrapper.Parent
     };
 
     return true;

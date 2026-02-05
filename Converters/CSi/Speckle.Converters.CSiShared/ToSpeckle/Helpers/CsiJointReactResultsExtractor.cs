@@ -42,7 +42,7 @@ public class CsiJointReactResultsExtractor : IApplicationResultsExtractor
       ["F3"] = [],
       ["M1"] = [],
       ["M2"] = [],
-      ["M3"] = [],
+      ["M3"] = []
     };
 
     // Step 3: define api variables

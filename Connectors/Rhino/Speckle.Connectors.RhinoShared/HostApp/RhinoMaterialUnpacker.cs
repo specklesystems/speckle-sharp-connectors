@@ -106,7 +106,7 @@ public class RhinoMaterialUnpacker
       {
         value = myMaterial,
         applicationId = materialId,
-        objects = new(),
+        objects = new()
       };
 
     // POC: we are not attaching source information here, since we do not support material inheritance
@@ -237,7 +237,7 @@ public class RhinoMaterialUnpacker
         roughness = roughness,
         diffuse = diffuse.ToArgb(),
         emissive = emissive.ToArgb(),
-        applicationId = renderMaterial.Id.ToString(),
+        applicationId = renderMaterial.Id.ToString()
       };
 
     // add additional dynamic props for rhino material receive

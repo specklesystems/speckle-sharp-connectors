@@ -42,7 +42,7 @@ public class PolyCurveToSpeckleConverter : ITypedConverter<RG.PolyCurve, SOG.Pol
       domain = _intervalConverter.Convert(target.Domain),
       length = target.GetLength(),
       segments = target.DuplicateSegments().Select(x => CurveConverter.Value.Convert(x)).ToList(),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
     return myPoly;
   }

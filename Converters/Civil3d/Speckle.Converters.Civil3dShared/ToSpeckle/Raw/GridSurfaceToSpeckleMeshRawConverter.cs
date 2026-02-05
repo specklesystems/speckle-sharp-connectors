@@ -31,7 +31,7 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
           cell.BottomLeftVertex.Location,
           cell.BottomRightVertex.Location,
           cell.TopLeftVertex.Location,
-          cell.TopRightVertex.Location,
+          cell.TopRightVertex.Location
         };
 
         foreach (Point3d p in cellVertices)
@@ -65,7 +65,7 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
       {
         vertices = vertices,
         faces = faces,
-        units = _settingsStore.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return mesh;

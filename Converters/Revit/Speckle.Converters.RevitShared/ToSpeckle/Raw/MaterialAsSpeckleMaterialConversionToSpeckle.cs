@@ -42,7 +42,7 @@ public class MaterialAsSpeckleMaterialConversionToSpeckle : ITypedConverter<DB.M
         name = target.Name,
         opacity = 1 - target.Transparency / 100d,
         diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb(),
-        applicationId = target.UniqueId,
+        applicationId = target.UniqueId
       };
 
     return renderMaterial;

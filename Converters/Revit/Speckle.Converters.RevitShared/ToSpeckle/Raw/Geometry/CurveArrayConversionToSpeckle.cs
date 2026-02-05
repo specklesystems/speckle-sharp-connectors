@@ -35,7 +35,7 @@ public sealed class CurveArrayConversionToSpeckle : ITypedConverter<DB.CurveArra
       closed =
         curves.First().GetEndPoint(0).DistanceTo(curves.Last().GetEndPoint(1)) < _converterSettings.Current.Tolerance,
       length = _scalingService.ScaleLength(curves.Sum(x => x.Length)),
-      segments = curves.Select(x => _curveConverter.Convert(x)).ToList(),
+      segments = curves.Select(x => _curveConverter.Convert(x)).ToList()
     };
   }
 }

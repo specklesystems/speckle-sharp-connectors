@@ -56,7 +56,7 @@ public sealed class EtabsFramePropertiesExtractor
       4 => "Steel Joist Design",
       7 => "No Design",
       13 => "Composite Column Design",
-      _ => "Program determined",
+      _ => "Program determined"
     };
   }
 

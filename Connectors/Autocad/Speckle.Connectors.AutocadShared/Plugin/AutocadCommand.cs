@@ -34,7 +34,7 @@ public class AutocadCommand
     PaletteSet = new PaletteSet($"Speckle", s_id)
     {
       Size = new Size(400, 500),
-      DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right),
+      DockEnabled = (DockSides)((int)DockSides.Left + (int)DockSides.Right)
     };
 
     // init DI

@@ -24,7 +24,7 @@ public class MeshByMaterialDictionaryToSpeckle
       name = "Transparent",
       diffuse = System.Drawing.Color.Transparent.ToArgb(),
       opacity = 0.3,
-      applicationId = "material_Transparent",
+      applicationId = "material_Transparent"
     };
 
   public MeshByMaterialDictionaryToSpeckle(
@@ -118,7 +118,7 @@ public class MeshByMaterialDictionaryToSpeckle
             {
               value = renderMaterial,
               applicationId = materialId.ToString(),
-              objects = [],
+              objects = []
             };
           materialProxyMap[materialIdString] = renderMaterialProxy;
         }

@@ -112,7 +112,7 @@ public sealed class RevitHostObjectBuilder(
     var (localToGlobalMaps, instanceComponentsForFamilies) = UnpackObjects(unpackedRoot, receiveInstancesAsFamilies);
 
     // 4 - Apply ID modifications and bake materials
-    ApplyIdModificationsAndBakeMaterials(localToGlobalMaps, unpackedRoot);
+    ApplyIdModificationsAndBakeMaterials(localToGlobalMaps, unpackedRoot, baseGroupName);
 
     // 5 - Bake objects
     (
@@ -232,7 +232,8 @@ public sealed class RevitHostObjectBuilder(
 
   private void ApplyIdModificationsAndBakeMaterials(
     IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
-    RootObjectUnpackerResult unpackedRoot
+    RootObjectUnpackerResult unpackedRoot,
+    string baseGroupName
   )
   {
     // NOTE: below is 💩... https://github.com/specklesystems/speckle-sharp-connectors/pull/813 broke sketchup to revit workflow
@@ -305,7 +306,6 @@ public sealed class RevitHostObjectBuilder(
             objectIdsToUse.Add(objectId);
           }
         }
-
         proxy.objects = objectIdsToUse;
       }
     }
@@ -323,7 +323,6 @@ public sealed class RevitHostObjectBuilder(
       {
         revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
       }
-
       transactionManager.CommitTransaction();
     }
 
@@ -334,7 +333,6 @@ public sealed class RevitHostObjectBuilder(
       viewBaker.BakeViews(unpackedRoot.Cameras);
       transactionManager.CommitTransaction();
     }
-  }
 
   private (
     HostObjectBuilderResult builderResult,

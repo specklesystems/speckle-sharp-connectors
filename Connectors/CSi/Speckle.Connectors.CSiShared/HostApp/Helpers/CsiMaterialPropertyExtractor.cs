@@ -98,7 +98,7 @@ public class CsiMaterialPropertyExtractor : IMaterialPropertyExtractor
       1 => DirectionalSymmetryType.ORTHOTROPIC,
       2 => DirectionalSymmetryType.ANISOTROPIC,
       3 => DirectionalSymmetryType.UNIAXIAL,
-      _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}"),
+      _ => throw new ArgumentException($"Unknown symmetry type: {materialDirectionalSymmetryKey}")
     };
 
     var mechanicalProperties = properties.EnsureNested(SectionPropertyCategory.MECHANICAL_DATA);

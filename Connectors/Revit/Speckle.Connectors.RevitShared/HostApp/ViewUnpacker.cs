@@ -8,6 +8,7 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// <summary>
 /// Unpacks Revit Views for sending
 /// </summary>
+
 public class ViewUnpacker
 {
   private readonly ILogger<ViewUnpacker> _logger;

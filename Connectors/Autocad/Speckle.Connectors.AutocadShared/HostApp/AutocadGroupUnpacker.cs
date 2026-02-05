@@ -53,7 +53,7 @@ public class AutocadGroupUnpacker
             {
               applicationId = groupAppId,
               name = group.Name,
-              objects = [applicationId],
+              objects = [applicationId]
             };
           }
         }

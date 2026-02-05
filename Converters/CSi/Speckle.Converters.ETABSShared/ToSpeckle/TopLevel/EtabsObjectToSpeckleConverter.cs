@@ -49,6 +49,6 @@ public class EtabsObjectToSpeckleConverter : CsiObjectToSpeckleConverterBase
       displayValue = displayValue,
       properties = properties,
       units = units,
-      applicationId = applicationId,
+      applicationId = applicationId
     };
 }

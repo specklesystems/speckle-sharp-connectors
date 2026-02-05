@@ -6,6 +6,7 @@
     <DefineConstants>$(DefineConstants);REVIT2022;REVIT2022_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
   <PropertyGroup Label="Things needed to get ancient cef buildling with modern msbuild">
     <!--There is a weird bug or misconfiguration in cef 65.0.1 nuget that makes it pick x86 dlls if asked to build x64.-->
     <!--Asking it to build AnyCPU appaers to work, but generates MSB3270 warnings, which we are ignoring here-->
@@ -14,8 +15,12 @@
     <Prefer32bit>false</Prefer32bit>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
+  
+
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
+
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
+
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -26,14 +31,17 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" NoWarn="NU1903, NU1902" VersionOverride="65.0.1" />
   </ItemGroup>
+
   <ItemGroup>
     <Content Include="Plugin\Speckle.Connectors.Revit2022.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -44,7 +44,7 @@ public class PropertySetDefinitionHandler
         [PROP_DEF_DESCRIPTION_KEY] = propertyDefinition.Description,
         [PROP_DEF_ID_KEY] = propertyDefinition.Id,
         [PROP_DEF_TYPE_KEY] = propertyDefinition.DataType.ToString(),
-        [PROP_DEF_DEFAULT_VALUE_KEY] = propertyDefinition.DefaultData,
+        [PROP_DEF_DEFAULT_VALUE_KEY] = propertyDefinition.DefaultData
       };
 
       // accessing unit type prop can be expected to throw if it's not applicable to the definition
@@ -64,7 +64,7 @@ public class PropertySetDefinitionHandler
     Definitions[name] = new Dictionary<string, object?>()
     {
       [PROP_SET_DEF_NAME_KEY] = name,
-      [PROP_SET_PROP_DEFS_KEY] = propertyDefinitionsDict,
+      [PROP_SET_PROP_DEFS_KEY] = propertyDefinitionsDict
     };
 
     return propertyDefinitionNames;

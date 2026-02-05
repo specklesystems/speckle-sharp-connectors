@@ -68,7 +68,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
       ObjectType.Brep,
       ObjectType.SubD,
       ObjectType.Mesh,
-      ObjectType.Hatch,
+      ObjectType.Hatch
     ];
 
   private string GetFilterNickName(ObjectType type) =>
@@ -83,7 +83,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
       ObjectType.SubD => "SubDs",
       ObjectType.Mesh => "Meshes",
       ObjectType.Hatch => "Hatches",
-      _ => "",
+      _ => ""
     };
 
   private List<int>? _outputFilterIndices;
@@ -266,7 +266,7 @@ public class QuerySpeckleObjects : GH_Component, IGH_VariableParameterComponent
       Name = filter.ToString(),
       NickName = GetFilterNickName(filter),
       MutableNickName = false,
-      Optional = true,
+      Optional = true
     };
   }
 

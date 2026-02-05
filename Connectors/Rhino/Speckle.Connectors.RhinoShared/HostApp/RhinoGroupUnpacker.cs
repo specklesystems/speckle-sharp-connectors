@@ -45,7 +45,7 @@ public class RhinoGroupUnpacker
             {
               applicationId = group.Id.ToString(),
               name = group.Name,
-              objects = [rhinoObject.Id.ToString()],
+              objects = [rhinoObject.Id.ToString()]
             };
           }
         }

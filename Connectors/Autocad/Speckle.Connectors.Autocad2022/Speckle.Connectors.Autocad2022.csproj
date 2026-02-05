@@ -7,13 +7,16 @@
     <DefineConstants>$(DefineConstants);AUTOCAD;AUTOCAD2022;AUTOCAD2022_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+  
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2022.0.2" ExcludeAssets="runtime" />
-  </ItemGroup>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2022.0.2" ExcludeAssets="runtime"/>
+  </ItemGroup>  
+  
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Autocad\Speckle.Converters.Autocad2022\Speckle.Converters.Autocad2022.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
+  
   <Import Project="..\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />
 </Project>

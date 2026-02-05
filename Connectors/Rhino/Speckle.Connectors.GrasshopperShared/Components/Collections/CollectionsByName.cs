@@ -192,7 +192,7 @@ public class CollectionsByName : GH_Component
     {
       GH_String ghString => ghString.Value,
       IGH_Goo goo => goo.ToString(),
-      _ => nameObj.ToString(),
+      _ => nameObj.ToString()
     };
 
   /// <summary>
@@ -237,7 +237,7 @@ public class CollectionsByName : GH_Component
           Color = null,
           Material = null,
           Topology = null, // only set topology on leaf collections
-          ApplicationId = Guid.NewGuid().ToString(),
+          ApplicationId = Guid.NewGuid().ToString()
         };
 
         currentCollection.Elements.Add(newChild);

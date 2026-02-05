@@ -53,7 +53,7 @@ public class EtabsFrameSectionPropertyExtractor : IApplicationFrameSectionProper
       "FileName",
       "FromFile",
       "SectInFile",
-      "NotAutoFact",
+      "NotAutoFact"
     };
 
     // get the section type / shape using the dedicated api query (exception to the database approach)

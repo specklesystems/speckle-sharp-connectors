@@ -185,7 +185,7 @@ public class Polyline2dToSpeckleConverter
         length = target.Length,
         area = target.Area,
         bbox = bbox,
-        units = _settingsStore.Current.SpeckleUnits,
+        units = _settingsStore.Current.SpeckleUnits
       };
 
     return polycurve;

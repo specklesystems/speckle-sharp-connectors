@@ -178,7 +178,7 @@ public sealed class EtabsShellPropertiesExtractor
       "Floor" => "Floor Object Connectivity",
       "Wall" => "Wall Object Connectivity",
       "Null" => "Null Area Object Connectivity",
-      _ => throw new ArgumentException($"Unexpected design orientation: {designOrientation}"),
+      _ => throw new ArgumentException($"Unexpected design orientation: {designOrientation}")
     };
 
     // using the DatabaseTableExtractor fetch table with key from the designOrientation

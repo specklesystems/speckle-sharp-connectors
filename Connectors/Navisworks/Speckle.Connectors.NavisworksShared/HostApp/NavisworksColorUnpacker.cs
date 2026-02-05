@@ -105,7 +105,7 @@ public class NavisworksColorUnpacker(
             value = ColorConverter.NavisworksColorToColor(representationColor).ToArgb(),
             name = colorName,
             applicationId = colorId.ToString(),
-            objects = [finalId],
+            objects = [finalId]
           };
         }
       }

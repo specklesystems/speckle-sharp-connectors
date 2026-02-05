@@ -3,6 +3,7 @@ namespace Speckle.Connectors.Logging;
 /// <summary>
 /// Configuration object for the Speckle logging system.
 /// </summary>
+
 public record SpeckleObservability(
   SpeckleLogging? Logging = null,
   SpeckleTracing? Tracing = null,

@@ -32,6 +32,6 @@ public class BoxToSpeckleConverter : ITypedConverter<RG.Box, SOG.Box>
       xSize = _intervalConverter.Convert(target.X),
       ySize = _intervalConverter.Convert(target.Y),
       zSize = _intervalConverter.Convert(target.Z),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 }

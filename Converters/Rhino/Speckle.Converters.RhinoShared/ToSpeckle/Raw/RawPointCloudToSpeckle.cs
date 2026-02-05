@@ -22,6 +22,6 @@ public class RawPointCloudToSpeckle : ITypedConverter<RG.PointCloud, SOG.Pointcl
     {
       points = target.GetPoints().SelectMany(pt => new[] { pt.X, pt.Y, pt.Z }).ToList(),
       colors = target.GetColors().Select(o => o.ToArgb()).ToList(),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 }

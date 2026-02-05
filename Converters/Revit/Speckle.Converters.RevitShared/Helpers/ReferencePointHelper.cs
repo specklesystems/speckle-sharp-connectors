@@ -35,9 +35,9 @@ public static class ReferencePointHelper
           transform.Origin.X,
           transform.Origin.Y,
           transform.Origin.Z,
-          1,
+          1
         }
-      },
+      }
     };
 
   public static Matrix4x4 TransformToMatrix(Transform transform) =>
@@ -61,7 +61,7 @@ public static class ReferencePointHelper
       M14 = transform.Origin.X,
       M24 = transform.Origin.Y,
       M34 = transform.Origin.Z,
-      M44 = 1,
+      M44 = 1
     };
 
   /// <summary>

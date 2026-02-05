@@ -41,7 +41,7 @@ public class DBEllipseToSpeckleRawConverter : ITypedConverter<ADB.Ellipse, SOG.E
         domain = new SOP.Interval { start = 0, end = Math.PI * 2 },
         trimDomain = trim,
         length = target.GetDistanceAtParameter(target.EndParam),
-        bbox = bbox,
+        bbox = bbox
       };
 
     return ellipse;

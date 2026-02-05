@@ -57,7 +57,7 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       {
         vertices = vertices,
         faces = faces,
-        units = _converterSettings.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     return speckleMesh;

@@ -10,7 +10,7 @@ public enum ModelObjectType
   TENDON = 4,
   SHELL = 5,
   SOLID = 6,
-  LINK = 7,
+  LINK = 7
 }
 
 public enum ElementCategory
@@ -22,7 +22,7 @@ public enum ElementCategory
   FLOOR,
   RAMP,
   JOINT,
-  OTHER,
+  OTHER
 }
 
 public enum DirectionalSymmetryType
@@ -30,7 +30,7 @@ public enum DirectionalSymmetryType
   ISOTROPIC,
   ORTHOTROPIC,
   ANISOTROPIC,
-  UNIAXIAL,
+  UNIAXIAL
 }
 
 public enum AreaPropertyType
@@ -38,5 +38,5 @@ public enum AreaPropertyType
   NONE = 0,
   SHELL = 1,
   PLANE = 2,
-  ASOLID = 3,
+  ASOLID = 3
 }

@@ -21,5 +21,5 @@ public enum ReceiveMode
   /// <summary>
   /// Ignores updating previously received objects and does not attempt updating or deleting them, creates new objects
   /// </summary>
-  Ignore,
+  Ignore
 }

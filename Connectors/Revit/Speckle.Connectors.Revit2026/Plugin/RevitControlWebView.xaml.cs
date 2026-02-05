@@ -46,7 +46,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
       CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
       HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
       VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
-      Source = Url.Netlify,
+      Source = Url.Netlify
     };
 
     _browser.CoreWebView2InitializationCompleted += (sender, args) =>

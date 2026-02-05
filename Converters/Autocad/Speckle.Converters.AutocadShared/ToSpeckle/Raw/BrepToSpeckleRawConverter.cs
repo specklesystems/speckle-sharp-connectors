@@ -67,7 +67,7 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
           faces = faces,
           vertices = vertices,
           units = _settingsStore.Current.SpeckleUnits,
-          area = target.GetSurfaceArea(),
+          area = target.GetSurfaceArea()
         };
 
       try

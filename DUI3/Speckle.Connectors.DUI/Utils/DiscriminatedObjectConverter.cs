@@ -23,7 +23,7 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
     {
       DefaultValueHandling = DefaultValueHandling.Ignore,
       ContractResolver = new CamelCasePropertyNamesContractResolver(),
-      NullValueHandling = NullValueHandling.Ignore,
+      NullValueHandling = NullValueHandling.Ignore
     };
 
   public override void WriteJson(

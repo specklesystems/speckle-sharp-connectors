@@ -45,7 +45,7 @@ public sealed class PointcloudToSpeckleConverter : ITypedConverter<DB.PointCloud
           .ToList(),
         colors = points.Select(o => ConvertAbgrToArgb(o.Color)).ToList(),
         units = _converterSettings.Current.SpeckleUnits,
-        bbox = _boundingBoxConverter.Convert(boundingBox),
+        bbox = _boundingBoxConverter.Convert(boundingBox)
       };
 
       return specklePointCloud;

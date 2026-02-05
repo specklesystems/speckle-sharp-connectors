@@ -181,7 +181,7 @@ internal sealed class LocalToGlobalMapHandler
             Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
               ? cachedObjMaterial
               : null,
-            ApplicationId = objId,
+            ApplicationId = objId
           };
 
           ConvertedObjectsMap[objId] = wrapper;

@@ -6,7 +6,7 @@ namespace Speckle.Importers.JobProcessor.JobQueue;
 
 internal sealed class JsonHandler<T> : SqlMapper.TypeHandler<T>
 {
-  private readonly JsonSerializerOptions _options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+  private readonly JsonSerializerOptions _options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, };
 
   public override void SetValue(IDbDataParameter parameter, T? value)
   {

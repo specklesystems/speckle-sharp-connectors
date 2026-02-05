@@ -70,7 +70,7 @@ public class CsiSpandrelForceResultsExtractor : IApplicationResultsExtractor
       ["V3"] = v3,
       ["T"] = t,
       ["M2"] = m2,
-      ["M3"] = m3,
+      ["M3"] = m3
     };
 
     // Step 4: return sorted and processed dictionary

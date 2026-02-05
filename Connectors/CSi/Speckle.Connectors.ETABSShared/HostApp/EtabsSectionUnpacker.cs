@@ -66,7 +66,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
           applicationId = sectionName,
           objects = frameIds,
           ["type"] = "Frame Section",
-          ["properties"] = properties,
+          ["properties"] = properties
         };
 
       yield return sectionProxy;
@@ -100,7 +100,7 @@ public class EtabsSectionUnpacker : ISectionUnpacker
           applicationId = sectionName,
           objects = frameIds,
           ["type"] = "Shell Section", // since sectionProxies are a flat list, need some way to distinguish from frame
-          ["properties"] = properties, // openings will just have an empty dict here
+          ["properties"] = properties // openings will just have an empty dict here
         };
 
       yield return sectionProxy;

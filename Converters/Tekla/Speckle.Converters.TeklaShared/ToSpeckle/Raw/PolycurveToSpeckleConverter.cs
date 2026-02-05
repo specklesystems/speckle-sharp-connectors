@@ -41,7 +41,7 @@ public class PolycurveToSpeckleConverter : ITypedConverter<TG.Polycurve, SOG.Pol
     {
       segments = segments,
       length = target.Length,
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
   }
 }

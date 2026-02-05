@@ -34,7 +34,7 @@ public class PlaneToSpeckleConverter : ITypedConverter<DB.Plane, SOG.Plane>
       normal = normal,
       xdir = xdir,
       ydir = ydir,
-      units = _converterSettings.Current.SpeckleUnits,
+      units = _converterSettings.Current.SpeckleUnits
     };
   }
 }

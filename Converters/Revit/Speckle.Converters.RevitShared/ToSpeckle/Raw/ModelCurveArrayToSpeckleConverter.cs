@@ -41,7 +41,7 @@ public sealed class ModelCurveArrayToSpeckleConverter : ITypedConverter<DB.Model
         units = _converterSettings.Current.SpeckleUnits,
         closed = start.DistanceTo(end) < _converterSettings.Current.Tolerance,
         length = _scalingService.ScaleLength(curves.Sum(x => x.Length)),
-        segments = curves.Select(x => _curveConverter.Convert(x)).ToList(),
+        segments = curves.Select(x => _curveConverter.Convert(x)).ToList()
       };
 
     return polycurve;

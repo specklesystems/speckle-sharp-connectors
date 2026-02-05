@@ -100,7 +100,7 @@ internal sealed class RhinoJobHandler(
       UseShellExecute = false,
     };
     processStart.ArgumentList.AddRange(argList);
-    var process = new Process { StartInfo = processStart, EnableRaisingEvents = true };
+    var process = new Process { StartInfo = processStart, EnableRaisingEvents = true, };
     // Capture output asynchronously
     process.OutputDataReceived += (_, e) =>
     {

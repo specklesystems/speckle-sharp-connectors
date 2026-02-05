@@ -12,34 +12,25 @@
     <UseWindowsForms>true</UseWindowsForms>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference
-      Include="RhinoCommon"
-      IncludeAssets="compile; build"
-      PrivateAssets="all"
-      VersionOverride="8.9.24194.18121"
-    />
-    <PackageReference
-      Include="RhinoWindows"
-      IncludeAssets="compile; build"
-      PrivateAssets="all"
-      VersionOverride="8.9.24194.18121"
-    />
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
+    <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.9.24194.18121"/>
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="EmbeddedResources\**\*" />
     <EmbeddedResource Include="Resources\**\*.ico" />
   </ItemGroup>
+  
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />
+
   <ItemGroup>
-    <None
-      Include="..\Toolbars\Speckle.Connectors.Rhino.rui"
-      Link="$(AssemblyName).rui"
-      CopyToOutputDirectory="PreserveNewest"
-    />
+    <None Include="..\Toolbars\Speckle.Connectors.Rhino.rui" Link="$(AssemblyName).rui" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
 </Project>

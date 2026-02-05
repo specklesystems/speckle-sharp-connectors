@@ -35,7 +35,7 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       screenOriented = false,
       alignmentH = GetHorizontalAlignment(target.Attachment),
       alignmentV = GetVerticalAlignment(target.Attachment),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 
   private SOG.Plane GetTextPlane(ADB.MText target)

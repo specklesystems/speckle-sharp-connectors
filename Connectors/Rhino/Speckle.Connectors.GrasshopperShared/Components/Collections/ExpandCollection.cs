@@ -69,7 +69,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         NickName = "_objs",
         Description =
           "Some collections may contain a mix of objects and other collections. These are the objects directly contained in this collection.",
-        Access = GH_ParamAccess.list,
+        Access = GH_ParamAccess.list
       };
 
       // Don't use topology for _objects output (always list)
@@ -96,7 +96,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
           ? GH_ParamAccess.item
           : topology is null
             ? GH_ParamAccess.list
-            : GH_ParamAccess.tree,
+            : GH_ParamAccess.tree
       };
 
       object outputValue;
@@ -193,7 +193,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,
         MutableNickName = false,
-        Access = newParam.Param.Access,
+        Access = newParam.Param.Access
       };
       Params.RegisterOutputParam(param);
     }
@@ -215,7 +215,7 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     {
       Name = GH_ComponentParamServer.InventUniqueNickname("ABCD", Params.Input),
       MutableNickName = true,
-      Optional = true,
+      Optional = true
     };
     myParam.NickName = myParam.Name;
     return myParam;

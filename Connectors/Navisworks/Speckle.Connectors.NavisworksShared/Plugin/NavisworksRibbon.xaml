@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <RibbonControl
   x:Uid="Speckle_Ribbon"
   xmlns="clr-namespace:Autodesk.Windows;assembly=AdWindows"
   xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:gui="clr-namespace:Autodesk.Navisworks.Gui.Roamer.AIRLook;assembly=navisworks.gui.roamer"
->
+  xmlns:gui="clr-namespace:Autodesk.Navisworks.Gui.Roamer.AIRLook;assembly=navisworks.gui.roamer">
   <RibbonTab Id="Speckle" KeyTip="SP">
     <RibbonPanel x:Uid="Panel_Speckle">
       <RibbonPanelSource Id="SpeckleV3Source" x:Uid="PanelSource_Speckle_V3" Title="Speckle">
@@ -15,16 +15,14 @@
           Size="Large"
           KeyTip="3"
           ShowText="True"
-          Orientation="Vertical"
-        />
+          Orientation="Vertical" />
         <gui:NWRibbonButton
           x:Uid="Button_Speckle_V2"
           Id="Speckle_Launch_V2"
           Size="Large"
           KeyTip="2"
           ShowText="True"
-          Orientation="Vertical"
-        />
+          Orientation="Vertical" />
       </RibbonPanelSource>
     </RibbonPanel>
   </RibbonTab>

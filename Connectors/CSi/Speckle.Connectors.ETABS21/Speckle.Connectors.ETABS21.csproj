@@ -1,30 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <Platforms>AnyCPU</Platforms>
-    <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF>
-    <ETABSVersion>21</ETABSVersion>
-    <DefineConstants>$(DefineConstants);ETABS21</DefineConstants>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Configurations>Debug;Release;Local</Configurations>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Converters\CSi\Speckle.Converters.ETABS21\Speckle.Converters.ETABS21.csproj" />
-    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
-    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference
-      Include="Speckle.CSI.API"
-      PrivateAssets="all"
-      IncludeAssets="compile; build"
-      VersionOverride="1.30.0"
-    />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Plugin\SpeckleForm.cs" />
-  </ItemGroup>
-  <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
-  <Import Project="..\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems" Label="Shared" />
+
+    <PropertyGroup>
+      <TargetFramework>net48</TargetFramework>
+      <Platforms>AnyCPU</Platforms>
+      <UseWindowsForms>true</UseWindowsForms>
+      <UseWPF>true</UseWPF>
+      <ETABSVersion>21</ETABSVersion>
+      <DefineConstants>$(DefineConstants);ETABS21</DefineConstants>
+      <EnableDynamicLoading>true</EnableDynamicLoading>
+      <Configurations>Debug;Release;Local</Configurations>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Converters\CSi\Speckle.Converters.ETABS21\Speckle.Converters.ETABS21.csproj" />
+      <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+      <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" VersionOverride="1.30.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Plugin\SpeckleForm.cs" />
+    </ItemGroup>
+
+    <Import Project="..\Speckle.Connectors.CSiShared\Speckle.Connectors.CSiShared.projitems" Label="Shared" />
+
+    <Import Project="..\Speckle.Connectors.ETABSShared\Speckle.Connectors.ETABSShared.projitems" Label="Shared" />
+
 </Project>

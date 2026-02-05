@@ -45,7 +45,7 @@ public class SearchToolStripMenuItem
       Checked = isChecked ?? false,
       Image = image,
       ImageScaling = ToolStripItemImageScaling.SizeToFit,
-      ImageAlign = ContentAlignment.MiddleLeft,
+      ImageAlign = ContentAlignment.MiddleLeft
     };
     item.Click += click;
     if (visible == false)
@@ -114,7 +114,7 @@ public class SearchToolStripMenuItem
       ControlAlign = ContentAlignment.MiddleLeft,
       Name = SearchItemId,
       Margin = new Padding(2),
-      Padding = new Padding(2),
+      Padding = new Padding(2)
     };
 
     ParentDropDown.Items.Insert(0, SearchHost);

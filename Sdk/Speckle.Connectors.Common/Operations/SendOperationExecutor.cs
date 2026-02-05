@@ -40,7 +40,7 @@ public class SendOperationExecutor(
         SkipCacheRead = serializationOptions.SkipCacheRead,
         SkipCacheWrite = serializationOptions.SkipCacheWrite,
         SkipServer = serializationOptions.SkipServer,
-        SkipFindTotalObjects = serializationOptions.SkipFindTotalObjects,
+        SkipFindTotalObjects = serializationOptions.SkipFindTotalObjects
       }
     );
     try

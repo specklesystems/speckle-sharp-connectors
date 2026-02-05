@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -17,4 +18,5 @@
     <ProjectReference Include="..\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
     <ProjectReference Include="..\Speckle.Testing\Speckle.Testing.csproj" />
   </ItemGroup>
+
 </Project>

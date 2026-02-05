@@ -76,7 +76,7 @@ public class GeometryBaseConverter : IToSpeckleTopLevelConverter
       RG.Brep brep => _brepConverter.Convert(brep),
       RG.Extrusion ext => _extrusionConverter.Convert(ext),
       RG.SubD subD => _subdConverter.Convert(subD),
-      _ => throw new ConversionException($"Failed to find a conversion for {target.GetType()}"),
+      _ => throw new ConversionException($"Failed to find a conversion for {target.GetType()}")
     };
   }
 }

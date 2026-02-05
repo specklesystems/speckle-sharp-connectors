@@ -20,7 +20,7 @@ public static class Consts
         new("Connectors/Revit/Speckle.Connectors.Revit2023", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2024", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2025", "net8.0-windows"),
-        new("Connectors/Revit/Speckle.Connectors.Revit2026", "net8.0-windows"),
+        new("Connectors/Revit/Speckle.Connectors.Revit2026", "net8.0-windows")
       ]
     ),
     new(
@@ -30,7 +30,7 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2025", "net8.0-windows"),
-        new("Connectors/Autocad/Speckle.Connectors.Autocad2026", "net8.0-windows"),
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2026", "net8.0-windows")
       ]
     ),
     new(
@@ -40,7 +40,7 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows"),
-        new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows"),
+        new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows")
       ]
     ),
     new(
@@ -52,7 +52,7 @@ public static class Consts
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2025", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2026", "net48"),
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2026", "net48")
       ]
     ),
     new(
@@ -60,7 +60,7 @@ public static class Consts
       [
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48"),
-        new("Connectors/Tekla/Speckle.Connector.Tekla2025", "net48"),
+        new("Connectors/Tekla/Speckle.Connector.Tekla2025", "net48")
       ]
     ),
     new(

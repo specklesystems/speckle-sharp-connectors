@@ -100,7 +100,7 @@ public class RevitFamilyBaker
         {
           InstanceDefinitionProxy d => d.applicationId ?? d.id.NotNull(),
           InstanceProxy i => i.applicationId ?? i.id.NotNull(),
-          _ => "unknown",
+          _ => "unknown"
         };
 
         _logger.LogError(ex, "Failed to process instance component {ComponentId}", componentId);
@@ -390,7 +390,7 @@ public class RevitFamilyBaker
     {
       ("YZ", mirrorState.X, Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
       ("XZ", mirrorState.Y, Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
-      ("XY", mirrorState.Z, Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec)),
+      ("XY", mirrorState.Z, Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
     };
 
     foreach (var (name, shouldMirror, mirrorPlane) in mirrorOperations.Where(op => op.shouldMirror))

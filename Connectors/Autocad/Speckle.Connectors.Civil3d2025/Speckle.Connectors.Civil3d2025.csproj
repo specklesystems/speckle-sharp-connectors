@@ -5,24 +5,26 @@
     <DefineConstants>$(DefineConstants);CIVIL3D2025;CIVIL3D;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
   <PropertyGroup>
     <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <!--This is needed for managed dependencies-->
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <!--This is needed for the rest-->
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <!--This is needed just to keep folder paths the same as the netframework versions of autocad/civil-->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!--This is needed for managed dependencies-->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies> <!--This is needed for the rest-->
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath> <!--This is needed just to keep folder paths the same as the netframework versions of autocad/civil-->
   </PropertyGroup>
+  
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" ExcludeAssets="runtime" />
-    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2025.0.0" ExcludeAssets="runtime" />
-  </ItemGroup>
-  <ItemGroup>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.Civil3d.API" VersionOverride="2025.0.0" ExcludeAssets="runtime"/>
+  </ItemGroup>  
+  
+  <ItemGroup>   
     <ProjectReference Include="..\..\..\Converters\Civil3d\Speckle.Converters.Civil3d2025\Speckle.Converters.Civil3d2025.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
+  
   <Import Project="..\Speckle.Connectors.Civil3dShared\Speckle.Connectors.Civil3dShared.projitems" Label="Shared" />
+  
   <Import Project="..\Speckle.Connectors.AutocadShared\Speckle.Connectors.AutocadShared.projitems" Label="Shared" />
 </Project>

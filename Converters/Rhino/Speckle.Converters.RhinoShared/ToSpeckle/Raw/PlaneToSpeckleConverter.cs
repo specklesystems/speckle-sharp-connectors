@@ -32,6 +32,6 @@ public class PlaneToSpeckleConverter : ITypedConverter<RG.Plane, SOG.Plane>
       normal = _vectorConverter.Convert(target.ZAxis),
       xdir = _vectorConverter.Convert(target.XAxis),
       ydir = _vectorConverter.Convert(target.YAxis),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 }

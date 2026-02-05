@@ -138,7 +138,7 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
           var maxZ = points.Max(p => p.Z);
 
           // create the bounding box
-          var bounds = new AABB { MinPoint = new Point(minX, minY, minZ), MaxPoint = new Point(maxX, maxY, maxZ), };
+          var bounds = new AABB { MinPoint = new Point(minX, minY, minZ), MaxPoint = new Point(maxX, maxY, maxZ) };
 
           // zoom in to bounding box
           TSMUI.ViewHandler.ZoomToBoundingBox(bounds);

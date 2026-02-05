@@ -112,7 +112,7 @@ public class CsiStoryForceResultsExtractor : IApplicationResultsExtractor
       [MINOR_SHEAR] = vyValues,
       [TORSION] = tValues,
       [MAJOR_MOMENT] = mxValues,
-      [MINOR_MOMENT] = myValues,
+      [MINOR_MOMENT] = myValues
     };
 
     // Step 4: return sorted and processed dictionary

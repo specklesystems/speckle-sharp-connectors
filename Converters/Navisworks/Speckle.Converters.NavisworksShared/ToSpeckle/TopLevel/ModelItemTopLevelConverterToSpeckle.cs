@@ -38,7 +38,7 @@ public class ModelItemToToSpeckleConverter(
       units = settingsStore.Current.Derived.SpeckleUnits,
       name = name,
       properties = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
-      displayValue = displayValue,
+      displayValue = displayValue
     };
 
     return geometryObject;

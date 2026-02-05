@@ -275,7 +275,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     Nulls = 1 << 0,
     Invalids = 1 << 1,
     Duplicates = 1 << 2,
-    Empty = 1 << 31,
+    Empty = 1 << 31
   };
 
   /// <summary>
@@ -790,7 +790,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
     {
       None,
       Scrolling,
-      Panning,
+      Panning
     }
 
     ScrollMode _activeScrollMode = ScrollMode.None;
@@ -934,7 +934,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
                         var primaryFormat = new StringFormat(StringFormatFlags.NoWrap)
                         {
                           Trimming = StringTrimming.EllipsisCharacter,
-                          LineAlignment = StringAlignment.Center,
+                          LineAlignment = StringAlignment.Center
                         }
                       )
                       {
@@ -943,7 +943,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
                           {
                             Trimming = StringTrimming.EllipsisPath,
                             LineAlignment = StringAlignment.Center,
-                            Alignment = StringAlignment.Far,
+                            Alignment = StringAlignment.Far
                           }
                         )
                         {
@@ -1170,7 +1170,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
             X = nameBounds.X,
             Y = nameBounds.Y + 16,
             Width = nameBounds.Width,
-            Height = nameBounds.Height,
+            Height = nameBounds.Height
           };
 
           graphics.DrawString(item.Value.TypeName, s_typeNameFont, typeName.Brush, textBounds, typeName.Format);
@@ -1189,7 +1189,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
         new PointF(x - 6.5F, y - 0.5F),
         new PointF(x, y + 6.0F),
         new PointF(x + 9.5F, y - 3.5F),
-        new PointF(x + 6.5F, y - 6.5F),
+        new PointF(x + 6.5F, y - 6.5F)
       };
 
       using (var edge = new Pen(color, 1.0F))
@@ -1212,7 +1212,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
             var pen = new Pen(Color.FromArgb(Math.Min(GH_Canvas.ZoomFadeMedium, 100), color), SCROLLER_WIDTH)
             {
               StartCap = System.Drawing.Drawing2D.LineCap.Round,
-              EndCap = System.Drawing.Drawing2D.LineCap.Round,
+              EndCap = System.Drawing.Drawing2D.LineCap.Round
             }
           )
           {
@@ -1793,7 +1793,7 @@ public abstract class ValueSet<T> : GH_PersistentParam<T>, IGH_InitCodeAware, IG
         + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>"
         + @"<dt><b>;</b></dt><dd>Regular expresion, see "
         + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>"
-        + @"</dl>",
+        + @"</dl>"
     };
 
     return nTopic.HtmlFormat();

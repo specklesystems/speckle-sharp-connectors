@@ -31,6 +31,6 @@ public class CircleToSpeckleConverter : ITypedConverter<RG.Circle, SOG.Circle>
       plane = _planeConverter.Convert(target.Plane),
       radius = target.Radius,
       units = _settingsStore.Current.SpeckleUnits,
-      domain = SOP.Interval.UnitInterval,
+      domain = SOP.Interval.UnitInterval
     };
 }

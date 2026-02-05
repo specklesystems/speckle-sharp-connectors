@@ -80,7 +80,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
           {
             GeometryBase = gb,
             Base = converted,
-            ApplicationId = appId,
+            ApplicationId = appId
           };
         return true;
     }
@@ -118,7 +118,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
       GH_Hatch => TryCastToHatch(ref target),
 #endif
       IGH_GeometricGoo => TryCastToGeometricGoo(ref target),
-      _ => CastToModelObject(ref target),
+      _ => CastToModelObject(ref target)
     };
   }
 

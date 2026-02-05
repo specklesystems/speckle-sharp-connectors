@@ -28,7 +28,7 @@ public class DisplayValueExtractor
       CsiJointWrapper joint => ExtractJoint(joint),
       CsiFrameWrapper frame => ExtractFrame(frame),
       CsiShellWrapper shell => ExtractShell(shell),
-      _ => Enumerable.Empty<Base>(),
+      _ => Enumerable.Empty<Base>()
     };
   }
 

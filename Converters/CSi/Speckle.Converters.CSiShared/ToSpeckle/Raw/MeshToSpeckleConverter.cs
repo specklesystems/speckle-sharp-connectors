@@ -72,7 +72,7 @@ public class MeshToSpeckleConverter : ITypedConverter<CsiShellWrapper, Mesh>
     {
       vertices = vertices,
       faces = faces,
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
   }
 }

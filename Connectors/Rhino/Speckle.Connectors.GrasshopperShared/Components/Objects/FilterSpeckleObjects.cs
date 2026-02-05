@@ -297,7 +297,7 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
         NickName = Grasshopper.CentralSettings.CanvasFullNames ? "Application Id" : "aID", // see remarks
         Description = "Find objects with a matching applicationId",
         Access = GH_ParamAccess.item,
-        Optional = true,
+        Optional = true
       };
     }
 
@@ -309,7 +309,7 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
         NickName = Grasshopper.CentralSettings.CanvasFullNames ? "Speckle Id" : "sID", // see remarks
         Description = "Find objects with a matching Speckle id",
         Access = GH_ParamAccess.item,
-        Optional = true,
+        Optional = true
       };
     }
 

@@ -25,7 +25,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       { ElementCategory.FLOOR, "Floors" },
       { ElementCategory.RAMP, "Ramps" },
       { ElementCategory.JOINT, "Joints" },
-      { ElementCategory.OTHER, "Other" },
+      { ElementCategory.OTHER, "Other" }
     };
 
   public EtabsSendCollectionManager(IConverterSettingsStore<CsiConversionSettings> converterSettings)
@@ -108,7 +108,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       ("Wall", nameof(ModelObjectType.SHELL)) => ElementCategory.WALL,
       ("Floor", nameof(ModelObjectType.SHELL)) => ElementCategory.FLOOR,
       ("Ramp", nameof(ModelObjectType.SHELL)) => ElementCategory.RAMP,
-      _ => ElementCategory.OTHER,
+      _ => ElementCategory.OTHER
     };
   }
 

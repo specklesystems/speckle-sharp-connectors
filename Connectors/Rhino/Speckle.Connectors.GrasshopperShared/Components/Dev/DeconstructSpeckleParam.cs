@@ -137,7 +137,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
 
       SpecklePropertyGroupGoo propGoo when propGoo.Value != null => ParsePropertyGroup(propGoo),
 
-      _ => HandleUnsupportedType(data),
+      _ => HandleUnsupportedType(data)
     };
 
   /// <summary>
@@ -155,7 +155,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       {
         SpecklePropertyGoo prop => prop.Value,
         SpecklePropertyGroupGoo propGroup => propGroup,
-        _ => value,
+        _ => value
       };
 
       // determine access type based on the value
@@ -266,7 +266,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
       Dictionary<string, object?> dict => CreateDictionaryOutputParam(prop.Key, dict),
       SpeckleWrapper wrapper => CreateOutputParamByKeyValue(prop.Key, wrapper.CreateGoo(), GH_ParamAccess.item),
       Base baseValue => CreateOutputParamByKeyValue(prop.Key, ConvertOrCreateWrapper(baseValue), GH_ParamAccess.list),
-      _ => CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item),
+      _ => CreateOutputParamByKeyValue(prop.Key, prop.Value, GH_ParamAccess.item)
     };
 
   /// <summary>
@@ -285,7 +285,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     {
       "elements" when @base is Collection && elements != null => elements,
       "displayValue" when @base is Speckle.Objects.Data.DataObject && displayValue != null => displayValue,
-      _ => list,
+      _ => list
     };
 
     List<object> nativeObjects = new();
@@ -349,7 +349,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         GeometryBase = converted.geometry as GeometryBase,
         Name = converted.@base["name"] as string ?? "",
         Color = null,
-        Material = null,
+        Material = null
       };
     return new SpeckleGeometryWrapperGoo(wrapper);
   }
@@ -366,7 +366,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         GeometryBase = null,
         Name = @base[Constants.NAME_PROP] as string ?? "",
         Color = null,
-        Material = null,
+        Material = null
       };
     return new SpeckleGeometryWrapperGoo(wrapper);
   }
@@ -379,7 +379,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         Name = key,
         NickName = key,
         Description = "",
-        Access = access,
+        Access = access
       };
 
     return new OutputParamWrapper(param, value);
@@ -397,7 +397,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
     {
       Name = GH_ComponentParamServer.InventUniqueNickname("ABCD", Params.Input),
       MutableNickName = true,
-      Optional = true,
+      Optional = true
     };
     myParam.NickName = myParam.Name;
     return myParam;
@@ -421,7 +421,7 @@ public class DeconstructSpeckleParam : GH_Component, IGH_VariableParameterCompon
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,
         MutableNickName = false,
-        Access = newParam.Param.Access,
+        Access = newParam.Param.Access
       };
       Params.RegisterOutputParam(param);
     }

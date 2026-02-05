@@ -19,7 +19,7 @@ public static class ToHostTopLevelConverterExtension
       LogLevel logLevel = ex switch
       {
         SpeckleException => LogLevel.Information, //If it's too noisy, we could demote to LogLevel.Debug
-        _ => LogLevel.Error,
+        _ => LogLevel.Error
       };
 
       logger.Log(

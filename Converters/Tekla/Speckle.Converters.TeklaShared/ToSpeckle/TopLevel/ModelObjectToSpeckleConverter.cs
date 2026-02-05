@@ -69,7 +69,7 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
       elements = children,
       properties = properties,
       displayValue = displayValue.ToList(),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 
     return result;

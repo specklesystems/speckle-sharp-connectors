@@ -1,10 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0</TargetFrameworks>
-    <Configurations>Debug;Release;Local</Configurations>
+	<Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LibTessDotNet" />
     <PackageReference Include="Speckle.DoubleNumerics" />
   </ItemGroup>
+
 </Project>

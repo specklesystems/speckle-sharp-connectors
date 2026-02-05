@@ -507,7 +507,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       {
         { "isAsync", true },
         { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
-        { "auto", Parent.AutoReceive },
+        { "auto", Parent.AutoReceive }
       };
       if (receiveInfo.WorkspaceId != null)
       {

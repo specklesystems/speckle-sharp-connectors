@@ -69,7 +69,7 @@ public class CsiStoryDriftsResultsExtractor : IApplicationResultsExtractor
       ["Label"] = label,
       ["X"] = x,
       ["Y"] = y,
-      ["Z"] = z,
+      ["Z"] = z
     };
 
     // Step 4: return sorted and processed dictionary

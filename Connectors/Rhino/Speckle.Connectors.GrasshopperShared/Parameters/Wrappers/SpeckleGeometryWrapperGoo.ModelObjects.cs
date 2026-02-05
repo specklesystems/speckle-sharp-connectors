@@ -200,7 +200,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = validAppId,
+        ApplicationId = validAppId
       }
       : new SpeckleGeometryWrapper()
       {
@@ -212,7 +212,7 @@ public partial class SpeckleGeometryWrapperGoo : GH_Goo<SpeckleGeometryWrapper>,
         Color = color,
         Material = mat,
         Properties = props,
-        ApplicationId = validAppId,
+        ApplicationId = validAppId
       };
 
     return true;

@@ -22,10 +22,7 @@
   </Folder>
   <Folder Name="/Connectors/" />
   <Folder Name="/Connectors/Rhino/">
-    <Project
-      Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj"
-      Type="Classic C#"
-    />
+    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="Classic C#" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/Converter/">

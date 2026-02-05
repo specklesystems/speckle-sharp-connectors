@@ -35,7 +35,7 @@ public static class PropertyHelpers
           var pointProperty = new Point(point.X, point.Y, point.Z, units);
           return pointProperty.ToString();
         }
-      },
+      }
     };
 
   internal static dynamic? ConvertPropertyValue(NAV.VariantData? value, string units)
@@ -112,7 +112,7 @@ internal static class UnitLabels
       NAV.Units.Inches => "Inches",
       NAV.Units.Mils => "Mils",
       NAV.Units.Microinches => "Microinches",
-      _ => "Metres",
+      _ => "Metres"
     };
 
   internal static string Area(NAV.Units u) => $"Square {Linear(u).ToLower()}";

@@ -50,7 +50,7 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
         displayValue = new() { displayPoint },
         properties = props,
         units = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.Id.GetSpeckleApplicationId(),
+        applicationId = target.Id.GetSpeckleApplicationId()
       };
 
     return civilObject;

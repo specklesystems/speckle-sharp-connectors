@@ -44,7 +44,7 @@ public sealed class CsiFrameForceResultsExtractor : IApplicationResultsExtractor
       ["V3"] = [],
       ["T"] = [],
       ["M2"] = [],
-      ["M3"] = [],
+      ["M3"] = []
     };
 
     // Step 3: define api variables

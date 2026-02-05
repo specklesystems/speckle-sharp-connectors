@@ -119,7 +119,7 @@ public class VersionMenuHandler
         Name = "Show more...",
         AutoSize = false,
         Margin = new Padding(4),
-        Padding = new Padding(2),
+        Padding = new Padding(2)
       };
 
       menu.Items.Insert(menu.Items.Count, addMoreButtonHost);
@@ -162,7 +162,7 @@ public class VersionMenuHandler
     bool? isChecked = null
   )
   {
-    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false, TextAlign = ContentAlignment.MiddleLeft, };
+    var item = new ToolStripMenuItem(text) { Checked = isChecked ?? false, TextAlign = ContentAlignment.MiddleLeft };
     item.Click += click;
     if (visible == false)
     {

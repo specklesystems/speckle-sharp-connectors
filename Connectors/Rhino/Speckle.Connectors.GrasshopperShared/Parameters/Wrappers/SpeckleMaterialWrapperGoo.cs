@@ -51,7 +51,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
           Base = ToSpeckleRenderMaterial(material),
           Name = material.Name,
           RhinoMaterial = material,
-          RhinoRenderMaterialId = Guid.Empty,
+          RhinoRenderMaterialId = Guid.Empty
         };
         return true;
       case SpeckleRenderMaterial speckleMaterial:
@@ -120,7 +120,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
         applicationId = mat.Name,
         ["specular"] = mat.SpecularColor.ToArgb(),
         ["shine"] = mat.AmbientColor,
-        ["ior"] = mat.IndexOfRefraction,
+        ["ior"] = mat.IndexOfRefraction
       };
 
     return speckleRenderMaterial;
@@ -144,6 +144,6 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
       EmissionColor = mat.emissiveColor,
       Transparency = 1 - mat.opacity,
       Shine = mat["shine"] is double shine ? shine : default,
-      IndexOfRefraction = mat["ior"] is double ior ? ior : default,
+      IndexOfRefraction = mat["ior"] is double ior ? ior : default
     };
 }

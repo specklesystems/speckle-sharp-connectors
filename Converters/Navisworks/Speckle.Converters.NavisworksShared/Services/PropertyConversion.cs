@@ -78,7 +78,7 @@ public class PropertyConverter(IUiUnitsCache uiUnitsCache) : IPropertyConverter
 
           return new Speckle.Objects.Geometry.Point(p.X * k, p.Y * k, p.Z * k, UnitLabels.Linear(uiUnits));
         }
-      },
+      }
     };
 
   private static Dictionary<string, object> NumObj(string name, double value, string units) =>
@@ -86,6 +86,6 @@ public class PropertyConverter(IUiUnitsCache uiUnitsCache) : IPropertyConverter
     {
       ["name"] = name,
       ["value"] = value,
-      ["units"] = units,
+      ["units"] = units
     };
 }

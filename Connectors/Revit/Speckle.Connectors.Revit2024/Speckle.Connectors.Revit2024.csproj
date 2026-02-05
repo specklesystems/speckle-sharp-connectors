@@ -7,8 +7,11 @@
     <DefineConstants>$(DefineConstants);REVIT2024;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
+
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
+  
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -19,14 +22,17 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2024\Speckle.Converters.Revit2024.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" IncludeAssets="compile" NoWarn="NU1903" VersionOverride="105.03.390.0" />
   </ItemGroup>
+
   <ItemGroup>
     <None Remove="Plugin\Speckle.Connectors.Revit2024.addin" />
     <Content Include="Plugin\Speckle.Connectors.Revit2024.addin">

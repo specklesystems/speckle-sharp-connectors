@@ -63,7 +63,7 @@ public static class UiUnitsUtil
       13 => NAV.Units.Inches,
       14 => NAV.Units.Mils,
       15 => NAV.Units.Microinches,
-      _ => NAV.Units.Meters,
+      _ => NAV.Units.Meters
     };
 
     return code >= 0;

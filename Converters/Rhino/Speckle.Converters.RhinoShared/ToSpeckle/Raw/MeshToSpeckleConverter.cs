@@ -112,7 +112,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
       vertexNormals = [.. vertexNormals], // this will be empty array when setting is false
       units = _settingsStore.Current.SpeckleUnits,
       volume = volume,
-      area = area,
+      area = area
     };
   }
 }

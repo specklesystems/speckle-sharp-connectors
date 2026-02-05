@@ -15,7 +15,7 @@ public static class RootObjectBuilderExtensions
     LogLevel logLevel = ex switch
     {
       SpeckleException => LogLevel.Information, //If it's too noisy, we could demote to LogLevel.Debug
-      _ => LogLevel.Error,
+      _ => LogLevel.Error
     };
 
     logger.Log(logLevel, ex, "Conversion of object {objectType} was not successful", objectType);

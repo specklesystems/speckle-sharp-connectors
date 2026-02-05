@@ -87,7 +87,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
     {
       GH_ParameterSide.Input => index == FixedInputCount,
       GH_ParameterSide.Output => index == FixedOutputCount,
-      _ => false,
+      _ => false
     };
   }
 
@@ -102,7 +102,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
     {
       GH_ParameterSide.Input => index == FixedInputCount,
       GH_ParameterSide.Output => index == FixedOutputCount,
-      _ => false,
+      _ => false
     };
   }
 
@@ -141,7 +141,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
     {
       GH_ParameterSide.Input => index == FixedInputCount,
       GH_ParameterSide.Output => index == FixedOutputCount,
-      _ => false,
+      _ => false
     };
   }
 
@@ -161,7 +161,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
       NickName = Grasshopper.CentralSettings.CanvasFullNames ? APP_ID_NAME : APP_ID_NICKNAME,
       Description = APP_ID_DESCRIPTION,
       Access = GH_ParamAccess.item,
-      Optional = true,
+      Optional = true
     };
 
   private void AddApplicationIdInput()

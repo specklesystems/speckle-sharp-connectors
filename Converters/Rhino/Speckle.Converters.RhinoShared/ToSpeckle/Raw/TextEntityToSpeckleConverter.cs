@@ -36,7 +36,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
       screenOriented = screenOriented,
       alignmentH = GetHorizontalAlignment(target.TextHorizontalAlignment),
       alignmentV = GetVerticalAlignment(target.TextVerticalAlignment),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
   }
 

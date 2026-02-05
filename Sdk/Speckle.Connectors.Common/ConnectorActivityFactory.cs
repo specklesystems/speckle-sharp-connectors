@@ -41,7 +41,7 @@ public sealed class ConnectorActivityFactory(ISpeckleApplication application) : 
           SdkActivityStatusCode.Error => LoggingActivityStatusCode.Error,
           SdkActivityStatusCode.Unset => LoggingActivityStatusCode.Unset,
           SdkActivityStatusCode.Ok => LoggingActivityStatusCode.Ok,
-          _ => throw new ArgumentOutOfRangeException(nameof(code), code, null),
+          _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
         }
       );
 

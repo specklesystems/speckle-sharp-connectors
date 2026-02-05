@@ -92,7 +92,7 @@ public static class BitmapBuilder
       new((int)(centerX + side), (int)centerY),
       new((int)(centerX + side / 2), (int)(centerY + h)),
       new((int)(centerX - side / 2), (int)(centerY + h)),
-      new((int)(centerX - side), (int)centerY),
+      new((int)(centerX - side), (int)centerY)
     ];
 
     using (Brush blueBrush = new SolidBrush(Color.Blue))

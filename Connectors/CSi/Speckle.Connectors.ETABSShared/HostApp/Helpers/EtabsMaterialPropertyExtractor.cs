@@ -14,7 +14,7 @@ public class EtabsMaterialPropertyExtractor : IApplicationMaterialPropertyExtrac
     {
       { 0, "User defined" },
       { 1, "Parametric - Simple" },
-      { 2, "Parametric - Mander" },
+      { 2, "Parametric - Mander" }
     };
 
   private readonly Dictionary<int, string?> _ssHysTypeDict =
@@ -27,7 +27,7 @@ public class EtabsMaterialPropertyExtractor : IApplicationMaterialPropertyExtrac
       { 4, "Concrete" },
       { 5, "BRB Hardening" },
       { 6, "Degrading" },
-      { 7, "Isotropic" },
+      { 7, "Isotropic" }
     };
 
   private const int TEMP = 0;

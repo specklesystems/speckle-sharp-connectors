@@ -17,7 +17,7 @@ public class ElementUnpacker
     BuiltInCategory.OST_StairsSketchLandingCenterLines,
     BuiltInCategory.OST_StairsSketchRiserLines,
     BuiltInCategory.OST_RebarSketchLines,
-    BuiltInCategory.OST_StairsSketchRunLines,
+    BuiltInCategory.OST_StairsSketchRunLines
   ];
 
   /// <summary>

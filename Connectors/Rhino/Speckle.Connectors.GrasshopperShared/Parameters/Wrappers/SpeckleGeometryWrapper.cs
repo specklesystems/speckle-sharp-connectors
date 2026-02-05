@@ -175,7 +175,7 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Parent = Parent,
       Properties = Properties,
       Name = Name,
-      Path = Path,
+      Path = Path
     };
 
   public virtual ObjectAttributes CreateObjectAttributes(int layerIndex = -1, bool bakeMaterial = false)

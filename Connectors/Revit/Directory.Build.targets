@@ -1,27 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target
-    AfterTargets="Clean"
-    Name="CleanAddinsRevit"
-    Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'"
-  >
+  <Target AfterTargets="Clean" Name="CleanAddinsRevit" Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <RemoveDir Directories="$(TargetDir);$(ProjectDir)\..\Release\Release$(RevitVersion);$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion);" />
     <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion).addin" />
   </Target>
-  <Target
-    AfterTargets="Build"
-    Name="AfterBuildRevit"
-    Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'"
-  >
+
+  <Target AfterTargets="Build"  Name="AfterBuildRevit" Condition="'$(RevitVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
     <ItemGroup>
       <RevitDLLs Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.addin" />
       <SourceManifest Include="$(TargetDir)\Plugin\Speckle.Connectors.Revit$(RevitVersion).addin" />
     </ItemGroup>
-    <Message Text="Revit Version $(RevitVersion)" Importance="high" />
-    <Copy
-      DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion)\%(RecursiveDir)"
-      SourceFiles="@(RevitDLLs)"
-    />
+    <Message Text="Revit Version $(RevitVersion)" Importance="high"/>
+    <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\Speckle.Connectors.Revit$(RevitVersion)\%(RecursiveDir)" SourceFiles="@(RevitDLLs)" />
     <Copy DestinationFolder="$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\" SourceFiles="@(SourceManifest)" />
   </Target>
 </Project>

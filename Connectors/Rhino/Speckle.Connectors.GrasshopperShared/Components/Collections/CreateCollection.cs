@@ -101,7 +101,7 @@ public class CreateCollection : VariableParameterComponentBase
       SpeckleGeometryWrapper => true,
       SpeckleDataObjectWrapper => true,
       SpeckleCollectionWrapper collection => collection.Elements.Any(HasAnyValidContent),
-      _ => false,
+      _ => false
     };
 
   private SpeckleCollectionWrapper CreateRootCollection() =>
@@ -112,7 +112,7 @@ public class CreateCollection : VariableParameterComponentBase
       Path = new List<string> { "Unnamed" },
       Color = null,
       Material = null,
-      ApplicationId = InstanceGuid.ToString(),
+      ApplicationId = InstanceGuid.ToString()
     };
 
   private SpeckleCollectionWrapper? ProcessInputParameter(IGH_Param inputParam, List<IGH_Goo> data, string rootName)
@@ -139,7 +139,7 @@ public class CreateCollection : VariableParameterComponentBase
       Color = null,
       Material = null,
       Topology = GrasshopperHelpers.GetParamTopology(inputParam),
-      ApplicationId = inputParam.InstanceGuid.ToString(),
+      ApplicationId = inputParam.InstanceGuid.ToString()
     };
 
     if (collections.Count > 0)

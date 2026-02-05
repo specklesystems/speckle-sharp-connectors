@@ -173,7 +173,7 @@ public class RevitBuiltInCategoryExtractor(IPropertyConverter converter) : IRevi
       ["Rooms"] = "OST_Rooms",
 
       // Misc
-      ["Ramps"] = "OST_Ramps",
+      ["Ramps"] = "OST_Ramps"
     };
 
   /// <summary>

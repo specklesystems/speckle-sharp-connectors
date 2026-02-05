@@ -14,7 +14,7 @@ internal static class SpeckleLogLevelUtility
       SpeckleLogLevel.Warning => LogEventLevel.Warning,
       SpeckleLogLevel.Error => LogEventLevel.Error,
       SpeckleLogLevel.Fatal => LogEventLevel.Fatal,
-      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null),
+      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null)
     };
 
   internal static LogLevel GetMicrosoftLevel(SpeckleLogLevel speckleLogLevel) =>
@@ -26,6 +26,6 @@ internal static class SpeckleLogLevelUtility
       SpeckleLogLevel.Warning => LogLevel.Warning,
       SpeckleLogLevel.Error => LogLevel.Error,
       SpeckleLogLevel.Fatal => LogLevel.Critical,
-      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null),
+      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null)
     };
 }

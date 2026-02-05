@@ -33,7 +33,7 @@ public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Cir
         plane = plane,
         radius = target.Radius,
         units = _settingsStore.Current.SpeckleUnits,
-        bbox = bbox,
+        bbox = bbox
       };
 
     return circle;

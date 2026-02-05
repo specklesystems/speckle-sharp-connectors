@@ -40,7 +40,7 @@ public class NurbsSurfaceToSpeckleConverter : ITypedConverter<RG.NurbsSurface, S
       domainV = _intervalConverter.Convert(target.Domain(1)),
       knotsU = target.KnotsU.ToList(),
       knotsV = target.KnotsV.ToList(),
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 
     return result;

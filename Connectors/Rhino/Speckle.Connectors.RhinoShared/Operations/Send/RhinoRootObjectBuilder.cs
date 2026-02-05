@@ -76,7 +76,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   {
     using var activity = _activityFactory.Start("Build");
     // 0 - Init the root
-    Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document", };
+    Collection rootObjectCollection = new() { name = _converterSettings.Current.Document.Name ?? "Unnamed document" };
     rootObjectCollection["units"] = _converterSettings.Current.SpeckleUnits;
 
     // 1 - Unpack the instances

@@ -49,7 +49,7 @@ public class DisplayableObjectConverter
         SOG.Arc arc => _arcConverter.Convert(arc),
         SOG.Mesh mesh => _meshConverter.Convert(mesh),
         SOG.Point point => _pointConverter.Convert(point),
-        _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}"),
+        _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
       x.Transform(GetUnitsTransform(item));
       result.Add(x);

@@ -91,7 +91,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     {
       vertices = vertices,
       faces = faces,
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
   }
 
@@ -129,7 +129,7 @@ public class SolidToSpeckleConverter : ITypedConverter<TSM.Solid, SOG.Mesh>
     {
       vertices = vertices,
       faces = faces,
-      units = _settingsStore.Current.SpeckleUnits,
+      units = _settingsStore.Current.SpeckleUnits
     };
 
     return mesh;

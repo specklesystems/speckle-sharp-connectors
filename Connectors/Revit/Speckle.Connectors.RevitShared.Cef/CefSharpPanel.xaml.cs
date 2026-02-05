@@ -68,7 +68,7 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     data.InitialState = new Autodesk.Revit.UI.DockablePaneState
     {
       DockPosition = DockPosition.Tabbed,
-      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser,
+      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
     };
   }
 }

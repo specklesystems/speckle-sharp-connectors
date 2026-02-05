@@ -114,7 +114,7 @@ public class DataObjectConverter
       SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
       SOG.Region region => new() { _regionConverter.Convert(region) },
       SOG.SubDX subd => _subdConverter.Convert(subd),
-      _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}"),
+      _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
 
   private RG.Transform GetUnitsTransform(Base speckleObject)

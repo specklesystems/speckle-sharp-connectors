@@ -85,6 +85,6 @@ public static class CsiWrapperFactory
       5 => new CsiShellWrapper { Name = name },
       6 => new CsiSolidWrapper { Name = name }, // TODO: CsiSolidWrapper
       7 => new CsiLinkWrapper { Name = name }, // TODO: CsiLinkWrapper
-      _ => throw new ArgumentOutOfRangeException(nameof(objectType), $"Unsupported object type: {objectType}"),
+      _ => throw new ArgumentOutOfRangeException(nameof(objectType), $"Unsupported object type: {objectType}")
     };
 }

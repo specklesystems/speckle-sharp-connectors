@@ -2,13 +2,16 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <UseWpf>true</UseWpf>
+    <UseWpf>true</UseWpf>    
     <RevitVersion>2023</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2023;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
+
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
+
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
+  
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -19,14 +22,17 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" IncludeAssets="compile" NoWarn="NU1903" />
   </ItemGroup>
+
   <ItemGroup>
     <Content Include="Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

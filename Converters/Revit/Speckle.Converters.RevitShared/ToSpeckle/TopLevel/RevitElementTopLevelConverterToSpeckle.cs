@@ -129,7 +129,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
         elements = children,
         displayValue = proxifiedDisplayValues,
         properties = properties,
-        units = _converterSettings.Current.SpeckleUnits,
+        units = _converterSettings.Current.SpeckleUnits
       };
 
     return revitObject;
@@ -265,7 +265,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       definitionId = instanceDefinitionId,
       transform = transform,
       maxDepth = 0,
-      units = mesh.units,
+      units = mesh.units
     };
 
     return instanceProxy;

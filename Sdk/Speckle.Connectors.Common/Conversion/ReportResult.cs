@@ -16,7 +16,7 @@ public enum Status
   SUCCESS = 1,
   INFO = 2, // Not in use yet, maybe later as discussed
   WARNING = 3, // Not in use yet, maybe later as discussed
-  ERROR = 4,
+  ERROR = 4
 }
 
 public sealed class SendConversionResult : ConversionResult
@@ -109,7 +109,7 @@ public abstract class ConversionResult
     return new ErrorWrapper()
     {
       Message = exception.Message,
-      StackTrace = $"{exception.Message}\n{exception.StackTrace}",
+      StackTrace = $"{exception.Message}\n{exception.StackTrace}"
     };
   }
 }

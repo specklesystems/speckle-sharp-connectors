@@ -73,7 +73,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           definitionId = definitionId.ToString(),
           maxDepth = depth,
           transform = GetMatrix(instance.BlockTransform.ToArray()),
-          units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits),
+          units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
 
       var properties = _propertiesExtractor.GetProperties(instance);
@@ -151,7 +151,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         applicationId = definitionId.ToString(),
         objects = new(),
         maxDepth = depth,
-        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
+        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name
       };
 
       // Go through each definition object
