@@ -72,7 +72,7 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
         displayValue = displayValue,
         properties = properties,
         units = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.GetSpeckleApplicationId()
+        applicationId = target.GetSpeckleApplicationId(),
       };
 
     return civilObject;

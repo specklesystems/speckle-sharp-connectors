@@ -22,6 +22,6 @@ public class TeklaLineConverter : ITypedConverter<TG.LineSegment, SOG.Line>
     {
       start = _pointConverter.Convert(target.StartPoint),
       end = _pointConverter.Convert(target.EndPoint),
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
 }

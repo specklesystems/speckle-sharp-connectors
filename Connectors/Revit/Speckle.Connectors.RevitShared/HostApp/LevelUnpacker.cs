@@ -54,7 +54,7 @@ public class LevelUnpacker
         {
           name = level.Name,
           displayValue = [],
-          properties = _propertiesExtractor.GetProperties(level)
+          properties = _propertiesExtractor.GetProperties(level),
         };
         var unitSettings = _converterSettings.Current.Document.GetUnits();
         var lengthUnitType = unitSettings.GetFormatOptions(SpecTypeId.Length).GetUnitTypeId();
@@ -65,7 +65,7 @@ public class LevelUnpacker
         {
           applicationId = level.UniqueId,
           objects = [element.UniqueId],
-          value = levelDataObject
+          value = levelDataObject,
         };
       }
     }

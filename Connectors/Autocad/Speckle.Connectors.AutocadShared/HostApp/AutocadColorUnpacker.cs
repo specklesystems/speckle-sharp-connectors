@@ -116,7 +116,7 @@ public class AutocadColorUnpacker
         value = argb,
         applicationId = id,
         name = name,
-        objects = new()
+        objects = new(),
       };
 
     // add the color source as well for receiving in other apps

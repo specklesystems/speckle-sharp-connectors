@@ -116,7 +116,7 @@ public class AutocadMaterialUnpacker
         name = material.Name,
         opacity = material.Opacity.Percentage,
         diffuse = diffuse.ToArgb(),
-        applicationId = id
+        applicationId = id,
       };
 
     // Add additional properties
@@ -127,7 +127,7 @@ public class AutocadMaterialUnpacker
     {
       value = renderMaterial,
       objects = new(),
-      applicationId = id
+      applicationId = id,
     };
   }
 }

@@ -44,7 +44,7 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
         midPoint = mid,
         domain = domain,
         bbox = bbox,
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
     return arc;

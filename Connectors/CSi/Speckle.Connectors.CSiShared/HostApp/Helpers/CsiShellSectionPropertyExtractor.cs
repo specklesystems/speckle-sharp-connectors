@@ -59,7 +59,7 @@ public class CsiShellSectionPropertyExtractor : IShellSectionPropertyExtractor
         ["Shear v13 Direction"] = stiffnessModifiersArray[5],
         ["Shear v23 Direction"] = stiffnessModifiersArray[6],
         ["Mass"] = stiffnessModifiersArray[7],
-        ["Weight"] = stiffnessModifiersArray[8]
+        ["Weight"] = stiffnessModifiersArray[8],
       };
 
     var generalData = properties.EnsureNested(SectionPropertyCategory.GENERAL_DATA);

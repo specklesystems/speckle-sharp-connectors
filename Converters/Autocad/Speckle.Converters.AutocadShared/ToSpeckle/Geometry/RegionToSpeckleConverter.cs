@@ -69,7 +69,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
       innerLoops = innerLoops,
       hasHatchPattern = false,
       displayValue = [mesh],
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 
@@ -142,7 +142,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
     {
       segments = segments.Select(x => ConvertSegment(x)).ToList(),
       closed = true,
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 
@@ -153,7 +153,7 @@ public class RegionToSpeckleConverter : IToSpeckleTopLevelConverter, ITypedConve
       AG.LineSegment3d line => _lineConverter.Convert(line),
       AG.CircularArc3d arc => _arcConverter.Convert(arc),
       AG.NurbCurve3d nurb => _nurbConverter.Convert(ADB.Curve.CreateFromGeCurve(nurb)),
-      _ => throw new ConversionException($"Unsupported curve type for Region conversion: {curve}")
+      _ => throw new ConversionException($"Unsupported curve type for Region conversion: {curve}"),
     };
   }
 }

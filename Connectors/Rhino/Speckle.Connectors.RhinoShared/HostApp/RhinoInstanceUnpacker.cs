@@ -55,7 +55,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
           definitionId = instance.InstanceDefinition.Id.ToString(),
           transform = XFormToMatrix(instance.InstanceXform),
           maxDepth = depth,
-          units = currentDoc.ModelUnitSystem.ToSpeckleString()
+          units = currentDoc.ModelUnitSystem.ToSpeckleString(),
         };
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
@@ -107,7 +107,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
         objects = new List<string>(),
         maxDepth = depth,
         name = instance.InstanceDefinition.Name,
-        ["description"] = instance.InstanceDefinition.Description
+        ["description"] = instance.InstanceDefinition.Description,
       };
 
       _instanceObjectsManager.AddDefinitionProxy(instance.InstanceDefinition.Id.ToString(), definition);

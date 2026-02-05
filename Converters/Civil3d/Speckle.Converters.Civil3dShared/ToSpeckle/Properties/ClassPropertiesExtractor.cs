@@ -152,7 +152,7 @@ public class ClassPropertiesExtractor
       ["area"] = catchment.Area,
       ["area2d"] = catchment.Area2d,
       ["imperviousArea"] = catchment.ImperviousArea,
-      ["perimeter2d"] = catchment.Perimeter2d
+      ["perimeter2d"] = catchment.Perimeter2d,
     };
 
     // get hydrological props
@@ -164,7 +164,7 @@ public class ClassPropertiesExtractor
       ["hydrologicallyMostDistantLength"] = catchment.HydrologicallyMostDistantLength,
       ["runoffCoefficient"] = catchment.RunoffCoefficient,
       ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
-      ["antecedentWetness"] = catchment.AntecedentWetness
+      ["antecedentWetness"] = catchment.AntecedentWetness,
     };
 
     // get hydraulic props
@@ -278,7 +278,7 @@ public class ClassPropertiesExtractor
         ["maximumCover"] = pipe.MaximumCover,
         ["junctionLoss"] = pipe.JunctionLoss,
         ["flowDirection"] = pipe.FlowDirection.ToString(),
-        ["flowRate"] = pipe.FlowRate
+        ["flowRate"] = pipe.FlowRate,
       };
 
     // get assignments like catchment group, reference surface, reference pipe networks
@@ -330,7 +330,7 @@ public class ClassPropertiesExtractor
       {
         ["sumpDepth"] = structure.SumpDepth,
         ["sumpElevation"] = structure.SumpElevation,
-        ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth
+        ["innerDiameterOrWidth"] = structure.InnerDiameterOrWidth,
       };
 
     if (structure.BoundingShape == CDB.BoundingShapeType.Box)
@@ -417,7 +417,7 @@ public class ClassPropertiesExtractor
             ["x"] = point.XYZ.X,
             ["y"] = point.XYZ.Y,
             ["z"] = point.XYZ.Z,
-            ["isBreak"] = point.IsBreak
+            ["isBreak"] = point.IsBreak,
           };
 
         PropertyHandler propHandler = new();
@@ -461,7 +461,7 @@ public class ClassPropertiesExtractor
       {
         ["codeName"] = featureLineCode.CodeName,
         ["isConnected"] = featureLineCode.IsConnected,
-        ["payItems"] = featureLineCode.PayItems
+        ["payItems"] = featureLineCode.PayItems,
       };
     }
 
@@ -512,7 +512,7 @@ public class ClassPropertiesExtractor
       {
         ["startingStation"] = alignment.StartingStation,
         ["endingStation"] = alignment.EndingStation,
-        ["alignmentType"] = alignment.AlignmentType.ToString()
+        ["alignmentType"] = alignment.AlignmentType.ToString(),
       };
 
     // get assignments
@@ -540,7 +540,7 @@ public class ClassPropertiesExtractor
         ["rawStationBack"] = stationEquation.RawStationBack,
         ["stationBack"] = stationEquation.StationBack,
         ["stationAhead"] = stationEquation.StationAhead,
-        ["equationType"] = stationEquation.EquationType.ToString()
+        ["equationType"] = stationEquation.EquationType.ToString(),
       };
       equationCount++;
     }
@@ -550,7 +550,7 @@ public class ClassPropertiesExtractor
     {
       ["x"] = alignment.ReferencePoint.X,
       ["y"] = alignment.ReferencePoint.Y,
-      ["station"] = alignment.ReferencePointStation
+      ["station"] = alignment.ReferencePointStation,
     };
 
     AddDictionaryToDictionary(stationControlDict, properties, "Station Control");
@@ -564,7 +564,7 @@ public class ClassPropertiesExtractor
       {
         ["number"] = designSpeed.SpeedNumber,
         ["station"] = designSpeed.Station,
-        ["value"] = designSpeed.Value
+        ["value"] = designSpeed.Value,
       };
       speedsCount++;
     }
@@ -583,7 +583,7 @@ public class ClassPropertiesExtractor
         {
           ["side"] = offsetInfo?.Side.ToString(),
           ["parentAlignmentId"] = offsetInfo?.ParentAlignmentId.GetSpeckleApplicationId(),
-          ["nominalOffset"] = offsetInfo?.NominalOffset
+          ["nominalOffset"] = offsetInfo?.NominalOffset,
         };
       }
     }
@@ -600,7 +600,7 @@ public class ClassPropertiesExtractor
       ["endingStation"] = profile.EndingStation,
       ["profileType"] = profile.ProfileType.ToString(),
       ["elevationMin"] = profile.ElevationMin,
-      ["elevationMax"] = profile.ElevationMax
+      ["elevationMax"] = profile.ElevationMax,
     };
   }
 
@@ -654,7 +654,7 @@ public class ClassPropertiesExtractor
     {
       ["x"] = subassembly.Origin.X,
       ["y"] = subassembly.Origin.Y,
-      ["z"] = subassembly.Origin.Z
+      ["z"] = subassembly.Origin.Z,
     };
 
     // get shapes > links > points info
@@ -676,7 +676,7 @@ public class ClassPropertiesExtractor
         int pointCount = 0;
         foreach (CDB.Point point in link.Points)
         {
-          Dictionary<string, object?> pointDict = new() { ["elevation"] = point.Elevation, ["offset"] = point.Offset };
+          Dictionary<string, object?> pointDict = new() { ["elevation"] = point.Elevation, ["offset"] = point.Offset, };
           AddCodesToDict(point.Codes, pointDict);
           pointCount++;
         }

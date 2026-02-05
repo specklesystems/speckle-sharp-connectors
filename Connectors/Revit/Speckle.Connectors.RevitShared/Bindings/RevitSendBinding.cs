@@ -187,9 +187,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               _toSpeckleSettingsManager.GetSendParameterNullOrEmptyStringsSetting(document, card),
               _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
               _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
-              _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card)
-              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
-              false
+              _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card),
+              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card)
             )
           );
       },

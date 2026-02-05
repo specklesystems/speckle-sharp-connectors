@@ -6,7 +6,6 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 public class PartDataExtractor
 {
   /// POC: Note that we're abusing dictionaries in here because we've yet to have a simple way to serialize non-base derived classes (or structs?)
-
   public PartDataExtractor() { }
 
   /// <summary>
@@ -20,7 +19,7 @@ public class PartDataExtractor
     {
       CDB.Part part => ParsePartData(part.PartData),
       CDB.PressurePart pressurePart => ParsePartData(pressurePart.PartData),
-      _ => null
+      _ => null,
     };
   }
 
@@ -63,7 +62,7 @@ public class PartDataExtractor
         ["value"] = value,
         ["name"] = field.Name,
         ["context"] = fieldName,
-        ["units"] = field.Units
+        ["units"] = field.Units,
       };
 
       if (!result.ContainsKey(fieldName))

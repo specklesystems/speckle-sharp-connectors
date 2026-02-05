@@ -13,7 +13,7 @@ public sealed class Logger(ILogger logger)
       SpeckleLogLevel.Warning => LogLevel.Warning,
       SpeckleLogLevel.Error => LogLevel.Error,
       SpeckleLogLevel.Fatal => LogLevel.Critical,
-      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null)
+      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null),
     };
 
   public void Write<TState>(

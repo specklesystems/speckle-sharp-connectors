@@ -62,7 +62,7 @@ public class RevitRootObjectBuilder(
 
     // init the root
     Collection rootObject =
-      new() { name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
+      new() { name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First(), };
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
@@ -123,7 +123,7 @@ public class RevitRootObjectBuilder(
     foreach (var filteredDocumentToConvert in filteredDocumentsToConvert)
     {
       using (
-        converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc })
+        converterSettings.Push(currentSettings => currentSettings with { Document = filteredDocumentToConvert.Doc, })
       )
       {
         var atomicObjects = elementUnpacker
@@ -268,7 +268,7 @@ public class RevitRootObjectBuilder(
       new Collection()
       {
         elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
-        name = "definitionGeometry"
+        name = "definitionGeometry",
       }
     );
 

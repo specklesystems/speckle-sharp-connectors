@@ -5,60 +5,53 @@
     <Description>NextGen Speckle Connector for Autodesk Navisworks Manage</Description>
     <Authors>$(Authors) jonathon@speckle.systems</Authors>
     <PackageTags>$(PackageTags) connector nwd nwc nwf navisworks manage</PackageTags>
-
     <PluginBundleTarget>$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Navisworks.bundle</PluginBundleTarget>
     <PluginVersionContentTarget>$(PluginBundleTarget)\Contents\$(NavisworksVersion)</PluginVersionContentTarget>
     <RootNamespace>Speckle.Connector.Navisworks</RootNamespace>
   </PropertyGroup>
-
-  <Target Name="PostBuild"
-          AfterTargets="Build"
-          Condition="'$(OS)' == 'Windows_NT' and '$(NavisworksVersion)' != ''">
-
-    <Message Text="Navisworks Version $(NavisworksVersion)" Importance="high"/>
-
-    <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')"/>
-
-    <MakeDir Directories="
+  <Target Name="PostBuild" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' and '$(NavisworksVersion)' != ''">
+    <Message Text="Navisworks Version $(NavisworksVersion)" Importance="high" />
+    <RemoveDir Directories="$(PluginVersionContentTarget)" Condition="Exists('$(PluginVersionContentTarget)')" />
+    <MakeDir
+      Directories="
       $(PluginBundleTarget);
       $(PluginBundleTarget)\Contents;
       $(PluginVersionContentTarget);
       $(PluginVersionContentTarget)\en-US;
-      $(PluginVersionContentTarget)\Resources"/>
-
+      $(PluginVersionContentTarget)\Resources"
+    />
     <!-- Re-evaluate outputs at execution time -->
     <ItemGroup>
-      <PackageXml Include="$(OutDir)Plugin\PackageContents.xml"/>
-      <RibbonFiles Include="$(OutDir)Plugin\NavisworksRibbon.*"/>
-      <ResourceFiles Include="$(OutDir)Resources\**\*.png;$(OutDir)Resources\**\*.ico"/>
-      <AllFiles Include="$(OutDir)**\*.*"/>
-
-      <Message Text="AllFiles count: @(AllFiles->Count())" Importance="high"/>
-      <Warning Condition="'@(AllFiles)' == ''" Text="No files in $(OutDir) at PostBuild time."/>
-
+      <PackageXml Include="$(OutDir)Plugin\PackageContents.xml" />
+      <RibbonFiles Include="$(OutDir)Plugin\NavisworksRibbon.*" />
+      <ResourceFiles Include="$(OutDir)Resources\**\*.png;$(OutDir)Resources\**\*.ico" />
+      <AllFiles Include="$(OutDir)**\*.*" />
+      <Message Text="AllFiles count: @(AllFiles-&gt;Count())" Importance="high" />
+      <Warning Condition="'@(AllFiles)' == ''" Text="No files in $(OutDir) at PostBuild time." />
     </ItemGroup>
-
-    <Copy SourceFiles="@(PackageXml)"
-          DestinationFolder="$(PluginBundleTarget)\"
-          SkipUnchangedFiles="true"/>
-
-    <Copy SourceFiles="@(RibbonFiles)"
-          DestinationFolder="$(PluginVersionContentTarget)\en-US\"
-          SkipUnchangedFiles="true"/>
-
-    <Copy SourceFiles="@(ResourceFiles)"
-          DestinationFiles="@(ResourceFiles->'$(PluginVersionContentTarget)\Resources\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"/>
-
-    <Copy SourceFiles="@(AllFiles)"
-          DestinationFiles="@(AllFiles->'$(PluginVersionContentTarget)\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"/>
-
-    <Message Text="Copied build to $(PluginVersionContentTarget)" Importance="high"/>
+    <Copy SourceFiles="@(PackageXml)" DestinationFolder="$(PluginBundleTarget)\" SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(RibbonFiles)"
+      DestinationFolder="$(PluginVersionContentTarget)\en-US\"
+      SkipUnchangedFiles="true"
+    />
+    <Copy
+      SourceFiles="@(ResourceFiles)"
+      DestinationFiles="@(ResourceFiles-&gt;'$(PluginVersionContentTarget)\Resources\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
+    <Copy
+      SourceFiles="@(AllFiles)"
+      DestinationFiles="@(AllFiles-&gt;'$(PluginVersionContentTarget)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
+    <Message Text="Copied build to $(PluginVersionContentTarget)" Importance="high" />
   </Target>
-
-  <Target Name="ValidateNavisworksVersion" BeforeTargets="PostBuild"
-          Condition="'$(NavisworksVersion)' == '' and '$(OS)' == 'Windows_NT'">
-    <Error Text="NavisworksVersion property is required for PostBuild packaging."/>
+  <Target
+    Name="ValidateNavisworksVersion"
+    BeforeTargets="PostBuild"
+    Condition="'$(NavisworksVersion)' == '' and '$(OS)' == 'Windows_NT'"
+  >
+    <Error Text="NavisworksVersion property is required for PostBuild packaging." />
   </Target>
 </Project>

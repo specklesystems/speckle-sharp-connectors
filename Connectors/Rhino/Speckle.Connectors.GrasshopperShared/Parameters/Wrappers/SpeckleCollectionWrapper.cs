@@ -126,10 +126,10 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
             SpeckleCollectionWrapper c => c.DeepCopy(),
             SpeckleBlockInstanceWrapper b => b.DeepCopy(),
             SpeckleGeometryWrapper o => o.DeepCopy(),
-            _ => e
+            _ => e,
           }
         )
-        .ToList()
+        .ToList(),
     };
 
   /// <summary>

@@ -231,6 +231,6 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       Base = (Base)InstanceDefinitionProxy.ShallowCopy(),
       ApplicationId = ApplicationId,
       Name = Name,
-      Objects = Objects.Select(o => o.DeepCopy()).ToList()
+      Objects = Objects.Select(o => o.DeepCopy()).ToList(),
     };
 }

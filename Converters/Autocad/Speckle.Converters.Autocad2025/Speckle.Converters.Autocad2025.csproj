@@ -5,15 +5,12 @@
     <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2025.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
-
   <Import Project="..\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems" Label="Shared" />
 </Project>

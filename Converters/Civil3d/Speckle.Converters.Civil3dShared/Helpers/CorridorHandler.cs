@@ -157,7 +157,7 @@ public sealed class CorridorHandler
                 {
                   ["name"] = subassembly.Name,
                   ["type"] = subassembly.GetType().ToString().Split('.').Last(),
-                  applicationId = subassembly.GetSpeckleApplicationId()
+                  applicationId = subassembly.GetSpeckleApplicationId(),
                 };
 
               // try to get the display value mesh from the corridor display value extractor by subassembly key
@@ -184,7 +184,7 @@ public sealed class CorridorHandler
               ["name"] = assembly.Name,
               ["type"] = assembly.GetType().ToString().Split('.').Last(),
               ["subassemblies"] = subassemblies,
-              applicationId = assembly.GetSpeckleApplicationId()
+              applicationId = assembly.GetSpeckleApplicationId(),
             };
 
           convertedRegion["assembly"] = convertedAssembly;
@@ -202,7 +202,7 @@ public sealed class CorridorHandler
           CDB.AppliedAssembly appliedAssembly = region.AppliedAssemblies[i];
 
           Dictionary<string, object?> appliedAssemblyDict =
-            new() { ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(), ["station"] = station };
+            new() { ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(), ["station"] = station, };
           PropertyHandler propHandler = new();
           propHandler.TryAddToDictionary(
             appliedAssemblyDict,
@@ -223,7 +223,7 @@ public sealed class CorridorHandler
               new()
               {
                 ["subassemblyId"] = subassemblyId,
-                ["calculatedShapes"] = GetCalculatedShapes(appliedSubassembly)
+                ["calculatedShapes"] = GetCalculatedShapes(appliedSubassembly),
               };
 
             appliedSubassemblies[name] = appliedSubassemblyDict;
@@ -271,7 +271,7 @@ public sealed class CorridorHandler
         calculatedLinks[linkCount.ToString()] = new Dictionary<string, object?>()
         {
           ["corridorCodes"] = link.CorridorCodes.ToList(),
-          ["calculatedPoints"] = calculatedPoints
+          ["calculatedPoints"] = calculatedPoints,
         };
 
         linkCount++;
@@ -281,7 +281,7 @@ public sealed class CorridorHandler
       {
         ["corridorCodes"] = shape.CorridorCodes.ToList(),
         ["area"] = shape.Area,
-        ["calculatedLinks"] = calculatedLinks
+        ["calculatedLinks"] = calculatedLinks,
       };
     }
     return calculatedShapes;
@@ -313,7 +313,7 @@ public sealed class CorridorHandler
       ["name"] = featureline.CodeName,
       ["type"] = featureline.GetType().ToString().Split('.').Last(),
       ["codeName"] = featureline.CodeName,
-      ["displayValue"] = polylines
+      ["displayValue"] = polylines,
     };
   }
 }

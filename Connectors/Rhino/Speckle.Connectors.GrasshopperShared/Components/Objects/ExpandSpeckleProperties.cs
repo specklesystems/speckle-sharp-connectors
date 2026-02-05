@@ -58,14 +58,14 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       {
         SpecklePropertyGoo prop => prop.Value,
         SpecklePropertyGroupGoo propGroup => propGroup,
-        _ => value
+        _ => value,
       };
 
       var param = new SpeckleOutputParam
       {
         Name = key,
         NickName = key,
-        Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
+        Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item,
       };
 
       outputParams.Add(new OutputParamWrapper(param, outputValue));
@@ -115,7 +115,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
         Name = newParam.Param.Name,
         NickName = newParam.Param.NickName,
         MutableNickName = false,
-        Access = newParam.Param.Access
+        Access = newParam.Param.Access,
       };
       Params.RegisterOutputParam(param);
     }

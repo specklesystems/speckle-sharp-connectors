@@ -226,7 +226,7 @@ public sealed class DisplayValueExtractor
       (not null, not null) => documentToWorld.Multiply(localToDocument),
       (not null, null) => localToDocument,
       (null, not null) => documentToWorld,
-      (null, null) => null
+      (null, null) => null,
     };
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
@@ -375,7 +375,7 @@ public sealed class DisplayValueExtractor
       M14 = _toSpeckleScalingService.ScaleLength(transform.Origin.X),
       M24 = _toSpeckleScalingService.ScaleLength(transform.Origin.Y),
       M34 = _toSpeckleScalingService.ScaleLength(transform.Origin.Z),
-      M44 = 1
+      M44 = 1,
     };
 
   private static DB.Transform? GetTransform(DB.Element element)
@@ -436,7 +436,7 @@ public sealed class DisplayValueExtractor
     {
       { DetailLevelType.Coarse, DB.ViewDetailLevel.Coarse },
       { DetailLevelType.Medium, DB.ViewDetailLevel.Medium },
-      { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
+      { DetailLevelType.Fine, DB.ViewDetailLevel.Fine },
     };
 
   /// <summary>

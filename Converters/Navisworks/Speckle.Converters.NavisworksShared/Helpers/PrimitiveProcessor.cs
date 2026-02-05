@@ -120,7 +120,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
         safeTriangle.Vertex2.Z,
         safeTriangle.Vertex3.X,
         safeTriangle.Vertex3.Y,
-        safeTriangle.Vertex3.Z
+        safeTriangle.Vertex3.Z,
       ]
     );
 

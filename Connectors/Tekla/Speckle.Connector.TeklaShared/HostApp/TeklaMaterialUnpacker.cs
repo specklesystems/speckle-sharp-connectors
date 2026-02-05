@@ -44,7 +44,7 @@ public class TeklaMaterialUnpacker
           {
             value = renderMaterial,
             objects = [objectId],
-            applicationId = colorId
+            applicationId = colorId,
           };
         renderMaterialProxies[colorId] = proxyRenderMaterial;
       }

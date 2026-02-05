@@ -73,7 +73,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
           .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
           .Split(_documentPathSeparator, StringSplitOptions.None)
           .Reverse()
-          .First()
+          .First(),
       };
 
     // TODO: better handling for document and transactions!!

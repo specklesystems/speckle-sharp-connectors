@@ -151,7 +151,10 @@
   <Folder Name="/Connectors/Rhino/8/">
     <Project Path="Connectors\Rhino\Speckle.Connectors.Grasshopper8\Speckle.Connectors.Grasshopper8.csproj" />
     <Project Path="Connectors\Rhino\Speckle.Connectors.Rhino8\Speckle.Connectors.Rhino8.csproj" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="Classic C#" />
+    <Project
+      Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj"
+      Type="Classic C#"
+    />
     <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" />
   </Folder>
   <Folder Name="/Connectors/Rhino/Shared/">
@@ -180,7 +183,10 @@
   </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Rhino/">
-    <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj" Type="Classic C#">
+    <Project
+      Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj"
+      Type="Classic C#"
+    >
       <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />
     </Project>
     <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />

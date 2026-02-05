@@ -40,7 +40,7 @@ public class CurveConversionToSpeckle : ITypedConverter<DB.Curve, ICurve>
       DB.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
       DB.NurbSpline nurbs => _nurbsConverter.Convert(nurbs),
       DB.HermiteSpline hermite => _hermiteConverter.Convert(hermite),
-      _ => throw new ValidationException($"Unsupported curve type {target.GetType()}")
+      _ => throw new ValidationException($"Unsupported curve type {target.GetType()}"),
     };
   }
 }

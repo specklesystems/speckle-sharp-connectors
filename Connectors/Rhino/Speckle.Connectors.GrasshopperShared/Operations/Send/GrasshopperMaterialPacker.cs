@@ -41,7 +41,7 @@ internal sealed class GrasshopperMaterialPacker
         {
           value = matWrapper.Material,
           applicationId = matWrapper.ApplicationId,
-          objects = new() { objectId }
+          objects = new() { objectId },
         };
 
       RenderMaterialProxies[matWrapper.ApplicationId] = newMaterialProxy;

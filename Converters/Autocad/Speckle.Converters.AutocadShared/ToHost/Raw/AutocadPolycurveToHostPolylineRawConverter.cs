@@ -37,7 +37,7 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
       {
         Normal = _vectorConverter.Convert(target.normal),
         Elevation = (double)target.elevation * f,
-        Closed = target.closed
+        Closed = target.closed,
       };
 
     for (int i = 0; i < points2d.Count; i++)

@@ -127,7 +127,7 @@ public sealed class GeometryToSpeckleConverter(
               transform = ConvertToMatrix4X4(transformedWorld),
               units = _settings.Derived.SpeckleUnits,
               applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToHashString()}",
-              maxDepth = 0
+              maxDepth = 0,
             };
 
             _registry.MarkConverted(itemPathKey);
@@ -316,7 +316,7 @@ public sealed class GeometryToSpeckleConverter(
           (triangle.Vertex2.Z + _transformVector.Z) * SCALE,
           (triangle.Vertex3.X + _transformVector.X) * SCALE,
           (triangle.Vertex3.Y + _transformVector.Y) * SCALE,
-          (triangle.Vertex3.Z + _transformVector.Z) * SCALE
+          (triangle.Vertex3.Z + _transformVector.Z) * SCALE,
         ]
       );
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
@@ -326,7 +326,7 @@ public sealed class GeometryToSpeckleConverter(
     {
       vertices = vertices,
       faces = faces,
-      units = _settings.Derived.SpeckleUnits
+      units = _settings.Derived.SpeckleUnits,
     };
   }
 
@@ -351,7 +351,7 @@ public sealed class GeometryToSpeckleConverter(
             (line.End.Z + _transformVector.Z) * SCALE,
             _settings.Derived.SpeckleUnits
           ),
-          units = _settings.Derived.SpeckleUnits
+          units = _settings.Derived.SpeckleUnits,
         }
       );
     }
@@ -395,7 +395,7 @@ public sealed class GeometryToSpeckleConverter(
           {
             vertices = [.. mesh.vertices],
             faces = mesh.faces,
-            units = mesh.units
+            units = mesh.units,
           };
           GeometryHelpers.UnbakeMeshVertices(unbaked, invWorld);
           result.Add(unbaked);
@@ -407,7 +407,7 @@ public sealed class GeometryToSpeckleConverter(
           {
             start = new Point(line.start.x, line.start.y, line.start.z, line.start.units),
             end = new Point(line.end.x, line.end.y, line.end.z, line.end.units),
-            units = line.units
+            units = line.units,
           };
           GeometryHelpers.UnbakeLine(unbaked, invWorld);
           result.Add(unbaked);
@@ -484,7 +484,7 @@ public sealed class GeometryToSpeckleConverter(
           M41 = matrix[12],
           M42 = matrix[13],
           M43 = matrix[14],
-          M44 = matrix[15]
+          M44 = matrix[15],
         }
       )
       : throw new ArgumentException("Matrix must have exactly 16 elements", nameof(matrix));

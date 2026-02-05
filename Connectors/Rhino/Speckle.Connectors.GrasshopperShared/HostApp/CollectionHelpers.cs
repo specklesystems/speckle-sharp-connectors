@@ -19,7 +19,7 @@ public static class CollectionHelpers
       Path = new List<string> { "Unnamed" },
       Color = null,
       Material = null,
-      ApplicationId = instanceGuid
+      ApplicationId = instanceGuid,
     };
 
   /// <summary>
@@ -78,6 +78,6 @@ public static class CollectionHelpers
       SpeckleGeometryWrapper => true,
       SpeckleDataObjectWrapper => true,
       SpeckleCollectionWrapper collection => collection.Elements.Any(HasAnyValidContent),
-      _ => false
+      _ => false,
     };
 }

@@ -51,7 +51,7 @@ internal sealed class GrasshopperColorPacker
         value = argb,
         applicationId = id,
         name = name,
-        objects = new()
+        objects = new(),
       };
 
     return colorProxy;

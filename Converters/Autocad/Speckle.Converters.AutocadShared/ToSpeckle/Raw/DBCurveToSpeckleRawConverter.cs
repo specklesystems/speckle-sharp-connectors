@@ -60,7 +60,7 @@ public class DBCurveToSpeckleRawConverter : ITypedConverter<ADB.Curve, Objects.I
       ADB.Circle circle => _circleConverter.Convert(circle),
       ADB.Ellipse ellipse => _ellipseConverter.Convert(ellipse),
       ADB.Spline spline => _splineConverter.Convert(spline),
-      _ => _splineConverter.Convert(target.Spline)
+      _ => _splineConverter.Convert(target.Spline),
     };
 
   Base ITypedConverter<ADB.Curve, Base>.Convert(ADB.Curve target) => (Base)Convert(target);

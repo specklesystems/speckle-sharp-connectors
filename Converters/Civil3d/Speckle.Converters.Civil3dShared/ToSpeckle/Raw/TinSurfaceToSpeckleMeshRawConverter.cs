@@ -30,7 +30,7 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
         {
           triangle.Vertex1.Location,
           triangle.Vertex2.Location,
-          triangle.Vertex3.Location
+          triangle.Vertex3.Location,
         };
         foreach (Point3d p in triangleVertices)
         {
@@ -61,7 +61,7 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
       {
         faces = faces,
         vertices = vertices,
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
     return mesh;

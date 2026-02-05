@@ -38,7 +38,7 @@ public enum ToastNotificationType
   SUCCESS,
   WARNING,
   DANGER,
-  INFO
+  INFO,
 }
 
 public class BasicConnectorBindingCommands
@@ -76,7 +76,7 @@ public class BasicConnectorBindingCommands
         type,
         title,
         description = message,
-        autoClose
+        autoClose,
       }
     );
 

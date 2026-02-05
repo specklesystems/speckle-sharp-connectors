@@ -88,7 +88,7 @@ public class NavisworksConversionSettingsFactory(
       OriginMode.ProjectBasePoint => CalculateProjectBasePointTransform(),
       OriginMode.BoundingBoxCenter => CalculateBoundingBoxTransform(),
       OriginMode.ModelOrigin => new SafeVector(0.0, 0.0, 0.0), // Default identity transform
-      _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported.")
+      _ => throw new NotSupportedException($"OriginMode {_originMode} is not supported."),
     };
 
   private SafeVector CalculateProjectBasePointTransform()

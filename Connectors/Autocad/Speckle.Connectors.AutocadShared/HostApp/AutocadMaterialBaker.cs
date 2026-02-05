@@ -175,7 +175,7 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
         {
           Name = matName,
           Opacity = opacity,
-          Diffuse = diffuse
+          Diffuse = diffuse,
         };
 
       if (renderMaterial["reflectivity"] is double reflectivity)

@@ -31,7 +31,7 @@ public class ArcToSpeckleConverter : ITypedConverter<TG.Arc, SOG.Arc>
         normal = _vectorConverter.Convert(target.Normal),
         xdir = _vectorConverter.Convert(target.StartDirection),
         ydir = _vectorConverter.Convert(yaxis),
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
     return new()
@@ -40,7 +40,7 @@ public class ArcToSpeckleConverter : ITypedConverter<TG.Arc, SOG.Arc>
       midPoint = _pointConverter.Convert(target.ArcMiddlePoint),
       endPoint = _pointConverter.Convert(target.EndPoint),
       plane = plane,
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 }

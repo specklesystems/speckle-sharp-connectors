@@ -54,6 +54,6 @@ public class CurveToHostConverter : ITypedConverter<ICurve, RG.Curve>
       SOG.Polyline polyline => _polylineConverter.Convert(polyline),
       SOG.Curve curve => _nurbsCurveConverter.Convert(curve),
       SOG.Polycurve polyCurve => _polyCurveConverter.Convert(polyCurve),
-      _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}")
+      _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}"),
     };
 }

@@ -60,7 +60,7 @@ public class RhinoMaterialBaker
               Name = matName,
               DiffuseColor = diffuse,
               EmissionColor = emissive,
-              Transparency = transparency
+              Transparency = transparency,
             };
 
           // try to get additional properties

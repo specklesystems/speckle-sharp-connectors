@@ -103,7 +103,7 @@ public class NavisworksRootObjectBuilder(
     new()
     {
       name = NavisworksApp.ActiveDocument.Title ?? "Unnamed model",
-      ["units"] = converterSettings.Current.Derived.SpeckleUnits
+      ["units"] = converterSettings.Current.Derived.SpeckleUnits,
     };
 
   private Task<(Dictionary<string, Base?> converted, List<SendConversionResult> results)> ConvertModelItemsAsync(
@@ -285,7 +285,7 @@ public class NavisworksRootObjectBuilder(
       properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
-      ["path"] = path
+      ["path"] = path,
     };
   }
 
@@ -307,7 +307,7 @@ public class NavisworksRootObjectBuilder(
       properties = convertedBase["properties"] as Dictionary<string, object?> ?? [],
       units = units.ToString(),
       applicationId = convertedBase.applicationId,
-      ["path"] = path
+      ["path"] = path,
     };
   }
 
@@ -373,7 +373,7 @@ public class NavisworksRootObjectBuilder(
         name = $"Shared Geometry {groupKeyHash}",
         objects = geometries.Select(g => g.applicationId ?? "").Where(id => !string.IsNullOrEmpty(id)).ToList(),
         applicationId = $"{DEFINITION_ID_PREFIX}{groupKeyHash}",
-        maxDepth = 0
+        maxDepth = 0,
       };
 
       instanceDefinitionProxies.Add(defProxy);
@@ -384,7 +384,7 @@ public class NavisworksRootObjectBuilder(
     var geometryDefinitionsCollection = new Collection
     {
       name = "Geometry Definitions",
-      elements = allDefinitionGeometries
+      elements = allDefinitionGeometries,
     };
 
     var objectCollection = new Collection { name = "", elements = finalElements };

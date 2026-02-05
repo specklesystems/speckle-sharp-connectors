@@ -1,79 +1,56 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<ApplicationPackage 
-        SchemaVersion="1.0"
-        AppVersion="1.0"
-        Author="AEC SYSTEMS LTD"
-        Name="Speckle for AutoCAD"
-        Description="Speckle for AutoCAD"
-        Icon="./Contents/Resources/Logo.ico"
-        ProductCode="{958850b9-3782-4e6f-b9b3-1b570e0fcae1}" 
-        UpgradeCode="{274de351-80aa-4972-9b45-6a93f8ce968f}"> <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
-    
-    <CompanyDetails
-            Name="Speckle"
-            Url="https://speckle.systems"
-            Email="support@speckle.systems" />
-    <Components>
-    
-        <!-- AutoCAD 2022 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Autocad2022"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2022/Speckle.Connectors.Autocad2022.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="AutoCAD"
-                    SeriesMin="R24.1"
-                    SeriesMax="R24.1" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2023 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Autocad2023"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2023/Speckle.Connectors.Autocad2023.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="AutoCAD"
-                    SeriesMin="R24.2"
-                    SeriesMax="R24.2" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2024 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Autocad2024"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2024/Speckle.Connectors.Autocad2024.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="AutoCAD"
-                    SeriesMin="R24.3"
-                    SeriesMax="R24.3" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2025 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Autocad2025"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2025/Speckle.Connectors.Autocad2025.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="AutoCAD"
-                    SeriesMin="R25.0"
-                    SeriesMax="R25.0" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2026 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Autocad2026"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2026/Speckle.Connectors.Autocad2026.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="AutoCAD"
-                    SeriesMin="R25.1"
-                    SeriesMax="R25.1" />
-        </ComponentEntry>
-    </Components>
-
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage
+  SchemaVersion="1.0"
+  AppVersion="1.0"
+  Author="AEC SYSTEMS LTD"
+  Name="Speckle for AutoCAD"
+  Description="Speckle for AutoCAD"
+  Icon="./Contents/Resources/Logo.ico"
+  ProductCode="{958850b9-3782-4e6f-b9b3-1b570e0fcae1}"
+  UpgradeCode="{274de351-80aa-4972-9b45-6a93f8ce968f}"
+>
+  <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
+  <CompanyDetails Name="Speckle" Url="https://speckle.systems" Email="support@speckle.systems" />
+  <Components>
+    <!-- AutoCAD 2022 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Autocad2022"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2022/Speckle.Connectors.Autocad2022.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.1" SeriesMax="R24.1" />
+    </ComponentEntry>
+    <!-- AutoCAD 2023 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Autocad2023"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2023/Speckle.Connectors.Autocad2023.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.2" SeriesMax="R24.2" />
+    </ComponentEntry>
+    <!-- AutoCAD 2024 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Autocad2024"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2024/Speckle.Connectors.Autocad2024.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.3" SeriesMax="R24.3" />
+    </ComponentEntry>
+    <!-- AutoCAD 2025 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Autocad2025"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2025/Speckle.Connectors.Autocad2025.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R25.0" SeriesMax="R25.0" />
+    </ComponentEntry>
+    <!-- AutoCAD 2026 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Autocad2026"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2026/Speckle.Connectors.Autocad2026.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R25.1" SeriesMax="R25.1" />
+    </ComponentEntry>
+  </Components>
 </ApplicationPackage>

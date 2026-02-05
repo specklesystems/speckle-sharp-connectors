@@ -41,7 +41,7 @@ public class EtabsMaterialUnpacker : IMaterialUnpacker
           name = name,
           applicationId = name,
           objects = sectionIds,
-          ["properties"] = properties
+          ["properties"] = properties,
         };
 
       yield return materialProxy;

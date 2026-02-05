@@ -252,7 +252,7 @@ public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
       matrix.M41,
       matrix.M42,
       matrix.M43,
-      matrix.M44
+      matrix.M44,
     };
 
     var m3d = new Matrix3d(scaledTransform);
@@ -291,7 +291,7 @@ public class AutocadInstanceBaker : IInstanceBaker<IReadOnlyCollection<Entity>>
       0.0,
       0.0,
       0.0,
-      matrix[3, 3]
+      matrix[3, 3],
     ];
   }
 }

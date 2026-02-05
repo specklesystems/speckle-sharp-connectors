@@ -1,19 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-
   <ItemGroup>
-    <InternalsVisibleTo Include="Speckle.Connectors.DUI.Tests"/>
+    <InternalsVisibleTo Include="Speckle.Connectors.DUI.Tests" />
   </ItemGroup>
-  
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
-  
   <ItemGroup>
     <ProjectReference Include="..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
-  </ItemGroup> 
+  </ItemGroup>
 </Project>

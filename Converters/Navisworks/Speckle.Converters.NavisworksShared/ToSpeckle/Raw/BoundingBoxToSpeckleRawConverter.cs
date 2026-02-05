@@ -29,7 +29,7 @@ public class BoundingBoxToSpeckleRawConverter(IConverterSettingsStore<Navisworks
       normal = new Vector(0, 0, 1, units),
       xdir = new Vector(1, 0, 0, units),
       ydir = new Vector(0, 1, 0, units),
-      units = units
+      units = units,
     };
 
     var boundingBox = new Box
@@ -38,7 +38,7 @@ public class BoundingBoxToSpeckleRawConverter(IConverterSettingsStore<Navisworks
       plane = basePlane,
       xSize = new Interval() { start = minPoint.X, end = maxPoint.X },
       ySize = new Interval() { start = minPoint.Y, end = maxPoint.Y },
-      zSize = new Interval() { start = minPoint.Z, end = maxPoint.Z }
+      zSize = new Interval() { start = minPoint.Z, end = maxPoint.Z },
     };
 
     return boundingBox;

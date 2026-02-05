@@ -24,6 +24,6 @@ public class CsiResultsExtractorFactory
       ResultsKey.SPANDREL_FORCES => _serviceProvider.GetRequiredService<CsiSpandrelForceResultsExtractor>(),
       ResultsKey.STORY_DRIFTS => _serviceProvider.GetRequiredService<CsiStoryDriftsResultsExtractor>(),
       ResultsKey.STORY_FORCES => _serviceProvider.GetRequiredService<CsiStoryForceResultsExtractor>(),
-      _ => throw new InvalidOperationException($"{resultsKey} not accounted for in CsiResultsExtractorFactory")
+      _ => throw new InvalidOperationException($"{resultsKey} not accounted for in CsiResultsExtractorFactory"),
     };
 }

@@ -132,7 +132,7 @@ public class HierarchicalPropertyHandler(
       "DisplayName",
       "InstanceGuid",
       "Source",
-      "Source Guid"
+      "Source Guid",
     ];
 
     if (

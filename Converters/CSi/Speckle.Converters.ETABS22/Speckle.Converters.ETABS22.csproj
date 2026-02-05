@@ -1,20 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net8.0-windows</TargetFramework>
-        <Configurations>Debug;Release;Local</Configurations>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build"/>
-    </ItemGroup>
-
-    <Import Project="..\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems" Label="Shared" />
-
-    <Import Project="..\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems" Label="Shared" />
-
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Speckle.CSI.API" PrivateAssets="all" IncludeAssets="compile; build" />
+  </ItemGroup>
+  <Import Project="..\Speckle.Converters.CSiShared\Speckle.Converters.CSiShared.projitems" Label="Shared" />
+  <Import Project="..\Speckle.Converters.ETABSShared\Speckle.Converters.ETABSShared.projitems" Label="Shared" />
 </Project>

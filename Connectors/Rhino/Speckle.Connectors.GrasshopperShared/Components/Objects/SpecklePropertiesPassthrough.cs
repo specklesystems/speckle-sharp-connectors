@@ -32,7 +32,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
   {
     Merge, // this should be default mode
     Replace,
-    Remove
+    Remove,
   }
 
   private PropertyMode _mode = PropertyMode.Merge;

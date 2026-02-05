@@ -109,7 +109,7 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
       {
         start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
         end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
       yield return line;
@@ -124,7 +124,7 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
       {
         start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
         end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
       yield return line;

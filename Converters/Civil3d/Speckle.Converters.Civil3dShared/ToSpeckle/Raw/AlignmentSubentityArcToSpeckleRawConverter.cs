@@ -58,29 +58,29 @@ public class AlignmentSubentityArcToSpeckleRawConverter : ITypedConverter<CDB.Al
           x = target.StartPoint.X,
           y = target.StartPoint.Y,
           z = 0,
-          units = units
+          units = units,
         },
         endPoint = new()
         {
           x = target.EndPoint.X,
           y = target.EndPoint.Y,
           z = 0,
-          units = units
+          units = units,
         },
         midPoint = new()
         {
           x = midPointX,
           y = midPointY,
           z = 0,
-          units = units
+          units = units,
         },
         plane = _planeConverter.Convert(plane),
-        units = units
+        units = units,
       };
 
     // create a properties dictionary for additional props
     Dictionary<string, object?> props =
-      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation };
+      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation, };
     PropertyHandler propHandler = new();
     propHandler.TryAddToDictionary(props, "startDirection", () => target.StartDirection); // might throw
     propHandler.TryAddToDictionary(props, "endDirection", () => target.EndDirection); // might throw

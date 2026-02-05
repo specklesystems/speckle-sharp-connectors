@@ -1,21 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-  
   <ItemGroup>
-    <InternalsVisibleTo Include="Speckle.Converters.Common.Tests"/>
+    <InternalsVisibleTo Include="Speckle.Converters.Common.Tests" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
+  <ItemGroup Condition="'$(Configuration)' == 'Local'">
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
-  </ItemGroup> 
-  <ItemGroup Condition="'$(Configuration)' != 'Local'"> 
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'Local'">
     <PackageReference Include="Speckle.Objects" />
-  </ItemGroup> 
+  </ItemGroup>
 </Project>

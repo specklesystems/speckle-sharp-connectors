@@ -16,7 +16,7 @@ public static class HandledModelCardErrors
     LogLevel level = ex switch
     {
       SpeckleException => LogLevel.Warning,
-      _ => LogLevel.Error
+      _ => LogLevel.Error,
     };
 
     logger.Log(level, ex, "{bindingType} operation was not successful", typeof(T));

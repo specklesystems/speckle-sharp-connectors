@@ -47,7 +47,7 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
       {
         value = polylineValue,
         units = units,
-        closed = spiral.StartPoint == spiral.EndPoint
+        closed = spiral.StartPoint == spiral.EndPoint,
       };
 
     // create a properties dictionary for additional props. These all can throw

@@ -61,7 +61,7 @@ public abstract class VariableParameterComponentBase : GH_Component, IGH_Variabl
       Optional = true,
       Access = access,
       CanInheritNames = true,
-      AlwaysInheritNames = AlwaysInheritNames
+      AlwaysInheritNames = AlwaysInheritNames,
     };
 
     // Subscribe to the parameter's name changes for auto-resizing

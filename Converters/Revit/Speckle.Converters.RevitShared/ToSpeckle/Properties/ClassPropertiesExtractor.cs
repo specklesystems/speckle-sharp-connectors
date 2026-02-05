@@ -44,7 +44,7 @@ public class ClassPropertiesExtractor
       {
         { "elementId", element.Id.ToString() },
         { "builtInCategory", element.Category?.GetBuiltInCategory().ToString() },
-        { "worksetId", element.WorksetId?.ToString() }
+        { "worksetId", element.WorksetId?.ToString() },
       };
 
     int? worksetId = element.WorksetId?.IntegerValue;

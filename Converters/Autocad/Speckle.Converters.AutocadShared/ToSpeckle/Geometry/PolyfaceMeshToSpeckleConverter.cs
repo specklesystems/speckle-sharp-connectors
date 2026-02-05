@@ -100,7 +100,7 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,
         bbox = bbox,
-        ["faceVisibility"] = faceVisibility
+        ["faceVisibility"] = faceVisibility,
       };
 
     return speckleMesh;

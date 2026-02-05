@@ -1,21 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <DefineConstants>$(DefineConstants);REVIT2022;REVIT2022_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
-
   <Import Project="..\Speckle.Converters.RevitShared\Speckle.Converters.RevitShared.projitems" Label="Shared" />
-
   <ItemGroup>
-    <PackageReference Include="Speckle.Revit.API" VersionOverride="2022.0.2.1" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.Revit.API" VersionOverride="2022.0.2.1" ExcludeAssets="runtime" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
   </ItemGroup>
-
 </Project>

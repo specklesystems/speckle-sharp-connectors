@@ -7,6 +7,7 @@
       <!-- Analysers that provide no tangeable value to a test project -->
       CA5394;CA2007;CA1852;CA1819;CA1711;CA1063;CA2234;CA1054;CA1810;CA2208;CA1019;CA1831;
       $(NoWarn);
-    </NoWarn>
+    </NoWarn
+    >
   </PropertyGroup>
 </Project>

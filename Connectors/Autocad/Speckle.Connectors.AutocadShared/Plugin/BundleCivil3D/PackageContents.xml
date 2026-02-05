@@ -1,79 +1,56 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage
-        SchemaVersion="1.0"
-        AppVersion="1.0"
-        Author="AEC SYSTEMS LTD"
-        Name="Speckle for Civil 3D"
-        Description="Speckle for Civil 3D"
-        Icon="./Contents/Resources/Logo.ico"
-        ProductCode="{cecad7b2-daa9-4a9d-941d-737619ffd999}"
-        UpgradeCode="{ccf4134d-0e24-4e91-8bf4-781ec7313bef}"> <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
-
-    <CompanyDetails
-            Name="Speckle"
-            Url="https://speckle.systems"
-            Email="support@speckle.systems" />
-    <Components>
-
-        <!-- AutoCAD 2022 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Civil3d2022"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2022/Speckle.Connectors.Civil3d2022.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Civil3D"
-                    SeriesMin="R24.1"
-                    SeriesMax="R24.1" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2023 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Civil3d2023"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2023/Speckle.Connectors.Civil3d2023.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Civil3D"
-                    SeriesMin="R24.2"
-                    SeriesMax="R24.2" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2024 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Civil3d2024"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2024/Speckle.Connectors.Civil3d2024.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Civil3D"
-                    SeriesMin="R24.3"
-                    SeriesMax="R24.3" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2025 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Civil3d2025"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2025/Speckle.Connectors.Civil3d2025.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Civil3D"
-                    SeriesMin="R25.0"
-                    SeriesMax="R25.0" />
-        </ComponentEntry>
-
-        <!-- AutoCAD 2026 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Civil3d2026"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2026/Speckle.Connectors.Civil3d2026.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Civil3D"
-                    SeriesMin="R25.1"
-                    SeriesMax="R25.1" />
-        </ComponentEntry>
-    </Components>
-
+  SchemaVersion="1.0"
+  AppVersion="1.0"
+  Author="AEC SYSTEMS LTD"
+  Name="Speckle for Civil 3D"
+  Description="Speckle for Civil 3D"
+  Icon="./Contents/Resources/Logo.ico"
+  ProductCode="{cecad7b2-daa9-4a9d-941d-737619ffd999}"
+  UpgradeCode="{ccf4134d-0e24-4e91-8bf4-781ec7313bef}"
+>
+  <!-- For now, we're not updating the AppVersion & ProductCodes with each version -->
+  <CompanyDetails Name="Speckle" Url="https://speckle.systems" Email="support@speckle.systems" />
+  <Components>
+    <!-- AutoCAD 2022 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2022"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2022/Speckle.Connectors.Civil3d2022.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R24.1" SeriesMax="R24.1" />
+    </ComponentEntry>
+    <!-- AutoCAD 2023 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2023"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2023/Speckle.Connectors.Civil3d2023.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R24.2" SeriesMax="R24.2" />
+    </ComponentEntry>
+    <!-- AutoCAD 2024 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2024"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2024/Speckle.Connectors.Civil3d2024.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R24.3" SeriesMax="R24.3" />
+    </ComponentEntry>
+    <!-- AutoCAD 2025 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2025"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2025/Speckle.Connectors.Civil3d2025.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R25.0" SeriesMax="R25.0" />
+    </ComponentEntry>
+    <!-- AutoCAD 2026 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2026"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2026/Speckle.Connectors.Civil3d2026.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R25.1" SeriesMax="R25.1" />
+    </ComponentEntry>
+  </Components>
 </ApplicationPackage>

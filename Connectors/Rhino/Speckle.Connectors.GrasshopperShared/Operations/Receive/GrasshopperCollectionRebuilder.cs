@@ -20,7 +20,7 @@ internal sealed class GrasshopperCollectionRebuilder
       Color = null,
       Material = null,
       ApplicationId = baseCollection.applicationId ?? Guid.NewGuid().ToString(),
-      Path = new() { baseCollection.name }
+      Path = new() { baseCollection.name },
     };
   }
 

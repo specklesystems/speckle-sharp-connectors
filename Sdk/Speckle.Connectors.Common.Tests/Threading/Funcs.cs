@@ -14,5 +14,5 @@ public enum Funcs
   WorkerToMain,
   MainToWorkerAsync,
   RunMainAsync_T,
-  RunWorkerAsync_T
+  RunWorkerAsync_T,
 }

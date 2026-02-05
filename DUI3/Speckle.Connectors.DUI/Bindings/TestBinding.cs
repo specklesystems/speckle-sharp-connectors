@@ -38,7 +38,7 @@ public class TestBinding : IBinding
     {
       Id = GetHashCode() + " - I am a string",
       count = GetHashCode(),
-      thisIsABoolean = false
+      thisIsABoolean = false,
     };
 
   public async Task TriggerEvent(string eventName)
@@ -57,7 +57,7 @@ public class TestBinding : IBinding
           {
             IsOk = true,
             Name = "foo",
-            Count = 42
+            Count = 42,
           }
         );
         break;

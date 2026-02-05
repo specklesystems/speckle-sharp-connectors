@@ -6,15 +6,15 @@
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.Navisworks.API" VersionOverride="2024.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
     <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
   </ItemGroup>
-  
   <!-- Includes -->
-  <Import Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems" Label="Shared"/>
-
+  <Import
+    Project="..\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.projitems"
+    Label="Shared"
+  />
 </Project>

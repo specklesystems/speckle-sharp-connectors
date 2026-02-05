@@ -4,5 +4,5 @@ public enum DetailLevelType
 {
   Coarse,
   Medium,
-  Fine
+  Fine,
 }

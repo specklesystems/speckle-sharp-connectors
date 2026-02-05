@@ -71,7 +71,7 @@ public class DBSubDMeshToSpeckleConverter : IToSpeckleTopLevelConverter
         faces = faces,
         colors = colors,
         units = _settingsStore.Current.SpeckleUnits,
-        area = target.ComputeSurfaceArea()
+        area = target.ComputeSurfaceArea(),
       };
 
     try

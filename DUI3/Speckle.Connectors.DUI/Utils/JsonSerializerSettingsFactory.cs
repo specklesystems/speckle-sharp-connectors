@@ -26,8 +26,8 @@ public class JsonSerializerSettingsFactory(IServiceProvider serviceProvider) : I
         Converters =
         {
           new DiscriminatedObjectConverter(serviceProvider),
-          new AbstractConverter<DiscriminatedObject, ISendFilter>()
-        }
+          new AbstractConverter<DiscriminatedObject, ISendFilter>(),
+        },
       };
     return settings;
   }

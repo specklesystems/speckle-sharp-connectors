@@ -44,7 +44,7 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
           {
             start = lastPt,
             end = pts[i],
-            units = target.units
+            units = target.units,
           }
         );
         if (success)
@@ -61,7 +61,7 @@ public class PolylineConverterToHost : ITypedConverter<SOG.Polyline, DB.CurveArr
           {
             start = pts[^1],
             end = pts[0],
-            units = target.units
+            units = target.units,
           }
         );
       }

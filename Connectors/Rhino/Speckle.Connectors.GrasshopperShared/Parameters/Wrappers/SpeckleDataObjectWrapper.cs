@@ -211,7 +211,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
       ApplicationId = ApplicationId,
       Name = Name,
       Path = [.. Path],
-      Parent = Parent
+      Parent = Parent,
     };
 
   /// <summary>

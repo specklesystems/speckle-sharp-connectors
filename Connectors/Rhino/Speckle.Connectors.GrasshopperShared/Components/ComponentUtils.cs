@@ -21,5 +21,5 @@ public enum ComponentState
   Receiving,
   Ready,
   Sending,
-  UpToDate
+  UpToDate,
 }

@@ -36,7 +36,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<RG.Ellipse, SOG.Ellipse
       units = _settingsStore.Current.SpeckleUnits,
       domain = SOP.Interval.UnitInterval,
       length = nurbsCurve.GetLength(),
-      area = Math.PI * target.Radius1 * target.Radius2
+      area = Math.PI * target.Radius1 * target.Radius2,
     };
   }
 }

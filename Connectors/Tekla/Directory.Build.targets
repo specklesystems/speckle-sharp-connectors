@@ -1,80 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Target AfterTargets="Build" Name="AfterBuildTekla" Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+  <Target
+    AfterTargets="Build"
+    Name="AfterBuildTekla"
+    Condition="'$(TeklaVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'"
+  >
     <ItemGroup>
       <TeklaDlls Include="$(TargetDir)\**\*.*" Exclude="$(TargetDir)*.bmp" />
-      <TeklaBmp Include="$(TargetDir)\Resources\et_element_Speckle.bmp"/>
-      <TeklaSvg Include="$(TargetDir)\Resources\speckle.svg"/>
-      <TeklaRibbonXml Include="$(TargetDir)\Resources\Speckle-Ribbon.xml"/>
+      <TeklaBmp Include="$(TargetDir)\Resources\et_element_Speckle.bmp" />
+      <TeklaSvg Include="$(TargetDir)\Resources\speckle.svg" />
+      <TeklaRibbonXml Include="$(TargetDir)\Resources\Speckle-Ribbon.xml" />
     </ItemGroup>
-    <Message Text="Tekla Version $(TeklaVersion)" Importance="high"/>
-
+    <Message Text="Tekla Version $(TeklaVersion)" Importance="high" />
     <!-- Define installation paths -->
     <PropertyGroup>
       <ProgramDataTeklaPath>$(ProgramData)\Trimble\Tekla Structures\$(TeklaVersion).0</ProgramDataTeklaPath>
       <DirectTeklaPath>C:\TeklaStructures\$(TeklaVersion).0</DirectTeklaPath>
-
       <!-- Define extension and ribbon paths -->
       <ProgramDataRibbonPath>$(ProgramDataTeklaPath)\Environments\common\system\Ribbons\CustomTabs\Modeling</ProgramDataRibbonPath>
       <DirectRibbonPath>$(DirectTeklaPath)\Environments\common\system\Ribbons\CustomTabs\Modeling</DirectRibbonPath>
-
-      <SpeckleExtensionPath Condition="Exists('$(ProgramDataTeklaPath)')">$(ProgramDataTeklaPath)\Environments\common\extensions\Speckle3TeklaStructures</SpeckleExtensionPath>
-      <SpeckleExtensionPath Condition="Exists('$(DirectTeklaPath)')">$(DirectTeklaPath)\Environments\common\extensions\Speckle3TeklaStructures</SpeckleExtensionPath>
+      <SpeckleExtensionPath Condition="Exists('$(ProgramDataTeklaPath)')"
+        >$(ProgramDataTeklaPath)\Environments\common\extensions\Speckle3TeklaStructures</SpeckleExtensionPath
+      >
+      <SpeckleExtensionPath Condition="Exists('$(DirectTeklaPath)')"
+        >$(DirectTeklaPath)\Environments\common\extensions\Speckle3TeklaStructures</SpeckleExtensionPath
+      >
     </PropertyGroup>
-
     <!-- Delete win-arm64 folder if it exists in the active installation path -->
     <RemoveDir
       Condition="Exists('$(SpeckleExtensionPath)\runtimes\win-arm64\native')"
-      Directories="$(SpeckleExtensionPath)\runtimes\win-arm64\native" />
-
+      Directories="$(SpeckleExtensionPath)\runtimes\win-arm64\native"
+    />
     <!-- Check which installation path exists for the specific version -->
     <PropertyGroup>
       <TeklaInstallPath Condition="Exists('$(ProgramDataTeklaPath)')">$(ProgramDataTeklaPath)</TeklaInstallPath>
       <TeklaInstallPath Condition="Exists('$(DirectTeklaPath)')">$(DirectTeklaPath)</TeklaInstallPath>
     </PropertyGroup>
-
     <!-- Copy DLLs to extension folder -->
     <Copy
       Condition="'$(SpeckleExtensionPath)' != ''"
       DestinationFolder="$(SpeckleExtensionPath)\%(RecursiveDir)"
-      SourceFiles="@(TeklaDlls)" />
-
+      SourceFiles="@(TeklaDlls)"
+    />
     <!-- Copy SVG to Resources folder -->
     <Copy
       Condition="'$(SpeckleExtensionPath)' != ''"
       DestinationFolder="$(SpeckleExtensionPath)\Resources"
-      SourceFiles="@(TeklaSvg)" />
-
+      SourceFiles="@(TeklaSvg)"
+    />
     <!-- Copy BMP to Bitmaps folder -->
     <Copy
       Condition="'$(TeklaInstallPath)' != ''"
       DestinationFolder="$(TeklaInstallPath)\Bitmaps"
-      SourceFiles="@(TeklaBmp)" />
-
+      SourceFiles="@(TeklaBmp)"
+    />
     <!-- Create Ribbon directories if they don't exist -->
-    <MakeDir Directories="$(ProgramDataRibbonPath)"
-             Condition="Exists('$(ProgramDataTeklaPath)') And !Exists('$(ProgramDataRibbonPath)')" />
-    <MakeDir Directories="$(DirectRibbonPath)"
-             Condition="Exists('$(DirectTeklaPath)') And !Exists('$(DirectRibbonPath)')" />
-
+    <MakeDir
+      Directories="$(ProgramDataRibbonPath)"
+      Condition="Exists('$(ProgramDataTeklaPath)') And !Exists('$(ProgramDataRibbonPath)')"
+    />
+    <MakeDir
+      Directories="$(DirectRibbonPath)"
+      Condition="Exists('$(DirectTeklaPath)') And !Exists('$(DirectRibbonPath)')"
+    />
     <!-- Copy the XML file to both possible destinations -->
     <Copy
       SourceFiles="@(TeklaRibbonXml)"
       DestinationFolder="$(ProgramDataRibbonPath)"
-      Condition="Exists('$(ProgramDataTeklaPath)')" />
+      Condition="Exists('$(ProgramDataTeklaPath)')"
+    />
     <Copy
       SourceFiles="@(TeklaRibbonXml)"
       DestinationFolder="$(DirectRibbonPath)"
-      Condition="Exists('$(DirectTeklaPath)')" />
-
+      Condition="Exists('$(DirectTeklaPath)')"
+    />
     <!-- Copy the SVG file to both possible ribbon destinations -->
     <Copy
       SourceFiles="@(TeklaSvg)"
       DestinationFolder="$(ProgramDataRibbonPath)"
-      Condition="Exists('$(ProgramDataTeklaPath)')" />
-    <Copy
-      SourceFiles="@(TeklaSvg)"
-      DestinationFolder="$(DirectRibbonPath)"
-      Condition="Exists('$(DirectTeklaPath)')" />
+      Condition="Exists('$(ProgramDataTeklaPath)')"
+    />
+    <Copy SourceFiles="@(TeklaSvg)" DestinationFolder="$(DirectRibbonPath)" Condition="Exists('$(DirectTeklaPath)')" />
   </Target>
 </Project>

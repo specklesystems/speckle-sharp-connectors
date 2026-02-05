@@ -44,7 +44,7 @@ public class CurveToSpeckleConverter : ITypedConverter<RG.Curve, ICurve>, ITyped
       RG.ArcCurve arcCurve => _arcCurveConverter.Convert(arcCurve),
       RG.PolylineCurve polylineCurve => _polylineConverter.Convert(polylineCurve),
       RG.LineCurve lineCurve => _lineCurveConverter.Convert(lineCurve),
-      _ => _nurbsCurveConverter.Convert(target.ToNurbsCurve())
+      _ => _nurbsCurveConverter.Convert(target.ToNurbsCurve()),
     };
 
   Base ITypedConverter<RG.Curve, Base>.Convert(RG.Curve target) => (Base)Convert(target);

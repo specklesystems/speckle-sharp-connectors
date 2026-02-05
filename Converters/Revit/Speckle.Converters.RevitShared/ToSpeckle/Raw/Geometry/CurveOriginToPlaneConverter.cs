@@ -55,7 +55,7 @@ public class CurveOriginToPlaneConverter
       xdir = _xyzToVectorConverter.Convert(target.xDir),
       ydir = _xyzToVectorConverter.Convert(target.yDir),
       normal = _xyzToVectorConverter.Convert(target.normal),
-      units = _converterSettings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits,
     };
   }
 }

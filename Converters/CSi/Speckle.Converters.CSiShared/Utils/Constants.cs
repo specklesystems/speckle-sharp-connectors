@@ -87,6 +87,6 @@ public static class ResultsKey
     PIER_FORCES,
     SPANDREL_FORCES,
     STORY_DRIFTS,
-    STORY_FORCES
+    STORY_FORCES,
   ];
 }

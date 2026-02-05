@@ -42,7 +42,7 @@ public class EllipseToSpeckleConverter : ITypedConverter<DB.Ellipse, SOG.Ellipse
       domain = Interval.UnitInterval,
       trimDomain = trim,
       length = _scalingService.ScaleLength(target.Length),
-      units = _converterSettings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits,
     };
   }
 }

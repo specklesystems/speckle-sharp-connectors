@@ -59,7 +59,7 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
       {
         Elevation = convertedElevation,
         Normal = convertedNormal,
-        Closed = target.closed
+        Closed = target.closed,
       };
 
     // add polyline2d to document

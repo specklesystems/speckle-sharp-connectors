@@ -66,7 +66,7 @@ public class NavisworksSendBinding : ISendBinding
     [
       new NavisworksSelectionFilter() { IsDefault = true },
       new NavisworksSavedSetsFilter(new ConnectorElementSelectionService()),
-      new NavisworksSavedViewsFilter(new ConnectorElementSelectionService())
+      new NavisworksSavedViewsFilter(new ConnectorElementSelectionService()),
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -76,7 +76,7 @@ public class NavisworksSendBinding : ISendBinding
       new IncludeInternalPropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
-      new RevitCategoryMappingSetting(false)
+      new RevitCategoryMappingSetting(false),
     ];
 
   public async Task Send(string modelCardId) =>

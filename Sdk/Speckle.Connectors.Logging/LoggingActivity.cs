@@ -26,7 +26,7 @@ public readonly struct LoggingActivity
         LoggingActivityStatusCode.Error => ActivityStatusCode.Error,
         LoggingActivityStatusCode.Unset => ActivityStatusCode.Unset,
         LoggingActivityStatusCode.Ok => ActivityStatusCode.Ok,
-        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null),
       }
     );
 
