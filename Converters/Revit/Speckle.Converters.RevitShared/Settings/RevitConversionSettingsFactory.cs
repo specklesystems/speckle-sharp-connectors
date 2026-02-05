@@ -17,7 +17,7 @@ public class RevitConversionSettingsFactory(
     bool sendEmptyOrNullParams,
     bool sendLinkedModels,
     bool sendRebarsAsVolumetric,
-    bool receiveInstancesAsFamilies,
+    bool sendAreasAsMesh,
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
@@ -30,7 +30,7 @@ public class RevitConversionSettingsFactory(
       sendEmptyOrNullParams,
       sendLinkedModels,
       sendRebarsAsVolumetric,
-      receiveInstancesAsFamilies,
+      sendAreasAsMesh,
       tolerance
     );
   }

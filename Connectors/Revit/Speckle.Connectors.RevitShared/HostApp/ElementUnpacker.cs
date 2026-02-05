@@ -9,8 +9,19 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// </summary>
 public class ElementUnpacker
 {
+  private static readonly List<BuiltInCategory> s_skippedCategories =
+  [
+    BuiltInCategory.OST_SketchLines,
+    BuiltInCategory.OST_MassForm,
+    BuiltInCategory.OST_StairsSketchBoundaryLines,
+    BuiltInCategory.OST_StairsSketchLandingCenterLines,
+    BuiltInCategory.OST_StairsSketchRiserLines,
+    BuiltInCategory.OST_RebarSketchLines,
+    BuiltInCategory.OST_StairsSketchRunLines
+  ];
+
   /// <summary>
-  /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recurisvely, nested families into atomic family instances.
+  /// Unpacks a random set of revit objects into atomic objects. It currently unpacks groups recursively, nested families into atomic family instances.
   /// This method will also "pack" curtain walls if necessary (ie, if mullions or panels are selected without their parent curtain wall, they are sent independently; if the parent curtain wall is selected, they will be removed out as the curtain wall will include all its children).
   /// </summary>
   /// <param name="selectionElements"></param>
@@ -32,7 +43,7 @@ public class ElementUnpacker
   }
 
   /// <summary>
-  /// Unpacks input element ids into their subelements, eg groups and nested family instances
+  /// Unpacks input element ids into their sub-elements, eg groups and nested family instances
   /// </summary>
   /// <param name="objectIds"></param>
   /// <returns></returns>
@@ -57,11 +68,21 @@ public class ElementUnpacker
       // UNPACK: Groups
       if (element is Group g)
       {
-        // When a group is from a linked model, GetMemberIds may behave differently
-        // We add null checks to handle cases where elements can't be properly resolved
-        // POC: this might screw up generating hosting rel generation here, because nested families in groups get flattened out by GetMemberIds().
-        var groupElements = g.GetMemberIds().Select(doc.GetElement).Where(el => el != null);
-        unpackedElements.AddRange(UnpackElements(groupElements, doc));
+        var memberIds = g.GetMemberIds();
+
+        if (memberIds.Count <= 0)
+        {
+          continue;
+        }
+
+        // using a collector more efficient
+        using var collector = new FilteredElementCollector(doc, memberIds);
+        collector.WhereElementIsNotElementType(); // exclude "Type" elements (FamilySymbols)
+        var filter = new ElementMulticategoryFilter(s_skippedCategories, inverted: true); // exclude "Sketch/Form" categories
+        collector.WherePasses(filter);
+
+        // recursively unpack the valid results
+        unpackedElements.AddRange(UnpackElements(collector, doc));
       }
       else if (element is BaseArray baseArray)
       {

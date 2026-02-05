@@ -8,6 +8,6 @@ public record RevitConversionSettings(
   bool SendParameterNullOrEmptyStrings,
   bool SendLinkedModels,
   bool SendRebarsAsVolumetric,
-  bool ReceiveInstancesAsFamilies,
+  bool SendAreasAsMesh,
   double Tolerance = 0.0164042 // 5mm in ft
 );

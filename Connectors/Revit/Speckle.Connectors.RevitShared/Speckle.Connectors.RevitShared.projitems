@@ -25,6 +25,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitFamilyBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ViewUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewManager.cs" />
@@ -50,6 +51,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\LinkedModelsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendAreasAsMeshSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendReferencePointSetting.cs" />
