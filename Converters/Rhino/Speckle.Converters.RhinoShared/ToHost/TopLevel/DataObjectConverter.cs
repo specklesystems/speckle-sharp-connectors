@@ -1,6 +1,7 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
+using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
@@ -21,7 +22,7 @@ public class DataObjectConverter
   private readonly ITypedConverter<SOG.Ellipse, RG.NurbsCurve> _ellipseConverter;
   private readonly ITypedConverter<SOG.ExtrusionX, List<RG.GeometryBase>> _extrusionConverter;
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
-  private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
+  private readonly IMeshToHostConversionHelper _meshConversionHelper;
   private readonly ITypedConverter<SOG.Pointcloud, RG.PointCloud> _pointcloudConverter;
   private readonly ITypedConverter<SOG.Point, RG.Point> _pointConverter;
   private readonly ITypedConverter<SOG.Polycurve, RG.PolyCurve> _polycurveConverter;
@@ -39,7 +40,7 @@ public class DataObjectConverter
     ITypedConverter<SOG.Ellipse, RG.NurbsCurve> ellipseConverter,
     ITypedConverter<SOG.ExtrusionX, List<RG.GeometryBase>> extrusionConverter,
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
-    ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
+    IMeshToHostConversionHelper meshConversionHelper,
     ITypedConverter<SOG.Pointcloud, RG.PointCloud> pointcloudConverter,
     ITypedConverter<SOG.Point, RG.Point> pointConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
@@ -57,7 +58,7 @@ public class DataObjectConverter
     _ellipseConverter = ellipseConverter;
     _extrusionConverter = extrusionConverter;
     _lineConverter = lineConverter;
-    _meshConverter = meshConverter;
+    _meshConversionHelper = meshConversionHelper;
     _pointcloudConverter = pointcloudConverter;
     _pointConverter = pointConverter;
     _polycurveConverter = polycurveConverter;
@@ -107,7 +108,7 @@ public class DataObjectConverter
       SOG.Ellipse ellipse => new() { _ellipseConverter.Convert(ellipse) },
       SOG.ExtrusionX extrusion => _extrusionConverter.Convert(extrusion),
       SOG.Line line => new() { _lineConverter.Convert(line) },
-      SOG.Mesh mesh => ConvertMesh(mesh),
+      SOG.Mesh mesh => new() { _meshConversionHelper.ConvertMesh(mesh) },
       SOG.Pointcloud pointcloud => new() { _pointcloudConverter.Convert(pointcloud) },
       SOG.Point point => new() { _pointConverter.Convert(point) },
       SOG.Polycurve polycurve => new() { _polycurveConverter.Convert(polycurve) },
@@ -116,28 +117,6 @@ public class DataObjectConverter
       SOG.SubDX subd => _subdConverter.Convert(subd),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
-
-#pragma warning disable CA1508 // Brep.CreateFromMesh can return null for degenerate meshes
-  private List<RG.GeometryBase> ConvertMesh(SOG.Mesh mesh)
-  {
-    var rhinoMesh = _meshConverter.Convert(mesh);
-
-    if (_settingsStore.Current.ConvertMeshesToBreps && mesh["fromSolid"] is true)
-    {
-      var brep = RG.Brep.CreateFromMesh(rhinoMesh, true);
-      if (brep is not null)
-      {
-        brep.MergeCoplanarFaces(
-          _settingsStore.Current.Document.ModelAbsoluteTolerance,
-          _settingsStore.Current.Document.ModelAngleToleranceRadians
-        );
-        return new() { brep };
-      }
-    }
-
-    return new() { rhinoMesh };
-  }
-#pragma warning restore CA1508
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
   {

@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
@@ -15,7 +16,7 @@ public class DisplayableObjectConverter
   private readonly ITypedConverter<SOG.Line, RG.LineCurve> _lineConverter;
   private readonly ITypedConverter<SOG.Polyline, RG.PolylineCurve> _polylineConverter;
   private readonly ITypedConverter<SOG.Arc, RG.ArcCurve> _arcConverter;
-  private readonly ITypedConverter<SOG.Mesh, RG.Mesh> _meshConverter;
+  private readonly IMeshToHostConversionHelper _meshConversionHelper;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   public DisplayableObjectConverter(
@@ -23,7 +24,7 @@ public class DisplayableObjectConverter
     ITypedConverter<SOG.Line, RG.LineCurve> lineConverter,
     ITypedConverter<SOG.Polyline, RG.PolylineCurve> polylineConverter,
     ITypedConverter<SOG.Arc, RG.ArcCurve> arcConverter,
-    ITypedConverter<SOG.Mesh, RG.Mesh> meshConverter,
+    IMeshToHostConversionHelper meshConversionHelper,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
@@ -31,7 +32,7 @@ public class DisplayableObjectConverter
     _lineConverter = lineConverter;
     _polylineConverter = polylineConverter;
     _arcConverter = arcConverter;
-    _meshConverter = meshConverter;
+    _meshConversionHelper = meshConversionHelper;
     _settingsStore = settingsStore;
   }
 
@@ -47,7 +48,7 @@ public class DisplayableObjectConverter
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Arc arc => _arcConverter.Convert(arc),
-        SOG.Mesh mesh => ConvertMesh(mesh),
+        SOG.Mesh mesh => _meshConversionHelper.ConvertMesh(mesh),
         SOG.Point point => _pointConverter.Convert(point),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
@@ -57,28 +58,6 @@ public class DisplayableObjectConverter
 
     return result.Zip(target.displayValue, (a, b) => (a, b)).ToList();
   }
-
-#pragma warning disable CA1508 // Brep.CreateFromMesh can return null for degenerate meshes
-  private RG.GeometryBase ConvertMesh(SOG.Mesh mesh)
-  {
-    var rhinoMesh = _meshConverter.Convert(mesh);
-
-    if (_settingsStore.Current.ConvertMeshesToBreps && mesh["fromSolid"] is true)
-    {
-      var brep = RG.Brep.CreateFromMesh(rhinoMesh, true);
-      if (brep is not null)
-      {
-        brep.MergeCoplanarFaces(
-          _settingsStore.Current.Document.ModelAbsoluteTolerance,
-          _settingsStore.Current.Document.ModelAngleToleranceRadians
-        );
-        return brep;
-      }
-    }
-
-    return rhinoMesh;
-  }
-#pragma warning restore CA1508
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
   {
