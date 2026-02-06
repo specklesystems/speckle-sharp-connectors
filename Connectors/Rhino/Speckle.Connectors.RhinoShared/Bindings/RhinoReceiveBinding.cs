@@ -3,6 +3,8 @@ using Rhino;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Settings;
+using Speckle.Connectors.Rhino.Operations.Receive.Settings;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 
@@ -12,13 +14,18 @@ public class RhinoReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory
+  IReceiveOperationManagerFactory receiveOperationManagerFactory,
+  IToHostSettingsManager toHostSettingsManager
 ) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
 
   private ReceiveBindingUICommands Commands { get; } = new(parent);
+
+#pragma warning disable CA1024
+  public List<ICardSetting> GetReceiveSettings() => [new ConvertMeshesToBrepsSetting()];
+#pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 
@@ -32,7 +39,13 @@ public class RhinoReceiveBinding(
       (sp, card) =>
       {
         sp.GetRequiredService<IConverterSettingsStore<RhinoConversionSettings>>()
-          .Initialize(rhinoConversionSettingsFactory.Create(RhinoDoc.ActiveDoc, true));
+          .Initialize(
+            rhinoConversionSettingsFactory.Create(
+              RhinoDoc.ActiveDoc,
+              true,
+              toHostSettingsManager.GetConvertMeshesToBrepsSetting(card)
+            )
+          );
       },
       async (modelName, processor) =>
       {

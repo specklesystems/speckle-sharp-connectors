@@ -19,6 +19,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Connectors.Rhino.Mapper.Revit;
 using Speckle.Connectors.Rhino.Operations.Receive;
+using Speckle.Connectors.Rhino.Operations.Receive.Settings;
 using Speckle.Connectors.Rhino.Operations.Send;
 using Speckle.Connectors.Rhino.Operations.Send.Settings;
 using Speckle.Connectors.Rhino.Plugin;
@@ -61,6 +62,9 @@ public static class ServiceRegistration
 
     // register send settings
     serviceCollection.AddScoped<ToSpeckleSettingsManager>();
+
+    // register receive settings
+    serviceCollection.AddSingleton<IToHostSettingsManager, ToHostSettingsManager>();
 
     // register send conversion cache
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();

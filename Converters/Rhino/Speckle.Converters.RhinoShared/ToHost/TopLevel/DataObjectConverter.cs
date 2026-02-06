@@ -107,7 +107,7 @@ public class DataObjectConverter
       SOG.Ellipse ellipse => new() { _ellipseConverter.Convert(ellipse) },
       SOG.ExtrusionX extrusion => _extrusionConverter.Convert(extrusion),
       SOG.Line line => new() { _lineConverter.Convert(line) },
-      SOG.Mesh mesh => new() { _meshConverter.Convert(mesh) },
+      SOG.Mesh mesh => ConvertMesh(mesh),
       SOG.Pointcloud pointcloud => new() { _pointcloudConverter.Convert(pointcloud) },
       SOG.Point point => new() { _pointConverter.Convert(point) },
       SOG.Polycurve polycurve => new() { _polycurveConverter.Convert(polycurve) },
@@ -116,6 +116,28 @@ public class DataObjectConverter
       SOG.SubDX subd => _subdConverter.Convert(subd),
       _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
     };
+
+#pragma warning disable CA1508 // Brep.CreateFromMesh can return null for degenerate meshes
+  private List<RG.GeometryBase> ConvertMesh(SOG.Mesh mesh)
+  {
+    var rhinoMesh = _meshConverter.Convert(mesh);
+
+    if (_settingsStore.Current.ConvertMeshesToBreps && mesh["fromSolid"] is true)
+    {
+      var brep = RG.Brep.CreateFromMesh(rhinoMesh, true);
+      if (brep is not null)
+      {
+        brep.MergeCoplanarFaces(
+          _settingsStore.Current.Document.ModelAbsoluteTolerance,
+          _settingsStore.Current.Document.ModelAngleToleranceRadians
+        );
+        return new() { brep };
+      }
+    }
+
+    return new() { rhinoMesh };
+  }
+#pragma warning restore CA1508
 
   private RG.Transform GetUnitsTransform(Base speckleObject)
   {

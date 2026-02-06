@@ -14,4 +14,16 @@ public class RhinoConversionSettingsFactory(
 
   public RhinoConversionSettings Create(RhinoDoc document, bool addVisualizationProperties) =>
     new(document, unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem), addVisualizationProperties);
+
+  public RhinoConversionSettings Create(
+    RhinoDoc document,
+    bool addVisualizationProperties,
+    bool convertMeshesToBreps
+  ) =>
+    new(
+      document,
+      unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem),
+      addVisualizationProperties,
+      convertMeshesToBreps
+    );
 }
