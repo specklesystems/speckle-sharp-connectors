@@ -37,6 +37,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Mapper\Revit\RevitMappingResolver.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RhinoLayersFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RhinoContinousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\AddVisualizationProperties.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RhinoEvents.cs" />

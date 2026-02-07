@@ -11,6 +11,16 @@ public interface IRootObjectBuilder<in T>
     IReadOnlyList<T> objects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  );
+}
+
+public interface IRootContinuousTraversalBuilder<in T>
+{
+  public Task<RootObjectBuilderResult> Build(
+    IReadOnlyList<T> objects,
+    string projectId,
+    IProgress<CardProgress> onOperationProgressed,
     SendPipeline sendPipelinePipeline,
     CancellationToken cancellationToken
   );

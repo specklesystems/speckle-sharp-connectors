@@ -16,14 +16,17 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
 
 /// <summary>
+/// NOTE: I am not happy this is a mostly copy paste of the Root object builder, but i'm also not too worried. The main (hot) path
+/// should be this one going forward, so we should not touch the og root object builder besides to delete it.
 /// Stateless builder object to turn an <see cref="ISendFilter"/> into a <see cref="Base"/> object
 /// </summary>
-public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
+public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<RhinoObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
@@ -38,7 +41,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly ILogger<RhinoRootObjectBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
-  public RhinoRootObjectBuilder(
+  public RhinoContinuousTraversalBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
@@ -71,6 +74,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     IReadOnlyList<RhinoObject> rhinoObjects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    SendPipeline sendPipeline,
     CancellationToken cancellationToken
   )
   {
@@ -108,7 +112,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
-        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId);
+        var result = await ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId, sendPipeline);
         results.Add(result);
 
         ++count;
@@ -149,14 +153,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
     }
 
+    await sendPipeline.Process(rootObjectCollection);
+    await sendPipeline.WaitForUpload();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private SendConversionResult ConvertRhinoObject(
+  private async Task<SendConversionResult> ConvertRhinoObject(
     RhinoObject rhinoObject,
     Collection collectionHost,
     IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
-    string projectId
+    string projectId,
+    SendPipeline sendPipeline
   )
   {
     string applicationId = rhinoObject.Id.ToString();
@@ -167,6 +174,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       // What we actually do here is check if the object has been previously converted AND has not changed.
       // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
       Base converted;
+      bool wasCached = false;
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
@@ -174,6 +182,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
         converted = value;
+        wasCached = true;
       }
       else
       {
@@ -194,10 +203,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         converted["properties"] = properties;
       }
 
-      // add to host
-      collectionHost.elements.Add(converted);
+      var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
+      if (!wasCached)
+      {
+        // NOTE: can be moved in else block above where we check for cached objects
+        _sendConversionCache.AppendSendResult(projectId, applicationId, reference);
+      }
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      // add to host
+      collectionHost.elements.Add(reference);
+
+      return new(Status.SUCCESS, applicationId, sourceType, reference);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
