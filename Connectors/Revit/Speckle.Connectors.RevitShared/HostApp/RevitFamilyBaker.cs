@@ -11,46 +11,43 @@ using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
+using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Plane = Autodesk.Revit.DB.Plane;
+using SMesh = Speckle.Objects.Geometry.Mesh;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
-/// <summary>
-/// Bakes InstanceProxy and InstanceDefinitionProxy objects as Revit Families and FamilyInstances.
-/// Expects to be a scoped dependency per receive operation.
-/// </summary>
-/// <remarks>
-/// Depth-aware processing for nested blocks.
-/// </remarks>
-public class RevitFamilyBaker
+public sealed class RevitFamilyBaker : IDisposable
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _cache;
   private readonly ILogger<RevitFamilyBaker> _logger;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), Transform> _transformConverter;
+  private readonly RevitMeshBuilder _revitMeshBuilder;
+
   private string? _cachedTemplatePath;
+  private readonly Dictionary<string, string> _bakedFamilyPaths = new();
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitToHostCacheSingleton cache,
     ILogger<RevitFamilyBaker> logger,
-    ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter
+    ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter,
+    RevitMeshBuilder revitMeshBuilder
   )
   {
     _converterSettings = converterSettings;
     _cache = cache;
     _logger = logger;
     _transformConverter = transformConverter;
+    _revitMeshBuilder = revitMeshBuilder;
   }
 
-  /// <summary>
-  /// Bakes instance definitions as Families and instance proxies as FamilyInstances.
-  /// Processes in depth order (deepest first) to handle nested blocks correctly.
-  /// </summary>
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
+    IReadOnlyDictionary<string, Base> speckleObjectLookup,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -58,8 +55,6 @@ public class RevitFamilyBaker
     var results = new List<ReceiveConversionResult>();
     var createdElementIds = new List<string>();
 
-    // sort by maxDepth descending, definitions before instances
-    // TODO: check in on GH
     var sortedComponents = instanceComponents
       .OrderByDescending(x => x.component.maxDepth)
       .ThenBy(x => x.component is InstanceDefinitionProxy ? 0 : 1)
@@ -74,7 +69,7 @@ public class RevitFamilyBaker
       {
         if (component is InstanceDefinitionProxy definitionProxy)
         {
-          var result = CreateFamilyFromDefinition(document, definitionProxy);
+          var result = CreateFamilyFromDefinition(document, definitionProxy, speckleObjectLookup);
           if (result.HasValue)
           {
             results.Add(
@@ -102,17 +97,11 @@ public class RevitFamilyBaker
           InstanceProxy i => i.applicationId ?? i.id.NotNull(),
           _ => "unknown"
         };
-
         _logger.LogError(ex, "Failed to process instance component {ComponentId}", componentId);
 
-        switch (component)
+        if (component is Base b)
         {
-          case InstanceDefinitionProxy defProxy:
-            results.Add(new ReceiveConversionResult(Status.ERROR, defProxy, null, null, ex));
-            break;
-          case InstanceProxy instProxy:
-            results.Add(new ReceiveConversionResult(Status.ERROR, instProxy, null, null, ex));
-            break;
+          results.Add(new ReceiveConversionResult(Status.ERROR, b, null, null, ex));
         }
       }
     }
@@ -120,28 +109,23 @@ public class RevitFamilyBaker
     return (results, createdElementIds);
   }
 
-  /// <summary>
-  /// Creates a Revit Family from an InstanceDefinitionProxy.
-  /// </summary>
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
     Document document,
-    InstanceDefinitionProxy definitionProxy
+    InstanceDefinitionProxy definitionProxy,
+    IReadOnlyDictionary<string, Base> objectLookup
   )
   {
-    // NOTE: for this ticket just creates an empty family with placeholder geometry (bounding box).
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id.NotNull();
 
-    // check cache first
     if (_cache.FamiliesByDefinitionId.TryGetValue(definitionId, out var existingFamily))
     {
       var existingSymbol = _cache.SymbolsByDefinitionId[definitionId];
       return (existingFamily, existingSymbol);
     }
 
-    // check if family already exists in document, creates if doesn't exist
-    // TODO: this is where we need to talk about update behavior
     var familyName = GetFamilyName(definitionProxy);
-    var family = FindFamilyByName(document, familyName) ?? CreateFamily(document, familyName);
+    var family =
+      FindFamilyByName(document, familyName) ?? CreateFamily(document, familyName, definitionProxy, objectLookup);
 
     if (family == null)
     {
@@ -149,11 +133,9 @@ public class RevitFamilyBaker
       return null;
     }
 
-    // get and activate the first symbol
     var symbolId = family.GetFamilySymbolIds().FirstOrDefault();
     if (symbolId == null || symbolId == ElementId.InvalidElementId)
     {
-      _logger.LogWarning("Family {FamilyName} has no symbols", familyName);
       return null;
     }
 
@@ -168,157 +150,188 @@ public class RevitFamilyBaker
       document.Regenerate();
     }
 
-    // cache for future use
     _cache.FamiliesByDefinitionId[definitionId] = family;
     _cache.SymbolsByDefinitionId[definitionId] = symbol;
 
     return (family, symbol);
   }
 
-  /// <summary>
-  /// Gets the family name for a definition proxy, sanitized for use as a filename.
-  /// </summary>
-  private static string GetFamilyName(InstanceDefinitionProxy definitionProxy)
+  private Family? CreateFamily(
+    Document document,
+    string familyName,
+    InstanceDefinitionProxy definition,
+    IReadOnlyDictionary<string, Base> objectLookup
+  )
   {
-    var baseName = definitionProxy.name;
-
-    // remove invalid filename characters
-    var invalidChars = Path.GetInvalidFileNameChars(); // e.g. :, \, /, *, ?
-    return string.Concat(baseName.Select(c => invalidChars.Contains(c) ? '_' : c));
-  }
-
-  /// <summary>
-  /// Finds a family by name in the document.
-  /// </summary>
-  private static Family? FindFamilyByName(Document document, string familyName)
-  {
-    using var collector = new FilteredElementCollector(document);
-    return collector.OfClass(typeof(Family)).OfType<Family>().FirstOrDefault(f => f.Name == familyName);
-  }
-
-  /// <summary>
-  /// Creates a new family document, adds placeholder geometry, sets work-plane-based, saves and loads it.
-  /// </summary>
-  private Family? CreateFamily(Document document, string familyName)
-  {
-    var templatePath = GetFamilyTemplatePath(document); // throws if file doesn't exist
+    var templatePath = GetFamilyTemplatePath(document);
     var famDoc = document.Application.NewFamilyDocument(templatePath);
+    var tempPath = Path.Combine(Path.GetTempPath(), $"{familyName}.rfa");
 
     try
     {
-      using (var t = new Transaction(famDoc, "Create placeholder geometry"))
+      using (var t = new Transaction(famDoc, "Populate Family"))
       {
         t.Start();
-        CreatePlaceholderGeometry(famDoc);
-        SetFamilyWorkPlaneBased(famDoc); // enable work-plane-based placement
+        PopulateFamily(famDoc, definition, objectLookup);
+        SetFamilyWorkPlaneBased(famDoc);
         t.Commit();
       }
 
-      var tempPath = Path.Combine(Path.GetTempPath(), $"{familyName}.rfa");
       var saveOptions = new SaveAsOptions { OverwriteExistingFile = true };
       famDoc.SaveAs(tempPath, saveOptions);
       famDoc.Close(false);
 
+      var definitionId = definition.applicationId ?? definition.id.NotNull();
+      _bakedFamilyPaths[definitionId] = tempPath;
+
       document.LoadFamily(tempPath, new FamilyLoadOptions(), out var loadedFamily);
-
-      // clean up temp file and ignore errors
-      try
-      {
-        File.Delete(tempPath);
-      }
-      catch (IOException) { }
-
       return loadedFamily;
     }
-    catch
+    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
     {
+      _logger.LogError(ex, "Revit API error creating family {FamilyName}", familyName);
       famDoc.Close(false);
+      CleanupTempFile(tempPath);
+      throw;
+    }
+    catch (IOException ex)
+    {
+      _logger.LogError(ex, "IO error creating family {FamilyName}", familyName);
+      famDoc.Close(false);
+      CleanupTempFile(tempPath);
       throw;
     }
   }
 
-  /// <summary>
-  /// Resolves the physical path to the appropriate Revit family template (.rft) based on the document's unit system and Revit version.
-  /// </summary>
-  private string GetFamilyTemplatePath(Document document)
+  private void PopulateFamily(
+    Document famDoc,
+    InstanceDefinitionProxy definition,
+    IReadOnlyDictionary<string, Base> objectLookup
+  )
   {
-    // return cached path if we've already found it during this receive operation
-    if (_cachedTemplatePath != null)
+    if (definition.objects.Count == 0)
     {
-      return _cachedTemplatePath;
+      return;
     }
 
-    // read version
-    var version = document.Application.VersionNumber;
-
-    // check if doc is Metric or Imperial
-    var isMetric = document.DisplayUnitSystem == DisplayUnit.METRIC;
-    var templateName = isMetric ? "Metric Generic Model.rft" : "Generic Model.rft";
-
-    // resolve the folder where the DLL lives
-    // typeof() anchors the Resources search to the actual deployment directory of the connector
-    // should be most robust for local and installed state(s)
-    var assemblyLocation = typeof(RevitFamilyBaker).Assembly.Location;
-    var assemblyDir =
-      Path.GetDirectoryName(assemblyLocation) ?? throw new ConversionException("Could not resolve assembly directory.");
-
-    // using the same structure from .projitems creates: Resources/Templates/{Year}/{File}
-    var templatePath = Path.Combine(assemblyDir, "Resources", "Templates", version, templateName);
-
-    // fail loudly if nothing found
-    if (!File.Exists(templatePath))
+    foreach (var id in definition.objects)
     {
-      _logger.LogError("Revit Family Template missing. Searched path: {templatePath}", templatePath);
+      if (!objectLookup.TryGetValue(id, out var obj))
+      {
+        _logger.LogWarning("Failed to find object {ObjectId} for definition {DefinitionId}", id, definition.id);
+        continue;
+      }
 
-      throw new ConversionException(
-        $"Could not find required family template: {templateName}. "
-          + $"Please ensure the 'Resources' folder exists at {assemblyDir}"
-      );
-    }
+      try
+      {
+        if (obj is SMesh mesh)
+        {
+          var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
 
-    _cachedTemplatePath = templatePath;
-    return templatePath;
-  }
-
-  /// <summary>
-  /// Creates placeholder geometry (1x1x1 foot box) for the family.
-  /// </summary>
-  private static void CreatePlaceholderGeometry(Document famDoc)
-  {
-    const double SIZE = 1.0; // 1 foot
-
-    var profile = new CurveLoop();
-    var p0 = new XYZ(-SIZE / 2, -SIZE / 2, 0);
-    var p1 = new XYZ(SIZE / 2, -SIZE / 2, 0);
-    var p2 = new XYZ(SIZE / 2, SIZE / 2, 0);
-    var p3 = new XYZ(-SIZE / 2, SIZE / 2, 0);
-
-    profile.Append(Line.CreateBound(p0, p1));
-    profile.Append(Line.CreateBound(p1, p2));
-    profile.Append(Line.CreateBound(p2, p3));
-    profile.Append(Line.CreateBound(p3, p0));
-
-    var solid = GeometryCreationUtilities.CreateExtrusionGeometry(new List<CurveLoop> { profile }, XYZ.BasisZ, SIZE);
-
-    using var _ = FreeFormElement.Create(famDoc, solid);
-  }
-
-  /// <summary>
-  /// Sets the family to be work-plane-based, which allows proper 3D placement with full transform support.
-  /// </summary>
-  private static void SetFamilyWorkPlaneBased(Document famDoc)
-  {
-    var workPlaneBasedParam = famDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_WORK_PLANE_BASED);
-    if (workPlaneBasedParam != null && !workPlaneBasedParam.IsReadOnly)
-    {
-      workPlaneBasedParam.Set(1); // 1 = true/checked
+          if (geomObject is Solid solid)
+          {
+            // Prefer FreeFormElement for Solids (Native behavior)
+            using var _ = FreeFormElement.Create(famDoc, solid);
+          }
+          else if (geomObject is Mesh revitMesh)
+          {
+            // Fallback for open meshes: DirectShape (Visible but less interactive)
+            using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+            ds.SetShape([revitMesh]);
+          }
+        }
+        else if (obj is InstanceProxy instanceProxy)
+        {
+          PlaceNestedInstance(famDoc, instanceProxy);
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+      {
+        _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", id, definition.name);
+      }
+      catch (SpeckleException ex)
+      {
+        _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", id, definition.name);
+      }
     }
   }
 
-  /// <summary>
-  /// Places a FamilyInstance for the given InstanceProxy using a work-plane-based strategy
-  /// to support full 3D transforms, including rotation and mirroring.
-  /// </summary>
+  private FamilyInstance? PlaceNestedInstance(Document famDoc, InstanceProxy instanceProxy)
+  {
+    var childDefinitionId = instanceProxy.definitionId;
+
+    if (!_bakedFamilyPaths.TryGetValue(childDefinitionId, out var rfaPath) || !File.Exists(rfaPath))
+    {
+      return null;
+    }
+
+    using var childFamily = LoadFamilyWrapper(famDoc, rfaPath);
+
+    if (childFamily == null)
+    {
+      return null;
+    }
+
+    var symbolId = childFamily.GetFamilySymbolIds().FirstOrDefault();
+    if (symbolId == null)
+    {
+      return null;
+    }
+
+    var symbol = famDoc.GetElement(symbolId) as FamilySymbol;
+    if (symbol == null)
+    {
+      return null;
+    }
+
+    if (!symbol.IsActive)
+    {
+      symbol.Activate();
+    }
+
+    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
+    XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
+    XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
+
+    // Find a suitable view for the reference plane
+    View? view;
+    using (var collector = new FilteredElementCollector(famDoc))
+    {
+      view = collector
+        .OfClass(typeof(View))
+        .Cast<View>()
+        .FirstOrDefault(v => !v.IsTemplate && v.ViewType == ViewType.ThreeD);
+    }
+    view ??= famDoc.ActiveView;
+
+    if (view == null)
+    {
+      return null;
+    }
+
+    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(bubbleEnd, revitTransform.Origin, freeEnd, view);
+    refPlane.Name = $"Speckle_Nested_{Guid.NewGuid().ToString()[..8]}";
+
+    var instance = famDoc.FamilyCreate.NewFamilyInstance(
+      refPlane.GetReference(),
+      revitTransform.Origin,
+      revitTransform.BasisX,
+      symbol
+    );
+
+    var mirrorState = GetMirrorState(instanceProxy.transform);
+    ApplyMirroring(famDoc, instance.Id, refPlane.GetPlane(), mirrorState);
+
+    return instance;
+  }
+
+  // Helper to satisfy CA2000 by converting 'out' param to return value
+  private static Family? LoadFamilyWrapper(Document doc, string path)
+  {
+    doc.LoadFamily(path, new FamilyLoadOptions(), out var family);
+    return family;
+  }
+
   private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
   {
     var definitionId = instanceProxy.definitionId;
@@ -330,7 +343,6 @@ public class RevitFamilyBaker
       return null;
     }
 
-    // create a Reference Plane
     XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
     XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
 
@@ -341,7 +353,6 @@ public class RevitFamilyBaker
       document.ActiveView
     );
 
-    // place using the reference from the ReferencePlane
     var instance = document.Create.NewFamilyInstance(
       refPlane.GetReference(),
       revitTransform.Origin,
@@ -349,41 +360,74 @@ public class RevitFamilyBaker
       symbol
     );
 
-    // handle mirroring
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(document, instance.Id, refPlane.GetPlane(), mirrorState);
-
-    // NOTE: we leave the ReferencePlane for now to ensure stability.
-    // TODO: collect these and delete them at the very end of the BakeInstances loop to keep the file clean
 
     return instance;
   }
 
-  /// <summary>
-  /// Extracts mirror state from the transform matrix by checking the determinant.
-  /// A negative determinant indicates a reflection (odd number of axis flips).
-  /// </summary>
+  private static void SetFamilyWorkPlaneBased(Document famDoc)
+  {
+    var workPlaneBasedParam = famDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_WORK_PLANE_BASED);
+    if (workPlaneBasedParam != null && !workPlaneBasedParam.IsReadOnly)
+    {
+      workPlaneBasedParam.Set(1);
+    }
+  }
+
+  private string GetFamilyTemplatePath(Document document)
+  {
+    if (_cachedTemplatePath != null)
+    {
+      return _cachedTemplatePath;
+    }
+
+    var version = document.Application.VersionNumber;
+    var isMetric = document.DisplayUnitSystem == DisplayUnit.METRIC;
+    var templateName = isMetric ? "Metric Generic Model.rft" : "Generic Model.rft";
+    var assemblyLocation = typeof(RevitFamilyBaker).Assembly.Location;
+    var assemblyDir =
+      Path.GetDirectoryName(assemblyLocation) ?? throw new ConversionException("Could not resolve assembly directory.");
+
+    var templatePath = Path.Combine(assemblyDir, "Resources", "Templates", version, templateName);
+
+    if (!File.Exists(templatePath))
+    {
+      _logger.LogError("Revit Family Template missing. Searched path: {templatePath}", templatePath);
+      throw new ConversionException($"Could not find required family template: {templateName}.");
+    }
+
+    _cachedTemplatePath = templatePath;
+    return templatePath;
+  }
+
+  private static string GetFamilyName(InstanceDefinitionProxy definitionProxy)
+  {
+    var baseName = definitionProxy.name;
+    var invalidChars = Path.GetInvalidFileNameChars();
+    return string.Concat(baseName.Select(c => invalidChars.Contains(c) ? '_' : c));
+  }
+
+  private static Family? FindFamilyByName(Document document, string familyName)
+  {
+    using var collector = new FilteredElementCollector(document);
+    return collector.OfClass(typeof(Family)).OfType<Family>().FirstOrDefault(f => f.Name == familyName);
+  }
+
   private static (bool X, bool Y, bool Z) GetMirrorState(Matrix4x4 matrix)
   {
-    // Check determinant of the 3x3 rotation/scale part to detect reflection
     var det =
       matrix.M11 * (matrix.M22 * matrix.M33 - matrix.M23 * matrix.M32)
       - matrix.M12 * (matrix.M21 * matrix.M33 - matrix.M23 * matrix.M31)
       + matrix.M13 * (matrix.M21 * matrix.M32 - matrix.M22 * matrix.M31);
 
-    // If determinant is negative, there's a reflection
-    // We apply X-axis mirroring as that's the most common case
     if (det < 0)
     {
       return (true, false, false);
     }
-
     return (false, false, false);
   }
 
-  /// <summary>
-  /// Mirrors an element across the specified axes of a given plane.
-  /// </summary>
   private void ApplyMirroring(Document document, ElementId elementId, Plane plane, (bool X, bool Y, bool Z) mirrorState)
   {
     var mirrorOperations = new List<(string name, bool shouldMirror, Plane mirrorPlane)>
@@ -411,11 +455,34 @@ public class RevitFamilyBaker
     }
   }
 
+  private static void CleanupTempFile(string path)
+  {
+    try
+    {
+      if (File.Exists(path))
+      {
+        File.Delete(path);
+      }
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      // Suppress deletion errors
+    }
+  }
+
+  public void Dispose()
+  {
+    foreach (var path in _bakedFamilyPaths.Values)
+    {
+      CleanupTempFile(path);
+    }
+    _bakedFamilyPaths.Clear();
+  }
+
   private sealed class FamilyLoadOptions : IFamilyLoadOptions
   {
     public bool OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
     {
-      // if the family exists, overwrite its parameter values with the incoming ones
       overwriteParameterValues = true;
       return true;
     }
@@ -427,8 +494,6 @@ public class RevitFamilyBaker
       out bool overwriteParameterValues
     )
     {
-      // FamilySource.Family means "Use the version from the RFA file being loaded" (I think)
-      // this ensures shared components update to match the Speckle data.
       source = FamilySource.Family;
       overwriteParameterValues = true;
       return true;

@@ -144,9 +144,22 @@ public sealed class RevitHostObjectBuilder(
     // Bakes instances as families (if setting is enabled Count > 0)
     if (instanceComponentsForFamilies is { Count: > 0 })
     {
+      // Populate the object lookup for the Baker
+      // We need to map the string IDs found in InstanceDefinitionProxy.objects to actual Base objects
+      // We assume unpackedRoot.ObjectsToConvert contains all objects in the commit
+      var speckleObjectLookup = new Dictionary<string, Base>();
+      foreach (var tc in unpackedRoot.ObjectsToConvert)
+      {
+        if (!string.IsNullOrEmpty(tc.Current.id) && !speckleObjectLookup.ContainsKey(tc.Current.id))
+        {
+          speckleObjectLookup[tc.Current.id] = tc.Current;
+        }
+      }
+
       conversionResults = BakeInstancesAsFamilies(
         instanceComponentsForFamilies,
         conversionResults,
+        speckleObjectLookup,
         onOperationProgressed
       );
     }
@@ -346,13 +359,18 @@ public sealed class RevitHostObjectBuilder(
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) currentResults,
+    Dictionary<string, Base> speckleObjectLookup, // [UPDATED] Added lookup param
     IProgress<CardProgress> onOperationProgressed
   )
   {
     using var _ = activityFactory.Start("Creating families");
     transactionManager.StartTransaction(true, "Creating families");
 
-    var (familyResults, familyElementIds) = familyBaker.BakeInstances(instanceComponents, onOperationProgressed);
+    (List<ReceiveConversionResult> familyResults, List<string> familyElementIds) = familyBaker.BakeInstances(
+      instanceComponents,
+      speckleObjectLookup,
+      onOperationProgressed
+    );
 
     // Merge results
     var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
