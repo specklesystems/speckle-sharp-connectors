@@ -154,15 +154,13 @@ public sealed class RevitHostObjectBuilder(
         // 1. Primary Index: Speckle Hash (Most reliable)
         if (!string.IsNullOrEmpty(obj.id))
         {
-          speckleObjectLookup[obj.id.NotNull()] = obj;
+          speckleObjectLookup[obj.id.NotNullOrWhiteSpace()] = obj;
         }
 
         // 2. Secondary Index: Application ID (Required for Rhino/Revit blocks)
-        // We use !ContainsKey check just to ensure we don't accidentally overwrite a hash key
-        // if the AppID happens to be identical to someone else's hash (vanishingly rare).
-        if (!string.IsNullOrEmpty(obj.applicationId) && !speckleObjectLookup.ContainsKey(obj.applicationId.NotNull()))
+        if (!string.IsNullOrEmpty(obj.applicationId))
         {
-          speckleObjectLookup[obj.applicationId] = obj;
+          speckleObjectLookup[obj.applicationId.NotNullOrWhiteSpace()] = obj;
         }
       }
 

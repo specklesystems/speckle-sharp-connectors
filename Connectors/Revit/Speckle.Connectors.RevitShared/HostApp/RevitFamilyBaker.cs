@@ -286,7 +286,19 @@ public sealed class RevitFamilyBaker : IDisposable
       return;
     }
 
-    using var childFamily = LoadFamilyWrapper(famDoc, rfaPath);
+    var familyName = Path.GetFileNameWithoutExtension(rfaPath);
+
+    // Attempt to find existing
+    Family? childFamily = FindFamilyByName(famDoc, familyName);
+
+    // If not found, load it
+    if (childFamily == null)
+    {
+      childFamily = LoadFamilyWrapper(famDoc, rfaPath);
+    }
+
+    // Wrap in using to ensure the wrapper is disposed (whether we found it or loaded it)
+    using var _ = childFamily;
 
     if (childFamily == null)
     {
@@ -314,7 +326,6 @@ public sealed class RevitFamilyBaker : IDisposable
     XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
     XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
 
-    // Find a suitable view for the reference plane
     View? view;
     using (var collector = new FilteredElementCollector(famDoc))
     {
