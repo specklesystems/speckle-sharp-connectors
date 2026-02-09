@@ -9,5 +9,5 @@ public record RhinoConversionSettings(
   RhinoDoc Document,
   string SpeckleUnits,
   bool AddVisualizationProperties,
-  bool ConvertMeshesToBreps = false
+  bool ConvertMeshesToPolysurfaces = false
 );

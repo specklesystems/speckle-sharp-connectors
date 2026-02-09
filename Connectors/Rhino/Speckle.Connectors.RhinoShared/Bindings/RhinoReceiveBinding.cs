@@ -24,7 +24,7 @@ public class RhinoReceiveBinding(
   private ReceiveBindingUICommands Commands { get; } = new(parent);
 
 #pragma warning disable CA1024
-  public List<ICardSetting> GetReceiveSettings() => [new ConvertMeshesToBrepsSetting()];
+  public List<ICardSetting> GetReceiveSettings() => [new ConvertMeshesToPolysurfacesSetting()];
 #pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
@@ -43,7 +43,7 @@ public class RhinoReceiveBinding(
             rhinoConversionSettingsFactory.Create(
               RhinoDoc.ActiveDoc,
               true,
-              toHostSettingsManager.GetConvertMeshesToBrepsSetting(card)
+              toHostSettingsManager.GetConvertMeshesToPolysurfacesSetting(card)
             )
           );
       },

@@ -18,12 +18,12 @@ public class RhinoConversionSettingsFactory(
   public RhinoConversionSettings Create(
     RhinoDoc document,
     bool addVisualizationProperties,
-    bool convertMeshesToBreps
+    bool convertMeshesToPolysurfaces
   ) =>
     new(
       document,
       unitsConverter.ConvertOrThrow(RhinoDoc.ActiveDoc.ModelUnitSystem),
       addVisualizationProperties,
-      convertMeshesToBreps
+      convertMeshesToPolysurfaces
     );
 }

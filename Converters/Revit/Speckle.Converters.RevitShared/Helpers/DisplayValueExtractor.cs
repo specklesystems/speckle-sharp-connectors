@@ -293,23 +293,14 @@ public sealed class DisplayValueExtractor
     DB.Transform? curveTransform
   )
   {
-    bool makeTransparent = ShouldSetElementDisplayToTransparent(element);
-
-    // Native meshes
-    var meshesByMaterial = GetMeshesByMaterialFromMeshes(collections.Meshes);
-    var displayMeshes = _meshByMaterialConverter.Convert((meshesByMaterial, element.Id, makeTransparent));
-
-    // Solid-origin meshes — processed separately and tagged
-    var solidMeshesByMaterial = GetMeshesByMaterialFromSolids(collections.Solids);
-    var solidDisplayMeshes = _meshByMaterialConverter.Convert((solidMeshesByMaterial, element.Id, makeTransparent));
-    foreach (var solidMesh in solidDisplayMeshes)
-    {
-      solidMesh["fromSolid"] = true;
-    }
+    var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
+    var displayMeshes = _meshByMaterialConverter.Convert(
+      (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
+    );
 
     List<DisplayValueResult> displayValue = new(collections.TotalCount);
 
-    foreach (var mesh in displayMeshes.Concat(solidDisplayMeshes))
+    foreach (var mesh in displayMeshes)
     {
       // if we have a transform, keep mesh in symbol space and attach transform
       displayValue.Add(
@@ -397,7 +388,10 @@ public sealed class DisplayValueExtractor
     return null;
   }
 
-  private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterialFromMeshes(List<DB.Mesh> meshes)
+  private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterial(
+    List<DB.Mesh> meshes,
+    List<DB.Solid> solids
+  )
   {
     var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
     foreach (var mesh in meshes)
@@ -412,12 +406,6 @@ public sealed class DisplayValueExtractor
       value.Add(mesh);
     }
 
-    return meshesByMaterial;
-  }
-
-  private static Dictionary<DB.ElementId, List<DB.Mesh>> GetMeshesByMaterialFromSolids(List<DB.Solid> solids)
-  {
-    var meshesByMaterial = new Dictionary<DB.ElementId, List<DB.Mesh>>();
     foreach (var solid in solids)
     {
       foreach (DB.Face face in solid.Faces)
