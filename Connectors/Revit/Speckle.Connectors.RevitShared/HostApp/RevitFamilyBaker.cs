@@ -13,6 +13,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.Instances;
 using Plane = Autodesk.Revit.DB.Plane;
 using SMesh = Speckle.Objects.Geometry.Mesh;
@@ -224,25 +225,30 @@ public sealed class RevitFamilyBaker : IDisposable
 
       try
       {
-        if (obj is SMesh mesh)
-        {
-          var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
-
-          if (geomObject is Solid solid)
-          {
-            // Prefer FreeFormElement for Solids (Native behavior)
-            using var _ = FreeFormElement.Create(famDoc, solid);
-          }
-          else if (geomObject is Mesh revitMesh)
-          {
-            // Fallback for open meshes: DirectShape (Visible but less interactive)
-            using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
-            ds.SetShape([revitMesh]);
-          }
-        }
-        else if (obj is InstanceProxy instanceProxy)
+        if (obj is InstanceProxy instanceProxy)
         {
           PlaceNestedInstance(famDoc, instanceProxy);
+        }
+        else
+        {
+          // 1. If the object itself IS a Mesh, bake it.
+          if (obj is SMesh mesh)
+          {
+            BakeMesh(famDoc, mesh);
+          }
+
+          // 2. If the object HAS meshes (Extrusion, Brep, etc.) in its displayValue, bake them.
+          var displayValues = obj.TryGetDisplayValue();
+          if (displayValues != null)
+          {
+            foreach (var item in displayValues)
+            {
+              if (item is SMesh displayMesh)
+              {
+                BakeMesh(famDoc, displayMesh);
+              }
+            }
+          }
         }
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException ex)
@@ -256,32 +262,47 @@ public sealed class RevitFamilyBaker : IDisposable
     }
   }
 
-  private FamilyInstance? PlaceNestedInstance(Document famDoc, InstanceProxy instanceProxy)
+  private void BakeMesh(Document famDoc, SMesh mesh)
+  {
+    var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
+
+    if (geomObject is Solid solid)
+    {
+      using var _ = FreeFormElement.Create(famDoc, solid);
+    }
+    else if (geomObject is Mesh revitMesh)
+    {
+      using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+      ds.SetShape([revitMesh]);
+    }
+  }
+
+  private void PlaceNestedInstance(Document famDoc, InstanceProxy instanceProxy)
   {
     var childDefinitionId = instanceProxy.definitionId;
 
     if (!_bakedFamilyPaths.TryGetValue(childDefinitionId, out var rfaPath) || !File.Exists(rfaPath))
     {
-      return null;
+      return;
     }
 
     using var childFamily = LoadFamilyWrapper(famDoc, rfaPath);
 
     if (childFamily == null)
     {
-      return null;
+      return;
     }
 
     var symbolId = childFamily.GetFamilySymbolIds().FirstOrDefault();
     if (symbolId == null)
     {
-      return null;
+      return;
     }
 
     var symbol = famDoc.GetElement(symbolId) as FamilySymbol;
     if (symbol == null)
     {
-      return null;
+      return;
     }
 
     if (!symbol.IsActive)
@@ -306,7 +327,7 @@ public sealed class RevitFamilyBaker : IDisposable
 
     if (view == null)
     {
-      return null;
+      return;
     }
 
     using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(bubbleEnd, revitTransform.Origin, freeEnd, view);
@@ -321,8 +342,6 @@ public sealed class RevitFamilyBaker : IDisposable
 
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(famDoc, instance.Id, refPlane.GetPlane(), mirrorState);
-
-    return instance;
   }
 
   // Helper to satisfy CA2000 by converting 'out' param to return value
@@ -387,14 +406,14 @@ public sealed class RevitFamilyBaker : IDisposable
     var templateName = isMetric ? "Metric Generic Model.rft" : "Generic Model.rft";
     var assemblyLocation = typeof(RevitFamilyBaker).Assembly.Location;
     var assemblyDir =
-      Path.GetDirectoryName(assemblyLocation) ?? throw new ConversionException("Could not resolve assembly directory.");
+      Path.GetDirectoryName(assemblyLocation) ?? throw new ConversionException("Could not resolve assembly directory");
 
     var templatePath = Path.Combine(assemblyDir, "Resources", "Templates", version, templateName);
 
     if (!File.Exists(templatePath))
     {
       _logger.LogError("Revit Family Template missing. Searched path: {templatePath}", templatePath);
-      throw new ConversionException($"Could not find required family template: {templateName}.");
+      throw new ConversionException($"Could not find required family template: {templateName}");
     }
 
     _cachedTemplatePath = templatePath;

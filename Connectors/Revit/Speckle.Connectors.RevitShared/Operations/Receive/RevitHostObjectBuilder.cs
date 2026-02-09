@@ -144,15 +144,25 @@ public sealed class RevitHostObjectBuilder(
     // Bakes instances as families (if setting is enabled Count > 0)
     if (instanceComponentsForFamilies is { Count: > 0 })
     {
-      // Populate the object lookup for the Baker
-      // We need to map the string IDs found in InstanceDefinitionProxy.objects to actual Base objects
-      // We assume unpackedRoot.ObjectsToConvert contains all objects in the commit
+      // Defensively double-indexing objects (ensures we find Definition references by Speckle ID OR Application ID)
       var speckleObjectLookup = new Dictionary<string, Base>();
+
       foreach (var tc in unpackedRoot.ObjectsToConvert)
       {
-        if (!string.IsNullOrEmpty(tc.Current.id) && !speckleObjectLookup.ContainsKey(tc.Current.id))
+        var obj = tc.Current;
+
+        // 1. Primary Index: Speckle Hash (Most reliable)
+        if (!string.IsNullOrEmpty(obj.id))
         {
-          speckleObjectLookup[tc.Current.id] = tc.Current;
+          speckleObjectLookup[obj.id.NotNull()] = obj;
+        }
+
+        // 2. Secondary Index: Application ID (Required for Rhino/Revit blocks)
+        // We use !ContainsKey check just to ensure we don't accidentally overwrite a hash key
+        // if the AppID happens to be identical to someone else's hash (vanishingly rare).
+        if (!string.IsNullOrEmpty(obj.applicationId) && !speckleObjectLookup.ContainsKey(obj.applicationId.NotNull()))
+        {
+          speckleObjectLookup[obj.applicationId] = obj;
         }
       }
 
@@ -434,13 +444,6 @@ public sealed class RevitHostObjectBuilder(
           {
             _atomicObjectToParentDataObject[objectId] = parentDataObject;
           }
-        }
-        else
-        {
-          logger.LogError(
-            "Could not find parent DataObject for DefinitionProxy {ApplicationId}",
-            defProxy.applicationId
-          );
         }
       }
     }
