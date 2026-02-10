@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -26,8 +26,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\ExtrusionXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\SubDXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\BrepXToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\SolidXToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\MeshToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\DataObjectConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Helpers\EntityUnitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\RawEncodingToHostConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline2dRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolyline3dRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\AutocadPolycurveToHostPolylineRawConverter.cs" />
@@ -63,6 +66,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\ExtensionDictionaryExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\IPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\PropertiesExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Solid3dToRawEncodingConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBSubDMeshToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\BrepToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\CircularArc2dToSpeckleRawConverter.cs" />
@@ -94,5 +98,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Point3dToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\DBSplineToSpeckleRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\Vector3dToSpeckleRawConverter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)ToHost\Helpers\" />
   </ItemGroup>
 </Project>

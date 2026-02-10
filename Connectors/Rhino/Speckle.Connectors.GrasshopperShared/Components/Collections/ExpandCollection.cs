@@ -51,11 +51,14 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
     Name = wrapper.Name;
     NickName = wrapper.Name;
 
-    // Separate objects and collections
+    // Separate objects and collections (skip nulls for non-topology outputs)
     // Note: SpeckleBlockInstanceWrapper inherits from SpeckleObjectWrapper,
     // so it will be included in objects
     List<SpeckleWrapper> objects = wrapper.GetAtomicObjects().ToList();
-    List<SpeckleCollectionWrapper> collections = wrapper.Elements.OfType<SpeckleCollectionWrapper>().ToList();
+    List<SpeckleCollectionWrapper> collections = wrapper
+      .Elements.Where(e => e != null)
+      .OfType<SpeckleCollectionWrapper>()
+      .ToList();
 
     var outputParams = new List<OutputParamWrapper>();
     if (objects.Count != 0)
@@ -69,22 +72,14 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
         Access = GH_ParamAccess.list
       };
 
-      // Create appropriate Goo types for each object (downside of the inheritance refactor)
+      // Don't use topology for _objects output (always list)
       List<IGH_Goo> atomicObjectGoos = objects.Select(obj => obj.CreateGoo()).ToList();
-
       outputParams.Add(new OutputParamWrapper(param, atomicObjectGoos, null));
     }
 
     foreach (SpeckleCollectionWrapper childWrapper in collections)
     {
-      /* POC: we shouldn't skip empty, people would probably expect to see what they see in browser.
-      if (childWrapper.Elements.Count == 0)
-      {
-        continue;
-      }
-      */
-
-      var hasInnerCollections = childWrapper.Elements.Any(el => el is SpeckleCollectionWrapper);
+      var hasInnerCollections = childWrapper.Elements.Where(e => e != null).Any(el => el is SpeckleCollectionWrapper);
       var topology = childWrapper.Topology;
       var nickName = childWrapper.Name;
       if (nickName.Length > 16)
@@ -111,8 +106,11 @@ public class ExpandCollection : GH_Component, IGH_VariableParameterComponent
       }
       else
       {
-        // Create appropriate Goo types for child objects
-        List<IGH_Goo> childObjectGoos = childWrapper.GetAtomicObjects().Select(obj => obj.CreateGoo()).ToList();
+        // If topology exists, include nulls to match topology count (CNX-2855)
+        List<IGH_Goo> childObjectGoos =
+          topology != null
+            ? childWrapper.ToGooListWithNulls()
+            : childWrapper.GetAtomicObjects().Select(obj => obj.CreateGoo()).ToList();
         outputValue = childObjectGoos;
       }
 

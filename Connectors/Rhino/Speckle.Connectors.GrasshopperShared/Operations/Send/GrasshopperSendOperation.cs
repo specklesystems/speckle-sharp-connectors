@@ -78,12 +78,18 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     colorPacker.ProcessColor(wrapper.ApplicationId, wrapper.Color);
     materialPacker.ProcessMaterial(wrapper.ApplicationId, wrapper.Material);
 
+    int skippedNulls = 0;
+
     // iterate through this wrapper's elements to unwrap children
     // HashSet<string> collObjectIds = new();
-    foreach (ISpeckleCollectionObject element in wrapper.Elements)
+    foreach (ISpeckleCollectionObject? element in wrapper.Elements)
     {
       switch (element)
       {
+        case null:
+          // CNX-2855: count skipped nulls and obvs don't add to collection (can't send nulls)
+          skippedNulls++;
+          continue;
         case SpeckleCollectionWrapper collWrapper:
           // create an application id for this collection if none exists. This will be used for color and render material proxies
           collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
@@ -131,6 +137,13 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
       }
     }
     */
+
+    // clear topology when nulls are present - no simple way to preserve tree structure since Collection.elements
+    // doesn't support nulls on publish. Topology is GH-specific and optional, so clearing it is safe. (CNX-2855)
+    if (skippedNulls > 0)
+    {
+      targetCollection[Constants.TOPOLOGY_PROP] = null;
+    }
 
     return targetCollection;
   }

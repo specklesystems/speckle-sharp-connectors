@@ -8,7 +8,7 @@ internal sealed class FileimportPayload
   public required string Token { get; init; }
   public required string BlobId { get; init; }
   public required string JobType { get; init; }
-  public required string ModelId { get; init; }
+  public required string ModelIngestionId { get; init; }
   public required string FileName { get; init; }
 
   /// <summary>File extension, no dot</summary>

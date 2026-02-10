@@ -16,7 +16,7 @@ jobs:
       file_version: ${{ steps.set-version.outputs.file_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -26,7 +26,7 @@ jobs:
           dotnet-version: 8.0.4xx # Align with global.json (including roll forward rules)
 
       - name: Cache Nuget
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -35,7 +35,7 @@ jobs:
         run: ./build.ps1 zip
 
       - name: ⬆️ Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: output-${{ env.SEMVER }}
           path: output/*.*
@@ -68,7 +68,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: main
+          ref: jedd/cnx-1358-autocad-and-civil3d-installations-are-blocked-by-pre #todo: revert back to main before PR is merged
           wait-for-completion: true
           wait-for-completion-interval: 10s
           wait-for-completion-timeout: 10m

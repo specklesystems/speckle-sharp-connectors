@@ -4,13 +4,15 @@ using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
-using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
+using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Importers.Rhino.Internal;
 
@@ -19,13 +21,24 @@ internal sealed class Sender(
   IServiceProvider serviceProvider,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
   IMixPanelManager mixpanel,
-  Progress progress,
-  Application applicationInfo,
+  IIngestionProgressManagerFactory progressManagerFactory,
   ILogger<Sender> logger
 )
 {
-  public async Task<Version> Send(Project project, string modelId, Account account, CancellationToken cancellationToken)
+  public async Task<SerializeProcessResults> Send(
+    Project project,
+    ModelIngestion ingestion,
+    IClient speckleClient,
+    CancellationToken cancellationToken
+  )
   {
+    var progressManager = progressManagerFactory.CreateInstance(
+      speckleClient,
+      ingestion,
+      project.id,
+      TimeSpan.FromSeconds(1.5),
+      cancellationToken
+    );
     // NOTE: introduction of AddVisualizationProperties setting not accounted for, hence hardcoded as true (i.e. "as before")
     using var activity = activityFactory.Start();
     using var scope = serviceProvider.CreateScope();
@@ -44,18 +57,23 @@ internal sealed class Sender(
     }
 
     var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-    var buildResults = await operation.Build(rhinoObjects, project.id, progress, cancellationToken);
-    var (results, version) = await operation.Send(
+    var buildResults = await operation.Build(rhinoObjects, project.id, progressManager, cancellationToken);
+    var results = await operation.SendObjects(
       buildResults.RootObject,
       project.id,
-      modelId,
-      applicationInfo.Slug,
-      null,
-      account,
-      progress,
+      speckleClient.Account,
+      progressManager,
       cancellationToken
     );
 
+    await TrackSendMetrics(project, speckleClient.Account);
+    logger.LogInformation("Root: {RootId}", results.RootId);
+
+    return results;
+  }
+
+  private async Task TrackSendMetrics(Project project, Account account)
+  {
     Dictionary<string, object> customProperties = [];
     customProperties.Add("actionSource", "import");
     if (project.workspaceId != null)
@@ -64,8 +82,5 @@ internal sealed class Sender(
     }
 
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
-    logger.LogInformation("Root: {RootId}", results.RootId);
-
-    return version;
   }
 }

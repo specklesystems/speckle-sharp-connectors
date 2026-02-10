@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.DependencyInjection;
 using Speckle.Converters.Rhino;
@@ -17,10 +18,11 @@ internal static class ServiceRegistration
 
     services.AddRhino(false);
     services.AddRhinoConverters();
-    services.AddTransient<Progress>();
     services.AddTransient<Sender>();
     services.AddTransient<ImporterInstance>();
     services.AddTransient<ImporterInstanceFactory>();
+    services.AddTransient<IIngestionProgressManager, IngestionProgressManager>();
+    services.AddTransient<IIngestionProgressManagerFactory, IngestionProgressManagerFactory>();
 
     // override default thread context
     services.AddSingleton<IThreadContext>(new ImporterThreadContext());

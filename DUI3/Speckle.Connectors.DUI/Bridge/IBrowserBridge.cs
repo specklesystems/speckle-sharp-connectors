@@ -40,6 +40,6 @@ public interface IBrowserBridge
   public Task Send<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
 
-  public void SendProgress<T>(string eventName, T data)
+  public void SendProgress<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class;
 }

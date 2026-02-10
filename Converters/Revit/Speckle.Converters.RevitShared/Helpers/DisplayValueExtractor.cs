@@ -1,9 +1,11 @@
+using Speckle.Common.MeshTriangulation;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToSpeckle;
 using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Converters.RevitShared.ToSpeckle;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Sdk;
@@ -26,6 +28,8 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
+  private readonly IReferencePointConverter _referencePointConverter;
+  private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public DisplayValueExtractor(
     ITypedConverter<
@@ -37,7 +41,9 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.Point, SOG.Point> pointConverter,
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    IScalingServiceToSpeckle toSpeckleScalingService
+    IScalingServiceToSpeckle toSpeckleScalingService,
+    IReferencePointConverter referencePointConverter,
+    ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
     _meshByMaterialConverter = meshByMaterialConverter;
@@ -47,6 +53,8 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
+    _referencePointConverter = referencePointConverter;
+    _xyzToPointConverter = xyzToPointConverter;
   }
 
   public List<DisplayValueResult> GetDisplayValue(DB.Element element)
@@ -61,27 +69,22 @@ public sealed class DisplayValueExtractor
       case DB.Grid grid:
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
       case DB.Area area:
-        List<DisplayValueResult> areaDisplay = new();
-        using (var options = new DB.SpatialElementBoundaryOptions())
-        {
-          foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
-          {
-            foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
-            {
-              areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
-            }
-          }
-        }
-        return areaDisplay;
+        return _converterSettings.Current.SendAreasAsMesh
+          ? GetAreaMeshDisplayValue(area)
+          : GetAreaBoundaryDisplayValue(area);
 
-      // NOTE: this is only for Rebar and not AreaReinforcement, RebarInSystem
-      // AreaReinforcement and RebarInSystem pass through GetGeometryDisplayValue which get DisplayValues as per hostApp
-      // Rebar elements need special handling as get_Geometry() doesn't work properly
-      // We either represent them as centerlines or as solids based on settings
+      // Rebar: get_Geometry() returns null, use GetTransformedCenterlineCurves/GetFullGeometryForView
+      // Reference point transform is handled by point converters during conversion
       case DB.Structure.Rebar rebar:
         return _converterSettings.Current.SendRebarsAsVolumetric
           ? GetRebarVolumetricDisplayValue(rebar)
           : GetRebarCenterlineDisplayValue(rebar);
+
+      // AreaReinforcement/PathReinforcement get_Geometry() returns curves in document coordinates
+      // unlike Rebar which needs reference point transform applied, these are already correct
+      case DB.Structure.AreaReinforcement:
+      case DB.Structure.PathReinforcement:
+        return GetAreaReinforcementDisplayValue(element);
 
       // handle specific types of objects with multiple parts or children
       // curtain and stacked walls should have their display values in their children
@@ -98,21 +101,136 @@ public sealed class DisplayValueExtractor
 
   private Base GetCurveDisplayValue(DB.Curve curve) => (Base)_curveConverter.Convert(curve);
 
+  private List<DisplayValueResult> GetAreaBoundaryDisplayValue(DB.Area area)
+  {
+    List<DisplayValueResult> areaDisplay = new();
+    using (var options = new DB.SpatialElementBoundaryOptions())
+    {
+      foreach (IList<DB.BoundarySegment> boundarySegmentGroup in area.GetBoundarySegments(options))
+      {
+        foreach (DB.BoundarySegment boundarySegment in boundarySegmentGroup)
+        {
+          areaDisplay.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(boundarySegment.GetCurve())));
+        }
+      }
+    }
+    return areaDisplay;
+  }
+
+  private List<DisplayValueResult> GetAreaMeshDisplayValue(DB.Area area)
+  {
+    using var options = new DB.SpatialElementBoundaryOptions();
+    var boundaryGroups = area.GetBoundarySegments(options);
+    if (boundaryGroups.Count == 0)
+    {
+      return new List<DisplayValueResult>();
+    }
+
+    var polygons = new List<Poly3>();
+    foreach (var boundaryGroup in boundaryGroups)
+    {
+      if (boundaryGroup.Count == 0)
+      {
+        continue;
+      }
+
+      var vertices = new List<Vector3>();
+      foreach (var segment in boundaryGroup)
+      {
+        var curve = segment.GetCurve();
+        if (curve == null)
+        {
+          continue;
+        }
+
+        var tessellated = curve.Tessellate();
+        foreach (var pt in tessellated)
+        {
+          // Apply both reference point transformation and scaling
+          var specklePoint = _xyzToPointConverter.Convert(pt);
+          vertices.Add(new Vector3(specklePoint.x, specklePoint.y, specklePoint.z));
+        }
+      }
+
+      if (vertices.Count < 3)
+      {
+        continue;
+      }
+
+      // Revit: outer=CCW, holes=CW; MeshGenerator: outer=CW, holes=CCW
+      var poly = new Poly3(vertices);
+      poly.Reverse();
+      polygons.Add(poly);
+    }
+
+    if (polygons.Count == 0)
+    {
+      return new List<DisplayValueResult>();
+    }
+
+    var generator = new MeshGenerator(new BaseTransformer(), new LibTessTriangulator());
+    var mesh3 = generator.TriangulateSurface(polygons);
+    var speckleMesh = ConvertMesh3ToSpeckleMesh(mesh3);
+    return [DisplayValueResult.WithoutTransform(speckleMesh)];
+  }
+
+  private SOG.Mesh ConvertMesh3ToSpeckleMesh(Mesh3 mesh3)
+  {
+    var vertices = new List<double>();
+    var faces = new List<int>();
+
+    foreach (var v in mesh3.Vertices)
+    {
+      vertices.Add(v.X);
+      vertices.Add(v.Y);
+      vertices.Add(v.Z);
+    }
+
+    // validate triangle count
+    // checking defensively to ensure we never access invalid indices
+    if (mesh3.Triangles.Count % 3 != 0)
+    {
+      // this should never happen due to Mesh3 validation, but handle gracefully if it does
+      return new SOG.Mesh
+      {
+        vertices = vertices,
+        faces = new List<int>(),
+        units = _converterSettings.Current.SpeckleUnits,
+      };
+    }
+
+    for (int i = 0; i < mesh3.Triangles.Count; i += 3)
+    {
+      faces.Add(3); // Triangle indicator
+      faces.Add(mesh3.Triangles[i]);
+      faces.Add(mesh3.Triangles[i + 1]);
+      faces.Add(mesh3.Triangles[i + 2]);
+    }
+
+    return new SOG.Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _converterSettings.Current.SpeckleUnits,
+    };
+  }
+
   private List<DisplayValueResult> GetGeometryDisplayValue(DB.Element element, DB.Options? options = null)
   {
     using DB.Transform? localToDocument = GetTransform(element);
     using DB.Transform? documentToLocal = localToDocument?.Inverse;
 
     DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
-    using DB.Transform? compoundTransform =
-      localToDocument is not null && documentToWorld is not null
-        ? documentToWorld.Multiply(localToDocument)
-        : localToDocument; // don't want to accidentally dispose of the ReferencePointTransform
-
-    DB.Transform? localToWorld = compoundTransform ?? documentToWorld;
+    DB.Transform? localToWorld = (localToDocument, documentToWorld) switch
+    {
+      (not null, not null) => documentToWorld.Multiply(localToDocument),
+      (not null, null) => localToDocument,
+      (null, not null) => documentToWorld,
+      (null, null) => null
+    };
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
-    return ProcessGeometryCollections(element, collections, localToWorld);
+    return ProcessGeometryCollections(element, collections, localToWorld, localToDocument);
   }
 
   /// <summary>
@@ -161,44 +279,42 @@ public sealed class DisplayValueExtractor
   }
 
   /// <summary>
-  /// Processes collections of different geometry types and converts them to display values.
-  /// Extracted as a common method to reduce code duplication between regular geometry processing and special cases like rebar.
+  /// Converts sorted geometry into DisplayValueResults <see cref="ElementTopLevelConverterToSpeckle"/>.
   /// </summary>
   /// <remarks>
-  /// Essentially all the ensuing steps after the common get_Geometry element method
+  /// Meshes get localToWorld attached as transform metadata (for instancing).
+  /// Curves, polylines, and points get curveTransform applied (instance transform only) -
+  /// reference point transform is handled by the point converters.
   /// </remarks>
   private List<DisplayValueResult> ProcessGeometryCollections(
     DB.Element element,
     GeometryCollections collections,
-    DB.Transform? localToWorld
+    DB.Transform? localToWorld,
+    DB.Transform? curveTransform
   )
   {
-    // handle all solids and meshes by their material
     var meshesByMaterial = GetMeshesByMaterial(collections.Meshes, collections.Solids);
-    List<SOG.Mesh> displayMeshes = _meshByMaterialConverter.Convert(
+    var displayMeshes = _meshByMaterialConverter.Convert(
       (meshesByMaterial, element.Id, ShouldSetElementDisplayToTransparent(element))
     );
 
     List<DisplayValueResult> displayValue = new(collections.TotalCount);
-    Matrix4x4? matrix = localToWorld is not null ? TransformToMatrix(localToWorld) : null;
 
-    foreach (SOG.Mesh mesh in displayMeshes)
+    foreach (var mesh in displayMeshes)
     {
+      // if we have a transform, keep mesh in symbol space and attach transform
       displayValue.Add(
-        matrix.HasValue
-          ? DisplayValueResult.WithTransform(mesh, matrix.Value)
+        localToWorld != null
+          ? DisplayValueResult.WithTransform(mesh, TransformToMatrix(localToWorld))
           : DisplayValueResult.WithoutTransform(mesh)
       );
     }
 
-    // transform curves, polylines, and points to world coordinates before conversion.
-    // Unlike meshes/solids which are proxified with transform matrices, these geometry
-    // types must have their final world coordinates baked directly into their geometry.
     foreach (var curve in collections.Curves)
     {
-      if (localToWorld is not null)
+      if (curveTransform is not null)
       {
-        using var transformedCurve = curve.CreateTransformed(localToWorld);
+        using var transformedCurve = curve.CreateTransformed(curveTransform);
         displayValue.Add(DisplayValueResult.WithoutTransform(GetCurveDisplayValue(transformedCurve)));
       }
       else
@@ -207,15 +323,12 @@ public sealed class DisplayValueExtractor
       }
     }
 
-    // Note: Creating new polyline/point instances for transformation isn't ideal for perf,
-    // but Revit API doesn't provide in-place transform methods. Trade-off is acceptable since
-    // family instances typically don't have massive numbers of raw polylines/points in their geometry.
     foreach (var polyline in collections.Polylines)
     {
-      if (localToWorld is not null)
+      if (curveTransform is not null)
       {
         var coords = polyline.GetCoordinates();
-        var transformedCoords = coords.Select(coord => localToWorld.OfPoint(coord)).ToList();
+        var transformedCoords = coords.Select(coord => curveTransform.OfPoint(coord)).ToList();
         using var transformedPolyline = DB.PolyLine.Create(transformedCoords);
         displayValue.Add(DisplayValueResult.WithoutTransform(_polylineConverter.Convert(transformedPolyline)));
       }
@@ -227,9 +340,9 @@ public sealed class DisplayValueExtractor
 
     foreach (var point in collections.Points)
     {
-      if (localToWorld is not null)
+      if (curveTransform is not null)
       {
-        using var transformedPoint = DB.Point.Create(localToWorld.OfPoint(point.Coord));
+        using var transformedPoint = DB.Point.Create(curveTransform.OfPoint(point.Coord));
         displayValue.Add(DisplayValueResult.WithoutTransform(_pointConverter.Convert(transformedPoint)));
       }
       else
@@ -327,23 +440,17 @@ public sealed class DisplayValueExtractor
     };
 
   /// <summary>
-  /// According to the remarks on the GeometryInstance class in the RevitAPIDocs,
-  /// https://www.revitapidocs.com/2024/fe25b14f-5866-ca0f-a660-c157484c3a56.htm,
-  /// a family instance geometryElement should have a top-level geometry instance when the symbol
-  /// does not have modified geometry (the docs say that modified geometry will not have a geom instance,
-  /// however in my experience, all family instances have a top-level geom instance, but if the family instance
-  /// is modified, then the geom instance won't contain any geometry.)
-  ///
-  /// This remark also leads me to think that a family instance will not have top-level solids and geom instances.
-  /// We are logging cases where this is not true.
-  ///
-  /// Note: this is basically a geometry unpacker for all types of geometry
+  /// Sorts element geometry into solids, meshes, curves, polylines, points.
   /// </summary>
+  /// <remarks>
+  /// GeometryInstances are processed via GetSymbolGeometry() with accumulated transforms,
+  /// keeping meshes in symbol space and avoiding double transforms.
+  /// </remarks>
   private void SortGeometry(
     DB.Element element,
     GeometryCollections collections,
     DB.GeometryElement geom,
-    DB.Transform? worldToLocal
+    DB.Transform? accumulatedTransform
   )
   {
     foreach (DB.GeometryObject geomObj in geom)
@@ -356,56 +463,62 @@ public sealed class DisplayValueExtractor
       switch (geomObj)
       {
         case DB.Solid solid:
-          // skip invalid solid
           if (solid.Faces.Size == 0)
           {
             continue;
           }
 
-          if (worldToLocal is not null)
+          if (accumulatedTransform != null)
           {
-            solid = DB.SolidUtils.CreateTransformed(solid, worldToLocal);
+            // apply transform to bring solid into document/world space
+            // only apply once to avoid double-transform bugs
+            solid = DB.SolidUtils.CreateTransformed(solid, accumulatedTransform);
           }
+
           collections.Solids.Add(solid);
           break;
 
         case DB.Mesh mesh:
-          if (worldToLocal is not null)
+          if (accumulatedTransform != null)
           {
-            mesh = mesh.get_Transformed(worldToLocal);
+            // apply accumulated transform to mesh
+            // prevents geometry from being incorrectly transformed later [Ref: CNX-2875]
+            mesh = mesh.get_Transformed(accumulatedTransform);
           }
+
           collections.Meshes.Add(mesh);
           break;
 
-        // curves, polylines, and points are transformed to world space in ProcessGeometryCollections,
-        // not here, because they cannot be proxified like meshes.
         case DB.Curve curve:
+          // curves are stored as-is; transforms are applied later in ProcessGeometryCollections
           collections.Curves.Add(curve);
           break;
 
         case DB.PolyLine polyline:
+          // polylines also handled later during display value processing
           collections.Polylines.Add(polyline);
           break;
 
         case DB.Point point:
+          // points remain in local space; transformed later if needed
           collections.Points.Add(point);
           break;
 
         case DB.GeometryInstance instance:
-          // element transforms should not be carried down into nested geometryInstances.
-          // Nested geomInstances should have their geom retrieved with GetInstanceGeom, not GetSymbolGeom
-          if (worldToLocal == null) //see remark on method for why this is safe to do...
-          {
-            SortGeometry(element, collections, instance.GetInstanceGeometry(), null);
-          }
-          else
-          {
-            SortGeometry(element, collections, instance.GetSymbolGeometry(), null);
-          }
+          // GeometryInstance.Transform: symbol → parent coordinate system
+          // multiply with accumulatedTransform to handle nested instances
+          var instanceTransform = instance.Transform;
+          var nextTransform =
+            accumulatedTransform != null ? accumulatedTransform.Multiply(instanceTransform) : instanceTransform;
+
+          // always use symbol geometry, never GetInstanceGeometry() [Ref: CNX-2875]
+          SortGeometry(element, collections, instance.GetSymbolGeometry(), nextTransform);
           break;
 
         case DB.GeometryElement geometryElement:
-          SortGeometry(element, collections, geometryElement, null);
+          // raw GeometryElement: it has no transform of its own
+          // pass accumulatedTransform from parent if present
+          SortGeometry(element, collections, geometryElement, accumulatedTransform);
           break;
       }
     }
@@ -423,7 +536,7 @@ public sealed class DisplayValueExtractor
       return false; // exit fast on a potential hot path
     }
 
-    DB.GraphicsStyle? bjk = null; // ask ogu why this variable is named like this
+    DB.GraphicsStyle? bjk; // ask ogu why this variable is named like this
 
     if (!_graphicStyleCache.ContainsKey(geomObj.GraphicsStyleId.ToString().NotNull()))
     {
@@ -497,6 +610,26 @@ public sealed class DisplayValueExtractor
       return currentOptions;
     }
 
+    // cable trays (and fittings) are MEP system families whose geometry detail is effectively view-driven.
+    // So, we've seen that, Options.DetailLevel is ignored by get_Geometry() for these categories unless a View is
+    // explicitly supplied, and Revit will always return a medium-detail representation otherwise [Ref: CNX-2735]
+    // We force extraction through the active view here (if there is one!)
+    if (
+      elementBuiltInCategory == DB.BuiltInCategory.OST_CableTray
+      || elementBuiltInCategory == DB.BuiltInCategory.OST_CableTrayFitting
+    )
+    {
+      try
+      {
+        return new DB.Options { View = _converterSettings.Current.Document.NotNull().ActiveView };
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // linked docs or invalid view context – fall back to non-view-specific options
+        return currentOptions;
+      }
+    }
+
     // NOTE: On steel elements. This is an incomplete solution.
     // If steel element proxies will be sucked in via category selection, and they are not visible in the current view, they will not be extracted out.
     // I'm inclined to go with this as a semi-permanent limitation. See:
@@ -547,8 +680,9 @@ public sealed class DisplayValueExtractor
 
     if (geometryElements != null)
     {
+      DB.Transform? documentToWorld = _converterSettings.Current.ReferencePointTransform?.Inverse;
       SortGeometry(rebar, collections, geometryElements, null);
-      return ProcessGeometryCollections(rebar, collections, null);
+      return ProcessGeometryCollections(rebar, collections, documentToWorld, null);
     }
 
     // Return empty list if no geometry is found - imo not critical
@@ -600,14 +734,30 @@ public sealed class DisplayValueExtractor
   }
 
   /// <summary>
+  /// Gets display value for AreaReinforcement and PathReinforcement.
+  /// </summary>
+  /// <remarks>
+  /// These elements' get_Geometry() returns curves already in document coordinates.
+  /// Unlike Rebar.GetTransformedCenterlineCurves() which requires reference point transform,
+  /// these curves should not be transformed - they're already in the correct space.
+  /// </remarks>
+  private List<DisplayValueResult> GetAreaReinforcementDisplayValue(DB.Element element)
+  {
+    var collections = GetSortedGeometryFromElement(element, null, null);
+    // pass null for transform - curves are already in correct document coordinates
+    return ProcessGeometryCollections(element, collections, null, null);
+  }
+
+  /// <summary>
   /// Represents sorted collections of different geometry types extracted from an element.
   /// Used to pass multiple geometry collections as a single parameter to improve code readability
   /// and reduce the risk of parameter ordering errors.
   /// </summary>
   /// <remarks>
-  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to local coordinate space in SortGeometry.
+  /// <see cref="Solids"/> and <see cref="Meshes"/> are transformed to symbol space in SortGeometry.
   /// <see cref="Curves"/>, <see cref="Polylines"/>, and <see cref="Points"/> remain in their original coordinate space
-  /// and are transformed to world space during processing in ProcessGeometryCollections.
+  /// and receive only the instance transform (if any) in ProcessGeometryCollections - reference point
+  /// transform is handled by the point converters during conversion.
   /// </remarks>
   private sealed record GeometryCollections
   {

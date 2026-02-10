@@ -10,9 +10,9 @@ public class WorkspaceSelectedEventArgs(LimitedWorkspace? model) : EventArgs
 
 public class WorkspaceMenuHandler
 {
-  private readonly Func<string, Task<ResourceCollection<Workspace>>> _fetchWorkspaces;
+  private readonly Func<string, Task<ResourceCollection<Workspace>?>> _fetchWorkspaces;
   private ToolStripDropDown? _menu;
-  public bool IsPersonalProjects { get; set; }
+  public bool IsPersonalProjects { get; private set; }
   private SearchToolStripMenuItem? _searchItem;
   private readonly Func<Task> _createWorkspace;
   private LimitedWorkspace? SelectedWorkspace { get; set; }
@@ -24,7 +24,7 @@ public class WorkspaceMenuHandler
   public GhContextMenuButton WorkspaceContextMenuButton { get; }
 
   public WorkspaceMenuHandler(
-    Func<string, Task<ResourceCollection<Workspace>>> fetchWorkspaces,
+    Func<string, Task<ResourceCollection<Workspace>?>> fetchWorkspaces,
     Func<Task> createWorkspace
   )
   {
@@ -44,6 +44,7 @@ public class WorkspaceMenuHandler
     _menu?.Close();
     Workspaces = null;
     SelectedWorkspace = null;
+    IsPersonalProjects = false;
     RedrawMenuButton(null);
   }
 
@@ -51,7 +52,7 @@ public class WorkspaceMenuHandler
   {
     Workspaces = await _fetchWorkspaces.Invoke(searchText);
     // NOTE: We shouldn't call PopulateMenu here bc it will reset the search item when search is happening, it borks the state.
-    PopulateModelMenuItems(_menu!, _searchItem!);
+    PopulateModelMenuItems(_menu!, _searchItem);
   }
 
   private bool PopulateMenu(ToolStripDropDown menu)
@@ -60,7 +61,7 @@ public class WorkspaceMenuHandler
     _menu = menu;
     _searchItem = new SearchToolStripMenuItem(menu, Refetch);
 
-    if (Workspaces == null || Workspaces.items.Count == 0)
+    if (Workspaces?.items.Count == 0)
     {
       menu.Items.Clear();
       _searchItem.AddMenuItem("Create a new workspace", (_, _) => _createWorkspace.Invoke());
@@ -72,7 +73,7 @@ public class WorkspaceMenuHandler
     return true;
   }
 
-  private void PopulateModelMenuItems(ToolStripDropDown menu, SearchToolStripMenuItem searchItem)
+  private void PopulateModelMenuItems(ToolStripDropDown menu, SearchToolStripMenuItem? searchItem)
   {
     for (int i = menu.Items.Count - 1; i > 1; i--)
     {
@@ -81,6 +82,12 @@ public class WorkspaceMenuHandler
 
     if (Workspaces == null)
     {
+      searchItem?.AddMenuItem(
+        "Personal Projects",
+        (_, _) => OnWorkspaceSelected(null),
+        !IsPersonalProjects,
+        IsPersonalProjects
+      );
       return;
     }
 
@@ -94,13 +101,6 @@ public class WorkspaceMenuHandler
         Base64ToImage(workspace.logo)
       );
     }
-
-    searchItem?.AddMenuItem(
-      "Personal Projects",
-      (_, _) => OnWorkspaceSelected(null),
-      !IsPersonalProjects,
-      IsPersonalProjects
-    );
   }
 
   private void OnWorkspaceSelected(LimitedWorkspace? workspace)
@@ -130,7 +130,7 @@ public class WorkspaceMenuHandler
       WorkspaceContextMenuButton.SetIconOverride(null);
       WorkspaceContextMenuButton.Name = "Personal Projects";
       WorkspaceContextMenuButton.NickName = "Personal Projects";
-      WorkspaceContextMenuButton.Description = "Legacy";
+      WorkspaceContextMenuButton.Description = "Legacy"; //Servers that don't have workspaces enabled (e.g. public opensource server (v2.x))
     }
     else
     {

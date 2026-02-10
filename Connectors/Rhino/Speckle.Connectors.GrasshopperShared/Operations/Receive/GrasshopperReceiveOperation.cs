@@ -95,7 +95,7 @@ public class GrasshopperReceiveOperation
       .ConfigureAwait(false);
 
     await apiClient
-      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.SourceApplication), cancellationToken)
+      .Version.Received(new(version.id, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug), cancellationToken)
       .ConfigureAwait(false);
     return commitObject;
   }

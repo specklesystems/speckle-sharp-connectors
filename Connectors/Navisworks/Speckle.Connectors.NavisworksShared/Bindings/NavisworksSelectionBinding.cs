@@ -1,6 +1,6 @@
-using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Converter.Navisworks.Services;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 
