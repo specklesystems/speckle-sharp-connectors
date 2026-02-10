@@ -68,6 +68,14 @@ public sealed class DisplayValueExtractor
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(modelCurve.GeometryCurve))];
       case DB.Grid grid:
         return [DisplayValueResult.WithoutTransform(GetCurveDisplayValue(grid.Curve))];
+      case DB.Architecture.Room room:
+        // api still returns geometry for unplaced rooms.
+        // return empty list so room object is sent but with null display value
+        if (room.Volume == 0)
+        {
+          return new List<DisplayValueResult>();
+        }
+        return GetGeometryDisplayValue(room);
       case DB.Area area:
         return _converterSettings.Current.SendAreasAsMesh
           ? GetAreaMeshDisplayValue(area)
