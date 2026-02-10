@@ -20,7 +20,6 @@ using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
 using System.Net.Http;
 #endif
 
-
 namespace Speckle.Connectors.Common.Operations;
 
 [GenerateAutoInterface]

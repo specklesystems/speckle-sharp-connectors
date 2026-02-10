@@ -26,6 +26,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DataObjectInstanceGrouper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Properties\PropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoViewUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoViewBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoIdleManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoLayerHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoObjectHelper.cs" />

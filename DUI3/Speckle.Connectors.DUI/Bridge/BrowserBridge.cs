@@ -232,7 +232,7 @@ public sealed class BrowserBridge : IBrowserBridge
   {
     _resultsStore[requestId] = serializedData;
     string script = $"{FrontendBoundName}.responseReady('{requestId}')";
-    _browserScriptExecutor.ExecuteScript(script);
+    _browserScriptExecutor.ExecuteScript(script, CancellationToken.None);
   }
 
   /// <summary>
@@ -275,7 +275,7 @@ public sealed class BrowserBridge : IBrowserBridge
 
     var script = $"{FrontendBoundName}.emit('{eventName}')";
 
-    _browserScriptExecutor.ExecuteScript(script);
+    _browserScriptExecutor.ExecuteScript(script, cancellationToken);
     return Task.CompletedTask;
   }
 
@@ -291,11 +291,11 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.ExecuteScript(script);
+    _browserScriptExecutor.ExecuteScript(script, cancellationToken);
     return Task.CompletedTask;
   }
 
-  public void SendProgress<T>(string eventName, T data)
+  public void SendProgress<T>(string eventName, T data, CancellationToken cancellationToken = default)
     where T : class
   {
     if (_binding is null)
@@ -307,6 +307,6 @@ public sealed class BrowserBridge : IBrowserBridge
     string requestId = $"{Guid.NewGuid()}_{eventName}";
     _resultsStore[requestId] = payload;
     var script = $"{FrontendBoundName}.emitResponseReady('{eventName}', '{requestId}')";
-    _browserScriptExecutor.SendProgress(script);
+    _browserScriptExecutor.ExecuteScriptDispatched(script, cancellationToken);
   }
 }

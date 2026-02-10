@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <Target AfterTargets="Clean" Name="CleanAddinAutocad" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
-    <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion);" />
+    <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\Contents\Windows\Speckle.Connectors.Autocad$(AutoCADVersion);" />
   </Target>
 
   <Target AfterTargets="Build"  Name="AfterBuildAutoCAD" Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
@@ -9,11 +9,12 @@
       <AutoCADDLLs Include="$(TargetDir)\**\*.*" />
     </ItemGroup>
     <Message Text="AutoCAD Version $(AutoCADVersion)" Importance="high"/>
-    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\Contents\Windows\Speckle.Connectors.Autocad$(AutoCADVersion)\%(RecursiveDir)" SourceFiles="@(AutoCADDLLs)" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Autocad.bundle\" SourceFiles="$(TargetDir)\Plugin\BundleAutoCAD\PackageContents.xml" />
   </Target>
 
   <Target AfterTargets="Clean" Name="CleanAddinCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
-    <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion);" />
+    <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\Contents\Windows\Speckle.Connectors.Civil3d$(Civil3DVersion);" />
   </Target>
 
   <Target AfterTargets="Build"  Name="AfterBuildCivil3D" Condition="'$(Civil3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
@@ -21,7 +22,8 @@
       <Civil3DDLLs Include="$(TargetDir)\**\*.*" />
     </ItemGroup>
     <Message Text="Civil3D Version $(Civil3DVersion)" Importance="high"/>
-    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\Contents\Windows\Speckle.Connectors.Civil3d$(Civil3DVersion)\%(RecursiveDir)" SourceFiles="@(Civil3DDLLs)" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Civil3d.bundle\" SourceFiles="$(TargetDir)\Plugin\BundleCivil3D\PackageContents.xml" />
   </Target>
 
   <PropertyGroup Condition="'$(AutoCADVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">

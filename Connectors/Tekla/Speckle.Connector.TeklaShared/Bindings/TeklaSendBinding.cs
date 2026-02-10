@@ -123,13 +123,18 @@ public sealed class TeklaSendBinding : ISendBinding
 
   private (string? fileName, long? fileSizeBytes) GetFileInfo()
   {
-    string? path = _model.GetInfo()?.ModelPath;
-    if (path is null || !File.Exists(path))
+    ModelInfo? info = _model.GetInfo();
+    if (info?.ModelPath is not null)
     {
-      return (null, null);
+      string path = Path.Combine(info.ModelPath, info.ModelName);
+      if (File.Exists(path))
+      {
+        FileInfo file = new(path);
+        return (file.Name, file.Length);
+      }
     }
-    FileInfo file = new(path);
-    return (file.Name, file.Length);
+
+    return (info?.ModelName, null);
   }
 
   private async Task RunExpirationChecks()

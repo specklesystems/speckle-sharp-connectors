@@ -270,7 +270,7 @@ public class SpeckleOperationWizard
   /// <summary>
   /// Callback function to retrieve workspaces with the search text
   /// </summary>
-  public async Task<ResourceCollection<Workspace>> FetchWorkspaces(string searchText)
+  public async Task<ResourceCollection<Workspace>?> FetchWorkspaces(string searchText)
   {
     if (SelectedAccount == null)
     {
@@ -278,6 +278,11 @@ public class SpeckleOperationWizard
     }
 
     using IClient client = _clientFactory.Create(SelectedAccount);
+    if (!await client.Server.IsWorkspaceEnabled())
+    {
+      return null;
+    }
+
     var workspaces = await client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText));
     WorkspaceMenuHandler.Workspaces = workspaces;
     return workspaces;
@@ -286,17 +291,9 @@ public class SpeckleOperationWizard
   /// <summary>
   /// Callback function to retrieve workspaces with the search text sync
   /// </summary>
-  public ResourceCollection<Workspace> FetchWorkspacesSync(string searchText)
+  public ResourceCollection<Workspace>? FetchWorkspacesSync(string searchText)
   {
-    if (SelectedAccount == null)
-    {
-      return new ResourceCollection<Workspace>();
-    }
-
-    using IClient client = _clientFactory.Create(SelectedAccount);
-    var workspaces = client.ActiveUser.GetWorkspaces(10, null, new UserWorkspacesFilter(searchText)).Result;
-    WorkspaceMenuHandler.Workspaces = workspaces;
-    return workspaces;
+    return Task.Run(async () => await FetchWorkspaces(searchText)).GetAwaiter().GetResult();
   }
 
   /// <summary>
@@ -330,27 +327,7 @@ public class SpeckleOperationWizard
   /// </summary>
   public ResourceCollection<ProjectWithPermissions> FetchProjectsSync(string searchText)
   {
-    if (SelectedAccount == null)
-    {
-      return new ResourceCollection<ProjectWithPermissions>();
-    }
-
-    using IClient client = _clientFactory.Create(SelectedAccount);
-    var workspaceId = SelectedWorkspace?.id ?? null;
-    var projects = client
-      .ActiveUser.GetProjectsWithPermissions(
-        10,
-        null,
-        new UserProjectsFilter(
-          searchText,
-          workspaceId: workspaceId,
-          includeImplicitAccess: true,
-          personalOnly: WorkspaceMenuHandler.IsPersonalProjects
-        )
-      )
-      .Result;
-    ProjectMenuHandler.Projects = projects;
-    return projects;
+    return Task.Run(async () => await FetchProjects(searchText)).GetAwaiter().GetResult();
   }
 
   /// <summary>
@@ -376,17 +353,7 @@ public class SpeckleOperationWizard
   /// </summary>
   public ResourceCollection<Model> FetchModelsSync(string searchText)
   {
-    if (SelectedAccount == null || SelectedProject == null)
-    {
-      return new ResourceCollection<Model>();
-    }
-
-    IClient client = _clientFactory.Create(SelectedAccount);
-    var projectWithModels = client
-      .Project.GetWithModels(SelectedProject.id, 10, modelsFilter: new ProjectModelsFilter(search: searchText))
-      .Result;
-    ModelMenuHandler.Models = projectWithModels.models;
-    return projectWithModels.models;
+    return Task.Run(async () => await FetchModels(searchText)).GetAwaiter().GetResult();
   }
 
   /// <summary>
@@ -416,19 +383,7 @@ public class SpeckleOperationWizard
   /// </summary>
   public ResourceCollection<Version> FetchVersionsSync(int versionCount)
   {
-    if (SelectedAccount == null || SelectedProject == null || SelectedModel == null)
-    {
-      return new ResourceCollection<Version>();
-    }
-
-    using IClient client = _clientFactory.Create(SelectedAccount);
-    var newVersionsResult = client.Model.GetWithVersions(SelectedModel.id, SelectedProject.id, versionCount).Result;
-    if (VersionMenuHandler != null)
-    {
-      VersionMenuHandler.Versions = newVersionsResult.versions;
-    }
-
-    return newVersionsResult.versions;
+    return Task.Run(async () => await FetchVersions(versionCount)).GetAwaiter().GetResult();
   }
 
   public void SetDefaultWorkspaceSync()
