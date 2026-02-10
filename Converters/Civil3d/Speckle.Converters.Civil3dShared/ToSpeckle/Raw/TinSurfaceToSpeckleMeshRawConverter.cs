@@ -1,4 +1,5 @@
 using Autodesk.AutoCAD.Geometry;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -6,10 +7,15 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
 public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurface, SOG.Mesh>
 {
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public TinSurfaceToSpeckleMeshRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
+  public TinSurfaceToSpeckleMeshRawConverter(
+    IReferencePointConverter referencePointConverter,
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
+  )
   {
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -60,7 +66,7 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
       new()
       {
         faces = faces,
-        vertices = vertices,
+        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
         units = _settingsStore.Current.SpeckleUnits
       };
 

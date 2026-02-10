@@ -34,6 +34,7 @@ public static class ServiceRegistration
       IConverterSettingsStore<AutocadConversionSettings>,
       ConverterSettingsStore<AutocadConversionSettings>
     >();
+    serviceCollection.AddScoped<IReferencePointConverter, ReferencePointConverter>();
 
     // add other classes
     serviceCollection.AddScoped<Speckle.Converters.Civil3dShared.ToSpeckle.PropertiesExtractor>(); // for civil
