@@ -323,8 +323,12 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
-    XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
-    XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
+    XYZ origin = revitTransform.Origin;
+    XYZ basisX = revitTransform.BasisX.Normalize();
+    XYZ basisY = revitTransform.BasisY.Normalize();
+
+    XYZ bubbleEnd = origin + basisX;
+    XYZ thirdPnt = origin + basisY;
 
     View? view;
     using (var collector = new FilteredElementCollector(famDoc))
@@ -341,15 +345,8 @@ public sealed class RevitFamilyBaker : IDisposable
       return;
     }
 
-    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(bubbleEnd, revitTransform.Origin, freeEnd, view);
-    refPlane.Name = $"Speckle_Nested_{Guid.NewGuid().ToString()[..8]}";
-
-    var instance = famDoc.FamilyCreate.NewFamilyInstance(
-      refPlane.GetReference(),
-      revitTransform.Origin,
-      revitTransform.BasisX,
-      symbol
-    );
+    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(bubbleEnd, origin, thirdPnt, view);
+    var instance = famDoc.FamilyCreate.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
 
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(famDoc, instance.Id, refPlane.GetPlane(), mirrorState);
@@ -373,23 +370,16 @@ public sealed class RevitFamilyBaker : IDisposable
       return null;
     }
 
-    XYZ bubbleEnd = revitTransform.Origin + revitTransform.BasisX;
-    XYZ freeEnd = revitTransform.Origin + revitTransform.BasisY;
+    XYZ origin = revitTransform.Origin;
+    XYZ basisX = revitTransform.BasisX.Normalize();
+    XYZ basisY = revitTransform.BasisY.Normalize();
 
-    ReferencePlane refPlane = document.Create.NewReferencePlane2(
-      bubbleEnd,
-      revitTransform.Origin,
-      freeEnd,
-      document.ActiveView
-    );
+    XYZ bubbleEnd = origin + basisX;
+    XYZ freeEnd = origin;
+    XYZ thirdPnt = origin + basisY;
 
-    var instance = document.Create.NewFamilyInstance(
-      refPlane.GetReference(),
-      revitTransform.Origin,
-      revitTransform.BasisX,
-      symbol
-    );
-
+    using var refPlane = document.Create.NewReferencePlane2(bubbleEnd, freeEnd, thirdPnt, document.ActiveView);
+    var instance = document.Create.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(document, instance.Id, refPlane.GetPlane(), mirrorState);
 
