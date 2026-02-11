@@ -17,10 +17,11 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
-public class RevitRootObjectBuilder(
+public class RevitContinuousTraversalBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
@@ -33,23 +34,26 @@ public class RevitRootObjectBuilder(
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
   LinkedModelHandler linkedModelHandler,
   IConfigStore configStore
-) : IRootObjectBuilder<DocumentToConvert>
+) : IRootContinuousTraversalBuilder<DocumentToConvert>
 {
   public Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    SendPipeline sendPipeline,
     CancellationToken ct
   ) =>
     threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
+      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, sendPipeline, ct))
     );
 
+  [SuppressMessage("Maintainability", "CA1502:Avoid excessive class coupling")]
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private RootObjectBuilderResult BuildSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
+    SendPipeline sendPipeline,
     CancellationToken cancellationToken
   )
   {
@@ -191,6 +195,7 @@ public class RevitRootObjectBuilder(
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
 
+            bool wasCached = false;
             if (
               !hasTransform
               && !config.DocumentChangeListeningDisabled //This is experimental
@@ -198,6 +203,7 @@ public class RevitRootObjectBuilder(
             )
             {
               converted = value;
+              wasCached = true;
               cacheHitCount++;
             }
             // not in cache means we convert
@@ -216,6 +222,14 @@ public class RevitRootObjectBuilder(
               converted.applicationId = applicationId;
             }
 
+            // TODO: send pipeline processing
+            var reference = sendPipeline.Process(converted).Result;
+            if (!wasCached)
+            {
+              // NOTE: can be moved in else block above where we check for cached objects
+              sendConversionCache.AppendSendResult(projectId, applicationId, reference);
+            }
+
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
               rootObject,
@@ -223,8 +237,8 @@ public class RevitRootObjectBuilder(
               modelDisplayName
             );
 
-            collection.elements.Add(converted);
-            results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+            collection.elements.Add(reference);
+            results.Add(new(Status.SUCCESS, applicationId, sourceType, reference));
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
@@ -288,6 +302,9 @@ public class RevitRootObjectBuilder(
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
       rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] = transformMatrix;
     }
+
+    sendPipeline.Process(rootObject).Wait(cancellationToken); // note: locks up revit?
+    sendPipeline.WaitForUpload().Wait(cancellationToken); // note: locks up revit? todo threading digging
 
     return new RootObjectBuilderResult(rootObject, results);
   }
