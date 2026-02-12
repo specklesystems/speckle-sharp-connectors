@@ -15,7 +15,6 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.Instances;
-using Plane = Autodesk.Revit.DB.Plane;
 using SMesh = Speckle.Objects.Geometry.Mesh;
 
 namespace Speckle.Connectors.Revit.HostApp;
@@ -231,13 +230,11 @@ public sealed class RevitFamilyBaker : IDisposable
         }
         else
         {
-          // 1. If the object itself IS a Mesh, bake it.
           if (obj is SMesh mesh)
           {
             BakeMesh(famDoc, mesh);
           }
 
-          // 2. If the object HAS meshes (Extrusion, Brep, etc.) in its displayValue, bake them.
           var displayValues = obj.TryGetDisplayValue();
           if (displayValues != null)
           {
@@ -287,19 +284,9 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     var familyName = Path.GetFileNameWithoutExtension(rfaPath);
+    Family? childFamily = FindFamilyByName(famDoc, familyName) ?? LoadFamilyWrapper(famDoc, rfaPath);
 
-    // Attempt to find existing
-    Family? childFamily = FindFamilyByName(famDoc, familyName);
-
-    // If not found, load it
-    if (childFamily == null)
-    {
-      childFamily = LoadFamilyWrapper(famDoc, rfaPath);
-    }
-
-    // Wrap in using to ensure the wrapper is disposed (whether we found it or loaded it)
     using var _ = childFamily;
-
     if (childFamily == null)
     {
       return;
@@ -311,8 +298,7 @@ public sealed class RevitFamilyBaker : IDisposable
       return;
     }
 
-    var symbol = famDoc.GetElement(symbolId) as FamilySymbol;
-    if (symbol == null)
+    if (famDoc.GetElement(symbolId) is not FamilySymbol symbol)
     {
       return;
     }
@@ -323,12 +309,13 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
+
+    // [FIX] 3-Point Plane Logic: Guarantees correct orientation with no drift
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
-
-    XYZ bubbleEnd = origin + basisX;
-    XYZ thirdPnt = origin + basisY;
+    XYZ ptOnX = origin + basisX;
+    XYZ ptOnY = origin + basisY;
 
     View? view;
     using (var collector = new FilteredElementCollector(famDoc))
@@ -339,20 +326,22 @@ public sealed class RevitFamilyBaker : IDisposable
         .FirstOrDefault(v => !v.IsTemplate && v.ViewType == ViewType.ThreeD);
     }
     view ??= famDoc.ActiveView;
-
     if (view == null)
     {
       return;
     }
 
-    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(bubbleEnd, origin, thirdPnt, view);
+    // Use NewReferencePlane2 (3 Points) to set explicit Origin and XY alignment
+    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(ptOnX, origin, ptOnY, view);
+    refPlane.Name = $"Speckle_Nested_{Guid.NewGuid().ToString()[..8]}";
+
+    // Place on plane. Instance inherits Plane's rotation/location perfectly.
     var instance = famDoc.FamilyCreate.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
 
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(famDoc, instance.Id, refPlane.GetPlane(), mirrorState);
   }
 
-  // Helper to satisfy CA2000 by converting 'out' param to return value
   private static Family? LoadFamilyWrapper(Document doc, string path)
   {
     doc.LoadFamily(path, new FamilyLoadOptions(), out var family);
@@ -370,16 +359,17 @@ public sealed class RevitFamilyBaker : IDisposable
       return null;
     }
 
+    // [FIX] 3-Point Plane Logic
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
+    XYZ ptOnX = origin + basisX;
+    XYZ ptOnY = origin + basisY;
 
-    XYZ bubbleEnd = origin + basisX;
-    XYZ freeEnd = origin;
-    XYZ thirdPnt = origin + basisY;
-
-    using var refPlane = document.Create.NewReferencePlane2(bubbleEnd, freeEnd, thirdPnt, document.ActiveView);
+    // Use document.Create for Project Context
+    using var refPlane = document.Create.NewReferencePlane2(ptOnX, origin, ptOnY, document.ActiveView);
     var instance = document.Create.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
+
     var mirrorState = GetMirrorState(instanceProxy.transform);
     ApplyMirroring(document, instance.Id, refPlane.GetPlane(), mirrorState);
 
@@ -391,6 +381,9 @@ public sealed class RevitFamilyBaker : IDisposable
     var workPlaneBasedParam = famDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_WORK_PLANE_BASED);
     if (workPlaneBasedParam != null && !workPlaneBasedParam.IsReadOnly)
     {
+      // [CRITICAL] Must be 1 (True).
+      // This forces the family to attach to our rotated Reference Plane.
+      // Without this, NewFamilyInstance might place it globally aligned, ignoring rotation.
       workPlaneBasedParam.Set(1);
     }
   }
@@ -441,20 +434,21 @@ public sealed class RevitFamilyBaker : IDisposable
       - matrix.M12 * (matrix.M21 * matrix.M33 - matrix.M23 * matrix.M31)
       + matrix.M13 * (matrix.M21 * matrix.M32 - matrix.M22 * matrix.M31);
 
-    if (det < 0)
-    {
-      return (true, false, false);
-    }
-    return (false, false, false);
+    return det < 0 ? (true, false, false) : (false, false, false);
   }
 
-  private void ApplyMirroring(Document document, ElementId elementId, Plane plane, (bool X, bool Y, bool Z) mirrorState)
+  private void ApplyMirroring(
+    Document document,
+    ElementId elementId,
+    Autodesk.Revit.DB.Plane plane,
+    (bool X, bool Y, bool Z) mirrorState
+  )
   {
-    var mirrorOperations = new List<(string name, bool shouldMirror, Plane mirrorPlane)>
+    var mirrorOperations = new List<(string name, bool shouldMirror, Autodesk.Revit.DB.Plane mirrorPlane)>
     {
-      ("YZ", mirrorState.X, Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
-      ("XZ", mirrorState.Y, Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
-      ("XY", mirrorState.Z, Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
+      ("YZ", mirrorState.X, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
+      ("XZ", mirrorState.Y, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
+      ("XY", mirrorState.Z, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
     };
 
     foreach (var (name, shouldMirror, mirrorPlane) in mirrorOperations.Where(op => op.shouldMirror))
@@ -484,10 +478,7 @@ public sealed class RevitFamilyBaker : IDisposable
         File.Delete(path);
       }
     }
-    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-    {
-      // Suppress deletion errors
-    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
   }
 
   public void Dispose()
