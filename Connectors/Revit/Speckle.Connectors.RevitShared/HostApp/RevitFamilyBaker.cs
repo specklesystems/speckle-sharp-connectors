@@ -445,8 +445,7 @@ public sealed class RevitFamilyBaker : IDisposable
       return null;
     }
 
-    var instance = document.GetElement(ids.First()) as FamilyInstance;
-    if (instance == null)
+    if (document.GetElement(ids.First()) is not FamilyInstance instance)
     {
       return null;
     }
