@@ -39,6 +39,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly ParameterUpdater _parameterUpdater;
   private bool _isDocChangedSubscribed;
   private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
   private readonly ConnectorConfig _config;
@@ -67,6 +68,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory,
+    ParameterUpdater parameterUpdater,
     IConfigStore configStore
   )
     : base("sendBinding", bridge)
@@ -84,6 +86,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _parameterUpdater = parameterUpdater;
     _config = configStore.GetConnectorConfig();
 
     Commands = new SendBindingUICommands(bridge);
@@ -195,6 +198,40 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       fileName: fileName,
       fileSizeBytes: fileBytes
     );
+  }
+
+  public async Task UpdateParameters(string applicationId, string[] path, object value)
+  {
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (document == null)
+    {
+      throw new SpeckleException("No document is active for sending.");
+    }
+    Element currentElement = document.GetElement(applicationId);
+
+    await _threadContext.RunOnMainAsync(() =>
+    {
+      using (var transaction = new Transaction(document, "Speckle Parameter Update"))
+      {
+        transaction.Start();
+
+        var result = _parameterUpdater.Update(currentElement, path, value);
+
+        if (result.IsSuccess)
+        {
+          transaction.Commit();
+        }
+        else
+        {
+          transaction.RollBack();
+          // handle error - log or throw
+        }
+      }
+      return Task.FromResult(true);
+    });
+
+    _parameterUpdater.Update(currentElement, path, value);
+    await Task.CompletedTask;
   }
 
   private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
