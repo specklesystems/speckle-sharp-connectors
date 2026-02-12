@@ -144,9 +144,30 @@ public sealed class RevitHostObjectBuilder(
     // Bakes instances as families (if setting is enabled Count > 0)
     if (instanceComponentsForFamilies is { Count: > 0 })
     {
+      // Defensively double-indexing objects (ensures we find Definition references by Speckle ID OR Application ID)
+      var speckleObjectLookup = new Dictionary<string, Base>();
+
+      foreach (var tc in unpackedRoot.ObjectsToConvert)
+      {
+        var obj = tc.Current;
+
+        // 1. Primary Index: Speckle Hash (Most reliable)
+        if (!string.IsNullOrEmpty(obj.id))
+        {
+          speckleObjectLookup[obj.id.NotNullOrWhiteSpace()] = obj;
+        }
+
+        // 2. Secondary Index: Application ID (Required for Rhino/Revit blocks)
+        if (!string.IsNullOrEmpty(obj.applicationId))
+        {
+          speckleObjectLookup[obj.applicationId.NotNullOrWhiteSpace()] = obj;
+        }
+      }
+
       conversionResults = BakeInstancesAsFamilies(
         instanceComponentsForFamilies,
         conversionResults,
+        speckleObjectLookup,
         onOperationProgressed
       );
     }
@@ -346,13 +367,18 @@ public sealed class RevitHostObjectBuilder(
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) currentResults,
+    Dictionary<string, Base> speckleObjectLookup, // [UPDATED] Added lookup param
     IProgress<CardProgress> onOperationProgressed
   )
   {
     using var _ = activityFactory.Start("Creating families");
     transactionManager.StartTransaction(true, "Creating families");
 
-    var (familyResults, familyElementIds) = familyBaker.BakeInstances(instanceComponents, onOperationProgressed);
+    (List<ReceiveConversionResult> familyResults, List<string> familyElementIds) = familyBaker.BakeInstances(
+      instanceComponents,
+      speckleObjectLookup,
+      onOperationProgressed
+    );
 
     // Merge results
     var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
@@ -416,13 +442,6 @@ public sealed class RevitHostObjectBuilder(
           {
             _atomicObjectToParentDataObject[objectId] = parentDataObject;
           }
-        }
-        else
-        {
-          logger.LogError(
-            "Could not find parent DataObject for DefinitionProxy {ApplicationId}",
-            defProxy.applicationId
-          );
         }
       }
     }
