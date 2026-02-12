@@ -17,6 +17,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.Instances;
+using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
 using SMesh = Speckle.Objects.Geometry.Mesh;
 
@@ -29,7 +30,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private readonly ILogger<RevitFamilyBaker> _logger;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), Transform> _transformConverter;
   private readonly RevitMeshBuilder _revitMeshBuilder;
-
+  private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
   private string? _cachedTemplatePath;
   private readonly Dictionary<string, string> _bakedFamilyPaths = [];
 
@@ -38,7 +39,8 @@ public sealed class RevitFamilyBaker : IDisposable
     RevitToHostCacheSingleton cache,
     ILogger<RevitFamilyBaker> logger,
     ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter,
-    RevitMeshBuilder revitMeshBuilder
+    RevitMeshBuilder revitMeshBuilder,
+    ITypedConverter<Base, List<DB.GeometryObject>> geometryConverter
   )
   {
     _converterSettings = converterSettings;
@@ -46,6 +48,7 @@ public sealed class RevitFamilyBaker : IDisposable
     _logger = logger;
     _transformConverter = transformConverter;
     _revitMeshBuilder = revitMeshBuilder;
+    _geometryConverter = geometryConverter;
   }
 
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
@@ -58,8 +61,6 @@ public sealed class RevitFamilyBaker : IDisposable
     var results = new List<ReceiveConversionResult>();
     var createdElementIds = new List<string>();
 
-    // We must identify every object that is a child of a definition.
-    // We resolve them via lookup to catch both ID and ApplicationID references.
     var consumedIds = new HashSet<string>();
 
     foreach (var (_, component) in instanceComponents)
@@ -68,10 +69,7 @@ public sealed class RevitFamilyBaker : IDisposable
       {
         foreach (var childId in definition.objects ?? Enumerable.Empty<string>())
         {
-          // Add the raw reference ID (usually the hash)
           consumedIds.Add(childId);
-
-          // Try to resolve the object to get its alternate ID (e.g. ApplicationID)
           if (speckleObjectLookup.TryGetValue(childId, out var childObj))
           {
             if (childObj.id != null)
@@ -112,8 +110,6 @@ public sealed class RevitFamilyBaker : IDisposable
         }
         else if (component is InstanceProxy instanceProxy)
         {
-          // Skip Nested Instances
-          // Check both ID and ApplicationID against the consumed set.
           bool isConsumed =
             (instanceProxy.id != null && consumedIds.Contains(instanceProxy.id))
             || (instanceProxy.applicationId != null && consumedIds.Contains(instanceProxy.applicationId));
@@ -262,7 +258,6 @@ public sealed class RevitFamilyBaker : IDisposable
     {
       if (!objectLookup.TryGetValue(id, out var obj))
       {
-        _logger.LogWarning("Failed to find object {ObjectId} for definition {DefinitionId}", id, definition.id);
         continue;
       }
 
@@ -274,22 +269,7 @@ public sealed class RevitFamilyBaker : IDisposable
         }
         else
         {
-          if (obj is SMesh mesh)
-          {
-            BakeMesh(famDoc, mesh);
-          }
-
-          var displayValues = obj.TryGetDisplayValue();
-          if (displayValues != null)
-          {
-            foreach (var item in displayValues)
-            {
-              if (item is SMesh displayMesh)
-              {
-                BakeMesh(famDoc, displayMesh);
-              }
-            }
-          }
+          BakeGeometry(famDoc, obj);
         }
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException ex)
@@ -299,6 +279,44 @@ public sealed class RevitFamilyBaker : IDisposable
       catch (SpeckleException ex)
       {
         _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", id, definition.name);
+      }
+    }
+  }
+
+  private void BakeGeometry(Document famDoc, Base obj)
+  {
+    // Mesh Handling
+    if (obj is SMesh mesh)
+    {
+      BakeMesh(famDoc, mesh);
+      return;
+    }
+
+    // Generic Geometry Handling (Points, Curves, etc.)
+    try
+    {
+      // Delegates to specific Point/Curve/etc converters and returns objects ready for DirectShapes
+      var geometries = _geometryConverter.Convert(obj);
+
+      if (geometries.Count > 0)
+      {
+        using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+        ds.SetShape(geometries);
+        return;
+      }
+    }
+    catch (SpeckleException)
+    {
+      // If direct conversion fails, fall through to display values
+    }
+
+    // Fallback: Display Values
+    var displayValues = obj.TryGetDisplayValue();
+    if (displayValues != null)
+    {
+      foreach (var item in displayValues)
+      {
+        BakeGeometry(famDoc, item);
       }
     }
   }
@@ -358,7 +376,7 @@ public sealed class RevitFamilyBaker : IDisposable
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
 
-    var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
+    var plane = DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
     using var sketchPlane = SketchPlane.Create(famDoc, plane);
 
     var creationData = new FamilyInstanceCreationData(
@@ -379,6 +397,7 @@ public sealed class RevitFamilyBaker : IDisposable
     }
   }
 
+  // Helper to satisfy CA2000 by converting 'out' param to return value
   private static Family? LoadFamilyWrapper(Document doc, string path)
   {
     doc.LoadFamily(path, new FamilyLoadOptions(), out var family);
@@ -400,7 +419,7 @@ public sealed class RevitFamilyBaker : IDisposable
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
 
-    var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
+    var plane = DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
     using var sketchPlane = SketchPlane.Create(document, plane);
 
     var creationData = new FamilyInstanceCreationData(
@@ -417,8 +436,7 @@ public sealed class RevitFamilyBaker : IDisposable
       return null;
     }
 
-    var instance = document.GetElement(ids.First()) as FamilyInstance;
-    if (instance == null)
+    if (document.GetElement(ids.First()) is not FamilyInstance instance)
     {
       return null;
     }
@@ -491,15 +509,15 @@ public sealed class RevitFamilyBaker : IDisposable
   private void ApplyMirroring(
     Document document,
     ElementId elementId,
-    Autodesk.Revit.DB.Plane plane,
+    DB.Plane plane,
     (bool X, bool Y, bool Z) mirrorState
   )
   {
-    var mirrorOperations = new List<(string name, bool shouldMirror, Autodesk.Revit.DB.Plane mirrorPlane)>
+    var mirrorOperations = new List<(string name, bool shouldMirror, DB.Plane mirrorPlane)>
     {
-      ("YZ", mirrorState.X, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
-      ("XZ", mirrorState.Y, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
-      ("XY", mirrorState.Z, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
+      ("YZ", mirrorState.X, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
+      ("XZ", mirrorState.Y, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
+      ("XY", mirrorState.Z, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
     };
 
     foreach (var (name, shouldMirror, mirrorPlane) in mirrorOperations.Where(op => op.shouldMirror))
@@ -538,6 +556,7 @@ public sealed class RevitFamilyBaker : IDisposable
     {
       CleanupTempFile(path);
     }
+
     _bakedFamilyPaths.Clear();
   }
 
