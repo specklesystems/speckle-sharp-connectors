@@ -1,5 +1,7 @@
 ﻿using System.IO;
+using Autodesk.Revit.Creation;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Structure;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
@@ -15,10 +17,16 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.Instances;
+using Document = Autodesk.Revit.DB.Document;
 using SMesh = Speckle.Objects.Geometry.Mesh;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
+/// <summary>
+/// Bakes Speckle InstanceProxy/InstanceDefinitionProxy as Revit Families and FamilyInstances.
+/// Uses a flattened approach: nested block geometry is recursively collected and baked directly
+/// into each family definition, avoiding the complexities of nested family instance placement.
+/// </summary>
 public sealed class RevitFamilyBaker : IDisposable
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
@@ -28,7 +36,9 @@ public sealed class RevitFamilyBaker : IDisposable
   private readonly RevitMeshBuilder _revitMeshBuilder;
 
   private string? _cachedTemplatePath;
-  private readonly Dictionary<string, string> _bakedFamilyPaths = new();
+  private readonly Dictionary<string, string> _bakedFamilyPaths = [];
+
+  private Dictionary<string, InstanceDefinitionProxy> _definitionLookup = [];
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -55,6 +65,13 @@ public sealed class RevitFamilyBaker : IDisposable
     var results = new List<ReceiveConversionResult>();
     var createdElementIds = new List<string>();
 
+    // Build definition lookup for nested geometry resolution
+    _definitionLookup = instanceComponents
+      .Select(x => x.component)
+      .OfType<InstanceDefinitionProxy>()
+      .ToDictionary(d => d.applicationId ?? d.id.NotNull(), d => d);
+
+    // Process definitions first (sorted by depth - deepest first), then instances
     var sortedComponents = instanceComponents
       .OrderByDescending(x => x.component.maxDepth)
       .ThenBy(x => x.component is InstanceDefinitionProxy ? 0 : 1)
@@ -79,13 +96,17 @@ public sealed class RevitFamilyBaker : IDisposable
         }
         else if (component is InstanceProxy instanceProxy)
         {
-          var instance = PlaceFamilyInstance(document, instanceProxy);
-          if (instance != null)
+          // Only place top-level instances (those not consumed by other definitions)
+          if (!IsConsumedByDefinition(instanceProxy))
           {
-            createdElementIds.Add(instance.UniqueId);
-            results.Add(
-              new ReceiveConversionResult(Status.SUCCESS, instanceProxy, instance.UniqueId, "FamilyInstance")
-            );
+            var instance = PlaceFamilyInstance(document, instanceProxy);
+            if (instance != null)
+            {
+              createdElementIds.Add(instance.UniqueId);
+              results.Add(
+                new ReceiveConversionResult(Status.SUCCESS, instanceProxy, instance.UniqueId, "FamilyInstance")
+              );
+            }
           }
         }
       }
@@ -107,6 +128,20 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     return (results, createdElementIds);
+  }
+
+  /// <summary>
+  /// Checks if an InstanceProxy is consumed by a definition (i.e., it's a nested instance).
+  /// Nested instances are baked as geometry into parent families, not placed separately.
+  /// </summary>
+  private bool IsConsumedByDefinition(InstanceProxy instanceProxy)
+  {
+    var instanceId = instanceProxy.applicationId ?? instanceProxy.id;
+    if (instanceId is null)
+    {
+      return false;
+    }
+    return _definitionLookup.Values.Any(d => d.objects.Contains(instanceId));
   }
 
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
@@ -172,7 +207,7 @@ public sealed class RevitFamilyBaker : IDisposable
       using (var t = new Transaction(famDoc, "Populate Family"))
       {
         t.Start();
-        PopulateFamily(famDoc, definition, objectLookup);
+        PopulateFamilyFlattened(famDoc, definition, objectLookup, Matrix4x4.Identity);
         SetFamilyWorkPlaneBased(famDoc);
         t.Commit();
       }
@@ -203,10 +238,14 @@ public sealed class RevitFamilyBaker : IDisposable
     }
   }
 
-  private void PopulateFamily(
+  /// <summary>
+  /// Populates family with flattened geometry - recursively collects all geometry including from nested instances.
+  /// </summary>
+  private void PopulateFamilyFlattened(
     Document famDoc,
     InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, Base> objectLookup,
+    Matrix4x4 accumulatedTransform
   )
   {
     if (definition.objects.Count == 0)
@@ -224,28 +263,15 @@ public sealed class RevitFamilyBaker : IDisposable
 
       try
       {
-        if (obj is InstanceProxy instanceProxy)
+        if (obj is InstanceProxy nestedInstanceProxy)
         {
-          PlaceNestedInstance(famDoc, instanceProxy);
+          // Recursively flatten nested instance geometry
+          ProcessNestedInstance(famDoc, nestedInstanceProxy, objectLookup, accumulatedTransform);
         }
         else
         {
-          if (obj is SMesh mesh)
-          {
-            BakeMesh(famDoc, mesh);
-          }
-
-          var displayValues = obj.TryGetDisplayValue();
-          if (displayValues != null)
-          {
-            foreach (var item in displayValues)
-            {
-              if (item is SMesh displayMesh)
-              {
-                BakeMesh(famDoc, displayMesh);
-              }
-            }
-          }
+          // Bake direct geometry with accumulated transform
+          BakeGeometryWithTransform(famDoc, obj, accumulatedTransform);
         }
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException ex)
@@ -259,9 +285,70 @@ public sealed class RevitFamilyBaker : IDisposable
     }
   }
 
-  private void BakeMesh(Document famDoc, SMesh mesh)
+  /// <summary>
+  /// Processes a nested instance by recursively flattening its definition's geometry.
+  /// </summary>
+  private void ProcessNestedInstance(
+    Document famDoc,
+    InstanceProxy nestedInstanceProxy,
+    IReadOnlyDictionary<string, Base> objectLookup,
+    Matrix4x4 parentTransform
+  )
   {
-    var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
+    var nestedDefinitionId = nestedInstanceProxy.definitionId;
+
+    if (!_definitionLookup.TryGetValue(nestedDefinitionId, out var nestedDefinition))
+    {
+      _logger.LogWarning("Failed to find nested definition {DefinitionId}", nestedDefinitionId);
+      return;
+    }
+
+    // Compose transforms: parent * nested instance transform
+    var composedTransform = parentTransform * nestedInstanceProxy.transform;
+
+    // Recursively populate with composed transform
+    PopulateFamilyFlattened(famDoc, nestedDefinition, objectLookup, composedTransform);
+  }
+
+  /// <summary>
+  /// Bakes geometry into family document with the specified transform applied.
+  /// </summary>
+  private void BakeGeometryWithTransform(Document famDoc, Base obj, Matrix4x4 transform)
+  {
+    var meshes = new List<SMesh>();
+
+    if (obj is SMesh mesh)
+    {
+      meshes.Add(mesh);
+    }
+
+    var displayValues = obj.TryGetDisplayValue();
+    if (displayValues != null)
+    {
+      foreach (var item in displayValues)
+      {
+        if (item is SMesh displayMesh)
+        {
+          meshes.Add(displayMesh);
+        }
+      }
+    }
+
+    foreach (var m in meshes)
+    {
+      BakeMeshWithTransform(famDoc, m, transform);
+    }
+  }
+
+  /// <summary>
+  /// Bakes a single mesh into the family document with transform applied.
+  /// </summary>
+  private void BakeMeshWithTransform(Document famDoc, SMesh mesh, Matrix4x4 transform)
+  {
+    // Apply transform to mesh if not identity
+    var meshToBake = transform == Matrix4x4.Identity ? mesh : TransformMesh(mesh, transform);
+
+    var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(meshToBake);
 
     if (geomObject is Solid solid)
     {
@@ -274,80 +361,56 @@ public sealed class RevitFamilyBaker : IDisposable
     }
   }
 
-  private void PlaceNestedInstance(Document famDoc, InstanceProxy instanceProxy)
+  /// <summary>
+  /// Creates a transformed copy of a mesh by applying the matrix to all vertices.
+  /// </summary>
+  private static SMesh TransformMesh(SMesh originalMesh, Matrix4x4 transform)
   {
-    var childDefinitionId = instanceProxy.definitionId;
-
-    if (!_bakedFamilyPaths.TryGetValue(childDefinitionId, out var rfaPath) || !File.Exists(rfaPath))
+    var transformedMesh = new SMesh
     {
-      return;
+      vertices = TransformVertices(originalMesh.vertices, transform),
+      faces = [.. originalMesh.faces],
+      units = originalMesh.units,
+      applicationId = originalMesh.applicationId
+    };
+
+    if (originalMesh.colors is { } colors)
+    {
+      transformedMesh.colors = [.. colors];
     }
 
-    var familyName = Path.GetFileNameWithoutExtension(rfaPath);
-    Family? childFamily = FindFamilyByName(famDoc, familyName) ?? LoadFamilyWrapper(famDoc, rfaPath);
-
-    using var _ = childFamily;
-    if (childFamily == null)
-    {
-      return;
-    }
-
-    var symbolId = childFamily.GetFamilySymbolIds().FirstOrDefault();
-    if (symbolId == null)
-    {
-      return;
-    }
-
-    if (famDoc.GetElement(symbolId) is not FamilySymbol symbol)
-    {
-      return;
-    }
-
-    if (!symbol.IsActive)
-    {
-      symbol.Activate();
-    }
-
-    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
-
-    // [FIX] 3-Point Plane Logic: Guarantees correct orientation with no drift
-    XYZ origin = revitTransform.Origin;
-    XYZ basisX = revitTransform.BasisX.Normalize();
-    XYZ basisY = revitTransform.BasisY.Normalize();
-    XYZ ptOnX = origin + basisX;
-    XYZ ptOnY = origin + basisY;
-
-    View? view;
-    using (var collector = new FilteredElementCollector(famDoc))
-    {
-      view = collector
-        .OfClass(typeof(View))
-        .Cast<View>()
-        .FirstOrDefault(v => !v.IsTemplate && v.ViewType == ViewType.ThreeD);
-    }
-    view ??= famDoc.ActiveView;
-    if (view == null)
-    {
-      return;
-    }
-
-    // Use NewReferencePlane2 (3 Points) to set explicit Origin and XY alignment
-    using var refPlane = famDoc.FamilyCreate.NewReferencePlane2(ptOnX, origin, ptOnY, view);
-    refPlane.Name = $"Speckle_Nested_{Guid.NewGuid().ToString()[..8]}";
-
-    // Place on plane. Instance inherits Plane's rotation/location perfectly.
-    var instance = famDoc.FamilyCreate.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
-
-    var mirrorState = GetMirrorState(instanceProxy.transform);
-    ApplyMirroring(famDoc, instance.Id, refPlane.GetPlane(), mirrorState);
+    return transformedMesh;
   }
 
-  private static Family? LoadFamilyWrapper(Document doc, string path)
+  /// <summary>
+  /// Transforms a flat list of vertices (x,y,z,x,y,z,...) by the given matrix.
+  /// </summary>
+  private static List<double> TransformVertices(IReadOnlyList<double> vertices, Matrix4x4 transform)
   {
-    doc.LoadFamily(path, new FamilyLoadOptions(), out var family);
-    return family;
+    var result = new List<double>(vertices.Count);
+
+    for (int i = 0; i < vertices.Count; i += 3)
+    {
+      double x = vertices[i];
+      double y = vertices[i + 1];
+      double z = vertices[i + 2];
+
+      // Apply 4x4 transformation
+      double newX = transform.M11 * x + transform.M12 * y + transform.M13 * z + transform.M14;
+      double newY = transform.M21 * x + transform.M22 * y + transform.M23 * z + transform.M24;
+      double newZ = transform.M31 * x + transform.M32 * y + transform.M33 * z + transform.M34;
+
+      result.Add(newX);
+      result.Add(newY);
+      result.Add(newZ);
+    }
+
+    return result;
   }
 
+  /// <summary>
+  /// Places family instance in project document using NewFamilyInstances2.
+  /// </summary>
   private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
   {
     var definitionId = instanceProxy.definitionId;
@@ -359,19 +422,39 @@ public sealed class RevitFamilyBaker : IDisposable
       return null;
     }
 
-    // [FIX] 3-Point Plane Logic
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
-    XYZ ptOnX = origin + basisX;
-    XYZ ptOnY = origin + basisY;
 
-    // Use document.Create for Project Context
-    using var refPlane = document.Create.NewReferencePlane2(ptOnX, origin, ptOnY, document.ActiveView);
-    var instance = document.Create.NewFamilyInstance(refPlane.GetReference(), origin, basisX, symbol);
+    // Create SketchPlane at desired orientation (for work-plane-based families)
+    var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
+    using var sketchPlane = SketchPlane.Create(document, plane);
+
+    // Use FamilyInstanceCreationData
+    var creationData = new FamilyInstanceCreationData(
+      location: origin,
+      symbol: symbol,
+      host: sketchPlane,
+      level: null,
+      structuralType: StructuralType.NonStructural
+    );
+
+    var ids = document.Create.NewFamilyInstances2([creationData]);
+    if (ids.Count == 0)
+    {
+      return null;
+    }
+
+    var instance = document.GetElement(ids.First()) as FamilyInstance;
+    if (instance == null)
+    {
+      return null;
+    }
+
+    document.Regenerate();
 
     var mirrorState = GetMirrorState(instanceProxy.transform);
-    ApplyMirroring(document, instance.Id, refPlane.GetPlane(), mirrorState);
+    ApplyMirroring(document, instance.Id, plane, mirrorState);
 
     return instance;
   }
@@ -381,9 +464,6 @@ public sealed class RevitFamilyBaker : IDisposable
     var workPlaneBasedParam = famDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_WORK_PLANE_BASED);
     if (workPlaneBasedParam != null && !workPlaneBasedParam.IsReadOnly)
     {
-      // [CRITICAL] Must be 1 (True).
-      // This forces the family to attach to our rotated Reference Plane.
-      // Without this, NewFamilyInstance might place it globally aligned, ignoring rotation.
       workPlaneBasedParam.Set(1);
     }
   }
@@ -456,7 +536,7 @@ public sealed class RevitFamilyBaker : IDisposable
       try
       {
         document.Regenerate();
-        ElementTransformUtils.MirrorElements(document, new List<ElementId> { elementId }, mirrorPlane, false);
+        ElementTransformUtils.MirrorElements(document, [elementId], mirrorPlane, false);
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
@@ -488,6 +568,7 @@ public sealed class RevitFamilyBaker : IDisposable
       CleanupTempFile(path);
     }
     _bakedFamilyPaths.Clear();
+    _definitionLookup.Clear();
   }
 
   private sealed class FamilyLoadOptions : IFamilyLoadOptions
