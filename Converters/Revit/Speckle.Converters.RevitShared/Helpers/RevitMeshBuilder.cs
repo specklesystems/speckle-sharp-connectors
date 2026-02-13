@@ -41,7 +41,7 @@ public class RevitMeshBuilder
     ForgeTypeId sourceUnitTypeId = _scalingService.UnitsToNative(speckleMesh.units);
 
     // 3. Process and Weld Vertices
-    // Welding coincident vertices is critical because meshes often have unwelded vertices 
+    // Welding coincident vertices is critical because meshes often have unwelded vertices
     // at UV seams, which Revit interprets as open edges (preventing Solid creation).
     var weldedVertices = new List<XYZ>();
     var vertexMap = new int[speckleMesh.vertices.Count / 3];
