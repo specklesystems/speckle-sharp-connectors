@@ -175,7 +175,7 @@ public class RevitMeshBuilder
     var v1 = vertices[1] - vertices[0];
     var v2 = vertices[2] - vertices[0];
     var crossProduct = v1.CrossProduct(v2);
-    
+
     // The length of the cross product vector is twice the area of the triangle
     double area = crossProduct.GetLength() / 2.0;
 
