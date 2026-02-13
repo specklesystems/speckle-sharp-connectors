@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
+using Speckle.Connectors.Civil3dShared.HostApp;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Autocad;
@@ -16,10 +17,12 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 {
   private readonly AutocadLayerUnpacker _layerUnpacker;
   private readonly PropertySetDefinitionHandler _propertySetDefinitionHandler;
+  private readonly CutFillHelper _cutFillHelper;
 
   public Civil3dRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
     PropertySetDefinitionHandler propertySetDefinitionHandler,
+    CutFillHelper cutFillHelper,
     IRootToSpeckleConverter converter,
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
@@ -44,6 +47,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
   {
     _layerUnpacker = layerUnpacker;
     _propertySetDefinitionHandler = propertySetDefinitionHandler;
+    _cutFillHelper = cutFillHelper;
   }
 
   public override (Collection, LayerTableRecord?) CreateObjectCollection(Entity entity, Transaction tr)
@@ -55,6 +59,7 @@ public sealed class Civil3dRootObjectBuilder : AutocadRootObjectBaseBuilder
 
   public override void AddAdditionalProxiesToRoot(Collection rootObject)
   {
+    rootObject["cutFill"] = _cutFillHelper.GetVolumesFromVolumeSurface("Surface02");
     rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] = _propertySetDefinitionHandler.Definitions;
   }
 }

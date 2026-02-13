@@ -32,6 +32,7 @@ public static class Civil3dConnectorModule
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<PropertySetBaker>();
+    serviceCollection.AddScoped<CutFillHelper>();
 
     // automatically detects the Class:IClass interface pattern to register all generated interfaces
     serviceCollection.AddMatchingInterfacesAsTransient(Assembly.GetExecutingAssembly());
