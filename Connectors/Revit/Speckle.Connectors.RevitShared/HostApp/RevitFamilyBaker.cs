@@ -40,7 +40,7 @@ public sealed class RevitFamilyBaker : IDisposable
     ILogger<RevitFamilyBaker> logger,
     ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter,
     RevitMeshBuilder revitMeshBuilder,
-    ITypedConverter<Base, List<DB.GeometryObject>> geometryConverter
+    ITypedConverter<Base, List<GeometryObject>> geometryConverter
   )
   {
     _converterSettings = converterSettings;
@@ -261,73 +261,141 @@ public sealed class RevitFamilyBaker : IDisposable
         continue;
       }
 
-      try
-      {
-        if (obj is InstanceProxy instanceProxy)
-        {
-          PlaceNestedInstance(famDoc, instanceProxy);
-        }
-        else
-        {
-          BakeGeometry(famDoc, obj);
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.ApplicationException ex)
-      {
-        _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", id, definition.name);
-      }
-      catch (SpeckleException ex)
-      {
-        _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", id, definition.name);
-      }
+      ProcessObjectForFamily(famDoc, obj, null, definition.name);
     }
   }
 
-  private void BakeGeometry(Document famDoc, Base obj)
+  /// <summary>
+  /// Recursively processes Speckle objects to bake into a Revit Family.
+  /// Generates subcategories dynamically when encountering Speckle Collections (e.g., Rhino layers).
+  /// </summary>
+  private void ProcessObjectForFamily(Document famDoc, Base obj, Category? currentSubcategory, string familyName)
   {
-    // Mesh Handling
+    try
+    {
+      if (obj is Collection collection)
+      {
+        Category? newSubcategory = currentSubcategory;
+        var subcategoryName = collection.name;
+
+        if (!string.IsNullOrWhiteSpace(subcategoryName))
+        {
+          var familyCategory = famDoc.OwnerFamily.FamilyCategory;
+          if (familyCategory != null)
+          {
+            // Retrieve existing subcategory or create a new one
+            if (familyCategory.SubCategories.Contains(subcategoryName))
+            {
+              newSubcategory = familyCategory.SubCategories.get_Item(subcategoryName);
+            }
+            else
+            {
+              try
+              {
+                newSubcategory = famDoc.Settings.Categories.NewSubcategory(familyCategory, subcategoryName);
+              }
+              catch (Autodesk.Revit.Exceptions.ArgumentException)
+              {
+                // Fallback in case the collection name contains invalid characters for Revit categories
+                _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", subcategoryName);
+                newSubcategory = currentSubcategory;
+              }
+            }
+          }
+        }
+
+        // Recursively process the geometries inside the collection with the newly acquired subcategory
+        foreach (var element in collection.elements)
+        {
+          ProcessObjectForFamily(famDoc, element, newSubcategory, familyName);
+        }
+      }
+      else if (obj is InstanceProxy instanceProxy)
+      {
+        PlaceNestedInstance(famDoc, instanceProxy);
+      }
+      else
+      {
+        BakeGeometry(famDoc, obj, currentSubcategory);
+      }
+    }
+    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+    {
+      _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", obj.id, familyName);
+    }
+    catch (SpeckleException ex)
+    {
+      _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", obj.id, familyName);
+    }
+  }
+
+  private void BakeGeometry(Document famDoc, Base obj, Category? subcategory)
+  {
+    // 1. Explicit Mesh Handling (falls back to TessellatedShapeBuilder)
     if (obj is SMesh mesh)
     {
-      BakeMesh(famDoc, mesh);
+      BakeMesh(famDoc, mesh, subcategory);
       return;
     }
 
-    // Generic Geometry Handling (Points, Curves, etc.)
+    // 2. Generic Geometry Handling (Breps, Extrusions, Curves, Points, etc.)
     try
     {
-      // Delegates to specific Point/Curve/etc converters and returns objects ready for DirectShapes
       var geometries = _geometryConverter.Convert(obj);
 
       if (geometries.Count > 0)
       {
-        using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
-        ds.SetShape(geometries);
+        // Separate Solids from other geometries (lines, points, open meshes)
+        var solids = geometries.OfType<Solid>().Where(s => s.Volume > 0).ToList();
+        var nonSolids = geometries.Where(g => g is not Solid s || s.Volume <= 0).ToList();
+
+        // Wrap valid Solids in FreeFormElements to support Subcategories!
+        foreach (var solid in solids)
+        {
+          using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+          if (subcategory != null)
+          {
+            freeFormElement.Subcategory = subcategory;
+          }
+        }
+
+        // Wrap remaining non-solid geometry in DirectShapes (no subcategory support)
+        if (nonSolids.Count > 0)
+        {
+          using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+          ds.SetShape(nonSolids);
+        }
+
         return;
       }
     }
     catch (SpeckleException)
     {
-      // If direct conversion fails, fall through to display values
+      // If direct conversion throws, we let it fall through to the displayValue fallback
     }
 
-    // Fallback: Display Values
+    // 3. Fallback: Display Values
     var displayValues = obj.TryGetDisplayValue();
     if (displayValues != null)
     {
       foreach (var item in displayValues)
       {
-        BakeGeometry(famDoc, item);
+        BakeGeometry(famDoc, item, subcategory);
       }
     }
   }
 
-  private void BakeMesh(Document famDoc, SMesh mesh)
+  private void BakeMesh(Document famDoc, SMesh mesh, Category? subcategory)
   {
     var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
 
     if (geomObject is Solid solid)
     {
-      using var _ = FreeFormElement.Create(famDoc, solid);
+      using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+      if (subcategory != null)
+      {
+        freeFormElement.Subcategory = subcategory;
+      }
     }
     else if (geomObject is Mesh revitMesh)
     {
