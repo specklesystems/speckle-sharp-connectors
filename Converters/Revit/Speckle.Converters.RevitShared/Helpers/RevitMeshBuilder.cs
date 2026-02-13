@@ -13,7 +13,7 @@ public class RevitMeshBuilder
   private readonly ScalingServiceToHost _scalingService;
   private readonly ILogger<RevitMeshBuilder> _logger;
 
-  // Revit's strict short curve tolerance is approx 0.00256 feet. 
+  // Revit's strict short curve tolerance is approx 0.00256 feet.
   // We use a slightly smaller tolerance for welding to ensure we don't collapse intentional small details,
   // but catch floating-point inaccuracies from other CAD software.
   private const double WELD_TOLERANCE = 1e-4;
