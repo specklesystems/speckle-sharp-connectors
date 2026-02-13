@@ -22,6 +22,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Transform = Speckle.Objects.Other.Transform;
 
@@ -144,23 +145,23 @@ public sealed class RevitHostObjectBuilder(
     // Bakes instances as families (if setting is enabled Count > 0)
     if (instanceComponentsForFamilies is { Count: > 0 })
     {
-      // Defensively double-indexing objects (ensures we find Definition references by Speckle ID OR Application ID)
-      var speckleObjectLookup = new Dictionary<string, Base>();
+      // Store the full TraversalContext instead of just the Base object
+      var speckleObjectLookup = new Dictionary<string, TraversalContext>();
 
       foreach (var tc in unpackedRoot.ObjectsToConvert)
       {
         var obj = tc.Current;
 
-        // 1. Primary Index: Speckle Hash (Most reliable)
+        // 1. Primary Index: Speckle Hash
         if (!string.IsNullOrEmpty(obj.id))
         {
-          speckleObjectLookup[obj.id.NotNullOrWhiteSpace()] = obj;
+          speckleObjectLookup[obj.id.NotNullOrWhiteSpace()] = tc;
         }
 
-        // 2. Secondary Index: Application ID (Required for Rhino/Revit blocks)
+        // 2. Secondary Index: Application ID
         if (!string.IsNullOrEmpty(obj.applicationId))
         {
-          speckleObjectLookup[obj.applicationId.NotNullOrWhiteSpace()] = obj;
+          speckleObjectLookup[obj.applicationId.NotNullOrWhiteSpace()] = tc;
         }
       }
 
@@ -367,7 +368,7 @@ public sealed class RevitHostObjectBuilder(
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) currentResults,
-    Dictionary<string, Base> speckleObjectLookup, // [UPDATED] Added lookup param
+    Dictionary<string, TraversalContext> speckleObjectLookup,
     IProgress<CardProgress> onOperationProgressed
   )
   {

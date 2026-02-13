@@ -16,6 +16,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
@@ -40,7 +41,7 @@ public sealed class RevitFamilyBaker : IDisposable
     ILogger<RevitFamilyBaker> logger,
     ITypedConverter<(Matrix4x4 matrix, string units), Transform> transformConverter,
     RevitMeshBuilder revitMeshBuilder,
-    ITypedConverter<Base, List<DB.GeometryObject>> geometryConverter
+    ITypedConverter<Base, List<GeometryObject>> geometryConverter
   )
   {
     _converterSettings = converterSettings;
@@ -53,7 +54,7 @@ public sealed class RevitFamilyBaker : IDisposable
 
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
-    IReadOnlyDictionary<string, Base> speckleObjectLookup,
+    IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -70,8 +71,9 @@ public sealed class RevitFamilyBaker : IDisposable
         foreach (var childId in definition.objects ?? Enumerable.Empty<string>())
         {
           consumedIds.Add(childId);
-          if (speckleObjectLookup.TryGetValue(childId, out var childObj))
+          if (speckleObjectLookup.TryGetValue(childId, out var childTc))
           {
+            var childObj = childTc.Current;
             if (childObj.id != null)
             {
               consumedIds.Add(childObj.id);
@@ -152,7 +154,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
     Document document,
     InstanceDefinitionProxy definitionProxy,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id.NotNull();
@@ -200,7 +202,7 @@ public sealed class RevitFamilyBaker : IDisposable
     Document document,
     string familyName,
     InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     var templatePath = GetFamilyTemplatePath(document);
@@ -246,7 +248,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private void PopulateFamily(
     Document famDoc,
     InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     if (definition.objects.Count == 0)
@@ -256,78 +258,167 @@ public sealed class RevitFamilyBaker : IDisposable
 
     foreach (var id in definition.objects)
     {
-      if (!objectLookup.TryGetValue(id, out var obj))
+      if (!objectLookup.TryGetValue(id, out var tc))
       {
         continue;
       }
 
-      try
+      // Climb the parent traversal context to find the collection
+      string? extractedSubcategoryName = null;
+      var parentTc = tc.Parent;
+      while (parentTc != null)
       {
-        if (obj is InstanceProxy instanceProxy)
+        if (parentTc.Current is Collection col && !string.IsNullOrWhiteSpace(col.name))
         {
-          PlaceNestedInstance(famDoc, instanceProxy);
+          extractedSubcategoryName = col.name;
+          break;
         }
-        else
-        {
-          BakeGeometry(famDoc, obj);
-        }
+        parentTc = parentTc.Parent;
       }
-      catch (Autodesk.Revit.Exceptions.ApplicationException ex)
-      {
-        _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", id, definition.name);
-      }
-      catch (SpeckleException ex)
-      {
-        _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", id, definition.name);
-      }
+
+      // Pass the layer name down to process
+      ProcessObjectForFamily(famDoc, tc.Current, null, definition.name, extractedSubcategoryName);
     }
   }
 
-  private void BakeGeometry(Document famDoc, Base obj)
+  /// <summary>
+  /// Recursively processes Speckle objects to bake into a Revit Family.
+  /// Generates subcategories dynamically when encountering Speckle Collections (e.g., Rhino layers).
+  /// </summary>
+  private void ProcessObjectForFamily(
+    Document famDoc,
+    Base obj,
+    Category? currentSubcategory,
+    string familyName,
+    string? extractedSubcategoryName = null
+  )
   {
-    // Mesh Handling
+    try
+    {
+      Category? newSubcategory = currentSubcategory;
+
+      // 1. Determine subcategory name from extraction, fallback to object if it's a nested collection
+      string? subcategoryName = extractedSubcategoryName ?? (obj as Collection)?.name;
+
+      if (!string.IsNullOrWhiteSpace(subcategoryName))
+      {
+        var familyCategory = famDoc.OwnerFamily.FamilyCategory;
+        if (familyCategory != null)
+        {
+          // Retrieve existing subcategory or create a new one
+          if (familyCategory.SubCategories.Contains(subcategoryName))
+          {
+            newSubcategory = familyCategory.SubCategories.get_Item(subcategoryName);
+          }
+          else
+          {
+            try
+            {
+              newSubcategory = famDoc.Settings.Categories.NewSubcategory(familyCategory, subcategoryName);
+            }
+            catch (Autodesk.Revit.Exceptions.ArgumentException)
+            {
+              _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", subcategoryName);
+              newSubcategory = currentSubcategory;
+            }
+          }
+        }
+      }
+
+      // 2. Route the object to the appropriate baker or recurse
+      if (obj is Collection col)
+      {
+        foreach (var element in col.elements)
+        {
+          ProcessObjectForFamily(famDoc, element, newSubcategory, familyName);
+        }
+      }
+      else if (obj is InstanceProxy instanceProxy)
+      {
+        PlaceNestedInstance(famDoc, instanceProxy);
+      }
+      else
+      {
+        BakeGeometry(famDoc, obj, newSubcategory);
+      }
+    }
+    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+    {
+      _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", obj.id, familyName);
+    }
+    catch (SpeckleException ex)
+    {
+      _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", obj.id, familyName);
+    }
+  }
+
+  private void BakeGeometry(Document famDoc, Base obj, Category? subcategory)
+  {
+    // 1. Explicit Mesh Handling (falls back to TessellatedShapeBuilder)
     if (obj is SMesh mesh)
     {
-      BakeMesh(famDoc, mesh);
+      BakeMesh(famDoc, mesh, subcategory);
       return;
     }
 
-    // Generic Geometry Handling (Points, Curves, etc.)
+    // 2. Generic Geometry Handling (Breps, Extrusions, Curves, Points, etc.)
     try
     {
-      // Delegates to specific Point/Curve/etc converters and returns objects ready for DirectShapes
       var geometries = _geometryConverter.Convert(obj);
 
       if (geometries.Count > 0)
       {
-        using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
-        ds.SetShape(geometries);
+        // Separate Solids from other geometries (lines, points, open meshes)
+        var solids = geometries.OfType<Solid>().Where(s => s.Volume > 0).ToList();
+        var nonSolids = geometries.Where(g => g is not Solid s || s.Volume <= 0).ToList();
+
+        // Wrap valid Solids in FreeFormElements to support Subcategories!
+        foreach (var solid in solids)
+        {
+          using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+          if (subcategory != null)
+          {
+            freeFormElement.Subcategory = subcategory;
+          }
+        }
+
+        // Wrap remaining non-solid geometry in DirectShapes (no subcategory support)
+        if (nonSolids.Count > 0)
+        {
+          using var ds = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+          ds.SetShape(nonSolids);
+        }
+
         return;
       }
     }
     catch (SpeckleException)
     {
-      // If direct conversion fails, fall through to display values
+      // If direct conversion throws, we let it fall through to the displayValue fallback
     }
 
-    // Fallback: Display Values
+    // 3. Fallback: Display Values
     var displayValues = obj.TryGetDisplayValue();
     if (displayValues != null)
     {
       foreach (var item in displayValues)
       {
-        BakeGeometry(famDoc, item);
+        BakeGeometry(famDoc, item, subcategory);
       }
     }
   }
 
-  private void BakeMesh(Document famDoc, SMesh mesh)
+  private void BakeMesh(Document famDoc, SMesh mesh, Category? subcategory)
   {
     var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
 
     if (geomObject is Solid solid)
     {
-      using var _ = FreeFormElement.Create(famDoc, solid);
+      using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+      if (subcategory != null)
+      {
+        freeFormElement.Subcategory = subcategory;
+      }
     }
     else if (geomObject is Mesh revitMesh)
     {
