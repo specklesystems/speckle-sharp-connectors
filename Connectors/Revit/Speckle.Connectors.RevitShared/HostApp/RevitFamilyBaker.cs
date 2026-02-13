@@ -16,6 +16,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
@@ -53,7 +54,7 @@ public sealed class RevitFamilyBaker : IDisposable
 
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
-    IReadOnlyDictionary<string, Base> speckleObjectLookup,
+    IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -70,8 +71,9 @@ public sealed class RevitFamilyBaker : IDisposable
         foreach (var childId in definition.objects ?? Enumerable.Empty<string>())
         {
           consumedIds.Add(childId);
-          if (speckleObjectLookup.TryGetValue(childId, out var childObj))
+          if (speckleObjectLookup.TryGetValue(childId, out var childTc))
           {
+            var childObj = childTc.Current;
             if (childObj.id != null)
             {
               consumedIds.Add(childObj.id);
@@ -152,7 +154,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
     Document document,
     InstanceDefinitionProxy definitionProxy,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id.NotNull();
@@ -200,7 +202,7 @@ public sealed class RevitFamilyBaker : IDisposable
     Document document,
     string familyName,
     InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     var templatePath = GetFamilyTemplatePath(document);
@@ -246,7 +248,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private void PopulateFamily(
     Document famDoc,
     InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, Base> objectLookup
+    IReadOnlyDictionary<string, TraversalContext> objectLookup
   )
   {
     if (definition.objects.Count == 0)
@@ -256,12 +258,26 @@ public sealed class RevitFamilyBaker : IDisposable
 
     foreach (var id in definition.objects)
     {
-      if (!objectLookup.TryGetValue(id, out var obj))
+      if (!objectLookup.TryGetValue(id, out var tc))
       {
         continue;
       }
 
-      ProcessObjectForFamily(famDoc, obj, null, definition.name);
+      // Climb the parent traversal context to find the collection
+      string? extractedSubcategoryName = null;
+      var parentTc = tc.Parent;
+      while (parentTc != null)
+      {
+        if (parentTc.Current is Collection col && !string.IsNullOrWhiteSpace(col.name))
+        {
+          extractedSubcategoryName = col.name;
+          break;
+        }
+        parentTc = parentTc.Parent;
+      }
+
+      // Pass the layer name down to process
+      ProcessObjectForFamily(famDoc, tc.Current, null, definition.name, extractedSubcategoryName);
     }
   }
 
@@ -269,43 +285,50 @@ public sealed class RevitFamilyBaker : IDisposable
   /// Recursively processes Speckle objects to bake into a Revit Family.
   /// Generates subcategories dynamically when encountering Speckle Collections (e.g., Rhino layers).
   /// </summary>
-  private void ProcessObjectForFamily(Document famDoc, Base obj, Category? currentSubcategory, string familyName)
+  private void ProcessObjectForFamily(
+    Document famDoc,
+    Base obj,
+    Category? currentSubcategory,
+    string familyName,
+    string? extractedSubcategoryName = null
+  )
   {
     try
     {
-      if (obj is Collection collection)
-      {
-        Category? newSubcategory = currentSubcategory;
-        var subcategoryName = collection.name;
+      Category? newSubcategory = currentSubcategory;
 
-        if (!string.IsNullOrWhiteSpace(subcategoryName))
+      // 1. Determine subcategory name from extraction, fallback to object if it's a nested collection
+      string? subcategoryName = extractedSubcategoryName ?? (obj as Collection)?.name;
+
+      if (!string.IsNullOrWhiteSpace(subcategoryName))
+      {
+        var familyCategory = famDoc.OwnerFamily.FamilyCategory;
+        if (familyCategory != null)
         {
-          var familyCategory = famDoc.OwnerFamily.FamilyCategory;
-          if (familyCategory != null)
+          // Retrieve existing subcategory or create a new one
+          if (familyCategory.SubCategories.Contains(subcategoryName))
           {
-            // Retrieve existing subcategory or create a new one
-            if (familyCategory.SubCategories.Contains(subcategoryName))
+            newSubcategory = familyCategory.SubCategories.get_Item(subcategoryName);
+          }
+          else
+          {
+            try
             {
-              newSubcategory = familyCategory.SubCategories.get_Item(subcategoryName);
+              newSubcategory = famDoc.Settings.Categories.NewSubcategory(familyCategory, subcategoryName);
             }
-            else
+            catch (Autodesk.Revit.Exceptions.ArgumentException)
             {
-              try
-              {
-                newSubcategory = famDoc.Settings.Categories.NewSubcategory(familyCategory, subcategoryName);
-              }
-              catch (Autodesk.Revit.Exceptions.ArgumentException)
-              {
-                // Fallback in case the collection name contains invalid characters for Revit categories
-                _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", subcategoryName);
-                newSubcategory = currentSubcategory;
-              }
+              _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", subcategoryName);
+              newSubcategory = currentSubcategory;
             }
           }
         }
+      }
 
-        // Recursively process the geometries inside the collection with the newly acquired subcategory
-        foreach (var element in collection.elements)
+      // 2. Route the object to the appropriate baker or recurse
+      if (obj is Collection col)
+      {
+        foreach (var element in col.elements)
         {
           ProcessObjectForFamily(famDoc, element, newSubcategory, familyName);
         }
@@ -316,7 +339,7 @@ public sealed class RevitFamilyBaker : IDisposable
       }
       else
       {
-        BakeGeometry(famDoc, obj, currentSubcategory);
+        BakeGeometry(famDoc, obj, newSubcategory);
       }
     }
     catch (Autodesk.Revit.Exceptions.ApplicationException ex)
