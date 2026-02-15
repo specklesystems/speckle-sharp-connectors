@@ -484,7 +484,6 @@ public sealed class RevitFamilyBaker : IDisposable
             freeFormElement.Subcategory = subcategory;
           }
 
-          // --- FFE Material Association ---
           if (
             materialManager != null
             && speckleMatId != null
