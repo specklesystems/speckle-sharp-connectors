@@ -16,6 +16,7 @@ using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
@@ -165,10 +166,14 @@ public sealed class RevitHostObjectBuilder(
         }
       }
 
+      // Pass the unpacked material proxies down to the family baker, defaulting to empty if null
+      var materialProxies = unpackedRoot.RenderMaterialProxies ?? [];
+
       conversionResults = BakeInstancesAsFamilies(
         instanceComponentsForFamilies,
         conversionResults,
         speckleObjectLookup,
+        materialProxies,
         onOperationProgressed
       );
     }
@@ -245,7 +250,7 @@ public sealed class RevitHostObjectBuilder(
       var definitions = unpackedRoot.DefinitionProxies.Select(proxy =>
         (Array.Empty<Collection>(), proxy as IInstanceComponent)
       );
-      instanceComponentsWithPath.AddRange(definitions!);
+      instanceComponentsWithPath.AddRange(definitions);
     }
 
     // only unpack filtered atomic objects (no instance flattening, no definition geometry)
@@ -369,6 +374,7 @@ public sealed class RevitHostObjectBuilder(
       List<(DirectShape res, string applicationId)> postBakePaintTargets
     ) currentResults,
     Dictionary<string, TraversalContext> speckleObjectLookup,
+    IReadOnlyCollection<RenderMaterialProxy> materialProxies,
     IProgress<CardProgress> onOperationProgressed
   )
   {
@@ -378,6 +384,7 @@ public sealed class RevitHostObjectBuilder(
     (List<ReceiveConversionResult> familyResults, List<string> familyElementIds) = familyBaker.BakeInstances(
       instanceComponents,
       speckleObjectLookup,
+      materialProxies,
       onOperationProgressed
     );
 
@@ -611,7 +618,7 @@ public sealed class RevitHostObjectBuilder(
     materialBaker.PurgeMaterials(baseGroupName);
   }
 
-  public void Dispose() => transactionManager?.Dispose();
+  public void Dispose() => transactionManager.Dispose();
 
   // NOTE: temp poc HACK!
   // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.
