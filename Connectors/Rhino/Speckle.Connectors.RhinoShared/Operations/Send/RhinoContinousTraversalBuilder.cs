@@ -16,7 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Sdk.Pipelines;
+using Speckle.Sdk.Pipelines.Send;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -73,8 +73,8 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     string projectId,
-    IProgress<CardProgress> onOperationProgressed,
     SendPipeline sendPipeline,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
