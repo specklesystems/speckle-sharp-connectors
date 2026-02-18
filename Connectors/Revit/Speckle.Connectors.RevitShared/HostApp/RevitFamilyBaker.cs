@@ -485,8 +485,8 @@ public sealed class RevitFamilyBaker : IDisposable
 
       if (geometries.Count > 0)
       {
-        var solids = geometries.OfType<Solid>().Where(s => s.Volume > 0).ToList();
-        var nonSolids = geometries.Where(g => g is not Solid s || s.Volume <= 0).ToList();
+        var solids = geometries.OfType<Solid>().Where(s => !s.Faces.IsEmpty).ToList();
+        var nonSolids = geometries.Where(g => g is not Solid s || s.Faces.IsEmpty).ToList();
 
         foreach (var solid in solids)
         {
