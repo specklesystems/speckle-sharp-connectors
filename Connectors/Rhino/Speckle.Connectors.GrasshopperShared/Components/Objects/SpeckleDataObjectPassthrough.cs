@@ -120,6 +120,7 @@ public class SpeckleDataObjectPassthrough()
         GH_RuntimeMessageLevel.Warning,
         "Pass in a Speckle DataObject or Geometries, Name, Properties or Application Id"
       );
+      return;
     }
 
     foreach (var inputGeo in inputGeometry)
