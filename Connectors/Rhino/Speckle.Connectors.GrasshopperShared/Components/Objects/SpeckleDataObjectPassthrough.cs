@@ -104,10 +104,22 @@ public class SpeckleDataObjectPassthrough()
     }
 
     List<SpeckleGeometryWrapperGoo> inputGeometry = new();
-    if (!da.GetDataList(1, inputGeometry) && result == null)
+    bool hasGeometries = da.GetDataList(1, inputGeometry);
+
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
+    SpecklePropertyGroupGoo? inputProperties = null;
+    da.GetData(3, ref inputProperties);
+
+    bool hasAppId = TryGetApplicationIdInput(da, out string? inputAppId);
+
+    if (result == null && !hasGeometries && inputName == null && inputProperties == null && !hasAppId)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a Speckle DataObject or Geometries");
-      return;
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Warning,
+        "Pass in a Speckle DataObject or Geometries, Name, Properties or Application Id"
+      );
     }
 
     foreach (var inputGeo in inputGeometry)
@@ -118,12 +130,6 @@ public class SpeckleDataObjectPassthrough()
         return;
       }
     }
-
-    string? inputName = null;
-    da.GetData(2, ref inputName);
-
-    SpecklePropertyGroupGoo? inputProperties = null;
-    da.GetData(3, ref inputProperties);
 
     // process geometry
     if (result == null)
@@ -162,7 +168,7 @@ public class SpeckleDataObjectPassthrough()
     }
 
     // process application id (only if user provided one)
-    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    if (hasAppId)
     {
       result.ApplicationId = inputAppId;
     }
