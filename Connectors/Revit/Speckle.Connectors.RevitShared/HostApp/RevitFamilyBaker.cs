@@ -212,9 +212,15 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     var familyName = GetFamilyName(definitionProxy);
-    var family =
-      FindFamilyByName(document, familyName)
-      ?? CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap);
+
+    bool isNewFamily = false;
+    var family = FindFamilyByName(document, familyName);
+
+    if (family == null)
+    {
+      family = CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap);
+      isNewFamily = true;
+    }
 
     if (family == null)
     {
@@ -239,7 +245,11 @@ public sealed class RevitFamilyBaker : IDisposable
       document.Regenerate();
     }
 
-    AssignProjectMaterialsToFamily(document, symbol, safeNameToProjectMatId);
+    // only assign materials if the family is new (CNX-3118)
+    if (isNewFamily)
+    {
+      AssignProjectMaterialsToFamily(document, symbol, safeNameToProjectMatId);
+    }
 
     _cache.FamiliesByDefinitionId[definitionId] = family;
     _cache.SymbolsByDefinitionId[definitionId] = symbol;
