@@ -165,13 +165,35 @@ public sealed class RevitFamilyBaker : IDisposable
             continue;
           }
 
+          // 1. Place the instance (it will silently / internally sanitize its own transform)
           var instance = PlaceFamilyInstance(document, instanceProxy);
+
           if (instance != null)
           {
             createdElementIds.Add(instance.UniqueId);
-            results.Add(
-              new ReceiveConversionResult(Status.SUCCESS, instanceProxy, instance.UniqueId, "FamilyInstance")
-            );
+
+            // 2. Check the transform here and flag for UI Report (if applicable)
+            if (HasScaleOrSkew(instanceProxy.transform))
+            {
+              var warningEx = new SpeckleException(
+                "Block instance placed with its original position and rotation, but the unsupported scale/skew was dropped"
+              );
+              results.Add(
+                new ReceiveConversionResult(
+                  Status.WARNING,
+                  instanceProxy,
+                  instance.UniqueId,
+                  "FamilyInstance",
+                  warningEx
+                )
+              );
+            }
+            else
+            {
+              results.Add(
+                new ReceiveConversionResult(Status.SUCCESS, instanceProxy, instance.UniqueId, "FamilyInstance")
+              );
+            }
           }
         }
       }
@@ -634,7 +656,12 @@ public sealed class RevitFamilyBaker : IDisposable
       symbol.Activate();
     }
 
-    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
+    // evaluate the transform conditions
+    var isMirrored = GetMirrorState(instanceProxy.transform).X;
+    var hasScaleOrSkew = HasScaleOrSkew(instanceProxy.transform);
+    var cleanMatrix =
+      (hasScaleOrSkew || isMirrored) ? RemoveScaleAndSkew(instanceProxy.transform) : instanceProxy.transform;
+    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
 
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
@@ -703,7 +730,15 @@ public sealed class RevitFamilyBaker : IDisposable
   private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
   {
     var definitionId = instanceProxy.definitionId;
-    var revitTransform = _transformConverter.Convert((instanceProxy.transform, instanceProxy.units));
+
+    // evaluate the transform conditions
+    var isMirrored = GetMirrorState(instanceProxy.transform).X;
+    var hasScaleOrSkew = HasScaleOrSkew(instanceProxy.transform);
+
+    // only apply the sanitization if it's mirrored (needs a right-handed fix) OR has scale/skew
+    var cleanMatrix =
+      (hasScaleOrSkew || isMirrored) ? RemoveScaleAndSkew(instanceProxy.transform) : instanceProxy.transform;
+    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
 
     if (!_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
     {
@@ -832,6 +867,103 @@ public sealed class RevitFamilyBaker : IDisposable
         mirrorPlane.Dispose();
       }
     }
+  }
+
+  private static bool HasScaleOrSkew(Matrix4x4 matrix)
+  {
+    // Extract lengths of basis vectors
+    var lenX = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M21 * matrix.M21 + matrix.M31 * matrix.M31);
+    var lenY = Math.Sqrt(matrix.M12 * matrix.M12 + matrix.M22 * matrix.M22 + matrix.M32 * matrix.M32);
+    var lenZ = Math.Sqrt(matrix.M13 * matrix.M13 + matrix.M23 * matrix.M23 + matrix.M33 * matrix.M33);
+
+    // Calculate dot products to check for orthogonality
+    var dotXY = matrix.M11 * matrix.M12 + matrix.M21 * matrix.M22 + matrix.M31 * matrix.M32;
+    var dotXZ = matrix.M11 * matrix.M13 + matrix.M21 * matrix.M23 + matrix.M31 * matrix.M33;
+    var dotYZ = matrix.M12 * matrix.M13 + matrix.M22 * matrix.M23 + matrix.M32 * matrix.M33;
+
+    double tol = 1e-4;
+
+    bool isOrthogonal = Math.Abs(dotXY) < tol && Math.Abs(dotXZ) < tol && Math.Abs(dotYZ) < tol;
+    bool isUnitScale = Math.Abs(lenX - 1.0) < tol && Math.Abs(lenY - 1.0) < tol && Math.Abs(lenZ - 1.0) < tol;
+
+    // Returns true if there is non-uniform/uniform scale, OR if it has shear/skew
+    return !isOrthogonal || !isUnitScale;
+  }
+
+  private static Matrix4x4 RemoveScaleAndSkew(Matrix4x4 matrix)
+  {
+    // 1. Extract Z column and normalize
+    double zX = matrix.M13,
+      zY = matrix.M23,
+      zZ = matrix.M33;
+    double lenZ = Math.Sqrt(zX * zX + zY * zY + zZ * zZ);
+    if (lenZ > 1e-6)
+    {
+      zX /= lenZ;
+      zY /= lenZ;
+      zZ /= lenZ;
+    }
+    else
+    {
+      zX = 0;
+      zY = 0;
+      zZ = 1; // Fallback
+    }
+
+    // 2. Extract Y column
+    double yX = matrix.M12,
+      yY = matrix.M22,
+      yZ = matrix.M32;
+
+    // 3. Cross product Y and Z to get orthogonal X
+    double xX = yY * zZ - yZ * zY;
+    double xY = yZ * zX - yX * zZ;
+    double xZ = yX * zY - yY * zX;
+    double lenX = Math.Sqrt(xX * xX + xY * xY + xZ * xZ);
+    if (lenX > 1e-6)
+    {
+      xX /= lenX;
+      xY /= lenX;
+      xZ /= lenX;
+    }
+    else
+    {
+      xX = 1;
+      xY = 0;
+      xZ = 0; // Fallback
+    }
+
+    // 4. Cross product Z and X to get orthogonal unit Y
+    yX = zY * xZ - zZ * xY;
+    yY = zZ * xX - zX * xZ;
+    yZ = zX * xY - zY * xX;
+    double lenY = Math.Sqrt(yX * yX + yY * yY + yZ * yZ);
+    if (lenY > 1e-6)
+    {
+      yX /= lenY;
+      yY /= lenY;
+      yZ /= lenY;
+    }
+
+    // Rebuild the matrix with pure rotation and original translation
+    return new Matrix4x4(
+      xX,
+      yX,
+      zX,
+      matrix.M14,
+      xY,
+      yY,
+      zY,
+      matrix.M24,
+      xZ,
+      yZ,
+      zZ,
+      matrix.M34,
+      matrix.M41,
+      matrix.M42,
+      matrix.M43,
+      matrix.M44
+    );
   }
 
   private static void CleanupTempFile(string path)
