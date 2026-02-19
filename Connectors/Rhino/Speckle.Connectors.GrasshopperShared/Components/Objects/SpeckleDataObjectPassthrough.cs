@@ -116,10 +116,7 @@ public class SpeckleDataObjectPassthrough()
 
     if (result == null && !hasGeometries && inputName == null && inputProperties == null && !hasAppId)
     {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Warning,
-        "Pass in a Speckle DataObject or Geometries, Name, Properties or Application Id"
-      );
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a DataObject or at least one input.");
       return;
     }
 
