@@ -21,6 +21,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentToConvert.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyGeometryBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyMaterialManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyTransformUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LevelUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitFamilyBaker.cs" />

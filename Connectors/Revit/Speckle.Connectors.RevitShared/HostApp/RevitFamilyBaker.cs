@@ -16,51 +16,49 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Models.Extensions;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
-using SMesh = Speckle.Objects.Geometry.Mesh;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
-#pragma warning disable CA1506
 public sealed class RevitFamilyBaker : IDisposable
-#pragma warning restore CA1506
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly RevitToHostCacheSingleton _cache;
   private readonly ILogger<RevitFamilyBaker> _logger;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
-  private readonly RevitMeshBuilder _revitMeshBuilder;
-  private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
   private readonly RevitMaterialBaker _materialBaker;
+  private readonly FamilyGeometryBaker _familyGeometryBaker;
+
   private string? _cachedTemplatePath;
   private readonly Dictionary<string, string> _bakedFamilyPaths = [];
+
+  private readonly string _tempDirectory;
+  private static readonly char[] s_invalidChars = Path.GetInvalidFileNameChars();
 
   public RevitFamilyBaker(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     RevitToHostCacheSingleton cache,
     ILogger<RevitFamilyBaker> logger,
     ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter,
-    RevitMeshBuilder revitMeshBuilder,
-    ITypedConverter<Base, List<GeometryObject>> geometryConverter,
-    RevitMaterialBaker materialBaker
+    RevitMaterialBaker materialBaker,
+    FamilyGeometryBaker familyGeometryBaker
   )
   {
     _converterSettings = converterSettings;
     _cache = cache;
     _logger = logger;
     _transformConverter = transformConverter;
-    _revitMeshBuilder = revitMeshBuilder;
-    _geometryConverter = geometryConverter;
     _materialBaker = materialBaker;
+    _familyGeometryBaker = familyGeometryBaker;
+
+    _tempDirectory = Path.Combine(Path.GetTempPath(), $"Speckle_FamilyBaker_{Guid.NewGuid()}");
+    Directory.CreateDirectory(_tempDirectory);
   }
 
-#pragma warning disable CA1502
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
-#pragma warning restore CA1502
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
     IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup,
     IReadOnlyCollection<RenderMaterialProxy> materialProxies,
@@ -71,65 +69,9 @@ public sealed class RevitFamilyBaker : IDisposable
     var results = new List<ReceiveConversionResult>();
     var createdElementIds = new List<string>();
 
-    var consumedIds = new HashSet<string>();
-
-    // 1. Build fast lookup maps
-    Dictionary<string, RenderMaterial> objectToMaterialMap = new();
-    Dictionary<string, ElementId> safeNameToProjectMatId = new();
-
-    foreach (var proxy in materialProxies)
-    {
-      string matId = proxy.value.id.NotNullOrWhiteSpace();
-      // Ensure the key precisely matches the string generated for the parameter names!
-      string safeName = string.IsNullOrWhiteSpace(proxy.value.name) ? matId : proxy.value.name;
-
-      foreach (var objId in proxy.objects)
-      {
-        objectToMaterialMap[objId] = proxy.value;
-      }
-
-      // Map the Safe Name directly to the Project Material ElementId using cache
-      if (proxy.objects.Count > 0)
-      {
-        foreach (var objId in proxy.objects)
-        {
-          if (_cache.MaterialsByObjectId.TryGetValue(objId, out var projMatId))
-          {
-            safeNameToProjectMatId[safeName] = projMatId;
-            break; // Stop looking once we find the project material for this proxy
-          }
-        }
-      }
-    }
-
-    foreach (var (_, component) in instanceComponents)
-    {
-      if (component is InstanceDefinitionProxy definition)
-      {
-        foreach (var childId in definition.objects ?? Enumerable.Empty<string>())
-        {
-          consumedIds.Add(childId);
-          if (speckleObjectLookup.TryGetValue(childId, out var childTc))
-          {
-            var childObj = childTc.Current;
-            if (childObj.id != null)
-            {
-              consumedIds.Add(childObj.id);
-            }
-
-            if (childObj.applicationId != null)
-            {
-              consumedIds.Add(childObj.applicationId);
-            }
-          }
-        }
-      }
-    }
-
-    var sortedComponents = instanceComponents
-      .OrderByDescending(x => x.component.maxDepth)
-      .ThenBy(x => x.component is InstanceDefinitionProxy ? 0 : 1)
-      .ToList();
+    var (objectToMaterialMap, safeNameToProjectMatId) = BuildMaterialMaps(materialProxies);
+    var consumedIds = BuildConsumedIdsSet(instanceComponents, speckleObjectLookup);
+    var sortedComponents = SortComponentsForBaking(instanceComponents);
 
     var count = 0;
     foreach (var (_, component) in sortedComponents)
@@ -147,6 +89,7 @@ public sealed class RevitFamilyBaker : IDisposable
             objectToMaterialMap,
             safeNameToProjectMatId
           );
+
           if (result.HasValue)
           {
             results.Add(
@@ -165,15 +108,13 @@ public sealed class RevitFamilyBaker : IDisposable
             continue;
           }
 
-          // 1. Place the instance (it will silently / internally sanitize its own transform)
           var instance = PlaceFamilyInstance(document, instanceProxy);
 
           if (instance != null)
           {
             createdElementIds.Add(instance.UniqueId);
 
-            // 2. Check the transform here and flag for UI Report (if applicable)
-            if (HasScaleOrSkew(instanceProxy.transform))
+            if (FamilyTransformUtils.HasScaleOrSkew(instanceProxy.transform))
             {
               var warningEx = new SpeckleException(
                 "Block instance placed with its original position and rotation, but the unsupported scale/skew was dropped"
@@ -216,6 +157,82 @@ public sealed class RevitFamilyBaker : IDisposable
 
     return (results, createdElementIds);
   }
+
+  private (
+    Dictionary<string, RenderMaterial> objectToMaterialMap,
+    Dictionary<string, ElementId> safeNameToProjectMatId
+  ) BuildMaterialMaps(IReadOnlyCollection<RenderMaterialProxy> materialProxies)
+  {
+    Dictionary<string, RenderMaterial> objectToMaterialMap = new();
+    Dictionary<string, ElementId> safeNameToProjectMatId = new();
+
+    foreach (var proxy in materialProxies)
+    {
+      string matId = proxy.value.id.NotNullOrWhiteSpace();
+      string safeName = string.IsNullOrWhiteSpace(proxy.value.name) ? matId : proxy.value.name;
+
+      foreach (var objId in proxy.objects)
+      {
+        objectToMaterialMap[objId] = proxy.value;
+      }
+
+      if (proxy.objects.Count > 0)
+      {
+        foreach (var objId in proxy.objects)
+        {
+          if (_cache.MaterialsByObjectId.TryGetValue(objId, out var projMatId))
+          {
+            safeNameToProjectMatId[safeName] = projMatId;
+            break;
+          }
+        }
+      }
+    }
+
+    return (objectToMaterialMap, safeNameToProjectMatId);
+  }
+
+  private static HashSet<string> BuildConsumedIdsSet(
+    ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
+    IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup
+  )
+  {
+    var consumedIds = new HashSet<string>();
+
+    foreach (var (_, component) in instanceComponents)
+    {
+      if (component is InstanceDefinitionProxy definition)
+      {
+        foreach (var childId in definition.objects ?? Enumerable.Empty<string>())
+        {
+          consumedIds.Add(childId);
+          if (speckleObjectLookup.TryGetValue(childId, out var childTc))
+          {
+            var childObj = childTc.Current;
+            if (childObj.id != null)
+            {
+              consumedIds.Add(childObj.id);
+            }
+
+            if (childObj.applicationId != null)
+            {
+              consumedIds.Add(childObj.applicationId);
+            }
+          }
+        }
+      }
+    }
+
+    return consumedIds;
+  }
+
+  private static List<(Collection[] collectionPath, IInstanceComponent component)> SortComponentsForBaking(
+    ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents
+  ) =>
+    instanceComponents
+      .OrderByDescending(x => x.component.maxDepth)
+      .ThenBy(x => x.component is InstanceDefinitionProxy ? 0 : 1)
+      .ToList();
 
   private (Family family, FamilySymbol symbol)? CreateFamilyFromDefinition(
     Document document,
@@ -267,67 +284,15 @@ public sealed class RevitFamilyBaker : IDisposable
       document.Regenerate();
     }
 
-    // only assign materials if the family is new (CNX-3118)
     if (isNewFamily)
     {
-      AssignProjectMaterialsToFamily(document, symbol, safeNameToProjectMatId);
+      FamilyMaterialManager.AssignProjectMaterialsToFamily(document, symbol, safeNameToProjectMatId);
     }
 
     _cache.FamiliesByDefinitionId[definitionId] = family;
     _cache.SymbolsByDefinitionId[definitionId] = symbol;
 
     return (family, symbol);
-  }
-
-  private void AssignProjectMaterialsToFamily(
-    Document document,
-    FamilySymbol symbol,
-    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId
-  )
-  {
-    Category? baseCategory = document.Settings.Categories.get_Item(BuiltInCategory.OST_GenericModel);
-
-    // 1. application for free form elements via type parameters
-    foreach (Parameter p in symbol.Parameters)
-    {
-      if (p.Definition.Name.StartsWith("Material_") && p.StorageType == StorageType.ElementId)
-      {
-        string safeName = p.Definition.Name["Material_".Length..];
-
-        if (safeNameToProjectMatId.TryGetValue(safeName, out var projMatId))
-        {
-          if (!p.IsReadOnly)
-          {
-            p.Set(projMatId);
-          }
-        }
-      }
-    }
-
-    // 2. application for direct shapes via subcategories
-    if (baseCategory != null)
-    {
-      foreach (var kvp in safeNameToProjectMatId)
-      {
-        string safeName = kvp.Key;
-        ElementId projMatId = kvp.Value;
-
-        string subCatName = $"Mat_{safeName}";
-        subCatName = subCatName.Length > 50 ? subCatName[..50] : subCatName;
-
-        if (baseCategory.SubCategories.Contains(subCatName))
-        {
-          Category projSubCat = baseCategory.SubCategories.get_Item(subCatName);
-          if (projSubCat != null)
-          {
-            if (document.GetElement(projMatId) is Material projMat)
-            {
-              projSubCat.Material = projMat;
-            }
-          }
-        }
-      }
-    }
   }
 
   private Family? CreateFamily(
@@ -340,14 +305,26 @@ public sealed class RevitFamilyBaker : IDisposable
   {
     var templatePath = GetFamilyTemplatePath(document);
     var famDoc = document.Application.NewFamilyDocument(templatePath);
-    var tempPath = Path.Combine(Path.GetTempPath(), $"{familyName}.rfa");
+    var tempPath = Path.Combine(_tempDirectory, $"{familyName}.rfa");
 
     try
     {
       using (var t = new Transaction(famDoc, "Populate Family"))
       {
         t.Start();
-        PopulateFamily(famDoc, definition, objectLookup, materialMap);
+
+        var materialManager = new FamilyMaterialManager(_materialBaker, _logger);
+        materialManager.SetupFamilyMaterials(famDoc, definition, objectLookup, materialMap);
+
+        _familyGeometryBaker.BakeFamilyGeometry(
+          famDoc,
+          definition,
+          objectLookup,
+          materialMap,
+          materialManager,
+          PlaceNestedInstance
+        );
+
         SetFamilyWorkPlaneBased(famDoc, true);
         t.Commit();
       }
@@ -366,259 +343,15 @@ public sealed class RevitFamilyBaker : IDisposable
     {
       _logger.LogError(ex, "Revit API error creating family {FamilyName}", familyName);
       famDoc.Close(false);
-      CleanupTempFile(tempPath);
+      SafeDelete(tempPath);
       throw;
     }
     catch (IOException ex)
     {
       _logger.LogError(ex, "IO error creating family {FamilyName}", familyName);
       famDoc.Close(false);
-      CleanupTempFile(tempPath);
+      SafeDelete(tempPath);
       throw;
-    }
-  }
-
-  private void PopulateFamily(
-    Document famDoc,
-    InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, TraversalContext> objectLookup,
-    IReadOnlyDictionary<string, RenderMaterial> materialMap
-  )
-  {
-    if (definition.objects.Count == 0)
-    {
-      return;
-    }
-
-    var materialManager = new FamilyMaterialManager(_materialBaker, _logger);
-    materialManager.SetupFamilyMaterials(famDoc, definition, objectLookup, materialMap);
-
-    foreach (var id in definition.objects)
-    {
-      if (!objectLookup.TryGetValue(id, out var tc))
-      {
-        continue;
-      }
-
-      string? extractedSubcategoryName = null;
-      var parentTc = tc.Parent;
-      while (parentTc != null)
-      {
-        if (parentTc.Current is Collection col && !string.IsNullOrWhiteSpace(col.name))
-        {
-          extractedSubcategoryName = col.name;
-          break;
-        }
-        parentTc = parentTc.Parent;
-      }
-
-      ProcessObjectForFamily(
-        famDoc,
-        tc.Current,
-        null,
-        definition.name,
-        extractedSubcategoryName,
-        materialManager,
-        materialMap
-      );
-    }
-  }
-
-  private void ProcessObjectForFamily(
-    Document famDoc,
-    Base obj,
-    Category? currentSubcategory,
-    string familyName,
-    string? extractedSubcategoryName = null,
-    FamilyMaterialManager? materialManager = null,
-    IReadOnlyDictionary<string, RenderMaterial>? materialMap = null
-  )
-  {
-    try
-    {
-      Category? newSubcategory = currentSubcategory;
-      string? subcategoryName = extractedSubcategoryName ?? (obj as Collection)?.name;
-
-      if (!string.IsNullOrWhiteSpace(subcategoryName))
-      {
-        var familyCategory = famDoc.OwnerFamily.FamilyCategory;
-        if (familyCategory != null)
-        {
-          if (familyCategory.SubCategories.Contains(subcategoryName))
-          {
-            newSubcategory = familyCategory.SubCategories.get_Item(subcategoryName);
-          }
-          else
-          {
-            try
-            {
-              newSubcategory = famDoc.Settings.Categories.NewSubcategory(familyCategory, subcategoryName);
-            }
-            catch (Autodesk.Revit.Exceptions.ArgumentException)
-            {
-              _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", subcategoryName);
-              newSubcategory = currentSubcategory;
-            }
-          }
-        }
-      }
-
-      if (obj is Collection col)
-      {
-        foreach (var element in col.elements)
-        {
-          ProcessObjectForFamily(famDoc, element, newSubcategory, familyName, null, materialManager, materialMap);
-        }
-      }
-      else if (obj is InstanceProxy instanceProxy)
-      {
-        PlaceNestedInstance(famDoc, instanceProxy, materialManager);
-      }
-      else
-      {
-        BakeGeometry(famDoc, obj, newSubcategory, materialManager, materialMap);
-      }
-    }
-    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
-    {
-      _logger.LogWarning(ex, "Revit API error baking object {ObjectId} into family {Family}", obj.id, familyName);
-    }
-    catch (SpeckleException ex)
-    {
-      _logger.LogWarning(ex, "Speckle error baking object {ObjectId} into family {Family}", obj.id, familyName);
-    }
-  }
-
-  private void BakeGeometry(
-    Document famDoc,
-    Base obj,
-    Category? subcategory,
-    FamilyMaterialManager? materialManager,
-    IReadOnlyDictionary<string, RenderMaterial>? materialMap
-  )
-  {
-    string objectId = obj.applicationId ?? obj.id.NotNull();
-    string? speckleMatId = null;
-
-    if (materialMap != null && materialMap.TryGetValue(objectId, out var mat))
-    {
-      speckleMatId = mat.id;
-    }
-
-    if (obj is SMesh mesh)
-    {
-      BakeMesh(famDoc, mesh, subcategory, speckleMatId, materialManager);
-      return;
-    }
-
-    try
-    {
-      var geometries = _geometryConverter.Convert(obj);
-
-      if (geometries.Count > 0)
-      {
-        var solids = geometries.OfType<Solid>().Where(s => !s.Faces.IsEmpty).ToList();
-        var nonSolids = geometries.Where(g => g is not Solid s || s.Faces.IsEmpty).ToList();
-
-        foreach (var solid in solids)
-        {
-          using var freeFormElement = FreeFormElement.Create(famDoc, solid);
-          if (subcategory != null)
-          {
-            freeFormElement.Subcategory = subcategory;
-          }
-
-          if (
-            materialManager != null
-            && speckleMatId != null
-            && materialManager.FamilyParameters.TryGetValue(speckleMatId, out var famParam)
-          )
-          {
-            Parameter ffeMatParam = freeFormElement.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM);
-            if (ffeMatParam != null && famDoc.FamilyManager.CanElementParameterBeAssociated(ffeMatParam))
-            {
-              famDoc.FamilyManager.AssociateElementParameterToFamilyParameter(ffeMatParam, famParam);
-            }
-          }
-        }
-
-        if (nonSolids.Count > 0)
-        {
-          ElementId categoryId = new(BuiltInCategory.OST_GenericModel);
-          if (
-            materialManager != null
-            && speckleMatId != null
-            && materialManager.SubCategories.TryGetValue(speckleMatId, out var subCatId)
-          )
-          {
-            categoryId = subCatId;
-          }
-
-          using var ds = DirectShape.CreateElement(famDoc, categoryId);
-          ds.SetShape(nonSolids);
-        }
-
-        return;
-      }
-    }
-    catch (SpeckleException) { }
-
-    var displayValues = obj.TryGetDisplayValue();
-    if (displayValues != null)
-    {
-      foreach (var item in displayValues)
-      {
-        BakeGeometry(famDoc, item, subcategory, materialManager, materialMap);
-      }
-    }
-  }
-
-  private void BakeMesh(
-    Document famDoc,
-    SMesh mesh,
-    Category? subcategory,
-    string? speckleMatId,
-    FamilyMaterialManager? materialManager
-  )
-  {
-    var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
-
-    if (geomObject is Solid solid)
-    {
-      using var freeFormElement = FreeFormElement.Create(famDoc, solid);
-      if (subcategory != null)
-      {
-        freeFormElement.Subcategory = subcategory;
-      }
-
-      if (
-        materialManager != null
-        && speckleMatId != null
-        && materialManager.FamilyParameters.TryGetValue(speckleMatId, out var famParam)
-      )
-      {
-        Parameter ffeMatParam = freeFormElement.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM);
-        if (ffeMatParam != null && famDoc.FamilyManager.CanElementParameterBeAssociated(ffeMatParam))
-        {
-          famDoc.FamilyManager.AssociateElementParameterToFamilyParameter(ffeMatParam, famParam);
-        }
-      }
-    }
-    else if (geomObject is Mesh revitMesh)
-    {
-      ElementId categoryId = new(BuiltInCategory.OST_GenericModel);
-
-      if (
-        materialManager != null
-        && speckleMatId != null
-        && materialManager.SubCategories.TryGetValue(speckleMatId, out var subCatId)
-      )
-      {
-        categoryId = subCatId;
-      }
-
-      using var ds = DirectShape.CreateElement(famDoc, categoryId);
-      ds.SetShape([revitMesh]);
     }
   }
 
@@ -641,12 +374,7 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     var symbolId = childFamily.GetFamilySymbolIds().FirstOrDefault();
-    if (symbolId == null)
-    {
-      return;
-    }
-
-    if (famDoc.GetElement(symbolId) is not FamilySymbol symbol)
+    if (symbolId == null || famDoc.GetElement(symbolId) is not FamilySymbol symbol)
     {
       return;
     }
@@ -656,64 +384,34 @@ public sealed class RevitFamilyBaker : IDisposable
       symbol.Activate();
     }
 
-    // evaluate the transform conditions
-    var isMirrored = GetMirrorState(instanceProxy.transform).X;
-    var hasScaleOrSkew = HasScaleOrSkew(instanceProxy.transform);
-    var cleanMatrix =
-      (hasScaleOrSkew || isMirrored) ? RemoveScaleAndSkew(instanceProxy.transform) : instanceProxy.transform;
-    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
+    var instance = CreateAndPlaceFamilyInstance(famDoc, instanceProxy, symbol);
 
-    XYZ origin = revitTransform.Origin;
-    XYZ basisX = revitTransform.BasisX.Normalize();
-    XYZ basisY = revitTransform.BasisY.Normalize();
-
-    var plane = DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
-    using var sketchPlane = SketchPlane.Create(famDoc, plane);
-
-    var creationData = new FamilyInstanceCreationData(
-      location: origin,
-      symbol: symbol,
-      host: sketchPlane,
-      level: null,
-      structuralType: StructuralType.NonStructural
-    );
-
-    var ids = famDoc.FamilyCreate.NewFamilyInstances2([creationData]);
-
-    if (ids.Count > 0)
+    if (instance != null && materialManager != null)
     {
-      var instanceId = ids.First();
-      var mirrorState = GetMirrorState(instanceProxy.transform);
-      ApplyMirroring(famDoc, instanceId, plane, mirrorState);
-
-      // bubble up nested material parameters
-      if (materialManager != null)
+      foreach (Parameter childParam in symbol.Parameters)
       {
-        foreach (Parameter childParam in symbol.Parameters)
+        if (childParam.Definition.Name.StartsWith("Material_") && childParam.StorageType == StorageType.ElementId)
         {
-          if (childParam.Definition.Name.StartsWith("Material_") && childParam.StorageType == StorageType.ElementId)
+          string paramName = childParam.Definition.Name;
+
+          FamilyParameter? parentFamParam =
+            famDoc.FamilyManager.get_Parameter(paramName)
+            ?? famDoc.FamilyManager.AddParameter(
+              paramName,
+              GroupTypeId.Materials,
+              SpecTypeId.Reference.Material,
+              false
+            );
+
+          if (famDoc.FamilyManager.CanElementParameterBeAssociated(childParam))
           {
-            string paramName = childParam.Definition.Name;
-
-            FamilyParameter? parentFamParam =
-              famDoc.FamilyManager.get_Parameter(paramName)
-              ?? famDoc.FamilyManager.AddParameter(
-                paramName,
-                GroupTypeId.Materials,
-                SpecTypeId.Reference.Material,
-                false // Ensure it is created as a TYPE parameter in the parent too!
-              );
-
-            if (famDoc.FamilyManager.CanElementParameterBeAssociated(childParam))
+            try
             {
-              try
-              {
-                famDoc.FamilyManager.AssociateElementParameterToFamilyParameter(childParam, parentFamParam);
-              }
-              catch (Autodesk.Revit.Exceptions.ArgumentException ex)
-              {
-                _logger.LogWarning(ex, "Failed to associate material parameter {ParamName}", paramName);
-              }
+              famDoc.FamilyManager.AssociateElementParameterToFamilyParameter(childParam, parentFamParam);
+            }
+            catch (Autodesk.Revit.Exceptions.ArgumentException ex)
+            {
+              _logger.LogWarning(ex, "Failed to associate material parameter {ParamName}", paramName);
             }
           }
         }
@@ -727,31 +425,24 @@ public sealed class RevitFamilyBaker : IDisposable
     return family;
   }
 
-  private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
+  private FamilyInstance? CreateAndPlaceFamilyInstance(Document doc, InstanceProxy instanceProxy, FamilySymbol symbol)
   {
-    var definitionId = instanceProxy.definitionId;
+    var isMirrored = FamilyTransformUtils.GetMirrorState(instanceProxy.transform).X;
+    var hasScaleOrSkew = FamilyTransformUtils.HasScaleOrSkew(instanceProxy.transform);
 
-    // evaluate the transform conditions
-    var isMirrored = GetMirrorState(instanceProxy.transform).X;
-    var hasScaleOrSkew = HasScaleOrSkew(instanceProxy.transform);
-
-    // only apply the sanitization if it's mirrored (needs a right-handed fix) OR has scale/skew
     var cleanMatrix =
-      (hasScaleOrSkew || isMirrored) ? RemoveScaleAndSkew(instanceProxy.transform) : instanceProxy.transform;
-    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
+      (hasScaleOrSkew || isMirrored)
+        ? FamilyTransformUtils.RemoveScaleAndSkew(instanceProxy.transform)
+        : instanceProxy.transform;
 
-    if (!_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
-    {
-      _logger.LogWarning("No family symbol found for definition {DefinitionId}.", definitionId);
-      return null;
-    }
+    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
 
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
     XYZ basisY = revitTransform.BasisY.Normalize();
 
     var plane = DB.Plane.CreateByOriginAndBasis(origin, basisX, basisY);
-    using var sketchPlane = SketchPlane.Create(document, plane);
+    using var sketchPlane = SketchPlane.Create(doc, plane);
 
     var creationData = new FamilyInstanceCreationData(
       location: origin,
@@ -761,22 +452,33 @@ public sealed class RevitFamilyBaker : IDisposable
       structuralType: StructuralType.NonStructural
     );
 
-    var ids = document.Create.NewFamilyInstances2([creationData]);
-    if (ids.Count == 0)
+    ICollection<ElementId> ids = doc.IsFamilyDocument
+      ? doc.FamilyCreate.NewFamilyInstances2([creationData])
+      : doc.Create.NewFamilyInstances2([creationData]);
+
+    if (ids.Count == 0 || doc.GetElement(ids.First()) is not FamilyInstance instance)
     {
       return null;
     }
 
-    if (document.GetElement(ids.First()) is not FamilyInstance instance)
-    {
-      return null;
-    }
-
-    document.Regenerate();
-    var mirrorState = GetMirrorState(instanceProxy.transform);
-    ApplyMirroring(document, instance.Id, plane, mirrorState);
+    doc.Regenerate();
+    var mirrorState = FamilyTransformUtils.GetMirrorState(instanceProxy.transform);
+    FamilyTransformUtils.ApplyMirroring(doc, instance.Id, plane, mirrorState, _logger);
 
     return instance;
+  }
+
+  private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
+  {
+    var definitionId = instanceProxy.definitionId;
+
+    if (_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
+    {
+      return CreateAndPlaceFamilyInstance(document, instanceProxy, symbol);
+    }
+
+    _logger.LogWarning("No family symbol found for definition {DefinitionId}", definitionId);
+    return null;
   }
 
   private static void SetFamilyWorkPlaneBased(Document famDoc, bool enabled)
@@ -817,8 +519,24 @@ public sealed class RevitFamilyBaker : IDisposable
   private static string GetFamilyName(InstanceDefinitionProxy definitionProxy)
   {
     var baseName = definitionProxy.name;
-    var invalidChars = Path.GetInvalidFileNameChars();
-    return string.Concat(baseName.Select(c => invalidChars.Contains(c) ? '_' : c));
+    if (string.IsNullOrWhiteSpace(baseName))
+    {
+      return "Unnamed_Block";
+    }
+
+    char[] buffer = baseName.ToCharArray();
+    bool changed = false;
+
+    for (int i = 0; i < buffer.Length; i++)
+    {
+      if (Array.IndexOf(s_invalidChars, buffer[i]) >= 0)
+      {
+        buffer[i] = '_';
+        changed = true;
+      }
+    }
+
+    return changed ? new string(buffer) : baseName;
   }
 
   private static Family? FindFamilyByName(Document document, string familyName)
@@ -827,146 +545,7 @@ public sealed class RevitFamilyBaker : IDisposable
     return collector.OfClass(typeof(Family)).OfType<Family>().FirstOrDefault(f => f.Name == familyName);
   }
 
-  private static (bool X, bool Y, bool Z) GetMirrorState(Matrix4x4 matrix)
-  {
-    var det =
-      matrix.M11 * (matrix.M22 * matrix.M33 - matrix.M23 * matrix.M32)
-      - matrix.M12 * (matrix.M21 * matrix.M33 - matrix.M23 * matrix.M31)
-      + matrix.M13 * (matrix.M21 * matrix.M32 - matrix.M22 * matrix.M31);
-
-    return det < 0 ? (true, false, false) : (false, false, false);
-  }
-
-  private void ApplyMirroring(
-    Document document,
-    ElementId elementId,
-    DB.Plane plane,
-    (bool X, bool Y, bool Z) mirrorState
-  )
-  {
-    var mirrorOperations = new List<(string name, bool shouldMirror, DB.Plane mirrorPlane)>
-    {
-      ("YZ", mirrorState.X, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
-      ("XZ", mirrorState.Y, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
-      ("XY", mirrorState.Z, DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
-    };
-
-    foreach (var (name, shouldMirror, mirrorPlane) in mirrorOperations.Where(op => op.shouldMirror))
-    {
-      try
-      {
-        document.Regenerate();
-        ElementTransformUtils.MirrorElements(document, [elementId], mirrorPlane, false);
-      }
-      catch (Autodesk.Revit.Exceptions.ApplicationException e)
-      {
-        _logger.LogWarning(e, "Failed to mirror element on {PlaneName} plane", name);
-      }
-      finally
-      {
-        mirrorPlane.Dispose();
-      }
-    }
-  }
-
-  private static bool HasScaleOrSkew(Matrix4x4 matrix)
-  {
-    // Extract lengths of basis vectors
-    var lenX = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M21 * matrix.M21 + matrix.M31 * matrix.M31);
-    var lenY = Math.Sqrt(matrix.M12 * matrix.M12 + matrix.M22 * matrix.M22 + matrix.M32 * matrix.M32);
-    var lenZ = Math.Sqrt(matrix.M13 * matrix.M13 + matrix.M23 * matrix.M23 + matrix.M33 * matrix.M33);
-
-    // Calculate dot products to check for orthogonality
-    var dotXY = matrix.M11 * matrix.M12 + matrix.M21 * matrix.M22 + matrix.M31 * matrix.M32;
-    var dotXZ = matrix.M11 * matrix.M13 + matrix.M21 * matrix.M23 + matrix.M31 * matrix.M33;
-    var dotYZ = matrix.M12 * matrix.M13 + matrix.M22 * matrix.M23 + matrix.M32 * matrix.M33;
-
-    double tol = 1e-4;
-
-    bool isOrthogonal = Math.Abs(dotXY) < tol && Math.Abs(dotXZ) < tol && Math.Abs(dotYZ) < tol;
-    bool isUnitScale = Math.Abs(lenX - 1.0) < tol && Math.Abs(lenY - 1.0) < tol && Math.Abs(lenZ - 1.0) < tol;
-
-    // Returns true if there is non-uniform/uniform scale, OR if it has shear/skew
-    return !isOrthogonal || !isUnitScale;
-  }
-
-  private static Matrix4x4 RemoveScaleAndSkew(Matrix4x4 matrix)
-  {
-    // 1. Extract Z column and normalize
-    double zX = matrix.M13,
-      zY = matrix.M23,
-      zZ = matrix.M33;
-    double lenZ = Math.Sqrt(zX * zX + zY * zY + zZ * zZ);
-    if (lenZ > 1e-6)
-    {
-      zX /= lenZ;
-      zY /= lenZ;
-      zZ /= lenZ;
-    }
-    else
-    {
-      zX = 0;
-      zY = 0;
-      zZ = 1; // Fallback
-    }
-
-    // 2. Extract Y column
-    double yX = matrix.M12,
-      yY = matrix.M22,
-      yZ = matrix.M32;
-
-    // 3. Cross product Y and Z to get orthogonal X
-    double xX = yY * zZ - yZ * zY;
-    double xY = yZ * zX - yX * zZ;
-    double xZ = yX * zY - yY * zX;
-    double lenX = Math.Sqrt(xX * xX + xY * xY + xZ * xZ);
-    if (lenX > 1e-6)
-    {
-      xX /= lenX;
-      xY /= lenX;
-      xZ /= lenX;
-    }
-    else
-    {
-      xX = 1;
-      xY = 0;
-      xZ = 0; // Fallback
-    }
-
-    // 4. Cross product Z and X to get orthogonal unit Y
-    yX = zY * xZ - zZ * xY;
-    yY = zZ * xX - zX * xZ;
-    yZ = zX * xY - zY * xX;
-    double lenY = Math.Sqrt(yX * yX + yY * yY + yZ * yZ);
-    if (lenY > 1e-6)
-    {
-      yX /= lenY;
-      yY /= lenY;
-      yZ /= lenY;
-    }
-
-    // Rebuild the matrix with pure rotation and original translation
-    return new Matrix4x4(
-      xX,
-      yX,
-      zX,
-      matrix.M14,
-      xY,
-      yY,
-      zY,
-      matrix.M24,
-      xZ,
-      yZ,
-      zZ,
-      matrix.M34,
-      matrix.M41,
-      matrix.M42,
-      matrix.M43,
-      matrix.M44
-    );
-  }
-
-  private static void CleanupTempFile(string path)
+  private static void SafeDelete(string path)
   {
     try
     {
@@ -980,12 +559,19 @@ public sealed class RevitFamilyBaker : IDisposable
 
   public void Dispose()
   {
-    foreach (var path in _bakedFamilyPaths.Values)
-    {
-      CleanupTempFile(path);
-    }
-
     _bakedFamilyPaths.Clear();
+
+    try
+    {
+      if (Directory.Exists(_tempDirectory))
+      {
+        Directory.Delete(_tempDirectory, true);
+      }
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      _logger.LogWarning(ex, "Failed to clean up temporary family directory at {TempDir}", _tempDirectory);
+    }
   }
 
   private sealed class FamilyLoadOptions : IFamilyLoadOptions
@@ -1006,103 +592,6 @@ public sealed class RevitFamilyBaker : IDisposable
       source = FamilySource.Family;
       overwriteParameterValues = true;
       return true;
-    }
-  }
-}
-
-/// <summary>
-/// Helper class extracted to reduce coupling in RevitFamilyBaker.
-/// Manages the resolution and assignment of materials, subcategories, and parameters within the Family Document context.
-/// </summary>
-public class FamilyMaterialManager
-{
-  private readonly RevitMaterialBaker _materialBaker;
-  private readonly ILogger _logger;
-
-  public Dictionary<string, FamilyParameter> FamilyParameters { get; } = [];
-  public Dictionary<string, ElementId> SubCategories { get; } = [];
-  private Dictionary<string, ElementId> BakedMaterials { get; } = [];
-
-  public FamilyMaterialManager(RevitMaterialBaker materialBaker, ILogger logger)
-  {
-    _materialBaker = materialBaker;
-    _logger = logger;
-  }
-
-  public void SetupFamilyMaterials(
-    Document famDoc,
-    InstanceDefinitionProxy definition,
-    IReadOnlyDictionary<string, TraversalContext> objectLookup,
-    IReadOnlyDictionary<string, RenderMaterial> materialMap
-  )
-  {
-    Category baseCategory = famDoc.OwnerFamily.FamilyCategory;
-
-    foreach (var id in definition.objects)
-    {
-      if (!objectLookup.TryGetValue(id, out var tc))
-      {
-        continue;
-      }
-
-      var obj = tc.Current;
-      string objectId = obj.applicationId ?? obj.id.NotNull();
-
-      if (materialMap.TryGetValue(objectId, out var renderMat))
-      {
-        if (BakedMaterials.ContainsKey(renderMat.id.NotNullOrWhiteSpace()))
-        {
-          continue;
-        }
-
-        try
-        {
-          // 1. Bake the material locally
-          ElementId famMatId = _materialBaker.BakeMaterial(renderMat, famDoc);
-          BakedMaterials[renderMat.id] = famMatId;
-
-          // 2. Setup Subcategory (for DirectShapes)
-          string safeName = string.IsNullOrWhiteSpace(renderMat.name) ? renderMat.id : renderMat.name;
-          string subCatName = $"Mat_{safeName}";
-          subCatName = subCatName.Length > 50 ? subCatName[..50] : subCatName;
-
-          if (baseCategory != null)
-          {
-            if (!baseCategory.SubCategories.Contains(subCatName))
-            {
-              Category subCat = famDoc.Settings.Categories.NewSubcategory(baseCategory, subCatName);
-              subCat.Material = famDoc.GetElement(famMatId) as Material;
-              SubCategories[renderMat.id] = subCat.Id;
-            }
-            else
-            {
-              SubCategories[renderMat.id] = baseCategory.SubCategories.get_Item(subCatName).Id;
-            }
-          }
-
-          // 3. Setup Family Parameter (for FreeFormElements)
-          string paramName = $"Material_{safeName}";
-          FamilyParameter? existingParam = famDoc.FamilyManager.get_Parameter(paramName);
-          if (existingParam == null)
-          {
-            FamilyParameter famParam = famDoc.FamilyManager.AddParameter(
-              paramName,
-              GroupTypeId.Materials,
-              SpecTypeId.Reference.Material,
-              false
-            );
-            FamilyParameters[renderMat.id] = famParam;
-          }
-          else
-          {
-            FamilyParameters[renderMat.id] = existingParam;
-          }
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          _logger.LogWarning(ex, "Failed to setup family material {MatName}", renderMat.name);
-        }
-      }
     }
   }
 }

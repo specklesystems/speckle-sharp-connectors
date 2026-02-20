@@ -6,7 +6,7 @@ public class ReceiveInstancesAsFamiliesSetting(bool value = ReceiveInstancesAsFa
   : ICardSetting
 {
   public const string SETTING_ID = "receiveInstancesAsFamiliesSetting";
-  public const bool DEFAULT_VALUE = true;
+  public const bool DEFAULT_VALUE = false;
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Receive Blocks as Families";
