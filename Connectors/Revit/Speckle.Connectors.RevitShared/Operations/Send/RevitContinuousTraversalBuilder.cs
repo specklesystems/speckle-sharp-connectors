@@ -17,7 +17,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Pipelines;
+using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -36,24 +36,33 @@ public class RevitContinuousTraversalBuilder(
   IConfigStore configStore
 ) : IRootContinuousTraversalBuilder<DocumentToConvert>
 {
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
-    IProgress<CardProgress> onOperationProgressed,
     SendPipeline sendPipeline,
-    CancellationToken ct
-  ) =>
-    threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, sendPipeline, ct))
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    return await threadContext.RunOnMainAsync(
+      async () =>
+        await BuildMainThread(
+          documentElementContexts,
+          projectId,
+          sendPipeline,
+          onOperationProgressed,
+          cancellationToken
+        )
     );
+  }
 
   [SuppressMessage("Maintainability", "CA1502:Avoid excessive class coupling")]
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  private RootObjectBuilderResult BuildSync(
+  private async Task<RootObjectBuilderResult> BuildMainThread(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
-    IProgress<CardProgress> onOperationProgressed,
     SendPipeline sendPipeline,
+    IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
   {
@@ -223,7 +232,7 @@ public class RevitContinuousTraversalBuilder(
             }
 
             // TODO: send pipeline processing
-            var reference = sendPipeline.Process(converted).Result;
+            var reference = await sendPipeline.Process(converted).ConfigureAwait(true);
             if (!wasCached)
             {
               // NOTE: can be moved in else block above where we check for cached objects
@@ -303,8 +312,8 @@ public class RevitContinuousTraversalBuilder(
       rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] = transformMatrix;
     }
 
-    sendPipeline.Process(rootObject).Wait(cancellationToken); // note: locks up revit?
-    sendPipeline.WaitForUpload().Wait(cancellationToken); // note: locks up revit? todo threading digging
+    await sendPipeline.Process(rootObject);
+    await sendPipeline.WaitForUpload();
 
     return new RootObjectBuilderResult(rootObject, results);
   }

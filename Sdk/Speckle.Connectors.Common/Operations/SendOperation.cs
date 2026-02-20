@@ -13,6 +13,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Send;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
@@ -33,6 +34,7 @@ public sealed class SendOperation<T>(
   ISpeckleApplication speckleApplication,
   IIngestionProgressManagerFactory ingestionProgressManagerFactory,
   ISpeckleHttp speckleHttp,
+  ISendPipelineFactory sendPipelineFactory,
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
@@ -118,18 +120,17 @@ public sealed class SendOperation<T>(
     AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
     try
     {
-      var sendPipeline = new Sdk.Pipelines.SendPipeline(
-        sendInfo.Account,
+      var sendPipeline = sendPipelineFactory.CreateInstance(
         sendInfo.ProjectId,
-        sendInfo.ModelId,
         ingestion.id,
+        sendInfo.Account,
         cancellationToken
       );
       var buildResult = await rootContinuousTraversalBuilder.Build(
         objects,
         sendInfo.ProjectId,
-        progress,
         sendPipeline,
+        progress,
         cancellationToken
       );
 
@@ -345,27 +346,32 @@ public sealed class SendOperation<T>(
     return useModelIngestionSend;
   }
 
-  /// <summary>
-  /// We just ping for the existence of the upload endpoint. If it exists, we can use packfile send.
-  /// </summary>
   /// <param name="sendInfo"></param>
   /// <param name="cancellationToken"></param>
-  /// <returns></returns>
+  /// <exception cref="FormatException">server returned a response, but it was neither <c>true</c> nor <c>false</c> (case insensitive)</exception>
+  /// <exception cref="HttpRequestException ">Request failed, or the server returned a non-successful status code that wasn't <c>404</c></exception>
+  /// <returns>
+  /// Returns <see langword="true"/> if the server supports the new packfile data uploads,
+  /// <see langword="false"/> if the server doesn't explicitly, or implicitly via a <c>404</c> response.
+  /// Will throw for unexpected cases.
+  /// </returns>
   private async Task<bool> CheckPackfileSendEndpoints(SendInfo sendInfo, CancellationToken cancellationToken)
   {
-    var url =
-      $"{sendInfo.Account.serverInfo.url}/api/v1/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}/uploads/sign";
-    try
+    Uri url = new Uri(new Uri(sendInfo.Account.serverInfo.url), "/api/v1/data-module-enabled");
+    using HttpClient client = speckleHttp.CreateHttpClient();
+    using var response = await client.GetAsync(url, cancellationToken);
+    if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
     {
-      using HttpClient client = speckleHttp.CreateHttpClient();
-      var request = new HttpRequestMessage(HttpMethod.Post, url);
-      var response = await client.SendAsync(request, cancellationToken);
-      return response.StatusCode != System.Net.HttpStatusCode.NotFound;
+      response.EnsureSuccessStatusCode();
+#if NET8_0_OR_GREATER
+      string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+#else
+      string responseBody = await response.Content.ReadAsStringAsync();
+#endif
+      return bool.Parse(responseBody);
     }
-    catch (Exception e) when (!e.IsFatal())
-    {
-      return false;
-    }
+
+    return false;
   }
 }
 
