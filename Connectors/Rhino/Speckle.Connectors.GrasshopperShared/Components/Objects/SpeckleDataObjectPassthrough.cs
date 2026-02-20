@@ -135,6 +135,18 @@ public class SpeckleDataObjectPassthrough()
       result = new SpeckleDataObjectWrapperGoo().Value;
     }
 
+    // process name first (geometry loop must use the final name)
+    if (inputName != null)
+    {
+      result.Name = inputName;
+    }
+
+    // process properties first (geometry loop must use the final properties)
+    if (inputProperties != null)
+    {
+      result.Properties = inputProperties;
+    }
+
     if (inputGeometry.Count > 0)
     {
       result.Geometries.Clear();
@@ -152,17 +164,14 @@ public class SpeckleDataObjectPassthrough()
         result.Geometries.Add(mutatingGeo);
       }
     }
-
-    // process name
-    if (inputName != null)
+    else if (inputName != null || inputProperties != null)
     {
-      result.Name = inputName;
-    }
-
-    // process properties
-    if (inputProperties != null)
-    {
-      result.Properties = inputProperties;
+      // keep existing geometries in sync when only name/properties are overridden
+      foreach (var geo in result.Geometries)
+      {
+        geo.Base[Constants.NAME_PROP] = result.Name;
+        geo.Properties = result.Properties;
+      }
     }
 
     // process application id (only if user provided one)
