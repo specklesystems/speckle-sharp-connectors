@@ -140,19 +140,19 @@ internal sealed class LocalToGlobalMapHandler
         _materialUnpacker
       );
 
-      // nothing converted - nothing to do
-      if (converted.Count == 0)
-      {
-        return;
-      }
-
-      // handle normal DataObject (has converted geometry)
+      // handle all DataObjects
       if (obj is DataObject normalDataObject)
       {
         var geometries = ConvertToGeometryWrappers(converted);
         var dataObjectWrapper = CreateDataObjectWrapper(normalDataObject, geometries, path, objectCollection);
 
         CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
+        return;
+      }
+
+      // nothing converted - nothing to do (for non-DataObjects)
+      if (converted.Count == 0)
+      {
         return;
       }
 
