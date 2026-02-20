@@ -147,7 +147,7 @@ public class SpeckleDataObjectPassthrough()
       result.Properties = inputProperties;
     }
 
-    if (inputGeometry.Count > 0)
+    if (hasGeometries)
     {
       result.Geometries.Clear();
       foreach (var inputGeo in inputGeometry)
