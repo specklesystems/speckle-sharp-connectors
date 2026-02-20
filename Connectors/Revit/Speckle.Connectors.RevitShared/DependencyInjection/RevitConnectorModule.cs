@@ -71,6 +71,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
     serviceCollection.AddScoped<RevitFamilyBaker>();
+    serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewBaker>();
