@@ -18,7 +18,7 @@ public interface IRootObjectBuilder<in T>
 public interface IRootContinuousTraversalBuilder<in T>
 {
   public Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<T> documentElementContexts,
+    IReadOnlyList<T> objects,
     string projectId,
     SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
