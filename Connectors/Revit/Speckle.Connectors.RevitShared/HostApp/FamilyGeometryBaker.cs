@@ -224,18 +224,31 @@ public class FamilyGeometryBaker
 
         if (nonSolids.Count > 0)
         {
-          ElementId categoryId = new(BuiltInCategory.OST_GenericModel);
-          if (
-            materialManager != null
-            && speckleMatId != null
-            && materialManager.SubCategories.TryGetValue(speckleMatId, out var subCatId)
-          )
+          // try to use the Family's actual Category, otherwise default to Generic Model
+          ElementId categoryId =
+            famDoc.OwnerFamily.FamilyCategory?.Id ?? new ElementId(BuiltInCategory.OST_GenericModel);
+
+          if (!DirectShape.IsValidCategoryId(categoryId, famDoc))
           {
-            categoryId = subCatId;
+            categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
           }
 
-          using var ds = DirectShape.CreateElement(famDoc, categoryId);
-          ds.SetShape(nonSolids);
+          try
+          {
+            using var ds = DirectShape.CreateElement(famDoc, categoryId);
+            ds.SetShape(nonSolids);
+          }
+          catch (Autodesk.Revit.Exceptions.ArgumentException ex)
+          {
+            _logger.LogWarning(
+              ex,
+              "DirectShape rejected Category ID {CategoryId}, falling back to Generic Model",
+              categoryId
+            );
+
+            using var fallbackDs = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+            fallbackDs.SetShape(nonSolids);
+          }
         }
 
         return;
@@ -286,19 +299,30 @@ public class FamilyGeometryBaker
     }
     else if (geomObject is Mesh revitMesh)
     {
-      ElementId categoryId = new(BuiltInCategory.OST_GenericModel);
+      // ry to use the Family's actual Category, otherwise default to Generic Model
+      ElementId categoryId = famDoc.OwnerFamily.FamilyCategory?.Id ?? new ElementId(BuiltInCategory.OST_GenericModel);
 
-      if (
-        materialManager != null
-        && speckleMatId != null
-        && materialManager.SubCategories.TryGetValue(speckleMatId, out var subCatId)
-      )
+      if (!DirectShape.IsValidCategoryId(categoryId, famDoc))
       {
-        categoryId = subCatId;
+        categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
       }
 
-      using var ds = DirectShape.CreateElement(famDoc, categoryId);
-      ds.SetShape([revitMesh]);
+      try
+      {
+        using var ds = DirectShape.CreateElement(famDoc, categoryId);
+        ds.SetShape([revitMesh]);
+      }
+      catch (Autodesk.Revit.Exceptions.ArgumentException ex)
+      {
+        _logger.LogWarning(
+          ex,
+          "DirectShape rejected Category ID {CategoryId}, falling back to Generic Model",
+          categoryId
+        );
+
+        using var fallbackDs = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+        fallbackDs.SetShape([revitMesh]);
+      }
     }
   }
 }

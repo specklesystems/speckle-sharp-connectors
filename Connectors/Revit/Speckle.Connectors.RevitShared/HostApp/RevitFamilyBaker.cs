@@ -53,8 +53,7 @@ public sealed class RevitFamilyBaker : IDisposable
     _transformConverter = transformConverter;
     _materialBaker = materialBaker;
     _familyGeometryBaker = familyGeometryBaker;
-
-    _tempDirectory = Path.Combine(Path.GetTempPath(), $"Speckle_FamilyBaker_{Guid.NewGuid()}");
+    _tempDirectory = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid().ToString("N")[..8]}");
     Directory.CreateDirectory(_tempDirectory);
   }
 
@@ -82,12 +81,18 @@ public sealed class RevitFamilyBaker : IDisposable
       {
         if (component is InstanceDefinitionProxy definitionProxy)
         {
+          var categoryString = FamilyCategoryUtils.ExtractCategoryForDefinition(
+            definitionProxy,
+            instanceComponents,
+            speckleObjectLookup
+          );
           var result = CreateFamilyFromDefinition(
             document,
             definitionProxy,
             speckleObjectLookup,
             objectToMaterialMap,
-            safeNameToProjectMatId
+            safeNameToProjectMatId,
+            categoryString
           );
 
           if (result.HasValue)
@@ -239,7 +244,8 @@ public sealed class RevitFamilyBaker : IDisposable
     InstanceDefinitionProxy definitionProxy,
     IReadOnlyDictionary<string, TraversalContext> objectLookup,
     IReadOnlyDictionary<string, RenderMaterial> materialMap,
-    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId
+    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId,
+    string? categoryString
   )
   {
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id.NotNull();
@@ -257,7 +263,7 @@ public sealed class RevitFamilyBaker : IDisposable
 
     if (family == null)
     {
-      family = CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap);
+      family = CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap, categoryString);
       isNewFamily = true;
     }
 
@@ -300,7 +306,8 @@ public sealed class RevitFamilyBaker : IDisposable
     string familyName,
     InstanceDefinitionProxy definition,
     IReadOnlyDictionary<string, TraversalContext> objectLookup,
-    IReadOnlyDictionary<string, RenderMaterial> materialMap
+    IReadOnlyDictionary<string, RenderMaterial> materialMap,
+    string? categoryString
   )
   {
     var templatePath = GetFamilyTemplatePath(document);
@@ -326,6 +333,7 @@ public sealed class RevitFamilyBaker : IDisposable
         );
 
         SetFamilyWorkPlaneBased(famDoc, true);
+        FamilyCategoryUtils.SetFamilyCategory(famDoc, categoryString, _logger);
         t.Commit();
       }
 
@@ -536,7 +544,17 @@ public sealed class RevitFamilyBaker : IDisposable
       }
     }
 
-    return changed ? new string(buffer) : baseName;
+    var safeName = changed ? new string(buffer) : baseName;
+
+    // truncate to avoid MAX_PATH exceptions. 100 chars should be very safe.
+    if (safeName.Length > 100)
+    {
+      // Append a short hash of the definition ID to guarantee uniqueness after truncation
+      var shortId = definitionProxy.id?[..8] ?? Guid.NewGuid().ToString("N")[..8];
+      return $"{safeName[..90]}_{shortId}";
+    }
+
+    return safeName;
   }
 
   private static Family? FindFamilyByName(Document document, string familyName)

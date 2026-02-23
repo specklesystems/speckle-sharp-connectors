@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
@@ -37,7 +38,7 @@ public class LocalToGlobalToDirectShapeConverter
   )
   {
     // 1- set ds category
-    var category = ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
+    var category = CategoryExtractor.ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
     var name = target.parentDataObject?.name ?? target.atomicObject.TryGetName();
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
@@ -111,25 +112,5 @@ public class LocalToGlobalToDirectShapeConverter
 
     result.SetShape(transformedGeometries);
     return result;
-  }
-
-  private static string? ExtractBuiltInCategory(DataObject? parentDataObject, Base atomicObject)
-  {
-    // Try parent DataObject first (for InstanceProxy displayValue case)
-    if (parentDataObject?.properties.TryGetValue("builtInCategory", out var cat) == true)
-    {
-      return cat?.ToString();
-    }
-
-    // Fallback to atomicObject properties
-    if (
-      atomicObject["properties"] is Dictionary<string, object?> props
-      && props.TryGetValue("builtInCategory", out var fallbackCat)
-    )
-    {
-      return fallbackCat?.ToString();
-    }
-
-    return null;
   }
 }
