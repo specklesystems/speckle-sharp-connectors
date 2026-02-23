@@ -21,6 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ElementIdHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\DocumentToConvert.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Elements.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyCategoryUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyGeometryBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyMaterialManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyTransformUtils.cs" />

@@ -82,12 +82,18 @@ public sealed class RevitFamilyBaker : IDisposable
       {
         if (component is InstanceDefinitionProxy definitionProxy)
         {
+          var categoryString = FamilyCategoryUtils.ExtractCategoryForDefinition(
+            definitionProxy,
+            instanceComponents,
+            speckleObjectLookup
+          );
           var result = CreateFamilyFromDefinition(
             document,
             definitionProxy,
             speckleObjectLookup,
             objectToMaterialMap,
-            safeNameToProjectMatId
+            safeNameToProjectMatId,
+            categoryString
           );
 
           if (result.HasValue)
@@ -239,7 +245,8 @@ public sealed class RevitFamilyBaker : IDisposable
     InstanceDefinitionProxy definitionProxy,
     IReadOnlyDictionary<string, TraversalContext> objectLookup,
     IReadOnlyDictionary<string, RenderMaterial> materialMap,
-    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId
+    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId,
+    string? categoryString
   )
   {
     var definitionId = definitionProxy.applicationId ?? definitionProxy.id.NotNull();
@@ -257,7 +264,7 @@ public sealed class RevitFamilyBaker : IDisposable
 
     if (family == null)
     {
-      family = CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap);
+      family = CreateFamily(document, familyName, definitionProxy, objectLookup, materialMap, categoryString);
       isNewFamily = true;
     }
 
@@ -300,7 +307,8 @@ public sealed class RevitFamilyBaker : IDisposable
     string familyName,
     InstanceDefinitionProxy definition,
     IReadOnlyDictionary<string, TraversalContext> objectLookup,
-    IReadOnlyDictionary<string, RenderMaterial> materialMap
+    IReadOnlyDictionary<string, RenderMaterial> materialMap,
+    string? categoryString
   )
   {
     var templatePath = GetFamilyTemplatePath(document);
@@ -326,6 +334,7 @@ public sealed class RevitFamilyBaker : IDisposable
         );
 
         SetFamilyWorkPlaneBased(famDoc, true);
+        FamilyCategoryUtils.SetFamilyCategory(famDoc, categoryString, _logger);
         t.Commit();
       }
 
