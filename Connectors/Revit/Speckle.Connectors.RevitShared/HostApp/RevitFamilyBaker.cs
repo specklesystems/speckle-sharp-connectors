@@ -53,8 +53,7 @@ public sealed class RevitFamilyBaker : IDisposable
     _transformConverter = transformConverter;
     _materialBaker = materialBaker;
     _familyGeometryBaker = familyGeometryBaker;
-
-    _tempDirectory = Path.Combine(Path.GetTempPath(), $"Speckle_FamilyBaker_{Guid.NewGuid()}");
+    _tempDirectory = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid().ToString("N")[..8]}");
     Directory.CreateDirectory(_tempDirectory);
   }
 
@@ -545,7 +544,17 @@ public sealed class RevitFamilyBaker : IDisposable
       }
     }
 
-    return changed ? new string(buffer) : baseName;
+    var safeName = changed ? new string(buffer) : baseName;
+
+    // truncate to avoid MAX_PATH exceptions. 100 chars should be very safe.
+    if (safeName.Length > 100)
+    {
+      // Append a short hash of the definition ID to guarantee uniqueness after truncation
+      var shortId = definitionProxy.id?[..8] ?? Guid.NewGuid().ToString("N")[..8];
+      return $"{safeName[..90]}_{shortId}";
+    }
+
+    return safeName;
   }
 
   private static Family? FindFamilyByName(Document document, string familyName)
