@@ -82,16 +82,10 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
     IEnumerable<Element> elementsInView = GetFilteredElementsForView(document, view);
 
-    // NOTE: FilteredElementCollector() includes sweeps and reveals from a wall family's definition and includes them as additional objects
-    // on this return. displayValue for Wall already includes these, therefore we end up with duplicate elements on wall sweeps
-    // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
-    // We filter only wall sweep/reveal sub-elements with empty names, not all unnamed elements,
-    // because steel connection elements (plates, bolts) also have empty names and must be kept.
-    // See [CNX-3130](https://linear.app/speckle/issue/CNX-3130)
-    var objectIds = elementsInView
-      .Where(e => !IsEmptyNameWallSubElement(e))
-      .Select(e => e.UniqueId)
-      .ToList();
+    // Filter out wall sweep/reveal sub-elements with empty names to avoid duplicates (CNX-1482).
+    // Only these specific categories are excluded — other unnamed elements like steel connections
+    // must be kept (CNX-3130).
+    var objectIds = elementsInView.Where(e => !IsEmptyNameWallSubElement(e)).Select(e => e.UniqueId).ToList();
     // we need the view uniqueId among the objectIds
     // to expire the modelCards with viewFilters when the user changes category visibility
     // a change in category visibility will trigger DocChangeHandler in RevitSendBinding
