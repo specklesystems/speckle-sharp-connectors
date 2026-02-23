@@ -16,6 +16,22 @@ public class FamilyMaterialManager
 {
   private readonly RevitMaterialBaker _materialBaker;
   private readonly ILogger _logger;
+  private static readonly char[] s_invalidRevitChars =
+  [
+    '\\',
+    ':',
+    '{',
+    '}',
+    '[',
+    ']',
+    '|',
+    ';',
+    '<',
+    '>',
+    '?',
+    '`',
+    '~'
+  ];
 
   public Dictionary<string, FamilyParameter> FamilyParameters { get; } = [];
   public Dictionary<string, ElementId> SubCategories { get; } = [];
@@ -25,6 +41,31 @@ public class FamilyMaterialManager
   {
     _materialBaker = materialBaker;
     _logger = logger;
+  }
+
+  /// <summary>
+  /// Sanitizes string to ensure it is valid for Revit Parameters and SubCategories.
+  /// </summary>
+  public static string GetSafeName(string rawName)
+  {
+    if (string.IsNullOrWhiteSpace(rawName))
+    {
+      return "Unnamed";
+    }
+
+    char[] buffer = rawName.ToCharArray();
+    bool changed = false;
+
+    for (int i = 0; i < buffer.Length; i++)
+    {
+      if (Array.IndexOf(s_invalidRevitChars, buffer[i]) >= 0)
+      {
+        buffer[i] = '_';
+        changed = true;
+      }
+    }
+
+    return changed ? new string(buffer) : rawName;
   }
 
   public void SetupFamilyMaterials(
@@ -60,7 +101,9 @@ public class FamilyMaterialManager
           BakedMaterials[renderMat.id] = famMatId;
 
           // 2. Setup Subcategory (for DirectShapes)
-          string safeName = string.IsNullOrWhiteSpace(renderMat.name) ? renderMat.id : renderMat.name;
+          string rawName = string.IsNullOrWhiteSpace(renderMat.name) ? renderMat.id : renderMat.name;
+          string safeName = GetSafeName(rawName);
+
           string subCatName = $"Mat_{safeName}";
           subCatName = subCatName.Length > 50 ? subCatName[..50] : subCatName;
 
@@ -107,10 +150,17 @@ public class FamilyMaterialManager
   public static void AssignProjectMaterialsToFamily(
     Document document,
     FamilySymbol symbol,
-    IReadOnlyDictionary<string, ElementId> safeNameToProjectMatId
+    IReadOnlyDictionary<string, ElementId> originalNameToProjectMatId
   )
   {
     Category? baseCategory = document.Settings.Categories.get_Item(BuiltInCategory.OST_GenericModel);
+
+    // Create a local map with sanitized keys so it perfectly matches the safeNames applied in the Family
+    var sanitizedMatMap = new Dictionary<string, ElementId>();
+    foreach (var kvp in originalNameToProjectMatId)
+    {
+      sanitizedMatMap[GetSafeName(kvp.Key)] = kvp.Value;
+    }
 
     foreach (Parameter p in symbol.Parameters)
     {
@@ -118,7 +168,7 @@ public class FamilyMaterialManager
       {
         string safeName = p.Definition.Name["Material_".Length..];
 
-        if (safeNameToProjectMatId.TryGetValue(safeName, out var projMatId) && !p.IsReadOnly)
+        if (sanitizedMatMap.TryGetValue(safeName, out var projMatId) && !p.IsReadOnly)
         {
           p.Set(projMatId);
         }
@@ -127,7 +177,7 @@ public class FamilyMaterialManager
 
     if (baseCategory != null)
     {
-      foreach (var kvp in safeNameToProjectMatId)
+      foreach (var kvp in sanitizedMatMap)
       {
         string safeName = kvp.Key;
         ElementId projMatId = kvp.Value;
