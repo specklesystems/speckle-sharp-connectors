@@ -82,11 +82,10 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
 
     IEnumerable<Element> elementsInView = GetFilteredElementsForView(document, view);
 
-    // NOTE: FilteredElementCollector() includes sweeps and reveals from a wall family's definition and includes them as additional objects
-    // on this return. displayValue for Wall already includes these, therefore we end up with duplicate elements on wall sweeps
-    // related to [CNX-1482](https://linear.app/speckle/issue/CNX-1482/wall-sweeps-published-duplicated)
-    // i (björn) noticed that all these elements have an empty string as Name parameter, hence below exclusion. tested as much as possible, seems like legit fix
-    var objectIds = elementsInView.Where(e => !string.IsNullOrEmpty(e.Name)).Select(e => e.UniqueId).ToList();
+    // Filter out wall sweep/reveal sub-elements with empty names to avoid duplicates (CNX-1482).
+    // Only these specific categories are excluded — other unnamed elements like steel connections
+    // must be kept (CNX-3130).
+    var objectIds = elementsInView.Where(e => !IsEmptyNameWallSubElement(e)).Select(e => e.UniqueId).ToList();
     // we need the view uniqueId among the objectIds
     // to expire the modelCards with viewFilters when the user changes category visibility
     // a change in category visibility will trigger DocChangeHandler in RevitSendBinding
@@ -175,5 +174,22 @@ public class RevitViewsFilter : DiscriminatedObject, ISendFilter, IRevitSendFilt
     }
 
     return allElements;
+  }
+
+  /// <summary>
+  /// Detects wall sweep/reveal sub-elements that have empty names when returned by the
+  /// view-scoped FilteredElementCollector. These are duplicates of geometry already included
+  /// in the parent wall's displayValue.
+  /// See <a href="https://linear.app/speckle/issue/CNX-1482">CNX-1482</a>.
+  /// </summary>
+  private static bool IsEmptyNameWallSubElement(Element e)
+  {
+    if (!string.IsNullOrEmpty(e.Name))
+    {
+      return false;
+    }
+
+    var bic = e.Category?.GetBuiltInCategory();
+    return bic is BuiltInCategory.OST_Cornices or BuiltInCategory.OST_Reveals;
   }
 }
