@@ -1,7 +1,6 @@
 ﻿using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
-using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -22,17 +21,17 @@ public class FamilyGeometryBaker
 {
   private readonly ILogger<FamilyGeometryBaker> _logger;
   private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
-  private readonly RevitMeshBuilder _revitMeshBuilder;
+  private readonly ITypedConverter<SMesh, GeometryObject> _freeformMeshConverter;
 
   public FamilyGeometryBaker(
     ILogger<FamilyGeometryBaker> logger,
     ITypedConverter<Base, List<GeometryObject>> geometryConverter,
-    RevitMeshBuilder revitMeshBuilder
+    ITypedConverter<SMesh, GeometryObject> freeformMeshConverter
   )
   {
     _logger = logger;
     _geometryConverter = geometryConverter;
-    _revitMeshBuilder = revitMeshBuilder;
+    _freeformMeshConverter = freeformMeshConverter;
   }
 
   public void BakeFamilyGeometry(
@@ -274,7 +273,16 @@ public class FamilyGeometryBaker
     FamilyMaterialManager? materialManager
   )
   {
-    var geomObject = _revitMeshBuilder.BuildFreeformElementGeometry(mesh);
+    GeometryObject geomObject;
+    try
+    {
+      geomObject = _freeformMeshConverter.Convert(mesh);
+    }
+    catch (SpeckleException ex)
+    {
+      _logger.LogWarning(ex, "Failed to convert Speckle Mesh into Revit freeform geometry.");
+      return;
+    }
 
     if (geomObject is Solid solid)
     {
@@ -299,7 +307,7 @@ public class FamilyGeometryBaker
     }
     else if (geomObject is Mesh revitMesh)
     {
-      // ry to use the Family's actual Category, otherwise default to Generic Model
+      // try to use the Family's actual Category, otherwise default to Generic Model
       ElementId categoryId = famDoc.OwnerFamily.FamilyCategory?.Id ?? new ElementId(BuiltInCategory.OST_GenericModel);
 
       if (!DirectShape.IsValidCategoryId(categoryId, famDoc))
