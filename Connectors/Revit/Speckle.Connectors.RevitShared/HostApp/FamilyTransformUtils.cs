@@ -12,8 +12,15 @@ namespace Speckle.Connectors.Revit.HostApp;
 /// because stripping scale/skew and applying API mirroring are Host App-specific workarounds
 /// for Revit's shitty Family Instance rules, not general stateless conversion logic.
 /// </remarks>
-public static class FamilyTransformUtils
+public class FamilyTransformUtils
 {
+  private readonly ILogger<FamilyTransformUtils> _logger;
+
+  public FamilyTransformUtils(ILogger<FamilyTransformUtils> logger)
+  {
+    _logger = logger;
+  }
+
   /// <summary>
   /// Checks if a transform matrix contains non-uniform scaling or shear/skew.
   /// </summary>
@@ -21,7 +28,7 @@ public static class FamilyTransformUtils
   /// Revit family instances natively reject matrices with scale or skew.
   /// We flag these matrices so we can sanitize them before placement.
   /// </remarks>
-  public static bool HasScaleOrSkew(Matrix4x4 matrix)
+  public bool HasScaleOrSkew(Matrix4x4 matrix)
   {
     // Extract lengths of basis vectors
     var lenX = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M21 * matrix.M21 + matrix.M31 * matrix.M31);
@@ -44,7 +51,7 @@ public static class FamilyTransformUtils
   /// <summary>
   /// Sanitizes a transform matrix by stripping out any scale or skew, returning a rigid transform.
   /// </summary>
-  public static Matrix4x4 RemoveScaleAndSkew(Matrix4x4 matrix)
+  public Matrix4x4 RemoveScaleAndSkew(Matrix4x4 matrix)
   {
     // 1. Extract Z column and normalize
     double zX = matrix.M13,
@@ -126,7 +133,7 @@ public static class FamilyTransformUtils
   /// A negative determinant implies a left-handed coordinate system (mirroring).
   /// We extract this so we can apply the mirror via Revit's native API instead.
   /// </remarks>
-  public static (bool X, bool Y, bool Z) GetMirrorState(Matrix4x4 matrix)
+  public (bool X, bool Y, bool Z) GetMirrorState(Matrix4x4 matrix)
   {
     var det =
       matrix.M11 * (matrix.M22 * matrix.M33 - matrix.M23 * matrix.M32)
@@ -143,12 +150,11 @@ public static class FamilyTransformUtils
   /// Because we strip the mirrored (left-handed) state from the initial transform to keep Revit happy,
   /// we must restore the mirrored geometry as a post-placement operation.
   /// </remarks>
-  public static void ApplyMirroring(
+  public void ApplyMirroring(
     Document document,
     ElementId elementId,
     Autodesk.Revit.DB.Plane plane,
-    (bool X, bool Y, bool Z) mirrorState,
-    ILogger logger
+    (bool X, bool Y, bool Z) mirrorState
   )
   {
     var mirrorOperations = new List<(string name, bool shouldMirror, Autodesk.Revit.DB.Plane mirrorPlane)>
@@ -167,7 +173,7 @@ public static class FamilyTransformUtils
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
-        logger.LogWarning(e, "Failed to mirror element on {PlaneName} plane", name);
+        _logger.LogWarning(e, "Failed to mirror element on {PlaneName} plane", name);
       }
       finally
       {

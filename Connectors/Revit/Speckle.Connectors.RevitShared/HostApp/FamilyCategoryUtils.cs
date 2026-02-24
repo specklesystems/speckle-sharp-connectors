@@ -8,9 +8,16 @@ using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Revit.HostApp;
 
-public static class FamilyCategoryUtils
+public class FamilyCategoryUtils
 {
-  public static string? ExtractCategoryForDefinition(
+  private readonly ILogger<FamilyCategoryUtils> _logger;
+
+  public FamilyCategoryUtils(ILogger<FamilyCategoryUtils> logger)
+  {
+    _logger = logger;
+  }
+
+  public string? ExtractCategoryForDefinition(
     InstanceDefinitionProxy definition,
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
     IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup
@@ -38,7 +45,7 @@ public static class FamilyCategoryUtils
     return null;
   }
 
-  public static void SetFamilyCategory(Document familyDoc, string? builtInCategoryString, ILogger logger)
+  public void SetFamilyCategory(Document familyDoc, string? builtInCategoryString)
   {
     if (!familyDoc.IsFamilyDocument || string.IsNullOrEmpty(builtInCategoryString))
     {
@@ -57,11 +64,11 @@ public static class FamilyCategoryUtils
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException)
       {
-        logger.LogInformation("Category {Category} cannot be assigned to a Family. Falling back to default.", bic);
+        _logger.LogInformation("Category {Category} cannot be assigned to a Family. Falling back to default.", bic);
       }
       catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
       {
-        logger.LogWarning(ex, "Invalid operation when setting category {Category}. Falling back to default.", bic);
+        _logger.LogWarning(ex, "Invalid operation when setting category {Category}. Falling back to default.", bic);
       }
     }
   }

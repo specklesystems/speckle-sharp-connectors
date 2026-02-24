@@ -77,6 +77,8 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();
     serviceCollection.AddSingleton<RevitUtils>();
+    serviceCollection.AddSingleton<FamilyCategoryUtils>();
+    serviceCollection.AddSingleton<FamilyTransformUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();

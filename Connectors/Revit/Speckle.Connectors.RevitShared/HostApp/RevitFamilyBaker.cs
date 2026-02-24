@@ -31,6 +31,8 @@ public sealed class RevitFamilyBaker : IDisposable
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
   private readonly RevitMaterialBaker _materialBaker;
   private readonly FamilyGeometryBaker _familyGeometryBaker;
+  private readonly FamilyCategoryUtils _familyCategoryUtils;
+  private readonly FamilyTransformUtils _familyTransformUtils;
 
   private string? _cachedTemplatePath;
   private readonly Dictionary<string, string> _bakedFamilyPaths = [];
@@ -44,7 +46,9 @@ public sealed class RevitFamilyBaker : IDisposable
     ILogger<RevitFamilyBaker> logger,
     ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter,
     RevitMaterialBaker materialBaker,
-    FamilyGeometryBaker familyGeometryBaker
+    FamilyGeometryBaker familyGeometryBaker,
+    FamilyCategoryUtils familyCategoryUtils,
+    FamilyTransformUtils familyTransformUtils
   )
   {
     _converterSettings = converterSettings;
@@ -53,6 +57,8 @@ public sealed class RevitFamilyBaker : IDisposable
     _transformConverter = transformConverter;
     _materialBaker = materialBaker;
     _familyGeometryBaker = familyGeometryBaker;
+    _familyCategoryUtils = familyCategoryUtils;
+    _familyTransformUtils = familyTransformUtils;
     _tempDirectory = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid().ToString("N")[..8]}");
     Directory.CreateDirectory(_tempDirectory);
   }
@@ -81,7 +87,7 @@ public sealed class RevitFamilyBaker : IDisposable
       {
         if (component is InstanceDefinitionProxy definitionProxy)
         {
-          var categoryString = FamilyCategoryUtils.ExtractCategoryForDefinition(
+          var categoryString = _familyCategoryUtils.ExtractCategoryForDefinition(
             definitionProxy,
             instanceComponents,
             speckleObjectLookup
@@ -119,7 +125,7 @@ public sealed class RevitFamilyBaker : IDisposable
           {
             createdElementIds.Add(instance.UniqueId);
 
-            if (FamilyTransformUtils.HasScaleOrSkew(instanceProxy.transform))
+            if (_familyTransformUtils.HasScaleOrSkew(instanceProxy.transform))
             {
               var warningEx = new SpeckleException(
                 "Block instance placed with its original position and rotation, but the unsupported scale/skew was dropped"
@@ -333,7 +339,7 @@ public sealed class RevitFamilyBaker : IDisposable
         );
 
         SetFamilyWorkPlaneBased(famDoc, true);
-        FamilyCategoryUtils.SetFamilyCategory(famDoc, categoryString, _logger);
+        _familyCategoryUtils.SetFamilyCategory(famDoc, categoryString);
         t.Commit();
       }
 
@@ -435,12 +441,12 @@ public sealed class RevitFamilyBaker : IDisposable
 
   private FamilyInstance? CreateAndPlaceFamilyInstance(Document doc, InstanceProxy instanceProxy, FamilySymbol symbol)
   {
-    var isMirrored = FamilyTransformUtils.GetMirrorState(instanceProxy.transform).X;
-    var hasScaleOrSkew = FamilyTransformUtils.HasScaleOrSkew(instanceProxy.transform);
+    var isMirrored = _familyTransformUtils.GetMirrorState(instanceProxy.transform).X;
+    var hasScaleOrSkew = _familyTransformUtils.HasScaleOrSkew(instanceProxy.transform);
 
     var cleanMatrix =
       (hasScaleOrSkew || isMirrored)
-        ? FamilyTransformUtils.RemoveScaleAndSkew(instanceProxy.transform)
+        ? _familyTransformUtils.RemoveScaleAndSkew(instanceProxy.transform)
         : instanceProxy.transform;
 
     var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
@@ -470,8 +476,8 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     doc.Regenerate();
-    var mirrorState = FamilyTransformUtils.GetMirrorState(instanceProxy.transform);
-    FamilyTransformUtils.ApplyMirroring(doc, instance.Id, plane, mirrorState, _logger);
+    var mirrorState = _familyTransformUtils.GetMirrorState(instanceProxy.transform);
+    _familyTransformUtils.ApplyMirroring(doc, instance.Id, plane, mirrorState);
 
     return instance;
   }
