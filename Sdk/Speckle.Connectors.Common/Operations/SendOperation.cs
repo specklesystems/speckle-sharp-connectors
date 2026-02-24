@@ -203,7 +203,10 @@ public sealed class SendOperation<T>(
         CancellationToken.None
       );
 
-      return (result, createdVersionId, ingestion.id);
+      // NOTE: it might seem weird to pass null for ingestion.id 'null' here but there is a reason.
+      // Because we complete ingestion here in .NET which is safe to pass null ingestion id that we don't want DUI explicitly subscribe to ingestion changes.
+      // I am hoping we will get rid of from logical branching once we have model ingestion on public server
+      return (result, createdVersionId, null);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
