@@ -55,6 +55,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<StructuralMaterialAssetExtractor>();
     serviceCollection.AddScoped<RevitMeshBuilder>();
+    serviceCollection.AddSingleton<CategoryExtractor>();
 
     return serviceCollection;
   }

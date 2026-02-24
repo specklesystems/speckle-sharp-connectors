@@ -23,14 +23,17 @@ public class LocalToGlobalToDirectShapeConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
+  private readonly CategoryExtractor _categoryExtractor;
 
   public LocalToGlobalToDirectShapeConverter(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter
+    ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter,
+    CategoryExtractor categoryExtractor
   )
   {
     _converterSettings = converterSettings;
     _transformConverter = transformConverter;
+    _categoryExtractor = categoryExtractor;
   }
 
   public DB.DirectShape Convert(
@@ -38,7 +41,7 @@ public class LocalToGlobalToDirectShapeConverter
   )
   {
     // 1- set ds category
-    var category = CategoryExtractor.ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
+    var category = _categoryExtractor.ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
     var name = target.parentDataObject?.name ?? target.atomicObject.TryGetName();
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;

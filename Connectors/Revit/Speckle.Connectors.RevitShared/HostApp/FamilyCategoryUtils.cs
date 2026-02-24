@@ -10,10 +10,12 @@ namespace Speckle.Connectors.Revit.HostApp;
 
 public class FamilyCategoryUtils
 {
+  private readonly CategoryExtractor _categoryExtractor;
   private readonly ILogger<FamilyCategoryUtils> _logger;
 
-  public FamilyCategoryUtils(ILogger<FamilyCategoryUtils> logger)
+  public FamilyCategoryUtils(CategoryExtractor categoryExtractor, ILogger<FamilyCategoryUtils> logger)
   {
+    _categoryExtractor = categoryExtractor;
     _logger = logger;
   }
 
@@ -39,7 +41,7 @@ public class FamilyCategoryUtils
     if (instanceObjectId != null && speckleObjectLookup.TryGetValue(instanceObjectId, out var tc))
     {
       var parentDataObject = tc.Parent?.Current as DataObject;
-      return CategoryExtractor.ExtractBuiltInCategory(parentDataObject, tc.Current);
+      return _categoryExtractor.ExtractBuiltInCategory(parentDataObject, tc.Current);
     }
 
     return null;
