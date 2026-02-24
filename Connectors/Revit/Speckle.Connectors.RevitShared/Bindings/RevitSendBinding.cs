@@ -200,38 +200,42 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     );
   }
 
-  public async Task UpdateParameters(string applicationId, string[] path, object value)
+  public async Task UpdateParameters(List<ParameterChangeRequest> changes)
   {
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     if (document == null)
     {
-      throw new SpeckleException("No document is active for sending.");
+      throw new SpeckleException("No document is active.");
     }
-    Element currentElement = document.GetElement(applicationId);
 
     await _threadContext.RunOnMainAsync(() =>
     {
-      using (var transaction = new Transaction(document, "Speckle Parameter Update"))
+      using var transaction = new Transaction(document, "Speckle Parameter Updates");
+      transaction.Start();
+
+      foreach (var change in changes)
       {
-        transaction.Start();
-
-        var result = _parameterUpdater.Update(currentElement, path, value);
-
-        if (result.IsSuccess)
+        var element = document.GetElement(change.ApplicationId);
+        if (element == null)
         {
-          transaction.Commit();
+          continue;
         }
-        else
-        {
-          transaction.RollBack();
-          // handle error - log or throw
-        }
+
+        var path = ParsePath(change.Path);
+        var result = _parameterUpdater.Update(element, path, change.To);
       }
+
+      transaction.Commit();
       return Task.FromResult(true);
     });
+  }
 
-    _parameterUpdater.Update(currentElement, path, value);
-    await Task.CompletedTask;
+  private string[] ParsePath(string concatenatedPath)
+  {
+    // "properties.Parameters.Type Parameters.Other.Family Name"
+    //  → ["Type Parameters", "Other", "Family Name"]
+    var segments = concatenatedPath.Split('.');
+    return segments.Skip(2).ToArray();
   }
 
   private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
