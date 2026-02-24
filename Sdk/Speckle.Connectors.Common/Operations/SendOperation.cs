@@ -38,7 +38,7 @@ public sealed class SendOperation<T>(
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
-  public async Task<(SendOperationResult sendResult, string versionId)> Send(
+  public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -81,7 +81,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaPackfile(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaPackfile(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -117,21 +117,21 @@ public sealed class SendOperation<T>(
       cancellationToken
     );
 
-    AggregateProgress<CardProgress> progressHandlers = new(ingestionProgress, uiProgress);
+    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
     try
     {
       var sendPipeline = sendPipelineFactory.CreateInstance(
         sendInfo.ProjectId,
         ingestion.id,
         sendInfo.Account,
-        new RenderedStreamProgress(progressHandlers),
+        new RenderedStreamProgress(progress),
         cancellationToken
       );
       var buildResult = await rootContinuousTraversalBuilder.Build(
         objects,
         sendInfo.ProjectId,
         sendPipeline,
-        progressHandlers,
+        progress,
         cancellationToken
       );
 
@@ -146,7 +146,7 @@ public sealed class SendOperation<T>(
       //   CancellationToken.None
       // );
 
-      return (result, "latest");
+      return (result, "latest", ingestion.id);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -166,7 +166,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaIngestion(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -204,7 +204,10 @@ public sealed class SendOperation<T>(
         CancellationToken.None
       );
 
-      return (result, createdVersionId);
+      // NOTE: it might seem weird to pass null for ingestion.id 'null' here but there is a reason.
+      // Because we complete ingestion here in .NET which is safe to pass null ingestion id that we don't want DUI explicitly subscribe to ingestion changes.
+      // I am hoping we will get rid of from logical branching once we have model ingestion on public server
+      return (result, createdVersionId, null);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -224,7 +227,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaVersionCreate(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaVersionCreate(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? versionMessage,
@@ -244,7 +247,7 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
-    return (result, version.id);
+    return (result, version.id, null);
   }
 
   public async Task<SendOperationResult> ConvertAndSend(

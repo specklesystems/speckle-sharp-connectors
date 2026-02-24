@@ -225,7 +225,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    var (result, versionId) = await sendOperation
+    // TODO: handle ingestion id (returned by sendOperation.Send) results with a same way as in DUI
+    var (result, versionId, _) = await sendOperation
       .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, cancellationToken)
       .ConfigureAwait(false);
 
