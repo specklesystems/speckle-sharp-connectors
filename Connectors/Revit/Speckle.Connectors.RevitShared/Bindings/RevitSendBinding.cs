@@ -39,6 +39,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly LinkedModelHandler _linkedModelHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly ParameterUpdater _parameterUpdater;
   private bool _isDocChangedSubscribed;
   private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
   private readonly ConnectorConfig _config;
@@ -67,6 +68,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory,
+    ParameterUpdater parameterUpdater,
     IConfigStore configStore
   )
     : base("sendBinding", bridge)
@@ -84,6 +86,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _linkedModelHandler = linkedModelHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _parameterUpdater = parameterUpdater;
     _config = configStore.GetConnectorConfig();
 
     Commands = new SendBindingUICommands(bridge);
@@ -195,6 +198,44 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       fileName: fileName,
       fileSizeBytes: fileBytes
     );
+  }
+
+  public async Task UpdateParameters(List<ParameterChangeRequest> changes)
+  {
+    var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
+    if (document == null)
+    {
+      throw new SpeckleException("No document is active.");
+    }
+
+    await _threadContext.RunOnMainAsync(() =>
+    {
+      using var transaction = new Transaction(document, "Speckle Parameter Updates");
+      transaction.Start();
+
+      foreach (var change in changes)
+      {
+        var element = document.GetElement(change.ApplicationId);
+        if (element == null)
+        {
+          continue;
+        }
+
+        var path = ParsePath(change.Path);
+        var result = _parameterUpdater.Update(element, path, change.To);
+      }
+
+      transaction.Commit();
+      return Task.FromResult(true);
+    });
+  }
+
+  private string[] ParsePath(string concatenatedPath)
+  {
+    // "properties.Parameters.Type Parameters.Other.Family Name"
+    //  → ["Type Parameters", "Other", "Family Name"]
+    var segments = concatenatedPath.Split('.');
+    return segments.Skip(2).ToArray();
   }
 
   private static (string? fileName, long? fileBytes) GetFileInfo(Document document)
