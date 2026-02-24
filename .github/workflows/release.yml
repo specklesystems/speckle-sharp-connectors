@@ -68,7 +68,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: jedd/cnx-1358-autocad-and-civil3d-installations-are-blocked-by-pre #todo: revert back to main before PR is merged
+          ref: main
           wait-for-completion: true
           wait-for-completion-interval: 10s
           wait-for-completion-timeout: 10m
