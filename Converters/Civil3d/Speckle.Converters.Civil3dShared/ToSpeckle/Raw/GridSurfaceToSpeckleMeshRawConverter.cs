@@ -1,4 +1,4 @@
-using Autodesk.AutoCAD.Geometry;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -6,10 +6,15 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
 public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurface, SOG.Mesh>
 {
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
-  public GridSurfaceToSpeckleMeshRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
+  public GridSurfaceToSpeckleMeshRawConverter(
+    IReferencePointConverter referencePointConverter,
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore
+  )
   {
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -19,14 +24,14 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
   {
     List<double> vertices = new();
     List<int> faces = new();
-    Dictionary<Point3d, int> indices = new();
+    Dictionary<AG.Point3d, int> indices = new();
 
     int indexCounter = 0;
     foreach (var cell in target.GetCells(false))
     {
       try
       {
-        Point3d[] cellVertices =
+        AG.Point3d[] cellVertices =
         {
           cell.BottomLeftVertex.Location,
           cell.BottomRightVertex.Location,
@@ -34,7 +39,7 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
           cell.TopRightVertex.Location
         };
 
-        foreach (Point3d p in cellVertices)
+        foreach (AG.Point3d p in cellVertices)
         {
           if (indices.ContainsKey(p))
           {
@@ -63,7 +68,7 @@ public class GridSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.GridSurf
     SOG.Mesh mesh =
       new()
       {
-        vertices = vertices,
+        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
         faces = faces,
         units = _settingsStore.Current.SpeckleUnits
       };

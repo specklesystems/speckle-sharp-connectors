@@ -70,11 +70,18 @@ public static class ServiceRegistration
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
+    serviceCollection.AddScoped<RevitFamilyBaker>();
+    serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();
+    serviceCollection.AddScoped<DirectShapeUnpackStrategy>();
+    serviceCollection.AddScoped<FamilyUnpackStrategy>();
+    serviceCollection.AddScoped<RevitPreBakeSetupService>();
     serviceCollection.AddSingleton<RevitUtils>();
+    serviceCollection.AddSingleton<FamilyCategoryUtils>();
+    serviceCollection.AddSingleton<FamilyTransformUtils>();
     serviceCollection.AddSingleton<IFailuresPreprocessor, HideWarningsFailuresPreprocessor>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddScoped<LocalToGlobalConverterUtils>();

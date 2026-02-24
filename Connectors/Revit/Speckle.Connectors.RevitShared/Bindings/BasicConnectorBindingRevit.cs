@@ -73,7 +73,12 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     }
 
     //should this use the Hashcode of the document instead of something like CreationGUID?
-    var info = new DocumentInfo(doc.PathName, doc.Title, doc.GetHashCode().ToString());
+    var info = new DocumentInfo(
+      doc.PathName,
+      doc.Title,
+      doc.GetHashCode().ToString(),
+      doc.IsModelInCloud ? doc.GetCloudModelUrn() : null
+    );
 
     return info;
   }
