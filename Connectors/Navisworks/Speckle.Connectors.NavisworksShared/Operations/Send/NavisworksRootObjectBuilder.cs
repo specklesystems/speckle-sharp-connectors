@@ -14,6 +14,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 using static Speckle.Connectors.Common.Operations.ProxyKeys;
 using static Speckle.Converter.Navisworks.Constants.InstanceConstants;

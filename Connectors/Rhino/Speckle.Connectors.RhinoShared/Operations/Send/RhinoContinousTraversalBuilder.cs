@@ -16,6 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -116,11 +117,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
         results.Add(result);
 
         ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
-        await Task.Yield();
-
-        // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
-        // Thread.Sleep(550);
+        progress.Report(new(count, atomicObjects.Count));
       }
     }
 

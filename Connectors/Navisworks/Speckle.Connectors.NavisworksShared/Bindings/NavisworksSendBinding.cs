@@ -18,6 +18,7 @@ using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connector.Navisworks.Bindings;
 

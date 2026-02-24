@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Common.Builders;
 

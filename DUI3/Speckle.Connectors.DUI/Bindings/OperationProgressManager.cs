@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

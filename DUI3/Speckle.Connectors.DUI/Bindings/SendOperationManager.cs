@@ -13,6 +13,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.DUI.Bindings;
 

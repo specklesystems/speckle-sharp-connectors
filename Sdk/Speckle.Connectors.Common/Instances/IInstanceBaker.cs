@@ -1,6 +1,7 @@
 using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Common.Instances;
 

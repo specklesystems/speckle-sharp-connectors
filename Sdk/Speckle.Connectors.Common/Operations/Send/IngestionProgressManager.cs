@@ -5,6 +5,7 @@ using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Common.Operations.Send;
 
