@@ -26,33 +26,33 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
     // check for normal
     if (target.normal is not SOG.Vector normal)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} did not have a normal");
+      throw new ArgumentException($"Autocad polycurve of type {target.polyType} did not have a normal");
     }
 
     // check for elevation
     if (target.elevation is not double elevation)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} did not have an elevation");
+      throw new ArgumentException($"Autocad polycurve of type {target.polyType} did not have an elevation");
     }
 
-    // get vertices
+    // convert the normal, get vertices and transform them to ocs
+    var convertedNormal = _vectorConverter.Convert(normal);
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
-    List<AG.Point3d> points = target.value.ConvertToPoint3d(f);
+    List<AG.Point3d> points = target.value.ConvertToPoint3dInOcs(convertedNormal, f);
 
     // check for invalid bulges
     if (target.bulges is null || target.bulges.Count < points.Count)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed bulges");
+      throw new ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed bulges");
     }
 
     // check for invalid tangents
     if (target.tangents is null || target.tangents.Count < points.Count)
     {
-      throw new System.ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed tangents");
+      throw new ArgumentException($"Autocad polycurve of type {target.polyType} had null or malformed tangents");
     }
 
     // create the polyline2d using the empty constructor
-    AG.Vector3d convertedNormal = _vectorConverter.Convert(normal);
     double convertedElevation = elevation * f;
     ADB.Polyline2d polyline =
       new()

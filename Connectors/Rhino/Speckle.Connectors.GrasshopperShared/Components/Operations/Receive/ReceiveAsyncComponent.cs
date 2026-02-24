@@ -32,8 +32,9 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
     : base("Load", "L", "Load a model from Speckle", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
   {
     BaseWorker = new ReceiveComponentWorker(this);
-    Attributes = new ReceiveAsyncComponentAttributes(this);
   }
+
+  public override void CreateAttributes() => m_attributes = new ReceiveAsyncComponentAttributes(this);
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_operations_load;
@@ -535,18 +536,10 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
 public class ReceiveAsyncComponentAttributes : GH_ComponentAttributes
 {
-  private bool _selected;
-
   public ReceiveAsyncComponentAttributes(GH_Component owner)
     : base(owner) { }
 
   private Rectangle ButtonBounds { get; set; }
-
-  public override bool Selected
-  {
-    get => _selected;
-    set => _selected = value;
-  }
 
   protected override void Layout()
   {
