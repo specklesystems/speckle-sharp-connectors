@@ -50,6 +50,25 @@ public class ToHostSettingsManager : IToHostSettingsManager
     return null;
   }
 
+  public bool GetReceiveInstancesAsFamiliesSetting(ModelCard modelCard)
+  {
+    var settingValue =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceiveInstancesAsFamiliesSetting.SETTING_ID)?.Value as bool?;
+
+    if (settingValue is not null)
+    {
+      return settingValue.Value;
+    }
+
+    _logger.LogWarning(
+      "Receive instances as families setting was null for model {ModelCardId}, using default: {DefaultValue}",
+      modelCard.ModelCardId,
+      ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE
+    );
+
+    return ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE;
+  }
+
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)
   {
     Transform? referencePointTransform = null;

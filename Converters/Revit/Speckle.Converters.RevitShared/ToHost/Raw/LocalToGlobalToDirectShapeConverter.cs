@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
@@ -22,14 +23,17 @@ public class LocalToGlobalToDirectShapeConverter
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> _transformConverter;
+  private readonly CategoryExtractor _categoryExtractor;
 
   public LocalToGlobalToDirectShapeConverter(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
-    ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter
+    ITypedConverter<(Matrix4x4 matrix, string units), DB.Transform> transformConverter,
+    CategoryExtractor categoryExtractor
   )
   {
     _converterSettings = converterSettings;
     _transformConverter = transformConverter;
+    _categoryExtractor = categoryExtractor;
   }
 
   public DB.DirectShape Convert(
@@ -37,7 +41,7 @@ public class LocalToGlobalToDirectShapeConverter
   )
   {
     // 1- set ds category
-    var category = ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
+    var category = _categoryExtractor.ExtractBuiltInCategory(target.parentDataObject, target.atomicObject);
     var name = target.parentDataObject?.name ?? target.atomicObject.TryGetName();
 
     var dsCategory = DB.BuiltInCategory.OST_GenericModel;
@@ -111,25 +115,5 @@ public class LocalToGlobalToDirectShapeConverter
 
     result.SetShape(transformedGeometries);
     return result;
-  }
-
-  private static string? ExtractBuiltInCategory(DataObject? parentDataObject, Base atomicObject)
-  {
-    // Try parent DataObject first (for InstanceProxy displayValue case)
-    if (parentDataObject?.properties.TryGetValue("builtInCategory", out var cat) == true)
-    {
-      return cat?.ToString();
-    }
-
-    // Fallback to atomicObject properties
-    if (
-      atomicObject["properties"] is Dictionary<string, object?> props
-      && props.TryGetValue("builtInCategory", out var fallbackCat)
-    )
-    {
-      return fallbackCat?.ToString();
-    }
-
-    return null;
   }
 }

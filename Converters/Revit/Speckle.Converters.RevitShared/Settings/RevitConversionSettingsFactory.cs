@@ -1,4 +1,4 @@
-using Speckle.Converters.Common;
+﻿using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk.Common;
@@ -18,6 +18,7 @@ public class RevitConversionSettingsFactory(
     bool sendLinkedModels,
     bool sendRebarsAsVolumetric,
     bool sendAreasAsMesh,
+    bool receiveInstancesAsFamilies,
     double tolerance = 0.0164042 // 5mm in ft
   )
   {
@@ -31,6 +32,7 @@ public class RevitConversionSettingsFactory(
       sendLinkedModels,
       sendRebarsAsVolumetric,
       sendAreasAsMesh,
+      receiveInstancesAsFamilies,
       tolerance
     );
   }
