@@ -446,7 +446,8 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     });
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    (SendOperationResult result, string versionId) = await sendOperation
+    // TODO: handle ingestion id (returned by sendOperation.Send) results with a same way as in DUI
+    (SendOperationResult result, string versionId, _) = await sendOperation
       .Send([rootCollectionWrapper], sendInfo, fileName, fileBytes, Parent.VersionMessage, progress, CancellationToken)
       .ConfigureAwait(false);
 

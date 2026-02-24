@@ -10,11 +10,16 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Send;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
 using Version = Speckle.Sdk.Api.GraphQL.Models.Version;
+#if !NET8_0_OR_GREATER
+using System.Net.Http;
+#endif
 
 namespace Speckle.Connectors.Common.Operations;
 
@@ -24,13 +29,16 @@ public sealed class SendOperation<T>(
   ISendConversionCache sendConversionCache,
   ISendProgress sendProgress,
   ISendOperationExecutor sendOperationExecutor,
-  ISdkActivityFactory activityFactory,
   IThreadContext threadContext,
+  ISdkActivityFactory activityFactory,
   ISpeckleApplication speckleApplication,
-  IIngestionProgressManagerFactory ingestionProgressManagerFactory
+  IIngestionProgressManagerFactory ingestionProgressManagerFactory,
+  ISpeckleHttp speckleHttp,
+  ISendPipelineFactory sendPipelineFactory,
+  IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
-  public async Task<(SendOperationResult sendResult, string versionId)> Send(
+  public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -43,6 +51,20 @@ public sealed class SendOperation<T>(
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
     if (useModelIngestionSend)
     {
+      bool usePackfileSend =
+        rootContinuousTraversalBuilder != null && await CheckPackfileSendEndpoints(sendInfo, cancellationToken);
+      if (usePackfileSend)
+      {
+        return await SendViaPackfile(
+          objects,
+          sendInfo,
+          fileName,
+          fileSizeBytes,
+          versionMessage,
+          uiProgress,
+          cancellationToken
+        );
+      }
       return await SendViaIngestion(
         objects,
         sendInfo,
@@ -59,7 +81,91 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaPackfile(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+#pragma warning disable IDE0060
+    string? versionMessage,
+#pragma warning restore IDE0060
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    if (rootContinuousTraversalBuilder == null)
+    {
+      throw new InvalidOperationException("rootContinuousTraversalBuilder cannot be null");
+    }
+
+    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
+      new(
+        sendInfo.ModelId,
+        sendInfo.ProjectId,
+        $"Sending from {speckleApplication.ApplicationAndVersion}",
+        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes)
+      ),
+      cancellationToken
+    );
+    using var ingestionScope = ActivityScope.SetTag("modelIngestionId", ingestion.id);
+
+    var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
+      sendInfo.Client,
+      ingestion,
+      sendInfo.ProjectId,
+      TimeSpan.FromSeconds(10),
+      cancellationToken
+    );
+
+    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
+    try
+    {
+      var sendPipeline = sendPipelineFactory.CreateInstance(
+        sendInfo.ProjectId,
+        ingestion.id,
+        sendInfo.Account,
+        cancellationToken
+      );
+      var buildResult = await rootContinuousTraversalBuilder.Build(
+        objects,
+        sendInfo.ProjectId,
+        sendPipeline,
+        progress,
+        cancellationToken
+      );
+
+      buildResult.RootObject["version"] = 3;
+
+      SendOperationResult result =
+        new(buildResult.RootObject.id!, new Dictionary<Id, ObjectReference>(), buildResult.ConversionResults);
+
+      // NOTE: clients do not need to complete the ingestion - that's going to the be the server's job
+      // string createdVersionId = await sendInfo.Client.Ingestion.Complete(
+      //   new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
+      //   CancellationToken.None
+      // );
+
+      return (result, "latest", ingestion.id);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithCancel(
+        new(ingestion.id, sendInfo.ProjectId, "User requested cancellation"),
+        CancellationToken.None
+      );
+      throw;
+    }
+    catch (Exception ex)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithError(
+        ModelIngestionFailedInput.FromException(ingestion.id, sendInfo.ProjectId, ex),
+        CancellationToken.None
+      );
+      throw;
+    }
+  }
+
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaIngestion(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -97,7 +203,10 @@ public sealed class SendOperation<T>(
         CancellationToken.None
       );
 
-      return (result, createdVersionId);
+      // NOTE: it might seem weird to pass null for ingestion.id 'null' here but there is a reason.
+      // Because we complete ingestion here in .NET which is safe to pass null ingestion id that we don't want DUI explicitly subscribe to ingestion changes.
+      // I am hoping we will get rid of from logical branching once we have model ingestion on public server
+      return (result, createdVersionId, null);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -117,7 +226,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaVersionCreate(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaVersionCreate(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? versionMessage,
@@ -137,7 +246,7 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
-    return (result, version.id);
+    return (result, version.id, null);
   }
 
   public async Task<SendOperationResult> ConvertAndSend(
@@ -238,6 +347,34 @@ public sealed class SendOperation<T>(
     }
 
     return useModelIngestionSend;
+  }
+
+  /// <param name="sendInfo"></param>
+  /// <param name="cancellationToken"></param>
+  /// <exception cref="FormatException">server returned a response, but it was neither <c>true</c> nor <c>false</c> (case insensitive)</exception>
+  /// <exception cref="HttpRequestException ">Request failed, or the server returned a non-successful status code that wasn't <c>404</c></exception>
+  /// <returns>
+  /// Returns <see langword="true"/> if the server supports the new packfile data uploads,
+  /// <see langword="false"/> if the server doesn't explicitly, or implicitly via a <c>404</c> response.
+  /// Will throw for unexpected cases.
+  /// </returns>
+  private async Task<bool> CheckPackfileSendEndpoints(SendInfo sendInfo, CancellationToken cancellationToken)
+  {
+    Uri url = new Uri(new Uri(sendInfo.Account.serverInfo.url), "/api/v1/data-module-enabled");
+    using HttpClient client = speckleHttp.CreateHttpClient();
+    using var response = await client.GetAsync(url, cancellationToken);
+    if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+    {
+      response.EnsureSuccessStatusCode();
+#if NET8_0_OR_GREATER
+      string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+#else
+      string responseBody = await response.Content.ReadAsStringAsync();
+#endif
+      return bool.Parse(responseBody);
+    }
+
+    return false;
   }
 }
 

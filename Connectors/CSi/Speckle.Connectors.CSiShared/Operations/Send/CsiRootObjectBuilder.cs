@@ -77,7 +77,8 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     IReadOnlyList<ICsiWrapper> csiObjects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    SendInfo sendInfo
   )
   {
     using var activity = _activityFactory.Start("Build");
