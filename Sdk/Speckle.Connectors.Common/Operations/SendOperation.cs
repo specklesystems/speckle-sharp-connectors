@@ -38,7 +38,7 @@ public sealed class SendOperation<T>(
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
-  public async Task<(SendOperationResult sendResult, string versionId)> Send(
+  public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -81,7 +81,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaPackfile(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaPackfile(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -145,7 +145,7 @@ public sealed class SendOperation<T>(
       //   CancellationToken.None
       // );
 
-      return (result, "latest");
+      return (result, "latest", ingestion.id);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -165,7 +165,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaIngestion(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaIngestion(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? fileName,
@@ -203,7 +203,7 @@ public sealed class SendOperation<T>(
         CancellationToken.None
       );
 
-      return (result, createdVersionId);
+      return (result, createdVersionId, ingestion.id);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -223,7 +223,7 @@ public sealed class SendOperation<T>(
     }
   }
 
-  private async Task<(SendOperationResult sendResult, string versionId)> SendViaVersionCreate(
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaVersionCreate(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     string? versionMessage,
@@ -243,7 +243,7 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
-    return (result, version.id);
+    return (result, version.id, null);
   }
 
   public async Task<SendOperationResult> ConvertAndSend(
