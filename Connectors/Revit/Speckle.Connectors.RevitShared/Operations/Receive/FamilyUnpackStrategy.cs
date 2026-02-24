@@ -1,20 +1,13 @@
 using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Objects.Data;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
-/// <summary>
-/// The unpacking strategy used when receiving instances as native Revit Families.
-/// </summary>
-/// <remarks>
-/// This strategy isolates instance components from standard "atomic" objects (standalone geometry).
-/// It ensures that geometry consumed by definitions is filtered out so we don't accidentally
-/// bake definition geometry as standalone DirectShapes in the main model.
-/// </remarks>
-public class FamilyUnpackStrategy : IRevitUnpackStrategy
+public class FamilyUnpackStrategy : RevitUnpackStrategyBase
 {
   private readonly ILocalToGlobalUnpacker _localToGlobalUnpacker;
   private readonly RootObjectUnpacker _rootObjectUnpacker;
@@ -25,23 +18,37 @@ public class FamilyUnpackStrategy : IRevitUnpackStrategy
     _rootObjectUnpacker = rootObjectUnpacker;
   }
 
-  public UnpackStrategyResult Unpack(RootObjectUnpackerResult unpackedRoot)
+  public override UnpackStrategyResult Unpack(RootObjectUnpackerResult unpackedRoot)
   {
-    // 1. Build a map of parent DataObjects (handles the InstanceProxy displayValue parent mapping)
     var parentDataObjectMap = new Dictionary<string, DataObject>();
-    PopulateParentDataObjectMap(unpackedRoot, parentDataObjectMap);
+    var displayValueDefinitionIds = new HashSet<string>();
+
+    // 1. Build parent maps and identify definitions used purely for DataObject display values
+    PopulateParentDataObjectMap(unpackedRoot, parentDataObjectMap, displayValueDefinitionIds);
 
     // 2. Split out standard atomic objects from instance components
     var (atomicObjects, instanceComponents) = _rootObjectUnpacker.SplitAtomicObjectsAndInstances(
       unpackedRoot.ObjectsToConvert
     );
 
-    // 3. Collect all object IDs that are consumed by definitions (i.e. definition geometry)
-    var consumedObjectIds =
-      unpackedRoot.DefinitionProxies?.SelectMany(dp => dp.objects).ToHashSet() ?? new HashSet<string>();
+    // 3. Collect true definition geometries to filter out
+    var consumedObjectIds = new HashSet<string>();
+    if (unpackedRoot.DefinitionProxies != null)
+    {
+      foreach (var dp in unpackedRoot.DefinitionProxies)
+      {
+        var defId = dp.applicationId ?? dp.id.NotNull();
+        if (!displayValueDefinitionIds.Contains(defId) && (dp.id == null || !displayValueDefinitionIds.Contains(dp.id)))
+        {
+          foreach (var objId in dp.objects)
+          {
+            consumedObjectIds.Add(objId);
+          }
+        }
+      }
+    }
 
-    // 4. Filter out consumed objects from the atomic objects list
-    // If we don't do this, definition geometry will appear as duplicate standalone DirectShapes in the model
+    // 4. Filter out consumed objects
     var filteredAtomicObjects = atomicObjects
       .Where(tc =>
       {
@@ -51,63 +58,35 @@ public class FamilyUnpackStrategy : IRevitUnpackStrategy
       })
       .ToList();
 
-    // 5. Prepare the instance components with empty paths
+    // 5. Prepare true Family instances (ignore the display value proxies)
     var instanceComponentsWithPath = instanceComponents
+      .Where(tc => tc.Current is not InstanceProxy proxy || !displayValueDefinitionIds.Contains(proxy.definitionId))
       .Select(tc => (Array.Empty<Collection>(), tc.Current as IInstanceComponent))
       .Where(x => x.Item2 != null)
       .Select(x => (x.Item1, x.Item2!))
       .ToList();
 
-    // 6. Add definition proxies (since these aren't captured by the standard graph traversal)
+    // 6. Add true definition proxies
     if (unpackedRoot.DefinitionProxies != null)
     {
-      var definitions = unpackedRoot.DefinitionProxies.Select(proxy =>
-        (Array.Empty<Collection>(), proxy as IInstanceComponent)
-      );
+      var definitions = unpackedRoot
+        .DefinitionProxies.Where(proxy =>
+        {
+          var defId = proxy.applicationId ?? proxy.id.NotNull();
+          return !displayValueDefinitionIds.Contains(defId)
+            && (proxy.id == null || !displayValueDefinitionIds.Contains(proxy.id));
+        })
+        .Select(proxy => (Array.Empty<Collection>(), proxy as IInstanceComponent));
+
       instanceComponentsWithPath.AddRange(definitions);
     }
 
-    // 7. Finally, pass the surviving standalone atomic objects through the pure local-to-global unpacker
-    // to flatten their matrices for DirectShape conversion
-    var localToGlobalMaps = _localToGlobalUnpacker.Unpack(null, filteredAtomicObjects);
+    // 7. Flatten surviving atomic objects
+    var localToGlobalMaps = _localToGlobalUnpacker.Unpack(unpackedRoot.DefinitionProxies, filteredAtomicObjects);
 
-    return new UnpackStrategyResult(localToGlobalMaps, instanceComponentsWithPath, parentDataObjectMap);
-  }
+    // 8. Clean out DataObjects using the shared base logic!
+    var cleanedMaps = FilterUnpackedDataObjects(localToGlobalMaps);
 
-  private void PopulateParentDataObjectMap(RootObjectUnpackerResult unpackedRoot, Dictionary<string, DataObject> map)
-  {
-    var definitionToDataObject = new Dictionary<string, DataObject>();
-
-    foreach (var tc in unpackedRoot.ObjectsToConvert)
-    {
-      if (tc.Current is DataObject dataObject)
-      {
-        var instanceProxies = dataObject.displayValue.OfType<InstanceProxy>().ToList();
-        if (instanceProxies.Count > 0)
-        {
-          foreach (var ip in instanceProxies)
-          {
-            definitionToDataObject[ip.definitionId] = dataObject;
-          }
-        }
-      }
-    }
-
-    if (unpackedRoot.DefinitionProxies is not null)
-    {
-      foreach (var defProxy in unpackedRoot.DefinitionProxies)
-      {
-        if (
-          defProxy.applicationId is not null
-          && definitionToDataObject.TryGetValue(defProxy.applicationId, out var parentDataObject)
-        )
-        {
-          foreach (var objectId in defProxy.objects)
-          {
-            map[objectId] = parentDataObject;
-          }
-        }
-      }
-    }
+    return new UnpackStrategyResult(cleanedMaps, instanceComponentsWithPath, parentDataObjectMap);
   }
 }
