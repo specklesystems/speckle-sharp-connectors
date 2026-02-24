@@ -76,6 +76,9 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<RevitMaterialBaker>();
     serviceCollection.AddScoped<RevitViewBaker>();
     serviceCollection.AddScoped<RevitViewManager>();
+    serviceCollection.AddScoped<DirectShapeUnpackStrategy>();
+    serviceCollection.AddScoped<FamilyUnpackStrategy>();
+    serviceCollection.AddScoped<RevitPreBakeSetupService>();
     serviceCollection.AddSingleton<RevitUtils>();
     serviceCollection.AddSingleton<FamilyCategoryUtils>();
     serviceCollection.AddSingleton<FamilyTransformUtils>();

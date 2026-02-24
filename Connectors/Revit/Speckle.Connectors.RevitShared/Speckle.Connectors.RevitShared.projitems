@@ -33,6 +33,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ViewUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SupportedCategoriesUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitViewManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\DirectShapeUnpackStrategy.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\FamilyUnpackStrategy.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\HideWarningsFailuresPreprocessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IdStorageSchema.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\IStorageSchema.cs" />
@@ -42,10 +44,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SendCollectionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ElementUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\IRevitUnpackingStrategy.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveInstancesAsFamiliesSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitPreBakeSetupService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ToHostSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\TransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\IRevitSendFilter.cs" />
