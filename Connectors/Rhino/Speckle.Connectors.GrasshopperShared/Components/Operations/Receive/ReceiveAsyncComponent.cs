@@ -8,7 +8,6 @@ using GrasshopperAsyncComponent;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;

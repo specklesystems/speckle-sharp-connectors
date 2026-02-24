@@ -1,7 +1,6 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
@@ -118,21 +117,21 @@ public sealed class SendOperation<T>(
       cancellationToken
     );
 
-    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
+    AggregateProgress<CardProgress> progressHandlers = new(ingestionProgress, uiProgress);
     try
     {
       var sendPipeline = sendPipelineFactory.CreateInstance(
         sendInfo.ProjectId,
         ingestion.id,
         sendInfo.Account,
-        progress,
+        new RenderedStreamProgress(progressHandlers),
         cancellationToken
       );
       var buildResult = await rootContinuousTraversalBuilder.Build(
         objects,
         sendInfo.ProjectId,
         sendPipeline,
-        progress,
+        progressHandlers,
         cancellationToken
       );
 

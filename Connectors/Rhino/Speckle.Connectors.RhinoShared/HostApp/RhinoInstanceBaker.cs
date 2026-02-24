@@ -4,7 +4,6 @@ using Rhino.DocObjects;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Converters.Common.ToHost;
 using Speckle.DoubleNumerics;
