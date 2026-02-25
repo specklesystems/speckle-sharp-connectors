@@ -39,7 +39,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
   private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly RhinoViewUnpacker _viewUnpacker;
   private readonly PropertiesExtractor _propertiesExtractor;
-  private readonly ILogger<RhinoRootObjectBuilder> _logger;
+  private readonly ILogger<RhinoContinuousTraversalBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoContinuousTraversalBuilder(
@@ -53,7 +53,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
     RhinoColorUnpacker colorUnpacker,
     RhinoViewUnpacker viewUnpacker,
     PropertiesExtractor propertiesExtractor,
-    ILogger<RhinoRootObjectBuilder> logger,
+    ILogger<RhinoContinuousTraversalBuilder> logger,
     ISdkActivityFactory activityFactory
   )
   {
