@@ -224,10 +224,25 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    // TODO: handle ingestion id (returned by sendOperation.Send) results with a same way as in DUI
-    var (result, versionId, _) = await sendOperation
+    var (result, versionId, ingestionId) = await sendOperation
       .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, cancellationToken)
       .ConfigureAwait(false);
+
+    if (ingestionId != null)
+    {
+      Message = "Remote processing";
+      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
+      await ingestionTracker
+        .WaitForIngestionCompletion(
+          client,
+          sendInfo.ProjectId,
+          ingestionId,
+          reportProgress: null,
+          reportProgressId: null,
+          cancellationToken
+        )
+        .ConfigureAwait(false);
+    }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object> { { "isAsync", false } };
