@@ -4,7 +4,6 @@ using Rhino.DocObjects;
 using Rhino.Render;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Pipelines.Progress;
 using Material = Rhino.DocObjects.Material;
 using PhysicallyBasedMaterial = Rhino.DocObjects.PhysicallyBasedMaterial;
 using RenderMaterial = Rhino.Render.RenderMaterial;
@@ -120,37 +119,24 @@ public class RhinoMaterialUnpacker
   /// <param name="atomicObjects">atomic root objects, including instance objects</param>
   /// <param name="layers">the layers corresponding to collections on the root collection</param>
   /// <returns></returns>
-  public List<RenderMaterialProxy> UnpackRenderMaterials(
-    IReadOnlyCollection<RhinoObject> atomicObjects,
-    IReadOnlyCollection<Layer> layers,
-    IProgress<CardProgress> progress
-  )
+  public List<RenderMaterialProxy> UnpackRenderMaterials(List<RhinoObject> atomicObjects, List<Layer> layers)
   {
-    int totalItemsToProcess = atomicObjects.Count + layers.Count;
-    int itemsProcessed = 0;
     var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
     // Stage 1: unpack materials from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
-      progress.Report(
-        new(
-          $"Extracting Render Materials {itemsProcessed:N0} / {totalItemsToProcess:N0}",
-          (double)itemsProcessed / totalItemsToProcess
-        )
-      );
+      if (rootObj.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromLayer)
+      {
+        continue;
+      }
+
+      // materials are confusing in rhino. we need both render material and material because objects can have either assigned
+      RenderMaterial? rhinoRenderMaterial = rootObj.GetRenderMaterial(true);
+      Material? rhinoMaterial = rootObj.GetMaterial(true);
 
       try
       {
-        if (rootObj.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromLayer)
-        {
-          continue;
-        }
-
-        // materials are confusing in rhino. we need both render material and material because objects can have either assigned
-        RenderMaterial? rhinoRenderMaterial = rootObj.GetRenderMaterial(true);
-        Material? rhinoMaterial = rootObj.GetMaterial(true);
-
         ProcessObjectMaterial(
           rootObj.Id.ToString(),
           rhinoRenderMaterial,
@@ -162,22 +148,11 @@ public class RhinoMaterialUnpacker
       {
         _logger.LogError(ex, "Failed to unpack material from Rhino Object");
       }
-      finally
-      {
-        itemsProcessed++;
-      }
     }
 
     // Stage 2: make sure we collect layer materials as well
     foreach (Layer layer in layers)
     {
-      progress.Report(
-        new(
-          $"Extracting Render Materials {itemsProcessed:N0} / {totalItemsToProcess:N0}",
-          (double)itemsProcessed / totalItemsToProcess
-        )
-      );
-
       // materials are confusing in rhino. we will first try to get layer render material and then material by index if null
       RenderMaterial? rhinoRenderMaterial = layer.RenderMaterial;
       Material? rhinoMaterial =
@@ -195,10 +170,6 @@ public class RhinoMaterialUnpacker
       catch (Exception ex) when (!ex.IsFatal())
       {
         _logger.LogError(ex, "Failed to unpack materials from Rhino Layer");
-      }
-      finally
-      {
-        itemsProcessed++;
       }
     }
 

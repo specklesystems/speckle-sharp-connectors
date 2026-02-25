@@ -116,9 +116,9 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
         var result = await ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId, sendPipeline);
         results.Add(result);
 
-        ++count;
+        count++;
         onOperationProgressed.Report(
-          new($"Converting Objects {count:N0} / {atomicObjects.Count:N0}", (double)count / atomicObjects.Count)
+          new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)count / atomicObjects.Count)
         );
       }
     }
@@ -134,16 +134,12 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
 
     using (var _ = _activityFactory.Start("UnpackRenderMaterials"))
     {
-      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(
-        atomicObjects,
-        layers,
-        onOperationProgressed
-      );
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(atomicObjects, layers);
     }
 
     using (var _ = _activityFactory.Start("UnpackColors"))
     {
-      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers, onOperationProgressed);
+      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers);
     }
 
     // 5 - Unpack all other objects for the root
@@ -151,7 +147,8 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
     {
       List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(
         _converterSettings.Current.Document.NamedViews,
-        onOperationProgressed
+        onOperationProgressed,
+        cancellationToken
       );
       if (views.Count > 0)
       {

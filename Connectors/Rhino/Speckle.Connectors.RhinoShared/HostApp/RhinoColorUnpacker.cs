@@ -4,7 +4,6 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
-using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -102,24 +101,11 @@ public class RhinoColorUnpacker
   /// <param name="atomicObjects">atomic root objects, including instance objects</param>
   /// <param name="layers">the layers corresponding to collections on the root collection</param>
   /// <returns></returns>
-  public List<ColorProxy> UnpackColors(
-    IReadOnlyCollection<RhinoObject> atomicObjects,
-    IReadOnlyCollection<Layer> layers,
-    IProgress<CardProgress> progress
-  )
+  public List<ColorProxy> UnpackColors(List<RhinoObject> atomicObjects, List<Layer> layers)
   {
-    int totalItemsToProcess = atomicObjects.Count + layers.Count;
-    int itemsProcessed = 0;
     // Stage 1: unpack colors from objects
     foreach (RhinoObject rootObj in atomicObjects)
     {
-      progress.Report(
-        new(
-          $"Extracting Render Materials {itemsProcessed:N0} / {totalItemsToProcess:N0}",
-          (double)itemsProcessed / totalItemsToProcess
-        )
-      );
-
       try
       {
         ProcessObjectColor(
@@ -133,20 +119,11 @@ public class RhinoColorUnpacker
       {
         _logger.LogError(ex, "Failed to unpack colors from Rhino Object");
       }
-
-      itemsProcessed++;
     }
 
     // Stage 2: make sure we collect layer colors as well
     foreach (Layer layer in layers)
     {
-      progress.Report(
-        new(
-          $"Extracting Render Materials {itemsProcessed:N0} / {totalItemsToProcess:N0}",
-          (double)itemsProcessed / totalItemsToProcess
-        )
-      );
-
       try
       {
         ProcessObjectColor(layer.Id.ToString(), layer.Color, ObjectColorSource.ColorFromObject);
@@ -155,8 +132,6 @@ public class RhinoColorUnpacker
       {
         _logger.LogError(ex, "Failed to unpack colors from Rhino Layer");
       }
-
-      itemsProcessed++;
     }
 
     return ColorProxies.Values.ToList();

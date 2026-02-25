@@ -43,7 +43,11 @@ public class RhinoViewUnpacker
   /// </summary>
   /// <param name="views">current document named views</param>
   /// <returns></returns>
-  public List<Camera> UnpackViews(NamedViewTable views, IProgress<CardProgress> progress)
+  public List<Camera> UnpackViews(
+    NamedViewTable views,
+    IProgress<CardProgress> progress,
+    CancellationToken cancellationToken
+  )
   {
     int totalItemsToProcess = views.Count;
     int itemsProcessed = 0;
@@ -51,9 +55,11 @@ public class RhinoViewUnpacker
     List<Camera> cameras = new();
     foreach (ViewInfo view in views)
     {
+      cancellationToken.ThrowIfCancellationRequested();
+
       progress.Report(
         new(
-          $"Extracting Render Materials {itemsProcessed:N0} / {totalItemsToProcess:N0}",
+          $"Extracting views... ({itemsProcessed:N0} / {totalItemsToProcess:N0})",
           (double)itemsProcessed / totalItemsToProcess
         )
       );
