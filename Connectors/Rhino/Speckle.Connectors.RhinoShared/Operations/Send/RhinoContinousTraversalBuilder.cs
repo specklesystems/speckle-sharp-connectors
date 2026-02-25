@@ -145,11 +145,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
     // 5 - Unpack all other objects for the root
     using (var _ = _activityFactory.Start("UnpackViews"))
     {
-      List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(
-        _converterSettings.Current.Document.NamedViews,
-        onOperationProgressed,
-        cancellationToken
-      );
+      List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
       if (views.Count > 0)
       {
         rootObjectCollection[RootKeys.VIEW] = views;
