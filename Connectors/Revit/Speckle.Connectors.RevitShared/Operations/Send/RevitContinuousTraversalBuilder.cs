@@ -300,11 +300,7 @@ public class RevitContinuousTraversalBuilder(
     );
 
     // STEP 6: Unpack all other objects to attach to root collection
-    List<Objects.Other.Camera> views = viewUnpacker.Unpack(
-      converterSettings.Current.Document,
-      onOperationProgressed,
-      cancellationToken
-    );
+    List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
 
     if (views.Count > 0)
     {
