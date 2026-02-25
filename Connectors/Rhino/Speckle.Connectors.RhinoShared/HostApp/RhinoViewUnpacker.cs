@@ -4,7 +4,6 @@ using Rhino.DocObjects.Tables;
 using Speckle.Converters.Common;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -43,48 +42,21 @@ public class RhinoViewUnpacker
   /// </summary>
   /// <param name="views">current document named views</param>
   /// <returns></returns>
-  public List<Camera> UnpackViews(
-    NamedViewTable views,
-    IProgress<CardProgress> progress,
-    CancellationToken cancellationToken
-  )
+  public List<Camera> UnpackViews(NamedViewTable views)
   {
-    int totalItemsToProcess = views.Count;
-    int itemsProcessed = 0;
-
     List<Camera> cameras = new();
     foreach (ViewInfo view in views)
     {
-      cancellationToken.ThrowIfCancellationRequested();
-
-      progress.Report(
-        new(
-          $"Extracting views... ({itemsProcessed:N0} / {totalItemsToProcess:N0})",
-          (double)itemsProcessed / totalItemsToProcess
-        )
-      );
-
-      try
+      // skip isometric views for now.
+      // getting the orthographic match between host apps and the viewer requires too much effort atm.
+      if (view.Viewport.IsParallelProjection)
       {
-        // skip isometric views for now.
-        // getting the orthographic match between host apps and the viewer requires too much effort atm.
-        if (view.Viewport.IsParallelProjection)
-        {
-          continue;
-        }
-
-        if (ConvertViewToCamera(view) is Camera camera)
-        {
-          cameras.Add(camera);
-        }
+        continue;
       }
-      catch (Exception ex) when (!ex.IsFatal())
+
+      if (ConvertViewToCamera(view) is Camera camera)
       {
-        _logger.LogError(ex, "Failed to unpack {View}", view.Name);
-      }
-      finally
-      {
-        itemsProcessed++;
+        cameras.Add(camera);
       }
     }
 

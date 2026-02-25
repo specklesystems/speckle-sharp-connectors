@@ -132,25 +132,18 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
     using (var _ = _activityFactory.Start("UnpackRenderMaterials"))
     {
-      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(
-        atomicObjects,
-        layers,
-        onOperationProgressed
-      );
+      rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = _materialUnpacker.UnpackRenderMaterials(atomicObjects, layers);
     }
 
     using (var _ = _activityFactory.Start("UnpackColors"))
     {
-      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers, onOperationProgressed);
+      rootObjectCollection[ProxyKeys.COLOR] = _colorUnpacker.UnpackColors(atomicObjects, layers);
     }
 
     // 5 - Unpack all other objects for the root
     using (var _ = _activityFactory.Start("UnpackViews"))
     {
-      List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(
-        _converterSettings.Current.Document.NamedViews,
-        onOperationProgressed
-      );
+      List<Objects.Other.Camera> views = _viewUnpacker.UnpackViews(_converterSettings.Current.Document.NamedViews);
       if (views.Count > 0)
       {
         rootObjectCollection[RootKeys.VIEW] = views;
