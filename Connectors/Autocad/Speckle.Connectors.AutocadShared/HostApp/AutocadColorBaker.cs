@@ -1,6 +1,5 @@
 using Autodesk.AutoCAD.Colors;
 using Microsoft.Extensions.Logging;
-using Speckle.Connectors.Common.Operations;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;

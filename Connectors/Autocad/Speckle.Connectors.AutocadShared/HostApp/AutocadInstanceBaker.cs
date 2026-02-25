@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;

@@ -20,8 +20,6 @@ internal static class ServiceRegistration
     services.AddTransient<Sender>();
     services.AddTransient<ImporterInstance>();
     services.AddTransient<ImporterInstanceFactory>();
-    services.AddTransient<IIngestionProgressManager, IngestionProgressManager>();
-    services.AddTransient<IIngestionProgressManagerFactory, IngestionProgressManagerFactory>();
 
     // override default thread context
     services.AddSingleton<IThreadContext>(new ImporterThreadContext());

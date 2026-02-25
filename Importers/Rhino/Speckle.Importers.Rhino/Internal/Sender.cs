@@ -11,6 +11,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Importers.Rhino.Internal;

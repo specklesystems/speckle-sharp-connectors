@@ -5,7 +5,6 @@ using Speckle.Connector.Navisworks.Operations.Send.Filters;
 using Speckle.Connector.Navisworks.Operations.Send.Settings;
 using Speckle.Connector.Navisworks.Services;
 using Speckle.Connectors.Common.Cancellation;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;

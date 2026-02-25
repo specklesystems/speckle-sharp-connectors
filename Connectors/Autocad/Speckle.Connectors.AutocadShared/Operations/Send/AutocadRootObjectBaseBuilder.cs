@@ -63,8 +63,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     IReadOnlyList<AutocadRootObject> objects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken,
-    SendInfo sendInfo
+    CancellationToken cancellationToken
   )
   {
     // 0 - Init the root
