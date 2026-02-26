@@ -207,8 +207,8 @@
       },
       "System.Threading.Channels": {
         "type": "Transitive",
-        "resolved": "10.0.1",
-        "contentHash": "YRqU6Y2Cl6C+HrG5h1ftgKZ5VDTSA7j1wMKs5RtlauPeQ2EZ639Jt5aOFHdX3naP01hDDWFOWPApmNDVKwOpmg=="
+        "resolved": "10.0.0",
+        "contentHash": "fwRdkJpKisUEVNaEdsL5w5EwidzuVw0BOTfzDvYB1Yg8sq1pqNfUZxBOVFgSj6i6tNhpT3HP8BEDXf1+kFkTDA=="
       },
       "speckle.common.meshtriangulation": {
         "type": "Project",
@@ -240,7 +240,7 @@
           "Speckle.DoubleNumerics": "[4.1.0, )",
           "Speckle.Newtonsoft.Json": "[13.0.2, )",
           "Speckle.Sdk.Dependencies": "[1.0.0, )",
-          "System.Threading.Channels": "[10.0.1, )"
+          "System.Threading.Channels": "[10.0.0, )"
         }
       },
       "speckle.sdk.dependencies": {

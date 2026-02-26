@@ -54,6 +54,10 @@ public static class ServiceRegistration
     services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     services.AddScoped<SendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ModelObject>, TeklaRootObjectBuilder>();
+    services.AddScoped<
+      IRootContinuousTraversalBuilder<ModelObject>,
+      TeklaContinuousTraversalBuilder
+    >();
     services.AddScoped<SendOperation<ModelObject>>();
 
     services.AddSingleton<ToSpeckleSettingsManager>();

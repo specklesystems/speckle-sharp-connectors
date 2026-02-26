@@ -41,6 +41,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadContinuousTraversalBaseBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadContinuousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\AutocadRibbon.cs" />

@@ -22,6 +22,10 @@ public static class Civil3dConnectorModule
     // add send
     serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
+    serviceCollection.AddScoped<
+      IRootContinuousTraversalBuilder<AutocadRootObject>,
+      Civil3dContinuousTraversalBuilder
+    >();
     serviceCollection.AddSingleton<IBinding, Civil3dSendBinding>();
 
     // add receive

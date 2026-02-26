@@ -24,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\SavedItemHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GeometryNodeMerger.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksHierarchyBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksContinuousTraversalBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenElementsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\IncludeInternalPropertiesSetting.cs"/>
