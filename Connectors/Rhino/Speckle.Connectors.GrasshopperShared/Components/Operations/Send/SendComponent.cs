@@ -255,12 +255,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
-    SpeckleUrlLatestModelVersionResource createdVersionResource =
+    SpeckleUrlModelVersionResource createdVersionResource =
       new(
         new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
-        sendInfo.ModelId
+        sendInfo.ModelId,
+        versionId
       );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource, versionId);
