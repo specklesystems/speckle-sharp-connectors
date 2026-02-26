@@ -17,6 +17,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 

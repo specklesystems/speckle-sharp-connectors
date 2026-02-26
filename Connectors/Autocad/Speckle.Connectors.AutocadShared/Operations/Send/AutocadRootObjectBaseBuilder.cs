@@ -13,6 +13,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
@@ -62,8 +63,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
     IReadOnlyList<AutocadRootObject> objects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken,
-    SendInfo sendInfo
+    CancellationToken cancellationToken
   )
   {
     // 0 - Init the root

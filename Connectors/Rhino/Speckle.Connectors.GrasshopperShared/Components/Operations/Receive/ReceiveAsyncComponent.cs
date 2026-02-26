@@ -8,7 +8,6 @@ using GrasshopperAsyncComponent;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -22,6 +21,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Extensions;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Receive;
 

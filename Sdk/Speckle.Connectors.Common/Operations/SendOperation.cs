@@ -1,7 +1,6 @@
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Operations.Send;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Logging;
 using Speckle.InterfaceGenerator;
@@ -13,6 +12,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
 using Speckle.Sdk.Serialisation;
 using Speckle.Sdk.Serialisation.V2.Send;
@@ -124,6 +124,7 @@ public sealed class SendOperation<T>(
         sendInfo.ProjectId,
         ingestion.id,
         sendInfo.Account,
+        new RenderedStreamProgress(progress),
         cancellationToken
       );
       var buildResult = await rootContinuousTraversalBuilder.Build(

@@ -17,6 +17,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
@@ -147,7 +148,7 @@ public class RevitContinuousTraversalBuilder(
       }
     }
 
-    var countProgress = 0;
+    var count = 0;
     var cacheHitCount = 0;
     var skippedObjectCount = 0;
 
@@ -255,7 +256,10 @@ public class RevitContinuousTraversalBuilder(
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
           }
 
-          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
+          count++;
+          onOperationProgressed.Report(
+            new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)count / atomicObjectCount)
+          );
         }
       }
     }
@@ -297,6 +301,7 @@ public class RevitContinuousTraversalBuilder(
 
     // STEP 6: Unpack all other objects to attach to root collection
     List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
+
     if (views.Count > 0)
     {
       rootObject[RootKeys.VIEW] = views;
