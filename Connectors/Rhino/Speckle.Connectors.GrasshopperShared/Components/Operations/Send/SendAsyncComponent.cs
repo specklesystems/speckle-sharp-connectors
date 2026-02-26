@@ -454,7 +454,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     {
       Parent.Message = "Remote processing";
       var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
-      await ingestionTracker
+      versionId = await ingestionTracker
         .WaitForIngestionCompletion(
           Parent.ApiClient,
           sendInfo.ProjectId,

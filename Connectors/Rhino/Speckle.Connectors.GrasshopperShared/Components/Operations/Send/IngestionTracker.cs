@@ -1,6 +1,7 @@
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Enums;
+using Speckle.Sdk.Common;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
@@ -18,7 +19,7 @@ public class IngestionTracker
 {
   private static readonly TimeSpan s_pollInterval = TimeSpan.FromSeconds(1);
 
-  public async Task WaitForIngestionCompletion(
+  public async Task<string> WaitForIngestionCompletion(
     IClient client,
     string projectId,
     string ingestionId,
@@ -38,7 +39,7 @@ public class IngestionTracker
       switch (status)
       {
         case ModelIngestionStatus.success:
-          return;
+          return ingestion.statusData.versionId.NotNull();
         case ModelIngestionStatus.failed:
           throw new SpeckleException($"Server processing failed: {ingestion.statusData.progressMessage}");
         case ModelIngestionStatus.cancelled:

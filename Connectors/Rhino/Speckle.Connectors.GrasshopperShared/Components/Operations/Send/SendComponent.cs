@@ -233,7 +233,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     {
       Message = "Remote processing";
       var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
-      await ingestionTracker
+      versionId = await ingestionTracker
         .WaitForIngestionCompletion(
           client,
           sendInfo.ProjectId,
