@@ -13,6 +13,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.CSiShared.Builders;
 
@@ -77,8 +78,7 @@ public class CsiRootObjectBuilder : IRootObjectBuilder<ICsiWrapper>
     IReadOnlyList<ICsiWrapper> csiObjects,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken,
-    SendInfo sendInfo
+    CancellationToken cancellationToken
   )
   {
     using var activity = _activityFactory.Start("Build");

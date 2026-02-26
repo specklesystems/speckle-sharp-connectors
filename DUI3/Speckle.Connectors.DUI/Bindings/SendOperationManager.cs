@@ -13,6 +13,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -98,7 +99,7 @@ public sealed class SendOperationManager(
         cancellationItem.Token
       );
 
-      var objects = await gatherObjects(modelCard, progress);
+      var objects = await gatherObjects.Invoke(modelCard, progress);
 
       if (objects.Count == 0)
       {

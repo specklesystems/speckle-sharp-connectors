@@ -1,6 +1,7 @@
 ﻿using Moq;
 using NUnit.Framework;
 using Speckle.Connectors.Common.Operations;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Transports;
 using Speckle.Testing;
 

@@ -16,6 +16,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
 using Layer = Rhino.DocObjects.Layer;
 
@@ -38,7 +39,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
   private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly RhinoViewUnpacker _viewUnpacker;
   private readonly PropertiesExtractor _propertiesExtractor;
-  private readonly ILogger<RhinoRootObjectBuilder> _logger;
+  private readonly ILogger<RhinoContinuousTraversalBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
   public RhinoContinuousTraversalBuilder(
@@ -52,7 +53,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
     RhinoColorUnpacker colorUnpacker,
     RhinoViewUnpacker viewUnpacker,
     PropertiesExtractor propertiesExtractor,
-    ILogger<RhinoRootObjectBuilder> logger,
+    ILogger<RhinoContinuousTraversalBuilder> logger,
     ISdkActivityFactory activityFactory
   )
   {
@@ -115,12 +116,10 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
         var result = await ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId, sendPipeline);
         results.Add(result);
 
-        ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
-        await Task.Yield();
-
-        // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
-        // Thread.Sleep(550);
+        count++;
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)count / atomicObjects.Count)
+        );
       }
     }
 
