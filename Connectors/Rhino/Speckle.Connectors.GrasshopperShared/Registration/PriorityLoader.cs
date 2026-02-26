@@ -66,7 +66,7 @@ public class PriorityLoader : GH_AssemblyPriority
 
       // send
       services.AddTransient<IRootObjectBuilder<SpeckleCollectionWrapperGoo>, GrasshopperRootObjectBuilder>();
-      services.AddScoped<
+      services.AddTransient<
         IRootContinuousTraversalBuilder<SpeckleCollectionWrapperGoo>,
         GrasshopperContinuousTraversalBuilder
       >();
