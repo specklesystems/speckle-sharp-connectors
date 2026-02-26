@@ -47,7 +47,7 @@ public class DisplayableObjectConverter
         SOG.Line line => _lineConverter.Convert(line),
         SOG.Polyline polyline => _polylineConverter.Convert(polyline),
         SOG.Arc arc => _arcConverter.Convert(arc),
-        SOG.Mesh mesh => _meshConverter.Convert(mesh),
+        SOG.Mesh mesh => ConvertMesh(mesh),
         SOG.Point point => _pointConverter.Convert(point),
         _ => throw new ConversionException($"Found unsupported fallback geometry: {item.GetType()}")
       };
@@ -74,4 +74,26 @@ public class DisplayableObjectConverter
 
     return RG.Transform.Identity;
   }
+
+#pragma warning disable CA1508 // Brep.CreateFromMesh can return null for degenerate meshes
+  private RG.GeometryBase ConvertMesh(SOG.Mesh mesh)
+  {
+    var rhinoMesh = _meshConverter.Convert(mesh);
+
+    if (_settingsStore.Current.ConvertMeshesToPolysurfaces)
+    {
+      var brep = RG.Brep.CreateFromMesh(rhinoMesh, true);
+      if (brep is not null)
+      {
+        brep.MergeCoplanarFaces(
+          _settingsStore.Current.Document.ModelAbsoluteTolerance,
+          _settingsStore.Current.Document.ModelAngleToleranceRadians
+        );
+        return brep;
+      }
+    }
+
+    return rhinoMesh;
+  }
+#pragma warning restore CA1508
 }
