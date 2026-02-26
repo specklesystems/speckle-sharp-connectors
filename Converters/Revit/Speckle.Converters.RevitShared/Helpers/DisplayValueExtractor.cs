@@ -652,6 +652,7 @@ public sealed class DisplayValueExtractor
         or DB.BuiltInCategory.OST_StructConnectionBolts
         or DB.BuiltInCategory.OST_StructConnectionWelds
         or DB.BuiltInCategory.OST_StructConnectionShearStuds
+        or DB.BuiltInCategory.OST_StructConnectionAnchors
     )
     {
       // try-catch is not pretty. we need to understand this better.
