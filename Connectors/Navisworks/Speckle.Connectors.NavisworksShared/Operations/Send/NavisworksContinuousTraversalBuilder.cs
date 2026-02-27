@@ -76,6 +76,7 @@ public class NavisworksContinuousTraversalBuilder(
     foreach (var element in finalElements)
     {
       cancellationToken.ThrowIfCancellationRequested();
+      // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(element).ConfigureAwait(false);
       processedElements.Add(reference);
     }

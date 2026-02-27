@@ -232,7 +232,7 @@ public class RevitContinuousTraversalBuilder(
               converted.applicationId = applicationId;
             }
 
-            // TODO: send pipeline processing
+            // NOTE: this is the main part that differentiate from the main root object builder
             var reference = await sendPipeline.Process(converted).ConfigureAwait(true);
             if (!wasCached)
             {

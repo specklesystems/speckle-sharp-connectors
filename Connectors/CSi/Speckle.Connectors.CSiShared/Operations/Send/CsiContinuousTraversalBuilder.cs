@@ -172,6 +172,7 @@ public class CsiContinuousTraversalBuilder : IRootContinuousTraversalBuilder<ICs
 
       var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, typeCollection);
 
+      // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
       collection.elements.Add(reference);
 
@@ -192,10 +193,7 @@ public class CsiContinuousTraversalBuilder : IRootContinuousTraversalBuilder<ICs
   private Dictionary<ModelObjectType, List<string>> GetObjectSummary(IReadOnlyList<ICsiWrapper> csiObjects) =>
     csiObjects
       .GroupBy(csiObject => csiObject.ObjectType)
-      .ToDictionary(
-        group => group.Key,
-        group => group.Select(obj => obj.Name).ToList()
-      );
+      .ToDictionary(group => group.Key, group => group.Select(obj => obj.Name).ToList());
 
   private (string, string) GetForceAndTemperatureUnits()
   {

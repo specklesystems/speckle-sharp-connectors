@@ -181,6 +181,7 @@ public abstract class AutocadContinuousTraversalBaseBuilder : IRootContinuousTra
         converted.applicationId = applicationId;
       }
 
+      // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
       collectionHost.elements.Add(reference);
       return new(Status.SUCCESS, applicationId, sourceType, reference);
