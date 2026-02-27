@@ -30,7 +30,7 @@
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
     <PackageVersion Include="RhinoCommon" Version="8.28.26041.11001" />
     <PackageVersion Include="Rhino.Inside" Version="8.0.7-beta" />
-    <PackageVersion Include="Grasshopper" Version="8.9.24194.18121" />
+    <PackageVersion Include="Grasshopper" Version="8.28.26041.11001" />
     <PackageVersion Include="RhinoWindows" Version="8.28.26041.11001" />
     <PackageVersion Include="Semver" Version="3.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />

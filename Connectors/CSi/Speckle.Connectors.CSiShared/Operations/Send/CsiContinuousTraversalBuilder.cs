@@ -13,6 +13,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Connectors.CSiShared.Builders;
