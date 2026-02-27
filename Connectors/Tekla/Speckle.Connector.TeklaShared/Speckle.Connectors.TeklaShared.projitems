@@ -37,6 +37,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TeklaMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsSolidSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaContinuousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TeklaRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\TeklaPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

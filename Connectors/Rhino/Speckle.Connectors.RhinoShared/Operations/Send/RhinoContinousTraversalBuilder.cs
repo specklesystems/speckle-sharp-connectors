@@ -202,6 +202,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
         converted["properties"] = properties;
       }
 
+      // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
       if (!wasCached)
       {
