@@ -446,10 +446,25 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     });
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    // TODO: handle ingestion id (returned by sendOperation.Send) results with a same way as in DUI
-    (SendOperationResult result, string versionId, _) = await sendOperation
+    (SendOperationResult result, string versionId, string? ingestionId) = await sendOperation
       .Send([rootCollectionWrapper], sendInfo, fileName, fileBytes, Parent.VersionMessage, progress, CancellationToken)
       .ConfigureAwait(false);
+
+    if (ingestionId != null)
+    {
+      Parent.Message = "Remote processing";
+      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
+      versionId = await ingestionTracker
+        .WaitForIngestionCompletion(
+          Parent.ApiClient,
+          sendInfo.ProjectId,
+          ingestionId,
+          reportProgress,
+          Id,
+          CancellationToken
+        )
+        .ConfigureAwait(false);
+    }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };
