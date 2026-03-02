@@ -1,3 +1,4 @@
+using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 
@@ -34,8 +35,12 @@ public sealed class SendConversionResult : ConversionResult
     SourceType = sourceType;
     ResultId = result?.id;
     ResultType = result?.speckle_type;
+    Result = result;
     Error = FormatError(exception);
   }
+
+  [JsonIgnore]
+  public Base? Result { get; }
 }
 
 // HACK: I've unsealed this for Grasshopper, non-ideal. Should be discussed and a better pattern may be implemented.
@@ -63,7 +68,6 @@ public class ReceiveConversionResult : ConversionResult
 /// send conversion result or a receive conversion result - but i do not believe this requires fully separate classes, especially
 /// for what this is meant to be at its core: a list of green or red checkmarks in the UI. To make DX easier, the two classes above embody
 /// this one and provided clean constructors for each case.
-/// POC: Inherits from Base so we can attach the conversion report to the root commit object. Can be revisited later (it's not a problem to not inherit from base).
 /// </summary>
 public abstract class ConversionResult
 {

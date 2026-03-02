@@ -12,12 +12,14 @@ using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send;
+using Speckle.Sdk.Serialisation;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
@@ -128,6 +130,12 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
+    var references = results
+      .Where(x => x.Result is not null)
+      .ToDictionary(x => new Id(x.SourceId), x => (ObjectReference)x.Result.NotNull());
+
+    _sendConversionCache.StoreSendResult(projectId, references);
+
     // 4 - Unpack all proxies for the root
     // Get all layers from the created collections on the root object commit for proxy processing
     List<Layer> layers = _layerUnpacker.GetUsedLayers().ToList();
@@ -173,7 +181,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       // What we actually do here is check if the object has been previously converted AND has not changed.
       // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
       Base converted;
-      bool wasCached = false;
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
@@ -181,7 +188,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
         converted = value;
-        wasCached = true;
       }
       else
       {
@@ -204,11 +210,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
 
       // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
-      if (!wasCached)
-      {
-        // NOTE: can be moved in else block above where we check for cached objects
-        _sendConversionCache.AppendSendResult(projectId, applicationId, reference);
-      }
 
       // add to host
       collectionHost.elements.Add(reference);
