@@ -130,12 +130,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       throw new SpeckleException("Failed to convert all objects."); // fail fast instead creating empty commit! It will appear as model card error with red color.
     }
 
-    var references = results
-      .Where(x => x.Result is not null)
-      .ToDictionary(x => new Id(x.SourceId), x => (ObjectReference)x.Result.NotNull());
-
-    _sendConversionCache.StoreSendResult(projectId, references);
-
     // 4 - Unpack all proxies for the root
     // Get all layers from the created collections on the root object commit for proxy processing
     List<Layer> layers = _layerUnpacker.GetUsedLayers().ToList();
