@@ -43,10 +43,7 @@ public static class ServiceRegistration
     services.AddScoped<ISendFilter, CsiSharedSelectionFilter>();
     services.AddScoped<CsiSendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
-    services.AddScoped<
-      IRootContinuousTraversalBuilder<ICsiWrapper>,
-      CsiContinuousTraversalBuilder
-    >();
+    services.AddScoped<IRootContinuousTraversalBuilder<ICsiWrapper>, CsiContinuousTraversalBuilder>();
     services.AddScoped<SendOperation<ICsiWrapper>>();
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
