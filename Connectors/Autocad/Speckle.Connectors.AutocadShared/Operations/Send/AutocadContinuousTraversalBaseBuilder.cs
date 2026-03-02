@@ -119,7 +119,9 @@ public abstract class AutocadContinuousTraversalBaseBuilder : IRootContinuousTra
         );
         results.Add(result);
 
-        onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)++count / atomicObjects.Count)
+        );
       }
 
       if (results.All(x => x.Status == Status.ERROR))

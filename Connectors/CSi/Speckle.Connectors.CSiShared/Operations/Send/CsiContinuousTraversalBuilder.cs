@@ -91,7 +91,9 @@ public class CsiContinuousTraversalBuilder : IRootContinuousTraversalBuilder<ICs
         results.Add(result);
 
         count++;
-        onOperationProgressed.Report(new("Converting", (double)count / csiObjects.Count));
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {csiObjects.Count:N0})", (double)count / csiObjects.Count)
+        );
         await Task.Yield();
       }
     }

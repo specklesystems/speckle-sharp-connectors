@@ -77,7 +77,9 @@ public class TeklaContinuousTraversalBuilder : IRootContinuousTraversalBuilder<T
         results.Add(result);
 
         ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / teklaObjects.Count));
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {teklaObjects.Count:N0})", (double)count / teklaObjects.Count)
+        );
         await Task.Yield();
       }
     }
