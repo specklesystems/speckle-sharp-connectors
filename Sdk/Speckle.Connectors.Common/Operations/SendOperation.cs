@@ -382,7 +382,7 @@ public sealed class SendOperation<T>(
   }
 
   /// <remarks>
-  /// Assuming that <paramref cref="conversionResults"/> are either <see langword="null"/> or <see cref="ObjectReference"/>
+  /// Assuming that <paramref name="conversionResults"/> are either <see langword="null"/> or <see cref="ObjectReference"/>
   /// Which will be true only for the packfile based builders.
   /// </remarks>
   /// <param name="conversionResults"></param>
