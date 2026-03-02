@@ -173,7 +173,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       // What we actually do here is check if the object has been previously converted AND has not changed.
       // If that's the case, we insert in the host collection just its object reference which has been saved from the prior conversion.
       Base converted;
-      bool wasCached = false;
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
@@ -181,7 +180,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
         converted = value;
-        wasCached = true;
       }
       else
       {
@@ -204,11 +202,6 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
 
       // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
-      if (!wasCached)
-      {
-        // NOTE: can be moved in else block above where we check for cached objects
-        _sendConversionCache.AppendSendResult(projectId, applicationId, reference);
-      }
 
       // add to host
       collectionHost.elements.Add(reference);
