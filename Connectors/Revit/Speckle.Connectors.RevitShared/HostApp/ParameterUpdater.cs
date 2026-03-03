@@ -85,7 +85,7 @@ public class ParameterUpdater
     {
       return null;
     }
-    return _revitContext?.UIApplication?.ActiveUIDocument.Document.GetElement(typeId);
+    return _revitContext.UIApplication?.ActiveUIDocument.Document.GetElement(typeId);
   }
 
   private DB.Element? GetSystemTypeElement(DB.Element element)
@@ -96,7 +96,7 @@ public class ParameterUpdater
       return null;
     }
 
-    return _revitContext?.UIApplication?.ActiveUIDocument.Document.GetElement(system.GetTypeId());
+    return _revitContext.UIApplication?.ActiveUIDocument.Document.GetElement(system.GetTypeId());
   }
 
   private DB.MEPSystem? GetMEPSystem(DB.Element element)
@@ -285,10 +285,6 @@ public class ParameterUpdater
     //     }
 
     var elementName = newValue.ToString();
-    if (elementName is null)
-    {
-      return false;
-    }
     var foundElement = FindElementByName(elementName);
     if (foundElement != null)
     {
@@ -300,7 +296,7 @@ public class ParameterUpdater
 
   private DB.Element? FindElementByName(string name)
   {
-    var doc = _revitContext?.UIApplication?.ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
 
     using var materialCollector = new DB.FilteredElementCollector(doc);
     var material = materialCollector.OfClass(typeof(DB.Material)).FirstOrDefault(e => e.Name == name);

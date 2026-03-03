@@ -2,6 +2,8 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Utils;
+using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -24,6 +26,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRevitTask _revitTask;
+  private readonly ParameterUpdater _parameterUpdater;
+  private readonly IJsonSerializer _jsonSerializer;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
@@ -31,7 +35,9 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     RevitContext revitContext,
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IRevitTask revitTask
+    IRevitTask revitTask,
+    ParameterUpdater parameterUpdater,
+    IJsonSerializer jsonSerializer
   )
   {
     Name = "baseBinding";
@@ -41,6 +47,8 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _revitTask = revitTask;
+    _parameterUpdater = parameterUpdater;
+    _jsonSerializer = jsonSerializer;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
@@ -190,5 +198,63 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     // activeUIDoc.Selection.SetElementIds(objectIds);
     // activeUIDoc.ShowElements(objectIds);
     // ;
+  }
+
+  public async Task UpdateParameters(string payload)
+  {
+    try
+    {
+      var requests = _jsonSerializer.Deserialize<List<ParameterChangeRequest>>(payload);
+
+      if (requests == null || requests.Count == 0)
+      {
+        return;
+      }
+
+      var activeUIDoc =
+        _revitContext.UIApplication?.ActiveUIDocument
+        ?? throw new SpeckleException("Unable to retrieve active UI document");
+      var doc = activeUIDoc.Document;
+
+      await _revitTask
+        .RunAsync(() =>
+        {
+          using var t = new Transaction(doc, "Speckle: Apply Parameter Changes");
+          t.Start();
+
+          foreach (var request in requests)
+          {
+            var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
+            if (elementId == null)
+            {
+              continue;
+            }
+
+            var element = doc.GetElement(elementId);
+            if (element == null)
+            {
+              continue;
+            }
+
+            var pathParts = request.Path.Split(new[] { '.' }, 3);
+            _parameterUpdater.Update(element, pathParts, request.To);
+          }
+
+          t.Commit();
+        })
+        .ConfigureAwait(false);
+
+      await Commands.SetGlobalNotification(
+        ToastNotificationType.SUCCESS,
+        "Parameters Updated",
+        $"Successfully applied updates to {requests.Count} element(s)."
+      );
+    }
+    catch (Exception ex)
+    {
+      _topLevelExceptionHandler.CatchUnhandled(
+        () => throw new SpeckleException("Failed to apply parameter updates", ex)
+      );
+    }
   }
 }
