@@ -45,7 +45,7 @@ public class ParameterUpdater
 
     var parameterScope = path[0]; // "Instance Parameters" | "Type Parameters" | "System Type Parameters"
     var groupName = path[1]; // "Identity Data", "Dimensions", etc.
-    var parameterKey = path[2]; // human readable name (or internalDefinitionName if collision)
+    var parameterKey = path[2]; // human-readable name (or internalDefinitionName if collision)
 
     // get target element based on scope
     var targetElement = GetTargetElement(element, parameterScope);
@@ -142,7 +142,7 @@ public class ParameterUpdater
         continue;
       }
 
-      // check if name matches (try human readable first, then internal)
+      // check if name matches (try human-readable first, then internal)
       var humanName = definition.Name;
       var internalName = GetInternalDefinitionName(parameter);
 
@@ -285,10 +285,13 @@ public class ParameterUpdater
     //     }
 
     var elementName = newValue.ToString();
-    var foundElement = FindElementByName(elementName);
-    if (foundElement != null)
+    if (elementName != null)
     {
-      return parameter.Set(foundElement.Id);
+      var foundElement = FindElementByName(elementName);
+      if (foundElement != null)
+      {
+        return parameter.Set(foundElement.Id);
+      }
     }
 
     return false;
