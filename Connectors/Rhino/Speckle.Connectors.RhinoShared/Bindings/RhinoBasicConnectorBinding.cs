@@ -170,4 +170,11 @@ public sealed class RhinoBasicConnectorBinding : IBasicConnectorBinding
 
     RhinoDoc.ActiveDoc.Views.Redraw();
   }
+
+  public async Task UpdateParameters(string payload) =>
+    await Commands.SetGlobalNotification(
+      ToastNotificationType.INFO,
+      "Not Supported",
+      "Applying parameter changes is not yet supported in this host application"
+    );
 }
