@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.DocObjects.Tables;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
@@ -17,8 +18,18 @@ public class RhinoGroupUnpacker
 
   public Dictionary<string, GroupProxy> GroupProxies { get; } = new();
 
-  public void UnpackGroups(IEnumerable<RhinoObject> rhinoObjects)
+  public void UnpackGroups(IReadOnlyList<RhinoObject> rhinoObjects)
   {
+    if (RhinoDoc.ActiveDoc.Groups.Count == 0)
+    {
+      // Documents with lots of instances (e.g. skp imports) perform poorly with this function
+      // Because its implementation is not very efficient, requiring it to deeply traverse all instances
+      // This causes a LOT of memory allocations, which was causing SKP file imports to fail (OOM)
+      // This is a very dumb work around. The ideal fix would be for us to optimise this function,
+      // and if possible, avoid needing to traverse instances (maybe we could loop over the groups and use `GroupTable.GetMembers(index)` instead)
+      return;
+    }
+
     foreach (RhinoObject rhinoObject in rhinoObjects)
     {
       try

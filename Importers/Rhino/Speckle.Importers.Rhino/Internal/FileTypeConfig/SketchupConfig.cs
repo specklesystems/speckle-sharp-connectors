@@ -15,7 +15,7 @@ internal sealed class SketchupConfig : IFileTypeConfig
       AddObjectsToGroups = true,
       ImportCurves = true,
       ImportFacesAsMeshes = true,
-      UseGroupLayers = true,
+      UseGroupLayers = false, //Our GroupUnpacker is very unoptimised for files that contain a lot of instances (like skp imports). This enables a dumb work-around to skip the GroupUnpacker and avoid OOM.
     };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
