@@ -35,8 +35,9 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     )
   {
     BaseWorker = new SendComponentWorker(this);
-    Attributes = new SendAsyncComponentAttributes(this);
   }
+
+  public override void CreateAttributes() => m_attributes = new SendAsyncComponentAttributes(this);
 
   public override Guid ComponentGuid => GetType().GUID;
 
@@ -477,18 +478,10 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
 public class SendAsyncComponentAttributes : GH_ComponentAttributes
 {
-  private bool _selected;
-
   public SendAsyncComponentAttributes(GH_Component owner)
     : base(owner) { }
 
   private Rectangle ButtonBounds { get; set; }
-
-  public override bool Selected
-  {
-    get => _selected;
-    set => _selected = value;
-  }
 
   protected override void Layout()
   {

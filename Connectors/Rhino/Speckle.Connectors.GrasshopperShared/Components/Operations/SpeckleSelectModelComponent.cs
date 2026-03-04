@@ -43,7 +43,6 @@ public class SpeckleSelectModelComponent : GH_Component
       ComponentCategories.OPERATIONS
     )
   {
-    Attributes = new SpeckleSelectModelComponentAttributes(this);
     SpeckleOperationWizard = new SpeckleOperationWizard(RefreshComponent, UpdateComponentMessage, false);
 
     WorkspaceContextMenuButton = SpeckleOperationWizard.WorkspaceMenuHandler.WorkspaceContextMenuButton;
@@ -51,6 +50,8 @@ public class SpeckleSelectModelComponent : GH_Component
     ModelContextMenuButton = SpeckleOperationWizard.ModelMenuHandler.ModelContextMenuButton;
     VersionContextMenuButton = SpeckleOperationWizard!.VersionMenuHandler!.VersionContextMenuButton; // TODO: fix this shit later when we split
   }
+
+  public override void CreateAttributes() => m_attributes = new SpeckleSelectModelComponentAttributes(this);
 
   private Task RefreshComponent()
   {

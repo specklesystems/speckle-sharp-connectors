@@ -13,16 +13,17 @@ using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
-using Speckle.Objects;
 using Speckle.Objects.Data;
 using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
-using Transform = Speckle.Objects.Other.Transform;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -31,10 +32,8 @@ public sealed class RevitHostObjectBuilder(
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ITransactionManager transactionManager,
   ISdkActivityFactory activityFactory,
-  ILocalToGlobalUnpacker localToGlobalUnpacker,
   RevitGroupBaker groupManager,
   RevitMaterialBaker materialBaker,
-  RevitViewBaker viewBaker,
   RootObjectUnpacker rootObjectUnpacker,
   ILogger<RevitHostObjectBuilder> logger,
   IThreadContext threadContext,
@@ -43,12 +42,13 @@ public sealed class RevitHostObjectBuilder(
     (Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix, DataObject? parentDataObject),
     DirectShape
   > localToGlobalDirectShapeConverter,
-  IReceiveConversionHandler conversionHandler
+  IReceiveConversionHandler conversionHandler,
+  RevitFamilyBaker familyBaker,
+  DirectShapeUnpackStrategy directShapeUnpackStrategy,
+  FamilyUnpackStrategy familyUnpackStrategy,
+  RevitPreBakeSetupService preBakeSetupService
 ) : IHostObjectBuilder, IDisposable
 {
-  // Maps atomic object applicationId -> parent DataObject
-  private readonly Dictionary<string, DataObject> _atomicObjectToParentDataObject = new();
-
   public Task<HostObjectBuilderResult> Build(
     Base rootObject,
     string projectName,
@@ -102,113 +102,18 @@ public sealed class RevitHostObjectBuilder(
 
     // 1 - Unpack objects and proxies from root commit object
     var unpackedRoot = rootObjectUnpacker.Unpack(rootObject);
-    var localToGlobalMaps = localToGlobalUnpacker.Unpack(
-      unpackedRoot.DefinitionProxies,
-      unpackedRoot.ObjectsToConvert.ToList()
-    );
 
-    // Register DataObjects with InstanceProxy displayValues
-    RegisterDataObjectsWithInstanceProxies(unpackedRoot);
+    // 2 - Determine conversion path based on setting
+    var receiveInstancesAsFamilies = converterSettings.Current.ReceiveInstancesAsFamilies;
+    IRevitUnpackStrategy unpackStrategy = receiveInstancesAsFamilies ? familyUnpackStrategy : directShapeUnpackStrategy;
 
-    // NOTE: below is 💩... https://github.com/specklesystems/speckle-sharp-connectors/pull/813 broke sketchup to revit workflow
-    // ids were modified to fix receiving instances [CNX-1707](https://linear.app/speckle/issue/CNX-1707/revit-curves-and-meshes-in-blocks-come-as-duplicated)
-    // but we then broke sketchup to revit because applicationIds in proxies didn't match modified application ids which cam from #813 hack
-    // given urgency to get sketchup to revit workflow back up and running, temp fix involves setting modified ids before material baking, mapping original app ids to modified ids and using those
-    // this way, CNX-1707 fix stays in tact and we fix sketchup to revit
-    // TODO: TransformTo and material baking needs to be fixed in Revit!!
+    // 3 - Split objects/Flatten objects based on strategy
+    var unpackResult = unpackStrategy.Unpack(unpackedRoot);
 
-    // create a mapping from original to modified IDs <- so that we can actually map ids in the proxies to the objects
-    // as part of CNX-2677, we have a one-to-many problem. many instances share the same reference, so we use a list
-    Dictionary<string, List<string>> originalToModifiedIds = new();
+    // 4 - Apply ID modifications and bake materials
+    preBakeSetupService.ApplyIdModificationsAndBakeMaterials(unpackResult, unpackedRoot);
 
-    // modify application IDs BEFORE material baking
-    foreach (LocalToGlobalMap localToGlobalMap in localToGlobalMaps)
-    {
-      if (
-        localToGlobalMap.AtomicObject is ITransformable transformable
-        && localToGlobalMap.Matrix.Count > 0
-        && localToGlobalMap.AtomicObject["units"] is string units
-      )
-      {
-        var id = localToGlobalMap.AtomicObject.id;
-        var originalAppId = localToGlobalMap.AtomicObject.applicationId ?? id;
-
-        // Apply transformations...
-        ITransformable? newTransformable = null;
-        foreach (var mat in localToGlobalMap.Matrix)
-        {
-          transformable.TransformTo(new Transform() { matrix = mat, units = units }, out newTransformable);
-          transformable = newTransformable;
-        }
-
-        localToGlobalMap.AtomicObject = (newTransformable as Base)!;
-        localToGlobalMap.AtomicObject.id = id;
-
-        // create modified ID and store mapping <- fixes CNX-1707 but causes us material mapping headache!!!
-        string modifiedAppId = $"{originalAppId}_{Guid.NewGuid().ToString("N")[..8]}";
-        if (originalAppId != null)
-        {
-          if (!originalToModifiedIds.TryGetValue(originalAppId, out List<string>? modifiedIds))
-          {
-            modifiedIds = new List<string>();
-            originalToModifiedIds[originalAppId] = modifiedIds;
-          }
-
-          modifiedIds.Add(modifiedAppId);
-        }
-
-        localToGlobalMap.AtomicObject.applicationId = modifiedAppId;
-        localToGlobalMap.Matrix = new HashSet<Matrix4x4>();
-      }
-    }
-
-    // Update the RenderMaterialProxies with the "new" (aka hacked) application IDs
-    if (unpackedRoot.RenderMaterialProxies != null)
-    {
-      foreach (var proxy in unpackedRoot.RenderMaterialProxies)
-      {
-        var objectIdsToUse = new List<string>();
-        foreach (var objectId in proxy.objects)
-        {
-          // Use the modified ID if it exists, otherwise keep the original <- this SUCKS and we need to change
-          if (originalToModifiedIds.TryGetValue(objectId, out var modifiedIds))
-          {
-            objectIdsToUse.AddRange(modifiedIds);
-          }
-          else
-          {
-            objectIdsToUse.Add(objectId);
-          }
-        }
-        proxy.objects = objectIdsToUse;
-      }
-    }
-
-    // Update DataObject lookup IDs
-    UpdateAtomicObjectLookupWithModifiedIds(originalToModifiedIds);
-
-    // 2 - Bake materials (now with the updated IDs)
-    if (unpackedRoot.RenderMaterialProxies != null)
-    {
-      transactionManager.StartTransaction(true, "Baking materials");
-      materialBaker.MapLayersRenderMaterials(unpackedRoot);
-      var map = materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
-      foreach (var kvp in map)
-      {
-        revitToHostCacheSingleton.MaterialsByObjectId.Add(kvp.Key, kvp.Value);
-      }
-      transactionManager.CommitTransaction();
-    }
-
-    // 2.1 - Bake views
-    if (unpackedRoot.Cameras is not null)
-    {
-      transactionManager.StartTransaction(true, "Baking views");
-      viewBaker.BakeViews(unpackedRoot.Cameras);
-      transactionManager.CommitTransaction();
-    }
-
-    // 3 - Bake objects
+    // 5 - Bake objects
     (
       HostObjectBuilderResult builderResult,
       List<(DirectShape res, string applicationId)> postBakePaintTargets
@@ -229,12 +134,52 @@ public sealed class RevitHostObjectBuilder(
         )
       )
       {
-        conversionResults = BakeObjects(localToGlobalMaps, onOperationProgressed, cancellationToken);
+        conversionResults = BakeObjects(
+          unpackResult.LocalToGlobalMaps,
+          unpackResult.ParentDataObjectMap,
+          onOperationProgressed,
+          cancellationToken
+        );
       }
+
       transactionManager.CommitTransaction();
     }
 
-    // 4 - Paint solids
+    // Bakes instances as families (if setting is enabled Count > 0)
+    if (receiveInstancesAsFamilies && unpackResult.InstanceComponents is { Count: > 0 })
+    {
+      var speckleObjectLookup = new Dictionary<string, TraversalContext>();
+      foreach (var tc in unpackedRoot.ObjectsToConvert)
+      {
+        var obj = tc.Current;
+
+        // 1. Primary Index: our Hash
+        // TODO: investigate. this should never be null? but i (Björn) had some weird edge-cases
+        if (!string.IsNullOrEmpty(obj.id))
+        {
+          speckleObjectLookup[obj.id.NotNullOrWhiteSpace()] = tc;
+        }
+
+        // 2. Secondary Index: Application ID (kinda fallback)
+        if (!string.IsNullOrEmpty(obj.applicationId))
+        {
+          speckleObjectLookup[obj.applicationId.NotNullOrWhiteSpace()] = tc;
+        }
+      }
+
+      // Pass the unpacked material proxies down to the family baker, defaulting to empty if null
+      var materialProxies = unpackedRoot.RenderMaterialProxies ?? [];
+
+      conversionResults = BakeInstancesAsFamilies(
+        unpackResult.InstanceComponents,
+        conversionResults,
+        speckleObjectLookup,
+        materialProxies,
+        onOperationProgressed
+      );
+    }
+
+    // 6 - Paint solids
     {
       using var _ = activityFactory.Start("Painting solids");
       transactionManager.StartTransaction(true, "Painting solids");
@@ -242,7 +187,7 @@ public sealed class RevitHostObjectBuilder(
       transactionManager.CommitTransaction();
     }
 
-    // 5 - Create group
+    // 7 - Create group
     {
       using var _ = activityFactory.Start("Grouping");
       transactionManager.StartTransaction(true, "Grouping");
@@ -253,85 +198,53 @@ public sealed class RevitHostObjectBuilder(
     return conversionResults.builderResult;
   }
 
-  /// <summary>
-  /// Registers DataObjects that have InstanceProxy displayValues and builds the lookup.
-  /// </summary>
-  private void RegisterDataObjectsWithInstanceProxies(RootObjectUnpackerResult unpackedRoot)
+  private (
+    HostObjectBuilderResult builderResult,
+    List<(DirectShape res, string applicationId)> postBakePaintTargets
+  ) BakeInstancesAsFamilies(
+    List<(Collection[] path, IInstanceComponent component)> instanceComponents,
+    (
+      HostObjectBuilderResult builderResult,
+      List<(DirectShape res, string applicationId)> postBakePaintTargets
+    ) currentResults,
+    Dictionary<string, TraversalContext> speckleObjectLookup,
+    IReadOnlyCollection<RenderMaterialProxy> materialProxies,
+    IProgress<CardProgress> onOperationProgressed
+  )
   {
-    var definitionToDataObject = new Dictionary<string, DataObject>();
+    using var _ = activityFactory.Start("Creating families");
+    transactionManager.StartTransaction(true, "Creating families");
 
-    foreach (var tc in unpackedRoot.ObjectsToConvert)
+    (List<ReceiveConversionResult> familyResults, List<string> familyElementIds) = familyBaker.BakeInstances(
+      instanceComponents,
+      speckleObjectLookup,
+      materialProxies,
+      onOperationProgressed
+    );
+
+    // Merge results
+    var mergedConversionResults = currentResults.builderResult.ConversionResults.ToList();
+    mergedConversionResults.AddRange(familyResults);
+
+    var mergedBakedObjectIds = currentResults.builderResult.BakedObjectIds.ToList();
+    mergedBakedObjectIds.AddRange(familyElementIds);
+
+    // Add created elements to group
+    foreach (var elementId in familyElementIds)
     {
-      if (tc.Current is DataObject dataObject)
+      var element = converterSettings.Current.Document.GetElement(elementId);
+      if (element != null)
       {
-        var instanceProxies = dataObject.displayValue.OfType<InstanceProxy>().ToList();
-        if (instanceProxies.Count > 0)
-        {
-          foreach (var ip in instanceProxies)
-          {
-            definitionToDataObject[ip.definitionId] = dataObject;
-          }
-        }
+        groupManager.AddToTopLevelGroup(element);
       }
     }
 
-    // Build lookup: definition object applicationId -> parent DataObject
-    _atomicObjectToParentDataObject.Clear();
-    if (unpackedRoot.DefinitionProxies is not null)
-    {
-      foreach (var defProxy in unpackedRoot.DefinitionProxies)
-      {
-        if (
-          defProxy.applicationId is not null
-          && definitionToDataObject.TryGetValue(defProxy.applicationId, out var parentDataObject)
-        )
-        {
-          foreach (var objectId in defProxy.objects)
-          {
-            _atomicObjectToParentDataObject[objectId] = parentDataObject;
-          }
-        }
-        else
-        {
-          logger.LogError(
-            "Could not find parent DataObject for DefinitionProxy {ApplicationId}",
-            defProxy.applicationId
-          );
-        }
-      }
-    }
-  }
+    transactionManager.CommitTransaction();
 
-  /// <summary>
-  /// Updates the atomic object lookup with modified IDs
-  /// </summary>
-  private void UpdateAtomicObjectLookupWithModifiedIds(Dictionary<string, List<string>> originalToModifiedIds)
-  {
-    // Build updated entries first to avoid modifying collection during iteration
-    var entriesToAdd = new List<KeyValuePair<string, DataObject>>();
-    var keysToRemove = new List<string>();
-
-    foreach (var kvp in _atomicObjectToParentDataObject)
-    {
-      if (originalToModifiedIds.TryGetValue(kvp.Key, out var modifiedIds))
-      {
-        keysToRemove.Add(kvp.Key);
-        foreach (var modifiedId in modifiedIds)
-        {
-          entriesToAdd.Add(new(modifiedId, kvp.Value));
-        }
-      }
-    }
-
-    foreach (var key in keysToRemove)
-    {
-      _atomicObjectToParentDataObject.Remove(key);
-    }
-
-    foreach (var entry in entriesToAdd)
-    {
-      _atomicObjectToParentDataObject[entry.Key] = entry.Value;
-    }
+    return (
+      new HostObjectBuilderResult(mergedBakedObjectIds, mergedConversionResults),
+      currentResults.postBakePaintTargets
+    );
   }
 
   private Autodesk.Revit.DB.Transform? CalculateNewTransform(
@@ -357,6 +270,7 @@ public sealed class RevitHostObjectBuilder(
     List<(DirectShape res, string applicationId)> postBakePaintTargets
   ) BakeObjects(
     IReadOnlyCollection<LocalToGlobalMap> localToGlobalMaps,
+    Dictionary<string, DataObject> parentDataObjectMap,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -383,7 +297,7 @@ public sealed class RevitHostObjectBuilder(
           DataObject? parentDataObject = null;
           if (atomicId is not null)
           {
-            _atomicObjectToParentDataObject.TryGetValue(atomicId, out parentDataObject);
+            parentDataObjectMap.TryGetValue(atomicId, out parentDataObject);
           }
 
           // direct shape creation happens here
@@ -417,6 +331,7 @@ public sealed class RevitHostObjectBuilder(
         conversionResults.Add(new(Status.ERROR, localToGlobalMap.AtomicObject, null, null, ex));
       }
     }
+
     return (new(bakedObjectIds, conversionResults), postBakePaintTargets);
   }
 
@@ -458,13 +373,12 @@ public sealed class RevitHostObjectBuilder(
   {
     DirectShapeLibrary.GetDirectShapeLibrary(converterSettings.Current.Document).Reset(); // Note: this needs to be cleared, as it is being used in the converter
 
-    revitToHostCacheSingleton.MaterialsByObjectId.Clear(); // Massive hack!
-    _atomicObjectToParentDataObject.Clear();
+    revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);
   }
 
-  public void Dispose() => transactionManager?.Dispose();
+  public void Dispose() => transactionManager.Dispose();
 
   // NOTE: temp poc HACK!
   // this hack only works if we are only assuming one material applied to the solids inside DataObject displayValue. as soon as we have multiple solids with multiple materials it will break again.
@@ -482,6 +396,7 @@ public sealed class RevitHostObjectBuilder(
         {
           SetSolidPostBakePaintTargets(item, directShapes, targets);
         }
+
         break;
     }
   }

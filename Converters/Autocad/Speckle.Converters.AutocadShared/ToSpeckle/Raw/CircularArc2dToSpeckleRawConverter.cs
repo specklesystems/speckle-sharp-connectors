@@ -5,14 +5,17 @@ namespace Speckle.Converters.Autocad.ToSpeckle.Raw;
 
 public class CircularArc2dToSpeckleRawConverter : ITypedConverter<AG.CircularArc2d, SOG.Arc>
 {
+  private readonly ITypedConverter<AG.Point2d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Plane, SOG.Plane> _planeConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public CircularArc2dToSpeckleRawConverter(
+    ITypedConverter<AG.Point2d, SOG.Point> pointConverter,
     ITypedConverter<AG.Plane, SOG.Plane> planeConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
+    _pointConverter = pointConverter;
     _planeConverter = planeConverter;
     _settingsStore = settingsStore;
   }
@@ -35,27 +38,9 @@ public class CircularArc2dToSpeckleRawConverter : ITypedConverter<AG.CircularArc
     var arc = new SOG.Arc()
     {
       plane = _planeConverter.Convert(plane),
-      startPoint = new()
-      {
-        x = target.StartPoint.X,
-        y = target.StartPoint.Y,
-        z = 0,
-        units = units
-      },
-      endPoint = new()
-      {
-        x = target.EndPoint.X,
-        y = target.EndPoint.Y,
-        z = 0,
-        units = units
-      },
-      midPoint = new()
-      {
-        x = midPoint.X,
-        y = midPoint.Y,
-        z = 0,
-        units = units
-      },
+      startPoint = _pointConverter.Convert(target.StartPoint),
+      endPoint = _pointConverter.Convert(target.EndPoint),
+      midPoint = _pointConverter.Convert(midPoint),
       domain = new SOP.Interval { start = startParam, end = endParam },
       units = units
     };
