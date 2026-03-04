@@ -71,11 +71,4 @@ public class CsiSharedBasicConnectorBinding : IBasicConnectorBinding
   public Task HighlightModel(string modelCardId) => Task.CompletedTask;
 
   public Task HighlightObjects(IReadOnlyList<string> objectIds) => Task.CompletedTask;
-
-  public async Task UpdateParameters(string payload) =>
-    await Commands.SetGlobalNotification(
-      ToastNotificationType.INFO,
-      "Not Supported",
-      "Applying parameter changes is not yet supported in this host application"
-    );
 }

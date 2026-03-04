@@ -47,11 +47,4 @@ public class NavisworksBasicConnectorBinding(
   public async Task HighlightObjects(IReadOnlyList<string> objectIds) =>
     // TODO: Implement highlighting logic on main thread
     await Task.CompletedTask;
-
-  public async Task UpdateParameters(string payload) =>
-    await Commands.SetGlobalNotification(
-      ToastNotificationType.INFO,
-      "Not Supported",
-      "Applying parameter changes is not yet supported in this host application"
-    );
 }

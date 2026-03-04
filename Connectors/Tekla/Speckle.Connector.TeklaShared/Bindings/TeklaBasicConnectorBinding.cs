@@ -151,11 +151,4 @@ public class TeklaBasicConnectorBinding : IBasicConnectorBinding
       _logger.LogError(ex, "Failed to highlight objects");
     }
   }
-
-  public async Task UpdateParameters(string payload) =>
-    await Commands.SetGlobalNotification(
-      ToastNotificationType.INFO,
-      "Not Supported",
-      "Applying parameter changes is not yet supported in this host application"
-    );
 }

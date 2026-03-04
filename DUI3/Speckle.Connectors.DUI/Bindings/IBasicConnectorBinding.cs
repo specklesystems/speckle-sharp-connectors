@@ -23,7 +23,6 @@ public interface IBasicConnectorBinding : IBinding
   public Task HighlightModel(string modelCardId);
 
   public Task HighlightObjects(IReadOnlyList<string> objectIds);
-  public Task UpdateParameters(string payload);
 
   public BasicConnectorBindingCommands Commands { get; }
 }
