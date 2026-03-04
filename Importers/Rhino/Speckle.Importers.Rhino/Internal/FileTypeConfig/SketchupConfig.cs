@@ -12,10 +12,11 @@ internal sealed class SketchupConfig : IFileTypeConfig
       JoinEdges = true,
       JoinFaces = true,
       Weld = false,
-      AddObjectsToGroups = true,
       ImportCurves = true,
       ImportFacesAsMeshes = true,
-      UseGroupLayers = false, //Our GroupUnpacker is very unoptimised for files that contain a lot of instances (like skp imports). This enables a dumb work-around to skip the GroupUnpacker and avoid OOM.
+      //Our GroupUnpacker is very unoptimised for files that contain a lot of instances (like skp imports). This enables a dumb work-around to skip the GroupUnpacker and avoid OOM. SEE https://linear.app/speckle/issue/CNX-3184/skp-file-upload-fails-rhino-importer
+      AddObjectsToGroups = false,
+      UseGroupLayers = false,
     };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)

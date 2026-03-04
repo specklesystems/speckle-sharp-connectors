@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
-using Rhino.DocObjects.Tables;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
 
@@ -27,6 +26,7 @@ public class RhinoGroupUnpacker
       // This causes a LOT of memory allocations, which was causing SKP file imports to fail (OOM)
       // This is a very dumb work around. The ideal fix would be for us to optimise this function,
       // and if possible, avoid needing to traverse instances (maybe we could loop over the groups and use `GroupTable.GetMembers(index)` instead)
+      // SEE https://linear.app/speckle/issue/CNX-3184/skp-file-upload-fails-rhino-importer
       return;
     }
 
