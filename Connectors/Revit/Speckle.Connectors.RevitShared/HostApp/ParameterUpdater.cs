@@ -45,7 +45,7 @@ public class ParameterUpdater
 
     var parameterScope = path[0]; // "Instance Parameters" | "Type Parameters" | "System Type Parameters"
     var groupName = path[1]; // "Identity Data", "Dimensions", etc.
-    var parameterKey = path[2]; // human readable name (or internalDefinitionName if collision)
+    var parameterKey = path[2]; // human-readable name (or internalDefinitionName if collision)
 
     // get target element based on scope
     var targetElement = GetTargetElement(element, parameterScope);
@@ -85,7 +85,7 @@ public class ParameterUpdater
     {
       return null;
     }
-    return _revitContext?.UIApplication?.ActiveUIDocument.Document.GetElement(typeId);
+    return _revitContext.UIApplication?.ActiveUIDocument.Document.GetElement(typeId);
   }
 
   private DB.Element? GetSystemTypeElement(DB.Element element)
@@ -96,7 +96,7 @@ public class ParameterUpdater
       return null;
     }
 
-    return _revitContext?.UIApplication?.ActiveUIDocument.Document.GetElement(system.GetTypeId());
+    return _revitContext.UIApplication?.ActiveUIDocument.Document.GetElement(system.GetTypeId());
   }
 
   private DB.MEPSystem? GetMEPSystem(DB.Element element)
@@ -142,7 +142,7 @@ public class ParameterUpdater
         continue;
       }
 
-      // check if name matches (try human readable first, then internal)
+      // check if name matches (try human-readable first, then internal)
       var humanName = definition.Name;
       var internalName = GetInternalDefinitionName(parameter);
 
@@ -285,14 +285,13 @@ public class ParameterUpdater
     //     }
 
     var elementName = newValue.ToString();
-    if (elementName is null)
+    if (elementName != null)
     {
-      return false;
-    }
-    var foundElement = FindElementByName(elementName);
-    if (foundElement != null)
-    {
-      return parameter.Set(foundElement.Id);
+      var foundElement = FindElementByName(elementName);
+      if (foundElement != null)
+      {
+        return parameter.Set(foundElement.Id);
+      }
     }
 
     return false;
@@ -300,7 +299,7 @@ public class ParameterUpdater
 
   private DB.Element? FindElementByName(string name)
   {
-    var doc = _revitContext?.UIApplication?.ActiveUIDocument.Document;
+    var doc = _revitContext.UIApplication?.ActiveUIDocument.Document;
 
     using var materialCollector = new DB.FilteredElementCollector(doc);
     var material = materialCollector.OfClass(typeof(DB.Material)).FirstOrDefault(e => e.Name == name);
