@@ -91,7 +91,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     // 2 - Unpack the groups
-    _groupUnpacker.UnpackGroups(rhinoObjects);
+    // _groupUnpacker.UnpackGroups(rhinoObjects);
     rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
     // 3 - Convert atomic objects

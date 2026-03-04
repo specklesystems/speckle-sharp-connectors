@@ -24,7 +24,7 @@ public static class Program
   {
     ILogger? logger = null;
     ImporterInstance? importer = null;
-
+    // Thread.Sleep(10000);
     try
     {
       var importerArgs = JsonSerializer.Deserialize<ImporterArgs>(args[0], s_serializerOptions);
