@@ -3,6 +3,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.Connectors.Revit.HostApp;
+using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
@@ -64,6 +65,12 @@ internal sealed class RevitParametersBinding : IParametersBinding
         .RunAsync(() =>
         {
           using var t = new Transaction(doc, "Speckle: Apply Parameter Changes");
+
+          // silence pop-ups like "duplicate mark values" etc. which blocks our param updates
+          var failureOptions = t.GetFailureHandlingOptions();
+          failureOptions.SetFailuresPreprocessor(new HideWarningsFailuresPreprocessor());
+          t.SetFailureHandlingOptions(failureOptions);
+
           t.Start();
 
           foreach (var request in requests)
