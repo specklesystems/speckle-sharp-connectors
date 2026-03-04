@@ -58,7 +58,7 @@ public static class Program
           try
           {
             var results = await importer.RunRhinoImport(CancellationToken.None).ConfigureAwait(false);
-            WriteResult(new() { RootObjectId = results.RootId }, importerArgs.ResultsPath);
+            WriteResult(new() { RootObjectId = results.RootObject.id }, importerArgs.ResultsPath);
           }
           catch (Exception ex)
           {
