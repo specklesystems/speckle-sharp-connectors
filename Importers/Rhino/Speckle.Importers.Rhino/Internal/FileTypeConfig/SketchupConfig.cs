@@ -14,7 +14,6 @@ internal sealed class SketchupConfig : IFileTypeConfig
       Weld = false,
       ImportCurves = true,
       ImportFacesAsMeshes = true,
-      //Our GroupUnpacker is very unoptimised for files that contain a lot of instances (like skp imports). This enables a dumb work-around to skip the GroupUnpacker and avoid OOM. SEE https://linear.app/speckle/issue/CNX-3184/skp-file-upload-fails-rhino-importer
       AddObjectsToGroups = false,
       UseGroupLayers = false,
     };
@@ -26,6 +25,11 @@ internal sealed class SketchupConfig : IFileTypeConfig
     {
       throw new SpeckleException("Rhino could not import this file");
     }
+
+    // Our GroupUnpacker is very unoptimised for files that contain a lot of instances (like skp imports).
+    // This enables a dumb work-around to skip the GroupUnpacker and avoid OOM.
+    // SEE https://linear.app/speckle/issue/CNX-3184/skp-file-upload-fails-rhino-importer
+    doc.Groups.Clear();
     return doc;
   }
 
