@@ -114,7 +114,7 @@ public readonly record struct PathKey
 #pragma warning restore CA5351
 
     var hex = BitConverter.ToString(hashBytes).Replace("-", "");
-    return hex[..Math.Min(16, hex.Length)];
+    return hex[..16];
   }
 }
 
