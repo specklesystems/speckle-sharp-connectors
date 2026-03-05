@@ -44,7 +44,7 @@ internal static class TracingBuilder
 
     if (tracing.Endpoint is not null)
     {
-      options.Endpoint = new Uri(tracing.Endpoint);
+      options.Endpoint = tracing.Endpoint;
     }
   }
 }
