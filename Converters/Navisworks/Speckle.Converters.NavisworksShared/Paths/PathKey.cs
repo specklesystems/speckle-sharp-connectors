@@ -84,38 +84,10 @@ public readonly record struct PathKey
     return true;
   }
 
-  public override string ToString()
-  {
-    if (Data == null || Data.Length == 0)
-    {
-      return string.Empty;
-    }
-    return string.Join(",", Data);
-  }
+  public override string ToString() => Data == null || Data.Length == 0 ? string.Empty : string.Join(",", Data);
 
-  /// <summary>
-  /// Returns a compact string representation for application IDs and definition IDs.
-  /// Uses SHA256 truncated to 16 hex chars to avoid collisions when many paths exist.
-  /// The previous 32-bit hash caused deterministic missing elements in large selections.
-  /// </summary>
-  public string ToHashString()
-  {
-    if (Data == null || Data.Length == 0)
-    {
-      return "0";
-    }
-
-    var input = string.Join(",", Data);
-    var inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
-
-#pragma warning disable CA5351 // Do Not Use Broken Cryptographic Algorithms
-    using var sha = System.Security.Cryptography.SHA256.Create();
-    var hashBytes = sha.ComputeHash(inputBytes);
-#pragma warning restore CA5351
-
-    var hex = BitConverter.ToString(hashBytes).Replace("-", "");
-    return hex[..16];
-  }
+  public string ToPathString() =>
+    Data == null || Data.Length == 0 ? "0" : string.Join(",", Data);
 }
 
 internal sealed class PathKeyComparer : IEqualityComparer<PathKey>

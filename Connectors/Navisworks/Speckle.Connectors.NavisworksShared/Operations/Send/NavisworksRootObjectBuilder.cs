@@ -366,13 +366,13 @@ public class NavisworksRootObjectBuilder(
     {
       var groupKey = kvp.Key;
       var geometries = kvp.Value;
-      var groupKeyHash = groupKey.ToHashString();
+      var groupKeyPath = groupKey.ToPathString();
 
       var defProxy = new InstanceDefinitionProxy
       {
-        name = $"Shared Geometry {groupKeyHash}",
+        name = $"Shared Geometry {groupKeyPath}",
         objects = geometries.Select(g => g.applicationId ?? "").Where(id => !string.IsNullOrEmpty(id)).ToList(),
-        applicationId = $"{DEFINITION_ID_PREFIX}{groupKeyHash}",
+        applicationId = $"{DEFINITION_ID_PREFIX}{groupKeyPath}",
         maxDepth = 0
       };
 
