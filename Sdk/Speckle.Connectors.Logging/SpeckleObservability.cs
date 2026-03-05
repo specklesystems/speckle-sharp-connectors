@@ -28,11 +28,7 @@ public record SpeckleLogging(
 
 public record SpeckleFileLogging(string? Path = null, bool Enabled = true);
 
-public record SpeckleOtelLogging(
-  string? Endpoint = null,
-  bool Enabled = true,
-  Dictionary<string, string>? Headers = null
-);
+public record SpeckleOtelLogging(Uri? Endpoint = null, bool Enabled = true, Dictionary<string, string>? Headers = null);
 
 public record SpeckleTracing(bool Console = false, IEnumerable<SpeckleOtelTracing>? Otel = null)
 {
@@ -40,11 +36,7 @@ public record SpeckleTracing(bool Console = false, IEnumerable<SpeckleOtelTracin
     : this(console, otel is null ? null : [otel]) { }
 }
 
-public record SpeckleOtelTracing(
-  string? Endpoint = null,
-  bool Enabled = true,
-  Dictionary<string, string>? Headers = null
-);
+public record SpeckleOtelTracing(Uri? Endpoint = null, bool Enabled = true, Dictionary<string, string>? Headers = null);
 
 public record SpeckleMetrics(bool Console = false, IEnumerable<SpeckleOtelMetrics>? Otel = null)
 {
@@ -52,8 +44,4 @@ public record SpeckleMetrics(bool Console = false, IEnumerable<SpeckleOtelMetric
     : this(console, otel is null ? null : [otel]) { }
 }
 
-public record SpeckleOtelMetrics(
-  string? Endpoint = null,
-  bool Enabled = true,
-  Dictionary<string, string>? Headers = null
-);
+public record SpeckleOtelMetrics(Uri? Endpoint = null, bool Enabled = true, Dictionary<string, string>? Headers = null);

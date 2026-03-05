@@ -84,7 +84,7 @@ internal static class LogBuilder
           y.Protocol = OtlpExportProtocol.HttpProtobuf;
           y.Endpoint = speckleOtelLogging.Endpoint is null
             ? throw new InvalidOperationException("Need a logging endpoint")
-            : new Uri(speckleOtelLogging.Endpoint);
+            : speckleOtelLogging.Endpoint;
           var sb = new StringBuilder();
           bool appendSemicolon = false;
           foreach (var kvp in speckleOtelLogging.Headers ?? [])
