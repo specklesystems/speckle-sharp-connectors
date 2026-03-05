@@ -94,11 +94,28 @@ public readonly record struct PathKey
   }
 
   /// <summary>
-  /// Returns a compact string representation using the hash value as an unsigned integer.
-  /// Suitable for use as application IDs and definition IDs.
-  /// This avoids negative numbers in IDs by treating the hash as unsigned.
+  /// Returns a compact string representation for application IDs and definition IDs.
+  /// Uses SHA256 truncated to 16 hex chars to avoid collisions when many paths exist.
+  /// The previous 32-bit hash caused deterministic missing elements in large selections.
   /// </summary>
-  public string ToHashString() => unchecked((uint)Hash).ToString();
+  public string ToHashString()
+  {
+    if (Data == null || Data.Length == 0)
+    {
+      return "0";
+    }
+
+    var input = string.Join(",", Data);
+    var inputBytes = System.Text.Encoding.UTF8.GetBytes(input);
+
+#pragma warning disable CA5351 // Do Not Use Broken Cryptographic Algorithms
+    using var sha = System.Security.Cryptography.SHA256.Create();
+    var hashBytes = sha.ComputeHash(inputBytes);
+#pragma warning restore CA5351
+
+    var hex = BitConverter.ToString(hashBytes).Replace("-", "");
+    return hex[..Math.Min(16, hex.Length)];
+  }
 }
 
 internal sealed class PathKeyComparer : IEqualityComparer<PathKey>
