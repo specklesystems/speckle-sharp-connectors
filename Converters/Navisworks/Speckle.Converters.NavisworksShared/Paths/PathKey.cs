@@ -84,10 +84,10 @@ public readonly record struct PathKey
     return true;
   }
 
-  public override string ToString() => Data == null || Data.Length == 0 ? string.Empty : string.Join(",", Data);
+  public override string ToString() => Data == null || Data.Length == 0 ? string.Empty : string.Join(".", Data);
 
   public string ToPathString() =>
-    Data == null || Data.Length == 0 ? "0" : string.Join(",", Data);
+    Data == null || Data.Length == 0 ? "0" : string.Join(".", Data);
 }
 
 internal sealed class PathKeyComparer : IEqualityComparer<PathKey>
