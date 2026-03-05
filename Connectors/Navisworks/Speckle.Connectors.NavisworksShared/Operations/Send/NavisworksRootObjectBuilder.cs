@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
