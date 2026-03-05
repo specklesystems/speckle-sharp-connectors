@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converter.Navisworks.Paths;
+namespace Speckle.Converter.Navisworks.Paths;
 
 public readonly record struct PathKey
 {
