@@ -1,4 +1,8 @@
-﻿using Autodesk.Revit.DB;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
@@ -13,15 +17,15 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitParametersBinding : IParametersBinding
 {
-  public string Name => "parametersBinding";
+  public string Name { get; } = "parametersBinding";
   public IBrowserBridge Parent { get; }
-  public BasicConnectorBindingCommands Commands { get; }
 
   private readonly RevitContext _revitContext;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRevitTask _revitTask;
   private readonly ParameterUpdater _parameterUpdater;
   private readonly IJsonSerializer _jsonSerializer;
+  private readonly IBasicConnectorBinding _baseBinding;
 
   public RevitParametersBinding(
     IBrowserBridge parent,
@@ -29,16 +33,17 @@ internal sealed class RevitParametersBinding : IParametersBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
     ParameterUpdater parameterUpdater,
-    IJsonSerializer jsonSerializer
+    IJsonSerializer jsonSerializer,
+    IBasicConnectorBinding baseBinding
   )
   {
     Parent = parent;
-    Commands = new BasicConnectorBindingCommands(parent);
     _revitContext = revitContext;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _revitTask = revitTask;
     _parameterUpdater = parameterUpdater;
     _jsonSerializer = jsonSerializer;
+    _baseBinding = baseBinding;
   }
 
   public async Task Update(string payload)
@@ -146,7 +151,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
       if (errors.Count > 0)
       {
-        await Commands.SetGlobalNotification(
+        await _baseBinding.Commands.SetGlobalNotification(
           ToastNotificationType.WARNING,
           "Update Completed with Issues",
           $"Applied {successCount} updates. Encountered {errors.Count} errors: {string.Join(" | ", errors.Take(3))}",
@@ -155,7 +160,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
       }
       else
       {
-        await Commands.SetGlobalNotification(
+        await _baseBinding.Commands.SetGlobalNotification(
           ToastNotificationType.SUCCESS,
           "Parameters Updated",
           $"Successfully applied {successCount} updates."
