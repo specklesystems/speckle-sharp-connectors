@@ -49,9 +49,7 @@ public class MeshToHostConverter(IFlatPointListToHostConverter pointListConverte
     }
 
     AssignMeshFaces(target, m);
-
-    // POC: CNX-9273 There was a piece of code here about Merging co-planar faces that I've removed for now as this setting does not exist yet.
-
+    
     return m;
   }
 
