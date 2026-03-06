@@ -18,6 +18,10 @@ public static class AutocadConnectorModule
     // Send
     serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, AutocadRootObjectBuilder>();
+    serviceCollection.AddScoped<
+      IRootContinuousTraversalBuilder<AutocadRootObject>,
+      AutocadContinuousTraversalBuilder
+    >();
 
     // Receive
     serviceCollection.LoadReceive();

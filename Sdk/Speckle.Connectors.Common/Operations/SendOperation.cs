@@ -8,6 +8,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
@@ -136,6 +137,8 @@ public sealed class SendOperation<T>(
       );
 
       buildResult.RootObject["version"] = 3;
+
+      WriteReferencesToCache(buildResult.ConversionResults, sendInfo.ProjectId);
 
       SendOperationResult result =
         new(buildResult.RootObject.id!, new Dictionary<Id, ObjectReference>(), buildResult.ConversionResults);
@@ -376,6 +379,34 @@ public sealed class SendOperation<T>(
     }
 
     return false;
+  }
+
+  /// <remarks>
+  /// Assuming that <paramref name="conversionResults"/> are either <see langword="null"/> or <see cref="ObjectReference"/>
+  /// Which will be true only for the packfile based builders.
+  /// </remarks>
+  /// <param name="conversionResults"></param>
+  /// <param name="projectId"></param>
+  private void WriteReferencesToCache(IReadOnlyList<SendConversionResult> conversionResults, string projectId)
+  {
+    // We write the objects to the cache after they've been uploaded to the server
+    // There is still an inbuilt "bad" assumption here that, successfully uploading NDJson means the server is able to re-materialize ids -
+    // but this is only true once the `Version` object is created
+    // Since for many reasons, the server could fail to process the json...
+    // This would leave this send cache out-of-sync with the server, and lead to bad commits that contain references to objects the server doesn't have.
+    // For now, we've taken the decision that it's unlikely to happen...
+
+    var references = new Dictionary<Id, ObjectReference>();
+    foreach (var x in conversionResults)
+    {
+      if (x.Result is not null)
+      {
+        // NOTE: why not ToDictionary -> we might end up reoccurring object references for any reason. instancing, linked models etc.
+        // ToDictionary throws 'item already exists' errors. but safe to override items in references dictionary since they are unique
+        references[new Id(x.SourceId)] = (ObjectReference)x.Result.NotNull();
+      }
+    }
+    sendConversionCache.StoreSendResult(projectId, references);
   }
 }
 

@@ -205,7 +205,6 @@ public class RevitContinuousTraversalBuilder(
             // TODO: Potential here to transform cached objects and NOT reconvert,
             // TODO: we wont do !hasTransform here, and re-set application id before this
 
-            bool wasCached = false;
             if (
               !hasTransform
               && !config.DocumentChangeListeningDisabled //This is experimental
@@ -213,7 +212,6 @@ public class RevitContinuousTraversalBuilder(
             )
             {
               converted = value;
-              wasCached = true;
               cacheHitCount++;
             }
             // not in cache means we convert
@@ -232,13 +230,8 @@ public class RevitContinuousTraversalBuilder(
               converted.applicationId = applicationId;
             }
 
-            // TODO: send pipeline processing
+            // NOTE: this is the main part that differentiate from the main root object builder
             var reference = await sendPipeline.Process(converted).ConfigureAwait(true);
-            if (!wasCached)
-            {
-              // NOTE: can be moved in else block above where we check for cached objects
-              sendConversionCache.AppendSendResult(projectId, applicationId, reference);
-            }
 
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
