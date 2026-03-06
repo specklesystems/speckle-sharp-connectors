@@ -396,9 +396,16 @@ public sealed class SendOperation<T>(
     // This would leave this send cache out-of-sync with the server, and lead to bad commits that contain references to objects the server doesn't have.
     // For now, we've taken the decision that it's unlikely to happen...
 
-    var references = conversionResults
-      .Where(x => x.Result is not null)
-      .ToDictionary(x => new Id(x.SourceId), x => (ObjectReference)x.Result.NotNull());
+    var references = new Dictionary<Id, ObjectReference>();
+    foreach (var x in conversionResults)
+    {
+      if (x.Result is not null)
+      {
+        // NOTE: why not ToDictionary -> we might end up reoccurring object references for any reason. instancing, linked models etc.
+        // ToDictionary throws 'item already exists' errors. but safe to override items in references dictionary since they are unique
+        references[new Id(x.SourceId)] = (ObjectReference)x.Result.NotNull();
+      }
+    }
     sendConversionCache.StoreSendResult(projectId, references);
   }
 }
