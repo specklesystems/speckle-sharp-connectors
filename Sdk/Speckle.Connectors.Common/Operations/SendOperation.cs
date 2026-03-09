@@ -381,10 +381,6 @@ public sealed class SendOperation<T>(
     return false;
   }
 
-  /// <remarks>
-  /// Assuming that <paramref name="conversionResults"/> are either <see langword="null"/> or <see cref="ObjectReference"/>
-  /// Which will be true only for the packfile based builders.
-  /// </remarks>
   /// <param name="conversionResults"></param>
   /// <param name="projectId"></param>
   private void WriteReferencesToCache(IReadOnlyList<SendConversionResult> conversionResults, string projectId)
@@ -396,17 +392,26 @@ public sealed class SendOperation<T>(
     // This would leave this send cache out-of-sync with the server, and lead to bad commits that contain references to objects the server doesn't have.
     // For now, we've taken the decision that it's unlikely to happen...
 
-    var references = new Dictionary<Id, ObjectReference>();
     foreach (var x in conversionResults)
     {
-      if (x.Result is not null)
+      switch (x.Result)
       {
-        // NOTE: why not ToDictionary -> we might end up reoccurring object references for any reason. instancing, linked models etc.
-        // ToDictionary throws 'item already exists' errors. but safe to override items in references dictionary since they are unique
-        references[new Id(x.SourceId)] = (ObjectReference)x.Result.NotNull();
+        case ObjectReference r:
+          // NOTE: we may end up reoccurring applicationId multiple times e.g. instancing, linked models etc.
+          // It's safe to let StoreSendResult override references since they are equivalent
+          sendConversionCache.StoreSendResult(projectId, x.SourceId, r);
+          break;
+        case { } b:
+          // All other connectores report ObjectReferences as results
+          // Navisworks works a bit differently because it's not converting depth first
+          sendConversionCache.StoreSendResult(
+            projectId,
+            x.SourceId,
+            new ObjectReference { referencedId = b.id.NotNull(), applicationId = b.applicationId }
+          );
+          break;
       }
     }
-    sendConversionCache.StoreSendResult(projectId, references);
   }
 }
 

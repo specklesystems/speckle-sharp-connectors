@@ -17,7 +17,7 @@ public class SendConversionCache : ISendConversionCache
     }
   }
 
-  public void AppendSendResult(string projectId, string applicationId, ObjectReference convertedReference)
+  public void StoreSendResult(string projectId, string applicationId, ObjectReference convertedReference)
   {
     Cache[(applicationId, projectId)] = convertedReference;
   }
