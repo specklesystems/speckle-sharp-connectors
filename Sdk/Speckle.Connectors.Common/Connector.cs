@@ -37,54 +37,63 @@ public static class Connector
       typeof(Point).Assembly
     );
 
+    return serviceCollection.AddSeqLogging(
+      application,
+      version,
 #if DEBUG || LOCAL
-    var minimumLevel = SpeckleLogLevel.Debug;
+      new SpeckleLogging(Console: true, File: new(), MinimumLevel: SpeckleLogLevel.Debug),
+      new SpeckleTracing(Console: false),
+      new SpeckleMetrics(Console: false)
 #else
-    var minimumLevel = SpeckleLogLevel.Information;
+      new SpeckleLogging(
+        Console: true,
+        File: new(),
+        Otel:
+        [
+          new(
+            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/logs"),
+            Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
+          )
+        ],
+        MinimumLevel: SpeckleLogLevel.Information
+      ),
+      new SpeckleTracing(
+        Console: false,
+        Otel:
+        [
+          new(
+            Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/traces"),
+            Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
+          )
+        ]
+      ),
+      null
 #endif
+    );
+  }
+
+  public static IDisposable AddSeqLogging(
+    this IServiceCollection serviceCollection,
+    Application application,
+    HostAppVersion version,
+    SpeckleLogging loggingConfig,
+    SpeckleTracing? tracingConfig,
+    SpeckleMetrics? metricsConfig
+  )
+  {
+    var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
     var (logging, tracing, metrics) = Observability.Initialize(
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       assemblyVersion,
-#if DEBUG || LOCAL
-      new(
-        new SpeckleLogging(Console: true, File: new(), MinimumLevel: minimumLevel),
-        new SpeckleTracing(Console: false),
-        new SpeckleMetrics(Console: false)
-      )
-#else
-      new(
-        new SpeckleLogging(
-          Console: true,
-          File: new(),
-          Otel:
-          [
-            new(
-              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/logs",
-              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-            )
-          ],
-          MinimumLevel: minimumLevel
-        ),
-        new SpeckleTracing(
-          Console: false,
-          Otel:
-          [
-            new(
-              Endpoint: "https://seq-dev.speckle.systems/ingest/otlp/v1/traces",
-              Headers: new() { { "X-Seq-ApiKey", "y5YnBp12ZE1Czh4tzZWn" } }
-            )
-          ]
-        )
-      )
-#endif
+      new(loggingConfig, tracingConfig, metricsConfig)
     );
     //do this after the AddSpeckleSdk so that the logging system gets values from here.
     serviceCollection.AddLogging(x =>
     {
       x.ClearProviders();
       x.AddProvider(new SpeckleLogProvider(logging));
-      x.SetMinimumLevel(GetMicrosoftLevel(minimumLevel));
+      x.SetMinimumLevel(GetMicrosoftLevel(loggingConfig.MinimumLevel));
     });
     serviceCollection.AddSingleton<Speckle.Sdk.Logging.ISdkActivityFactory, ConnectorActivityFactory>();
     return new LoggingDisposable(logging, tracing, metrics);
