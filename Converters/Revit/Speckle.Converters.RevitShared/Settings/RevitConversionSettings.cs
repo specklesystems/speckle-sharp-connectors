@@ -1,4 +1,4 @@
-namespace Speckle.Converters.RevitShared.Settings;
+﻿namespace Speckle.Converters.RevitShared.Settings;
 
 public record RevitConversionSettings(
   DB.Document Document,
@@ -9,5 +9,6 @@ public record RevitConversionSettings(
   bool SendLinkedModels,
   bool SendRebarsAsVolumetric,
   bool SendAreasAsMesh,
+  bool ReceiveInstancesAsFamilies,
   double Tolerance = 0.0164042 // 5mm in ft
 );

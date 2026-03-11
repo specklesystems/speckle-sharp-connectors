@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converter.Navisworks.Paths;
+namespace Speckle.Converter.Navisworks.Paths;
 
 public readonly record struct PathKey
 {
@@ -84,21 +84,9 @@ public readonly record struct PathKey
     return true;
   }
 
-  public override string ToString()
-  {
-    if (Data == null || Data.Length == 0)
-    {
-      return string.Empty;
-    }
-    return string.Join(",", Data);
-  }
+  public override string ToString() => Data == null || Data.Length == 0 ? string.Empty : string.Join(".", Data);
 
-  /// <summary>
-  /// Returns a compact string representation using the hash value as an unsigned integer.
-  /// Suitable for use as application IDs and definition IDs.
-  /// This avoids negative numbers in IDs by treating the hash as unsigned.
-  /// </summary>
-  public string ToHashString() => unchecked((uint)Hash).ToString();
+  public string ToPathString() => Data == null || Data.Length == 0 ? "0" : string.Join(".", Data);
 }
 
 internal sealed class PathKeyComparer : IEqualityComparer<PathKey>

@@ -104,9 +104,19 @@ public class SpeckleDataObjectPassthrough()
     }
 
     List<SpeckleGeometryWrapperGoo> inputGeometry = new();
-    if (!da.GetDataList(1, inputGeometry) && result == null)
+    bool hasGeometries = da.GetDataList(1, inputGeometry);
+
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
+    SpecklePropertyGroupGoo? inputProperties = null;
+    da.GetData(3, ref inputProperties);
+
+    bool hasAppId = TryGetApplicationIdInput(da, out string? inputAppId);
+
+    if (result == null && !hasGeometries && inputName == null && inputProperties == null && !hasAppId)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a Speckle DataObject or Geometries");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Pass in a DataObject or at least one input.");
       return;
     }
 
@@ -119,19 +129,25 @@ public class SpeckleDataObjectPassthrough()
       }
     }
 
-    string? inputName = null;
-    da.GetData(2, ref inputName);
-
-    SpecklePropertyGroupGoo? inputProperties = null;
-    da.GetData(3, ref inputProperties);
-
     // process geometry
     if (result == null)
     {
       result = new SpeckleDataObjectWrapperGoo().Value;
     }
 
-    if (inputGeometry.Count > 0)
+    // process name first (geometry loop must use the final name)
+    if (inputName != null)
+    {
+      result.Name = inputName;
+    }
+
+    // process properties first (geometry loop must use the final properties)
+    if (inputProperties != null)
+    {
+      result.Properties = inputProperties;
+    }
+
+    if (hasGeometries)
     {
       result.Geometries.Clear();
       foreach (var inputGeo in inputGeometry)
@@ -148,21 +164,18 @@ public class SpeckleDataObjectPassthrough()
         result.Geometries.Add(mutatingGeo);
       }
     }
-
-    // process name
-    if (inputName != null)
+    else if (inputName != null || inputProperties != null)
     {
-      result.Name = inputName;
-    }
-
-    // process properties
-    if (inputProperties != null)
-    {
-      result.Properties = inputProperties;
+      // keep existing geometries in sync when only name/properties are overridden
+      foreach (var geo in result.Geometries)
+      {
+        geo.Base[Constants.NAME_PROP] = result.Name;
+        geo.Properties = result.Properties;
+      }
     }
 
     // process application id (only if user provided one)
-    if (TryGetApplicationIdInput(da, out string? inputAppId))
+    if (hasAppId)
     {
       result.ApplicationId = inputAppId;
     }

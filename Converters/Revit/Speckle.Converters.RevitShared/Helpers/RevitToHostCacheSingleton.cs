@@ -9,4 +9,23 @@ public class RevitToHostCacheSingleton
   /// They needed to be set while creating "TessellatedFace".
   /// </summary>
   public Dictionary<string, DB.ElementId> MaterialsByObjectId { get; } = new();
+
+  /// <summary>
+  /// Maps InstanceDefinitionProxy.applicationId to the created Revit Family.
+  /// Populated by RevitFamilyBaker during receive operations.
+  /// </summary>
+  public Dictionary<string, DB.Family> FamiliesByDefinitionId { get; } = new();
+
+  /// <summary>
+  /// Maps InstanceDefinitionProxy.applicationId to the activated FamilySymbol (for placement).
+  /// Populated by RevitFamilyBaker during receive operations.
+  /// </summary>
+  public Dictionary<string, DB.FamilySymbol> SymbolsByDefinitionId { get; } = new();
+
+  public void Clear()
+  {
+    MaterialsByObjectId.Clear();
+    FamiliesByDefinitionId.Clear();
+    SymbolsByDefinitionId.Clear();
+  }
 }

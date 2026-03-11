@@ -36,12 +36,13 @@ public class AccountManagerComponent : GH_Component, IDisposable
       ComponentCategories.OPERATIONS
     )
   {
-    Attributes = new AccountManagerComponentAttributes(this);
     _accountManager = PriorityLoader.Container.GetRequiredService<IAccountManager>();
     Accounts = _accountManager.GetAccounts().ToList();
 
     SignInButton = new GhContextMenuButton("Sign In", "Sign In", "Click to sign into Speckle account.", AuthFlow);
   }
+
+  public override void CreateAttributes() => m_attributes = new AccountManagerComponentAttributes(this);
 
   private bool AuthFlow(ToolStripDropDown menu)
   {

@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
-using Speckle.DoubleNumerics;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Instances;
 
@@ -46,6 +46,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       {
         UnpackInstance(blockReference, 0, transaction);
       }
+
       _instanceObjectsManager.AddAtomicObject(obj.ApplicationId, obj);
     }
     return _instanceObjectsManager.GetUnpackResult();
@@ -66,13 +67,14 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         ? instance.AnonymousBlockTableRecord
         : instance.BlockTableRecord;
 
+      // transforms on instances are always stored in WCS
       InstanceProxy instanceProxy =
         new()
         {
           applicationId = instanceId,
           definitionId = definitionId.ToString(),
           maxDepth = depth,
-          transform = GetMatrix(instance.BlockTransform.ToArray()),
+          transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
           units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
         };
 
@@ -173,6 +175,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
           UnpackInstance(blockReference, depth + 1, transaction);
         }
 
+        _instanceObjectsManager.AddAtomicDefinitionObjectId(appId);
         _instanceObjectsManager.AddAtomicObject(appId, new(obj, appId));
       }
 
@@ -183,7 +186,4 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
   }
-
-  private Matrix4x4 GetMatrix(double[] t) =>
-    new(t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8], t[9], t[10], t[11], t[12], t[13], t[14], t[15]);
 }

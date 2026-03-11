@@ -18,21 +18,21 @@ public class Polyline3dToSpeckleConverter
   : IToSpeckleTopLevelConverter,
     ITypedConverter<ADB.Polyline3d, SOG.Autocad.AutocadPolycurve>
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
+  private readonly ITypedConverter<List<double>, SOG.Polyline> _doublesConverter;
   private readonly ITypedConverter<ADB.Spline, SOG.Curve> _splineConverter;
-  private readonly ITypedConverter<ADB.Extents3d, SOG.Box> _boxConverter;
+  private readonly IReferencePointConverter _referencePointConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public Polyline3dToSpeckleConverter(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
+    ITypedConverter<List<double>, SOG.Polyline> doublesConverter,
     ITypedConverter<ADB.Spline, SOG.Curve> splineConverter,
-    ITypedConverter<ADB.Extents3d, SOG.Box> boxConverter,
+    IReferencePointConverter referencePointConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
+    _doublesConverter = doublesConverter;
     _splineConverter = splineConverter;
-    _boxConverter = boxConverter;
+    _referencePointConverter = referencePointConverter;
     _settingsStore = settingsStore;
   }
 
@@ -56,7 +56,6 @@ public class Polyline3dToSpeckleConverter
     }
 
     // get all vertex data except control vertices
-    List<double> value = new();
     List<ADB.PolylineVertex3d> vertices = target
       .GetSubEntities<ADB.PolylineVertex3d>(
         ADB.OpenMode.ForRead,
@@ -64,10 +63,13 @@ public class Polyline3dToSpeckleConverter
       )
       .Where(e => e.VertexType != ADB.Vertex3dType.FitVertex) // Do not collect fit vertex points, they are not used for creation
       .ToList();
+    List<double> value = new(vertices.Count * 3);
     for (int i = 0; i < vertices.Count; i++)
     {
       // vertex value is in the Global Coordinate System (GCS).
-      value.AddRange(vertices[i].Position.ToArray());
+      value.Add(vertices[i].Position.X);
+      value.Add(vertices[i].Position.Y);
+      value.Add(vertices[i].Position.Z);
     }
 
     List<Objects.ICurve> segments = new();
@@ -94,18 +96,15 @@ public class Polyline3dToSpeckleConverter
         }
       }
 
-      SOG.Polyline displayValue = segmentValues.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
-      if (displayValue != null)
-      {
-        spline.displayValue = displayValue;
-      }
+      // set displayValue of spline
+      spline.displayValue = _doublesConverter.Convert(segmentValues);
 
       segments.Add(spline);
     }
     // for simple polyline3ds just get the polyline segment from the value
     else
     {
-      SOG.Polyline polyline = value.ConvertToSpecklePolyline(_settingsStore.Current.SpeckleUnits);
+      SOG.Polyline polyline = _doublesConverter.Convert(value);
       if (target.Closed)
       {
         polyline.closed = true;
@@ -114,8 +113,6 @@ public class Polyline3dToSpeckleConverter
       segments.Add(polyline);
     }
 
-    SOG.Box bbox = _boxConverter.Convert(target.GeometricExtents);
-
     SOG.Autocad.AutocadPolycurve polycurve =
       new()
       {
@@ -123,11 +120,10 @@ public class Polyline3dToSpeckleConverter
         bulges = null,
         tangents = null,
         normal = null,
-        value = value,
+        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // convert with reference point
         polyType = polyType,
         closed = target.Closed,
         length = target.Length,
-        bbox = bbox,
         units = _settingsStore.Current.SpeckleUnits
       };
 
