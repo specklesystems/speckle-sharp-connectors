@@ -22,6 +22,8 @@ public static class Program
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "IPC")]
   public static async Task Main(string[] args)
   {
+    Thread.Sleep(10000); //For Debugging purposes, gives you enough time to attach your IDE to the running process
+    
     ILogger? logger = null;
     ImporterInstance? importer = null;
 

@@ -96,27 +96,6 @@ internal sealed class JobProcessorInstance(
     }
   }
 
-  private async Task ReportSuccess(
-    FileimportJob job,
-    string rootObjectId,
-    IClient client,
-    double elapsedSeconds,
-    CancellationToken cancellationToken
-  )
-  {
-    string versionId = await client.Ingestion.Complete(
-      new(job.Payload.ModelIngestionId, job.Payload.ProjectId, rootObjectId, null),
-      cancellationToken
-    );
-    logger.LogInformation(
-      "Attempt {Attempt} of {JobId} has succeeded creating {VersionId} after {ElapsedSeconds}",
-      job.Attempt,
-      job.Id,
-      versionId,
-      elapsedSeconds
-    );
-  }
-
   private async Task ReportCancelled(FileimportJob job, IClient client, Exception ex, double elapsedSeconds)
   {
     await client.Ingestion.FailWithCancel(
@@ -186,10 +165,8 @@ internal sealed class JobProcessorInstance(
         throw new MaxAttemptsExceededException("Unhandled error silently failed the job multiple times");
       }
 
-      string rootObjectId = await ExecuteJobWithTimeout(job, speckleClient, serviceCancellationToken);
+      await ExecuteJobWithTimeout(job, speckleClient, serviceCancellationToken);
       totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-
-      await ReportSuccess(job, rootObjectId, speckleClient, totalElapsedSeconds, serviceCancellationToken);
 
       activity?.SetStatus(SdkActivityStatusCode.Ok);
     }

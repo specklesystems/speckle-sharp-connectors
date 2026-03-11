@@ -14,7 +14,7 @@ public sealed class ConnectorActivityFactory(ISpeckleApplication application) : 
 
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
+  public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "", string? parentId = null)
   {
     var activity = _loggingActivityFactory.Start(application.ApplicationAndVersion + " " + (name ?? source));
     if (activity is null)

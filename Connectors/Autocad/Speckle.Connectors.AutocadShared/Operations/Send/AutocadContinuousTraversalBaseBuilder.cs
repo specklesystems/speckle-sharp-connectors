@@ -87,7 +87,7 @@ public abstract class AutocadContinuousTraversalBaseBuilder : IRootContinuousTra
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();
 
     // 1 - Unpack the instances
-    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = _instanceUnpacker.UnpackSelection(objects);
+    var (atomicObjects, _, instanceProxies, instanceDefinitionProxies) = _instanceUnpacker.UnpackSelection(objects);
     root[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies;
 
     // 2 - Unpack the groups
