@@ -108,18 +108,16 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
       return;
     }
 
-    // process the properties
-    Dictionary<string, ISpecklePropertyGoo> result =
-      inputProperties is null || Mode == PropertyMode.Replace
-        ? new()
-        : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
+    // deep clone to prevent mutating upstream grasshopper data
+    SpecklePropertyGroupGoo resultGoo =
+      inputProperties is null || Mode == PropertyMode.Replace ? new SpecklePropertyGroupGoo() : inputProperties.Clone();
 
     // process keys and values
     if (hasKeys)
     {
       // check for duplicate keys
-      var duplicates = inputKeys.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key);
-      if (duplicates.Any())
+      var duplicates = inputKeys.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+      if (duplicates.Count != 0)
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
@@ -128,12 +126,12 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
         return;
       }
 
-      // set keyvalue pairs
+      // set key-value pairs
       for (int i = 0; i < inputKeys.Count; i++)
       {
         string key = inputKeys[i];
         object? value = Mode == PropertyMode.Remove ? null : inputValues[i];
-        ISpecklePropertyGoo? convertedValue = null;
+        ISpecklePropertyGoo? convertedValue;
         switch (value)
         {
           case SpecklePropertyGroupGoo propGoo:
@@ -148,7 +146,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
             {
               AddRuntimeMessage(
                 GH_RuntimeMessageLevel.Error,
-                $"Values contain an invalid data type. Only strings, numbers, booleans, planes, vectors, intervals, and other Speckle properties are supported."
+                "Values contain an invalid data type. Only strings, numbers, booleans, planes, vectors, intervals, and other Speckle properties are supported."
               );
               return;
             }
@@ -160,29 +158,19 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
         switch (Mode)
         {
           case PropertyMode.Merge:
-            if (result.ContainsKey(key))
-            {
-              result[key] = convertedValue;
-            }
-            else
-            {
-              result.Add(key, convertedValue);
-            }
-            break;
           case PropertyMode.Replace:
-            result.Add(key, convertedValue);
+            resultGoo.SetValueByPath(key, convertedValue);
             break;
           case PropertyMode.Remove:
-            result.Remove(key);
+            resultGoo.RemoveValueByPath(key);
             break;
         }
       }
     }
 
-    var groupGoo = new SpecklePropertyGroupGoo(result);
-    da.SetData(0, groupGoo);
-    da.SetDataList(1, result.Keys);
-    da.SetDataList(2, result.Values);
+    da.SetData(0, resultGoo);
+    da.SetDataList(1, resultGoo.Value.Keys);
+    da.SetDataList(2, resultGoo.Value.Values);
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -197,13 +185,13 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
       {
         case PropertyMode.Merge:
           modeItem.ToolTipText =
-            "Input keyvalue pairs will be merged with existing properties. Any existing keys will be updated with new values.";
+            @"Input key-value pairs will be merged with existing properties. Any existing keys will be updated with new values.";
           break;
         case PropertyMode.Replace:
-          modeItem.ToolTipText = "Existing properties will be cleared and replaced by input keyvalue pairs.";
+          modeItem.ToolTipText = @"Existing properties will be cleared and replaced by input key-value pairs.";
           break;
         case PropertyMode.Remove:
-          modeItem.ToolTipText = "Existing keyvalue pairs that match the input keys will be removed from properties.";
+          modeItem.ToolTipText = @"Existing key-value pairs that match the input keys will be removed from properties.";
           break;
       }
     }
