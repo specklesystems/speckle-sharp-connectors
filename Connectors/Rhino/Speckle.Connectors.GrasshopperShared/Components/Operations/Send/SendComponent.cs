@@ -13,6 +13,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
@@ -224,9 +225,25 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    var (result, versionId) = await sendOperation
+    var (result, versionId, ingestionId) = await sendOperation
       .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, cancellationToken)
       .ConfigureAwait(false);
+
+    if (ingestionId != null)
+    {
+      Message = "Remote processing";
+      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
+      versionId = await ingestionTracker
+        .WaitForIngestionCompletion(
+          client,
+          sendInfo.ProjectId,
+          ingestionId,
+          reportProgress: null,
+          reportProgressId: null,
+          cancellationToken
+        )
+        .ConfigureAwait(false);
+    }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object> { { "isAsync", false } };
@@ -238,12 +255,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
-    SpeckleUrlLatestModelVersionResource createdVersionResource =
+    SpeckleUrlModelVersionResource createdVersionResource =
       new(
         new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
         sendInfo.WorkspaceId,
         sendInfo.ProjectId,
-        sendInfo.ModelId
+        sendInfo.ModelId,
+        versionId
       );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource, versionId);

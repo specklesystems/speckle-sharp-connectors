@@ -13,7 +13,8 @@ public interface ISendBindingUICommands
   Task SetModelSendResult(
     string modelCardId,
     string versionId,
-    IEnumerable<SendConversionResult> sendConversionResults
+    IEnumerable<SendConversionResult> sendConversionResults,
+    string? ingestionId = null
   );
 
   IBrowserBridge Bridge { get; }

@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -21,7 +21,7 @@ public class OperationProgressManager : IOperationProgressManager
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
   private static readonly ConcurrentDictionary<string, (DateTime lastCallTime, string status)> s_lastProgressValues =
     new();
-  private const int THROTTLE_INTERVAL_MS = 200;
+  private const int THROTTLE_INTERVAL_MS = 400;
 
   public IProgress<CardProgress> CreateOperationProgressEventHandler(
     IBrowserBridge bridge,
@@ -65,7 +65,7 @@ public class OperationProgressManager : IOperationProgressManager
     var currentTime = DateTime.Now;
     var elapsedMs = (currentTime - t.Item1).Milliseconds;
 
-    if (elapsedMs < THROTTLE_INTERVAL_MS && t.Item2 == progress.Status)
+    if (elapsedMs < THROTTLE_INTERVAL_MS)
     {
       return;
     }

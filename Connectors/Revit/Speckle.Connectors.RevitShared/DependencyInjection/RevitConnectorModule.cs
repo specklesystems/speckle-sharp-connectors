@@ -62,6 +62,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ViewUnpacker>();
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootContinuousTraversalBuilder<DocumentToConvert>, RevitContinuousTraversalBuilder>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();
