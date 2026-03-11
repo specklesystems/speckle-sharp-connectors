@@ -85,7 +85,7 @@ internal static class ServiceRegistration
             }
           ),
           new(
-            Endpoint: new Uri("https://collector.speckle.dev/v1/logs"),
+            Endpoint: new Uri("https://collector.speckle.dev/v1/traces"),
             Headers: new()
             {
               {
