@@ -13,7 +13,7 @@ public static class Consts
   public const string USER_ID = "user.id";
   public const string USER_DISTINCT_ID = "user.distinctId";
   public const string USER_SERVER_URL = "user.server_url";
-  public const string TRACING_SOURCE = "speckle";
+  public const string TRACING_SOURCE = "connector";
 
   /// <summary>
   /// A random GUID for adding to the logging context to correlate the <c>service.instance.id</c>
