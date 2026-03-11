@@ -92,36 +92,105 @@ public class RhinoMapperBinding : IBinding
   /// <summary>
   /// Assigns selected objects to a specific Revit category.
   /// </summary>
+  /// <remarks>
+  /// If block instance is selected, mapping is applied uniformly to all instances of that block definition in the doc.
+  /// </remarks>
   public void AssignObjectsToCategory(string[] objectIds, string categoryValue)
   {
+    var objectsToModify = new HashSet<RhinoObject>();
+    var processedDefinitions = new HashSet<int>(); // Tracks unique block definitions
+
     foreach (var objectIdString in objectIds)
     {
-      // NOTE: should we be checking if key already exists?
-      // For POC, straightforward set on object
       var rhinoObject = _rhinoObjectHelper.GetRhinoObject(objectIdString);
-      var attrs = rhinoObject?.Attributes.Duplicate();
-      attrs?.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
-      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
+      switch (rhinoObject)
+      {
+        case null:
+          continue;
+        case InstanceObject instanceObj:
+        {
+          var defIndex = instanceObj.InstanceDefinition.Index;
+
+          // HashSet.Add returns true only if the index wasn't already in the set.
+          // we only want to fetch and loop through siblings once per definition.
+          if (processedDefinitions.Add(defIndex))
+          {
+            var siblingInstances = instanceObj.InstanceDefinition.GetReferences(0);
+            foreach (var sibling in siblingInstances)
+            {
+              objectsToModify.Add(sibling);
+            }
+          }
+
+          break;
+        }
+        default:
+          objectsToModify.Add(rhinoObject);
+          break;
+      }
     }
 
-    // Trigger single update after all changes
+    // Apply the mapping uniformly to all collected objects
+    foreach (var obj in objectsToModify)
+    {
+      var attrs = obj.Attributes.Duplicate();
+      attrs.SetUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY, categoryValue);
+      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(obj, attrs, true);
+    }
+
+    // Trigger single UI update
     _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 
   /// <summary>
   /// Removes category assignments from specific objects.
   /// </summary>
+  /// <remarks>
+  /// If block instance is selected, assignment is cleared uniformly from all instances of that block definition in the doc.
+  /// </remarks>
   public void ClearObjectsCategoryAssignment(string[] objectIds)
   {
+    var objectsToModify = new HashSet<RhinoObject>();
+    var processedDefinitions = new HashSet<int>(); // Tracks unique block definitions
+
     foreach (var objectIdString in objectIds)
     {
       var rhinoObject = _rhinoObjectHelper.GetRhinoObject(objectIdString);
-      var attrs = rhinoObject?.Attributes.Duplicate();
-      attrs?.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
-      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(rhinoObject, attrs, true);
+      switch (rhinoObject)
+      {
+        case null:
+          continue;
+        case InstanceObject instanceObj:
+        {
+          var defIndex = instanceObj.InstanceDefinition.Index;
+
+          // Deduplicate definition processing
+          if (processedDefinitions.Add(defIndex))
+          {
+            var siblingInstances = instanceObj.InstanceDefinition.GetReferences(0);
+            foreach (var sibling in siblingInstances)
+            {
+              objectsToModify.Add(sibling);
+            }
+          }
+
+          break;
+        }
+        default:
+          objectsToModify.Add(rhinoObject);
+          break;
+      }
     }
 
-    // Trigger single update after all changes
+    // Clear the mapping from all collected objects
+    foreach (var obj in objectsToModify)
+    {
+      var attrs = obj.Attributes.Duplicate();
+      attrs.DeleteUserString(RevitMappingConstants.CATEGORY_USER_STRING_KEY);
+      RhinoDoc.ActiveDoc.Objects.ModifyAttributes(obj, attrs, true);
+    }
+
+    // Trigger single UI update
     _idleManager.SubscribeToIdle(nameof(NotifyMappingsChanged), NotifyMappingsChanged);
   }
 

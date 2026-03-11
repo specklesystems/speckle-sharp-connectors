@@ -7,33 +7,23 @@ namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 public class AlignmentSubentityLineToSpeckleRawConverter : ITypedConverter<CDB.AlignmentSubEntityLine, SOG.Line>
 {
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
+  private readonly ITypedConverter<AG.Point2d, SOG.Point> _pointConverter;
 
-  public AlignmentSubentityLineToSpeckleRawConverter(IConverterSettingsStore<Civil3dConversionSettings> settingsStore)
+  public AlignmentSubentityLineToSpeckleRawConverter(
+    IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
+    ITypedConverter<AG.Point2d, SOG.Point> pointConverter
+  )
   {
     _settingsStore = settingsStore;
+    _pointConverter = pointConverter;
   }
 
   public SOG.Line Convert(object target) => Convert((CDB.AlignmentSubEntityLine)target);
 
   public SOG.Line Convert(CDB.AlignmentSubEntityLine target)
   {
-    SOG.Point start =
-      new()
-      {
-        x = target.StartPoint.X,
-        y = target.StartPoint.Y,
-        z = 0,
-        units = _settingsStore.Current.SpeckleUnits
-      };
-
-    SOG.Point end =
-      new()
-      {
-        x = target.EndPoint.X,
-        y = target.EndPoint.Y,
-        z = 0,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Point start = _pointConverter.Convert(target.StartPoint);
+    SOG.Point end = _pointConverter.Convert(target.EndPoint);
 
     SOG.Line line =
       new()

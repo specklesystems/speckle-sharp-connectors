@@ -31,7 +31,7 @@ public class RevitMaterialBaker
     _converterSettings = converterSettings;
   }
 
-  private ElementId? FindExistingMaterialByName(string? materialName)
+  private ElementId? FindExistingMaterialByName(string? materialName, Document document)
   {
     if (string.IsNullOrWhiteSpace(materialName))
     {
@@ -40,7 +40,7 @@ public class RevitMaterialBaker
 
     string sanitizedName = _revitUtils.RemoveInvalidChars(materialName!);
 
-    using var collector = new FilteredElementCollector(_converterSettings.Current.Document);
+    using var collector = new FilteredElementCollector(document);
     var existingMaterial = collector
       .OfClass(typeof(Material))
       .Cast<Material>()
@@ -120,53 +120,54 @@ public class RevitMaterialBaker
   }
 
   /// <summary>
-  /// Will bake render materials in the revit document.
+  /// Bakes a single Speckle RenderMaterial into the provided document.
+  /// Used both for project-level baking and isolated family-level baking.
   /// </summary>
-  /// <param name="speckleRenderMaterialProxies"></param>
-  /// <returns></returns>
+  public ElementId BakeMaterial(RenderMaterial speckleRenderMaterial, Document document)
+  {
+    ElementId? existingMaterialId = FindExistingMaterialByName(speckleRenderMaterial.name, document);
+
+    if (existingMaterialId != null)
+    {
+      return existingMaterialId;
+    }
+
+    // create new material
+    // all values assumed to be on the 0 - 1 scale need to pass through this validation and logging (if assumption wrong)
+    double roughness = ClampToUnitRange(speckleRenderMaterial.roughness, "roughness", speckleRenderMaterial.name);
+    double opacity = ClampToUnitRange(speckleRenderMaterial.opacity, "opacity", speckleRenderMaterial.name);
+    double metalness = ClampToUnitRange(speckleRenderMaterial.metalness, "metalness", speckleRenderMaterial.name);
+
+    var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
+    double transparency = 1 - opacity;
+    double smoothness = 1 - roughness;
+    string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}");
+
+    var newMaterialId = Material.Create(document, matName);
+    var revitMaterial = (Material)document.GetElement(newMaterialId);
+    revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
+    revitMaterial.Transparency = (int)(transparency * 100);
+    revitMaterial.Shininess = (int)(metalness * 128);
+    revitMaterial.Smoothness = (int)(smoothness * 100);
+
+    return revitMaterial.Id;
+  }
+
+  /// <summary>
+  /// Will bake render materials in the project document.
+  /// </summary>
   public Dictionary<string, ElementId> BakeMaterials(
     IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies
   )
   {
     Dictionary<string, ElementId> objectIdAndMaterialIndexMap = new();
+    var document = _converterSettings.Current.Document;
+
     foreach (var proxy in speckleRenderMaterialProxies)
     {
-      var speckleRenderMaterial = proxy.value;
-
       try
       {
-        // first try to match existing material by name
-        ElementId? existingMaterialId = FindExistingMaterialByName(speckleRenderMaterial.name);
-
-        ElementId materialIdToUse;
-
-        if (existingMaterialId != null)
-        {
-          // Use existing material
-          materialIdToUse = existingMaterialId;
-        }
-        else
-        {
-          // create new material
-          // all values assumed to be on the 0 - 1 scale need to pass through this validation and logging (if assumption wrong)
-          double roughness = ClampToUnitRange(speckleRenderMaterial.roughness, "roughness", speckleRenderMaterial.name);
-          double opacity = ClampToUnitRange(speckleRenderMaterial.opacity, "opacity", speckleRenderMaterial.name);
-          double metalness = ClampToUnitRange(speckleRenderMaterial.metalness, "metalness", speckleRenderMaterial.name);
-
-          var diffuse = System.Drawing.Color.FromArgb(speckleRenderMaterial.diffuse);
-          double transparency = 1 - opacity;
-          double smoothness = 1 - roughness;
-          string matName = _revitUtils.RemoveInvalidChars($"{speckleRenderMaterial.name}");
-
-          var newMaterialId = Material.Create(_converterSettings.Current.Document, matName);
-          var revitMaterial = (Material)_converterSettings.Current.Document.GetElement(newMaterialId);
-          revitMaterial.Color = new Color(diffuse.R, diffuse.G, diffuse.B);
-          revitMaterial.Transparency = (int)(transparency * 100);
-          revitMaterial.Shininess = (int)(metalness * 128);
-          revitMaterial.Smoothness = (int)(smoothness * 100);
-
-          materialIdToUse = revitMaterial.Id;
-        }
+        ElementId materialIdToUse = BakeMaterial(proxy.value, document);
 
         foreach (var objectId in proxy.objects)
         {
@@ -187,27 +188,20 @@ public class RevitMaterialBaker
     var validBaseGroupName = _revitUtils.RemoveInvalidChars(baseGroupName);
     var document = _converterSettings.Current.Document;
 
-    using (var collector = new FilteredElementCollector(document))
-    {
-      var materialIds = collector
-        .OfClass(typeof(Material))
-        .Where(m => m.Name.Contains(validBaseGroupName))
-        .Select(m => m.Id)
-        .ToList();
+    using var collector = new FilteredElementCollector(document);
+    var materialIds = collector
+      .OfClass(typeof(Material))
+      .Where(m => m.Name.Contains(validBaseGroupName))
+      .Select(m => m.Id)
+      .ToList();
 
-      document.Delete(materialIds);
-    }
+    document.Delete(materialIds);
   }
 
   /// <summary>
   /// After CNX-2661, we've seen some edge cases contradicting the expected 0 - 1 range for PRB properties.
   /// Defensively, we'd rather clamp these values than throw.
   /// </summary>
-  /// <remarks>
-  /// Created a method so that we can extend the checks to any numerical value potentially leading to a negative value,
-  /// which would throw an exception. Generalised method since Math.Clamp() only available since C# 8.0 and this method
-  /// handles logging (in the hope that we can get a better feel for these "weird" models, e.g. 0 - 100 scale??)
-  /// </remarks>
   private double ClampToUnitRange(double value, string propertyName, string materialName)
   {
     if (value is < 0 or > 1)

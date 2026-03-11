@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Common.Caching;
+using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models.Collections;
@@ -15,6 +16,7 @@ public sealed class AutocadRootObjectBuilder : AutocadRootObjectBaseBuilder
   public AutocadRootObjectBuilder(
     AutocadLayerUnpacker layerUnpacker,
     IRootToSpeckleConverter converter,
+    IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     ISendConversionCache sendConversionCache,
     AutocadInstanceUnpacker instanceObjectManager,
     AutocadMaterialUnpacker materialUnpacker,
@@ -25,6 +27,7 @@ public sealed class AutocadRootObjectBuilder : AutocadRootObjectBaseBuilder
   )
     : base(
       converter,
+      converterSettings,
       sendConversionCache,
       instanceObjectManager,
       materialUnpacker,
