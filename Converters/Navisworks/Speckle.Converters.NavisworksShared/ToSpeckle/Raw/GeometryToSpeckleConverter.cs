@@ -108,10 +108,10 @@ public sealed class GeometryToSpeckleConverter(
             var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
             var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
             var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
-            var groupKeyHash = groupKey.ToHashString();
+            var groupKeyPath = groupKey.ToPathString();
             for (int i = 0; i < definitionGeometry.Count; i++)
             {
-              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyHash}_{i}";
+              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyPath}_{i}";
             }
 
             _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
@@ -123,10 +123,10 @@ public sealed class GeometryToSpeckleConverter(
             var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
             var instanceProxy = new InstanceProxy
             {
-              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToHashString()}",
+              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToPathString()}",
               transform = ConvertToMatrix4X4(transformedWorld),
               units = _settings.Derived.SpeckleUnits,
-              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToHashString()}",
+              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToPathString()}",
               maxDepth = 0
             };
 
