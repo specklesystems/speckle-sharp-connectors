@@ -46,17 +46,14 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       return;
     }
 
-    // flatten the properties to expose all nested dot-notation paths
-    var flattenedProperties = properties.Flatten();
-
-    Name = $"Properties ({flattenedProperties.Count})";
+    Name = $"Properties ({properties.Value.Count})";
     NickName = Name;
 
     var outputParams = new List<OutputParamWrapper>();
 
-    foreach (var key in flattenedProperties.Keys)
+    foreach (var key in properties.Value.Keys)
     {
-      ISpecklePropertyGoo value = flattenedProperties[key];
+      ISpecklePropertyGoo value = properties.Value[key];
       object? outputValue = value switch
       {
         SpecklePropertyGoo prop => prop.Value,
