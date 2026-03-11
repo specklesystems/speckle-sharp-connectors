@@ -36,7 +36,7 @@ internal static class ServiceRegistration
 
   private static void AddLoggingConfig(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddSeqLogging(
+    serviceCollection.AddOpenTelemetry(
       s_application,
       HOST_APP_VERSION,
 #if DEBUG || LOCAL

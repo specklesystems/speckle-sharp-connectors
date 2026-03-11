@@ -37,7 +37,7 @@ public static class Connector
       typeof(Point).Assembly
     );
 
-    return serviceCollection.AddSeqLogging(
+    return serviceCollection.AddOpenTelemetry(
       application,
       version,
 #if DEBUG || LOCAL
@@ -72,7 +72,7 @@ public static class Connector
     );
   }
 
-  public static IDisposable AddSeqLogging(
+  public static IDisposable AddOpenTelemetry(
     this IServiceCollection serviceCollection,
     Application application,
     HostAppVersion version,
