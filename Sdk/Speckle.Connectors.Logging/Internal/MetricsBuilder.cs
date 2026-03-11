@@ -38,7 +38,7 @@ internal static class MetricsBuilder
 
     if (metrics.Endpoint is not null)
     {
-      options.Endpoint = new Uri(metrics.Endpoint);
+      options.Endpoint = metrics.Endpoint;
     }
   }
 }
