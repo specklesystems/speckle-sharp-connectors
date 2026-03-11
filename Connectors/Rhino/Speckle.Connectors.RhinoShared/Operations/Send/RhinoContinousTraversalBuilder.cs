@@ -91,7 +91,7 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       unpackResults = _instanceUnpacker.UnpackSelection(rhinoObjects);
     }
 
-    var (atomicObjects, instanceProxies, instanceDefinitionProxies) = unpackResults;
+    var (atomicObjects, _, instanceProxies, instanceDefinitionProxies) = unpackResults;
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
     rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
