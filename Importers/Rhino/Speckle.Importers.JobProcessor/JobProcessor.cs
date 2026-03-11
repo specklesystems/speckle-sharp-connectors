@@ -71,7 +71,7 @@ internal sealed class JobProcessorInstance(
         job.RemainingComputeBudgetSeconds
       );
 
-      using var activity = activityFactory.Start();
+      using var activity = activityFactory.Start("Picked up a job (THIS IS THE TOP LEVEL TRACE)");
       using var scopeJobId = ActivityScope.SetTag("jobId", job.Id);
       using var scopeJobType = ActivityScope.SetTag("jobType", job.Payload.JobType);
       using var scopeAttempt = ActivityScope.SetTag("job.attempt", job.Attempt.ToString());

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RhinoInside;
 using Speckle.Importers.Rhino.Internal;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
 
@@ -38,6 +39,9 @@ public static class Program
       TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
         logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
 
+      using var activity = serviceProvider.GetRequiredService<ISdkActivityFactory>()
+        .Start(parentId: importerArgs.ParentTraceId);
+      
       var factory = serviceProvider.GetRequiredService<ImporterInstanceFactory>();
 
       // Error handling flow below here looks a bit of a mess, but we're having to navigate threading issues with rhino inside

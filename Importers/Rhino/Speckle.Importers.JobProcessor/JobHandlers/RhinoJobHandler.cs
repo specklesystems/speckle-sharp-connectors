@@ -10,6 +10,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
@@ -17,7 +18,8 @@ namespace Speckle.Importers.JobProcessor.JobHandlers;
 internal sealed class RhinoJobHandler(
   ILogger<RhinoJobHandler> logger,
   ImportJobFileDownloader fileDownloader,
-  ISpeckleApplication application
+  ISpeckleApplication application,
+  ISdkActivityFactory activityFactory
 ) : IJobHandler
 {
   private readonly JsonSerializerSettings _settings =
@@ -50,29 +52,35 @@ internal sealed class RhinoJobHandler(
       ),
       cancellationToken
     );
+    string resultsPath = $"{file.FileInfo.DirectoryName}/results.json";
 
-    var importerArgs = new ImporterArgs
-    {
-      FilePath = file.FileInfo.FullName,
-      ResultsPath = $"{file.FileInfo.DirectoryName}/results.json",
-      Account = client.Account,
-      Project = project,
-      Ingestion = ingestion,
-      JobId = job.Id,
-      BlobId = job.Payload.BlobId,
-      Attempt = job.Attempt,
-      HostApplication = handlerApplication,
-    };
-    await RunSubProcess(importerArgs, cancellationToken);
-    var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);
+      using (var activity = activityFactory.Start("Await sub-process"))
+      {
+        var importerArgs = new ImporterArgs
+        {
+          FilePath = file.FileInfo.FullName,
+          ResultsPath = resultsPath,
+          ParentTraceId = activity?.TraceId,
+          Account = client.Account,
+          Project = project,
+          Ingestion = ingestion,
+          JobId = job.Id,
+          BlobId = job.Payload.BlobId,
+          Attempt = job.Attempt,
+          HostApplication = handlerApplication,
+        };
+        await RunSubProcess(importerArgs, cancellationToken);
+      }
 
-    if (response.RootObjectId is null)
-    {
-      string message = response.ErrorMessage ?? "Import job failed without a message";
-      throw new SpeckleException(message);
-    }
+      var response = await DeserializeResponse(resultsPath, cancellationToken);
 
-    return response.RootObjectId;
+      if (response.RootObjectId is null)
+      {
+        string message = response.ErrorMessage ?? "Import job failed without a message";
+        throw new SpeckleException(message);
+      }
+
+      return response.RootObjectId;
   }
 
   private async Task RunSubProcess(ImporterArgs args, CancellationToken cancellationToken)
