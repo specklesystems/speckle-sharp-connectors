@@ -7,7 +7,6 @@ using Speckle.Importers.JobProcessor.Blobs;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 
 namespace Speckle.Importers.JobProcessor;
 
@@ -37,7 +36,7 @@ internal static class ServiceRegistration
 
   private static void AddLoggingConfig(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddOpenTelemetry(
+    serviceCollection.AddOpenTelemetry("Speckle.Importers.JobProcessor",
       s_application,
       HOST_APP_VERSION,
 #if DEBUG || LOCAL

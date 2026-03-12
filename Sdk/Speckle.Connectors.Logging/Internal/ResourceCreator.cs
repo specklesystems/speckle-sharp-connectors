@@ -5,24 +5,30 @@ namespace Speckle.Connectors.Logging.Internal;
 
 internal static class ResourceCreator
 {
-  internal static ResourceBuilder Create(string applicationAndVersion, string slug, string connectorVersion) =>
-    ResourceBuilder
+  internal static ResourceBuilder Create(
+    string serviceName,
+    string applicationAndVersion,
+    string slug,
+    string connectorVersion
+  )
+  {
+    string deploymentEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+    return ResourceBuilder
       .CreateEmpty()
-      .AddService(
-        serviceName: Consts.TRACING_SOURCE,
-        serviceVersion: connectorVersion,
-        serviceInstanceId: Consts.StaticSessionId
-      )
+      .AddService(serviceName: serviceName, serviceVersion: connectorVersion, serviceInstanceId: Consts.StaticSessionId)
       .AddAttributes(
         [
+          new(Consts.DEPLOYMENT_ENVIRONMENT, deploymentEnvironment.ToLowerInvariant()),
           new(Consts.SERVICE_NAME, applicationAndVersion),
           new(Consts.SERVICE_SLUG, slug),
           new(Consts.OS_NAME, Environment.OSVersion.ToString()),
           new(Consts.OS_TYPE, RuntimeInformation.ProcessArchitecture.ToString()),
           new(Consts.OS_SLUG, DetermineHostOsSlug()),
-          new(Consts.RUNTIME_NAME, RuntimeInformation.FrameworkDescription),
+          new(Consts.RUNTIME_NAME, ".NET"),
+          new(Consts.RUNTIME_VERSION, RuntimeInformation.FrameworkDescription),
         ]
       );
+  }
 
   private static string DetermineHostOsSlug()
   {

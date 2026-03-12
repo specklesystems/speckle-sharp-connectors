@@ -4,12 +4,14 @@ namespace Speckle.Connectors.Logging;
 
 public static class Consts
 {
+  public const string DEPLOYMENT_ENVIRONMENT = "deployment.environment.name";
   public const string SERVICE_NAME = "connector.name";
   public const string SERVICE_SLUG = "connector.slug";
   public const string OS_NAME = "os.name";
   public const string OS_TYPE = "os.type";
   public const string OS_SLUG = "os.slug";
-  public const string RUNTIME_NAME = "runtime.name";
+  public const string RUNTIME_NAME = "process.runtime.name";
+  public const string RUNTIME_VERSION = "process.runtime.version";
   public const string USER_ID = "user.id";
   public const string USER_DISTINCT_ID = "user.distinctId";
   public const string USER_SERVER_URL = "user.server_url";

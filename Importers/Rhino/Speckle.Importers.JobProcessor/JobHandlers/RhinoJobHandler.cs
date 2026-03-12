@@ -102,7 +102,12 @@ internal sealed class RhinoJobHandler(
     var processStart = new ProcessStartInfo()
     {
       FileName = $"{path}/Speckle.Importers.Rhino.exe",
-      Environment = { },
+      Environment =
+      {
+        ["DOTNET_ENVIRONMENT"] = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
+        ["SEQ_API_KEY"] = Environment.GetEnvironmentVariable("SEQ_API_KEY"),
+        ["SPECKLE_COLLECTOR_API_TOKEN"] = Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN"),
+      },
       RedirectStandardError = true,
       RedirectStandardOutput = true,
       UseShellExecute = false,
