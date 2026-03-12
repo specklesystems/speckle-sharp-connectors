@@ -12,7 +12,7 @@ internal static class ResourceCreator
     string connectorVersion
   )
   {
-    string deploymentEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+    string deploymentEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
     return ResourceBuilder
       .CreateEmpty()
       .AddService(serviceName: serviceName, serviceVersion: connectorVersion, serviceInstanceId: Consts.StaticSessionId)
