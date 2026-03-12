@@ -54,34 +54,34 @@ internal sealed class RhinoJobHandler(
     );
     string resultsPath = $"{file.FileInfo.DirectoryName}/results.json";
 
-      using (var activity = activityFactory.Start("Await sub-process"))
+    using (var activity = activityFactory.Start("Await sub-process"))
+    {
+      var importerArgs = new ImporterArgs
       {
-        var importerArgs = new ImporterArgs
-        {
-          FilePath = file.FileInfo.FullName,
-          ResultsPath = resultsPath,
-          TraceId = activity?.TraceId,
-          ParentSpanId = activity?.SpanId,
-          Account = client.Account,
-          Project = project,
-          Ingestion = ingestion,
-          JobId = job.Id,
-          BlobId = job.Payload.BlobId,
-          Attempt = job.Attempt,
-          HostApplication = handlerApplication,
-        };
-        await RunSubProcess(importerArgs, cancellationToken);
-      }
+        FilePath = file.FileInfo.FullName,
+        ResultsPath = resultsPath,
+        TraceId = activity?.TraceId,
+        ParentSpanId = activity?.SpanId,
+        Account = client.Account,
+        Project = project,
+        Ingestion = ingestion,
+        JobId = job.Id,
+        BlobId = job.Payload.BlobId,
+        Attempt = job.Attempt,
+        HostApplication = handlerApplication,
+      };
+      await RunSubProcess(importerArgs, cancellationToken);
+    }
 
-      var response = await DeserializeResponse(resultsPath, cancellationToken);
+    var response = await DeserializeResponse(resultsPath, cancellationToken);
 
-      if (response.RootObjectId is null)
-      {
-        string message = response.ErrorMessage ?? "Import job failed without a message";
-        throw new SpeckleException(message);
-      }
+    if (response.RootObjectId is null)
+    {
+      string message = response.ErrorMessage ?? "Import job failed without a message";
+      throw new SpeckleException(message);
+    }
 
-      return response.RootObjectId;
+    return response.RootObjectId;
   }
 
   private async Task RunSubProcess(ImporterArgs args, CancellationToken cancellationToken)

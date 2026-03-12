@@ -9,7 +9,6 @@ internal sealed class ImporterInstanceFactory(
   IClientFactory clientFactory,
   ILogger<ImporterInstance> logger,
   ISdkActivityFactory activityFactory
-  
 )
 {
   public ImporterInstance Create(ImporterArgs args)

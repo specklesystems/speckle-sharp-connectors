@@ -9,17 +9,20 @@ using Speckle.Converters.Rhino;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
-#if !DEBUG && !LOCAL 
+#if !DEBUG && !LOCAL
 using Speckle.Sdk.Common;
 #endif
 
 namespace Speckle.Importers.Rhino.Internal;
 
 internal static class ServiceRegistration
-{  
+{
   private const HostAppVersion HOST_APP_VERSION = HostAppVersion.v3;
-  
-  public static IServiceCollection AddRhinoImporter(this IServiceCollection serviceCollection, Application applicationInfo)
+
+  public static IServiceCollection AddRhinoImporter(
+    this IServiceCollection serviceCollection,
+    Application applicationInfo
+  )
   {
     var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
 
@@ -46,11 +49,12 @@ internal static class ServiceRegistration
 
     return serviceCollection;
   }
-  
+
   // Important to respect disposal, because disposal ensures pending messages are flushed
-  public static IDisposable AddLoggingConfig(this IServiceCollection serviceCollection, Application applicationInfo )
+  public static IDisposable AddLoggingConfig(this IServiceCollection serviceCollection, Application applicationInfo)
   {
-    return serviceCollection.AddOpenTelemetry("Speckle.Importers.Rhino",
+    return serviceCollection.AddOpenTelemetry(
+      "Speckle.Importers.Rhino",
       applicationInfo,
       HOST_APP_VERSION,
 #if DEBUG || LOCAL

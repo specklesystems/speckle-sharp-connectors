@@ -21,7 +21,7 @@ internal sealed class ImportJobFileDownloader(ILogger<ImportJobFile> logger, ISd
         null,
         cancellationToken
       );
-      var ret =  new ImportJobFile(logger, new FileInfo(targetFilePath));
+      var ret = new ImportJobFile(logger, new FileInfo(targetFilePath));
       activity?.SetStatus(SdkActivityStatusCode.Ok);
       return ret;
     }
