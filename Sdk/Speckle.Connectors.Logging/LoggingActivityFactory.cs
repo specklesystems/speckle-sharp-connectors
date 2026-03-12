@@ -15,16 +15,16 @@ public sealed class LoggingActivityFactory : IDisposable
   public LoggingActivity? StartRemote(string name, string traceId, string parentSpanId)
   {
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource.CreateActivity(
-      name: name,
-      parentContext: new ActivityContext(
+    var activity = _activitySource.StartActivity(
+      name,
+      ActivityKind.Client,
+      new ActivityContext(
         ActivityTraceId.CreateFromString(traceId.AsSpan()),
         ActivitySpanId.CreateFromString(parentSpanId.AsSpan()),
         ActivityTraceFlags.None,
         isRemote: true
       ),
-      kind: ActivityKind.Client,
-      tags: _tags
+      _tags
     );
     if (activity is null)
     {
