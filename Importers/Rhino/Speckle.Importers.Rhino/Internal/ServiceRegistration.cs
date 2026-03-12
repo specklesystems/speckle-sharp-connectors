@@ -30,7 +30,6 @@ internal static class ServiceRegistration
       typeof(Point).Assembly
     );
 
-    serviceCollection.AddLoggingConfig(applicationInfo);
     serviceCollection.AddSingleton(applicationInfo);
 
     serviceCollection.AddRhino(false);
@@ -48,9 +47,10 @@ internal static class ServiceRegistration
     return serviceCollection;
   }
   
-  private static void AddLoggingConfig(this IServiceCollection serviceCollection, Application applicationInfo )
+  // Important to respect disposal, because disposal ensures pending messages are flushed
+  public static IDisposable AddLoggingConfig(this IServiceCollection serviceCollection, Application applicationInfo )
   {
-    serviceCollection.AddOpenTelemetry("Speckle.Importers.Rhino",
+    return serviceCollection.AddOpenTelemetry("Speckle.Importers.Rhino",
       applicationInfo,
       HOST_APP_VERSION,
 #if DEBUG || LOCAL

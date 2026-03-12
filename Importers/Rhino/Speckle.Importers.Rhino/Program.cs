@@ -35,6 +35,7 @@ public static class Program
 
       var serviceCollection = new ServiceCollection();
       serviceCollection.AddRhinoImporter(importerArgs.HostApplication);
+      using var otel = serviceCollection.AddLoggingConfig(importerArgs.HostApplication);
       using var serviceProvider = serviceCollection.BuildServiceProvider();
       logger = serviceProvider.GetRequiredService<ILogger<object>>();
       TaskScheduler.UnobservedTaskException += (_, eventArgs) =>

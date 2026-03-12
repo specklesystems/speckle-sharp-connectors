@@ -34,7 +34,6 @@ public static class Program
       settings.SourceName = "Speckle Rhino File Import Job Processor";
       settings.Filter = (_, level) => level >= LogLevel.Information;
     });
-
     return builder.Build();
   }
   
