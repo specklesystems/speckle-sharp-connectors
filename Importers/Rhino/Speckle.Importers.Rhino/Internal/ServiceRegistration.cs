@@ -9,6 +9,9 @@ using Speckle.Converters.Rhino;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.SQLite;
+#if !DEBUG && !LOCAL 
+using Speckle.Sdk.Common;
+#endif
 
 namespace Speckle.Importers.Rhino.Internal;
 

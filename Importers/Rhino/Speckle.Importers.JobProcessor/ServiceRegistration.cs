@@ -7,7 +7,7 @@ using Speckle.Importers.JobProcessor.Blobs;
 using Speckle.Importers.JobProcessor.JobQueue;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk;
-#if !DEBUG || !LOCAL 
+#if !DEBUG && !LOCAL 
 using Speckle.Sdk.Common;
 #endif
 
