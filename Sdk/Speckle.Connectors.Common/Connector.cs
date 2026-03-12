@@ -20,6 +20,9 @@ public static class Connector
     }
   }
 
+  public static readonly string TabName = "Speckle";
+  public static readonly string TabTitle = "Speckle";
+
   public static IDisposable Initialize(
     this IServiceCollection serviceCollection,
     Application application,
@@ -81,7 +84,8 @@ public static class Connector
   )
   {
     var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
-    var (logging, tracing, metrics) = Observability.Initialize(serviceName,
+    var (logging, tracing, metrics) = Observability.Initialize(
+      serviceName,
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       assemblyVersion,

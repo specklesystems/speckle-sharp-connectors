@@ -12,10 +12,31 @@ public sealed class LoggingActivityFactory : IDisposable
 
   public void SetTag(string key, object? value) => _tags[key] = value;
 
-  public LoggingActivity? Start(string name, string? parentId = null)
+  public LoggingActivity? StartRemote(string name, string traceId, string parentSpanId)
   {
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource.StartActivity(name: name, parentId: parentId, kind: ActivityKind.Client, tags: _tags);
+    var activity = _activitySource.CreateActivity(
+      name: name,
+      parentContext: new ActivityContext(
+        ActivityTraceId.CreateFromString(traceId.AsSpan()),
+        ActivitySpanId.CreateFromString(parentSpanId.AsSpan()),
+        ActivityTraceFlags.None,
+        isRemote: true
+      ),
+      kind: ActivityKind.Client,
+      tags: _tags
+    );
+    if (activity is null)
+    {
+      return null;
+    }
+    return new LoggingActivity(activity);
+  }
+
+  public LoggingActivity? Start(string name)
+  {
+    //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
+    var activity = _activitySource.StartActivity(name: name, kind: ActivityKind.Client, tags: _tags);
     if (activity is null)
     {
       return null;

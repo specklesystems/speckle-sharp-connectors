@@ -60,7 +60,8 @@ internal sealed class RhinoJobHandler(
         {
           FilePath = file.FileInfo.FullName,
           ResultsPath = resultsPath,
-          ParentTraceId = activity?.TraceId,
+          TraceId = activity?.TraceId,
+          ParentSpanId = activity?.SpanId,
           Account = client.Account,
           Project = project,
           Ingestion = ingestion,
