@@ -27,13 +27,7 @@ public class ParameterUpdater
     _logger = logger;
   }
 
-  /// <summary>
-  /// Updates a parameter on an element.
-  /// </summary>
-  /// <param name="element">The Revit element</param>
-  /// <param name="path">Path to parameter: [scope, groupName, parameterKey]</param>
-  /// <param name="newValue">New value to set</param>
-  public UpdateResult Update(DB.Element element, string[] path, object? newValue)
+  public UpdateResult Update(DB.Element element, string[] path, object? newValue, string? internalDefinitionName = null)
   {
     // path = ["Instance Parameters", "Identity Data", "Mark"]
     if (path.Length != 3)
@@ -54,8 +48,8 @@ public class ParameterUpdater
       return UpdateResult.Fail($"Could not resolve target for scope: {parameterScope}");
     }
 
-    // find the parameter
-    var parameter = FindParameter(targetElement, groupName, parameterKey);
+    // find the parameter (now using the robust lookup)
+    var parameter = FindParameter(targetElement, groupName, parameterKey, internalDefinitionName);
     if (parameter == null)
     {
       return UpdateResult.Fail($"Parameter not found: {parameterKey} in group {groupName}");
@@ -124,8 +118,40 @@ public class ParameterUpdater
     return null;
   }
 
-  private DB.Parameter? FindParameter(DB.Element element, string groupName, string parameterKey)
+  private DB.Parameter? FindParameter(
+    DB.Element element,
+    string groupName,
+    string parameterKey,
+    string? internalDefinitionName
+  )
   {
+    // fast path: direct lookup using the internal definition name
+    if (!string.IsNullOrEmpty(internalDefinitionName))
+    {
+      // try as BuiltInParameter enum
+      if (Enum.TryParse(internalDefinitionName, out DB.BuiltInParameter bip) && bip != DB.BuiltInParameter.INVALID)
+      {
+        var param = element.get_Parameter(bip);
+        if (param != null)
+        {
+          return param;
+        }
+      }
+
+      // try as shared parameter Guid
+      if (Guid.TryParse(internalDefinitionName, out Guid guid))
+      {
+        var param = element.get_Parameter(guid);
+        if (param != null)
+        {
+          return param;
+        }
+      }
+    }
+
+    // fallback: iteration for project parameters or missing internal names
+    DB.Parameter? fallbackParameter = null;
+
     foreach (DB.Parameter parameter in element.Parameters)
     {
       var definition = parameter.Definition;
@@ -134,25 +160,30 @@ public class ParameterUpdater
         continue;
       }
 
-      // check group matches
-      var paramGroup = definition.GetGroupTypeId();
-      var groupLabel = DB.LabelUtils.GetLabelForGroup(paramGroup);
-      if (groupLabel != groupName)
-      {
-        continue;
-      }
-
-      // check if name matches (try human-readable first, then internal)
+      var currentInternalName = GetInternalDefinitionName(parameter);
       var humanName = definition.Name;
-      var internalName = GetInternalDefinitionName(parameter);
 
-      if (humanName == parameterKey || internalName == parameterKey)
+      // exact internal name match (covers project params that aren't BuiltIn/Shared)
+      if (!string.IsNullOrEmpty(internalDefinitionName) && currentInternalName == internalDefinitionName)
       {
         return parameter;
       }
+
+      // fallback human-readable name matching
+      if (humanName == parameterKey || currentInternalName == parameterKey)
+      {
+        var paramGroup = definition.GetGroupTypeId();
+        var groupLabel = DB.LabelUtils.GetLabelForGroup(paramGroup);
+
+        if (groupLabel == groupName)
+        {
+          return parameter;
+        }
+        fallbackParameter ??= parameter;
+      }
     }
 
-    return null;
+    return fallbackParameter;
   }
 
   private string GetInternalDefinitionName(DB.Parameter parameter)
@@ -171,6 +202,7 @@ public class ParameterUpdater
 
   private UpdateResult SetParameterValue(DB.Parameter parameter, object? newValue)
   {
+    var paramName = parameter.Definition.Name;
     if (newValue == null)
     {
       if (parameter.StorageType == DB.StorageType.String)
@@ -198,7 +230,7 @@ public class ParameterUpdater
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogWarning(ex, "Failed to set parameter value");
-      return UpdateResult.Fail($"Exception: {ex.Message}");
+      return UpdateResult.Fail($"Exception for '{paramName}': {ex.Message}");
     }
   }
 

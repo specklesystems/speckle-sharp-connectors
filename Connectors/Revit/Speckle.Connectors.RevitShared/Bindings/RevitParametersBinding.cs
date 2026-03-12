@@ -13,7 +13,7 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitParametersBinding : IParametersBinding
 {
-  public string Name { get; } = "parametersBinding";
+  public string Name => "parametersBinding";
   public IBrowserBridge Parent { get; }
 
   private readonly RevitContext _revitContext;
@@ -129,7 +129,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
               rawValue = jValue.Value;
             }
 
-            var result = _parameterUpdater.Update(element, pathParts, rawValue);
+            var result = _parameterUpdater.Update(element, pathParts, rawValue, request.InternalDefinitionName);
 
             if (result.IsSuccess)
             {
@@ -137,7 +137,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
             }
             else
             {
-              errors.Add($"[{pathParts[2]}]: {result.ErrorMessage}");
+              errors.Add(result.ErrorMessage ?? "Unknown error");
             }
           }
 
@@ -147,10 +147,11 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
       if (errors.Count > 0)
       {
+        var groupedErrors = errors.GroupBy(e => e).Select(g => g.Count() > 1 ? $"{g.Count()} x {g.Key}" : g.Key);
         await _baseBinding.Commands.SetGlobalNotification(
           ToastNotificationType.WARNING,
           "Update Completed with Issues",
-          $"Applied {successCount} updates. Encountered {errors.Count} errors: {string.Join(" | ", errors.Take(3))}",
+          $"Applied {successCount} updates. Encountered {errors.Count} errors: {string.Join(" | ", groupedErrors)}",
           autoClose: false
         );
       }
