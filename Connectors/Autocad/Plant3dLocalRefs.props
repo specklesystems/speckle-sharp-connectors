@@ -1,0 +1,92 @@
+<!--
+  Temporary local DLL references for Plant3D API.
+  Remove this file and its imports once Speckle.Plant3d.API NuGet package is available.
+
+  DLL locations (AutoCAD 2026):
+    Root:    C:\Program Files\Autodesk\AutoCAD <version>\
+    ACA:     C:\Program Files\Autodesk\AutoCAD <version>\ACA\        (AEC framework)
+    PLNT3D:  C:\Program Files\Autodesk\AutoCAD <version>\PLNT3D\     (Plant3D-specific)
+
+  To discover DLLs on your machine, run in PowerShell:
+    dir "C:\Program Files\Autodesk\AutoCAD 2026" -Recurse -Filter "Aec*.dll" | select FullName
+    dir "C:\Program Files\Autodesk\AutoCAD 2026" -Recurse -Filter "PnP*.dll" | select FullName
+    dir "C:\Program Files\Autodesk\AutoCAD 2026" -Recurse -Filter "PnID*.dll" | select FullName
+-->
+<Project>
+  <PropertyGroup>
+    <Plant3DInstallDir>$(ProgramW6432)\Autodesk\AutoCAD $(Plant3DVersion)</Plant3DInstallDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Plant3DVersion)' != ''">
+
+    <!-- ========== AEC Framework (ACA subfolder) ========== -->
+    <!-- Provides: Autodesk.Aec namespace (BuiltInUnit, ApplicationServices, etc.) -->
+    <Reference Include="AecBaseMgd">
+      <HintPath>$(Plant3DInstallDir)\ACA\AecBaseMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Provides: Autodesk.Aec.PropertyData.DatabaseServices (PropertySet, PropertySetDefinition, etc.) -->
+    <Reference Include="AecPropDataMgd">
+      <HintPath>$(Plant3DInstallDir)\ACA\AecPropDataMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- ========== Plant3D Core (root install dir) ========== -->
+    <!-- Provides: Autodesk.ProcessPower.DataObjects -->
+    <Reference Include="PnPDataObjects">
+      <HintPath>$(Plant3DInstallDir)\PnPDataObjects.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Data links between Plant3D objects and project data -->
+    <Reference Include="PnPDataLinks">
+      <HintPath>$(Plant3DInstallDir)\PnPDataLinks.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Common Plant managed types -->
+    <Reference Include="PnPCommonMgd">
+      <HintPath>$(Plant3DInstallDir)\PnPCommonMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Common Plant DBX managed types -->
+    <Reference Include="PnPCommonDbxMgd">
+      <HintPath>$(Plant3DInstallDir)\PnPCommonDbxMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- ========== Plant3D Managed APIs (PLNT3D subfolder) ========== -->
+    <!-- 3D piping objects managed API -->
+    <Reference Include="PnP3dObjectsMgd">
+      <HintPath>$(Plant3DInstallDir)\PLNT3D\PnP3dObjectsMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- P&ID managed API -->
+    <Reference Include="PnIDmgd">
+      <HintPath>$(Plant3DInstallDir)\PLNT3D\PnIDmgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Project manager: PlantProject, Project, MiscProject -->
+    <Reference Include="PnPProjectManagerMgd">
+      <HintPath>$(Plant3DInstallDir)\PLNT3D\PnPProjectManagerMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- P&ID project parts: PnIdProject -->
+    <Reference Include="PnIdProjectPartsMgd">
+      <HintPath>$(Plant3DInstallDir)\PLNT3D\PnIdProjectPartsMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- 3D project parts: PipingProject, IsoProject -->
+    <Reference Include="PnP3dProjectPartsMgd">
+      <HintPath>$(Plant3DInstallDir)\PLNT3D\PnP3dProjectPartsMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+  </ItemGroup>
+</Project>
