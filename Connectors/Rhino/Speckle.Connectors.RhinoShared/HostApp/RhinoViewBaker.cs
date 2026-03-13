@@ -90,7 +90,7 @@ public class RhinoViewBaker
     }
 
     var cameraLocation = _pointConverter.Convert(camera.position);
-    var cameraDirection = _vectorConverter.Convert(camera.forward);
+    var cameraDirection = -_vectorConverter.Convert(camera.forward);
     var cameraUp = _vectorConverter.Convert(camera.up);
 
     // scaling needed (point converters don't scale)
