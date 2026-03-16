@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RhinoInside;
+using Speckle.Connectors.Logging;
 using Speckle.Importers.Rhino.Internal;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
@@ -42,8 +42,8 @@ public static class Program
         logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
 
       ISdkActivityFactory activityFactory = serviceProvider.GetRequiredService<ISdkActivityFactory>();
-      using var activity = importerArgs.TraceId is not null
-        ? activityFactory.StartRemote(importerArgs.TraceId, importerArgs.ParentSpanId.NotNull())
+      using var activity = importerArgs.TraceContext is not null
+        ? activityFactory.StartRemote(importerArgs.TraceContext, SdkActivityKind.Consumer)
         : activityFactory.Start();
 
       var factory = serviceProvider.GetRequiredService<ImporterInstanceFactory>();

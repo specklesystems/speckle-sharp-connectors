@@ -11,9 +11,9 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
 
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, string source = "")
+  public ISdkActivity? Start(string? name, SdkActivityKind kind, string source)
   {
-    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source);
+    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind));
     if (activity is null)
     {
       return null;
@@ -22,15 +22,31 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     return new ConnectorActivity(activity.Value);
   }
 
-  public ISdkActivity? StartRemote(string traceId, string parentSpanId, string? name = default, string source = "")
+  /// <param name="traceContext">W3C trace context header</param>
+  /// <param name="kind"></param>
+  /// <param name="name"></param>
+  /// <returns></returns>
+  public ISdkActivity? StartRemote(string traceContext, SdkActivityKind kind, string? name, string source)
   {
-    LoggingActivity? activity = _loggingActivityFactory.StartRemote(name ?? source, traceId, parentSpanId);
+    LoggingActivity? activity = _loggingActivityFactory.StartRemote(name ?? source, traceContext, ToLoggingType(kind));
     if (activity is null)
     {
       return null;
     }
     return new ConnectorActivity(activity.Value);
   }
+
+  //We need to do this gymnastics due to ILRepack
+  private static LoggingActivityKind ToLoggingType(SdkActivityKind kind) =>
+    kind switch
+    {
+      SdkActivityKind.Internal => LoggingActivityKind.Internal,
+      SdkActivityKind.Server => LoggingActivityKind.Server,
+      SdkActivityKind.Client => LoggingActivityKind.Client,
+      SdkActivityKind.Producer => LoggingActivityKind.Producer,
+      SdkActivityKind.Consumer => LoggingActivityKind.Consumer,
+      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
 
   private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
   {

@@ -12,8 +12,7 @@ internal readonly struct ImporterArgs
   public required string BlobId { get; init; }
   public required int Attempt { get; init; }
   public required string ResultsPath { get; init; }
-  public required string? TraceId { get; init; }
-  public required string? ParentSpanId { get; init; }
+  public required string? TraceContext { get; init; }
   public required Project Project { get; init; }
   public required ModelIngestion Ingestion { get; init; }
   public required Account Account { get; init; }

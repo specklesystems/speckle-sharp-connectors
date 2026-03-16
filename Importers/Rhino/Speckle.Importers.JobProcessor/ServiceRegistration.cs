@@ -18,7 +18,7 @@ internal static class ServiceRegistration
   private static readonly Application s_application = new(".NET File Import Job Processor", "jobprocessor");
   private const HostAppVersion HOST_APP_VERSION = HostAppVersion.v3;
 
-  public static IServiceCollection AddJobProcessor(this IServiceCollection serviceCollection)
+  public static IDisposable AddJobProcessor(this IServiceCollection serviceCollection)
   {
     var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
 
@@ -29,17 +29,17 @@ internal static class ServiceRegistration
       typeof(Point).Assembly
     );
 
-    serviceCollection.AddLoggingConfig();
+    var loggingDisposable = serviceCollection.AddLoggingConfig();
 
     serviceCollection.AddTransient<Repository>();
     serviceCollection.AddTransient<ImportJobFileDownloader>();
     serviceCollection.AddHostedService<JobProcessorInstance>();
-    return serviceCollection;
+    return loggingDisposable;
   }
 
-  private static void AddLoggingConfig(this IServiceCollection serviceCollection)
+  private static IDisposable AddLoggingConfig(this IServiceCollection serviceCollection)
   {
-    serviceCollection.AddOpenTelemetry(
+    return serviceCollection.AddOpenTelemetry(
       "Speckle.Importers.JobProcessor",
       s_application,
       HOST_APP_VERSION,

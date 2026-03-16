@@ -21,6 +21,7 @@ public readonly struct LoggingActivity
   public string SpanId => _activity.SpanId.ToString();
 
   public void SetStatus(LoggingActivityStatusCode code) =>
+    //We need to do this gymnastics due to ILRepack
     _activity.SetStatus(
       code switch
       {
