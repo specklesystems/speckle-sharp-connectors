@@ -30,12 +30,12 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
   private enum PropertyMode
   {
-    Merge, // this should be default mode
-    Replace,
+    Update, // this should be default mode
+    Overwrite,
     Remove
   }
 
-  private PropertyMode _mode = PropertyMode.Merge;
+  private PropertyMode _mode = PropertyMode.Update;
   private PropertyMode Mode
   {
     get => _mode;
@@ -96,7 +96,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     }
 
     // validate that keys and values are of valid length
-    if ((Mode == PropertyMode.Merge || Mode == PropertyMode.Replace) && inputKeys.Count != inputValues.Count)
+    if ((Mode == PropertyMode.Update || Mode == PropertyMode.Overwrite) && inputKeys.Count != inputValues.Count)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Keys and values are mismatched in length");
       return;
@@ -110,7 +110,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
     // process the properties
     Dictionary<string, ISpecklePropertyGoo> result =
-      inputProperties is null || Mode == PropertyMode.Replace
+      inputProperties is null || Mode == PropertyMode.Overwrite
         ? new()
         : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
 
@@ -148,7 +148,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
             {
               AddRuntimeMessage(
                 GH_RuntimeMessageLevel.Error,
-                $"Values contain an invalid data type. Only strings, numbers, booleans, planes, vectors, intervals, and other Speckle properties are supported."
+                "Values contain an invalid data type. Only strings, numbers, booleans, planes, vectors, intervals, and other Speckle properties are supported."
               );
               return;
             }
@@ -159,17 +159,10 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
         switch (Mode)
         {
-          case PropertyMode.Merge:
-            if (result.ContainsKey(key))
-            {
-              result[key] = convertedValue;
-            }
-            else
-            {
-              result.Add(key, convertedValue);
-            }
+          case PropertyMode.Update:
+            result[key] = convertedValue;
             break;
-          case PropertyMode.Replace:
+          case PropertyMode.Overwrite:
             result.Add(key, convertedValue);
             break;
           case PropertyMode.Remove:
@@ -195,15 +188,14 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
       var modeItem = Menu_AppendItem(menu, mode.ToString(), (_, _) => Mode = mode, true, mode == Mode);
       switch (mode)
       {
-        case PropertyMode.Merge:
-          modeItem.ToolTipText =
-            "Input keyvalue pairs will be merged with existing properties. Any existing keys will be updated with new values.";
+        case PropertyMode.Update:
+          modeItem.ToolTipText = @"Overwrites the value if property exists. If it doesn't, it appends it.";
           break;
-        case PropertyMode.Replace:
-          modeItem.ToolTipText = "Existing properties will be cleared and replaced by input keyvalue pairs.";
+        case PropertyMode.Overwrite:
+          modeItem.ToolTipText = @"Replaces the incoming properties list with the current one.";
           break;
         case PropertyMode.Remove:
-          modeItem.ToolTipText = "Existing keyvalue pairs that match the input keys will be removed from properties.";
+          modeItem.ToolTipText = @"Removes given Keys from the properties list.";
           break;
       }
     }
