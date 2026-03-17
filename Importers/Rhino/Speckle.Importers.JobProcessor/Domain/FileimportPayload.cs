@@ -1,4 +1,4 @@
-﻿using Speckle.Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Speckle.Importers.JobProcessor.Domain;
 
@@ -19,13 +19,14 @@ internal sealed class FileimportPayload
   public required Uri ServerUrl { get; init; }
   public required int PayloadVersion { get; init; }
   public required int TimeOutSeconds { get; init; }
-  
-  [JsonProperty("_traceContext", Required = Required.Default)]
-  public required TraceContext? TraceContext { get; init; }
+
+  [JsonPropertyName("_traceContext")]
+  public TraceContext? TraceContext { get; init; }
 }
 
 public sealed class TraceContext
 {
-  [JsonProperty("traceparent", Required = Required.Always)]
+  [JsonPropertyName("traceparent")]
+  [JsonRequired]
   public required string TraceParent { get; init; }
 }
