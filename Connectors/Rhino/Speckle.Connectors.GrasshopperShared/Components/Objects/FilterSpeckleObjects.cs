@@ -37,11 +37,19 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     pManager.AddTextParameter(
       "Property Key",
-      "P",
+      "K",
       "Find objects with a property that has a matching key",
       GH_ParamAccess.item
     );
     Params.Input[2].Optional = true;
+
+    pManager.AddTextParameter(
+      "Property Value",
+      "V",
+      "Find objects with a property that has a matching value",
+      GH_ParamAccess.item
+    );
+    Params.Input[3].Optional = true;
 
     pManager.AddTextParameter(
       "Material Name",
@@ -49,7 +57,7 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
       "Find objects with a render material that has a matching name",
       GH_ParamAccess.item
     );
-    Params.Input[3].Optional = true;
+    Params.Input[4].Optional = true;
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -89,10 +97,12 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     string name = "";
     dataAccess.GetData(1, ref name);
-    string property = "";
-    dataAccess.GetData(2, ref property);
+    string propertyKey = "";
+    dataAccess.GetData(2, ref propertyKey);
+    string propertyValue = "";
+    dataAccess.GetData(3, ref propertyValue);
     string material = "";
-    dataAccess.GetData(3, ref material);
+    dataAccess.GetData(4, ref material);
 
     // optional parameters - only read if they've been added via ⊕
     string appId = "";
@@ -118,7 +128,19 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
 
     foreach (SpeckleWrapper wrapper in objects.Cast<SpeckleWrapper>())
     {
-      if (MatchesAllFilters(wrapper, name, property, material, appId, filterByAppId, speckleId, filterBySpeckleId))
+      if (
+        MatchesAllFilters(
+          wrapper,
+          name,
+          propertyKey,
+          propertyValue,
+          material,
+          appId,
+          filterByAppId,
+          speckleId,
+          filterBySpeckleId
+        )
+      )
       {
         matchedObjects.Add(wrapper);
       }
@@ -149,7 +171,8 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
   private bool MatchesAllFilters(
     SpeckleWrapper wrapper,
     string name,
-    string property,
+    string propertyKey,
+    string propertyValue,
     string material,
     string appId,
     bool filterByAppId,
@@ -164,7 +187,7 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
     }
 
     // filter by property
-    if (!MatchesPropertyFilter(wrapper, property))
+    if (!MatchesPropertyFilter(wrapper, propertyKey, propertyValue))
     {
       return false;
     }
@@ -190,9 +213,12 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
     return true;
   }
 
-  private bool MatchesPropertyFilter(SpeckleWrapper wrapper, string property)
+  private bool MatchesPropertyFilter(SpeckleWrapper wrapper, string propertyKey, string propertyValue)
   {
-    if (string.IsNullOrEmpty(property))
+    bool hasKeyFilter = !string.IsNullOrEmpty(propertyKey);
+    bool hasValueFilter = !string.IsNullOrEmpty(propertyValue);
+
+    if (!hasKeyFilter && !hasValueFilter)
     {
       return true;
     }
@@ -208,8 +234,30 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
       return false;
     }
 
-    // use flattened properties to search ALL nested property keys
-    return properties.Flatten().Keys.Any(key => MatchesSearchPattern(property, key));
+    var flattenedProps = properties.Flatten();
+
+    // Check both property key and value simultaneously
+    if (hasKeyFilter && hasValueFilter)
+    {
+      return flattenedProps.Any(kvp =>
+        MatchesSearchPattern(propertyKey, kvp.Key)
+        && MatchesSearchPattern(propertyValue, kvp.Value.Value?.ToString() ?? "")
+      );
+    }
+
+    // Check just property key
+    if (hasKeyFilter)
+    {
+      return flattenedProps.Keys.Any(key => MatchesSearchPattern(propertyKey, key));
+    }
+
+    // Check just property value
+    if (hasValueFilter)
+    {
+      return flattenedProps.Values.Any(val => MatchesSearchPattern(propertyValue, val.Value?.ToString() ?? ""));
+    }
+
+    return false;
   }
 
   private bool MatchesMaterialFilter(SpeckleWrapper wrapper, string material)
@@ -258,23 +306,23 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
       return false;
     }
 
-    // only allow inserting after the fixed parameters (index 4+)
-    if (index < 4)
+    // only allow inserting after the fixed parameters (index 5+)
+    if (index < 5)
     {
       return false;
     }
 
-    // check how many optional params are already added (total inputs - 4 fixed)
-    int addedOptionalCount = Params.Input.Count - 4;
+    // check how many optional params are already added (total inputs - 5 fixed)
+    int addedOptionalCount = Params.Input.Count - 5;
 
     // we have 2 optional parameters available
     return addedOptionalCount < 2;
   }
 
   public bool CanRemoveParameter(GH_ParameterSide side, int index) =>
-    // only allow removing optional input parameters (index 4+)
+    // only allow removing optional input parameters (index 5+)
     side == GH_ParameterSide.Input
-    && index >= 4;
+    && index >= 5;
 
   /// <remarks>
   /// The ternary operator for NickName is needed due to a Grasshopper quirk where
@@ -316,12 +364,12 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
     return new Param_String();
   }
 
-  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input && index >= 4;
+  public bool DestroyParameter(GH_ParameterSide side, int index) => side == GH_ParameterSide.Input && index >= 5;
 
   public void VariableParameterMaintenance()
   {
     // ensure all optional parameters stay marked as optional
-    for (int i = 4; i < Params.Input.Count; i++)
+    for (int i = 5; i < Params.Input.Count; i++)
     {
       Params.Input[i].Optional = true;
     }
