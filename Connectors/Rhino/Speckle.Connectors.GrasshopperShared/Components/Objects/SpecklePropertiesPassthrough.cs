@@ -30,9 +30,11 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
   private enum PropertyMode
   {
-    Update, // this should be default mode
-    Overwrite,
-    Remove
+    Merge,
+    Replace,
+    Remove,
+    Update, // pre rewording (cnx-3177), keeping for scripts with settings saved
+    Overwrite // pre rewording (cnx-3177), keeping for scripts with settings saved
   }
 
   private PropertyMode _mode = PropertyMode.Update;
@@ -41,6 +43,17 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     get => _mode;
     set
     {
+      // auto-migrate legacy modes to new modes
+      if (value == PropertyMode.Update)
+      {
+        value = PropertyMode.Merge;
+      }
+
+      if (value == PropertyMode.Overwrite)
+      {
+        value = PropertyMode.Replace;
+      }
+
       if (_mode != value)
       {
         _mode = value;
@@ -108,18 +121,16 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
       return;
     }
 
-    // process the properties
-    Dictionary<string, ISpecklePropertyGoo> result =
-      inputProperties is null || Mode == PropertyMode.Overwrite
-        ? new()
-        : inputProperties.Value.ToDictionary(entry => entry.Key, entry => entry.Value);
+    // deep clone to prevent mutating upstream grasshopper data
+    SpecklePropertyGroupGoo resultGoo =
+      inputProperties is null || Mode == PropertyMode.Replace ? new SpecklePropertyGroupGoo() : inputProperties.Clone();
 
     // process keys and values
     if (hasKeys)
     {
       // check for duplicate keys
-      var duplicates = inputKeys.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key);
-      if (duplicates.Any())
+      var duplicates = inputKeys.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+      if (duplicates.Count != 0)
       {
         AddRuntimeMessage(
           GH_RuntimeMessageLevel.Error,
@@ -128,12 +139,12 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
         return;
       }
 
-      // set keyvalue pairs
+      // set key-value pairs
       for (int i = 0; i < inputKeys.Count; i++)
       {
         string key = inputKeys[i];
         object? value = Mode == PropertyMode.Remove ? null : inputValues[i];
-        ISpecklePropertyGoo? convertedValue = null;
+        ISpecklePropertyGoo? convertedValue;
         switch (value)
         {
           case SpecklePropertyGroupGoo propGoo:
@@ -159,23 +170,20 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
         switch (Mode)
         {
-          case PropertyMode.Update:
-            result[key] = convertedValue;
-            break;
-          case PropertyMode.Overwrite:
-            result.Add(key, convertedValue);
+          case PropertyMode.Merge:
+          case PropertyMode.Replace:
+            resultGoo.SetValueByPath(key, convertedValue);
             break;
           case PropertyMode.Remove:
-            result.Remove(key);
+            resultGoo.RemoveValueByPath(key);
             break;
         }
       }
     }
 
-    var groupGoo = new SpecklePropertyGroupGoo(result);
-    da.SetData(0, groupGoo);
-    da.SetDataList(1, result.Keys);
-    da.SetDataList(2, result.Values);
+    da.SetData(0, resultGoo);
+    da.SetDataList(1, resultGoo.Value.Keys);
+    da.SetDataList(2, resultGoo.Value.Values);
   }
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -185,17 +193,24 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     Menu_AppendSeparator(menu); // modes section
     foreach (PropertyMode mode in Enum.GetValues(typeof(PropertyMode)))
     {
+      // hide "legacy modes" (before cnx-3177 rewording) from the dropdown
+      if (mode is PropertyMode.Update or PropertyMode.Overwrite)
+      {
+        continue;
+      }
+
       var modeItem = Menu_AppendItem(menu, mode.ToString(), (_, _) => Mode = mode, true, mode == Mode);
       switch (mode)
       {
-        case PropertyMode.Update:
-          modeItem.ToolTipText = @"Overwrites the value if property exists. If it doesn't, it appends it.";
+        case PropertyMode.Merge:
+          modeItem.ToolTipText =
+            @"Input key-value pairs will be merged with existing properties. Any existing keys will be updated with new values.";
           break;
-        case PropertyMode.Overwrite:
-          modeItem.ToolTipText = @"Replaces the incoming properties list with the current one.";
+        case PropertyMode.Replace:
+          modeItem.ToolTipText = @"Existing properties will be cleared and replaced by input key-value pairs.";
           break;
         case PropertyMode.Remove:
-          modeItem.ToolTipText = @"Removes given Keys from the properties list.";
+          modeItem.ToolTipText = @"Existing key-value pairs that match the input keys will be removed from properties.";
           break;
       }
     }
