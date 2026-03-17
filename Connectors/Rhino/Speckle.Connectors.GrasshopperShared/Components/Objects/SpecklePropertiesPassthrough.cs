@@ -30,9 +30,11 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
 
   private enum PropertyMode
   {
-    Merge, // this should be default mode
+    Merge,
     Replace,
-    Remove
+    Remove,
+    Update, // pre rewording (cnx-3177), keeping for scripts with settings saved
+    Overwrite // pre rewording (cnx-3177), keeping for scripts with settings saved
   }
 
   private PropertyMode _mode = PropertyMode.Merge;
@@ -41,6 +43,17 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     get => _mode;
     set
     {
+      // auto-migrate legacy modes to new modes
+      if (value == PropertyMode.Update)
+      {
+        value = PropertyMode.Merge;
+      }
+
+      if (value == PropertyMode.Overwrite)
+      {
+        value = PropertyMode.Replace;
+      }
+
       if (_mode != value)
       {
         _mode = value;
@@ -180,6 +193,12 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     Menu_AppendSeparator(menu); // modes section
     foreach (PropertyMode mode in Enum.GetValues(typeof(PropertyMode)))
     {
+      // hide "legacy modes" (before cnx-3177 rewording) from the dropdown
+      if (mode is PropertyMode.Update or PropertyMode.Overwrite)
+      {
+        continue;
+      }
+
       var modeItem = Menu_AppendItem(menu, mode.ToString(), (_, _) => Mode = mode, true, mode == Mode);
       switch (mode)
       {
