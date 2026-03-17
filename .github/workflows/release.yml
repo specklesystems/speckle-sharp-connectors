@@ -76,6 +76,6 @@ jobs:
           display-workflow-run-url-interval: 10s
       
       # Allows us to inspect the artifacts of failed builds, since this below step will be skipped if the above step fails
-      - uses: geekyeggo/delete-artifact@v5
+      - uses: geekyeggo/delete-artifact@v6
         with:
           name: output-*
