@@ -25,11 +25,13 @@ internal sealed class ImporterInstance : IDisposable
   private readonly ILogger<ImporterInstance> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
-  public ImporterInstance(ImporterArgs args,
+  public ImporterInstance(
+    ImporterArgs args,
     Sender sender,
     IClient speckleClient,
     ILogger<ImporterInstance> logger,
-    ISdkActivityFactory activityFactory)
+    ISdkActivityFactory activityFactory
+  )
   {
     _args = args;
     _sender = sender;
@@ -37,7 +39,8 @@ internal sealed class ImporterInstance : IDisposable
     _logger = logger;
     _activityFactory = activityFactory;
     _rhinoDoc = OpenDocument();
-    _scopes = [
+    _scopes =
+    [
       ActivityScope.SetTag("jobId", args.JobId),
       ActivityScope.SetTag("job.attempt", args.Attempt.ToString()),
       // ActivityScope.SetTag("jobType", args.JobType),
@@ -81,8 +84,8 @@ internal sealed class ImporterInstance : IDisposable
     try
     {
       using var config = GetConfig(Path.GetExtension(_args.FilePath));
-      RhinoDoc openedDoc =  config.OpenInHeadlessDocument(_args.FilePath);
-      
+      RhinoDoc openedDoc = config.OpenInHeadlessDocument(_args.FilePath);
+
       activity?.SetStatus(SdkActivityStatusCode.Ok);
       return openedDoc;
     }

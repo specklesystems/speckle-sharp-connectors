@@ -69,7 +69,6 @@ public class OperationProgressManager : IOperationProgressManager
     {
       return;
     }
-    Console.WriteLine($"Progress: {progress.Status} - {progress.Progress}");
     s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
     SendProgress(bridge, modelCardId, progress);
   }
