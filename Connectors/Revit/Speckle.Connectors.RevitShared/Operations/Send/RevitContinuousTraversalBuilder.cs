@@ -251,7 +251,7 @@ public class RevitContinuousTraversalBuilder(
 
           count++;
           onOperationProgressed.Report(
-            new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)count / atomicObjectCount)
+            new($"Converting objects... ({count:N0} / {atomicObjectCount:N0})", (double)count / atomicObjectCount)
           );
         }
       }
