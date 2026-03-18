@@ -86,10 +86,22 @@ public sealed class SendOperationManager(
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
       }
-      using SendInfo sendInfo = GetSendInfo(modelCard);
-      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
-
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
+
+      // <HERE FOR EXPERIMENT>
+      using SendInfo normalSendInfo = GetSendInfo(modelCard);
+
+      Account account = await accountManager.AuthenticateAccount(
+        normalSendInfo.Client.ServerUrl,
+        TimeSpan.FromMinutes(1),
+        cancellationItem.Token
+      );
+      var client = clientFactory.Create(account);
+
+      using SendInfo sendInfo = new(client, normalSendInfo.ProjectId, normalSendInfo.ModelId);
+      // </HERE FOR EXPERIMENT>
+
+      using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
       initializeScope(serviceScope.ServiceProvider, modelCard);
 
