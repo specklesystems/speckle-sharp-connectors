@@ -11,6 +11,18 @@ using Speckle.Sdk;
 
 namespace Speckle.Connectors.Revit.Bindings;
 
+public static class ParameterScopes
+{
+  public const string INSTANCE = "Instance Parameters";
+  public const string TYPE = "Type Parameters";
+  public const string SYSTEM_TYPE = "System Type Parameters";
+}
+
+public record ParsedParameterPath(string Scope, string Category, string Name)
+{
+  public string[] ToArray() => [Scope, Category, Name];
+}
+
 internal sealed class RevitParametersBinding : IParametersBinding
 {
   public string Name => "parametersBinding";
@@ -76,52 +88,11 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
           foreach (var request in requests)
           {
-            if (string.IsNullOrEmpty(request.ApplicationId))
+            if (!TryValidateAndParseRequest(doc, request, out var element, out var parsedPath, out var errorMessage))
             {
-              errors.Add("Missing ApplicationId.");
+              errors.Add(errorMessage!);
               continue;
             }
-
-            var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
-            if (elementId == null)
-            {
-              errors.Add($"Element UniqueId not found: {request.ApplicationId}");
-              continue;
-            }
-
-            var element = doc.GetElement(elementId);
-            if (element == null)
-            {
-              errors.Add($"Element is null for Id: {elementId}");
-              continue;
-            }
-
-            var rawPath = request.Path;
-            if (string.IsNullOrEmpty(rawPath))
-            {
-              errors.Add("Path is missing.");
-              continue;
-            }
-
-            // TODO: not happy about this
-            // 👇
-            if (rawPath.StartsWith("properties.", StringComparison.InvariantCultureIgnoreCase))
-            {
-              rawPath = rawPath[11..];
-            }
-            if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
-            {
-              rawPath = rawPath[11..];
-            }
-
-            var pathParts = rawPath.Split(['.'], 3);
-            if (pathParts.Length != 3)
-            {
-              errors.Add($"Path must have 3 parts. Got: '{rawPath}'");
-              continue;
-            }
-            // ☝️
-            // TODO: not happy about this
 
             object? rawValue = request.To;
             if (rawValue is Newtonsoft.Json.Linq.JValue jValue)
@@ -129,7 +100,12 @@ internal sealed class RevitParametersBinding : IParametersBinding
               rawValue = jValue.Value;
             }
 
-            var result = _parameterUpdater.Update(element, pathParts, rawValue, request.InternalDefinitionName);
+            var result = _parameterUpdater.Update(
+              element!,
+              parsedPath!.ToArray(),
+              rawValue,
+              request.InternalDefinitionName
+            );
 
             if (result.IsSuccess)
             {
@@ -170,6 +146,65 @@ internal sealed class RevitParametersBinding : IParametersBinding
         () => throw new SpeckleException("Failed to apply parameter updates", ex)
       );
     }
+  }
+
+  private bool TryValidateAndParseRequest(
+    Document doc,
+    ParameterChangeRequest request,
+    out Element? element,
+    out ParsedParameterPath? parsedPath,
+    out string? errorMessage
+  )
+  {
+    element = null;
+    parsedPath = null;
+    errorMessage = null;
+
+    if (string.IsNullOrEmpty(request.ApplicationId))
+    {
+      errorMessage = "Missing ApplicationId.";
+      return false;
+    }
+
+    var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
+    if (elementId == null)
+    {
+      errorMessage = $"Element UniqueId not found: {request.ApplicationId}";
+      return false;
+    }
+
+    element = doc.GetElement(elementId);
+    if (element == null)
+    {
+      errorMessage = $"Element is null for Id: {elementId}";
+      return false;
+    }
+
+    var rawPath = request.Path;
+    if (string.IsNullOrEmpty(rawPath))
+    {
+      errorMessage = "Path is missing.";
+      return false;
+    }
+
+    if (rawPath.StartsWith("properties.", StringComparison.InvariantCultureIgnoreCase))
+    {
+      rawPath = rawPath[11..];
+    }
+    else if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
+    {
+      rawPath = rawPath[11..];
+    }
+
+    var pathParts = rawPath.Split(['.'], 3);
+    if (pathParts.Length != 3)
+    {
+      errorMessage = $"Path must have 3 parts. Got: '{rawPath}'";
+      return false;
+    }
+
+    parsedPath = new ParsedParameterPath(pathParts[0], pathParts[1], pathParts[2]);
+    return true;
   }
 }
 
