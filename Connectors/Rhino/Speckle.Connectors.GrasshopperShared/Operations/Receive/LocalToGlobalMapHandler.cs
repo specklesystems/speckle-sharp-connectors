@@ -26,7 +26,8 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// </remarks>
 internal sealed class LocalToGlobalMapHandler
 {
-  public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = new();
+  public Dictionary<string, SpeckleGeometryWrapper> ConvertedObjectsMap { get; } = [];
+  private readonly HashSet<string> _processedDataObjects = [];
 
   // injected via constructor (DI-managed)
   private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
@@ -113,7 +114,7 @@ internal sealed class LocalToGlobalMapHandler
     var obj = atomicContext.Current;
     var objId = obj.applicationId ?? obj.id;
 
-    if (objId is null || ConvertedObjectsMap.ContainsKey(objId))
+    if (objId is null || ConvertedObjectsMap.ContainsKey(objId) || _processedDataObjects.Contains(objId))
     {
       return;
     }
@@ -132,6 +133,15 @@ internal sealed class LocalToGlobalMapHandler
     {
       List<(object, Base)> converted = SpeckleConversionContext.Current.ConvertToHost(obj);
 
+      // geometry-less data objects (cnx-2522)
+      bool isMetadataOnly = obj is DataObject { displayValue.Count: 0 };
+
+      // bypass the early return if this genuinely is a metadata-only DataObject (cnx-3237)
+      if (converted.Count == 0 && !isMetadataOnly)
+      {
+        return;
+      }
+
       // get path and collection
       var path = _traversalContextUnpacker.GetCollectionPath(atomicContext).ToList();
       var objectCollection = CollectionRebuilder.GetOrCreateSpeckleCollectionFromPath(
@@ -143,16 +153,12 @@ internal sealed class LocalToGlobalMapHandler
       // handle all DataObjects
       if (obj is DataObject normalDataObject)
       {
+        _processedDataObjects.Add(objId);
+
         var geometries = ConvertToGeometryWrappers(converted);
         var dataObjectWrapper = CreateDataObjectWrapper(normalDataObject, geometries, path, objectCollection);
 
         CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
-        return;
-      }
-
-      // nothing converted - nothing to do (for non-DataObjects)
-      if (converted.Count == 0)
-      {
         return;
       }
 
@@ -210,6 +216,12 @@ internal sealed class LocalToGlobalMapHandler
 
     var dataObjectId = dataObject.applicationId ?? dataObject.id.NotNull();
     if (!_dataObjectInstanceRegistry.IsRegistered(dataObjectId))
+    {
+      return;
+    }
+
+    // ensures we don't process the same registered DataObject multiple times due to multiple traversal encounters.
+    if (!_processedDataObjects.Add(dataObjectId))
     {
       return;
     }
