@@ -40,57 +40,87 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    // ALWAYS run port generation on the first iteration, BEFORE validating the current item
+    // ensure that a null at index 0 doesn't prevent ports from being created.
+    if (da.Iteration == 0)
+    {
+      // gather all property groups from the input (skipNulls = true)
+      var allData = Params.Input[0].VolatileData.AllData(true).OfType<SpecklePropertyGroupGoo>().ToList();
+
+      var outputParamsDict = new Dictionary<string, OutputParamWrapper>();
+
+      foreach (var propGroup in allData)
+      {
+        if (propGroup?.Value == null)
+        {
+          continue;
+        }
+
+        foreach (var key in propGroup.Value.Keys)
+        {
+          ISpecklePropertyGoo value = propGroup.Value[key];
+          object? outputValue = value switch
+          {
+            SpecklePropertyGoo prop => prop.Value,
+            SpecklePropertyGroupGoo pg => pg,
+            _ => value
+          };
+
+          if (!outputParamsDict.TryGetValue(key, out var existingWrapper))
+          {
+            var param = new SpeckleOutputParam
+            {
+              Name = key,
+              NickName = key,
+              Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
+            };
+            outputParamsDict[key] = new OutputParamWrapper(param, outputValue);
+          }
+          else if (existingWrapper.Param.Access == GH_ParamAccess.item && outputValue is IList)
+          {
+            existingWrapper.Param.Access = GH_ParamAccess.list;
+          }
+        }
+      }
+
+      var outputParams = outputParamsDict.Values.ToList();
+
+      Name = $"Properties ({outputParams.Count})";
+      NickName = Name;
+
+      if (OutputMismatch(outputParams))
+      {
+        OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(outputParams));
+        return;
+      }
+    }
+
     SpecklePropertyGroupGoo? properties = null;
     if (!da.GetData(0, ref properties) || properties?.Value == null)
     {
       return;
     }
 
-    Name = $"Properties ({properties.Value.Count})";
-    NickName = Name;
-
-    var outputParams = new List<OutputParamWrapper>();
-
-    foreach (var key in properties.Value.Keys)
+    for (int i = 0; i < Params.Output.Count; i++)
     {
-      ISpecklePropertyGoo value = properties.Value[key];
-      object? outputValue = value switch
-      {
-        SpecklePropertyGoo prop => prop.Value,
-        SpecklePropertyGroupGoo propGroup => propGroup,
-        _ => value
-      };
+      var outParam = Params.Output[i];
 
-      var param = new SpeckleOutputParam
+      if (properties.Value.TryGetValue(outParam.Name, out ISpecklePropertyGoo? value))
       {
-        Name = key,
-        NickName = key,
-        Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
-      };
-
-      outputParams.Add(new OutputParamWrapper(param, outputValue));
-    }
-
-    // handle parameter creation/update (only on first iteration)
-    if (da.Iteration == 0 && OutputMismatch(outputParams))
-    {
-      OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(outputParams));
-      return; // exit early
-    }
-    // only set data if we have the correct parameter structure
-    if (Params.Output.Count == outputParams.Count)
-    {
-      for (int i = 0; i < outputParams.Count; i++)
-      {
-        var outputParam = outputParams[i];
-        switch (outputParam.Param.Access)
+        object? outputValue = value switch
         {
-          case GH_ParamAccess.item:
-            da.SetData(i, outputParam.Value);
-            break;
-          case GH_ParamAccess.list:
-            da.SetDataList(i, outputParam.Value as IList ?? new List<object?>());
-            break;
+          SpecklePropertyGoo prop => prop.Value,
+          SpecklePropertyGroupGoo propGroup => propGroup,
+          _ => value
+        };
+
+        if (outParam.Access == GH_ParamAccess.item)
+        {
+          da.SetData(i, outputValue);
+        }
+        else
+        {
+          da.SetDataList(i, outputValue as IList ?? new List<object?>());
         }
       }
     }
