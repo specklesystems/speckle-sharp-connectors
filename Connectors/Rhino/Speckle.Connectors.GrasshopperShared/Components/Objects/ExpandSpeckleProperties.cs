@@ -47,51 +47,55 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
       // gather all property groups from the input (skipNulls = true)
       var allData = Params.Input[0].VolatileData.AllData(true).OfType<SpecklePropertyGroupGoo>().ToList();
 
-      var outputParamsDict = new Dictionary<string, OutputParamWrapper>();
-
-      foreach (var propGroup in allData)
+      // guard against empty data on file load / async operations to prevent stale ports from dropping (CNX-3245)
+      if (allData.Count > 0)
       {
-        if (propGroup?.Value == null)
-        {
-          continue;
-        }
+        var outputParamsDict = new Dictionary<string, OutputParamWrapper>();
 
-        foreach (var key in propGroup.Value.Keys)
+        foreach (var propGroup in allData)
         {
-          ISpecklePropertyGoo value = propGroup.Value[key];
-          object? outputValue = value switch
+          if (propGroup?.Value == null)
           {
-            SpecklePropertyGoo prop => prop.Value,
-            SpecklePropertyGroupGoo pg => pg,
-            _ => value
-          };
+            continue;
+          }
 
-          if (!outputParamsDict.TryGetValue(key, out var existingWrapper))
+          foreach (var key in propGroup.Value.Keys)
           {
-            var param = new SpeckleOutputParam
+            ISpecklePropertyGoo value = propGroup.Value[key];
+            object? outputValue = value switch
             {
-              Name = key,
-              NickName = key,
-              Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
+              SpecklePropertyGoo prop => prop.Value,
+              SpecklePropertyGroupGoo pg => pg,
+              _ => value
             };
-            outputParamsDict[key] = new OutputParamWrapper(param, outputValue);
-          }
-          else if (existingWrapper.Param.Access == GH_ParamAccess.item && outputValue is IList)
-          {
-            existingWrapper.Param.Access = GH_ParamAccess.list;
+
+            if (!outputParamsDict.TryGetValue(key, out var existingWrapper))
+            {
+              var param = new SpeckleOutputParam
+              {
+                Name = key,
+                NickName = key,
+                Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
+              };
+              outputParamsDict[key] = new OutputParamWrapper(param, outputValue);
+            }
+            else if (existingWrapper.Param.Access == GH_ParamAccess.item && outputValue is IList)
+            {
+              existingWrapper.Param.Access = GH_ParamAccess.list;
+            }
           }
         }
-      }
 
-      var outputParams = outputParamsDict.Values.ToList();
+        var outputParams = outputParamsDict.Values.ToList();
 
-      Name = $"Properties ({outputParams.Count})";
-      NickName = Name;
+        Name = $"Properties ({outputParams.Count})";
+        NickName = Name;
 
-      if (OutputMismatch(outputParams))
-      {
-        OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(outputParams));
-        return;
+        if (OutputMismatch(outputParams))
+        {
+          OnPingDocument()?.ScheduleSolution(5, _ => CreateOutputs(outputParams));
+          return;
+        }
       }
     }
 
@@ -131,29 +135,68 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
   /// </summary>
   private void CreateOutputs(List<OutputParamWrapper> outputParams)
   {
-    // remove all existing output parameters
-    while (Params.Output.Count > 0)
-    {
-      Params.UnregisterOutputParameter(Params.Output[^1]);
-    }
+    bool needsMaintenance = false;
 
-    // add new output parameters
-    foreach (var newParam in outputParams)
+    // remove old parameters that are no longer present
+    for (int i = Params.Output.Count - 1; i >= 0; i--)
     {
-      var param = new SpeckleOutputParam
+      var existingParam = Params.Output[i];
+      if (outputParams.All(p => p.Param.Name != existingParam.Name))
       {
-        Name = newParam.Param.Name,
-        NickName = newParam.Param.NickName,
-        MutableNickName = false,
-        Access = newParam.Param.Access
-      };
-      Params.RegisterOutputParam(param);
+        Params.UnregisterOutputParameter(existingParam);
+        needsMaintenance = true;
+      }
     }
 
-    // notify gh of parameter changes
-    Params.OnParametersChanged();
-    VariableParameterMaintenance();
-    ExpireSolution(false);
+    // add new parameters and update existing ones in place to preserve wires
+    for (int i = 0; i < outputParams.Count; i++)
+    {
+      var targetParam = outputParams[i].Param;
+      var existingParam = Params.Output.FirstOrDefault(p => p.Name == targetParam.Name);
+
+      if (existingParam != null)
+      {
+        if (existingParam.Access != targetParam.Access)
+        {
+          existingParam.Access = targetParam.Access;
+          needsMaintenance = true;
+        }
+
+        if (existingParam.NickName != targetParam.NickName)
+        {
+          existingParam.NickName = targetParam.NickName;
+          needsMaintenance = true;
+        }
+
+        int currentIndex = Params.Output.IndexOf(existingParam);
+        if (currentIndex != i)
+        {
+          Params.Output.RemoveAt(currentIndex);
+          Params.Output.Insert(i, existingParam);
+          needsMaintenance = true;
+        }
+      }
+      else
+      {
+        var newParam = new SpeckleOutputParam
+        {
+          Name = targetParam.Name,
+          NickName = targetParam.NickName,
+          MutableNickName = false,
+          Access = targetParam.Access
+        };
+        Params.RegisterOutputParam(newParam, i);
+        needsMaintenance = true;
+      }
+    }
+
+    if (needsMaintenance)
+    {
+      // notify gh of parameter changes
+      Params.OnParametersChanged();
+      VariableParameterMaintenance();
+      ExpireSolution(false);
+    }
   }
 
   /// <summary>
