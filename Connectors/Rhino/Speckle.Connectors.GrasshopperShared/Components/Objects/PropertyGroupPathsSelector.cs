@@ -24,14 +24,14 @@ public class PropertyGroupPathsSelector : ValueSet<IGH_Goo>
 
   protected override void LoadVolatileData()
   {
-    List<SpecklePropertyGroupGoo> propertyGroups = VolatileData
-      .AllData(true)
-      .OfType<SpecklePropertyGroupGoo>()
-      .ToList();
+    var allData = VolatileData.AllData(true).ToList();
 
-    if (VolatileDataCount > propertyGroups.Count)
+    List<SpecklePropertyGroupGoo> propertyGroups = allData.OfType<SpecklePropertyGroupGoo>().ToList();
+
+    // compare against allData.Count to safely ignore nulls (CNX-3176)
+    if (allData.Count > propertyGroups.Count)
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Only Speckle Properties are accepted as inputs.");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Only Speckle Properties are accepted as inputs.");
       return;
     }
 
