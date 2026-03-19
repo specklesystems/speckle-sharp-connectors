@@ -191,7 +191,8 @@ internal sealed class RevitParametersBinding : IParametersBinding
     {
       rawPath = rawPath[11..];
     }
-    else if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
+
+    if (rawPath.StartsWith("parameters.", StringComparison.InvariantCultureIgnoreCase))
     {
       rawPath = rawPath[11..];
     }
