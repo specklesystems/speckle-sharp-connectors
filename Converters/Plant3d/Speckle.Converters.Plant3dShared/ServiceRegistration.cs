@@ -40,6 +40,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertySetExtractor>();
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
+    serviceCollection.AddScoped<Plant3dDataExtractor>();
     serviceCollection.AddScoped<EntityUnitConverter>();
   }
 }

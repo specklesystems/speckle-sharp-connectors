@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
+using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
@@ -12,16 +13,19 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
   private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
   private readonly ToSpeckle.PropertiesExtractor _propertiesExtractor;
+  private readonly ToSpeckle.Plant3dDataExtractor _dataExtractor;
 
   public Plant3dRootToSpeckleConverter(
     IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
     IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
-    ToSpeckle.PropertiesExtractor propertiesExtractor
+    ToSpeckle.PropertiesExtractor propertiesExtractor,
+    ToSpeckle.Plant3dDataExtractor dataExtractor
   )
   {
     _toSpeckle = toSpeckle;
     _settingsStore = settingsStore;
     _propertiesExtractor = propertiesExtractor;
+    _dataExtractor = dataExtractor;
   }
 
   public Base Convert(object target)
@@ -35,9 +39,6 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
 
     Type type = dbObject.GetType();
 
-    // TODO: Add Plant3D-specific type resolution here
-    // For example, check for Plant3D entity types from Autodesk.ProcessPower namespace
-
     var objectConverter = _toSpeckle.ResolveConverter(type);
 
     try
@@ -48,13 +49,38 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
         {
           var result = objectConverter.Convert(target);
 
-          // Extract properties (property sets, extension dictionaries) for AutoCAD entities
           if (target is ADB.Entity autocadEntity)
           {
+            // Extract AEC property sets and extension dictionaries
             var properties = _propertiesExtractor.GetProperties(autocadEntity);
-            if (properties.Count > 0)
+
+            // Extract Plant3D project database properties (Tag, NominalDiameter, etc.)
+            var dataProperties = _dataExtractor.GetDataProperties(autocadEntity);
+
+            if (result is DataObject dataObject)
             {
-              result["properties"] = properties;
+              // Merge AEC properties
+              foreach (var kvp in properties)
+              {
+                dataObject.properties[kvp.Key] = kvp.Value;
+              }
+
+              // Merge Plant3D data under "Plant3D Data" key
+              if (dataProperties.Count > 0)
+              {
+                dataObject.properties["Plant3D Data"] = dataProperties;
+              }
+            }
+            else
+            {
+              if (properties.Count > 0)
+              {
+                result["properties"] = properties;
+              }
+              if (dataProperties.Count > 0)
+              {
+                result["Plant3D Data"] = dataProperties;
+              }
             }
           }
 
@@ -66,7 +92,7 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
     catch (SpeckleException e)
     {
       Console.WriteLine(e);
-      throw; // Just rethrowing for now, Logs may be needed here.
+      throw;
     }
   }
 }

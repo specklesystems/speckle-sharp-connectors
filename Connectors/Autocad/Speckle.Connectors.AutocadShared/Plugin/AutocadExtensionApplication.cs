@@ -28,7 +28,7 @@ public class AutocadExtensionApplication : IExtensionApplication
   private static Assembly? OnPlant3dAssemblyResolve(object? sender, ResolveEventArgs args)
   {
     string name = args.Name.Split(',')[0];
-    string acadDir = Path.GetDirectoryName(typeof(Autodesk.AutoCAD.Runtime.ExtensionAttribute).Assembly.Location)
+    string acadDir = Path.GetDirectoryName(typeof(Autodesk.AutoCAD.Runtime.CommandMethodAttribute).Assembly.Location)
       ?? string.Empty;
 
     // Probe subfolders where AEC/Plant3D DLLs live
