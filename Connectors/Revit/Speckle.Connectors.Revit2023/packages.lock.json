@@ -193,8 +193,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.14.0-alpha.9",
-        "contentHash": "98BcAKeS24oFOdIq47EN3NgwHqG992X8tWyD4zpEjsJDXAHjXRI9rXtQ69GWtL1Ghzal+76UxQn/sBjLYbj2Xw==",
+        "resolved": "3.14.0",
+        "contentHash": "izkYfh85HFy1DfhqaerPDYGgklAiIDeoDM71eFs5vGp+znknhJ0bLF3YJIVeg/lQqztabllyvcpF8HBO5aYxbQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -203,13 +203,13 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.14.0-alpha.9"
+          "Speckle.Sdk.Dependencies": "3.14.0"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.14.0-alpha.9",
-        "contentHash": "AoamkTQRw/S4fi5B+1cEmy0yunwVpqpyjXLz0eCevDYi9AFgdVEv5W7jjx6UQ1MSJ3SE2CwYqARbU7iGQzU7Sg==",
+        "resolved": "3.14.0",
+        "contentHash": "q5kuoL9lJNsXeRDESZYF3GC+hns7zKAqzEThSD0UPVHkUUZNtoOywhZe2Uq/sRaFzK4GoDh3kQu5kIMGVEDY0w==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "9.0.4"
         }
@@ -312,7 +312,7 @@
           "Microsoft.Extensions.DependencyInjection": "[2.2.0, )",
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.14.0-alpha.9, )"
+          "Speckle.Objects": "[3.14.0, )"
         }
       },
       "speckle.connectors.dui": {
@@ -335,7 +335,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "[2.2.0, )",
-          "Speckle.Objects": "[3.14.0-alpha.9, )"
+          "Speckle.Objects": "[3.14.0, )"
         }
       },
       "speckle.converters.revit2023": {
@@ -387,11 +387,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.14.0-alpha.9, )",
-        "resolved": "3.14.0-alpha.9",
-        "contentHash": "KOFSi8q9LSOEr7oPZ+pZr09zz4eONrkJ2yJ5Fm8l/TVnHS/b6hvX5L7RY8KPgX+R74oew6m2eJ5+y4XEsQadDQ==",
+        "requested": "[3.14.0, )",
+        "resolved": "3.14.0",
+        "contentHash": "1ACyjortxzfkF7ZzUSYKwdU6O/CgRbRtbiESiQ4QgymLiadRhHT5btwINvxorDS+tG2Q0MrVfBfWFP8cgHWFNg==",
         "dependencies": {
-          "Speckle.Sdk": "3.14.0-alpha.9"
+          "Speckle.Sdk": "3.14.0"
         }
       },
       "Speckle.Revit.API": {
