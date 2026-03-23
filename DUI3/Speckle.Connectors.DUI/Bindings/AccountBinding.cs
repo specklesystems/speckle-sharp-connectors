@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Newtonsoft.Json;
 using Speckle.Sdk.Credentials;
@@ -5,13 +6,14 @@ using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
-public class AccountBinding : IBinding
+public sealed class AccountBinding : IBinding, IDisposable
 {
   public string Name => "accountsBinding";
   public IBrowserBridge Parent { get; }
 
   private readonly IAccountManager _accountManager;
   private readonly ISqLiteJsonCacheManager _jsonCacheManager;
+  private CancellationTokenSource _cancellationTokenSource = new();
 
   public AccountBinding(
     IBrowserBridge bridge,
@@ -32,4 +34,23 @@ public class AccountBinding : IBinding
   }
 
   public void RemoveAccount(string accountId) => _accountManager.RemoveAccount(accountId);
+
+  [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Binding API")]
+  public async Task<Account> AuthenticateAccount(string serverUrl)
+  {
+    _cancellationTokenSource.Cancel();
+    _cancellationTokenSource = new();
+
+    return await _accountManager.AuthenticateAccount(
+      new(serverUrl),
+      TimeSpan.FromMinutes(5),
+      _cancellationTokenSource.Token
+    );
+  }
+
+  public void Dispose()
+  {
+    _cancellationTokenSource.Dispose();
+    _jsonCacheManager.Dispose();
+  }
 }
