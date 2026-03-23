@@ -4,7 +4,6 @@ using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Collections;
@@ -92,44 +91,8 @@ public class CreateCollection : VariableParameterComponentBase
     dataAccess.SetData(0, new SpeckleCollectionWrapperGoo(rootCollection));
   }
 
-  /// <summary>
-  /// Recursively checks if collection or any descendants contain valid geometry/data objects
-  /// </summary>
-  private bool HasAnyValidContent(ISpeckleCollectionObject? element) =>
-    element switch
-    {
-      SpeckleGeometryWrapper => true,
-      SpeckleDataObjectWrapper => true,
-      SpeckleCollectionWrapper collection => collection.Elements.Any(HasAnyValidContent),
-      _ => false
-    };
-
-  private SpeckleCollectionWrapper CreateRootCollection() =>
-    new()
-    {
-      Base = new Collection(),
-      Name = "Unnamed",
-      Path = new List<string> { "Unnamed" },
-      Color = null,
-      Material = null,
-      ApplicationId = InstanceGuid.ToString()
-    };
-
   private SpeckleCollectionWrapper? ProcessInputParameter(IGH_Param inputParam, List<IGH_Goo> data, string rootName)
   {
-    var collections = data.OfType<SpeckleCollectionWrapperGoo>().Empty().ToList();
-    var nonCollections = data.Where(t => t is not SpeckleCollectionWrapperGoo).Empty().ToList();
-
-    // Validate input - cannot mix collections and objects
-    if (collections.Count > 0 && nonCollections.Count > 0)
-    {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Error,
-        $"Parameter {inputParam.NickName} cannot contain both objects and collections."
-      );
-      return null;
-    }
-
     var childPath = new List<string> { rootName, inputParam.NickName };
     var childCollection = new SpeckleCollectionWrapper
     {
@@ -142,83 +105,57 @@ public class CreateCollection : VariableParameterComponentBase
       ApplicationId = inputParam.InstanceGuid.ToString()
     };
 
-    if (collections.Count > 0)
-    {
-      ProcessCollectionInputs(collections, childCollection, childPath);
-    }
-    else
-    {
-      ProcessObjectInputs(nonCollections, childCollection, childPath);
-    }
-
-    return childCollection;
-  }
-
-  private void ProcessCollectionInputs(
-    List<SpeckleCollectionWrapperGoo> collections,
-    SpeckleCollectionWrapper parentCollection,
-    List<string> childPath
-  )
-  {
     var duplicateNames = new HashSet<string>();
-
-    foreach (var collectionGoo in collections.Select(c => (SpeckleCollectionWrapperGoo)c.Duplicate()))
-    {
-      collectionGoo.Value.Path = childPath;
-
-      // Check for duplicate names within this collection
-      foreach (
-        var subCollectionName in collectionGoo
-          .Value.Elements.Where(e => e != null) // skip nulls (CNX-2855)
-          .OfType<SpeckleCollectionWrapper>()
-          .Select(c => c.Name)
-      )
-      {
-        if (!duplicateNames.Add(subCollectionName))
-        {
-          AddRuntimeMessage(
-            GH_RuntimeMessageLevel.Error,
-            $"Duplicate collection name '{subCollectionName}' found. Collection names must be unique per level."
-          );
-          return;
-        }
-      }
-
-      parentCollection.Elements.AddRange(collectionGoo.Value.Elements);
-    }
-  }
-
-  private void ProcessObjectInputs(
-    List<IGH_Goo> objects,
-    SpeckleCollectionWrapper parentCollection,
-    List<string> childPath
-  )
-  {
     int skippedCount = 0;
 
-    foreach (var obj in objects)
+    foreach (var obj in data)
     {
+      if (obj is SpeckleCollectionWrapperGoo collectionGoo)
+      {
+        var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
+        colClone.Value.Path = childPath;
+
+        // Check for duplicate names within this collection
+        foreach (
+          var subCollectionName in colClone
+            .Value.Elements.Where(e => e != null) // skip nulls (CNX-2855)
+            .OfType<SpeckleCollectionWrapper>()
+            .Select(c => c.Name)
+        )
+        {
+          if (!duplicateNames.Add(subCollectionName))
+          {
+            AddRuntimeMessage(
+              GH_RuntimeMessageLevel.Error,
+              $"Duplicate collection name '{subCollectionName}' found. Collection names must be unique per level."
+            );
+            return null;
+          }
+        }
+
+        childCollection.Elements.AddRange(colClone.Value.Elements);
+      }
       // handle data objects directly (deep copy to avoid mutations)
       // NOTE: DataObject first, since a DataObject with one geo is castable to speckle geometry
-      if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
+      else if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
       {
         var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
         dataObjectWrapper.Path = childPath;
-        dataObjectWrapper.Parent = parentCollection;
-        parentCollection.Elements.Add(dataObjectWrapper);
+        dataObjectWrapper.Parent = childCollection;
+        childCollection.Elements.Add(dataObjectWrapper);
       }
       // handle geometry objects (deep copy to avoid mutations)
       else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
       {
         SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
         wrapper.Path = childPath;
-        wrapper.Parent = parentCollection;
-        parentCollection.Elements.Add(wrapper);
+        wrapper.Parent = childCollection;
+        childCollection.Elements.Add(wrapper);
       }
       else
       {
         // add null placeholder to preserve topology (CNX-2855)
-        parentCollection.Elements.Add(null);
+        childCollection.Elements.Add(null);
         skippedCount++;
       }
     }
@@ -231,6 +168,8 @@ public class CreateCollection : VariableParameterComponentBase
         $"Skipped {skippedCount} unsupported object(s) (Leaders, TextDots, Dimensions, etc.)"
       );
     }
+
+    return childCollection;
   }
 
   // IGH_VariableParameterComponent implementation
