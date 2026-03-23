@@ -42,7 +42,7 @@ public sealed class AccountBinding : IBinding, IDisposable
     _cancellationTokenSource = new();
 
     return await _accountManager.AuthenticateAccount(
-      new(serverUrl),
+      new Uri(serverUrl, UriKind.Absolute),
       TimeSpan.FromMinutes(5),
       _cancellationTokenSource.Token
     );
