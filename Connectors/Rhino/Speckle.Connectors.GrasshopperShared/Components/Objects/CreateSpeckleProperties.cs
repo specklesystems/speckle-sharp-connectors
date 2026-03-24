@@ -45,13 +45,13 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    var properties = new Dictionary<string, ISpecklePropertyGoo>();
+    var groupGoo = new SpecklePropertyGroupGoo();
 
     // Validate for duplicate names
     var paramNames = Params.Input.Select(p => p.NickName).ToList();
-    var duplicates = paramNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key);
+    var duplicates = paramNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
 
-    if (duplicates.Any())
+    if (duplicates.Count != 0)
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
@@ -77,11 +77,10 @@ public class CreateSpeckleProperties : VariableParameterComponentBase
 
       if (propertyValue != null)
       {
-        properties[paramName] = propertyValue;
+        groupGoo.SetValueByPath(paramName, propertyValue);
       }
     }
 
-    var groupGoo = new SpecklePropertyGroupGoo(properties);
     da.SetData(0, groupGoo);
   }
 
