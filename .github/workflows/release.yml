@@ -71,7 +71,7 @@ jobs:
           ref: main
           wait-for-completion: true
           sync-status: true
-        timeout-minutes: 1
+        timeout-minutes: 15
 
       # Allows us to inspect the artifacts of failed builds, since this below step will be skipped if the above step fails
       - uses: geekyeggo/delete-artifact@v6
