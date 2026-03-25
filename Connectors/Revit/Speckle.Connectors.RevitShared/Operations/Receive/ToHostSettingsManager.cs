@@ -83,6 +83,10 @@ public class ToHostSettingsManager : IToHostSettingsManager
 
       switch (referencePointType)
       {
+        case ReceiveReferencePointType.SharedLocation:
+          referencePointTransform = uiApplication.ActiveUIDocument.Document.ActiveProjectLocation.GetTransform();
+          break;
+
         // note that the project base (ui) rotation is registered on the survey pt, not on the base point
         case ReceiveReferencePointType.ProjectBase:
           if (projectPoint is not null)

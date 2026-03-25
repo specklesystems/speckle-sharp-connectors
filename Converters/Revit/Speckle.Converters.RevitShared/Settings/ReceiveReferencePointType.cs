@@ -5,5 +5,6 @@ public enum ReceiveReferencePointType
   Source,
   InternalOrigin,
   ProjectBase,
-  Survey
+  Survey,
+  SharedLocation
 }

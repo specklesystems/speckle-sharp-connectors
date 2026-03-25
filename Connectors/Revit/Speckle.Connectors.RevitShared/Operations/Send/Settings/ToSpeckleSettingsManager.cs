@@ -201,6 +201,9 @@ public class ToSpeckleSettingsManager(
 
     switch (referencePointType)
     {
+      case ReferencePointType.SharedLocation:
+        referencePointTransform = document.ActiveProjectLocation.GetTransform();
+        break;
       // note that the project base (ui) rotation is registered on the survey pt, not on the base point
       case ReferencePointType.ProjectBase:
         if (projectPoint is not null)
