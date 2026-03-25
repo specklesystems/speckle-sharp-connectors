@@ -6,34 +6,24 @@ using Speckle.Sdk.SQLite;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
-public sealed class AccountBinding : IBinding, IDisposable
+public sealed class AccountBinding(
+  IBrowserBridge bridge,
+  IAccountManager accountManager,
+  ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
+) : IBinding, IDisposable
 {
   public string Name => "accountsBinding";
-  public IBrowserBridge Parent { get; }
+  public IBrowserBridge Parent { get; } = bridge;
 
-  private readonly IAccountManager _accountManager;
-  private readonly ISqLiteJsonCacheManager _jsonCacheManager;
+  private readonly ISqLiteJsonCacheManager _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("Accounts");
   private CancellationTokenSource _cancellationTokenSource = new();
 
-  public AccountBinding(
-    IBrowserBridge bridge,
-    IAccountManager accountManager,
-    ISqLiteJsonCacheManagerFactory sqLiteJsonCacheManagerFactory
-  )
-  {
-    Parent = bridge;
-    _accountManager = accountManager;
-    _jsonCacheManager = sqLiteJsonCacheManagerFactory.CreateForUser("Accounts");
-  }
+  public Account[] GetAccounts() => accountManager.GetAccounts().ToArray();
 
-  public Account[] GetAccounts() => _accountManager.GetAccounts().ToArray();
-
-  public void AddAccount(string accountId, Account account)
-  {
+  public void AddAccount(string accountId, Account account) =>
     _jsonCacheManager.SaveObject(accountId, JsonConvert.SerializeObject(account));
-  }
 
-  public void RemoveAccount(string accountId) => _accountManager.RemoveAccount(accountId);
+  public void RemoveAccount(string accountId) => accountManager.RemoveAccount(accountId);
 
   [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Binding API")]
   public async Task<Account> AuthenticateAccount(string serverUrl)
@@ -41,7 +31,7 @@ public sealed class AccountBinding : IBinding, IDisposable
     _cancellationTokenSource.Cancel();
     _cancellationTokenSource = new();
 
-    return await _accountManager.AuthenticateAccount(
+    return await accountManager.AuthenticateAccount(
       new Uri(serverUrl, UriKind.Absolute),
       TimeSpan.FromMinutes(5),
       _cancellationTokenSource.Token
