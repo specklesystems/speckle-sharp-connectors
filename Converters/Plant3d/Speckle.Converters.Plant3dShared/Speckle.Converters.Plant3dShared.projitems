@@ -25,5 +25,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\EquipmentToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\PipeToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\PipeInlineAssetToSpeckleConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\FallbackEntityToSpeckleConverter.cs" />
   </ItemGroup>
 </Project>

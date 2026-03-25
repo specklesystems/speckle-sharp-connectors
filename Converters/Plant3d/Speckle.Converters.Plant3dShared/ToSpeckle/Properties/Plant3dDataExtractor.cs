@@ -50,7 +50,7 @@ public class Plant3dDataExtractor
         foreach (var kvp in allProps)
         {
           string key = kvp.Key?.ToString() ?? "unknown";
-          object? value = kvp.Value;
+          object? value = ToSerializable(kvp.Value);
 
           // Skip null/empty values
           if (value is null || (value is string s && string.IsNullOrWhiteSpace(s)))
@@ -68,6 +68,27 @@ public class Plant3dDataExtractor
     }
 
     return result;
+  }
+
+  /// <summary>
+  /// Converts a Plant3D property value to a Speckle-serializable type.
+  /// Raw API values can be AutoCAD types (ObjectId, TypedValue, etc.) that fail serialization.
+  /// </summary>
+  private static object? ToSerializable(object? value)
+  {
+    return value switch
+    {
+      null => null,
+      string s => s,
+      bool b => b,
+      int i => i,
+      long l => l,
+      double d => d,
+      float f => f,
+      decimal m => (double)m,
+      DateTime dt => dt.ToString("o"),
+      _ => value.ToString() // Convert any complex type to string
+    };
   }
 #pragma warning restore CA1031
 }

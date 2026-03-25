@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Models;
 
@@ -7,20 +8,23 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle.Geometry;
 
 /// <summary>
 /// Generic converter for Plant3D entity types.
-/// Extracts display mesh via Explode (Plant3D entities are typically block references)
-/// and creates a DataObject with Plant3D properties.
+/// Plant3D entities are internally block references (often nested).
+/// Uses Explode() to decompose into world-coordinate geometry, then converts each
+/// sub-entity using the existing AutoCAD converters (Line, Arc, Solid3d, etc.).
 /// </summary>
 public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConverter
 {
-  private readonly ITypedConverter<ABR.Brep, SOG.Mesh> _brepConverter;
+  private readonly IConverterManager<IToSpeckleTopLevelConverter> _converterManager;
   private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
 
+  private const int MAX_DEPTH = 5;
+
   protected Plant3dEntityToSpeckleConverter(
-    ITypedConverter<ABR.Brep, SOG.Mesh> brepConverter,
+    IConverterManager<IToSpeckleTopLevelConverter> converterManager,
     IConverterSettingsStore<Plant3dConversionSettings> settingsStore
   )
   {
-    _brepConverter = brepConverter;
+    _converterManager = converterManager;
     _settingsStore = settingsStore;
   }
 
@@ -42,76 +46,65 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
     return dataObject;
   }
 
-  /// <summary>
-  /// Extracts display meshes from a Plant3D entity.
-  /// Plant3D entities are typically block references, so we explode them
-  /// and extract meshes from the constituent Solid3d entities.
-  /// </summary>
-#pragma warning disable CA1031 // Autodesk APIs throw various exception types during BREP/Explode
+#pragma warning disable CA1031 // Autodesk APIs throw various exception types
   private List<Base> ExtractDisplayValue(ADB.Entity entity)
   {
-    List<Base> meshes = new();
+    List<Base> results = new();
+    CollectDisplayObjects(entity, results, 0);
+    return results;
+  }
 
-    // First try direct BREP extraction
-    try
+  /// <summary>
+  /// Recursively explodes the entity to reach leaf geometry, then converts
+  /// each piece using the registered AutoCAD converters.
+  /// Explode() produces entities in world coordinates (transforms are applied),
+  /// unlike opening the BlockTableRecord directly which gives local coordinates.
+  /// </summary>
+  private void CollectDisplayObjects(ADB.Entity entity, List<Base> results, int depth)
+  {
+    // If this is NOT a block reference, try converting it directly
+    // (Line, Arc, Circle, Polyline, Solid3d, etc.)
+    if (entity is not ADB.BlockReference)
     {
-      using ABR.Brep brep = new(entity);
-      if (!brep.IsNull)
+      try
       {
-        meshes.Add(_brepConverter.Convert(brep));
-        return meshes;
+        var converter = _converterManager.ResolveConverter(entity.GetType(), false);
+        if (converter is not null)
+        {
+          var converted = converter.Convert(entity);
+          results.Add(converted);
+          return;
+        }
+      }
+      catch (System.Exception)
+      {
+        // Converter not found or failed — fall through to explode
       }
     }
-    catch (System.Exception)
+
+    // For BlockReferences or unconvertible entities, explode to get sub-entities
+    // Explode produces world-coordinate geometry (block transform is applied)
+    if (depth >= MAX_DEPTH)
     {
-      // Expected for block references — fall through to explode
+      return;
     }
 
-    // Plant3D entities are typically block references — explode to get geometry
     try
     {
       using ADB.DBObjectCollection exploded = new();
       entity.Explode(exploded);
       foreach (ADB.DBObject obj in exploded)
       {
-        if (obj is ADB.Solid3d solid)
+        if (obj is ADB.Entity subEntity)
         {
-          try
-          {
-            using ABR.Brep brep = new(solid);
-            if (!brep.IsNull)
-            {
-              meshes.Add(_brepConverter.Convert(brep));
-            }
-          }
-          catch (System.Exception)
-          {
-            // Skip individual solids that fail
-          }
-        }
-        else if (obj is ADB.Entity subEntity)
-        {
-          try
-          {
-            using ABR.Brep brep = new(subEntity);
-            if (!brep.IsNull)
-            {
-              meshes.Add(_brepConverter.Convert(brep));
-            }
-          }
-          catch (System.Exception)
-          {
-            // Skip sub-entities that can't be meshed
-          }
+          CollectDisplayObjects(subEntity, results, depth + 1);
         }
       }
     }
     catch (System.Exception)
     {
-      // Entity can't be exploded
+      // Can't explode — no display value from this entity
     }
-
-    return meshes;
   }
 #pragma warning restore CA1031
 }
