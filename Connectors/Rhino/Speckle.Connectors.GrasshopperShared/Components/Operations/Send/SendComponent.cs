@@ -68,8 +68,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     // collection / data (Refactored to accept lists of mixed data)
     pManager.AddGenericParameter(
-      "Data",
-      "D",
+      "Collection",
+      "collection",
       "The collections, data objects, or geometries to publish",
       GH_ParamAccess.list
     );

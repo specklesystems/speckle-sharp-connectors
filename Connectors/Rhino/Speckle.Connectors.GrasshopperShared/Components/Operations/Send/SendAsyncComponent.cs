@@ -66,8 +66,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
     // collection / data
     pManager.AddGenericParameter(
-      "Data",
-      "D",
+      "Collection",
+      "collection",
       "The collections, data objects, or geometries to publish",
       GH_ParamAccess.list
     );
