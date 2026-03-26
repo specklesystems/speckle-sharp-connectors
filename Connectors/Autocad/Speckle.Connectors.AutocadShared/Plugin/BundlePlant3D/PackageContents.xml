@@ -15,30 +15,6 @@
             Email="support@speckle.systems" />
     <Components>
 
-        <!-- Plant 3D 2024 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Plant3d2024"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Plant3d2024/Speckle.Connectors.Plant3d2024.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Plant3D"
-                    SeriesMin="R24.3"
-                    SeriesMax="R24.3" />
-        </ComponentEntry>
-
-        <!-- Plant 3D 2025 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Plant3d2025"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Plant3d2025/Speckle.Connectors.Plant3d2025.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Plant3D"
-                    SeriesMin="R25.0"
-                    SeriesMax="R25.0" />
-        </ComponentEntry>
-
         <!-- Plant 3D 2026 -->
         <ComponentEntry
                 AppName="Speckle.Connectors.Plant3d2026"
