@@ -53,6 +53,9 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IBasicConnectorBinding>());
     serviceCollection.AddSingleton<IBasicConnectorBinding, BasicConnectorBindingRevit>();
 
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IParametersBinding>());
+    serviceCollection.AddSingleton<IParametersBinding, RevitParametersBinding>();
+
     // serviceCollection.AddSingleton<IAppIdleManager, RevitIdleManager>();
 
     // send operation and dependencies
@@ -66,6 +69,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
+    serviceCollection.AddSingleton<ParameterUpdater>();
 
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
