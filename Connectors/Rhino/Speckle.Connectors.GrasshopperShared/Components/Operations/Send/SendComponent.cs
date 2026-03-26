@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Grasshopper;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Operations;
@@ -13,6 +14,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
@@ -65,14 +67,15 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
 
-    // collection
-    pManager.AddParameter(
-      new SpeckleCollectionParam(GH_ParamAccess.item),
+    // collection / data (Refactored to accept lists of mixed data)
+    pManager.AddGenericParameter(
       "Collection",
       "collection",
-      "The model collection to publish",
-      GH_ParamAccess.item
+      "The collections, data objects, or geometries to publish",
+      GH_ParamAccess.list
     );
+
+    // version message
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
 
@@ -108,8 +111,78 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       throw new SpeckleException("Failed to get resource");
     }
 
-    SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
-    da.GetData(1, ref rootCollectionWrapper);
+    // read as generic list of Goos
+    List<IGH_Goo> inputGoos = new();
+    da.GetDataList(1, inputGoos);
+
+    SpeckleCollectionWrapper? rootBase;
+
+    // filter out nulls just to check if we can use the fast path
+    var nonNullGoos = inputGoos.Where(x => x != null).ToList();
+
+    // fast path: if there's exactly one valid item and it's a collection, use it directly
+    if (nonNullGoos.Count == 1 && nonNullGoos[0] is SpeckleCollectionWrapperGoo singleCollection)
+    {
+      rootBase = singleCollection.Value.DeepCopy();
+    }
+    else
+    {
+      // mixed inputs: construct a root collection using the document name  (CNX-3175)
+      var docName = GetGrasshopperFileInfo().fileName ?? "Unnamed Document";
+      if (
+        docName.EndsWith(".gh", StringComparison.OrdinalIgnoreCase)
+        || docName.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase)
+      )
+      {
+        docName = Path.GetFileNameWithoutExtension(docName);
+      }
+
+      rootBase = new SpeckleCollectionWrapper
+      {
+        Base = new Collection(),
+        Name = docName,
+        Path = [docName],
+        Color = null,
+        Material = null
+      };
+
+      int skippedCount = 0;
+      foreach (var obj in inputGoos)
+      {
+        if (obj is SpeckleCollectionWrapperGoo collectionGoo)
+        {
+          var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
+          colClone.Value.Path = rootBase.Path;
+          rootBase.Elements.AddRange(colClone.Value.Elements);
+        }
+        else if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
+        {
+          var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
+          dataObjectWrapper.Path = rootBase.Path;
+          dataObjectWrapper.Parent = rootBase;
+          rootBase.Elements.Add(dataObjectWrapper);
+        }
+        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+        {
+          SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
+          wrapper.Path = rootBase.Path;
+          wrapper.Parent = rootBase;
+          rootBase.Elements.Add(wrapper);
+        }
+        else
+        {
+          rootBase.Elements.Add(null);
+          skippedCount++;
+        }
+      }
+
+      if (skippedCount > 0)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Skipped {skippedCount} unsupported object(s).");
+      }
+    }
+
+    SpeckleCollectionWrapperGoo rootCollectionWrapper = new(rootBase);
 
     string? versionMessage = null;
     da.GetData(2, ref versionMessage);
@@ -170,27 +243,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
   )
   {
     var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
-    var multipleCollections = Params.Input[1].VolatileData.HasInputCountGreaterThan(1);
 
-    var hasMultipleInputs = multipleCollections || multipleResources;
-
-    if (hasMultipleInputs)
+    if (multipleResources)
     {
-      var mCollErrText =
-        "Only one single collection supported. Please group your input collections into one single one before sending.";
-      var mLinksErrText =
-        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components.";
-
-      if (multipleCollections)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mCollErrText);
-      }
-
-      if (multipleResources)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mLinksErrText);
-      }
-
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components."
+      );
       return new(null);
     }
 
@@ -199,9 +258,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       return new(null);
     }
 
-    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly - it's only
-    // constructed here from the Collection + Model Properties inputs.
-    // if this changes, then we need to update below!
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
     var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
     var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
 

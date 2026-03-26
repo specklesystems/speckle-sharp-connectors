@@ -5,6 +5,7 @@ using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
+using Grasshopper.Kernel.Types;
 using GrasshopperAsyncComponent;
 using Microsoft.Extensions.DependencyInjection;
 using Rhino;
@@ -64,14 +65,15 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     // speckle model
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
 
-    // collection
-    pManager.AddParameter(
-      new SpeckleCollectionParam(GH_ParamAccess.item),
+    // collection / data
+    pManager.AddGenericParameter(
       "Collection",
       "collection",
-      "The collection model object to send",
-      GH_ParamAccess.item
+      "The collections, data objects, or geometries to publish",
+      GH_ParamAccess.list
     );
+
+    // version message
     pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
     pManager[2].Optional = true;
 
@@ -150,27 +152,15 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   protected override void SolveInstance(IGH_DataAccess da)
   {
     var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
-    var multipleCollections = Params.Input[1].VolatileData.HasInputCountGreaterThan(1);
 
-    HasMultipleInputs = multipleCollections || multipleResources;
+    HasMultipleInputs = multipleResources;
 
     if (HasMultipleInputs)
     {
-      var mCollErrText =
-        "Only one single collection supported. Please group your input collections into one single one before sending.";
-      var mLinksErrText =
-        "Only one single model can be published to from this node. To send to multiple models, please use different publish components.";
-
-      if (multipleCollections)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mCollErrText);
-      }
-
-      if (multipleResources)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, mLinksErrText);
-      }
-
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        "Only one single model can be published to from this node. To send to multiple models, please use different publish components."
+      );
       return;
     }
 
@@ -195,7 +185,6 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     {
       // Set output data in a "first run" event. Note: we are not persisting the actual "sent" object as it can be very big.
       base.SolveInstance(da);
-      return;
     }
     else
     {
@@ -284,15 +273,84 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.ToFormattedString());
     }
 
-    SpeckleCollectionWrapperGoo rootCollectionWrapper = new();
-    da.GetData(1, ref rootCollectionWrapper);
-    if (rootCollectionWrapper is null)
+    List<IGH_Goo> inputGoos = new();
+    da.GetDataList(1, inputGoos);
+
+    if (inputGoos.Count == 0)
     {
       RootCollectionWrapper = null;
       TriggerAutoSave();
       return;
     }
-    RootCollectionWrapper = rootCollectionWrapper;
+
+    SpeckleCollectionWrapper? rootBase;
+
+    // filter out nulls just to check if we can use the fast path
+    var nonNullGoos = inputGoos.Where(x => x != null).ToList();
+
+    // fast path: if there's exactly one valid item and it's a collection, use it directly
+    if (nonNullGoos.Count == 1 && nonNullGoos[0] is SpeckleCollectionWrapperGoo singleCollection)
+    {
+      rootBase = singleCollection.Value.DeepCopy();
+    }
+    else
+    {
+      // mixed inputs: construct a root collection using the document name (CNX-3175)
+      var docName = SendComponent.GetGrasshopperFileInfo().fileName ?? "Unnamed Document";
+      if (
+        docName.EndsWith(".gh", StringComparison.OrdinalIgnoreCase)
+        || docName.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase)
+      )
+      {
+        docName = Path.GetFileNameWithoutExtension(docName);
+      }
+
+      rootBase = new SpeckleCollectionWrapper
+      {
+        Base = new Speckle.Sdk.Models.Collections.Collection(),
+        Path = [docName],
+        Color = null,
+        Material = null,
+        Name = docName
+      };
+
+      int skippedCount = 0;
+      foreach (var obj in inputGoos)
+      {
+        if (obj is SpeckleCollectionWrapperGoo collectionGoo)
+        {
+          var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
+          colClone.Value.Path = rootBase.Path;
+          rootBase.Elements.AddRange(colClone.Value.Elements);
+        }
+        else if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
+        {
+          var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
+          dataObjectWrapper.Path = rootBase.Path;
+          dataObjectWrapper.Parent = rootBase;
+          rootBase.Elements.Add(dataObjectWrapper);
+        }
+        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+        {
+          SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
+          wrapper.Path = rootBase.Path;
+          wrapper.Parent = rootBase;
+          rootBase.Elements.Add(wrapper);
+        }
+        else
+        {
+          rootBase.Elements.Add(null);
+          skippedCount++;
+        }
+      }
+
+      if (skippedCount > 0)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Skipped {skippedCount} unsupported object(s).");
+      }
+    }
+
+    RootCollectionWrapper = new SpeckleCollectionWrapperGoo(rootBase);
 
     string? versionMessage = null;
     da.GetData(2, ref versionMessage);
@@ -302,7 +360,6 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     da.GetData(3, ref rootPropsGoo);
 
     // validate single properties group
-    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
     if (Params.Input[3].VolatileData.DataCount > 1)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Only one Model Properties group is allowed");

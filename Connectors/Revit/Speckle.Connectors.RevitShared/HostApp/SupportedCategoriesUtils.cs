@@ -45,6 +45,8 @@ public static class SupportedCategoriesUtils
 #else
           category.Name == "OST_Grids";
 #endif
+      case CategoryType.AnalyticalModel:
+        return true;
 
       case CategoryType.Model:
         return

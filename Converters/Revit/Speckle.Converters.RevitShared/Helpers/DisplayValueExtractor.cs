@@ -71,7 +71,7 @@ public sealed class DisplayValueExtractor
       case DB.Architecture.Room room:
         // api still returns geometry for unplaced rooms.
         // return empty list so room object is sent but with null display value
-        if (room.Volume == 0)
+        if (room.UpperLimit == null)
         {
           return new List<DisplayValueResult>();
         }
