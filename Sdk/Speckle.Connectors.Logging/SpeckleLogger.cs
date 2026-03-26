@@ -5,6 +5,7 @@ namespace Speckle.Connectors.Logging;
 public sealed class Logger(ILogger logger)
 {
   private static LogLevel GetLevel(SpeckleLogLevel speckleLogLevel) =>
+    //We need to do this gymnastics due to ILRepack
     speckleLogLevel switch
     {
       SpeckleLogLevel.Debug => LogLevel.Debug,

@@ -35,10 +35,8 @@ public class QueryProperties : GH_Component
     pManager.AddTextParameter("Keys", "K", "Property keys to filter by", GH_ParamAccess.list);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
     pManager.AddGenericParameter("Values", "V", "The values of the specified keys", GH_ParamAccess.list);
-  }
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
@@ -64,7 +62,7 @@ public class QueryProperties : GH_Component
     List<object?> values = [];
     foreach (string key in keys)
     {
-      var value = GetValueByPath(properties, key);
+      var value = properties.GetValueByPath(key);
       var extractedValue = (value as SpecklePropertyGoo)?.Value ?? value;
 
       // NOTE: if property is a list, flatten into individual items for native gh list access
@@ -79,32 +77,5 @@ public class QueryProperties : GH_Component
     }
 
     da.SetDataList(0, values);
-  }
-
-  public static ISpecklePropertyGoo? GetValueByPath(SpecklePropertyGroupGoo data, string path)
-  {
-    string[] keys = path.Split('.');
-    ISpecklePropertyGoo? current = data;
-
-    foreach (var key in keys)
-    {
-      if (current is SpecklePropertyGroupGoo dict)
-      {
-        if (dict.Value.TryGetValue(key, out ISpecklePropertyGoo? next))
-        {
-          current = next;
-        }
-        else
-        {
-          return null;
-        }
-      }
-      else
-      {
-        return null; // Current is not a dictionary, path is invalid
-      }
-    }
-
-    return current;
   }
 }
