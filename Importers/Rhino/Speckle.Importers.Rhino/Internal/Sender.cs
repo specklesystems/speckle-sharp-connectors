@@ -36,7 +36,6 @@ internal sealed class Sender(
     var progressManager = progressManagerFactory.CreateInstance(
       speckleClient,
       ingestion,
-      project.id,
       TimeSpan.FromSeconds(1.5),
       cancellationToken
     );

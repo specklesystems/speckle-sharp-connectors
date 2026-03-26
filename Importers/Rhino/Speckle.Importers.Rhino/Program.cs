@@ -4,7 +4,9 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RhinoInside;
+using Speckle.Connectors.Logging;
 using Speckle.Importers.Rhino.Internal;
+using Speckle.Sdk.Logging;
 
 namespace Speckle.Importers.Rhino;
 
@@ -22,6 +24,8 @@ public static class Program
   [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "IPC")]
   public static async Task Main(string[] args)
   {
+    //Thread.Sleep(10000); //For Debugging purposes, gives you enough time to attach your IDE to the running process
+
     ILogger? logger = null;
     ImporterInstance? importer = null;
 
@@ -31,10 +35,16 @@ public static class Program
 
       var serviceCollection = new ServiceCollection();
       serviceCollection.AddRhinoImporter(importerArgs.HostApplication);
+      using var otel = serviceCollection.AddLoggingConfig(importerArgs.HostApplication);
       using var serviceProvider = serviceCollection.BuildServiceProvider();
       logger = serviceProvider.GetRequiredService<ILogger<object>>();
       TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
         logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
+
+      ISdkActivityFactory activityFactory = serviceProvider.GetRequiredService<ISdkActivityFactory>();
+      using var activity = importerArgs.TraceContext is not null
+        ? activityFactory.StartRemote(importerArgs.TraceContext, SdkActivityKind.Consumer)
+        : activityFactory.Start();
 
       var factory = serviceProvider.GetRequiredService<ImporterInstanceFactory>();
 
