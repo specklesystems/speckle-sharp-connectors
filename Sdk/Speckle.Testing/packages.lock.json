@@ -59,11 +59,11 @@
       },
       "Speckle.Objects": {
         "type": "Direct",
-        "requested": "[3.15.0, )",
-        "resolved": "3.15.0",
-        "contentHash": "7/40NmAVbQS+fm4y8J2Y8U7G7oFHTbI8C03HO2dig1tICdCO2EXcv9wpDM9WRfD+vKx/vfx8WwpT+/HUP4DlcQ==",
+        "requested": "[3.15.1, )",
+        "resolved": "3.15.1",
+        "contentHash": "vFIf01jNVD69N6wE5iYVM7TKA6AbSTZxq1EedJCVZxhj5pkhHBw+23fyO+wz7Cd9ggqsiBUJMuKxUBHaDphGWQ==",
         "dependencies": {
-          "Speckle.Sdk": "3.15.0"
+          "Speckle.Sdk": "3.15.1"
         }
       },
       "Castle.Core": {
@@ -192,8 +192,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.15.0",
-        "contentHash": "/Qc1ESqxzLulN2c8vR0rEk+SjEHRUzdzKWvcF5i1H2ipWBzxYNi+QdZ2yc7kE+he+LmW6rdALEfAGW6b0hQbig==",
+        "resolved": "3.15.1",
+        "contentHash": "Gt1qAZrMflLMOjDy4cQzJX5pdq5WokphYdsry7pMBlRHRdx9imQhJUPCg528Y2iVSMUnRKvj3A3cHtBeUxysEQ==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Data.Sqlite": "7.0.5",
@@ -201,13 +201,13 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.15.0"
+          "Speckle.Sdk.Dependencies": "3.15.1"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.15.0",
-        "contentHash": "q7CL5P25PXoya5QhfieD4b56HgsM/6nAPsmcitHCURxj6nHrIVECpOeptbnN0T5KaA5SL6RAB5WIj7YYepkXzQ=="
+        "resolved": "3.15.1",
+        "contentHash": "OUOnt4Vnd1J838LTWEpP0ge8WIwjhx8O94kuTbC6AJRfOx9Lw78SG6XtVCE+WXb9zC5h3tzOV9YOng8Ke5yXMg=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
