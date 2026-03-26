@@ -10,7 +10,7 @@ namespace Speckle.Connectors.GrasshopperShared.Parameters;
 /// </summary>
 public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpecklePropertyGoo>>, ISpecklePropertyGoo
 {
-  public override IGH_Goo Duplicate() => throw new NotImplementedException();
+  public override IGH_Goo Duplicate() => Clone();
 
   public override string ToString() => $"Speckle Properties : ({Value.Count})";
 
@@ -211,6 +211,101 @@ public partial class SpecklePropertyGroupGoo : GH_Goo<Dictionary<string, ISpeckl
     }
 
     return dict;
+  }
+
+  /// <summary>
+  /// Performs a deep clone of the property group to prevent mutating upstream Grasshopper data.
+  /// </summary>
+  /// <returns>
+  /// A new SpecklePropertyGroupGoo instance with cloned nested properties.
+  /// Needed since adding support for dot notation [CNX-3179]
+  /// </returns>
+  public SpecklePropertyGroupGoo Clone()
+  {
+    var newDict = new Dictionary<string, ISpecklePropertyGoo>();
+    foreach (var kvp in Value)
+    {
+      newDict[kvp.Key] = kvp.Value is SpecklePropertyGroupGoo group ? group.Clone() : kvp.Value;
+    }
+    return new SpecklePropertyGroupGoo(newDict);
+  }
+
+  /// <summary>
+  /// Sets a property value using dot-notation path traversal. Creates nested groups if they do not exist.
+  /// </summary>
+  /// <param name="path">The dot-notation property path.</param>
+  /// <param name="value">The Speckle property to set.</param>
+  public void SetValueByPath(string path, ISpecklePropertyGoo value)
+  {
+    string[] parts = path.Split('.');
+    var current = Value;
+
+    for (int i = 0; i < parts.Length - 1; i++)
+    {
+      string part = parts[i];
+      if (!current.TryGetValue(part, out var existing) || existing is not SpecklePropertyGroupGoo group)
+      {
+        group = new SpecklePropertyGroupGoo();
+        current[part] = group;
+      }
+      current = group.Value;
+    }
+
+    current[parts[^1]] = value;
+  }
+
+  /// <summary>
+  /// Removes a property value using dot-notation path traversal.
+  /// </summary>
+  /// <param name="path">The dot-notation property path.</param>
+  public void RemoveValueByPath(string path)
+  {
+    string[] parts = path.Split('.');
+    var current = Value;
+
+    for (int i = 0; i < parts.Length - 1; i++)
+    {
+      string part = parts[i];
+      if (!current.TryGetValue(part, out var existing) || existing is not SpecklePropertyGroupGoo group)
+      {
+        return; // path does not exist
+      }
+
+      current = group.Value;
+    }
+
+    current.Remove(parts[^1]);
+  }
+
+  /// <summary>
+  /// Retrieves a property value using dot-notation path traversal. Attempts exact match first.
+  /// </summary>
+  /// <param name="path">The dot-notation property path.</param>
+  /// <returns>The matching property goo if found, otherwise null.</returns>
+  public ISpecklePropertyGoo? GetValueByPath(string path)
+  {
+    // attempt exact match first for literal dots in native keys
+    if (Value.TryGetValue(path, out var exactMatch))
+    {
+      return exactMatch;
+    }
+
+    string[] parts = path.Split('.');
+    ISpecklePropertyGoo? current = this;
+
+    foreach (var part in parts)
+    {
+      if (current is SpecklePropertyGroupGoo group && group.Value.TryGetValue(part, out var next))
+      {
+        current = next;
+      }
+      else
+      {
+        return null; // current is not a dictionary, or path is invalid
+      }
+    }
+
+    return current;
   }
 
   public override int GetHashCode() => base.GetHashCode();

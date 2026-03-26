@@ -18,8 +18,10 @@ public readonly struct LoggingActivity
   public void RecordException(Exception e) => _activity.AddException(e);
 
   public string TraceId => _activity.TraceId.ToString();
+  public string SpanId => _activity.SpanId.ToString();
 
   public void SetStatus(LoggingActivityStatusCode code) =>
+    //We need to do this gymnastics due to ILRepack
     _activity.SetStatus(
       code switch
       {
