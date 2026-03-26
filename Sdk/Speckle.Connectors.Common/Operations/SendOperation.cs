@@ -112,7 +112,6 @@ public sealed class SendOperation<T>(
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
       sendInfo.Client,
       ingestion,
-      sendInfo.ProjectId,
       TimeSpan.FromSeconds(10),
       cancellationToken
     );
@@ -190,7 +189,6 @@ public sealed class SendOperation<T>(
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
       sendInfo.Client,
       ingestion,
-      sendInfo.ProjectId,
       TimeSpan.FromSeconds(5),
       cancellationToken
     );
