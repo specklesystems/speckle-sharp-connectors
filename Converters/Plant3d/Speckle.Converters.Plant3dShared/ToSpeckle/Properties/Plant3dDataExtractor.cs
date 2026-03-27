@@ -52,12 +52,6 @@ public class Plant3dDataExtractor
           string key = kvp.Key?.ToString() ?? "unknown";
           object? value = ToSerializable(kvp.Value);
 
-          // Skip null/empty values
-          if (value is null || (value is string s && string.IsNullOrWhiteSpace(s)))
-          {
-            continue;
-          }
-
           result[key] = value;
         }
       }
