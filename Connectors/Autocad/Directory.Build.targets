@@ -35,4 +35,23 @@
     <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Civil3DVersion)\acad.exe</StartProgram>
     <StartArguments>/product C3D</StartArguments>
   </PropertyGroup>
+
+  <Target AfterTargets="Clean" Name="CleanAddinPlant3D" Condition="'$(Plant3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <RemoveDir Directories="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Plant3d.bundle\Contents\Windows\Speckle.Connectors.Plant3d$(Plant3DVersion);" />
+  </Target>
+
+  <Target AfterTargets="Build"  Name="AfterBuildPlant3D" Condition="'$(Plant3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <Plant3DDLLs Include="$(TargetDir)\**\*.*" />
+    </ItemGroup>
+    <Message Text="Plant3D Version $(Plant3DVersion)" Importance="high"/>
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Plant3d.bundle\Contents\Windows\Speckle.Connectors.Plant3d$(Plant3DVersion)\%(RecursiveDir)" SourceFiles="@(Plant3DDLLs)" />
+    <Copy DestinationFolder="$(AppData)\Autodesk\ApplicationPlugins\Speckle.Connectors.Plant3d.bundle\" SourceFiles="$(TargetDir)\Plugin\BundlePlant3D\PackageContents.xml" />
+  </Target>
+
+  <PropertyGroup Condition="'$(Plant3DVersion)' != '' And '$(ContinuousIntegrationBuild)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <StartAction>Program</StartAction>
+    <StartProgram>$(ProgramW6432)\Autodesk\AutoCAD $(Plant3DVersion)\acad.exe</StartProgram>
+    <StartArguments>/product PLNT3D</StartArguments>
+  </PropertyGroup>
 </Project>
