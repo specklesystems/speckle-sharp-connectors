@@ -1,12 +1,9 @@
-﻿using System.Runtime.CompilerServices;
-using Speckle.Connectors.Logging;
-using Speckle.Sdk;
-using Speckle.Sdk.Common;
+﻿using Speckle.Connectors.Logging;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
 
-public sealed class ConnectorActivityFactory(ISpeckleApplication application) : ISdkActivityFactory, IDisposable
+public sealed class ConnectorActivityFactory : ISdkActivityFactory
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 
@@ -14,15 +11,42 @@ public sealed class ConnectorActivityFactory(ISpeckleApplication application) : 
 
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name = default, [CallerMemberName] string source = "")
+  public ISdkActivity? Start(string? name, SdkActivityKind kind, string source)
   {
-    var activity = _loggingActivityFactory.Start(application.ApplicationAndVersion + " " + (name ?? source));
+    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind));
     if (activity is null)
     {
       return null;
     }
-    return new ConnectorActivity(activity.NotNull());
+
+    return new ConnectorActivity(activity.Value);
   }
+
+  /// <param name="traceContext">W3C trace context header</param>
+  /// <param name="kind"></param>
+  /// <param name="name"></param>
+  /// <returns></returns>
+  public ISdkActivity? StartRemote(string traceContext, SdkActivityKind kind, string? name, string source)
+  {
+    LoggingActivity? activity = _loggingActivityFactory.StartRemote(name ?? source, traceContext, ToLoggingType(kind));
+    if (activity is null)
+    {
+      return null;
+    }
+    return new ConnectorActivity(activity.Value);
+  }
+
+  //We need to do this gymnastics due to ILRepack
+  private static LoggingActivityKind ToLoggingType(SdkActivityKind kind) =>
+    kind switch
+    {
+      SdkActivityKind.Internal => LoggingActivityKind.Internal,
+      SdkActivityKind.Server => LoggingActivityKind.Server,
+      SdkActivityKind.Client => LoggingActivityKind.Client,
+      SdkActivityKind.Producer => LoggingActivityKind.Producer,
+      SdkActivityKind.Consumer => LoggingActivityKind.Consumer,
+      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
 
   private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
   {
@@ -33,6 +57,7 @@ public sealed class ConnectorActivityFactory(ISpeckleApplication application) : 
     public void RecordException(Exception e) => activity.RecordException(e);
 
     public string TraceId => activity.TraceId;
+    public string SpanId => activity.SpanId;
 
     public void SetStatus(SdkActivityStatusCode code) =>
       activity.SetStatus(
