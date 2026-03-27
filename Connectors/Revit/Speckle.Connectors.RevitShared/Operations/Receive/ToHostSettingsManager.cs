@@ -75,7 +75,7 @@ public class ToHostSettingsManager : IToHostSettingsManager
 
     if (_revitContext.UIApplication is UIApplication uiApplication)
     {
-      // first get the main doc base points and reference setting transform
+      // first get the main doc base points
       using FilteredElementCollector filteredElementCollector = new(uiApplication.ActiveUIDocument.Document);
       var points = filteredElementCollector.OfClass(typeof(BasePoint)).Cast<BasePoint>().ToList();
       BasePoint? projectPoint = points.FirstOrDefault(o => !o.IsShared);
@@ -83,10 +83,6 @@ public class ToHostSettingsManager : IToHostSettingsManager
 
       switch (referencePointType)
       {
-        case ReceiveReferencePointType.SharedLocation:
-          referencePointTransform = uiApplication.ActiveUIDocument.Document.ActiveProjectLocation.GetTransform();
-          break;
-
         // note that the project base (ui) rotation is registered on the survey pt, not on the base point
         case ReceiveReferencePointType.ProjectBase:
           if (projectPoint is not null)
@@ -99,26 +95,23 @@ public class ToHostSettingsManager : IToHostSettingsManager
           }
           break;
 
-        // note that the project base (ui) rotation is registered on the survey pt, not on the base point
         case ReceiveReferencePointType.Survey:
-          if (surveyPoint is not null && projectPoint is not null)
+          if (surveyPoint is not null)
           {
-            // POC: should a null angle resolve to 0?
-            // retrieve the survey point rotation from the project point
-            var angle = projectPoint.get_Parameter(BuiltInParameter.BASEPOINT_ANGLETON_PARAM)?.AsDouble() ?? 0;
-
-            // POC: following disposed incorrectly or early or maybe a false negative?
+            ProjectPosition projectPosition =
+              uiApplication.ActiveUIDocument.Document.ActiveProjectLocation.GetProjectPosition(XYZ.Zero);
+            double angleToTrueNorth = projectPosition.Angle;
             using Transform translation = Transform.CreateTranslation(surveyPoint.Position);
-            referencePointTransform = translation.Multiply(Transform.CreateRotation(XYZ.BasisZ, angle));
+            using Transform rotation = Transform.CreateRotation(XYZ.BasisZ, angleToTrueNorth);
+            referencePointTransform = translation.Multiply(rotation);
           }
           else
           {
-            throw new InvalidOperationException("Couldn't retrieve Survey and Project Point from document");
+            throw new InvalidOperationException("Couldn't retrieve Survey Point from document");
           }
           break;
 
         case ReceiveReferencePointType.Source:
-          break;
         case ReceiveReferencePointType.InternalOrigin:
           break;
       }
