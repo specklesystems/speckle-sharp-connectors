@@ -71,7 +71,10 @@ internal sealed class JobProcessorInstance(
         job.RemainingComputeBudgetSeconds
       );
 
-      using var activity = activityFactory.Start();
+      using var activity = job.Payload.TraceContext is not null
+        ? activityFactory.StartRemote(job.Payload.TraceContext.TraceParent, SdkActivityKind.Consumer, "Picked up a job")
+        : activityFactory.Start("Picked up a job", SdkActivityKind.Consumer);
+
       using var scopeJobId = ActivityScope.SetTag("jobId", job.Id);
       using var scopeJobType = ActivityScope.SetTag("jobType", job.Payload.JobType);
       using var scopeAttempt = ActivityScope.SetTag("job.attempt", job.Attempt.ToString());
@@ -94,27 +97,6 @@ internal sealed class JobProcessorInstance(
         throw;
       }
     }
-  }
-
-  private async Task ReportSuccess(
-    FileimportJob job,
-    string rootObjectId,
-    IClient client,
-    double elapsedSeconds,
-    CancellationToken cancellationToken
-  )
-  {
-    string versionId = await client.Ingestion.Complete(
-      new(job.Payload.ModelIngestionId, job.Payload.ProjectId, rootObjectId, null),
-      cancellationToken
-    );
-    logger.LogInformation(
-      "Attempt {Attempt} of {JobId} has succeeded creating {VersionId} after {ElapsedSeconds}",
-      job.Attempt,
-      job.Id,
-      versionId,
-      elapsedSeconds
-    );
   }
 
   private async Task ReportCancelled(FileimportJob job, IClient client, Exception ex, double elapsedSeconds)
@@ -186,10 +168,8 @@ internal sealed class JobProcessorInstance(
         throw new MaxAttemptsExceededException("Unhandled error silently failed the job multiple times");
       }
 
-      string rootObjectId = await ExecuteJobWithTimeout(job, speckleClient, serviceCancellationToken);
+      await ExecuteJobWithTimeout(job, speckleClient, serviceCancellationToken);
       totalElapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-
-      await ReportSuccess(job, rootObjectId, speckleClient, totalElapsedSeconds, serviceCancellationToken);
 
       activity?.SetStatus(SdkActivityStatusCode.Ok);
     }

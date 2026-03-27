@@ -1,4 +1,6 @@
-﻿namespace Speckle.Importers.JobProcessor.Domain;
+﻿using System.Text.Json.Serialization;
+
+namespace Speckle.Importers.JobProcessor.Domain;
 
 /// <summary>
 /// Payload for the fileimport job
@@ -17,4 +19,14 @@ internal sealed class FileimportPayload
   public required Uri ServerUrl { get; init; }
   public required int PayloadVersion { get; init; }
   public required int TimeOutSeconds { get; init; }
+
+  [JsonPropertyName("_traceContext")]
+  public TraceContext? TraceContext { get; init; }
+}
+
+public sealed class TraceContext
+{
+  [JsonPropertyName("traceparent")]
+  [JsonRequired]
+  public required string TraceParent { get; init; }
 }
