@@ -96,7 +96,10 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
     rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     // 2 - Unpack the groups
-    _groupUnpacker.UnpackGroups(rhinoObjects);
+    using (var _ = _activityFactory.Start("Unpack Groups"))
+    {
+      _groupUnpacker.UnpackGroups(rhinoObjects);
+    }
     rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
     // 3 - Convert atomic objects
