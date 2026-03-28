@@ -2,11 +2,11 @@ using System.Diagnostics.Contracts;
 using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Runtime.InProcess;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Logging;
 using Speckle.Importers.Rhino.Internal.FileTypeConfig;
 using Speckle.Sdk.Api;
-using Speckle.Sdk.Serialisation.V2.Send;
 
 namespace Speckle.Importers.Rhino.Internal;
 
@@ -35,7 +35,7 @@ internal sealed class ImporterInstance(
     UserActivityScope.AddUserScope(args.Account),
   ];
 
-  public async Task<SerializeProcessResults> RunRhinoImport(CancellationToken cancellationToken)
+  public async Task<RootObjectBuilderResult> RunRhinoImport(CancellationToken cancellationToken)
   {
     try
     {

@@ -3,6 +3,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;

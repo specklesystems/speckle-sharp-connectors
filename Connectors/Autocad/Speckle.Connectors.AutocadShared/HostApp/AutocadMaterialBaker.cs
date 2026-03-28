@@ -3,12 +3,12 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Operations;
 using Speckle.InterfaceGenerator;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines.Progress;
 using Material = Autodesk.AutoCAD.DatabaseServices.Material;
 using RenderMaterial = Speckle.Objects.Other.RenderMaterial;
 

@@ -346,9 +346,9 @@
       },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[8.25.25328.11001, )",
-        "resolved": "8.25.25328.11001",
-        "contentHash": "PDKR9GwqyUXUkTulV4J0dzDIf/aWqSJkL7nkS8ReAx8xhnt/+RQpE8gTjOSCmkSU2tjG6WzclowbTxwMTU7VAA==",
+        "requested": "[8.28.26041.11001, )",
+        "resolved": "8.28.26041.11001",
+        "contentHash": "5mByZF+IdHvRLbYvr6Ek95Pwam6otewAyVHIGSC0sUE1+OscSpd9gbrFWnzo1arfCYmUJcUdsGhf7VayW09fQA==",
         "dependencies": {
           "System.Drawing.Common": "7.0.0"
         }

@@ -1,4 +1,5 @@
 using Speckle.InterfaceGenerator;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Transports;
 
 namespace Speckle.Connectors.Common.Operations;
