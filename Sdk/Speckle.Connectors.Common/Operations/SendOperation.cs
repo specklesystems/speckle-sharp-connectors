@@ -381,9 +381,13 @@ public sealed class SendOperation<T>(
     return false;
   }
 
+  /// <summary>
+  /// Reads the conversion results and any <see cref="ObjectReference"/> will be written to cache.
+  /// All other values will be ignored.
+  /// </summary>
   /// <remarks>
-  /// Assuming that <paramref name="conversionResults"/> are either <see langword="null"/> or <see cref="ObjectReference"/>
-  /// Which will be true only for the packfile based builders.
+  /// For the connectors that support send caching, we are reporting all results as either  <see cref="ObjectReference"/> or <see langword="null"/>
+  /// For Navisworks, which we no longer support send caching, it reports other <see cref="Base"/> subtypes, and those will not be cached.
   /// </remarks>
   /// <param name="conversionResults"></param>
   /// <param name="projectId"></param>
@@ -399,11 +403,11 @@ public sealed class SendOperation<T>(
     var references = new Dictionary<Id, ObjectReference>();
     foreach (var x in conversionResults)
     {
-      if (x.Result is not null)
+      if (x.Result is ObjectReference r)
       {
         // NOTE: why not ToDictionary -> we might end up reoccurring object references for any reason. instancing, linked models etc.
         // ToDictionary throws 'item already exists' errors. but safe to override items in references dictionary since they are unique
-        references[new Id(x.SourceId)] = (ObjectReference)x.Result.NotNull();
+        references[new Id(x.SourceId)] = r;
       }
     }
     sendConversionCache.StoreSendResult(projectId, references);

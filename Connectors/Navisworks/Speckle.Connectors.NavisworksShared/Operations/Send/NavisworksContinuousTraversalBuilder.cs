@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
@@ -28,7 +27,6 @@ namespace Speckle.Connector.Navisworks.Operations.Send;
 /// </summary>
 public class NavisworksContinuousTraversalBuilder(
   IRootToSpeckleConverter rootToSpeckleConverter,
-  ISendConversionCache sendConversionCache,
   IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
   ILogger<NavisworksContinuousTraversalBuilder> logger,
   ISdkActivityFactory activityFactory,
@@ -60,7 +58,7 @@ public class NavisworksContinuousTraversalBuilder(
 
     var rootCollection = InitializeRootCollection();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
-      await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
+      await ConvertModelItemsAsync(navisworksModelItems, onOperationProgressed, cancellationToken);
 
     ValidateConversionResults(conversionResults);
 
@@ -123,7 +121,6 @@ public class NavisworksContinuousTraversalBuilder(
 
   private Task<(Dictionary<string, Base?> converted, List<SendConversionResult> results)> ConvertModelItemsAsync(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -136,7 +133,7 @@ public class NavisworksContinuousTraversalBuilder(
     foreach (var item in navisworksModelItems)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases, projectId);
+      var converted = ConvertNavisworksItem(item, convertedBases);
       results.Add(converted);
 
       processedCount++;
@@ -380,8 +377,7 @@ public class NavisworksContinuousTraversalBuilder(
 
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
-    Dictionary<string, Base?> convertedBases,
-    string projectId
+    Dictionary<string, Base?> convertedBases
   )
   {
     string applicationId = elementSelectionService.GetModelItemPath(navisworksItem);
@@ -389,9 +385,7 @@ public class NavisworksContinuousTraversalBuilder(
 
     try
     {
-      Base converted = sendConversionCache.TryGetValue(applicationId, projectId, out ObjectReference? cached)
-        ? cached
-        : rootToSpeckleConverter.Convert(navisworksItem);
+      Base converted = rootToSpeckleConverter.Convert(navisworksItem);
 
       convertedBases[applicationId] = converted;
 
