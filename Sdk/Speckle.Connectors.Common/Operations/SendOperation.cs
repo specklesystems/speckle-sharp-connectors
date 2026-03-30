@@ -397,7 +397,7 @@ public sealed class SendOperation<T>(
     // There is still an inbuilt "bad" assumption here that, successfully uploading NDJson means the server is able to re-materialize ids -
     // but this is only true once the `Version` object is created
     // Since for many reasons, the server could fail to process the json...
-    // This would leave this send cache out-of-sync with the server, and lead to bad commits that contain references to objects the server doesn't have.
+    // This would leave this send cache out-of-sync with the server, and lead to failed processing of subsequent NDJson uploads
     // For now, we've taken the decision that it's unlikely to happen...
 
     var references = new Dictionary<Id, ObjectReference>();
