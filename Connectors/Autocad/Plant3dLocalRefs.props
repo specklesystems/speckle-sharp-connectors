@@ -18,20 +18,6 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(Plant3DVersion)' != ''">
-
-    <!-- ========== AEC Framework (ACA subfolder) ========== -->
-    <!-- Provides: Autodesk.Aec namespace (BuiltInUnit, ApplicationServices, etc.) -->
-    <Reference Include="AecBaseMgd">
-      <HintPath>$(Plant3DInstallDir)\ACA\AecBaseMgd.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-
-    <!-- Provides: Autodesk.Aec.PropertyData.DatabaseServices (PropertySet, PropertySetDefinition, etc.) -->
-    <Reference Include="AecPropDataMgd">
-      <HintPath>$(Plant3DInstallDir)\ACA\AecPropDataMgd.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-
     <!-- ========== Plant3D Core (root install dir) ========== -->
     <!-- Provides: Autodesk.ProcessPower.DataObjects -->
     <Reference Include="PnPDataObjects">

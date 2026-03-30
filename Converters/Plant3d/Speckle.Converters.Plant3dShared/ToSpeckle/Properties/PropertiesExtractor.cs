@@ -5,15 +5,10 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 /// </summary>
 public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
-  private readonly PropertySetExtractor _propertySetExtractor;
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
 
-  public PropertiesExtractor(
-    PropertySetExtractor propertySetExtractor,
-    ExtensionDictionaryExtractor extensionDictionaryExtractor
-  )
+  public PropertiesExtractor(ExtensionDictionaryExtractor extensionDictionaryExtractor)
   {
-    _propertySetExtractor = propertySetExtractor;
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
   }
 
@@ -25,7 +20,6 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
     // For example, extract pipe spec data, equipment data, etc.
 
     // add property sets and extension dictionaries to the properties dict
-    AddDictionaryToPropertyDictionary(_propertySetExtractor.GetPropertySets(entity), "Property Sets", properties);
     AddDictionaryToPropertyDictionary(
       _extensionDictionaryExtractor.GetExtensionDictionary(entity),
       "Extension Dictionary",

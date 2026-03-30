@@ -1,31 +1,31 @@
+using Autodesk.AutoCAD.DatabaseServices;
 using Speckle.Converters.Common;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 
 namespace Speckle.Converters.Plant3dShared;
 
-// Plant3D uses the same AEC BuiltInUnit system as Civil3D
-public class Plant3dToSpeckleUnitConverter : IHostToSpeckleUnitConverter<AAEC.BuiltInUnit>
+public class Plant3dToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitsValue>
 {
-  private static readonly IReadOnlyDictionary<AAEC.BuiltInUnit, string> s_unitsMapping = Create();
+  private static readonly IReadOnlyDictionary<UnitsValue, string> s_unitsMapping = Create();
 
-  private static IReadOnlyDictionary<AAEC.BuiltInUnit, string> Create()
+  private static IReadOnlyDictionary<UnitsValue, string> Create()
   {
-    var dict = new Dictionary<AAEC.BuiltInUnit, string>();
+    var dict = new Dictionary<UnitsValue, string>();
 
-    dict[AAEC.BuiltInUnit.Kilometer] = Units.Kilometers;
-    dict[AAEC.BuiltInUnit.Meter] = Units.Meters;
-    dict[AAEC.BuiltInUnit.Centimeter] = Units.Centimeters;
-    dict[AAEC.BuiltInUnit.Millimeter] = Units.Millimeters;
-    dict[AAEC.BuiltInUnit.Mile] = Units.Miles;
-    dict[AAEC.BuiltInUnit.Yards] = Units.Yards;
-    dict[AAEC.BuiltInUnit.Foot] = Units.Feet;
-    dict[AAEC.BuiltInUnit.Inch] = Units.Inches;
-    dict[AAEC.BuiltInUnit.Dimensionless] = Units.None;
+    dict[UnitsValue.Undefined] = Units.Meters;
+    dict[UnitsValue.Millimeters] = Units.Millimeters;
+    dict[UnitsValue.Centimeters] = Units.Centimeters;
+    dict[UnitsValue.Meters] = Units.Meters;
+    dict[UnitsValue.Kilometers] = Units.Kilometers;
+    dict[UnitsValue.Inches] = Units.Inches;
+    dict[UnitsValue.Feet] = Units.Feet;
+    dict[UnitsValue.Yards] = Units.Yards;
+    dict[UnitsValue.Miles] = Units.Miles;
     return dict;
   }
 
-  public string ConvertOrThrow(AAEC.BuiltInUnit hostUnit)
+  public string ConvertOrThrow(UnitsValue hostUnit)
   {
     if (s_unitsMapping.TryGetValue(hostUnit, out string? value))
     {

@@ -22,8 +22,8 @@ public static class ServiceRegistration
     serviceCollection.AddRootCommon<Plant3dRootToSpeckleConverter>(plant3dAssembly);
 
     // register all application converters
-    serviceCollection.AddApplicationConverters<Plant3dToSpeckleUnitConverter, AAEC.BuiltInUnit>(plant3dAssembly);
-    serviceCollection.AddApplicationConverters<AutocadToSpeckleUnitConverter, ADB.UnitsValue>(autocadAssembly);
+    serviceCollection.AddApplicationConverters<Plant3dToSpeckleUnitConverter, ADB.UnitsValue>(plant3dAssembly);
+    // serviceCollection.AddApplicationConverters<AutocadToSpeckleUnitConverter, ADB.UnitsValue>(autocadAssembly);
     serviceCollection.AddScoped<
       IConverterSettingsStore<Plant3dConversionSettings>,
       ConverterSettingsStore<Plant3dConversionSettings>
@@ -37,8 +37,6 @@ public static class ServiceRegistration
     // add other classes
     serviceCollection.AddScoped<Speckle.Converters.Plant3dShared.ToSpeckle.PropertiesExtractor>(); // for plant3d
     serviceCollection.AddScoped<Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor, PropertiesExtractor>();
-    serviceCollection.AddScoped<PropertySetExtractor>();
-    serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<Plant3dDataExtractor>();
     serviceCollection.AddScoped<EntityUnitConverter>();

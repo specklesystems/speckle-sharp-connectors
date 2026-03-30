@@ -68,7 +68,7 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
               // Merge Plant3D data under "Plant3D Data" key
               if (dataProperties.Count > 0)
               {
-                dataObject.properties["Plant3D Data"] = dataProperties;
+                dataObject.properties["P&ID"] = dataProperties;
               }
             }
             else
