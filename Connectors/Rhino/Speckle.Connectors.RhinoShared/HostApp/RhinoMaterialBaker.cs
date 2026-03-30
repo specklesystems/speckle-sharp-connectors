@@ -6,6 +6,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -73,6 +74,11 @@ public class RhinoMaterialBaker
             rhinoMaterial.Shine = shine;
           }
 
+          // create RDK RenderMaterial and add to RDK RenderMaterials (not doc.Materials) (CNX-2896)
+          var renderMaterial = RenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
+          doc.RenderMaterials.Add(renderMaterial);
+
+          // retrieve the index of the underlying legacy material that Rhino automatically synced
           matIndex = doc.Materials.Add(rhinoMaterial);
 
           // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
