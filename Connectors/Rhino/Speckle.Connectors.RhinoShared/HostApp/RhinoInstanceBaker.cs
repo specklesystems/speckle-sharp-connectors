@@ -137,9 +137,11 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
           // create attributes
           ObjectAttributes atts = instanceProxy.GetAttributes();
           atts.LayerIndex = layerIndex;
-          if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
+
+          // set material using Guid
+          if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(instanceProxyId, out Guid materialGuid))
           {
-            atts.MaterialIndex = mIndex;
+            atts.RenderMaterial = doc.RenderMaterials.Find(materialGuid);
             atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
           }
 

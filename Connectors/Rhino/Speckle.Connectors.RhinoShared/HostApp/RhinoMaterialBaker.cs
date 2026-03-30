@@ -25,9 +25,10 @@ public class RhinoMaterialBaker
   }
 
   /// <summary>
-  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// A map keeping track of ids, either layer id or object id, and their Render Material Guid.
+  /// It's generated from the material proxy list as we <see cref="BakeMaterials"/>.
   /// </summary>
-  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
+  public Dictionary<string, Guid> ObjectIdAndMaterialIdMap { get; } = [];
 
   public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
   {
@@ -46,10 +47,10 @@ public class RhinoMaterialBaker
         matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
 
         // Check if material with this name already exists in the document
-        int matIndex = doc.Materials.Find(matName, ignoreDeletedMaterials: true);
+        var existingRenderMaterial = doc.RenderMaterials.FirstOrDefault(m => m.Name == matName);
+        Guid materialGuid;
 
-        // If material doesn't exist, create it
-        if (matIndex == -1)
+        if (existingRenderMaterial == null)
         {
           Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
           Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
@@ -74,29 +75,32 @@ public class RhinoMaterialBaker
             rhinoMaterial.Shine = shine;
           }
 
-          // create RDK RenderMaterial and add to RDK RenderMaterials (not doc.Materials) (CNX-2896)
+          // create RenderMaterial wrapper (CNX-2896)
           var renderMaterial = RenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
+
+          // add to RenderMaterial table. From my understanding, this internally manages the legacy Material table entry
           doc.RenderMaterials.Add(renderMaterial);
-
-          // retrieve the index of the underlying legacy material that Rhino automatically synced
-          matIndex = doc.Materials.Add(rhinoMaterial);
-
-          // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
-          if (matIndex == -1)
-          {
-            throw new ConversionException($"Failed to add a material to the document: '{matName}' (ID: {materialId})");
-          }
+          materialGuid = renderMaterial.Id;
+        }
+        else
+        {
+          materialGuid = existingRenderMaterial.Id;
         }
 
-        // Create the object <> material index map
+        if (materialGuid == Guid.Empty)
+        {
+          throw new ConversionException($"Failed to create or retrieve RenderMaterial Guid for: '{matName}'");
+        }
+
+        // map object ID to Material Guid
         foreach (var objectId in proxy.objects)
         {
-          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
+          ObjectIdAndMaterialIdMap[objectId] = materialGuid;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to add a material to the document");
+        _logger.LogError(ex, "Failed to add a modern RenderMaterial to the document");
       }
     }
   }

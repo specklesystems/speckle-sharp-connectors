@@ -330,17 +330,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
+    if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
     {
-      atts.MaterialIndex = mIndex;
+      atts.RenderMaterial = _converterSettings.Current.Document.RenderMaterials.Find(materialGuid);
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
+      && (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(parentObjectId, out Guid parentGuid))
     )
     {
-      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.RenderMaterial = _converterSettings.Current.Document.RenderMaterials.Find(parentGuid);
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
