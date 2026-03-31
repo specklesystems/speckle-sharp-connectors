@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Render;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
@@ -332,7 +333,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
 
     if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
     {
-      atts.RenderMaterial = _converterSettings.Current.Document.RenderMaterials.Find(materialGuid);
+      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, materialGuid) as RenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
@@ -340,7 +341,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       && (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(parentObjectId, out Guid parentGuid))
     )
     {
-      atts.RenderMaterial = _converterSettings.Current.Document.RenderMaterials.Find(parentGuid);
+      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, parentGuid) as RenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
