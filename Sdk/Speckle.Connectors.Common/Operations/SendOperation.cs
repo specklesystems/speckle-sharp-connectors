@@ -103,7 +103,8 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes)
+        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        600
       ),
       cancellationToken
     );
@@ -135,6 +136,8 @@ public sealed class SendOperation<T>(
       );
 
       buildResult.RootObject["version"] = 3;
+
+      WriteReferencesToCache(buildResult.ConversionResults, sendInfo.ProjectId);
 
       SendOperationResult result =
         new(buildResult.RootObject.id!, new Dictionary<Id, ObjectReference>(), buildResult.ConversionResults);
@@ -180,7 +183,8 @@ public sealed class SendOperation<T>(
         sendInfo.ModelId,
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
-        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes)
+        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        600
       ),
       cancellationToken
     );
@@ -374,6 +378,38 @@ public sealed class SendOperation<T>(
     }
 
     return false;
+  }
+
+  /// <summary>
+  /// Reads the conversion results and any <see cref="ObjectReference"/> will be written to cache.
+  /// All other values will be ignored.
+  /// </summary>
+  /// <remarks>
+  /// For the connectors that support send caching, we are reporting all results as either  <see cref="ObjectReference"/> or <see langword="null"/>
+  /// For Navisworks, which we no longer support send caching, it reports other <see cref="Base"/> subtypes, and those will not be cached.
+  /// </remarks>
+  /// <param name="conversionResults"></param>
+  /// <param name="projectId"></param>
+  private void WriteReferencesToCache(IReadOnlyList<SendConversionResult> conversionResults, string projectId)
+  {
+    // We write the objects to the cache after they've been uploaded to the server
+    // There is still an inbuilt "bad" assumption here that, successfully uploading NDJson means the server is able to re-materialize ids -
+    // but this is only true once the `Version` object is created
+    // Since for many reasons, the server could fail to process the json...
+    // This would leave this send cache out-of-sync with the server, and lead to failed processing of subsequent NDJson uploads
+    // For now, we've taken the decision that it's unlikely to happen...
+
+    var references = new Dictionary<Id, ObjectReference>();
+    foreach (var x in conversionResults)
+    {
+      if (x.Result is ObjectReference r)
+      {
+        // NOTE: why not ToDictionary -> we might end up reoccurring object references for any reason. instancing, linked models etc.
+        // ToDictionary throws 'item already exists' errors. but safe to override items in references dictionary since they are unique
+        references[new Id(x.SourceId)] = r;
+      }
+    }
+    sendConversionCache.StoreSendResult(projectId, references);
   }
 }
 

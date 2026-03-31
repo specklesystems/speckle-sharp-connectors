@@ -10,6 +10,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
@@ -17,7 +18,8 @@ namespace Speckle.Importers.JobProcessor.JobHandlers;
 internal sealed class RhinoJobHandler(
   ILogger<RhinoJobHandler> logger,
   ImportJobFileDownloader fileDownloader,
-  ISpeckleApplication application
+  ISpeckleApplication application,
+  ISdkActivityFactory activityFactory
 ) : IJobHandler
 {
   private readonly JsonSerializerSettings _settings =
@@ -50,21 +52,27 @@ internal sealed class RhinoJobHandler(
       ),
       cancellationToken
     );
+    string resultsPath = $"{file.FileInfo.DirectoryName}/results.json";
 
-    var importerArgs = new ImporterArgs
+    using (var activity = activityFactory.Start("Await sub-process"))
     {
-      FilePath = file.FileInfo.FullName,
-      ResultsPath = $"{file.FileInfo.DirectoryName}/results.json",
-      Account = client.Account,
-      Project = project,
-      Ingestion = ingestion,
-      JobId = job.Id,
-      BlobId = job.Payload.BlobId,
-      Attempt = job.Attempt,
-      HostApplication = handlerApplication,
-    };
-    await RunSubProcess(importerArgs, cancellationToken);
-    var response = await DeserializeResponse(importerArgs.ResultsPath, cancellationToken);
+      var importerArgs = new ImporterArgs
+      {
+        FilePath = file.FileInfo.FullName,
+        ResultsPath = resultsPath,
+        TraceContext = $"00-{activity?.TraceId}-{activity?.SpanId}-01",
+        Account = client.Account,
+        Project = project,
+        Ingestion = ingestion,
+        JobId = job.Id,
+        BlobId = job.Payload.BlobId,
+        Attempt = job.Attempt,
+        HostApplication = handlerApplication,
+      };
+      await RunSubProcess(importerArgs, cancellationToken);
+    }
+
+    var response = await DeserializeResponse(resultsPath, cancellationToken);
 
     if (response.RootObjectId is null)
     {
@@ -94,7 +102,12 @@ internal sealed class RhinoJobHandler(
     var processStart = new ProcessStartInfo()
     {
       FileName = $"{path}/Speckle.Importers.Rhino.exe",
-      Environment = { },
+      Environment =
+      {
+        ["DOTNET_ENVIRONMENT"] = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
+        ["SEQ_API_KEY"] = Environment.GetEnvironmentVariable("SEQ_API_KEY"),
+        ["SPECKLE_COLLECTOR_API_TOKEN"] = Environment.GetEnvironmentVariable("SPECKLE_COLLECTOR_API_TOKEN"),
+      },
       RedirectStandardError = true,
       RedirectStandardOutput = true,
       UseShellExecute = false,
