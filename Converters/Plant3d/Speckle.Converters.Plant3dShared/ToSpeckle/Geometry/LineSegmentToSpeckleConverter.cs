@@ -55,7 +55,7 @@ public class LineSegmentToSpeckleConverter : IToSpeckleTopLevelConverter
     DataObject dataObject =
       new()
       {
-        name = lineSegment.GetType().Name,
+        name = lineSegment.TagValue is { Length: > 0 } tag ? tag : lineSegment.GetType().Name,
         displayValue = new List<Base> { polyline },
         properties = new Dictionary<string, object?>(),
         applicationId = lineSegment.Handle.Value.ToString()

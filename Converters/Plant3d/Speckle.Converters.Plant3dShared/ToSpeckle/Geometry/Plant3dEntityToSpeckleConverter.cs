@@ -34,10 +34,21 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
   {
     List<Base> displayValue = ExtractDisplayValue(entity);
 
+    // Plant3D P&ID types (Asset, LineSegment, EndLineObject, etc.) each have a TagValue property
+    // that provides a unique, human-readable identifier (e.g. "T-0001", "1 1/2"-CIPS-Util1049-...").
+    // These types all inherit directly from ADB.Entity — there is no shared P&ID base class
+    // that declares TagValue, so we use reflection to read it regardless of the concrete type.
+    // I don't like this but its a good tradeoff since Plant3d API does not have common class to find TagValue
+    string name = entity.GetType().Name;
+    if (entity.GetType().GetProperty("TagValue")?.GetValue(entity) is string tagValue && tagValue.Length > 0)
+    {
+      name = tagValue;
+    }
+
     DataObject dataObject =
       new()
       {
-        name = entity.GetType().Name,
+        name = name,
         displayValue = displayValue,
         properties = new Dictionary<string, object?>(),
         applicationId = entity.Handle.Value.ToString()
