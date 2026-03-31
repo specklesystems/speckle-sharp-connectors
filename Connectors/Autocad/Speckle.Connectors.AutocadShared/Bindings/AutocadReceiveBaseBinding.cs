@@ -19,24 +19,11 @@ public abstract class AutocadReceiveBaseBinding(
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
 
-  private readonly ReceiveBindingUICommands _commands = CreateCommandsAndSubscribe(
+  private readonly ReceiveBindingUICommands _commands = ReceiveBindingUICommands.CreateAndSubscribe(
     parent,
     store,
     topLevelExceptionHandler
   );
-
-  private static ReceiveBindingUICommands CreateCommandsAndSubscribe(
-    IBrowserBridge bridge,
-    DocumentModelStore store,
-    ITopLevelExceptionHandler topLevelExceptionHandler
-  )
-  {
-    var commands = new ReceiveBindingUICommands(bridge);
-    store.ReceiverSettingsChanged += (_, e) =>
-      topLevelExceptionHandler.FireAndForget(async () =>
-        await commands.SetModelsExpired(new[] { e.ModelCardId }));
-    return commands;
-  }
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
 
