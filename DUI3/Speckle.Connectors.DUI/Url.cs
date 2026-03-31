@@ -12,9 +12,9 @@ namespace Speckle.Connectors.DUI;
 /// </remarks>
 public static class Url
 {
-  //public static readonly Uri Netlify = new("https://dui.speckle.systems/");
+  public static readonly Uri Netlify = new("https://dui.speckle.systems/");
 
-   public static readonly Uri Netlify = new("http://localhost:8082/");
+  //public static readonly Uri Netlify = new("http://localhost:8082/");
 
   // In CefSharp XAML file we cannot call ToString() function over URI
   public static readonly string NetlifyString = Netlify.ToString();
