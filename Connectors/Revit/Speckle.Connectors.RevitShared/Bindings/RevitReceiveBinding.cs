@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.Revit.Operations.Receive;
 using Speckle.Connectors.Revit.Plugin;
@@ -17,12 +18,32 @@ public sealed class RevitReceiveBinding(
   ILogger<RevitReceiveBinding> logger,
   Operations.Receive.Settings.ToHostSettingsManager toHostSettingsManager,
   IRevitConversionSettingsFactory revitConversionSettingsFactory,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory
+  IReceiveOperationManagerFactory receiveOperationManagerFactory,
+  DocumentModelStore store,
+  ITopLevelExceptionHandler topLevelExceptionHandler
 ) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
-  private IReceiveBindingUICommands Commands { get; } = new ReceiveBindingUICommands(parent);
+
+  private readonly ReceiveBindingUICommands _commands = CreateCommandsAndSubscribe(
+    parent,
+    store,
+    topLevelExceptionHandler
+  );
+
+  private static ReceiveBindingUICommands CreateCommandsAndSubscribe(
+    IBrowserBridge bridge,
+    DocumentModelStore store,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+  {
+    var commands = new ReceiveBindingUICommands(bridge);
+    store.ReceiverSettingsChanged += (_, e) =>
+      topLevelExceptionHandler.FireAndForget(async () =>
+        await commands.SetModelsExpired(new[] { e.ModelCardId }));
+    return commands;
+  }
 
 #pragma warning disable CA1024
   public List<ICardSetting> GetReceiveSettings() =>
@@ -35,7 +56,7 @@ public sealed class RevitReceiveBinding(
   {
     using var manager = receiveOperationManagerFactory.Create();
     await manager.Process(
-      Commands,
+      _commands,
       modelCardId,
       (sp, card) =>
       {
@@ -60,7 +81,7 @@ public sealed class RevitReceiveBinding(
         }
         catch (SpeckleRevitTaskException ex)
         {
-          await SpeckleRevitTaskException.ProcessException(modelCardId, ex, logger, Commands);
+          await SpeckleRevitTaskException.ProcessException(modelCardId, ex, logger, _commands);
           return null;
         }
       }

@@ -7,6 +7,8 @@ public interface IReceiveBindingUICommands
 {
   Task SetModelError(string modelCardId, Exception exception);
 
+  Task SetModelsExpired(IEnumerable<string> expiredModelIds);
+
   Task SetModelReceiveResult(
     string modelCardId,
     IEnumerable<string> bakedObjectIds,
@@ -18,11 +20,14 @@ public interface IReceiveBindingUICommands
 
 public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands, IReceiveBindingUICommands
 {
-  // POC: put here events once we needed for receive specific
+  private const string SET_MODELS_EXPIRED_UI_COMMAND_NAME = "setModelsExpired";
   private const string SET_MODEL_RECEIVE_RESULT_UI_COMMAND_NAME = "setModelReceiveResult";
 
   public ReceiveBindingUICommands(IBrowserBridge bridge)
     : base(bridge) { }
+
+  public async Task SetModelsExpired(IEnumerable<string> expiredModelIds) =>
+    await Bridge.Send(SET_MODELS_EXPIRED_UI_COMMAND_NAME, expiredModelIds);
 
   public async Task SetModelReceiveResult(
     string modelCardId,

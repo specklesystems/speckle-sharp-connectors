@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.DUI.Utils;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
@@ -15,6 +16,13 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
   : IDocumentModelStore
 {
   public event EventHandler<ModelCardsChangedEventArgs>? ModelCardsChanged;
+
+  /// <summary>
+  /// Raised when a <see cref="ReceiverModelCard"/> that has already been received (has <see cref="ReceiverModelCard.BakedObjectIds"/>)
+  /// is updated with different settings.
+  /// </summary>
+  public event EventHandler<ReceiverSettingsChangedEventArgs>? ReceiverSettingsChanged;
+
   private readonly List<ModelCard> _models = new();
 
   /// <summary>
@@ -78,6 +86,7 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
 
   public void UpdateModel(ModelCard model)
   {
+    bool receiverSettingsChanged = false;
     lock (_models)
     {
       var index = _models.FindIndex(m => m.ModelCardId == model.ModelCardId);
@@ -86,8 +95,21 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
         logger.LogWarning("Model card not found to update. Model card ID: {ModelCardId}", model.ModelCardId);
         return;
       }
+
+      var oldModel = _models[index];
+      receiverSettingsChanged =
+        oldModel is ReceiverModelCard oldReceiver
+        && model is ReceiverModelCard
+        && oldReceiver.BakedObjectIds is { Count: > 0 }
+        && HaveSettingsChanged(oldModel.Settings, model.Settings);
+
       _models[index] = model;
       SaveState();
+    }
+
+    if (receiverSettingsChanged)
+    {
+      ReceiverSettingsChanged?.Invoke(this, new ReceiverSettingsChangedEventArgs(model.ModelCardId.NotNull()));
     }
   }
 
@@ -163,6 +185,35 @@ public abstract class DocumentModelStore(ILogger<DocumentModelStore> logger, IJs
   protected abstract void HostAppSaveState(string modelCardState);
 
   protected abstract void LoadState();
+
+  private static bool HaveSettingsChanged(List<CardSetting>? oldSettings, List<CardSetting>? newSettings)
+  {
+    if (oldSettings is null && newSettings is null)
+    {
+      return false;
+    }
+
+    if (oldSettings is null || newSettings is null || oldSettings.Count != newSettings.Count)
+    {
+      return true;
+    }
+
+    foreach (var oldSetting in oldSettings)
+    {
+      var newSetting = newSettings.FirstOrDefault(s => s.Id == oldSetting.Id);
+      if (newSetting is null)
+      {
+        return true;
+      }
+
+      if (!Equals(oldSetting.Value?.ToString(), newSetting.Value?.ToString()))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   protected void LoadFromString(string? models)
   {

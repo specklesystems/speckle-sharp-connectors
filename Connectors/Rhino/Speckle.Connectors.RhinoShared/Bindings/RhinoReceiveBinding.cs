@@ -3,6 +3,7 @@ using Rhino;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 
@@ -12,13 +13,32 @@ public class RhinoReceiveBinding(
   ICancellationManager cancellationManager,
   IBrowserBridge parent,
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory
+  IReceiveOperationManagerFactory receiveOperationManagerFactory,
+  DocumentModelStore store,
+  ITopLevelExceptionHandler topLevelExceptionHandler
 ) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
 
-  private ReceiveBindingUICommands Commands { get; } = new(parent);
+  private readonly ReceiveBindingUICommands _commands = CreateCommandsAndSubscribe(
+    parent,
+    store,
+    topLevelExceptionHandler
+  );
+
+  private static ReceiveBindingUICommands CreateCommandsAndSubscribe(
+    IBrowserBridge bridge,
+    DocumentModelStore store,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+  {
+    var commands = new ReceiveBindingUICommands(bridge);
+    store.ReceiverSettingsChanged += (_, e) =>
+      topLevelExceptionHandler.FireAndForget(async () =>
+        await commands.SetModelsExpired(new[] { e.ModelCardId }));
+    return commands;
+  }
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
 
@@ -27,7 +47,7 @@ public class RhinoReceiveBinding(
     // NOTE: introduction of AddVisualizationProperties setting not accounted for in receive pipeline, hence hardcoded as true (i.e. "as before")
     using var manager = receiveOperationManagerFactory.Create();
     await manager.Process(
-      Commands,
+      _commands,
       modelCardId,
       (sp, card) =>
       {

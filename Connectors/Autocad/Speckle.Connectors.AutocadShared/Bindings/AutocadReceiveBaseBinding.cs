@@ -2,6 +2,7 @@ using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 
 namespace Speckle.Connectors.Autocad.Bindings;
@@ -10,13 +11,32 @@ public abstract class AutocadReceiveBaseBinding(
   IBrowserBridge parent,
   ICancellationManager cancellationManager,
   IThreadContext threadContext,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory
+  IReceiveOperationManagerFactory receiveOperationManagerFactory,
+  DocumentModelStore store,
+  ITopLevelExceptionHandler topLevelExceptionHandler
 ) : IReceiveBinding
 {
   public string Name => "receiveBinding";
   public IBrowserBridge Parent { get; } = parent;
 
-  private ReceiveBindingUICommands Commands { get; } = new(parent);
+  private readonly ReceiveBindingUICommands _commands = CreateCommandsAndSubscribe(
+    parent,
+    store,
+    topLevelExceptionHandler
+  );
+
+  private static ReceiveBindingUICommands CreateCommandsAndSubscribe(
+    IBrowserBridge bridge,
+    DocumentModelStore store,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+  {
+    var commands = new ReceiveBindingUICommands(bridge);
+    store.ReceiverSettingsChanged += (_, e) =>
+      topLevelExceptionHandler.FireAndForget(async () =>
+        await commands.SetModelsExpired(new[] { e.ModelCardId }));
+    return commands;
+  }
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
 
@@ -29,7 +49,7 @@ public abstract class AutocadReceiveBaseBinding(
   {
     using var manager = receiveOperationManagerFactory.Create();
     await manager.Process(
-      Commands,
+      _commands,
       modelCardId,
       InitializeSettings,
       async (_, processor) =>
