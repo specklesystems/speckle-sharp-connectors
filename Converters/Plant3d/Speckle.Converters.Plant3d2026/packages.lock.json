@@ -39,6 +39,15 @@
         "resolved": "0.9.6",
         "contentHash": "HKH7tYrYYlCK1ct483hgxERAdVdMtl7gUKW9ijWXxA1UsYR4Z+TrRHYmzZ9qmpu1NnTycSrp005NYM78GDKV1w=="
       },
+      "Speckle.Plant3D.API": {
+        "type": "Direct",
+        "requested": "[2026.0.0, )",
+        "resolved": "2026.0.0",
+        "contentHash": "VT8M6CGQl1mk3/5Ro3AEAOVrOs/cX58YRwYZnu+6xeHvsazK07Et/6kMJsde4Y7Xrpox7eBLKgYeOspiRVvX5g==",
+        "dependencies": {
+          "Speckle.AutoCAD.API": "2026.0.0"
+        }
+      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.0.0",
