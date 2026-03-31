@@ -7,34 +7,46 @@ using Speckle.Connectors.DUI.Models.Card;
 
 namespace Speckle.Connectors.Autocad.Bindings;
 
-public abstract class AutocadReceiveBaseBinding(
-  IBrowserBridge parent,
-  ICancellationManager cancellationManager,
-  IThreadContext threadContext,
-  IReceiveOperationManagerFactory receiveOperationManagerFactory,
-  DocumentModelStore store,
-  ITopLevelExceptionHandler topLevelExceptionHandler
-) : IReceiveBinding
+public abstract class AutocadReceiveBaseBinding : IReceiveBinding
 {
-  public string Name => "receiveBinding";
-  public IBrowserBridge Parent { get; } = parent;
+  private readonly ICancellationManager _cancellationManager;
+  private readonly IThreadContext _threadContext;
+  private readonly IReceiveOperationManagerFactory _receiveOperationManagerFactory;
+  private readonly ReceiveBindingUICommands _commands;
 
-  private readonly ReceiveBindingUICommands _commands = ReceiveBindingUICommands.CreateAndSubscribe(
-    parent,
-    store,
-    topLevelExceptionHandler
-  );
+  public string Name => "receiveBinding";
+  public IBrowserBridge Parent { get; }
+
+  protected AutocadReceiveBaseBinding(
+    IBrowserBridge parent,
+    ICancellationManager cancellationManager,
+    IThreadContext threadContext,
+    IReceiveOperationManagerFactory receiveOperationManagerFactory,
+    DocumentModelStore store,
+    ITopLevelExceptionHandler topLevelExceptionHandler
+  )
+  {
+    Parent = parent;
+    _cancellationManager = cancellationManager;
+    _threadContext = threadContext;
+    _receiveOperationManagerFactory = receiveOperationManagerFactory;
+
+    _commands = new ReceiveBindingUICommands(parent);
+    store.ReceiverSettingsChanged += (_, e) =>
+      topLevelExceptionHandler.FireAndForget(async () =>
+        await _commands.SetModelsExpired(new[] { e.ModelCardId }));
+  }
 
   protected abstract void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc);
 
-  public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
+  public void CancelReceive(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public async Task Receive(string modelCardId) =>
-    await threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
+    await _threadContext.RunOnMainAsync(async () => await ReceiveInternal(modelCardId));
 
   private async Task ReceiveInternal(string modelCardId)
   {
-    using var manager = receiveOperationManagerFactory.Create();
+    using var manager = _receiveOperationManagerFactory.Create();
     await manager.Process(
       _commands,
       modelCardId,
