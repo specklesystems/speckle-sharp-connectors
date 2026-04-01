@@ -76,6 +76,7 @@ public sealed class SendOperationManager(
   )
   {
     using var activity = activityFactory.Start();
+    var sendConversionCache = serviceScope.ServiceProvider.GetRequiredService<ISendConversionCache>();
     try
     {
       if (store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -83,6 +84,7 @@ public sealed class SendOperationManager(
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
       }
+
       using SendInfo sendInfo = GetSendInfo(modelCard);
       using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
@@ -94,7 +96,6 @@ public sealed class SendOperationManager(
       var configStore = serviceScope.ServiceProvider.GetRequiredService<IConfigStore>();
       if (configStore.GetConnectorConfig().DisableCache)
       {
-        var sendConversionCache = serviceScope.ServiceProvider.GetRequiredService<ISendConversionCache>();
         sendConversionCache.ClearCache(); // clear whatever is currently in there to ensure 0% cache hits
         sendConversionCache.IsBypassed = true; // tells cache to ignore any future write requests during this scoped operation
       }
@@ -138,6 +139,11 @@ public sealed class SendOperationManager(
     {
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
+    }
+    finally
+    {
+      // state always reset to false
+      sendConversionCache.IsBypassed = false;
     }
   }
 
