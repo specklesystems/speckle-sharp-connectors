@@ -42,7 +42,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly ParameterUpdater _parameterUpdater;
   private bool _isDocChangedSubscribed;
   private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
-  private readonly ConnectorConfig _config;
+  private readonly IConfigStore _configStore;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -87,7 +87,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _parameterUpdater = parameterUpdater;
-    _config = configStore.GetConnectorConfig();
+    _configStore = configStore;
 
     Commands = new SendBindingUICommands(bridge);
     // TODO expiry events
@@ -105,8 +105,10 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
   private void OnModelCardsChanged(ModelCardsChangedEventArgs e)
   {
+    var config = _configStore.GetConnectorConfig();
     if (
-      !_config.DocumentChangeListeningDisabled
+      !config.DocumentChangeListeningDisabled
+      && !config.DisableCache
       && e.ModelCards.Count > 0
       && e.ModelCards.Any(m => m.TypeDiscriminator == nameof(SenderModelCard))
     )

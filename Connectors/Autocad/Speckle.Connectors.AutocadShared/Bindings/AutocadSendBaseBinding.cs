@@ -32,6 +32,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly IConfigStore _configStore;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
@@ -53,7 +54,8 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager idleManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
   {
     _store = store;
@@ -64,6 +66,7 @@ public abstract class AutocadSendBaseBinding : ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _idleManager = idleManager;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _configStore = configStore;
     Parent = parent;
     Commands = new SendBindingUICommands(parent);
 
@@ -151,6 +154,11 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 
   private void OnChangeChangedObjectIds(DBObject dBObject)
   {
+    if (_configStore.GetConnectorConfig().DisableCache)
+    {
+      return;
+    }
+
     ChangedObjectIds.Add(dBObject.GetSpeckleApplicationId());
     _idleManager.SubscribeToIdle(nameof(RunExpirationChecks), async () => await RunExpirationChecks());
   }

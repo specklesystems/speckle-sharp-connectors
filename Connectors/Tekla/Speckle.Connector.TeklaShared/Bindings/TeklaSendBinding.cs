@@ -36,6 +36,7 @@ public sealed class TeklaSendBinding : ISendBinding
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
   private readonly Events _events;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private readonly IConfigStore _configStore;
 
   private ConcurrentDictionary<string, byte> ChangedObjectIds { get; set; } = new();
 
@@ -48,7 +49,8 @@ public sealed class TeklaSendBinding : ISendBinding
     ILogger<TeklaSendBinding> logger,
     ITeklaConversionSettingsFactory teklaConversionSettingsFactory,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
   {
     _store = store;
@@ -61,6 +63,7 @@ public sealed class TeklaSendBinding : ISendBinding
     Commands = new SendBindingUICommands(parent);
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
     _sendOperationManagerFactory = sendOperationManagerFactory;
+    _configStore = configStore;
 
     _model = new Model();
     _events = new Events();
@@ -76,6 +79,11 @@ public sealed class TeklaSendBinding : ISendBinding
   // subscribes the all changes in a modelobject
   private void OnModelObjectChanged(List<ChangeData> changes)
   {
+    if (_configStore.GetConnectorConfig().DisableCache)
+    {
+      return;
+    }
+
     foreach (var change in changes)
     {
       if (change.Object is { } modelObj)
