@@ -9,8 +9,14 @@ public class SendConversionCache : ISendConversionCache
 {
   internal Dictionary<(string applicationId, string projectId), ObjectReference> Cache { get; set; } = new(); // NOTE: as this dude's accessed from potentially more operations at the same time, it might be safer to bless him as a concurrent dictionary.
 
+  public bool IsBypassed { get; set; }
+
   public void StoreSendResult(string projectId, IReadOnlyDictionary<Id, ObjectReference> convertedReferences)
   {
+    if (IsBypassed)
+    {
+      return;
+    }
     foreach (var kvp in convertedReferences)
     {
       Cache[(kvp.Key.Value, projectId)] = kvp.Value;

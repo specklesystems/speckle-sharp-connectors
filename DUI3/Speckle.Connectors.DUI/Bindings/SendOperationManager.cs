@@ -95,7 +95,8 @@ public sealed class SendOperationManager(
       if (configStore.GetConnectorConfig().DisableCache)
       {
         var sendConversionCache = serviceScope.ServiceProvider.GetRequiredService<ISendConversionCache>();
-        sendConversionCache.ClearCache();
+        sendConversionCache.ClearCache(); // clear whatever is currently in there to ensure 0% cache hits
+        sendConversionCache.IsBypassed = true; // tells cache to ignore any future write requests during this scoped operation
       }
 
       var progress = operationProgressManager.CreateOperationProgressEventHandler(
