@@ -120,7 +120,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       using var _ = _activityFactory.Start("Render Materials");
       _threadContext.RunOnMain(() =>
       {
-        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
       });
     }
 
