@@ -3,7 +3,6 @@ using Speckle.Converters.Autocad;
 using Speckle.Converters.Autocad.ToHost.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
-// using Speckle.Converters.Plant3dShared.Helpers;
 using Speckle.Converters.Plant3dShared.ToSpeckle;
 using Speckle.Sdk;
 

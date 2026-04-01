@@ -3,31 +3,17 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Plant3dShared;
 
-public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
+public class Plant3dRootToSpeckleConverter(
+  IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
+  IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
+  ToSpeckle.PropertiesExtractor propertiesExtractor,
+  ToSpeckle.Plant3dDataExtractor dataExtractor
+) : IRootToSpeckleConverter
 {
-  private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
-  private readonly ToSpeckle.PropertiesExtractor _propertiesExtractor;
-  private readonly ToSpeckle.Plant3dDataExtractor _dataExtractor;
-
-  public Plant3dRootToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
-    ToSpeckle.PropertiesExtractor propertiesExtractor,
-    ToSpeckle.Plant3dDataExtractor dataExtractor
-  )
-  {
-    _toSpeckle = toSpeckle;
-    _settingsStore = settingsStore;
-    _propertiesExtractor = propertiesExtractor;
-    _dataExtractor = dataExtractor;
-  }
-
   public Base Convert(object target)
   {
     if (target is not ADB.DBObject dbObject)
@@ -39,60 +25,48 @@ public class Plant3dRootToSpeckleConverter : IRootToSpeckleConverter
 
     Type type = dbObject.GetType();
 
-    var objectConverter = _toSpeckle.ResolveConverter(type);
+    var objectConverter = toSpeckle.ResolveConverter(type);
 
-    try
+    using var l = settingsStore.Current.Document.LockDocument();
+    using var tr = settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
+    Base result = objectConverter.Convert(target);
+
+    if (target is ADB.Entity autocadEntity)
     {
-      using (var l = _settingsStore.Current.Document.LockDocument())
+      // Extract AEC property sets and extension dictionaries
+      var properties = propertiesExtractor.GetProperties(autocadEntity);
+
+      // Extract Plant3D project database properties (Tag, NominalDiameter, etc.)
+      var dataProperties = dataExtractor.GetDataProperties(autocadEntity);
+
+      if (result is DataObject dataObject)
       {
-        using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
+        // Merge AEC properties
+        foreach (var kvp in properties)
         {
-          var result = objectConverter.Convert(target);
+          dataObject.properties[kvp.Key] = kvp.Value;
+        }
 
-          if (target is ADB.Entity autocadEntity)
-          {
-            // Extract AEC property sets and extension dictionaries
-            var properties = _propertiesExtractor.GetProperties(autocadEntity);
-
-            // Extract Plant3D project database properties (Tag, NominalDiameter, etc.)
-            var dataProperties = _dataExtractor.GetDataProperties(autocadEntity);
-
-            if (result is DataObject dataObject)
-            {
-              // Merge AEC properties
-              foreach (var kvp in properties)
-              {
-                dataObject.properties[kvp.Key] = kvp.Value;
-              }
-
-              // Merge Plant3D data under "P&ID" key
-              if (dataProperties.Count > 0)
-              {
-                dataObject.properties["P&ID"] = dataProperties;
-              }
-            }
-            else
-            {
-              if (properties.Count > 0)
-              {
-                result["properties"] = properties;
-              }
-              if (dataProperties.Count > 0)
-              {
-                result["Plant3D Data"] = dataProperties;
-              }
-            }
-          }
-
-          tr.Commit();
-          return result;
+        // Merge Plant3D data under "P&ID" key
+        if (dataProperties.Count > 0)
+        {
+          dataObject.properties["P&ID"] = dataProperties;
+        }
+      }
+      else
+      {
+        if (properties.Count > 0)
+        {
+          result["properties"] = properties;
+        }
+        if (dataProperties.Count > 0)
+        {
+          result["Plant3D Data"] = dataProperties;
         }
       }
     }
-    catch (SpeckleException e)
-    {
-      Console.WriteLine(e);
-      throw;
-    }
+
+    tr.Commit();
+    return result;
   }
 }

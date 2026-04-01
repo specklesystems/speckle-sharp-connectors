@@ -80,16 +80,14 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       try
       {
         var converter = _converterManager.ResolveConverter(entity.GetType(), false);
-        if (converter is not null)
-        {
-          var converted = converter.Convert(entity);
-          results.Add(converted);
-          return;
-        }
+
+        var converted = converter.Convert(entity);
+        results.Add(converted);
+        return;
       }
       catch (System.Exception)
       {
-        // Converter not found or failed — fall through to explode
+        // Fall through to explode on ConversionNotSupportedException or failed
       }
     }
 

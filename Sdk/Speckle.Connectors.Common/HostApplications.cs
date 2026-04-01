@@ -16,7 +16,7 @@ public static class HostApplications
     Civil = new("Civil 3D", "civil3d"),
     Civil3D = new("Civil 3D", "civil3d"),
     AutoCAD = new("AutoCAD", "autocad"),
-    Plant3D = new("Plant3D", "plant3d"),
+    Plant3D = new("Plant 3D", "plant3d"),
     MicroStation = new("MicroStation", "microstation"),
     OpenRoads = new("OpenRoads", "openroads"),
     OpenRail = new("OpenRail", "openrail"),
