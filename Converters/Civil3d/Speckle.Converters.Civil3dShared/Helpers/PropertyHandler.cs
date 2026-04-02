@@ -1,5 +1,3 @@
-using Speckle.Sdk;
-
 namespace Speckle.Converters.Civil3dShared.Helpers;
 
 /// <summary>

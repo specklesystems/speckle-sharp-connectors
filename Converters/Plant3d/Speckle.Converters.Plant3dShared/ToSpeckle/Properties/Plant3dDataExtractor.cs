@@ -55,7 +55,7 @@ public class Plant3dDataExtractor
         }
       }
     }
-    catch (System.Exception)
+    catch (PPDL.DLException)
     {
       // DataLinksManager not available or other API failure
     }

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared;
