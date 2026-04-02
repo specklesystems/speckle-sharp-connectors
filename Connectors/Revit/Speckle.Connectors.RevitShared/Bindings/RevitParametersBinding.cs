@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Utils;
@@ -34,6 +35,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
   private readonly ParameterUpdater _parameterUpdater;
   private readonly IJsonSerializer _jsonSerializer;
   private readonly IBasicConnectorBinding _baseBinding;
+  private readonly ILogger<RevitParametersBinding> _logger;
 
   public RevitParametersBinding(
     IBrowserBridge parent,
@@ -42,7 +44,8 @@ internal sealed class RevitParametersBinding : IParametersBinding
     IRevitTask revitTask,
     ParameterUpdater parameterUpdater,
     IJsonSerializer jsonSerializer,
-    IBasicConnectorBinding baseBinding
+    IBasicConnectorBinding baseBinding,
+    ILogger<RevitParametersBinding> logger
   )
   {
     Parent = parent;
@@ -52,6 +55,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
     _parameterUpdater = parameterUpdater;
     _jsonSerializer = jsonSerializer;
     _baseBinding = baseBinding;
+    _logger = logger;
   }
 
   public async Task Update(string payload)
@@ -123,19 +127,36 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
       if (errors.Count > 0)
       {
-        var groupedErrors = errors.GroupBy(e => e).Select(g => g.Count() > 1 ? $"{g.Count()} x {g.Key}" : g.Key);
-        await _baseBinding.Commands.SetGlobalNotification(
-          ToastNotificationType.WARNING,
-          "Update Completed with Issues",
-          $"Applied {successCount} updates. Encountered {errors.Count} errors: {string.Join(" | ", groupedErrors)}",
-          autoClose: false
-        );
+        var groupedErrors = errors.GroupBy(e => e).Select(g => $"{g.Count()} x {g.Key}");
+        var errorString = string.Join(", ", groupedErrors);
+
+        if (successCount > 0)
+        {
+          // Partial Success (Some worked, some failed)
+          await _baseBinding.Commands.SetGlobalNotification(
+            ToastNotificationType.WARNING,
+            "Parameters updated with errors",
+            $"Applied {successCount} updates. Encountered {errors.Count} errors: {errorString}",
+            autoClose: false
+          );
+        }
+        else
+        {
+          // Total Failure (None worked)
+          await _baseBinding.Commands.SetGlobalNotification(
+            ToastNotificationType.DANGER,
+            "No parameters updated",
+            $"All {errors.Count} updates failed: {errorString}",
+            autoClose: false
+          );
+        }
       }
-      else
+      else if (successCount > 0)
       {
+        // Total Success
         await _baseBinding.Commands.SetGlobalNotification(
           ToastNotificationType.SUCCESS,
-          "Parameters Updated",
+          "All parameters updated",
           $"Successfully applied {successCount} updates."
         );
       }
@@ -162,28 +183,35 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
     if (string.IsNullOrEmpty(request.ApplicationId))
     {
-      errorMessage = "Missing ApplicationId.";
+      errorMessage = "Missing ApplicationId";
+      return false;
+    }
+
+    if (ContainsLinkedModelTransformHash(request.ApplicationId))
+    {
+      errorMessage = "Cannot modify elements from a linked model";
       return false;
     }
 
     var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
     if (elementId == null)
     {
-      errorMessage = $"Element UniqueId not found: {request.ApplicationId}";
+      errorMessage = "Element(s) not found in document";
       return false;
     }
 
     element = doc.GetElement(elementId);
     if (element == null)
     {
-      errorMessage = $"Element is null for Id: {elementId}";
+      errorMessage = "Element(s) not found in document";
       return false;
     }
 
     var rawPath = request.Path;
     if (string.IsNullOrEmpty(rawPath))
     {
-      errorMessage = "Path is missing.";
+      _logger.LogError("Widget / DUI payload error: parameter path missing");
+      errorMessage = "Parameter path is missing";
       return false;
     }
 
@@ -200,13 +228,21 @@ internal sealed class RevitParametersBinding : IParametersBinding
     var pathParts = rawPath.Split(['.'], 3);
     if (pathParts.Length != 3)
     {
-      errorMessage = $"Path must have 3 parts. Got: '{rawPath}'";
+      _logger.LogError(
+        "Path format error: Expected exactly 3 parts (Scope.Category.Name) but received '{RawPath}' for element",
+        rawPath
+      );
+      errorMessage = "Parameter path is incorrectly formatted";
       return false;
     }
 
     parsedPath = new ParsedParameterPath(pathParts[0], pathParts[1], pathParts[2]);
     return true;
   }
+
+  private static bool ContainsLinkedModelTransformHash(string applicationId) =>
+    // Evaluates if the ID contains the standard transform hash for linked elements
+    System.Text.RegularExpressions.Regex.IsMatch(applicationId, @"_t[a-f0-9]+$");
 }
 
 public class ParameterChangesWrapper

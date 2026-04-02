@@ -3,9 +3,9 @@ using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Objects.Other;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Material = Rhino.DocObjects.Material;
+using RenderMaterial = Rhino.Render.RenderMaterial;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -24,11 +24,12 @@ public class RhinoMaterialBaker
   }
 
   /// <summary>
-  /// A map keeping track of ids, <b>either layer id or object id</b>, and their material index. It's generated from the material proxy list as we bake materials; <see cref="BakeMaterials"/> must be called in advance for this to be populated with the correct data.
+  /// A map keeping track of ids, either layer id or object id, and their Render Material Guid.
+  /// It's generated from the material proxy list as we <see cref="BakeMaterials"/>.
   /// </summary>
-  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = new();
+  public Dictionary<string, Guid> ObjectIdAndMaterialIdMap { get; } = [];
 
-  public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies, string baseLayerName)
+  public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies)
   {
     var doc = _converterSettings.Current.Document; // POC: too much right now to interface around
     // List<ReceiveConversionResult> conversionResults = new(); // TODO: return this guy
@@ -40,15 +41,14 @@ public class RhinoMaterialBaker
       try
       {
         // POC: Currently we're relying on the render material name for identification if it's coming from speckle and from which model; could we do something else?
-        string materialId = speckleRenderMaterial.applicationId ?? speckleRenderMaterial.id.NotNull();
-        string matName = $"{speckleRenderMaterial.name}-({materialId})-{baseLayerName}";
+        string matName = speckleRenderMaterial.name;
         matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
 
         // Check if material with this name already exists in the document
-        int matIndex = doc.Materials.Find(matName, ignoreDeletedMaterials: true);
+        var existingRenderMaterial = doc.RenderMaterials.FirstOrDefault(m => m.Name == matName);
+        Guid materialGuid;
 
-        // If material doesn't exist, create it
-        if (matIndex == -1)
+        if (existingRenderMaterial == null)
         {
           Color diffuse = Color.FromArgb(speckleRenderMaterial.diffuse);
           Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
@@ -73,24 +73,32 @@ public class RhinoMaterialBaker
             rhinoMaterial.Shine = shine;
           }
 
-          matIndex = doc.Materials.Add(rhinoMaterial);
+          // create RenderMaterial wrapper (CNX-2896)
+          var renderMaterial = RenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
 
-          // POC: check on matIndex -1, means we haven't created anything - this is most likely an recoverable error at this stage
-          if (matIndex == -1)
-          {
-            throw new ConversionException($"Failed to add a material to the document: '{matName}' (ID: {materialId})");
-          }
+          // add to RenderMaterial table. From my understanding, this internally manages the legacy Material table entry
+          doc.RenderMaterials.Add(renderMaterial);
+          materialGuid = renderMaterial.Id;
+        }
+        else
+        {
+          materialGuid = existingRenderMaterial.Id;
         }
 
-        // Create the object <> material index map
+        if (materialGuid == Guid.Empty)
+        {
+          throw new ConversionException($"Failed to create or retrieve RenderMaterial Guid for: '{matName}'");
+        }
+
+        // map object ID to Material Guid
         foreach (var objectId in proxy.objects)
         {
-          ObjectIdAndMaterialIndexMap[objectId] = matIndex;
+          ObjectIdAndMaterialIdMap[objectId] = materialGuid;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogError(ex, "Failed to add a material to the document");
+        _logger.LogError(ex, "Failed to add a modern RenderMaterial to the document");
       }
     }
   }
