@@ -42,14 +42,9 @@ public class AutocadCommand
 
     // init DI
     var services = new ServiceCollection();
-    try
-    {
-      _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
-    }
-    catch (BadImageFormatException)
-    {
-      // TODO: Speckle.Connectors.Logging assembly conflict in Plant3D — skip logging for now
-    }
+
+    _disposableLogger = services.Initialize(AppUtils.App, AppUtils.Version);
+
 #if AUTOCAD
     services.AddAutocad();
     services.AddAutocadConverters();
