@@ -46,7 +46,7 @@ internal sealed class ImporterInstance : IDisposable
       // ActivityScope.SetTag("jobType", args.JobType),
       ActivityScope.SetTag("serverUrl", new Uri(args.Account.serverInfo.url).ToString()),
       ActivityScope.SetTag("projectId", args.Project.id),
-      ActivityScope.SetTag("ingestionId", args.Ingestion.id),
+      ActivityScope.SetTag("modelIngestion.id", args.Ingestion.id),
       ActivityScope.SetTag("modelId", args.Ingestion.modelId),
       ActivityScope.SetTag("blobId", args.BlobId),
       ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.')),
@@ -105,6 +105,8 @@ internal sealed class ImporterInstance : IDisposable
       ".obj" => new ObjConfig(),
       ".dgn" => new DgnConfig(),
       ".fbx" => new FbxConfig(),
+      ".dwg" => new DwgConfig(),
+      ".dxf" => new DwgConfig(),
       _ => new DefaultConfig(),
     };
 
