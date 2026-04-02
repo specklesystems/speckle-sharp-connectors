@@ -77,7 +77,7 @@ internal sealed class JobProcessorInstance(
       using var scopeAttempt = ActivityScope.SetTag("job.attempt", job.Attempt.ToString());
       using var scopeServerUrl = ActivityScope.SetTag("serverUrl", job.Payload.ServerUrl.ToString());
       using var scopeProjectId = ActivityScope.SetTag("projectId", job.Payload.ProjectId);
-      using var scopeModelIngestionId = ActivityScope.SetTag("modelIngestionId", job.Payload.ModelIngestionId);
+      using var scopeModelIngestionId = ActivityScope.SetTag("modelIngestion.Id", job.Payload.ModelIngestionId);
       using var scopeBlobId = ActivityScope.SetTag("blobId", job.Payload.BlobId);
       using var scopeFileType = ActivityScope.SetTag("fileType", job.Payload.FileType);
 
