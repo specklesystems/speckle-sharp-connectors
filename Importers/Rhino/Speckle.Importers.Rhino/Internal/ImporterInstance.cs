@@ -66,6 +66,8 @@ internal sealed class ImporterInstance(
       ".obj" => new ObjConfig(),
       ".dgn" => new DgnConfig(),
       ".fbx" => new FbxConfig(),
+      ".dwg" => new DwgConfig(),
+      ".dxf" => new DwgConfig(),
       _ => new DefaultConfig(),
     };
 
