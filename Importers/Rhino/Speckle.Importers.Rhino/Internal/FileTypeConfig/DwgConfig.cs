@@ -6,11 +6,7 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 internal sealed class DwgConfig : IFileTypeConfig
 {
-  private readonly FileDwgReadOptions _readOptions =
-    new()
-    {
-      SetLayerMaterialToLayerColor = true
-    };
+  private readonly FileDwgReadOptions _readOptions = new() { SetLayerMaterialToLayerColor = true };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {
