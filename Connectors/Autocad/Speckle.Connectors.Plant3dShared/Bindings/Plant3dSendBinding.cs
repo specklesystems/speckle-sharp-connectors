@@ -47,7 +47,7 @@ public sealed class Plant3dSendBinding : AutocadSendBaseBinding
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }
 
-  // We need a separate send binding for Plant3D due to using a different unit converter (needed for conversion settings construction)
+  // We need a separate send binding for Plant 3D due to using a different unit converter (needed for conversion settings construction)
   protected override void InitializeSettings(IServiceProvider serviceProvider)
   {
     serviceProvider
