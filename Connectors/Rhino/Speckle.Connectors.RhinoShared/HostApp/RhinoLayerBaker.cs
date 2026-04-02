@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.Render;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -104,8 +105,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
   /// </summary>
   /// <param name="collectionPath">An array of Collection objects representing the path to create the layer.</param>
   /// <param name="baseLayerName">The base layer name to start creating the new layer.</param>
-  /// <returns>The index of the last created layer.</returns>
-  private int CreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
+  private void CreateLayerFromPath(Collection[] collectionPath, string baseLayerName)
   {
     var currentLayerName = baseLayerName;
     var currentDocument = RhinoDoc.ActiveDoc; // POC: too much effort right now to wrap around the interfaced layers
@@ -135,13 +135,17 @@ public class RhinoLayerBaker : TraversalContextUnpacker
 
       // set material
       if (
-        _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
+        _materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(
           collection.applicationId ?? collection.id.NotNull(),
-          out int mIndex
+          out Guid materialGuid
         )
       )
       {
-        newLayer.RenderMaterialIndex = mIndex;
+        var rc = RenderContent.FromId(currentDocument, materialGuid);
+        if (rc is RenderMaterial rm)
+        {
+          newLayer.RenderMaterialIndex = rm.DocumentAssoc.Materials.CurrentMaterialIndex;
+        }
       }
 
       // set color
@@ -164,7 +168,5 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       _hostLayerCache.Add(currentLayerName, index);
       previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
-
-    return previousLayer.Index;
   }
 }
