@@ -17,19 +17,7 @@ internal sealed class ImporterInstance : IDisposable
 
   private readonly RhinoDoc _rhinoDoc;
 
-  private readonly IReadOnlyList<IDisposable> _scopes =
-  [
-    ActivityScope.SetTag("jobId", args.JobId),
-    ActivityScope.SetTag("job.attempt", args.Attempt.ToString()),
-    // ActivityScope.SetTag("jobType", args.JobType),
-    ActivityScope.SetTag("serverUrl", args.Account.serverInfo.url),
-    ActivityScope.SetTag("projectId", args.Project.id),
-    ActivityScope.SetTag("modelIngestion.Id", args.Ingestion.id),
-    ActivityScope.SetTag("modelId", args.Ingestion.modelId),
-    ActivityScope.SetTag("blobId", args.BlobId),
-    ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.')),
-    UserActivityScope.AddUserScope(args.Account),
-  ];
+  private readonly IReadOnlyList<IDisposable> _scopes;
 
   private readonly ImporterArgs _args;
   private readonly Sender _sender;
@@ -58,7 +46,7 @@ internal sealed class ImporterInstance : IDisposable
       // ActivityScope.SetTag("jobType", args.JobType),
       ActivityScope.SetTag("serverUrl", new Uri(args.Account.serverInfo.url).ToString()),
       ActivityScope.SetTag("projectId", args.Project.id),
-      ActivityScope.SetTag("ingestionId", args.Ingestion.id),
+      ActivityScope.SetTag("modelIngestion.id", args.Ingestion.id),
       ActivityScope.SetTag("modelId", args.Ingestion.modelId),
       ActivityScope.SetTag("blobId", args.BlobId),
       ActivityScope.SetTag("fileType", Path.GetExtension(args.FilePath).TrimStart('.')),
