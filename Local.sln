@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{DEE5DD87-39C1-BF34-B639-A387DCCF972B}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\pr.yml = .github\workflows\pr.yml
@@ -308,6 +308,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk", "..\speckle-sharp-sdk\src\Speckle.Sdk\Speckle.Sdk.csproj", "{0201A282-BEFA-8897-C535-03EBAC94870B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Sdk.Dependencies", "..\speckle-sharp-sdk\src\Speckle.Sdk.Dependencies\Speckle.Sdk.Dependencies.csproj", "{0677CA87-027F-D526-4463-3517F75B76EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Connectors.Plant3d2026", "Connectors\Autocad\Speckle.Connectors.Plant3d2026\Speckle.Connectors.Plant3d2026.csproj", "{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speckle.Converters.Plant3d2026", "Converters\Plant3d\Speckle.Converters.Plant3d2026\Speckle.Converters.Plant3d2026.csproj", "{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Connectors.Plant3dShared", "Connectors\Autocad\Speckle.Connectors.Plant3dShared\Speckle.Connectors.Plant3dShared.shproj", "{B1C4A14C-2F4E-4C3D-9B71-A3F5D8E6C912}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Speckle.Converters.Plant3dShared", "Converters\Plant3d\Speckle.Converters.Plant3dShared\Speckle.Converters.Plant3dShared.shproj", "{C7E3A28D-5F91-4B6E-A8D2-3F1C9E7B4D56}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -790,6 +798,18 @@ Global
 		{0677CA87-027F-D526-4463-3517F75B76EC}.Local|Any CPU.Build.0 = Local|Any CPU
 		{0677CA87-027F-D526-4463-3517F75B76EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0677CA87-027F-D526-4463-3517F75B76EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Local|Any CPU.Build.0 = Local|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Local|Any CPU.ActiveCfg = Local|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Local|Any CPU.Build.0 = Local|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -927,5 +947,9 @@ Global
 		{37C78F74-1AFB-8865-7C2A-03B6B4262134} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}
 		{C3BD4841-7C1F-23F7-20AB-C30A678001F5} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}
 		{02E79865-6261-CDE0-77EA-3DD2E01DACBD} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}
+		{B68103BE-A274-4F61-AE98-DE0B75B8BD1C} = {D3670C11-52FA-1950-6D7E-27C5DEA68A33}
+		{AEF997CA-1413-4DF7-AFA7-AB4DC9BF92FF} = {D3670C11-52FA-1950-6D7E-27C5DEA68A33}
+		{B1C4A14C-2F4E-4C3D-9B71-A3F5D8E6C912} = {A97EFA6B-D703-EF29-A34D-BAD7BA42B5BE}
+		{C7E3A28D-5F91-4B6E-A8D2-3F1C9E7B4D56} = {A97EFA6B-D703-EF29-A34D-BAD7BA42B5BE}
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,6 @@
-namespace Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Sdk;
+
+namespace Speckle.Converters.Plant3dShared.Helpers;
 
 /// <summary>
 /// Used to help with properties on classes that may throw exceptions when accessed
@@ -14,9 +16,8 @@ public sealed class PropertyHandler
     }
     catch (Exception e)
       when (e is InvalidOperationException
-        || e is ArgumentException
-        || e is Autodesk.AutoCAD.Runtime.Exception // eNotApplicable
-        || e is Autodesk.Civil.CivilException
+        || e is ArgumentException argEx && !argEx.IsFatal()
+        || e is Autodesk.AutoCAD.Runtime.Exception acEx && !acEx.IsFatal()
       )
     {
       value = default;
