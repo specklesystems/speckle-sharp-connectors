@@ -18,10 +18,11 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
-public class RevitRootObjectBuilder(
+public class RevitContinuousTraversalBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RevitConversionSettings> converterSettings,
   ISendConversionCache sendConversionCache,
@@ -34,22 +35,34 @@ public class RevitRootObjectBuilder(
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
   LinkedModelHandler linkedModelHandler,
   IConfigStore configStore
-) : IRootObjectBuilder<DocumentToConvert>
+) : IRootContinuousTraversalBuilder<DocumentToConvert>
 {
-  public Task<RootObjectBuilderResult> Build(
+  public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
+    SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct
-  ) =>
-    threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))
+    CancellationToken cancellationToken
+  )
+  {
+    return await threadContext.RunOnMainAsync(
+      async () =>
+        await BuildMainThread(
+          documentElementContexts,
+          projectId,
+          sendPipeline,
+          onOperationProgressed,
+          cancellationToken
+        )
     );
+  }
 
+  [SuppressMessage("Maintainability", "CA1502:Avoid excessive class coupling")]
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  private RootObjectBuilderResult BuildSync(
+  private async Task<RootObjectBuilderResult> BuildMainThread(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
+    SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -135,7 +148,7 @@ public class RevitRootObjectBuilder(
       }
     }
 
-    var countProgress = 0;
+    var count = 0;
     var cacheHitCount = 0;
     var skippedObjectCount = 0;
 
@@ -217,6 +230,9 @@ public class RevitRootObjectBuilder(
               converted.applicationId = applicationId;
             }
 
+            // NOTE: this is the main part that differentiate from the main root object builder
+            var reference = await sendPipeline.Process(converted).ConfigureAwait(true);
+
             var collection = sendCollectionManager.GetAndCreateObjectHostCollection(
               revitElement,
               rootObject,
@@ -224,8 +240,8 @@ public class RevitRootObjectBuilder(
               modelDisplayName
             );
 
-            collection.elements.Add(converted);
-            results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+            collection.elements.Add(reference);
+            results.Add(new(Status.SUCCESS, applicationId, sourceType, reference));
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
@@ -233,7 +249,10 @@ public class RevitRootObjectBuilder(
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
           }
 
-          onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
+          count++;
+          onOperationProgressed.Report(
+            new($"Converting objects... ({count:N0} / {atomicObjectCount:N0})", (double)count / atomicObjectCount)
+          );
         }
       }
     }
@@ -275,6 +294,7 @@ public class RevitRootObjectBuilder(
 
     // STEP 6: Unpack all other objects to attach to root collection
     List<Objects.Other.Camera> views = viewUnpacker.Unpack(converterSettings.Current.Document);
+
     if (views.Count > 0)
     {
       rootObject[RootKeys.VIEW] = views;
@@ -289,6 +309,9 @@ public class RevitRootObjectBuilder(
       var transformMatrix = ReferencePointHelper.CreateTransformDataForRootObject(transform);
       rootObject[RootKeys.REFERENCE_POINT_TRANSFORM] = transformMatrix;
     }
+
+    await sendPipeline.Process(rootObject);
+    await sendPipeline.WaitForUpload();
 
     return new RootObjectBuilderResult(rootObject, results);
   }

@@ -5,7 +5,6 @@ using Rhino.Geometry;
 using Rhino.Render;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Converters.Common.ToHost;
 using Speckle.DoubleNumerics;
@@ -15,6 +14,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 

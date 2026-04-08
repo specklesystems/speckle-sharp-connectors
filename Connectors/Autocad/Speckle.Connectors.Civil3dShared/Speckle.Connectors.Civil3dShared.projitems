@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\Civil3dConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\PropertySetBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\Civil3dHostObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Civil3dContinuousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Civil3dRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\Civil3dSendBinding.cs" />
   </ItemGroup>

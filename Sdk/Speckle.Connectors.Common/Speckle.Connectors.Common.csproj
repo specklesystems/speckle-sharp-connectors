@@ -13,10 +13,11 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Web" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)' == 'Local'"> 
+  <ItemGroup Condition="'$(Configuration)' == 'Local'">
     <ProjectReference Include="..\..\..\speckle-sharp-sdk\src\Speckle.Objects\Speckle.Objects.csproj" />
-  </ItemGroup> 
+  </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Local'">
     <PackageReference Include="Speckle.Objects" />
-  </ItemGroup> 
+  </ItemGroup>
+
 </Project>

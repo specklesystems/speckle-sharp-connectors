@@ -37,7 +37,8 @@ public static class Connector
       typeof(Point).Assembly
     );
 
-    return serviceCollection.AddSeqLogging(
+    return serviceCollection.AddOpenTelemetry(
+      "Connector",
       application,
       version,
 #if DEBUG || LOCAL
@@ -72,8 +73,9 @@ public static class Connector
     );
   }
 
-  public static IDisposable AddSeqLogging(
+  public static IDisposable AddOpenTelemetry(
     this IServiceCollection serviceCollection,
+    string serviceName,
     Application application,
     HostAppVersion version,
     SpeckleLogging loggingConfig,
@@ -83,6 +85,7 @@ public static class Connector
   {
     var assemblyVersion = Assembly.GetExecutingAssembly().GetVersion();
     var (logging, tracing, metrics) = Observability.Initialize(
+      serviceName,
       application.Name + " " + HostApplications.GetVersion(version),
       application.Slug,
       assemblyVersion,
