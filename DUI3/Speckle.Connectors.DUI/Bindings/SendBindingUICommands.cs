@@ -37,7 +37,8 @@ public class SendBindingUICommands(IBrowserBridge bridge)
   public async Task SetModelSendResult(
     string modelCardId,
     string versionId,
-    IEnumerable<SendConversionResult> sendConversionResults
+    IEnumerable<SendConversionResult> sendConversionResults,
+    string? ingestionId = null
   ) =>
     await Bridge.Send(
       SET_MODEL_SEND_RESULT_UI_COMMAND_NAME,
@@ -45,7 +46,8 @@ public class SendBindingUICommands(IBrowserBridge bridge)
       {
         modelCardId,
         versionId,
-        sendConversionResults
+        sendConversionResults,
+        ingestionId
       }
     );
 }

@@ -17,6 +17,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Revit.Operations.Send;
 
@@ -39,7 +40,7 @@ public class RevitRootObjectBuilder(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct
   ) =>
     threadContext.RunOnMainAsync(
       () => Task.FromResult(BuildSync(documentElementContexts, projectId, onOperationProgressed, ct))

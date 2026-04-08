@@ -36,24 +36,20 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
 
     Type type = dbObject.GetType();
 
-    using (var l = _settingsStore.Current.Document.LockDocument())
+    using var l = _settingsStore.Current.Document.LockDocument();
+    using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
+    var objectConverter = _toSpeckle.ResolveConverter(type);
+
+    var convertedObject = objectConverter.Convert(dbObject);
+
+    // add properties
+    Dictionary<string, object?> properties = _propertiesExtractor.GetProperties((Entity)dbObject);
+    if (properties.Count > 0)
     {
-      using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
-      {
-        var objectConverter = _toSpeckle.ResolveConverter(type);
-
-        var convertedObject = objectConverter.Convert(dbObject);
-
-        // add properties
-        Dictionary<string, object?> properties = _propertiesExtractor.GetProperties((Entity)dbObject);
-        if (properties.Count > 0)
-        {
-          convertedObject["properties"] = properties;
-        }
-
-        tr.Commit();
-        return convertedObject;
-      }
+      convertedObject["properties"] = properties;
     }
+
+    tr.Commit();
+    return convertedObject;
   }
 }

@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Render;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Instances;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Converters.Common.ToHost;
 using Speckle.DoubleNumerics;
@@ -14,6 +14,7 @@ using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Rhino.HostApp;
 
@@ -137,9 +138,11 @@ public class RhinoInstanceBaker : IInstanceBaker<IReadOnlyCollection<string>>
           // create attributes
           ObjectAttributes atts = instanceProxy.GetAttributes();
           atts.LayerIndex = layerIndex;
-          if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(instanceProxyId, out int mIndex))
+
+          // set material using Guid
+          if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(instanceProxyId, out Guid materialGuid))
           {
-            atts.MaterialIndex = mIndex;
+            atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RenderMaterial;
             atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
           }
 
