@@ -18,7 +18,7 @@
     <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="Microsoft.Build" Version="17.11.48" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageVersion Include="Npgsql" Version="9.0.3" />
+    <PackageVersion Include="Npgsql" Version="9.0.4" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
@@ -28,10 +28,10 @@
     <PackageVersion Include="NUnit.Analyzers" Version="4.2.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="4.6.0" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
-    <PackageVersion Include="RhinoCommon" Version="8.25.25328.11001" />
+    <PackageVersion Include="RhinoCommon" Version="8.28.26041.11001" />
     <PackageVersion Include="Rhino.Inside" Version="8.0.7-beta" />
-    <PackageVersion Include="Grasshopper" Version="8.9.24194.18121" />
-    <PackageVersion Include="RhinoWindows" Version="8.25.25328.11001" />
+    <PackageVersion Include="Grasshopper" Version="8.28.26041.11001" />
+    <PackageVersion Include="RhinoWindows" Version="8.28.26041.11001" />
     <PackageVersion Include="Semver" Version="3.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Speckle.CSI.API" Version="2.4.0" />
@@ -43,8 +43,8 @@
     <PackageVersion Include="Tekla.Structures.Drawing" Version="2024.0.4" />
     <PackageVersion Include="Tekla.Structures.Model" Version="2024.0.4" />
     <PackageVersion Include="Tekla.Structures.Plugins" Version="2024.0.4" PrivateAssets="all" IncludeAssets="compile; build" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" version="1.13.0" />
     <PackageVersion Include="Serilog" Version="4.0.1" />
     <PackageVersion Include="Serilog.Exceptions" Version="8.4.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />

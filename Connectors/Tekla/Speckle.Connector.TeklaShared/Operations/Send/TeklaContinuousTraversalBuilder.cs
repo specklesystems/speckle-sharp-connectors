@@ -12,10 +12,15 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Connectors.TeklaShared.Operations.Send;
 
-public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
+/// <summary>
+/// Continuous traversal builder for Tekla that streams objects through a <see cref="SendPipeline"/>
+/// for packfile-based uploads. Same conversion logic as <see cref="TeklaRootObjectBuilder"/>.
+/// </summary>
+public class TeklaContinuousTraversalBuilder : IRootContinuousTraversalBuilder<TSM.ModelObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
@@ -25,7 +30,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
   private readonly ISdkActivityFactory _activityFactory;
   private readonly TeklaMaterialUnpacker _materialUnpacker;
 
-  public TeklaRootObjectBuilder(
+  public TeklaContinuousTraversalBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<TeklaConversionSettings> converterSettings,
@@ -47,6 +52,7 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<TSM.ModelObject> teklaObjects,
     string projectId,
+    SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -67,11 +73,13 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       foreach (TSM.ModelObject teklaObject in teklaObjects)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        var result = ConvertTeklaObject(teklaObject, rootObjectCollection, projectId);
+        var result = await ConvertTeklaObject(teklaObject, rootObjectCollection, projectId, sendPipeline);
         results.Add(result);
 
         ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / teklaObjects.Count));
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {teklaObjects.Count:N0})", (double)count / teklaObjects.Count)
+        );
         await Task.Yield();
       }
     }
@@ -87,13 +95,18 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
       rootObjectCollection[ProxyKeys.RENDER_MATERIAL] = renderMaterialProxies;
     }
 
+    // Process root collection and wait for all uploads
+    await sendPipeline.Process(rootObjectCollection);
+    await sendPipeline.WaitForUpload();
+
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private SendConversionResult ConvertTeklaObject(
+  private async Task<SendConversionResult> ConvertTeklaObject(
     TSM.ModelObject teklaObject,
     Collection collectionHost,
-    string projectId
+    string projectId,
+    SendPipeline sendPipeline
   )
   {
     string applicationId = teklaObject.GetSpeckleApplicationId();
@@ -113,10 +126,11 @@ public class TeklaRootObjectBuilder : IRootObjectBuilder<TSM.ModelObject>
 
       var collection = _sendCollectionManager.GetAndCreateObjectHostCollection(teklaObject, collectionHost);
 
-      // Add to host collection
-      collection.elements.Add(converted);
+      // NOTE: this is the main part that differentiate from the main root object builder
+      var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
+      collection.elements.Add(reference);
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      return new(Status.SUCCESS, applicationId, sourceType, reference);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

@@ -58,7 +58,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperBlockPacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperMaterialPacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperContinuousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\GrasshopperColorPacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\IngestionTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendAsyncComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Send\SendComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\SpeckleSelectModelComponent.cs" />

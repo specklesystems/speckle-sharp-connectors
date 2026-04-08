@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
-using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
@@ -14,33 +13,37 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send;
 using static Speckle.Connector.Navisworks.Operations.Send.GeometryNodeMerger;
 using static Speckle.Connectors.Common.Operations.ProxyKeys;
 using static Speckle.Converter.Navisworks.Constants.InstanceConstants;
 
 namespace Speckle.Connector.Navisworks.Operations.Send;
 
-public class NavisworksRootObjectBuilder(
+/// <summary>
+/// Continuous traversal builder for Navisworks that streams objects through a <see cref="SendPipeline"/>
+/// for packfile-based uploads. Same conversion/grouping logic as <see cref="NavisworksRootObjectBuilder"/>,
+/// but processes final elements through the pipeline after all post-processing is complete.
+/// </summary>
+public class NavisworksContinuousTraversalBuilder(
   IRootToSpeckleConverter rootToSpeckleConverter,
-  ISendConversionCache sendConversionCache,
   IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
-  ILogger<NavisworksRootObjectBuilder> logger,
+  ILogger<NavisworksContinuousTraversalBuilder> logger,
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
   IUiUnitsCache uiUnitsCache
-) : IRootObjectBuilder<NAV.ModelItem>
+) : IRootContinuousTraversalBuilder<NAV.ModelItem>
 {
-#pragma warning disable CA1823
-#pragma warning restore CA1823
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
     string projectId,
+    SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -55,7 +58,7 @@ public class NavisworksRootObjectBuilder(
 
     var rootCollection = InitializeRootCollection();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
-      await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
+      await ConvertModelItemsAsync(navisworksModelItems, onOperationProgressed, cancellationToken);
 
     ValidateConversionResults(conversionResults);
 
@@ -65,13 +68,23 @@ public class NavisworksRootObjectBuilder(
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
-    int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
-    logger.LogInformation(
-      "Final output contains {count} InstanceProxy objects in displayValues",
-      finalInstanceProxyCount
-    );
 
-    rootCollection.elements = finalElements;
+    // Process each final element through the send pipeline
+    var processedElements = new List<Base>(finalElements.Count);
+    foreach (var element in finalElements)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      // NOTE: this is the main part that differentiate from the main root object builder
+      var reference = await sendPipeline.Process(element).ConfigureAwait(false);
+      processedElements.Add(reference);
+    }
+
+    rootCollection.elements = processedElements;
+
+    // Process the root collection and wait for all uploads to complete
+    await sendPipeline.Process(rootCollection);
+    await sendPipeline.WaitForUpload();
+
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
 
@@ -108,7 +121,6 @@ public class NavisworksRootObjectBuilder(
 
   private Task<(Dictionary<string, Base?> converted, List<SendConversionResult> results)> ConvertModelItemsAsync(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -117,32 +129,17 @@ public class NavisworksRootObjectBuilder(
     var convertedBases = new Dictionary<string, Base?>();
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
-    int instanceProxyCount = 0;
 
     foreach (var item in navisworksModelItems)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases, projectId);
+      var converted = ConvertNavisworksItem(item, convertedBases);
       results.Add(converted);
-
-      if (
-        converted.Status == Status.SUCCESS
-        && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
-        && convertedBase?["displayValue"] is List<Base> displayValues
-      )
-      {
-        instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-      }
 
       processedCount++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
     }
 
-    logger.LogInformation(
-      "Converted {total} items, found {instanceProxies} InstanceProxy objects",
-      totalCount,
-      instanceProxyCount
-    );
     return Task.FromResult((convertedBases, results));
   }
 
@@ -267,17 +264,6 @@ public class NavisworksRootObjectBuilder(
         .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
     );
 
-    var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-    if (instanceProxyCount > 0)
-    {
-      logger.LogDebug(
-        "Group {groupKey} merging {siblings} siblings with {proxies} InstanceProxy objects",
-        groupKey,
-        siblingBases.Count,
-        instanceProxyCount
-      );
-    }
-
     return new NavisworksObject
     {
       name = name,
@@ -338,7 +324,6 @@ public class NavisworksRootObjectBuilder(
   {
     using var _ = activityFactory.Start("BuildInstanceDefinitions");
 
-    // Get all definition geometries from the registry
     var allDefinitions = instanceRegistry.GetAllDefinitionGeometries();
 
     if (allDefinitions.Count == 0)
@@ -348,14 +333,6 @@ public class NavisworksRootObjectBuilder(
     }
 
     logger.LogInformation("Building instance structure for {count} definition groups", allDefinitions.Count);
-
-    if (allDefinitions.Count > 100)
-    {
-      logger.LogWarning(
-        "Large number of definition groups ({count}) detected - this may indicate instance grouping is not working effectively",
-        allDefinitions.Count
-      );
-    }
 
     var instanceDefinitionProxies = new List<InstanceDefinitionProxy>(allDefinitions.Count);
 
@@ -398,28 +375,9 @@ public class NavisworksRootObjectBuilder(
     );
   }
 
-  private int CountInstanceProxiesRecursive(List<Base> elements)
-  {
-    int count = 0;
-    foreach (var element in elements)
-    {
-      if (element["displayValue"] is List<Base> displayValues)
-      {
-        count += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-      }
-
-      if (element is Collection { elements: not null } collection)
-      {
-        count += CountInstanceProxiesRecursive(collection.elements);
-      }
-    }
-    return count;
-  }
-
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
-    Dictionary<string, Base?> convertedBases,
-    string projectId
+    Dictionary<string, Base?> convertedBases
   )
   {
     string applicationId = elementSelectionService.GetModelItemPath(navisworksItem);
@@ -427,9 +385,7 @@ public class NavisworksRootObjectBuilder(
 
     try
     {
-      Base converted = sendConversionCache.TryGetValue(applicationId, projectId, out ObjectReference? cached)
-        ? cached
-        : rootToSpeckleConverter.Convert(navisworksItem);
+      Base converted = rootToSpeckleConverter.Convert(navisworksItem);
 
       convertedBases[applicationId] = converted;
 

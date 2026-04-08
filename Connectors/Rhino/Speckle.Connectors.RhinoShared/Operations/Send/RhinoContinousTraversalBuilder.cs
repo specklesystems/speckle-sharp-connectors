@@ -17,14 +17,17 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send;
 using Layer = Rhino.DocObjects.Layer;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
 
 /// <summary>
+/// NOTE: I am not happy this is a mostly copy paste of the Root object builder, but i'm also not too worried. The main (hot) path
+/// should be this one going forward, so we should not touch the og root object builder besides to delete it.
 /// Stateless builder object to turn an <see cref="ISendFilter"/> into a <see cref="Base"/> object
 /// </summary>
-public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
+public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<RhinoObject>
 {
   private readonly IRootToSpeckleConverter _rootToSpeckleConverter;
   private readonly ISendConversionCache _sendConversionCache;
@@ -36,10 +39,10 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   private readonly RhinoColorUnpacker _colorUnpacker;
   private readonly RhinoViewUnpacker _viewUnpacker;
   private readonly PropertiesExtractor _propertiesExtractor;
-  private readonly ILogger<RhinoRootObjectBuilder> _logger;
+  private readonly ILogger<RhinoContinuousTraversalBuilder> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
-  public RhinoRootObjectBuilder(
+  public RhinoContinuousTraversalBuilder(
     IRootToSpeckleConverter rootToSpeckleConverter,
     ISendConversionCache sendConversionCache,
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
@@ -50,7 +53,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
     RhinoColorUnpacker colorUnpacker,
     RhinoViewUnpacker viewUnpacker,
     PropertiesExtractor propertiesExtractor,
-    ILogger<RhinoRootObjectBuilder> logger,
+    ILogger<RhinoContinuousTraversalBuilder> logger,
     ISdkActivityFactory activityFactory
   )
   {
@@ -71,6 +74,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<RhinoObject> rhinoObjects,
     string projectId,
+    SendPipeline sendPipeline,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -87,12 +91,15 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       unpackResults = _instanceUnpacker.UnpackSelection(rhinoObjects);
     }
 
-    var (atomicObjects, atomicDefinitionObjectIds, instanceProxies, instanceDefinitionProxies) = unpackResults;
+    var (atomicObjects, _, instanceProxies, instanceDefinitionProxies) = unpackResults;
     // POC: we should formalise this, sooner or later - or somehow fix it a bit more
     rootObjectCollection[ProxyKeys.INSTANCE_DEFINITION] = instanceDefinitionProxies; // this won't work re traversal on receive
 
     // 2 - Unpack the groups
-    _groupUnpacker.UnpackGroups(rhinoObjects);
+    using (var _ = _activityFactory.Start("Unpack Groups"))
+    {
+      _groupUnpacker.UnpackGroups(rhinoObjects);
+    }
     rootObjectCollection[ProxyKeys.GROUP] = _groupUnpacker.GroupProxies.Values;
 
     // 3 - Convert atomic objects
@@ -109,15 +116,13 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         Layer layer = _converterSettings.Current.Document.Layers[rhinoObject.Attributes.LayerIndex];
         Collection collectionHost = _layerUnpacker.GetHostObjectCollection(layer, rootObjectCollection);
 
-        var result = ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId);
+        var result = await ConvertRhinoObject(rhinoObject, collectionHost, instanceProxies, projectId, sendPipeline);
         results.Add(result);
 
-        ++count;
-        onOperationProgressed.Report(new("Converting", (double)count / atomicObjects.Count));
-        await Task.Yield();
-
-        // NOTE: useful for testing ui states, pls keep for now so we can easily uncomment
-        // Thread.Sleep(550);
+        count++;
+        onOperationProgressed.Report(
+          new($"Converting objects... ({count:N0} / {atomicObjects.Count:N0})", (double)count / atomicObjects.Count)
+        );
       }
     }
 
@@ -150,14 +155,17 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
     }
 
+    await sendPipeline.Process(rootObjectCollection);
+    await sendPipeline.WaitForUpload();
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private SendConversionResult ConvertRhinoObject(
+  private async Task<SendConversionResult> ConvertRhinoObject(
     RhinoObject rhinoObject,
     Collection collectionHost,
     IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
-    string projectId
+    string projectId,
+    SendPipeline sendPipeline
   )
   {
     string applicationId = rhinoObject.Id.ToString();
@@ -195,10 +203,13 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
         converted["properties"] = properties;
       }
 
-      // add to host
-      collectionHost.elements.Add(converted);
+      // NOTE: this is the main part that differentiate from the main root object builder
+      var reference = await sendPipeline.Process(converted).ConfigureAwait(false);
 
-      return new(Status.SUCCESS, applicationId, sourceType, converted);
+      // add to host
+      collectionHost.elements.Add(reference);
+
+      return new(Status.SUCCESS, applicationId, sourceType, reference);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

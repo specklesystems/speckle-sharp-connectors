@@ -15,17 +15,17 @@ public static class Program
     // Dapper doesn't understand how to handle JSON deserialization, so we need to tell it what types can be deserialzied
     SqlMapper.AddTypeHandler(new JsonHandler<FileimportPayload>());
 
-    var host = ConfigureAppHost(args);
+    using var loggerDisposable = ConfigureAppHost(args, out IHost host);
 
     await host.RunAsync();
   }
 
-  private static IHost ConfigureAppHost(string[] args)
+  private static IDisposable ConfigureAppHost(string[] args, out IHost host)
   {
     // DI setup
     var builder = Host.CreateApplicationBuilder(args);
 
-    builder.Services.AddJobProcessor();
+    var loggingDisposable = builder.Services.AddJobProcessor();
     builder.Services.AddWindowsService();
     builder.Services.AddTransient<IJobHandler, RhinoJobHandler>();
 
@@ -35,6 +35,7 @@ public static class Program
       settings.Filter = (_, level) => level >= LogLevel.Information;
     });
 
-    return builder.Build();
+    host = builder.Build();
+    return loggingDisposable;
   }
 }
