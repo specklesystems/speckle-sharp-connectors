@@ -43,6 +43,7 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows")
       ]
     ),
+    new("plant3d", [new("Connectors/Autocad/Speckle.Connectors.Plant3d2026", "net8.0-windows")]),
     new(
       "navisworks",
       [

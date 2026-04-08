@@ -78,7 +78,7 @@ public sealed class SendOperation<T>(
       ),
       cancellationToken
     );
-    using var ingestionScope = ActivityScope.SetTag("modelIngestionId", ingestion.id);
+    using var ingestionScope = ActivityScope.SetTag("modelIngestion.Id", ingestion.id);
 
     var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
       sendInfo.Client,

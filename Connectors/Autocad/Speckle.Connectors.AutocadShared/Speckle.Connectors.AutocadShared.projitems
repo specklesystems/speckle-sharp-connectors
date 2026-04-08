@@ -60,5 +60,8 @@
     <Content Include="$(MSBuildThisFileDirectory)Plugin\BundleAutoCAD\PackageContents.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\BundlePlant3D\PackageContents.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
