@@ -283,7 +283,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var (result, versionId, ingestionId) = await sendOperation
-      .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, cancellationToken)
+      .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, true, cancellationToken)
       .ConfigureAwait(false);
 
     if (ingestionId != null)

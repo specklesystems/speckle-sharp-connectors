@@ -165,6 +165,8 @@ public sealed class ConnectorConfig
 {
   public bool DarkTheme { get; init; } = true;
 
+  public bool DisableCache { get; init; }
+
   /// <remarks>
   /// Only used by Revit Connector !!
   /// We're exposing some settings to disable event listening inorder to debug app crash issues caused by Revit event handlers
