@@ -94,10 +94,10 @@ public sealed class SendOperationManager(
 
       // if user has disabled cache, wipe the in-memory cache before gathering and building objects
       var configStore = serviceScope.ServiceProvider.GetRequiredService<IConfigStore>();
-      if (configStore.GetConnectorConfig().DisableCache)
+      var isCacheDisabled = configStore.GetConnectorConfig().DisableCache;
+      if (isCacheDisabled)
       {
         sendConversionCache.ClearCache(); // clear whatever is currently in there to ensure 0% cache hits
-        sendConversionCache.IsBypassed = true; // tells cache to ignore any future write requests during this scoped operation
       }
 
       var progress = operationProgressManager.CreateOperationProgressEventHandler(
@@ -123,7 +123,8 @@ public sealed class SendOperationManager(
         fileSizeBytes,
         null,
         progress,
-        cancellationItem.Token
+        cancellationItem.Token,
+        saveToCache: !isCacheDisabled
       );
 
       await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults);
@@ -139,11 +140,6 @@ public sealed class SendOperationManager(
     {
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
-    }
-    finally
-    {
-      // state always reset to false
-      sendConversionCache.IsBypassed = false;
     }
   }
 

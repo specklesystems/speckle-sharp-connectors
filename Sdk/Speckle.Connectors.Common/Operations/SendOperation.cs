@@ -37,7 +37,8 @@ public sealed class SendOperation<T>(
     long? fileSizeBytes,
     string? versionMessage,
     IProgress<CardProgress> uiProgress,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool saveToCache = true
   )
   {
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
@@ -50,12 +51,13 @@ public sealed class SendOperation<T>(
         fileSizeBytes,
         versionMessage,
         uiProgress,
-        cancellationToken
+        cancellationToken,
+        saveToCache
       );
     }
     else
     {
-      return await SendViaVersionCreate(objects, sendInfo, versionMessage, uiProgress, cancellationToken);
+      return await SendViaVersionCreate(objects, sendInfo, versionMessage, uiProgress, cancellationToken, saveToCache);
     }
   }
 
@@ -66,7 +68,8 @@ public sealed class SendOperation<T>(
     long? fileSizeBytes,
     string? versionMessage,
     IProgress<CardProgress> uiProgress,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool saveToCache = true
   )
   {
     ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
@@ -90,7 +93,7 @@ public sealed class SendOperation<T>(
     AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
     try
     {
-      SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, cancellationToken);
+      SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, cancellationToken, saveToCache);
 
       string createdVersionId = await sendInfo.Client.Ingestion.Complete(
         new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
@@ -122,10 +125,11 @@ public sealed class SendOperation<T>(
     SendInfo sendInfo,
     string? versionMessage,
     IProgress<CardProgress> progress,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool saveToCache = true
   )
   {
-    SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, cancellationToken);
+    SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, cancellationToken, saveToCache);
 
     Version version = await sendInfo.Client.Version.Create(
       new(
@@ -144,7 +148,8 @@ public sealed class SendOperation<T>(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken ct = default
+    CancellationToken ct = default,
+    bool saveToCache = true
   )
   {
     var buildResult = await Build(objects, sendInfo.ProjectId, onOperationProgressed, ct);
@@ -157,7 +162,8 @@ public sealed class SendOperation<T>(
         sendInfo.ProjectId,
         sendInfo.Account,
         onOperationProgressed,
-        ct
+        ct,
+        saveToCache
       );
 
       return results;
@@ -184,7 +190,8 @@ public sealed class SendOperation<T>(
     string projectId,
     Account account,
     IProgress<CardProgress> onOperationProgressed,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool saveToCache = true
   )
   {
     cancellationToken.ThrowIfCancellationRequested();
@@ -202,7 +209,10 @@ public sealed class SendOperation<T>(
       cancellationToken
     );
 
-    sendConversionCache.StoreSendResult(projectId, sendResult.ConvertedReferences);
+    if (saveToCache)
+    {
+      sendConversionCache.StoreSendResult(projectId, sendResult.ConvertedReferences);
+    }
 
     cancellationToken.ThrowIfCancellationRequested();
 

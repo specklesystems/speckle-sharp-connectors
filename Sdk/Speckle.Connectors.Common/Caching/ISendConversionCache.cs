@@ -23,5 +23,4 @@ public interface ISendConversionCache
   void EvictObjects(IEnumerable<string> objectIds);
   void ClearCache();
   bool TryGetValue(string projectId, string applicationId, [NotNullWhen(true)] out ObjectReference? objectReference);
-  bool IsBypassed { get; set; }
 }
