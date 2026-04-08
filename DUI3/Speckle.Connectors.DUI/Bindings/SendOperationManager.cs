@@ -13,6 +13,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.DUI.Bindings;
 
@@ -98,7 +99,7 @@ public sealed class SendOperationManager(
         cancellationItem.Token
       );
 
-      var objects = await gatherObjects(modelCard, progress);
+      var objects = await gatherObjects.Invoke(modelCard, progress);
 
       if (objects.Count == 0)
       {
@@ -108,7 +109,7 @@ public sealed class SendOperationManager(
 
       var sendOperation = serviceScope.ServiceProvider.GetRequiredService<ISendOperation<T>>();
 
-      var (result, versionId) = await sendOperation.Send(
+      var (result, versionId, ingestionId) = await sendOperation.Send(
         objects,
         sendInfo,
         fileName,
@@ -118,7 +119,7 @@ public sealed class SendOperationManager(
         cancellationItem.Token
       );
 
-      await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults);
+      await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults, ingestionId);
     }
     catch (OperationCanceledException)
     {

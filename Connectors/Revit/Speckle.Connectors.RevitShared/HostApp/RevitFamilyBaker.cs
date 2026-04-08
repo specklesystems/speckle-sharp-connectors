@@ -4,7 +4,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
@@ -18,6 +17,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
 

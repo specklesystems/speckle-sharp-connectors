@@ -1,5 +1,3 @@
-using Speckle.Sdk;
-
 namespace Speckle.Converters.Civil3dShared.Helpers;
 
 /// <summary>
@@ -16,9 +14,9 @@ public sealed class PropertyHandler
     }
     catch (Exception e)
       when (e is InvalidOperationException
-        || e is ArgumentException argEx && !argEx.IsFatal()
-        || e is Autodesk.AutoCAD.Runtime.Exception acEx && !acEx.IsFatal() // eNotApplicable
-        || e is Autodesk.Civil.CivilException civilEx && !civilEx.IsFatal()
+        || e is ArgumentException
+        || e is Autodesk.AutoCAD.Runtime.Exception // eNotApplicable
+        || e is Autodesk.Civil.CivilException
       )
     {
       value = default;

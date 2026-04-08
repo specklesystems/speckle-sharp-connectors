@@ -3,8 +3,7 @@ using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.Common.Operations.Send;
+using Speckle.Connectors.Common.Builders;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
 using Speckle.Sdk;
@@ -12,7 +11,8 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
-using Speckle.Sdk.Serialisation.V2.Send;
+using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Send;
 
 namespace Speckle.Importers.Rhino.Internal;
 
@@ -22,10 +22,11 @@ internal sealed class Sender(
   IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
   IMixPanelManager mixpanel,
   IIngestionProgressManagerFactory progressManagerFactory,
+  ISendPipelineFactory sendPipelineFactory,
   ILogger<Sender> logger
 )
 {
-  public async Task<SerializeProcessResults> Send(
+  public async Task<RootObjectBuilderResult> Send(
     Project project,
     ModelIngestion ingestion,
     IClient speckleClient,
@@ -35,7 +36,6 @@ internal sealed class Sender(
     var progressManager = progressManagerFactory.CreateInstance(
       speckleClient,
       ingestion,
-      project.id,
       TimeSpan.FromSeconds(1.5),
       cancellationToken
     );
@@ -56,20 +56,30 @@ internal sealed class Sender(
       throw new SpeckleException("There are no objects found in the file");
     }
 
-    var operation = scope.ServiceProvider.GetRequiredService<SendOperation<RhinoObject>>();
-    var buildResults = await operation.Build(rhinoObjects, project.id, progressManager, cancellationToken);
-    var results = await operation.SendObjects(
-      buildResults.RootObject,
+    var rootContinuousTraversalBuilder = scope.ServiceProvider.GetRequiredService<
+      IRootContinuousTraversalBuilder<RhinoObject>
+    >();
+
+    var sendPipeline = sendPipelineFactory.CreateInstance(
       project.id,
+      ingestion.id,
       speckleClient.Account,
+      new RenderedStreamProgress(progressManager),
+      cancellationToken
+    );
+    var buildResult = await rootContinuousTraversalBuilder.Build(
+      rhinoObjects,
+      project.id,
+      sendPipeline,
       progressManager,
       cancellationToken
     );
+    buildResult.RootObject["version"] = 3;
 
     await TrackSendMetrics(project, speckleClient.Account);
-    logger.LogInformation("Root: {RootId}", results.RootId);
 
-    return results;
+    logger.LogInformation("Root: {RootId}", buildResult.RootObject.id);
+    return buildResult;
   }
 
   private async Task TrackSendMetrics(Project project, Account account)

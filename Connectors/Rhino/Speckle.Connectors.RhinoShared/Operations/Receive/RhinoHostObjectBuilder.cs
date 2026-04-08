@@ -1,6 +1,7 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Rhino.Render;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
@@ -18,6 +19,7 @@ using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -119,7 +121,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       using var _ = _activityFactory.Start("Render Materials");
       _threadContext.RunOnMain(() =>
       {
-        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies, baseLayerName);
+        _materialBaker.BakeMaterials(unpackedRoot.RenderMaterialProxies);
       });
     }
 
@@ -330,17 +332,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
+    if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
     {
-      atts.MaterialIndex = mIndex;
+      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, materialGuid) as RenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexSpeckleObj))
+      && (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(parentObjectId, out Guid parentGuid))
     )
     {
-      atts.MaterialIndex = mIndexSpeckleObj;
+      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, parentGuid) as RenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 

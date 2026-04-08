@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
-using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Civil3dShared;
@@ -50,34 +49,22 @@ public class Civil3dRootToSpeckleConverter : IRootToSpeckleConverter
 
     var objectConverter = _toSpeckle.ResolveConverter(type);
 
-    try
+    using var l = _settingsStore.Current.Document.LockDocument();
+    using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
+    var result = objectConverter.Convert(target);
+
+    // This is needed to retrieve property sets on solids
+    // Civil entity properties are retrieved in the CivilEntityToSpeckleTopLevelConverter
+    if (target is not CDB.Entity && target is ADB.Entity autocadEntity)
     {
-      using (var l = _settingsStore.Current.Document.LockDocument())
+      var properties = _propertiesExtractor.GetProperties(autocadEntity);
+      if (properties.Count > 0)
       {
-        using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
-        {
-          var result = objectConverter.Convert(target);
-
-          // This is needed to retrieve property sets on solids
-          // Civil entity properties are retrieved in the CivilEntityToSpeckleTopLevelConverter
-          if (target is not CDB.Entity && target is ADB.Entity autocadEntity)
-          {
-            var properties = _propertiesExtractor.GetProperties(autocadEntity);
-            if (properties.Count > 0)
-            {
-              result["properties"] = properties;
-            }
-          }
-
-          tr.Commit();
-          return result;
-        }
+        result["properties"] = properties;
       }
     }
-    catch (SpeckleException e)
-    {
-      Console.WriteLine(e);
-      throw; // Just rethrowing for now, Logs may be needed here.
-    }
+
+    tr.Commit();
+    return result;
   }
 }
