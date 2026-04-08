@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Extensions;
 using Speckle.Connectors.Common.Operations;
@@ -7,6 +8,7 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.DUI.Logging;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.InterfaceGenerator;
 using Speckle.Sdk;
 using Speckle.Sdk.Api;
@@ -38,8 +40,7 @@ public sealed class SendOperationManager(
     Func<SenderModelCard, IReadOnlyList<T>> gatherObjects,
     string? fileName,
     long? fileSizeBytes
-  )
-  {
+  ) =>
     await Process(
       commands,
       modelCardId,
@@ -48,7 +49,6 @@ public sealed class SendOperationManager(
       fileName,
       fileSizeBytes
     );
-  }
 
   public async Task Process<T>(
     ISendBindingUICommands commands,
@@ -57,8 +57,7 @@ public sealed class SendOperationManager(
     Func<SenderModelCard, Task<IReadOnlyList<T>>> gatherObjects,
     string? fileName,
     long? fileSizeBytes
-  )
-  {
+  ) =>
     await Process(
       commands,
       modelCardId,
@@ -67,7 +66,6 @@ public sealed class SendOperationManager(
       fileName,
       fileSizeBytes
     );
-  }
 
   public async Task Process<T>(
     ISendBindingUICommands commands,
@@ -79,6 +77,7 @@ public sealed class SendOperationManager(
   )
   {
     using var activity = activityFactory.Start();
+    var sendConversionCache = serviceScope.ServiceProvider.GetRequiredService<ISendConversionCache>();
     try
     {
       if (store.GetModelById(modelCardId) is not SenderModelCard modelCard)
@@ -86,12 +85,21 @@ public sealed class SendOperationManager(
         // Handle as GLOBAL ERROR at BrowserBridge
         throw new InvalidOperationException("No publish model card was found.");
       }
+
       using SendInfo sendInfo = GetSendInfo(modelCard);
       using var userScope = UserActivityScope.AddUserScope(sendInfo.Account);
 
       using var cancellationItem = cancellationManager.GetCancellationItem(modelCardId);
 
       initializeScope(serviceScope.ServiceProvider, modelCard);
+
+      // if user has disabled cache, wipe the in-memory cache before gathering and building objects
+      var configStore = serviceScope.ServiceProvider.GetRequiredService<IConfigStore>();
+      var isCacheDisabled = configStore.GetConnectorConfig().DisableCache;
+      if (isCacheDisabled)
+      {
+        sendConversionCache.ClearCache(); // clear whatever is currently in there to ensure 0% cache hits
+      }
 
       var progress = operationProgressManager.CreateOperationProgressEventHandler(
         commands.Bridge,
@@ -116,6 +124,7 @@ public sealed class SendOperationManager(
         fileSizeBytes,
         null,
         progress,
+        saveToCache: !isCacheDisabled,
         cancellationItem.Token
       );
 
