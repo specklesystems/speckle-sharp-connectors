@@ -124,8 +124,8 @@ public sealed class SendOperationManager(
         fileSizeBytes,
         null,
         progress,
-        cancellationItem.Token,
-        saveToCache: !isCacheDisabled
+        saveToCache: !isCacheDisabled,
+        cancellationItem.Token
       );
 
       await commands.SetModelSendResult(modelCardId, versionId, result.ConversionResults, ingestionId);

@@ -505,7 +505,16 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
     (SendOperationResult result, string versionId, string? ingestionId) = await sendOperation
-      .Send([rootCollectionWrapper], sendInfo, fileName, fileBytes, Parent.VersionMessage, progress, CancellationToken)
+      .Send(
+        [rootCollectionWrapper],
+        sendInfo,
+        fileName,
+        fileBytes,
+        Parent.VersionMessage,
+        progress,
+        true,
+        CancellationToken
+      )
       .ConfigureAwait(false);
 
     if (ingestionId != null)
