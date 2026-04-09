@@ -71,6 +71,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
 
     serviceCollection.AddScoped<IRootObjectBuilder<RhinoObject>, RhinoRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootContinuousTraversalBuilder<RhinoObject>, RhinoContinuousTraversalBuilder>();
     serviceCollection.AddScoped<
       IInstanceObjectsManager<RhinoObject, List<string>>,
       InstanceObjectsManager<RhinoObject, List<string>>

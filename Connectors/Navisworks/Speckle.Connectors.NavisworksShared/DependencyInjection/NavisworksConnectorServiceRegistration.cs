@@ -57,6 +57,7 @@ public static class NavisworksConnectorServiceRegistration
 
     // Sending operations
     serviceCollection.AddScoped<IRootObjectBuilder<NAV.ModelItem>, NavisworksRootObjectBuilder>();
+    serviceCollection.AddScoped<IRootContinuousTraversalBuilder<NAV.ModelItem>, NavisworksContinuousTraversalBuilder>();
     serviceCollection.AddScoped<SendOperation<NAV.ModelItem>>();
     serviceCollection.AddSingleton(DefaultTraversal.CreateTraversalFunc());
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();

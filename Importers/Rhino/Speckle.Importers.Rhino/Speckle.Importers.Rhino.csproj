@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.25.25328.11001"/>
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.25.25328.11001"/>
-    <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="8.25.25328.11001"/>
+    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" />
+    <PackageReference Include="RhinoWindows" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Rhino.Inside" />
   </ItemGroup>
 

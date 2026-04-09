@@ -20,6 +20,7 @@ using Speckle.Sdk.Api;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models.Extensions;
+using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
@@ -503,9 +504,34 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     });
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
     var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-    (SendOperationResult result, string versionId) = await sendOperation
-      .Send([rootCollectionWrapper], sendInfo, fileName, fileBytes, Parent.VersionMessage, progress, CancellationToken)
+    (SendOperationResult result, string versionId, string? ingestionId) = await sendOperation
+      .Send(
+        [rootCollectionWrapper],
+        sendInfo,
+        fileName,
+        fileBytes,
+        Parent.VersionMessage,
+        progress,
+        true,
+        CancellationToken
+      )
       .ConfigureAwait(false);
+
+    if (ingestionId != null)
+    {
+      Parent.Message = "Remote processing";
+      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
+      versionId = await ingestionTracker
+        .WaitForIngestionCompletion(
+          Parent.ApiClient,
+          sendInfo.ProjectId,
+          ingestionId,
+          reportProgress,
+          Id,
+          CancellationToken
+        )
+        .ConfigureAwait(false);
+    }
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };

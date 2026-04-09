@@ -12,6 +12,7 @@ using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Testing;
 
 namespace Speckle.Connectors.DUI.Tests;
