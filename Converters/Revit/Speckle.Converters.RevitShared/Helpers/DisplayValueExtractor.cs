@@ -783,19 +783,26 @@ public sealed class DisplayValueExtractor
     DB.Transform? curveTransform
   )
   {
+    DB.Transform? combined = (accumulatedTransform, curveTransform) switch
+    {
+      (not null, not null) => curveTransform.Multiply(accumulatedTransform),
+      _ => accumulatedTransform ?? curveTransform
+    };
+
     var coords = polyline.GetCoordinates();
 
-    if (accumulatedTransform is not null)
+    if (combined is null || combined.IsIdentity)
     {
-      coords = coords.Select(accumulatedTransform.OfPoint).ToList();
+      return DB.PolyLine.Create(coords);
     }
 
-    if (curveTransform is not null)
+    var transformed = new List<DB.XYZ>(coords.Count);
+    foreach (var pt in coords)
     {
-      coords = coords.Select(curveTransform.OfPoint).ToList();
+      transformed.Add(combined.OfPoint(pt));
     }
 
-    return DB.PolyLine.Create(coords.ToList());
+    return DB.PolyLine.Create(transformed);
   }
 
   /// <remarks>
