@@ -26,6 +26,4 @@ public class NullSendConversionCache : ISendConversionCache
     objectReference = null;
     return false;
   }
-
-  public bool IsBypassed { get; set; }
 }

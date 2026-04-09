@@ -142,11 +142,6 @@ public sealed class SendOperationManager(
       logger.LogModelCardHandledError(ex);
       await commands.SetModelError(modelCardId, ex);
     }
-    finally
-    {
-      // state always reset to false
-      sendConversionCache.IsBypassed = false;
-    }
   }
 
   private SendInfo GetSendInfo(SenderModelCard modelCard)
