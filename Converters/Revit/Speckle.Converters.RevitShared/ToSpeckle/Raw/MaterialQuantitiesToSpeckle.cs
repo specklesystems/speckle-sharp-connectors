@@ -38,8 +38,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   // Known limitation: custom material names are not covered.
   private static readonly HashSet<string> s_excludedMaterialNames = ["Default Light Source"];
 
-  private static bool IsExcludedMaterial(string materialName) => s_excludedMaterialNames.Contains(materialName);
-
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -96,10 +94,6 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         // add material props
         if (TryAddMaterialPropertiesToQuantitiesDict(matId, materialQuantity, out string matName))
         {
-          if (IsExcludedMaterial(matName))
-          {
-            continue;
-          }
           quantities[matName] = materialQuantity;
         }
 
@@ -215,6 +209,10 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     matName = "";
     if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
     {
+      if (s_excludedMaterialNames.Contains(material.Name))
+      {
+        return false;
+      }
       materialQuantity["materialName"] = material.Name;
       materialQuantity["materialCategory"] = material.MaterialCategory;
       materialQuantity["materialClass"] = material.MaterialClass;
