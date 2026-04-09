@@ -8,7 +8,6 @@ namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 public sealed class DisplayValueExtractor
 {
   private readonly ITypedConverter<TSM.Solid, SOG.Mesh> _meshConverter;
-  private readonly ITypedConverter<TG.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly ITypedConverter<TG.Arc, SOG.Arc> _arcConverter;
@@ -16,7 +15,6 @@ public sealed class DisplayValueExtractor
 
   public DisplayValueExtractor(
     ITypedConverter<TSM.Solid, SOG.Mesh> meshConverter,
-    ITypedConverter<TG.Point, SOG.Point> pointConverter,
     ITypedConverter<TG.LineSegment, SOG.Line> lineConverter,
     ITypedConverter<TG.Arc, SOG.Arc> arcConverter,
     ITypedConverter<TSM.Grid, IEnumerable<Base>> gridConverter,
@@ -24,7 +22,6 @@ public sealed class DisplayValueExtractor
   )
   {
     _meshConverter = meshConverter;
-    _pointConverter = pointConverter;
     _lineConverter = lineConverter;
     _settingsStore = settingsStore;
     _lineConverter = lineConverter;

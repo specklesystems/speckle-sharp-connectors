@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Build;
 
-public static class Github
+internal static class Github
 {
   public static async Task BuildInstallers(string token, string runId, string version)
   {

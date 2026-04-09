@@ -9,15 +9,10 @@ namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base>>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-  private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
 
-  public GridToSpeckleConverter(
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
-    ITypedConverter<TG.LineSegment, SOG.Line> lineConverter
-  )
+  public GridToSpeckleConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _lineConverter = lineConverter;
   }
 
   // this function gets the scale factor from the coordinate system

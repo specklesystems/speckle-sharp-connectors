@@ -7,11 +7,15 @@ public class PassthroughProgress : IProgress<ProgressArgs>
 {
   private readonly Action<ProgressArgs> _progressCallback;
   private readonly Dictionary<ProgressEvent, long> _totals = new();
-
+#if NET5_0_OR_GREATER
+  private readonly ProgressEvent[] _progressEventTypes = Enum.GetValues<ProgressEvent>();
+#else
+  private readonly Array _progressEventTypes = Enum.GetValues(typeof(ProgressEvent));
+#endif
   public PassthroughProgress(Action<ProgressArgs> progressCallback)
   {
     _progressCallback = progressCallback;
-    foreach (ProgressEvent value in Enum.GetValues(typeof(ProgressEvent)))
+    foreach (ProgressEvent value in _progressEventTypes)
     {
       _totals[value] = 0;
     }

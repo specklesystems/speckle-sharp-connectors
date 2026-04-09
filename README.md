@@ -47,11 +47,11 @@ Make sure to also check and ⭐️ these other Speckle next generation repositor
 
 ## Developing
 
-It is recommended that you use Jetbrains Rider (version 2024.3 or greater) or Visual Studio 2022 (version 17.13 or greater)
-The project requires version 8.0.4xx of the .NET SDK.
-You can download the latest version from https://dotnet.microsoft.com/en-us/download/dotnet/8.0
+It is recommended that you use Jetbrains Rider (version 2025.3 or greater) or Visual Studio 2026 (version 18.4 or greater)
+The project requires version 10.0.2xx of the .NET SDK.
+You can download the latest version from https://dotnet.microsoft.com/en-us/download/dotnet/10.0
 
-From there you can open the main `Speckle.Connectors.sln` solution and build the project
+From there you can open the main `Speckle.Connectors.slnx` solution and build the project
 
 For good development experience and environment setup, you the commands are avaible needed.
 
@@ -71,7 +71,7 @@ We're using [CSharpier](https://github.com/belav/csharpier) to format our code. 
   For best DX, we recommend turning on CSharpier's `reformat on save` setting if you've installed it in your IDE.
 
 ### Clean Locks
-We're using npm package locks to store exact and versioned dependency trees. Occasionally you will need to clean your local package-lock files, eg when switching between `Speckle.Connectors.sln` and `Local.sln`.
+We're using npm package locks to store exact and versioned dependency trees. Occasionally you will need to clean your local package-lock files, eg when switching between `Speckle.Connectors.slnx` and `Local.slnx`.
 Run this command in CLI to delete all package.lock.json files before a restore:
 ```
 .\build.ps1 clean-locks
@@ -84,7 +84,7 @@ To make sure your local environment is ready for a clean build, run this command
 ```
 ### Deep Clean Local
 
-This is for users of the `Local.sln` solution:
+This is for users of the `Local.slnx` solution:
 
 To make sure your local environment is ready for a clean build, run this command to delete all `bin` and `obj` directories and restore all projects:
 ```
@@ -92,19 +92,11 @@ To make sure your local environment is ready for a clean build, run this command
 ```
 
 ## Local development with SDK changes
-If you'd like to make changes to the [`speckle-sharp-sdk`](https://github.com/specklesystems/speckle-sharp-sdk) side-by-side with changes to this repo's projects, use `**Local.sln**`. <br/>
+If you'd like to make changes to the [`speckle-sharp-sdk`](https://github.com/specklesystems/speckle-sharp-sdk) side-by-side with changes to this repo's projects, use `**Local.slnx**`. <br/>
 This solution includes the Core and Objects projects from the speckle-sharp-sdk repo, and uses a new Configuration to create a build directory alongside `Debug` and `Release`.
 
 > [!WARNING]
-> Using `Local.sln` will modify all your package locks. **Don't check these in!** Revert with the `clean-locks` command or use the regular solution to revert once your changes are made.
-
-## Switching to SLNX
-
-SLNX was introduced with .NET 9 (in May 2024), Visual Studio 17.13 and Rider 2024.3.  The older SLNs being used remain for now but will be removed when .NET 10 is introduced to the repo.  SLNXs specific to certain host apps are being generated from the main SLN to allow for faster developmenet.
-
-[https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/)
-
-[https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/](https://devblogs.microsoft.com/visualstudio/new-simpler-solution-file-format/)
+> Using `Local.slnx` will modify all your package locks. **Don't check these in!** Revert with the `clean-locks` command or use the regular solution to revert once your changes are made.
 
 # Security and Licensing
       

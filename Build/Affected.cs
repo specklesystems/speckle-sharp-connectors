@@ -4,7 +4,7 @@ using static SimpleExec.Command;
 
 namespace Build;
 
-public static class Affected
+internal static class Affected
 {
   public static readonly string Root = Environment.CurrentDirectory;
   public const string AFFECTED_PROJECT = "affected.proj";

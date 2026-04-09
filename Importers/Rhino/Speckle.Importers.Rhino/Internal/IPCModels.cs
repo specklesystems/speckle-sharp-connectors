@@ -19,7 +19,7 @@ internal readonly struct ImporterArgs
   public required Application HostApplication { get; init; }
 }
 
-public readonly struct ImporterResponse
+internal readonly struct ImporterResponse
 {
   public string? RootObjectId { get; init; }
   public string? ErrorMessage { get; init; }

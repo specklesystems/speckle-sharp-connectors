@@ -28,7 +28,6 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly IReferencePointConverter _referencePointConverter;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public DisplayValueExtractor(
@@ -42,7 +41,6 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle toSpeckleScalingService,
-    IReferencePointConverter referencePointConverter,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
@@ -53,7 +51,6 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
-    _referencePointConverter = referencePointConverter;
     _xyzToPointConverter = xyzToPointConverter;
   }
 

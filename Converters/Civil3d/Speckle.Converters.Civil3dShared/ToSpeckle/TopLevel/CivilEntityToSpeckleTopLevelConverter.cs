@@ -14,7 +14,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
-  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
   private readonly CorridorHandler _corridorHandler;
 
@@ -22,7 +21,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor,
     PropertiesExtractor propertiesExtractor,
     CorridorHandler corridorHandler
   )
@@ -30,7 +28,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
-    _classPropertiesExtractor = classPropertiesExtractor;
     _propertiesExtractor = propertiesExtractor;
     _corridorHandler = corridorHandler;
   }

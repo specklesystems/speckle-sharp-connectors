@@ -15,15 +15,10 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Raw;
 public class LineToSpeckleConverter : ITypedConverter<CsiFrameWrapper, Line>
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly ITypedConverter<CsiJointWrapper, Point> _pointConverter;
 
-  public LineToSpeckleConverter(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    ITypedConverter<CsiJointWrapper, Point> pointConverter
-  )
+  public LineToSpeckleConverter(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _pointConverter = pointConverter;
   }
 
   public Line Convert(CsiFrameWrapper target)

@@ -12,7 +12,5 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle.Geometry;
 /// Uses a rank lower than SPECKLE_DEFAULT_RANK so specific converters always win.
 /// </summary>
 [NameAndRankValue(typeof(ADB.Entity), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK - 1)]
-public class FallbackEntityToSpeckleConverter(
-  IConverterManager<IToSpeckleTopLevelConverter> converterManager,
-  IConverterSettingsStore<Plant3dConversionSettings> settingsStore
-) : Plant3dEntityToSpeckleConverter(converterManager, settingsStore);
+public class FallbackEntityToSpeckleConverter(IConverterManager<IToSpeckleTopLevelConverter> converterManager)
+  : Plant3dEntityToSpeckleConverter(converterManager);

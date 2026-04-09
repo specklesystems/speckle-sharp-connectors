@@ -168,7 +168,7 @@ public class AutocadRibbon
 
     Assembly assembly = Assembly.GetExecutingAssembly();
     string[] assemblyResources = GetType().Assembly.GetManifestResourceNames();
-    string? resource = assemblyResources.Where(o => o.EndsWith(sourceName)).FirstOrDefault();
+    string? resource = assemblyResources.FirstOrDefault(o => o.EndsWith(sourceName));
     if (string.IsNullOrEmpty(resource))
     {
       return false;

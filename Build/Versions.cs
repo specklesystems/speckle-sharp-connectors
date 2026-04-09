@@ -3,7 +3,7 @@ using static SimpleExec.Command;
 
 namespace Build;
 
-public static class Versions
+internal static class Versions
 {
   private static string? s_currentTag;
   private static SemVersion? s_currentVersion;

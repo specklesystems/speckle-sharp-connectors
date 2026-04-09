@@ -1,8 +1,8 @@
 ﻿namespace Build;
 
-public static class Consts
+internal static class Consts
 {
-  public static readonly string[] Solutions = ["Speckle.Connectors.sln"];
+  public static readonly string[] Solutions = ["Speckle.Connectors.slnx"];
 
   public static readonly ProjectGroup[] ProjectGroups =
   {
@@ -75,9 +75,9 @@ public static class Consts
   };
 }
 
-public readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<InstallerAsset> Projects)
+internal readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<InstallerAsset> Projects)
 {
   public override string ToString() => $"{HostAppSlug}";
 }
 
-public readonly record struct InstallerAsset(string ProjectPath, string TargetName);
+internal readonly record struct InstallerAsset(string ProjectPath, string TargetName);

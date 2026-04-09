@@ -1,7 +1,5 @@
 using Autodesk.Revit.DB;
-using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Extensions;
-using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
@@ -11,14 +9,7 @@ namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 /// </summary>
 public class ClassPropertiesExtractor
 {
-  private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-
   private readonly Dictionary<int, string> _worksetCache = new();
-
-  public ClassPropertiesExtractor(IConverterSettingsStore<RevitConversionSettings> converterSettings)
-  {
-    _converterSettings = converterSettings;
-  }
 
   public Dictionary<string, object?> GetClassProperties(DB.Element element)
   {

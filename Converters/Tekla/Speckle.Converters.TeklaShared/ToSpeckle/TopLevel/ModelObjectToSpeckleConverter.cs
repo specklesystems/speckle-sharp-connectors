@@ -13,19 +13,16 @@ public class ModelObjectToSpeckleConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
-  private readonly ClassPropertyExtractor _classPropertyExtractor;
 
   public ModelObjectToSpeckleConverter(
     IConverterSettingsStore<TeklaConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
-    PropertiesExtractor propertiesExtractor,
-    ClassPropertyExtractor classPropertyExtractor
+    PropertiesExtractor propertiesExtractor
   )
   {
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _propertiesExtractor = propertiesExtractor;
-    _classPropertyExtractor = classPropertyExtractor;
   }
 
   public Base Convert(object target) => Convert((TSM.ModelObject)target);
