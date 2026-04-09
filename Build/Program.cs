@@ -145,7 +145,7 @@ Target(
     dependsOn: [RESTORE_TOOLS],
     () =>
     {
-        Run("dotnet", "csharpier --check ./");
+        Run("dotnet", "csharpier check ./");
     }
 );
 
