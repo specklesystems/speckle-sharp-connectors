@@ -37,7 +37,7 @@
       $(NoWarn)
     </NoWarn>
   </PropertyGroup>
-
+  
   <PropertyGroup Label="Repo Info">
     <RepositoryUrl>https://github.com/specklesystems/speckle-sharp-connectors</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
