@@ -130,7 +130,7 @@ Target(
 
 Target(
     DETECT_AFFECTED,
-    DependsOn(RESTORE_TOOLS),
+    dependsOn: [RESTORE_TOOLS],
     async () =>
     {
         foreach (var group in await Affected.GetAffectedProjectGroups())
@@ -142,7 +142,7 @@ Target(
 
 Target(
     FORMAT,
-    DependsOn(RESTORE_TOOLS),
+    dependsOn: [RESTORE_TOOLS],
     () =>
     {
         Run("dotnet", "csharpier --check ./");
@@ -151,7 +151,7 @@ Target(
 
 Target(
     RESTORE,
-    DependsOn(FORMAT),
+    dependsOn: [FORMAT],
     Consts.Solutions,
     async s =>
     {
@@ -164,7 +164,7 @@ Target(
 
 Target(
     BUILD,
-    DependsOn(RESTORE),
+    dependsOn: [RESTORE],
     Consts.Solutions,
     async s =>
     {
@@ -183,7 +183,7 @@ Target(GEN_SOLUTIONS, Solutions.GenerateSolutions);
 
 Target(
     TEST_AFFECTED,
-    DependsOn(DETECT_AFFECTED, BUILD, CHECK_SOLUTIONS),
+    dependsOn: [DETECT_AFFECTED, BUILD, CHECK_SOLUTIONS],
     async () =>
     {
         foreach (var s in await Affected.GetTestProjects())
@@ -195,7 +195,7 @@ Target(
 
 Target(
     TEST,
-    DependsOn(BUILD, CHECK_SOLUTIONS),
+    dependsOn: [BUILD, CHECK_SOLUTIONS],
     Glob.Files(".", "**/*.Tests.csproj"),
     file =>
     {
@@ -206,11 +206,11 @@ Target(
     }
 );
 
-Target(TEST_AND_PACK, DependsOn(TEST, PACK));
+Target(TEST_AND_PACK, dependsOn: [TEST, PACK]);
 
 Target(
     PACK,
-    DependsOn(BUILD),
+    dependsOn: [BUILD],
     Consts.Solutions,
     async solution =>
     {
@@ -227,7 +227,7 @@ Target(
 
 Target(
     ZIP,
-    DependsOn(TEST_AFFECTED),
+    dependsOn: [TEST_AFFECTED],
     async () =>
     {
         var version = await Versions.ComputeVersion();
@@ -278,6 +278,6 @@ Target(
     }
 );
 
-Target("default", DependsOn(TEST_AFFECTED), () => Console.WriteLine("Done!"));
+Target("default", dependsOn: [TEST_AFFECTED], () => Console.WriteLine("Done!"));
 
 await RunTargetsAndExitAsync(args).ConfigureAwait(true);
