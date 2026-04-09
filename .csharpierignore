@@ -1,5 +1,6 @@
 Directory.Build.targets
 Directory.Build.props
+Directory.Packages.props
 
 *.slnx
 
