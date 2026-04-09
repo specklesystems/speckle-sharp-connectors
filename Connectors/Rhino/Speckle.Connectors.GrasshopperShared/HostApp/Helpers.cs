@@ -118,7 +118,7 @@ public static class GrasshopperHelpers
       M41 = rhinoTransform.M30,
       M42 = rhinoTransform.M31,
       M43 = rhinoTransform.M32,
-      M44 = rhinoTransform.M33
+      M44 = rhinoTransform.M33,
     };
 
     return m;

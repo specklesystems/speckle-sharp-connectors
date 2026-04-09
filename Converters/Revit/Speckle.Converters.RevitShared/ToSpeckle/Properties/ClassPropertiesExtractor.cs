@@ -30,13 +30,12 @@ public class ClassPropertiesExtractor
   // gets the properties on the db.element class
   private Dictionary<string, object?> ExtractElementProperties(DB.Element element)
   {
-    Dictionary<string, object?> elementProperties =
-      new()
-      {
-        { "elementId", element.Id.ToString() },
-        { "builtInCategory", element.Category?.GetBuiltInCategory().ToString() },
-        { "worksetId", element.WorksetId?.ToString() }
-      };
+    Dictionary<string, object?> elementProperties = new()
+    {
+      { "elementId", element.Id.ToString() },
+      { "builtInCategory", element.Category?.GetBuiltInCategory().ToString() },
+      { "worksetId", element.WorksetId?.ToString() },
+    };
 
     int? worksetId = element.WorksetId?.IntegerValue;
     if (worksetId is not null)

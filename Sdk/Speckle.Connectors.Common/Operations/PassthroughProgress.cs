@@ -12,6 +12,7 @@ public class PassthroughProgress : IProgress<ProgressArgs>
 #else
   private readonly Array _progressEventTypes = Enum.GetValues(typeof(ProgressEvent));
 #endif
+
   public PassthroughProgress(Action<ProgressArgs> progressCallback)
   {
     _progressCallback = progressCallback;

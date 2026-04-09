@@ -101,13 +101,12 @@ public class RhinoMaterialUnpacker
       return null;
     }
 
-    RenderMaterialProxy renderMaterialProxy =
-      new()
-      {
-        value = myMaterial,
-        applicationId = materialId,
-        objects = new()
-      };
+    RenderMaterialProxy renderMaterialProxy = new()
+    {
+      value = myMaterial,
+      applicationId = materialId,
+      objects = new(),
+    };
 
     // POC: we are not attaching source information here, since we do not support material inheritance
     return renderMaterialProxy;
@@ -228,17 +227,16 @@ public class RhinoMaterialUnpacker
       roughness = Math.Min(Math.Max(0, roughness), 1); // Math.Clamp() only from C# 8.0
     }
 
-    SpeckleRenderMaterial speckleRenderMaterial =
-      new()
-      {
-        name = renderMaterialName,
-        opacity = opacity,
-        metalness = pbRenderMaterial.Metallic,
-        roughness = roughness,
-        diffuse = diffuse.ToArgb(),
-        emissive = emissive.ToArgb(),
-        applicationId = renderMaterial.Id.ToString()
-      };
+    SpeckleRenderMaterial speckleRenderMaterial = new()
+    {
+      name = renderMaterialName,
+      opacity = opacity,
+      metalness = pbRenderMaterial.Metallic,
+      roughness = roughness,
+      diffuse = diffuse.ToArgb(),
+      emissive = emissive.ToArgb(),
+      applicationId = renderMaterial.Id.ToString(),
+    };
 
     // add additional dynamic props for rhino material receive
     speckleRenderMaterial["typeName"] = renderMaterial.TypeName;

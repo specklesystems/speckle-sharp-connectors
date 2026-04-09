@@ -38,7 +38,7 @@ public class SubDToSpeckleConverter : ITypedConverter<RG.SubD, SOG.SubDX>
     {
       displayValue = displayValue,
       encodedValue = subdEncoding,
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
 
     return bx;

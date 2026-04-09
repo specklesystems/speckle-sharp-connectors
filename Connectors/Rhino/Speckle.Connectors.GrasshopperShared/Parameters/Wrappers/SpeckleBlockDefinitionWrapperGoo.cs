@@ -31,7 +31,7 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       },
 
       ApplicationId = Guid.NewGuid().ToString(),
-      Name = "Unnamed Block"
+      Name = "Unnamed Block",
     };
   }
 
@@ -79,6 +79,6 @@ public partial class SpeckleBlockDefinitionWrapperGoo : GH_Goo<SpeckleBlockDefin
       Base = (Base)Value.InstanceDefinitionProxy.ShallowCopy(),
       Name = Value.Name,
       Objects = Value.Objects.Select(o => o.DeepCopy()).ToList(),
-      ApplicationId = Value.ApplicationId
+      ApplicationId = Value.ApplicationId,
     };
 }

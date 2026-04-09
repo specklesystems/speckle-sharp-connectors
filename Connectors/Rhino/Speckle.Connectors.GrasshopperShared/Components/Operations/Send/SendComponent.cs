@@ -143,7 +143,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
         Name = docName,
         Path = [docName],
         Color = null,
-        Material = null
+        Material = null,
       };
 
       int skippedCount = 0;
@@ -312,14 +312,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
     await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
 
-    SpeckleUrlModelVersionResource createdVersionResource =
-      new(
-        new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
-        sendInfo.WorkspaceId,
-        sendInfo.ProjectId,
-        sendInfo.ModelId,
-        versionId
-      );
+    SpeckleUrlModelVersionResource createdVersionResource = new(
+      new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
+      sendInfo.WorkspaceId,
+      sendInfo.ProjectId,
+      sendInfo.ModelId,
+      versionId
+    );
     Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
     return new SendComponentOutput(createdVersionResource, versionId);
   }

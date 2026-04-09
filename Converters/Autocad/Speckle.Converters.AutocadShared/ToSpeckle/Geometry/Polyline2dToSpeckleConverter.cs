@@ -174,21 +174,20 @@ public class Polyline2dToSpeckleConverter
       target.Normal
     );
 
-    SOG.Autocad.AutocadPolycurve polycurve =
-      new()
-      {
-        segments = segments,
-        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // convert with reference point
-        bulges = bulges,
-        tangents = tangents,
-        normal = normal,
-        elevation = elevation,
-        polyType = polyType,
-        closed = target.Closed,
-        length = target.Length,
-        area = target.Area,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Autocad.AutocadPolycurve polycurve = new()
+    {
+      segments = segments,
+      value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // convert with reference point
+      bulges = bulges,
+      tangents = tangents,
+      normal = normal,
+      elevation = elevation,
+      polyType = polyType,
+      closed = target.Closed,
+      length = target.Length,
+      area = target.Area,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return polycurve;
   }

@@ -53,7 +53,7 @@ public class LineToSpeckleConverter : ITypedConverter<CsiFrameWrapper, Line>
     {
       start = new Point(startX, startY, startZ, _settingsStore.Current.SpeckleUnits),
       end = new Point(endX, endY, endZ, _settingsStore.Current.SpeckleUnits),
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 }

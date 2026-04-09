@@ -102,7 +102,7 @@ public class CreateCollection : VariableParameterComponentBase
       Color = null,
       Material = null,
       Topology = GrasshopperHelpers.GetParamTopology(inputParam),
-      ApplicationId = inputParam.InstanceGuid.ToString()
+      ApplicationId = inputParam.InstanceGuid.ToString(),
     };
 
     var duplicateNames = new HashSet<string>();

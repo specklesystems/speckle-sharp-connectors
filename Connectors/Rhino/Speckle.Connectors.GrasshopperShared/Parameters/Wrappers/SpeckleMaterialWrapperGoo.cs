@@ -51,7 +51,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
           Base = ToSpeckleRenderMaterial(material),
           Name = material.Name,
           RhinoMaterial = material,
-          RhinoRenderMaterialId = Guid.Empty
+          RhinoRenderMaterialId = Guid.Empty,
         };
         return true;
       case SpeckleRenderMaterial speckleMaterial:
@@ -90,16 +90,15 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
 
   private SpeckleRenderMaterial ToSpeckleRenderMaterial(Rhino.Display.DisplayMaterial mat)
   {
-    SpeckleRenderMaterial speckleRenderMaterial =
-      new()
-      {
-        name = mat.GetSpeckleApplicationId(),
-        opacity = 1 - mat.Transparency,
-        metalness = mat.Shine,
-        diffuse = mat.Diffuse.ToArgb(),
-        emissive = mat.Emission.ToArgb(),
-        applicationId = mat.GetSpeckleApplicationId(),
-      };
+    SpeckleRenderMaterial speckleRenderMaterial = new()
+    {
+      name = mat.GetSpeckleApplicationId(),
+      opacity = 1 - mat.Transparency,
+      metalness = mat.Shine,
+      diffuse = mat.Diffuse.ToArgb(),
+      emissive = mat.Emission.ToArgb(),
+      applicationId = mat.GetSpeckleApplicationId(),
+    };
 
     // add additional dynamic props for rhino material receive
     speckleRenderMaterial["specular"] = mat.Specular.ToArgb();
@@ -110,18 +109,17 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
 
   private SpeckleRenderMaterial ToSpeckleRenderMaterial(Material mat)
   {
-    SpeckleRenderMaterial speckleRenderMaterial =
-      new()
-      {
-        name = mat.Name,
-        opacity = 1 - mat.Transparency,
-        diffuse = mat.DiffuseColor.ToArgb(),
-        emissive = mat.EmissionColor.ToArgb(),
-        applicationId = mat.Name,
-        ["specular"] = mat.SpecularColor.ToArgb(),
-        ["shine"] = mat.AmbientColor,
-        ["ior"] = mat.IndexOfRefraction
-      };
+    SpeckleRenderMaterial speckleRenderMaterial = new()
+    {
+      name = mat.Name,
+      opacity = 1 - mat.Transparency,
+      diffuse = mat.DiffuseColor.ToArgb(),
+      emissive = mat.EmissionColor.ToArgb(),
+      applicationId = mat.Name,
+      ["specular"] = mat.SpecularColor.ToArgb(),
+      ["shine"] = mat.AmbientColor,
+      ["ior"] = mat.IndexOfRefraction,
+    };
 
     return speckleRenderMaterial;
   }
@@ -144,6 +142,6 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
       EmissionColor = mat.emissiveColor,
       Transparency = 1 - mat.opacity,
       Shine = mat["shine"] is double shine ? shine : default,
-      IndexOfRefraction = mat["ior"] is double ior ? ior : default
+      IndexOfRefraction = mat["ior"] is double ior ? ior : default,
     };
 }

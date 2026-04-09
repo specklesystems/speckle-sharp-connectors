@@ -54,7 +54,7 @@ public class Solid3dToSpeckleConverter : IToSpeckleTopLevelConverter
       baseCurves = null,
       elements = [],
       units = _settingsStore.Current.SpeckleUnits,
-      applicationId = target.Handle.Value.ToString()
+      applicationId = target.Handle.Value.ToString(),
     };
 
     // Attach SAT encoding for round-trip

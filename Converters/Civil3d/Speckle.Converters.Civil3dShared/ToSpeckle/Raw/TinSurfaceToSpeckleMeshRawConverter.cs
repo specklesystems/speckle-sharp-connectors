@@ -36,7 +36,7 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
         {
           triangle.Vertex1.Location,
           triangle.Vertex2.Location,
-          triangle.Vertex3.Location
+          triangle.Vertex3.Location,
         };
         foreach (Point3d p in triangleVertices)
         {
@@ -62,13 +62,12 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
       }
     }
 
-    SOG.Mesh mesh =
-      new()
-      {
-        faces = faces,
-        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Mesh mesh = new()
+    {
+      faces = faces,
+      vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return mesh;
   }

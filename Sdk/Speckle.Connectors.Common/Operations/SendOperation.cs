@@ -145,8 +145,11 @@ public sealed class SendOperation<T>(
         WriteReferencesToCache(buildResult.ConversionResults, sendInfo.ProjectId);
       }
 
-      SendOperationResult result =
-        new(buildResult.RootObject.id!, new Dictionary<Id, ObjectReference>(), buildResult.ConversionResults);
+      SendOperationResult result = new(
+        buildResult.RootObject.id!,
+        new Dictionary<Id, ObjectReference>(),
+        buildResult.ConversionResults
+      );
 
       // NOTE: clients do not need to complete the ingestion - that's going to the be the server's job
       // string createdVersionId = await sendInfo.Client.Ingestion.Complete(

@@ -53,13 +53,12 @@ public class AutocadRibbon
     RibbonPanel panel = new() { Source = source };
     tab.Panels.Add(panel);
 
-    RibbonToolTip speckleToolTip =
-      new()
-      {
-        Title = "Speckle",
-        Content = $"Next Gen Speckle Connector for {AppUtils.App.Name}",
-        IsHelpEnabled = true // Without this "Press F1 for help" does not appear in the tooltip
-      };
+    RibbonToolTip speckleToolTip = new()
+    {
+      Title = "Speckle",
+      Content = $"Next Gen Speckle Connector for {AppUtils.App.Name}",
+      IsHelpEnabled = true, // Without this "Press F1 for help" does not appear in the tooltip
+    };
 
     _ = CreateSpeckleButton("Speckle", source, null, speckleToolTip, "logo");
   }
@@ -121,7 +120,7 @@ public class AutocadRibbon
       ShowText = true,
       ToolTip = tooltip,
       HelpSource = new System.Uri("https://speckle.guide/user/autocadcivil.html"),
-      Size = RibbonItemSize.Large
+      Size = RibbonItemSize.Large,
     };
 
     if (TryLoadPngImgSource(imageName + "16.png", out ImageSource? imageSource))

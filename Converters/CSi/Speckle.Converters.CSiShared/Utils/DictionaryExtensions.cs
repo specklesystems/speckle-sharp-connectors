@@ -37,6 +37,6 @@ public static class DictionaryExtensions
     {
       ["name"] = key,
       ["value"] = value,
-      ["units"] = units
+      ["units"] = units,
     };
 }

@@ -58,16 +58,15 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       }
 
       // create section proxy
-      GroupProxy sectionProxy =
-        new()
-        {
-          id = sectionName,
-          name = sectionName,
-          applicationId = sectionName,
-          objects = frameIds,
-          ["type"] = "Frame Section",
-          ["properties"] = properties
-        };
+      GroupProxy sectionProxy = new()
+      {
+        id = sectionName,
+        name = sectionName,
+        applicationId = sectionName,
+        objects = frameIds,
+        ["type"] = "Frame Section",
+        ["properties"] = properties,
+      };
 
       yield return sectionProxy;
     }
@@ -92,16 +91,15 @@ public class EtabsSectionUnpacker : ISectionUnpacker
       }
 
       // create section proxy
-      GroupProxy sectionProxy =
-        new()
-        {
-          id = sectionName,
-          name = sectionName,
-          applicationId = sectionName,
-          objects = frameIds,
-          ["type"] = "Shell Section", // since sectionProxies are a flat list, need some way to distinguish from frame
-          ["properties"] = properties // openings will just have an empty dict here
-        };
+      GroupProxy sectionProxy = new()
+      {
+        id = sectionName,
+        name = sectionName,
+        applicationId = sectionName,
+        objects = frameIds,
+        ["type"] = "Shell Section", // since sectionProxies are a flat list, need some way to distinguish from frame
+        ["properties"] = properties, // openings will just have an empty dict here
+      };
 
       yield return sectionProxy;
     }

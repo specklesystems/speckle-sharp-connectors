@@ -18,14 +18,13 @@ public class MeshByMaterialDictionaryToSpeckle
   private readonly ITypedConverter<List<DB.Mesh>, SOG.Mesh> _meshListConverter;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
 
-  private readonly RenderMaterial _transparentMaterial =
-    new()
-    {
-      name = "Transparent",
-      diffuse = System.Drawing.Color.Transparent.ToArgb(),
-      opacity = 0.3,
-      applicationId = "material_Transparent"
-    };
+  private readonly RenderMaterial _transparentMaterial = new()
+  {
+    name = "Transparent",
+    diffuse = System.Drawing.Color.Transparent.ToArgb(),
+    opacity = 0.3,
+    applicationId = "material_Transparent",
+  };
 
   public MeshByMaterialDictionaryToSpeckle(
     ITypedConverter<List<DB.Mesh>, SOG.Mesh> meshListConverter,
@@ -102,24 +101,23 @@ public class MeshByMaterialDictionaryToSpeckle
       }
       meshMatMap[speckleMesh.applicationId.NotNull()] = materialIdString;
 
-      RenderMaterial? renderMaterial = args.makeTransparent
-        ? _transparentMaterial
+      RenderMaterial? renderMaterial =
+        args.makeTransparent ? _transparentMaterial
         : _converterSettings.Current.Document.GetElement(materialId) is DB.Material material
           ? _speckleRenderMaterialConverter.Convert(material)
-          : null;
+        : null;
 
       // Create proxy but DON'T populate objects list yet
       if (renderMaterial is not null)
       {
         if (!materialProxyMap.ContainsKey(materialIdString))
         {
-          RenderMaterialProxy? renderMaterialProxy =
-            new()
-            {
-              value = renderMaterial,
-              applicationId = materialId.ToString(),
-              objects = []
-            };
+          RenderMaterialProxy? renderMaterialProxy = new()
+          {
+            value = renderMaterial,
+            applicationId = materialId.ToString(),
+            objects = [],
+          };
           materialProxyMap[materialIdString] = renderMaterialProxy;
         }
       }

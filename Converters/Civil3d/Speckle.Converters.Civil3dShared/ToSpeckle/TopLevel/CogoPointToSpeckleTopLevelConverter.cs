@@ -40,18 +40,17 @@ public class CogoPointToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     // get additional class properties
     Dictionary<string, object?> props = new() { ["number"] = target.PointNumber, ["northing"] = target.Northing };
 
-    Civil3dObject civilObject =
-      new()
-      {
-        name = name ?? "",
-        type = target.GetType().ToString().Split('.').Last(),
-        baseCurves = null,
-        elements = new(),
-        displayValue = new() { displayPoint },
-        properties = props,
-        units = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.Id.GetSpeckleApplicationId()
-      };
+    Civil3dObject civilObject = new()
+    {
+      name = name ?? "",
+      type = target.GetType().ToString().Split('.').Last(),
+      baseCurves = null,
+      elements = new(),
+      displayValue = new() { displayPoint },
+      properties = props,
+      units = _settingsStore.Current.SpeckleUnits,
+      applicationId = target.Id.GetSpeckleApplicationId(),
+    };
 
     return civilObject;
   }

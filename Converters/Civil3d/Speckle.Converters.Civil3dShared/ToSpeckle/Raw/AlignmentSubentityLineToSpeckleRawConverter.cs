@@ -25,18 +25,20 @@ public class AlignmentSubentityLineToSpeckleRawConverter : ITypedConverter<CDB.A
     SOG.Point start = _pointConverter.Convert(target.StartPoint);
     SOG.Point end = _pointConverter.Convert(target.EndPoint);
 
-    SOG.Line line =
-      new()
-      {
-        start = start,
-        end = end,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Line line = new()
+    {
+      start = start,
+      end = end,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     // create a properties dictionary for additional props
     PropertyHandler propHandler = new();
-    Dictionary<string, object?> props =
-      new() { ["startStation"] = target.StartStation, ["endStation"] = target.EndStation };
+    Dictionary<string, object?> props = new()
+    {
+      ["startStation"] = target.StartStation,
+      ["endStation"] = target.EndStation,
+    };
     propHandler.TryAddToDictionary(props, "direction", () => target.Direction); // may throw
     line["properties"] = props;
     return line;

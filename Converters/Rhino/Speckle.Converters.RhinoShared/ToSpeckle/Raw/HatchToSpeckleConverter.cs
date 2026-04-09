@@ -51,7 +51,7 @@ public class HatchToSpeckleConverter : ITypedConverter<RG.Hatch, SOG.Region>
       innerLoops = innerLoops,
       hasHatchPattern = true,
       units = _settingsStore.Current.SpeckleUnits,
-      displayValue = displayValue
+      displayValue = displayValue,
     };
   }
 }

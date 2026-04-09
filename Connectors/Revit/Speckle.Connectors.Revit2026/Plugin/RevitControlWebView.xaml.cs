@@ -43,7 +43,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
       CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
       HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
       VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
-      Source = Url.Netlify
+      Source = Url.Netlify,
     };
 
     _browser.CoreWebView2InitializationCompleted += (sender, args) =>
@@ -122,7 +122,10 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   //https://github.com/MicrosoftEdge/WebView2Feedback/issues/2161
   public void Dispose()
   {
-    _browser?.Dispatcher.Invoke(() => _browser.Dispose(), DispatcherPriority.Send);
-    _browser = null;
+    if (_browser is not null)
+    {
+      _browser.Dispatcher.Invoke(() => _browser.Dispose(), DispatcherPriority.Send);
+      _browser = null;
+    }
   }
 }

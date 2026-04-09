@@ -27,7 +27,6 @@ public sealed class BrowserBridge : IBrowserBridge
   /// The name under which we expect the frontend to hoist this bindings class to the global scope.
   /// e.g., `receiveBindings` should be available as `window.receiveBindings`.
   /// </summary>
-
   private readonly ConcurrentDictionary<string, string?> _resultsStore = new();
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;

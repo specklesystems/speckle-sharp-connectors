@@ -311,7 +311,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
         Path = [docName],
         Color = null,
         Material = null,
-        Name = docName
+        Name = docName,
       };
 
       int skippedCount = 0;
@@ -545,14 +545,13 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
       .TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties)
       .ConfigureAwait(false);
 
-    SpeckleUrlModelVersionResource createdVersion =
-      new(
-        new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
-        sendInfo.WorkspaceId,
-        sendInfo.ProjectId,
-        sendInfo.ModelId,
-        versionId
-      );
+    SpeckleUrlModelVersionResource createdVersion = new(
+      new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
+      sendInfo.WorkspaceId,
+      sendInfo.ProjectId,
+      sendInfo.ModelId,
+      versionId
+    );
     OutputParam = createdVersion;
     OutputVersionId = versionId;
     Parent.Url = $"{createdVersion.Account.Server}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";

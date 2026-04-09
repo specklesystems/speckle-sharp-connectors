@@ -6,13 +6,12 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 internal sealed class FbxConfig : IFileTypeConfig
 {
-  private readonly FileFbxReadOptions _readOptions =
-    new()
-    {
-      MapFbxYtoRhinoZ = true,
-      ImportLights = false, // Speckle doesn't support LightObject s
-      ImportCameras = true,
-    };
+  private readonly FileFbxReadOptions _readOptions = new()
+  {
+    MapFbxYtoRhinoZ = true,
+    ImportLights = false, // Speckle doesn't support LightObject s
+    ImportCameras = true,
+  };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {

@@ -23,13 +23,12 @@ public class DBCircleToSpeckleRawConverter : ITypedConverter<ADB.Circle, SOG.Cir
   public SOG.Circle Convert(ADB.Circle target)
   {
     SOG.Plane plane = _planeConverter.Convert(target.GetPlane());
-    SOG.Circle circle =
-      new()
-      {
-        plane = plane,
-        radius = target.Radius,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Circle circle = new()
+    {
+      plane = plane,
+      radius = target.Radius,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return circle;
   }

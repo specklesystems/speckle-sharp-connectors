@@ -68,15 +68,14 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         : instance.BlockTableRecord;
 
       // transforms on instances are always stored in WCS
-      InstanceProxy instanceProxy =
-        new()
-        {
-          applicationId = instanceId,
-          definitionId = definitionId.ToString(),
-          maxDepth = depth,
-          transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
-          units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
-        };
+      InstanceProxy instanceProxy = new()
+      {
+        applicationId = instanceId,
+        definitionId = definitionId.ToString(),
+        maxDepth = depth,
+        transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
+        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits),
+      };
 
       var properties = _propertiesExtractor.GetProperties(instance);
       if (properties?.Count > 0)
@@ -153,7 +152,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         applicationId = definitionId.ToString(),
         objects = new(),
         maxDepth = depth,
-        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name
+        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
       };
 
       // Go through each definition object

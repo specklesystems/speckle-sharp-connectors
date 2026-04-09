@@ -1,31 +1,23 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ApplicationPackage
-        SchemaVersion="1.0"
-        AppVersion="1.0"
-        Author="AEC SYSTEMS LTD"
-        Name="Speckle for Plant 3D"
-        Description="Speckle for Plant 3D"
-        Icon="./Contents/Resources/Logo.ico"
-        ProductCode="{b91352b6-01db-4084-93c8-684bb231947e}"
-        UpgradeCode="{91c7e43f-e962-40e9-85bd-d6bd733b6964}">
-
-    <CompanyDetails
-            Name="Speckle"
-            Url="https://speckle.systems"
-            Email="support@speckle.systems" />
-    <Components>
-
-        <!-- Plant 3D 2026 -->
-        <ComponentEntry
-                AppName="Speckle.Connectors.Plant3d2026"
-                ModuleName="./Contents/Windows/Speckle.Connectors.Plant3d2026/Speckle.Connectors.Plant3d2026.dll"
-                LoadOnAutoCADStartup="True">
-            <RuntimeRequirements
-                    OS="Win64"
-                    Platform="Plant3D"
-                    SeriesMin="R25.1"
-                    SeriesMax="R25.1" />
-        </ComponentEntry>
-    </Components>
-
+  SchemaVersion="1.0"
+  AppVersion="1.0"
+  Author="AEC SYSTEMS LTD"
+  Name="Speckle for Plant 3D"
+  Description="Speckle for Plant 3D"
+  Icon="./Contents/Resources/Logo.ico"
+  ProductCode="{b91352b6-01db-4084-93c8-684bb231947e}"
+  UpgradeCode="{91c7e43f-e962-40e9-85bd-d6bd733b6964}"
+>
+  <CompanyDetails Name="Speckle" Url="https://speckle.systems" Email="support@speckle.systems" />
+  <Components>
+    <!-- Plant 3D 2026 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Plant3d2026"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Plant3d2026/Speckle.Connectors.Plant3d2026.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Plant3D" SeriesMin="R25.1" SeriesMax="R25.1" />
+    </ComponentEntry>
+  </Components>
 </ApplicationPackage>
