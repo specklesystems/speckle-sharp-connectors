@@ -32,6 +32,14 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
   private readonly StructuralMaterialAssetExtractor _structuralAssetExtractor;
 
+  // Materials excluded from quantity extraction. Revit's GetMaterialIds() returns materials
+  // applied to geometry that we already exclude from display values (e.g. lighting cone).
+  // The API provides no way to identify such materials programmatically, so we exclude by name.
+  // Known limitation: custom material names are not covered.
+  private static readonly HashSet<string> s_excludedMaterialNames = ["Default Light Source"];
+
+  private static bool IsExcludedMaterial(string materialName) => s_excludedMaterialNames.Contains(materialName);
+
   public MaterialQuantitiesToSpeckleLite(
     ScalingServiceToSpeckle scalingService,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -88,6 +96,10 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         // add material props
         if (TryAddMaterialPropertiesToQuantitiesDict(matId, materialQuantity, out string matName))
         {
+          if (IsExcludedMaterial(matName))
+          {
+            continue;
+          }
           quantities[matName] = materialQuantity;
         }
 
