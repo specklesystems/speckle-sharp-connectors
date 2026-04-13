@@ -782,7 +782,7 @@ public sealed class DisplayValueExtractor
     DB.Transform? combined = (accumulatedTransform, curveTransform) switch
     {
       (not null, not null) => curveTransform.Multiply(accumulatedTransform),
-      _ => accumulatedTransform ?? curveTransform
+      _ => accumulatedTransform ?? curveTransform,
     };
 
     var coords = polyline.GetCoordinates();
