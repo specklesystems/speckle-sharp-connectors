@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -16,6 +17,24 @@ public class SpeckleDataObjectPassthrough()
     ComponentCategories.OBJECTS
   )
 {
+  private const string DESIGN_OPTION_KEY = "isDesignOption";
+  private bool _isDesignOption;
+  private bool IsDesignOption
+  {
+    get => _isDesignOption;
+    set
+    {
+      if (_isDesignOption == value)
+      {
+        return;
+      }
+
+      _isDesignOption = value;
+      UpdateMessage();
+      ExpireSolution(true);
+    }
+  }
+
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_dataobject;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -186,6 +205,11 @@ public class SpeckleDataObjectPassthrough()
       result.ApplicationId ??= Guid.NewGuid().ToString();
     }
 
+    if (_isDesignOption)
+    {
+      result.DataObject[DESIGN_OPTION_KEY] = true;
+    }
+
     // get the path
     string? path =
       result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
@@ -198,4 +222,32 @@ public class SpeckleDataObjectPassthrough()
     da.SetData(4, path);
     SetApplicationIdOutput(da, result.ApplicationId);
   }
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+    Menu_AppendSeparator(menu);
+    Menu_AppendItem(menu, "Mark as Design Option", (_, _) => IsDesignOption = !IsDesignOption, true, IsDesignOption);
+  }
+
+  public override bool Write(GH_IWriter writer)
+  {
+    var result = base.Write(writer);
+    writer.SetBoolean("IsDesignOption", _isDesignOption);
+    return result;
+  }
+
+  public override bool Read(GH_IReader reader)
+  {
+    var result = base.Read(reader);
+    bool isDesignOption = false;
+    if (reader.TryGetBoolean("IsDesignOption", ref isDesignOption))
+    {
+      _isDesignOption = isDesignOption;
+      UpdateMessage();
+    }
+    return result;
+  }
+
+  private void UpdateMessage() => Message = _isDesignOption ? "Design Option" : string.Empty;
 }
