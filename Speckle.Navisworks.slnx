@@ -58,7 +58,7 @@
   </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Rhino/">
-    <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj" Type="C#">
+    <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj">
       <Configuration Solution="Local|Any CPU" Project="Debug|Any CPU" />
     </Project>
     <Project Path="Importers\Rhino\Speckle.Importers.Rhino\Speckle.Importers.Rhino.csproj" />

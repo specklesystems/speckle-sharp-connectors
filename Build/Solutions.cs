@@ -76,8 +76,6 @@ internal static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
     var sln = Path.Combine(DIRECTORY, "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
-    sln = Path.Combine(DIRECTORY, "Local.slnx");
-    await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
 
     var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
     await GenerateConnector(connectors, revit, "Revit.Local");
@@ -112,6 +110,6 @@ internal static class Solutions
   public static async Task<SolutionModel> GetSolution(string solutionName)
   {
     var connectorsSln = Path.Combine(DIRECTORY, solutionName);
-    return await SolutionSerializers.SlnFileV12.OpenAsync(connectorsSln, default);
+    return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
   }
 }
