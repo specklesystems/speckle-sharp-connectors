@@ -35,9 +35,9 @@ public class ParameterValueExtractor
       StorageType.Integer => GetValueAsInt(parameter),
       StorageType.String => GetValueAsString(parameter),
       StorageType.ElementId => GetValueAsElementNameOrId(parameter),
-      StorageType.None
-      or _
-        => throw new ValidationException($"Unsupported parameter storage type {parameter.StorageType}")
+      StorageType.None or _ => throw new ValidationException(
+        $"Unsupported parameter storage type {parameter.StorageType}"
+      ),
     };
   }
 

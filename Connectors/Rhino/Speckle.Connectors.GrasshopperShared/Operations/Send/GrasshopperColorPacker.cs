@@ -45,14 +45,13 @@ internal sealed class GrasshopperColorPacker
     int argb = color.ToArgb();
     string? name = color.IsNamedColor ? color.Name : null;
 
-    ColorProxy colorProxy =
-      new()
-      {
-        value = argb,
-        applicationId = id,
-        name = name,
-        objects = new()
-      };
+    ColorProxy colorProxy = new()
+    {
+      value = argb,
+      applicationId = id,
+      name = name,
+      objects = new(),
+    };
 
     return colorProxy;
   }

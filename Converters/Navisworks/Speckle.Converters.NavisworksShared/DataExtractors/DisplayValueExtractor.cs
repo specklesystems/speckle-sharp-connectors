@@ -9,11 +9,9 @@ public class DisplayValueExtractor(
 )
 {
   internal List<Base> GetDisplayValue(NAV.ModelItem modelItem) =>
-    modelItem == null
-      ? throw new ArgumentNullException(nameof(modelItem))
-      : !modelItem.HasGeometry || !elementSelectionService.IsVisible(modelItem)
-        ? []
-        : GeometryConverter.Convert(modelItem);
+    modelItem == null ? throw new ArgumentNullException(nameof(modelItem))
+    : !modelItem.HasGeometry || !elementSelectionService.IsVisible(modelItem) ? []
+    : GeometryConverter.Convert(modelItem);
 
   /// <summary>
   /// Gets the underlying geometry converter for accessing cache statistics.

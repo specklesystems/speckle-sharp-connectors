@@ -275,7 +275,7 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     {
       ["name"] = name,
       ["value"] = value,
-      ["units"] = DB.LabelUtils.GetLabelForUnit(unitId)
+      ["units"] = DB.LabelUtils.GetLabelForUnit(unitId),
     };
   }
 }

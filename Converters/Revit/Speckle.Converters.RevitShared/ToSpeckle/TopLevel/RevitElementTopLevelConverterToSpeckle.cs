@@ -117,20 +117,19 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
     // get properties
     Dictionary<string, object?> properties = _propertiesExtractor.GetProperties(target);
 
-    RevitObject revitObject =
-      new()
-      {
-        name = name,
-        type = typeName,
-        family = familyName,
-        level = level,
-        category = category,
-        location = convertedLocation,
-        elements = children,
-        displayValue = proxifiedDisplayValues,
-        properties = properties,
-        units = _converterSettings.Current.SpeckleUnits
-      };
+    RevitObject revitObject = new()
+    {
+      name = name,
+      type = typeName,
+      family = familyName,
+      level = level,
+      category = category,
+      location = convertedLocation,
+      elements = children,
+      displayValue = proxifiedDisplayValues,
+      properties = properties,
+      units = _converterSettings.Current.SpeckleUnits,
+    };
 
     return revitObject;
   }
@@ -265,7 +264,7 @@ public class ElementTopLevelConverterToSpeckle : IToSpeckleTopLevelConverter
       definitionId = instanceDefinitionId,
       transform = transform,
       maxDepth = 0,
-      units = mesh.units
+      units = mesh.units,
     };
 
     return instanceProxy;

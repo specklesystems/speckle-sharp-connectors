@@ -4,47 +4,35 @@ namespace Speckle.Converters.TeklaShared.ToSpeckle.Helpers;
 
 public class ReportPropertyExtractor
 {
-  private static readonly Dictionary<Type, string[]> s_typeSpecificProperties =
-    new()
+  private static readonly Dictionary<Type, string[]> s_typeSpecificProperties = new()
+  {
     {
+      typeof(TSM.Beam),
+      new[]
       {
-        typeof(TSM.Beam),
-        new[]
-        {
-          "VOLUME",
-          "WEIGHT",
-          "LENGTH",
-          "HEIGHT",
-          "WIDTH",
-          "AREA",
-          "PROFILE_TYPE",
-          "MATERIAL_TYPE",
-          "CLASS",
-          "PREFIX",
-          "ASSEMBLY_POS",
-          "ASSEMBLY_NAME",
-          "PHASE"
-        }
-      },
-      {
-        typeof(TSM.ContourPlate),
-        new[]
-        {
-          "VOLUME",
-          "WEIGHT",
-          "AREA",
-          "PROFILE_TYPE",
-          "MATERIAL_TYPE",
-          "CLASS",
-          "PREFIX",
-          "ASSEMBLY_POS",
-          "PHASE"
-        }
-      },
-      { typeof(TSM.RebarGroup), new[] { "NUMBER_OF_REBARS", "TOTAL_LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
-      { typeof(TSM.SingleRebar), new[] { "LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
-      { typeof(TSM.BoltArray), new[] { "BOLT_SIZE", "NUMBER_OF_BOLTS", "BOLT_STANDARD", "BOLT_TYPE", "LENGTH" } }
-    };
+        "VOLUME",
+        "WEIGHT",
+        "LENGTH",
+        "HEIGHT",
+        "WIDTH",
+        "AREA",
+        "PROFILE_TYPE",
+        "MATERIAL_TYPE",
+        "CLASS",
+        "PREFIX",
+        "ASSEMBLY_POS",
+        "ASSEMBLY_NAME",
+        "PHASE",
+      }
+    },
+    {
+      typeof(TSM.ContourPlate),
+      new[] { "VOLUME", "WEIGHT", "AREA", "PROFILE_TYPE", "MATERIAL_TYPE", "CLASS", "PREFIX", "ASSEMBLY_POS", "PHASE" }
+    },
+    { typeof(TSM.RebarGroup), new[] { "NUMBER_OF_REBARS", "TOTAL_LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
+    { typeof(TSM.SingleRebar), new[] { "LENGTH", "WEIGHT", "SIZE", "GRADE", "CLASS" } },
+    { typeof(TSM.BoltArray), new[] { "BOLT_SIZE", "NUMBER_OF_BOLTS", "BOLT_STANDARD", "BOLT_TYPE", "LENGTH" } },
+  };
 
   public Dictionary<string, object?> GetReportProperties(TSM.ModelObject modelObject)
   {
@@ -87,7 +75,7 @@ public class ReportPropertyExtractor
         "VOLUME" => $"Cubic {Distance.MILLIMETERS.ToString().ToLower()}",
         "AREA" => $"Square {Distance.MILLIMETERS.ToString().ToLower()}", // NOTE: Weird number, but corresponds with generated report
         "WEIGHT" => "Kilograms",
-        _ => null // NOTE: No units appended for other parameters
+        _ => null, // NOTE: No units appended for other parameters
       };
     }
     else if (modelObject.GetReportProperty(propertyName, ref intValue))

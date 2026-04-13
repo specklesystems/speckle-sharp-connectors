@@ -6,17 +6,16 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 internal sealed class SketchupConfig : IFileTypeConfig
 {
-  private readonly FileSkpReadOptions _options =
-    new()
-    {
-      JoinEdges = true,
-      JoinFaces = true,
-      Weld = false,
-      AddObjectsToGroups = true,
-      ImportCurves = true,
-      ImportFacesAsMeshes = true,
-      UseGroupLayers = true,
-    };
+  private readonly FileSkpReadOptions _options = new()
+  {
+    JoinEdges = true,
+    JoinFaces = true,
+    Weld = false,
+    AddObjectsToGroups = true,
+    ImportCurves = true,
+    ImportFacesAsMeshes = true,
+    UseGroupLayers = true,
+  };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {

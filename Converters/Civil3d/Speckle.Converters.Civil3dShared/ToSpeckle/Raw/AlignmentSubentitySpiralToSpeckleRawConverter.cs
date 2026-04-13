@@ -48,13 +48,12 @@ public class AlignmentSubentitySpiralToSpeckleRawConverter
     polylineValue.Add(spiral.EndPoint.Y);
     polylineValue.Add(0);
 
-    SOG.Polyline polyline =
-      new()
-      {
-        value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(polylineValue), // convert by ref point transform
-        units = units,
-        closed = spiral.StartPoint == spiral.EndPoint
-      };
+    SOG.Polyline polyline = new()
+    {
+      value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(polylineValue), // convert by ref point transform
+      units = units,
+      closed = spiral.StartPoint == spiral.EndPoint,
+    };
 
     // create a properties dictionary for additional props. These all can throw
     PropertyHandler propHandler = new();

@@ -46,7 +46,7 @@ public class InstanceReferenceGeometryToSpeckleConverter : ITypedConverter<RG.In
       M41 = t.M30,
       M42 = t.M31,
       M43 = t.M32,
-      M44 = t.M33
+      M44 = t.M33,
     };
 
     return new InstanceProxy()
@@ -54,7 +54,7 @@ public class InstanceReferenceGeometryToSpeckleConverter : ITypedConverter<RG.In
       definitionId = target.ParentIdefId.ToString(),
       maxDepth = 0, // default value since this is too much to calculate and will be done in connectors
       transform = m,
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 }

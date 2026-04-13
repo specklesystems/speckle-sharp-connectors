@@ -42,7 +42,7 @@ public class Point3dCollectionToSpeckleRawConverter : ITypedConverter<AG.Point3d
       value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value), // transform by reference point
       units = _settingsStore.Current.SpeckleUnits,
       closed = false,
-      length = length
+      length = length,
     };
   }
 }

@@ -74,14 +74,13 @@ public abstract class AutocadContinuousTraversalBaseBuilder : IRootContinuousTra
   )
   {
     // 0 - Init the root
-    Collection root =
-      new()
-      {
-        name = Application
-          .DocumentManager.CurrentDocument.Name.Split(_documentPathSeparator, StringSplitOptions.None)
-          .Reverse()
-          .First()
-      };
+    Collection root = new()
+    {
+      name = Application
+        .DocumentManager.CurrentDocument.Name.Split(_documentPathSeparator, StringSplitOptions.None)
+        .Reverse()
+        .First(),
+    };
 
     Document doc = Application.DocumentManager.CurrentDocument;
     using Transaction tr = doc.Database.TransactionManager.StartTransaction();

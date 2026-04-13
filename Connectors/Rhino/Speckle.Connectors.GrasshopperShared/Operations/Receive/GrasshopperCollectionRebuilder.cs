@@ -20,7 +20,7 @@ internal sealed class GrasshopperCollectionRebuilder
       Color = null,
       Material = null,
       ApplicationId = baseCollection.applicationId ?? Guid.NewGuid().ToString(),
-      Path = new() { baseCollection.name }
+      Path = new() { baseCollection.name },
     };
   }
 
@@ -65,23 +65,19 @@ internal sealed class GrasshopperCollectionRebuilder
       }
 
       // create and cache if needed
-      SpeckleCollectionWrapper newSpeckleCollectionWrapper =
-        new()
-        {
-          Base = new Collection(),
-          Name = collectionName,
-          ApplicationId = collection.applicationId,
-          Path = currentLayerPath,
-          Color = colorUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
-            ? cachedCollectionColor
-            : null,
-          Material = materialUnpacker.Cache.TryGetValue(
-            collection.applicationId ?? "",
-            out var cachedCollectionMaterial
-          )
-            ? cachedCollectionMaterial
-            : null,
-        };
+      SpeckleCollectionWrapper newSpeckleCollectionWrapper = new()
+      {
+        Base = new Collection(),
+        Name = collectionName,
+        ApplicationId = collection.applicationId,
+        Path = currentLayerPath,
+        Color = colorUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionColor)
+          ? cachedCollectionColor
+          : null,
+        Material = materialUnpacker.Cache.TryGetValue(collection.applicationId ?? "", out var cachedCollectionMaterial)
+          ? cachedCollectionMaterial
+          : null,
+      };
 
       if (collection[Constants.TOPOLOGY_PROP] is string topology)
       {

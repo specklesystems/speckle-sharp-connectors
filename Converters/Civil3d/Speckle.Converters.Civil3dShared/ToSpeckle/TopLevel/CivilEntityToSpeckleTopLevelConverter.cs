@@ -62,18 +62,17 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     // this is a bespoke method by class type.
     var children = GetEntityChildren(target).ToList();
 
-    Civil3dObject civilObject =
-      new()
-      {
-        name = name,
-        type = target.GetType().ToString().Split('.').Last(),
-        baseCurves = baseCurves,
-        elements = children,
-        displayValue = displayValue,
-        properties = properties,
-        units = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.GetSpeckleApplicationId()
-      };
+    Civil3dObject civilObject = new()
+    {
+      name = name,
+      type = target.GetType().ToString().Split('.').Last(),
+      baseCurves = baseCurves,
+      elements = children,
+      displayValue = displayValue,
+      properties = properties,
+      units = _settingsStore.Current.SpeckleUnits,
+      applicationId = target.GetSpeckleApplicationId(),
+    };
 
     return civilObject;
   }

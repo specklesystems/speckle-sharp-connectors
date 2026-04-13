@@ -122,14 +122,13 @@ public class AutocadMaterialUnpacker
       diffuseColor.Blue
     );
 
-    RenderMaterial renderMaterial =
-      new()
-      {
-        name = material.Name,
-        opacity = material.Opacity.Percentage,
-        diffuse = diffuse.ToArgb(),
-        applicationId = id
-      };
+    RenderMaterial renderMaterial = new()
+    {
+      name = material.Name,
+      opacity = material.Opacity.Percentage,
+      diffuse = diffuse.ToArgb(),
+      applicationId = id,
+    };
 
     // Add additional properties
     renderMaterial["ior"] = material.Refraction.Index;
@@ -139,7 +138,7 @@ public class AutocadMaterialUnpacker
     {
       value = renderMaterial,
       objects = new(),
-      applicationId = id
+      applicationId = id,
     };
   }
 }

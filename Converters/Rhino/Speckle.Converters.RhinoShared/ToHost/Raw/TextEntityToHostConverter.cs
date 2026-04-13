@@ -26,19 +26,18 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
   {
     var scaleFactor = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
 
-    RG.TextEntity result =
-      new()
-      {
-        Plane = _planeConverter.Convert(target.plane),
-        PlainText = target.value,
-        TextHeight = target.height * scaleFactor,
-        TextOrientation = target.screenOriented ? TextOrientation.InView : TextOrientation.InPlane,
-        // text class does not have a scale prop.
-        // Scale is built in to the text height on publish, therefore a factor of 1 is always used here.
-        DimensionScale = 1.0,
-        TextHorizontalAlignment = GetTextHorizontalAlignment(target.alignmentH),
-        TextVerticalAlignment = GetTextVerticalAlignment(target.alignmentV),
-      };
+    RG.TextEntity result = new()
+    {
+      Plane = _planeConverter.Convert(target.plane),
+      PlainText = target.value,
+      TextHeight = target.height * scaleFactor,
+      TextOrientation = target.screenOriented ? TextOrientation.InView : TextOrientation.InPlane,
+      // text class does not have a scale prop.
+      // Scale is built in to the text height on publish, therefore a factor of 1 is always used here.
+      DimensionScale = 1.0,
+      TextHorizontalAlignment = GetTextHorizontalAlignment(target.alignmentH),
+      TextVerticalAlignment = GetTextVerticalAlignment(target.alignmentV),
+    };
 
     // only set the max width if target has a non-null value.
     // otherwise this will result in incorrectly wrapped text
@@ -58,7 +57,7 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
       SA.AlignmentHorizontal.Left => TextHorizontalAlignment.Left,
       SA.AlignmentHorizontal.Center => TextHorizontalAlignment.Center,
       SA.AlignmentHorizontal.Right => TextHorizontalAlignment.Right,
-      _ => throw new ConversionException($"Unexpected horizontal alignment value found on text: {alignment}")
+      _ => throw new ConversionException($"Unexpected horizontal alignment value found on text: {alignment}"),
     };
   }
 
@@ -69,7 +68,7 @@ public class TextEntityToHostConverter : ITypedConverter<SA.Text, RG.TextEntity>
       SA.AlignmentVertical.Top => TextVerticalAlignment.Top,
       SA.AlignmentVertical.Center => TextVerticalAlignment.Middle,
       SA.AlignmentVertical.Bottom => TextVerticalAlignment.Bottom,
-      _ => throw new ConversionException($"Unexpected vertical alignment value found on text: {alignment}")
+      _ => throw new ConversionException($"Unexpected vertical alignment value found on text: {alignment}"),
     };
   }
 }

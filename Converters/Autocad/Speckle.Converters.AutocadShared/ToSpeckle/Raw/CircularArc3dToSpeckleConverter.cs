@@ -28,22 +28,21 @@ public class CircularArc3dToSpeckleConverter : ITypedConverter<AG.CircularArc3d,
     SOG.Point mid = _pointConverter.Convert(target.EvaluatePoint(0.5)); // POC: testing, unsure
     SOP.Interval domain = new(target.GetInterval().LowerBound, target.GetInterval().UpperBound);
 
-    SOG.Arc arc =
-      new(
-        plane,
-        target.Radius,
-        target.StartAngle,
-        target.EndAngle,
-        target.EndAngle - target.StartAngle, // POC: testing, unsure
-        _contextStack.Current.SpeckleUnits
-      )
-      {
-        startPoint = start,
-        endPoint = end,
-        midPoint = mid,
-        domain = domain,
-        length = target.GetLength(0, 1, 0.000)
-      };
+    SOG.Arc arc = new(
+      plane,
+      target.Radius,
+      target.StartAngle,
+      target.EndAngle,
+      target.EndAngle - target.StartAngle, // POC: testing, unsure
+      _contextStack.Current.SpeckleUnits
+    )
+    {
+      startPoint = start,
+      endPoint = end,
+      midPoint = mid,
+      domain = domain,
+      length = target.GetLength(0, 1, 0.000),
+    };
 
     return arc;
   }

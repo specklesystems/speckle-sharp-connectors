@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
@@ -19,5 +18,4 @@
   <ItemGroup Condition="'$(Configuration)' != 'Local'">
     <PackageReference Include="Speckle.Objects" />
   </ItemGroup>
-
 </Project>

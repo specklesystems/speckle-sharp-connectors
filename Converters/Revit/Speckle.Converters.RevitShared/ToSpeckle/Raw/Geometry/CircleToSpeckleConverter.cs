@@ -34,6 +34,6 @@ public class CircleToSpeckleConverter : ITypedConverter<DB.Arc, SOG.Circle>
         (target.Center, target.XDirection, target.YDirection, target.Normal)
       ),
       radius = _scalingService.ScaleLength(target.Radius),
-      units = _converterSettings.Current.SpeckleUnits
+      units = _converterSettings.Current.SpeckleUnits,
     };
 }

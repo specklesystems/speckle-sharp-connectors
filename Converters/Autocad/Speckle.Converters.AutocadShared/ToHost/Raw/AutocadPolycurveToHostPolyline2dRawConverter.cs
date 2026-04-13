@@ -54,13 +54,12 @@ public class AutocadPolycurveToHostPolyline2dRawConverter
 
     // create the polyline2d using the empty constructor
     double convertedElevation = elevation * f;
-    ADB.Polyline2d polyline =
-      new()
-      {
-        Elevation = convertedElevation,
-        Normal = convertedNormal,
-        Closed = target.closed
-      };
+    ADB.Polyline2d polyline = new()
+    {
+      Elevation = convertedElevation,
+      Normal = convertedNormal,
+      Closed = target.closed,
+    };
 
     // add polyline2d to document
     ADB.Transaction tr = _settingsStore.Current.Document.TransactionManager.TopTransaction;

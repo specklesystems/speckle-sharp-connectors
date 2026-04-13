@@ -15,18 +15,17 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
 {
   private const string DEFAULT_LEVEL = "Unassigned";
 
-  private readonly Dictionary<ElementCategory, string> _categoryNames =
-    new()
-    {
-      { ElementCategory.COLUMN, "Columns" },
-      { ElementCategory.BEAM, "Beams" },
-      { ElementCategory.BRACE, "Braces" },
-      { ElementCategory.WALL, "Walls" },
-      { ElementCategory.FLOOR, "Floors" },
-      { ElementCategory.RAMP, "Ramps" },
-      { ElementCategory.JOINT, "Joints" },
-      { ElementCategory.OTHER, "Other" }
-    };
+  private readonly Dictionary<ElementCategory, string> _categoryNames = new()
+  {
+    { ElementCategory.COLUMN, "Columns" },
+    { ElementCategory.BEAM, "Beams" },
+    { ElementCategory.BRACE, "Braces" },
+    { ElementCategory.WALL, "Walls" },
+    { ElementCategory.FLOOR, "Floors" },
+    { ElementCategory.RAMP, "Ramps" },
+    { ElementCategory.JOINT, "Joints" },
+    { ElementCategory.OTHER, "Other" },
+  };
 
   public EtabsSendCollectionManager(IConverterSettingsStore<CsiConversionSettings> converterSettings)
     : base(converterSettings) { }
@@ -108,7 +107,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       ("Wall", nameof(ModelObjectType.SHELL)) => ElementCategory.WALL,
       ("Floor", nameof(ModelObjectType.SHELL)) => ElementCategory.FLOOR,
       ("Ramp", nameof(ModelObjectType.SHELL)) => ElementCategory.RAMP,
-      _ => ElementCategory.OTHER
+      _ => ElementCategory.OTHER,
     };
   }
 

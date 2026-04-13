@@ -161,7 +161,7 @@ public class FamilyTransformUtils
     {
       ("YZ", mirrorState.X, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.YVec, plane.Normal)),
       ("XZ", mirrorState.Y, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.Normal)),
-      ("XY", mirrorState.Z, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec))
+      ("XY", mirrorState.Z, Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin, plane.XVec, plane.YVec)),
     };
 
     foreach (var (name, _, mirrorPlane) in mirrorOperations.Where(op => op.shouldMirror))

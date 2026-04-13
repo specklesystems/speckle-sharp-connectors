@@ -22,8 +22,11 @@ internal sealed class RhinoJobHandler(
   ISdkActivityFactory activityFactory
 ) : IJobHandler
 {
-  private readonly JsonSerializerSettings _settings =
-    new() { TypeNameHandling = TypeNameHandling.All, MissingMemberHandling = MissingMemberHandling.Error, };
+  private readonly JsonSerializerSettings _settings = new()
+  {
+    TypeNameHandling = TypeNameHandling.All,
+    MissingMemberHandling = MissingMemberHandling.Error,
+  };
 
   public async Task<string> ProcessJob(
     FileimportJob job,
@@ -113,7 +116,7 @@ internal sealed class RhinoJobHandler(
       UseShellExecute = false,
     };
     processStart.ArgumentList.AddRange(argList);
-    var process = new Process { StartInfo = processStart, EnableRaisingEvents = true, };
+    var process = new Process { StartInfo = processStart, EnableRaisingEvents = true };
     // Capture output asynchronously
     process.OutputDataReceived += (_, e) =>
     {

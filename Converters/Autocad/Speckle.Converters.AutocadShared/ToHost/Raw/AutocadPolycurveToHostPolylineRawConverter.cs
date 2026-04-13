@@ -32,13 +32,12 @@ public class AutocadPolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Au
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     List<AG.Point3d> points3d = target.value.ConvertToPoint3dInOcs(normal, f);
 
-    ADB.Polyline polyline =
-      new()
-      {
-        Normal = normal,
-        Elevation = (double)target.elevation * f,
-        Closed = target.closed
-      };
+    ADB.Polyline polyline = new()
+    {
+      Normal = normal,
+      Elevation = (double)target.elevation * f,
+      Closed = target.closed,
+    };
 
     for (int i = 0; i < points3d.Count; i++)
     {

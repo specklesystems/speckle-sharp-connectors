@@ -51,16 +51,15 @@ public sealed class CorridorHandler
 
 #endif
 
-      Base convertedBaseline =
-        new()
-        {
-          ["type"] = baseline.GetType().ToString().Split('.').Last(),
-          ["name"] = baseline.Name,
-          ["startStation"] = baseline.StartStation,
-          ["endStation"] = baseline.EndStation,
-          ["units"] = _settingsStore.Current.SpeckleUnits,
-          ["applicationId"] = baselineGuid,
-        };
+      Base convertedBaseline = new()
+      {
+        ["type"] = baseline.GetType().ToString().Split('.').Last(),
+        ["name"] = baseline.Name,
+        ["startStation"] = baseline.StartStation,
+        ["endStation"] = baseline.EndStation,
+        ["units"] = _settingsStore.Current.SpeckleUnits,
+        ["applicationId"] = baselineGuid,
+      };
 
       // get profile and alignment if nonfeaturelinebased
       // for featureline based corridors, accessing AlignmentId and ProfileId will return NULL
@@ -121,16 +120,15 @@ public sealed class CorridorHandler
         string regionGuid = "";
 #endif
 
-        Base convertedRegion =
-          new()
-          {
-            ["type"] = region.GetType().ToString().Split('.').Last(),
-            ["name"] = region.Name,
-            ["startStation"] = region.StartStation,
-            ["endStation"] = region.EndStation,
-            ["units"] = _settingsStore.Current.SpeckleUnits,
-            ["applicationId"] = regionGuid,
-          };
+        Base convertedRegion = new()
+        {
+          ["type"] = region.GetType().ToString().Split('.').Last(),
+          ["name"] = region.Name,
+          ["startStation"] = region.StartStation,
+          ["endStation"] = region.EndStation,
+          ["units"] = _settingsStore.Current.SpeckleUnits,
+          ["applicationId"] = regionGuid,
+        };
 
         // traverse region assembly for subassemblies and codes
         // display values (corridor solids) will be dumped here, by their code
@@ -152,17 +150,21 @@ public sealed class CorridorHandler
               // store name in cache for later use by applied subassemblies
               subassemblyNameCache[subassemblyId] = subassembly.Name;
 
-              Base convertedSubassembly =
-                new()
-                {
-                  ["name"] = subassembly.Name,
-                  ["type"] = subassembly.GetType().ToString().Split('.').Last(),
-                  applicationId = subassembly.GetSpeckleApplicationId()
-                };
+              Base convertedSubassembly = new()
+              {
+                ["name"] = subassembly.Name,
+                ["type"] = subassembly.GetType().ToString().Split('.').Last(),
+                applicationId = subassembly.GetSpeckleApplicationId(),
+              };
 
               // try to get the display value mesh from the corridor display value extractor by subassembly key
-              SubassemblyCorridorKey subassemblyKey =
-                new(corridorHandle, baselineGuid, regionGuid, assemblyHandle, subassemblyHandle);
+              SubassemblyCorridorKey subassemblyKey = new(
+                corridorHandle,
+                baselineGuid,
+                regionGuid,
+                assemblyHandle,
+                subassemblyHandle
+              );
 
               if (
                 _displayValueExtractor.CorridorSolidsCache.TryGetValue(
@@ -178,14 +180,13 @@ public sealed class CorridorHandler
             }
           }
 
-          Base convertedAssembly =
-            new()
-            {
-              ["name"] = assembly.Name,
-              ["type"] = assembly.GetType().ToString().Split('.').Last(),
-              ["subassemblies"] = subassemblies,
-              applicationId = assembly.GetSpeckleApplicationId()
-            };
+          Base convertedAssembly = new()
+          {
+            ["name"] = assembly.Name,
+            ["type"] = assembly.GetType().ToString().Split('.').Last(),
+            ["subassemblies"] = subassemblies,
+            applicationId = assembly.GetSpeckleApplicationId(),
+          };
 
           convertedRegion["assembly"] = convertedAssembly;
 
@@ -201,8 +202,11 @@ public sealed class CorridorHandler
 
           CDB.AppliedAssembly appliedAssembly = region.AppliedAssemblies[i];
 
-          Dictionary<string, object?> appliedAssemblyDict =
-            new() { ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(), ["station"] = station };
+          Dictionary<string, object?> appliedAssemblyDict = new()
+          {
+            ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(),
+            ["station"] = station,
+          };
           PropertyHandler propHandler = new();
           propHandler.TryAddToDictionary(
             appliedAssemblyDict,
@@ -219,12 +223,11 @@ public sealed class CorridorHandler
               ? cachedName!
               : subassemblyId;
 
-            Dictionary<string, object?> appliedSubassemblyDict =
-              new()
-              {
-                ["subassemblyId"] = subassemblyId,
-                ["calculatedShapes"] = GetCalculatedShapes(appliedSubassembly)
-              };
+            Dictionary<string, object?> appliedSubassemblyDict = new()
+            {
+              ["subassemblyId"] = subassemblyId,
+              ["calculatedShapes"] = GetCalculatedShapes(appliedSubassembly),
+            };
 
             appliedSubassemblies[name] = appliedSubassemblyDict;
           }
@@ -271,7 +274,7 @@ public sealed class CorridorHandler
         calculatedLinks[linkCount.ToString()] = new Dictionary<string, object?>()
         {
           ["corridorCodes"] = link.CorridorCodes.ToList(),
-          ["calculatedPoints"] = calculatedPoints
+          ["calculatedPoints"] = calculatedPoints,
         };
 
         linkCount++;
@@ -281,7 +284,7 @@ public sealed class CorridorHandler
       {
         ["corridorCodes"] = shape.CorridorCodes.ToList(),
         ["area"] = shape.Area,
-        ["calculatedLinks"] = calculatedLinks
+        ["calculatedLinks"] = calculatedLinks,
       };
     }
     return calculatedShapes;
@@ -313,7 +316,7 @@ public sealed class CorridorHandler
       ["name"] = featureline.CodeName,
       ["type"] = featureline.GetType().ToString().Split('.').Last(),
       ["codeName"] = featureline.CodeName,
-      ["displayValue"] = polylines
+      ["displayValue"] = polylines,
     };
   }
 }

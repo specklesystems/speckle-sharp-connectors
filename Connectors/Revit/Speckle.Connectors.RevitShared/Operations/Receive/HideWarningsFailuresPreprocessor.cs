@@ -6,7 +6,6 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// This class will suppress warnings on the Revit UI
 /// Currently we use it after Revit receive when we create the group hierarchy
 /// </summary>
-
 public class HideWarningsFailuresPreprocessor : IFailuresPreprocessor
 {
   public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)

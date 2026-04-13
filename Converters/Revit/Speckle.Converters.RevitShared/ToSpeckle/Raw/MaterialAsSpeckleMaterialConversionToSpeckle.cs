@@ -36,14 +36,13 @@ public class MaterialAsSpeckleMaterialConversionToSpeckle : ITypedConverter<DB.M
 
   private RenderMaterial ConvertToRenderMaterial(DB.Material target)
   {
-    RenderMaterial renderMaterial =
-      new()
-      {
-        name = target.Name,
-        opacity = 1 - target.Transparency / 100d,
-        diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb(),
-        applicationId = target.UniqueId
-      };
+    RenderMaterial renderMaterial = new()
+    {
+      name = target.Name,
+      opacity = 1 - target.Transparency / 100d,
+      diffuse = System.Drawing.Color.FromArgb(target.Color.Red, target.Color.Green, target.Color.Blue).ToArgb(),
+      applicationId = target.UniqueId,
+    };
 
     return renderMaterial;
   }

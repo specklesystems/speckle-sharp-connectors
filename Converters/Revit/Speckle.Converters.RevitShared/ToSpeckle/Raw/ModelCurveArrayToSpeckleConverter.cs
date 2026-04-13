@@ -35,14 +35,13 @@ public sealed class ModelCurveArrayToSpeckleConverter : ITypedConverter<DB.Model
 
     var start = curves[0].GetEndPoint(0);
     var end = curves[^1].GetEndPoint(1);
-    SOG.Polycurve polycurve =
-      new()
-      {
-        units = _converterSettings.Current.SpeckleUnits,
-        closed = start.DistanceTo(end) < _converterSettings.Current.Tolerance,
-        length = _scalingService.ScaleLength(curves.Sum(x => x.Length)),
-        segments = curves.Select(x => _curveConverter.Convert(x)).ToList()
-      };
+    SOG.Polycurve polycurve = new()
+    {
+      units = _converterSettings.Current.SpeckleUnits,
+      closed = start.DistanceTo(end) < _converterSettings.Current.Tolerance,
+      length = _scalingService.ScaleLength(curves.Sum(x => x.Length)),
+      segments = curves.Select(x => _curveConverter.Convert(x)).ToList(),
+    };
 
     return polycurve;
   }

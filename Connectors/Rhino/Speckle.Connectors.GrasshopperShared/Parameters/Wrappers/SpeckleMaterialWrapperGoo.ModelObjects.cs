@@ -36,7 +36,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
           Name = renderMaterial.Name,
           ApplicationId = renderMaterial.Id.ToString(),
           RhinoMaterial = renderMaterial.ToMaterial(RenderTexture.TextureGeneration.Allow),
-          RhinoRenderMaterialId = renderMaterial.Id
+          RhinoRenderMaterialId = renderMaterial.Id,
         };
 
         return true;
@@ -83,7 +83,7 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
         var atts = new ModelRenderMaterial.Attributes()
         {
           Name = Value.Name,
-          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, RhinoDoc.ActiveDoc)
+          RenderMaterial = RenderMaterial.CreateBasicMaterial(Value.RhinoMaterial, RhinoDoc.ActiveDoc),
         };
 
         target = (T)(object)(new ModelRenderMaterial(atts));
@@ -110,20 +110,19 @@ public partial class SpeckleMaterialWrapperGoo : GH_Goo<SpeckleMaterialWrapper>
       ? pbRenderMaterial.Material.EmissionColor
       : pbRenderMaterial.Emission.AsSystemColor(); // pbRenderMaterial.emission gives wrong color for emission materials, and material.emissioncolor gives the wrong value for most others *shrug*
 
-    SpeckleRenderMaterial speckleRenderMaterial =
-      new()
-      {
-        name = renderMaterialName,
-        opacity = opacity,
-        metalness = pbRenderMaterial.Metallic,
-        roughness = pbRenderMaterial.Roughness,
-        diffuse = diffuse.ToArgb(),
-        emissive = emissive.ToArgb(),
-        applicationId = mat.Id.ToString(),
-        ["typeName"] = mat.TypeName,
-        ["ior"] = pbRenderMaterial.Material.IndexOfRefraction,
-        ["shine"] = pbRenderMaterial.Material.Shine,
-      };
+    SpeckleRenderMaterial speckleRenderMaterial = new()
+    {
+      name = renderMaterialName,
+      opacity = opacity,
+      metalness = pbRenderMaterial.Metallic,
+      roughness = pbRenderMaterial.Roughness,
+      diffuse = diffuse.ToArgb(),
+      emissive = emissive.ToArgb(),
+      applicationId = mat.Id.ToString(),
+      ["typeName"] = mat.TypeName,
+      ["ior"] = pbRenderMaterial.Material.IndexOfRefraction,
+      ["shine"] = pbRenderMaterial.Material.Shine,
+    };
 
     return speckleRenderMaterial;
   }

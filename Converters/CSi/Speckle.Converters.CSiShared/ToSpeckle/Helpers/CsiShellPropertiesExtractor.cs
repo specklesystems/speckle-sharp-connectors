@@ -79,7 +79,7 @@ public sealed class CsiShellPropertiesExtractor
       ["Shear V13 Modifier"] = value[6],
       ["Shear V23 Modifier"] = value[7],
       ["Mass"] = value[8],
-      ["Weight"] = value[9]
+      ["Weight"] = value[9],
     };
   }
 

@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
@@ -10,10 +9,30 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />
-    <PackageReference Include="Tekla.Structures.Dialog" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1" />
-    <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1"/>
-    <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1" />
-    <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride =" 2023.0.1" />
+    <PackageReference
+      Include="Tekla.Structures.Dialog"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride=" 2023.0.1"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Drawing"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride=" 2023.0.1"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Model"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride=" 2023.0.1"
+    />
+    <PackageReference
+      Include="Tekla.Structures.Plugins"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride=" 2023.0.1"
+    />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,5 +41,4 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
-
 </Project>
