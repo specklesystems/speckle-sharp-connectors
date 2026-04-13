@@ -1,7 +1,7 @@
 printWidth: 120
 useTabs: false
-tabWidth: 2
+indentSize: 2
 preprocessorSymbolSets:
-    - ""
-    - "DEBUG"
-    - "DEBUG,CODE_STYLE"
+  - ""
+  - "DEBUG"
+  - "DEBUG,CODE_STYLE"

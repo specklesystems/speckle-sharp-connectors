@@ -53,19 +53,19 @@ You can download the latest version from https://dotnet.microsoft.com/en-us/down
 
 From there you can open the main `Speckle.Connectors.sln` solution and build the project
 
-For good development experience and environment setup, you the commands are avaible needed.
+For good development experience and environment setup, you the commands are available needed.
 
 ### Formatting
 We're using [CSharpier](https://github.com/belav/csharpier) to format our code.  You can install Csharpier in a few ways:
 - Install CSharpier as a local tool and reformat from CLI
   ```
-  dotnet tool install csharpier
-  dotnet csharpier
+  dotnet tool restore
+  dotnet csharpier format ./
   ```
 - Install CSharpier as a global tool and reformat from CLI
   ```
-  dotnet tool install csharpier -g
-  dotnet csharpier
+  dotnet tool restore
+  dotnet csharpier format ./
   ```
 - Install the CSharpier extension for Visual Studio or Rider.<br/>
   For best DX, we recommend turning on CSharpier's `reformat on save` setting if you've installed it in your IDE.
