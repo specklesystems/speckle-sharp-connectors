@@ -203,6 +203,11 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     matName = "";
     if (_converterSettings.Current.Document.GetElement(matId) is DB.Material material)
     {
+      // No API to identify light-cone materials by ID; exclude by well-known default name.
+      if (material.Name == "Default Light Source")
+      {
+        return false;
+      }
       materialQuantity["materialName"] = material.Name;
       materialQuantity["materialCategory"] = material.MaterialCategory;
       materialQuantity["materialClass"] = material.MaterialClass;
