@@ -193,7 +193,7 @@ internal sealed class GrasshopperBlockUnpacker
       Base = definitionProxy,
       Name = definitionProxy.name,
       Objects = definitionObjects,
-      ApplicationId = definitionId
+      ApplicationId = definitionId,
     };
   }
 

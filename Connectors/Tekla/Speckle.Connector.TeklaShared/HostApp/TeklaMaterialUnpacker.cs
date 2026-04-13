@@ -39,13 +39,12 @@ public class TeklaMaterialUnpacker
       else
       {
         var renderMaterial = new RenderMaterial() { name = colorId, diffuse = systemColor.ToArgb() };
-        RenderMaterialProxy proxyRenderMaterial =
-          new()
-          {
-            value = renderMaterial,
-            objects = [objectId],
-            applicationId = colorId
-          };
+        RenderMaterialProxy proxyRenderMaterial = new()
+        {
+          value = renderMaterial,
+          objects = [objectId],
+          applicationId = colorId,
+        };
         renderMaterialProxies[colorId] = proxyRenderMaterial;
       }
     }

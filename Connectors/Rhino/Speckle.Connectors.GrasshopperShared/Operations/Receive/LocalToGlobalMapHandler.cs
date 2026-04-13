@@ -187,7 +187,7 @@ internal sealed class LocalToGlobalMapHandler
             Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
               ? cachedObjMaterial
               : null,
-            ApplicationId = objId
+            ApplicationId = objId,
           };
 
           ConvertedObjectsMap[objId] = wrapper;
@@ -427,19 +427,18 @@ internal sealed class LocalToGlobalMapHandler
     {
       if (convertedObj is GeometryBase geometryBase)
       {
-        SpeckleGeometryWrapper wrapper =
-          new()
-          {
-            Base = original,
-            GeometryBase = geometryBase,
-            // try to get color/material from the individual geometry first
-            Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
-              ? cachedObjColor
-              : null,
-            Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
-              ? cachedObjMaterial
-              : null,
-          };
+        SpeckleGeometryWrapper wrapper = new()
+        {
+          Base = original,
+          GeometryBase = geometryBase,
+          // try to get color/material from the individual geometry first
+          Color = _colorUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjColor)
+            ? cachedObjColor
+            : null,
+          Material = _materialUnpacker.Cache.TryGetValue(original.applicationId ?? "", out var cachedObjMaterial)
+            ? cachedObjMaterial
+            : null,
+        };
 
         geometries.Add(wrapper);
       }

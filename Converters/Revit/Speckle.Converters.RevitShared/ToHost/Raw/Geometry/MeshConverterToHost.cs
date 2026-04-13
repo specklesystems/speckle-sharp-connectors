@@ -34,7 +34,7 @@ public class MeshConverterToHost : ITypedConverter<SOG.Mesh, List<DB.GeometryObj
     {
       Fallback = fallback,
       Target = target,
-      GraphicsStyleId = ElementId.InvalidElementId
+      GraphicsStyleId = ElementId.InvalidElementId,
     };
 
     tsb.OpenConnectedFaceSet(false);

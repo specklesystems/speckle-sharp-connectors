@@ -34,9 +34,9 @@ public static class ReferencePointHelper
           transform.CoordinateSystem3d.Origin.X,
           transform.CoordinateSystem3d.Origin.Y,
           transform.CoordinateSystem3d.Origin.Z,
-          1
+          1,
         }
-      }
+      },
     };
   }
 }

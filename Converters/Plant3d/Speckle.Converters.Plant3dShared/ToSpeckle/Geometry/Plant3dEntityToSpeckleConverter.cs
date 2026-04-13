@@ -45,14 +45,13 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       name = tagValue;
     }
 
-    DataObject dataObject =
-      new()
-      {
-        name = name,
-        displayValue = displayValue,
-        properties = new Dictionary<string, object?>(),
-        applicationId = entity.Handle.Value.ToString()
-      };
+    DataObject dataObject = new()
+    {
+      name = name,
+      displayValue = displayValue,
+      properties = new Dictionary<string, object?>(),
+      applicationId = entity.Handle.Value.ToString(),
+    };
 
     return dataObject;
   }

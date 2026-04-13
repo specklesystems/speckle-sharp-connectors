@@ -24,11 +24,10 @@ public class PolycurveToHostPolylineRawConverter : ITypedConverter<SOG.Polycurve
   public ADB.Polyline Convert(SOG.Polycurve target)
   {
     ADB.Polyline polyline = new() { Closed = target.closed };
-    AG.Plane plane =
-      new(
-        AG.Point3d.Origin,
-        AG.Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
-      );
+    AG.Plane plane = new(
+      AG.Point3d.Origin,
+      AG.Vector3d.ZAxis.TransformBy(_settingsStore.Current.Document.Editor.CurrentUserCoordinateSystem)
+    );
 
     int count = 0;
     foreach (Objects.ICurve segment in target.segments)

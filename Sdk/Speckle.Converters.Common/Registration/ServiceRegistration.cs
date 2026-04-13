@@ -21,8 +21,6 @@ public static class ServiceRegistration
       This will require consolidating across other connectors.
     */
 
-
-
     serviceCollection.AddScoped<IRootToHostConverter, ConverterWithFallback>();
     serviceCollection.AddScoped<ConverterWithoutFallback>(); //Register as self, only the `ConverterWithFallback` needs it
 

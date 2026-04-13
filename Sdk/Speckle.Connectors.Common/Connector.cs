@@ -54,7 +54,7 @@ public static class Connector
           new(
             Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/logs"),
             Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
-          )
+          ),
         ],
         MinimumLevel: SpeckleLogLevel.Information
       ),
@@ -65,7 +65,7 @@ public static class Connector
           new(
             Endpoint: new Uri("https://seq.speckle.systems/ingest/otlp/v1/traces"),
             Headers: new() { { "X-Seq-ApiKey", "Y0Ya2CFVt1tCSgrbY07c" } }
-          )
+          ),
         ]
       ),
       null
@@ -111,6 +111,6 @@ public static class Connector
       SpeckleLogLevel.Warning => LogLevel.Warning,
       SpeckleLogLevel.Error => LogLevel.Error,
       SpeckleLogLevel.Fatal => LogLevel.Critical,
-      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null)
+      _ => throw new ArgumentOutOfRangeException(nameof(speckleLogLevel), speckleLogLevel, null),
     };
 }

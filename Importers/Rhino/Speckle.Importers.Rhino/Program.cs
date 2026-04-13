@@ -12,8 +12,10 @@ namespace Speckle.Importers.Rhino;
 
 public static class Program
 {
-  private static readonly JsonSerializerOptions s_serializerOptions =
-    new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, };
+  private static readonly JsonSerializerOptions s_serializerOptions = new()
+  {
+    UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+  };
 
   static Program()
   {

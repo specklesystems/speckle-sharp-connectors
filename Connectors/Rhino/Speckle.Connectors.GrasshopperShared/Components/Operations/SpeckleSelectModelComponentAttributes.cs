@@ -44,7 +44,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
     )
     {
       Parent = this,
-      Pivot = Pivot
+      Pivot = Pivot,
     };
 
     _typedOwner.VersionContextMenuButton.Attributes ??= new GhContextMenuButtonAttributes(
@@ -52,7 +52,7 @@ public class SpeckleSelectModelComponentAttributes : GH_ComponentAttributes
     )
     {
       Parent = this,
-      Pivot = Pivot
+      Pivot = Pivot,
     };
   }
 

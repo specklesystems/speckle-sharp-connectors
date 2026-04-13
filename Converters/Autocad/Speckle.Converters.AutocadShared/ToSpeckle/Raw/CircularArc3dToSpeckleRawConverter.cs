@@ -30,16 +30,15 @@ public class CircularArc3dToSpeckleRawConverter : ITypedConverter<AG.CircularArc
     AG.Point3d midPoint = target.EvaluatePoint(target.StartAngle + (target.EndAngle - target.StartAngle) / 2);
     SOG.Point mid = _pointConverter.Convert(midPoint);
 
-    SOG.Arc arc =
-      new()
-      {
-        plane = plane,
-        startPoint = start,
-        endPoint = end,
-        midPoint = mid,
-        domain = new SOP.Interval { start = startParam, end = endParam },
-        units = _settingsStore.Current.SpeckleUnits,
-      };
+    SOG.Arc arc = new()
+    {
+      plane = plane,
+      startPoint = start,
+      endPoint = end,
+      midPoint = mid,
+      domain = new SOP.Interval { start = startParam, end = endParam },
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return arc;
   }

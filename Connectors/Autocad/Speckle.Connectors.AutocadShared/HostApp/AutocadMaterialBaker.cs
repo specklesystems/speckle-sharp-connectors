@@ -170,13 +170,12 @@ public class AutocadMaterialBaker : IAutocadMaterialBaker
       MaterialColor diffuseColor = new(Method.Override, 1, entityDiffuseColor);
       MaterialDiffuseComponent diffuse = new(diffuseColor, map);
 
-      Material mat =
-        new()
-        {
-          Name = matName,
-          Opacity = opacity,
-          Diffuse = diffuse
-        };
+      Material mat = new()
+      {
+        Name = matName,
+        Opacity = opacity,
+        Diffuse = diffuse,
+      };
 
       if (renderMaterial["reflectivity"] is double reflectivity)
       {

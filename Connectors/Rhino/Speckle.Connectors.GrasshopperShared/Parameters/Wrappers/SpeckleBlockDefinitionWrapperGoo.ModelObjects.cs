@@ -77,11 +77,11 @@ public partial class SpeckleBlockDefinitionWrapperGoo
       {
         name = name,
         objects = objs.Select(o => o.ApplicationId!).ToList(),
-        maxDepth = 0 // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
+        maxDepth = 0, // represent newly created, top-level objects. actual depth calculation happens in GrasshopperBlockPacker
       },
       Name = name,
       Objects = objs,
-      ApplicationId = validAppId
+      ApplicationId = validAppId,
     };
   }
 

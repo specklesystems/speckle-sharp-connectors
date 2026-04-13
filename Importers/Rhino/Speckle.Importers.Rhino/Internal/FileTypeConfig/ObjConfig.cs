@@ -6,14 +6,13 @@ namespace Speckle.Importers.Rhino.Internal.FileTypeConfig;
 
 internal sealed class ObjConfig : IFileTypeConfig
 {
-  private readonly FileObjReadOptions _readOptions =
-    new(new FileReadOptions() { OpenMode = true })
-    {
-      MapYtoZ = true,
-      UseObjGroupsAs = FileObjReadOptions.UseObjGsAs.ObjGroupsAsLayers,
-      UseObjObjectsAs = FileObjReadOptions.UseObjOsAs.ObjObjectsAsObjects,
-      IgnoreTextures = true, //We don't support MTL uploads, so no point trying to find a MTL file...
-    };
+  private readonly FileObjReadOptions _readOptions = new(new FileReadOptions() { OpenMode = true })
+  {
+    MapYtoZ = true,
+    UseObjGroupsAs = FileObjReadOptions.UseObjGsAs.ObjGroupsAsLayers,
+    UseObjObjectsAs = FileObjReadOptions.UseObjOsAs.ObjObjectsAsObjects,
+    IgnoreTextures = true, //We don't support MTL uploads, so no point trying to find a MTL file...
+  };
 
   public RhinoDoc OpenInHeadlessDocument(string filePath)
   {

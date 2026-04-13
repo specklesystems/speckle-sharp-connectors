@@ -52,13 +52,12 @@ public class MeshListConversionToSpeckle : ITypedConverter<List<DB.Mesh>, SOG.Me
       }
     }
 
-    SOG.Mesh speckleMesh =
-      new()
-      {
-        vertices = vertices,
-        faces = faces,
-        units = _converterSettings.Current.SpeckleUnits
-      };
+    SOG.Mesh speckleMesh = new()
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _converterSettings.Current.SpeckleUnits,
+    };
 
     return speckleMesh;
   }

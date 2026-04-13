@@ -44,22 +44,20 @@ public class LineSegmentToSpeckleConverter : IToSpeckleTopLevelConverter
     // Apply the same WCS → external coordinate transform that all AutoCAD converters use
     value = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(value);
 
-    SOG.Polyline polyline =
-      new()
-      {
-        value = value,
-        closed = lineSegment.Closed,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Polyline polyline = new()
+    {
+      value = value,
+      closed = lineSegment.Closed,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
-    DataObject dataObject =
-      new()
-      {
-        name = lineSegment.TagValue is { Length: > 0 } tag ? tag : lineSegment.GetType().Name,
-        displayValue = new List<Base> { polyline },
-        properties = new Dictionary<string, object?>(),
-        applicationId = lineSegment.Handle.Value.ToString()
-      };
+    DataObject dataObject = new()
+    {
+      name = lineSegment.TagValue is { Length: > 0 } tag ? tag : lineSegment.GetType().Name,
+      displayValue = new List<Base> { polyline },
+      properties = new Dictionary<string, object?>(),
+      applicationId = lineSegment.Handle.Value.ToString(),
+    };
 
     return dataObject;
   }

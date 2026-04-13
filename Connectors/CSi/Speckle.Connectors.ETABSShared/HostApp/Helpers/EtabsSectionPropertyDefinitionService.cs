@@ -69,7 +69,7 @@ public class EtabsSectionPropertyDefinitionService
     {
       "Frame Section Property Definitions - Summary",
       "Frame Section Property Definitions - Concrete Beam Reinforcing",
-      "Frame Section Property Definitions - Concrete Column Reinforcing"
+      "Frame Section Property Definitions - Concrete Column Reinforcing",
     };
 
     return availableTableKeys.Where(key =>

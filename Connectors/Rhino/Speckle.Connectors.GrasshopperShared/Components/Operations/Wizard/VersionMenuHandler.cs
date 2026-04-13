@@ -119,7 +119,7 @@ public class VersionMenuHandler
         Name = "Show more...",
         AutoSize = false,
         Margin = new Padding(4),
-        Padding = new Padding(2)
+        Padding = new Padding(2),
       };
 
       menu.Items.Insert(menu.Items.Count, addMoreButtonHost);

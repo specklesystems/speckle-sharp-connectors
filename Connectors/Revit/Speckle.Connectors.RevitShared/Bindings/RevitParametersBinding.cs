@@ -163,8 +163,8 @@ internal sealed class RevitParametersBinding : IParametersBinding
     }
     catch (Exception ex)
     {
-      _topLevelExceptionHandler.CatchUnhandled(
-        () => throw new SpeckleException("Failed to apply parameter updates", ex)
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+        throw new SpeckleException("Failed to apply parameter updates", ex)
       );
     }
   }

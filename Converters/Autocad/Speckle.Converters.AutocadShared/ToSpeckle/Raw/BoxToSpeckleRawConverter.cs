@@ -32,15 +32,14 @@ public class BoxToSpeckleRawConverter : ITypedConverter<ADB.Extents3d, SOG.Box>
     AG.Plane acadPlane = new(target.MinPoint, ucs.Xaxis, ucs.Yaxis);
     SOG.Plane plane = _planeConverter.Convert(acadPlane);
 
-    SOG.Box box =
-      new()
-      {
-        plane = plane,
-        xSize = xSize,
-        ySize = ySize,
-        zSize = zSize,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Box box = new()
+    {
+      plane = plane,
+      xSize = xSize,
+      ySize = ySize,
+      zSize = zSize,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return box;
   }

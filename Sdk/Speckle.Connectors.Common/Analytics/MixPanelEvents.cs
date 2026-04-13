@@ -13,5 +13,5 @@ public enum MixPanelEvents
   /// <summary>
   /// Event triggered when data is received from a Speckle Server
   /// </summary>
-  Receive
+  Receive,
 }

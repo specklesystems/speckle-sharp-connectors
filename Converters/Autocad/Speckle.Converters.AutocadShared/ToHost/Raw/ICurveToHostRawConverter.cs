@@ -51,6 +51,6 @@ public class ICurveToHostRawConverter : ITypedConverter<ICurve, List<(ADB.Entity
       SOG.Polyline polyline => new() { (_polylineConverter.Convert(polyline), polyline) },
       SOG.Curve curve => new() { (_curveConverter.Convert(curve), curve) },
       SOG.Polycurve polycurve => _polycurveConverter.Convert(polycurve),
-      _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}")
+      _ => throw new ValidationException($"Unable to convert curves of type {target.GetType().Name}"),
     };
 }

@@ -11,24 +11,23 @@ public class JsonSerializerSettingsFactory(IServiceProvider serviceProvider) : I
   public JsonSerializerSettings Create()
   {
     // Register WebView2 panel stuff
-    JsonSerializerSettings settings =
-      new()
+    JsonSerializerSettings settings = new()
+    {
+      Error = (_, args) =>
       {
-        Error = (_, args) =>
-        {
-          // POC: we should probably do a bit more than just swallowing this!
-          Console.WriteLine("*** JSON ERROR: " + args.ErrorContext);
-        },
-        ContractResolver = new CamelCasePropertyNamesContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore,
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-        DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
-        Converters =
-        {
-          new DiscriminatedObjectConverter(serviceProvider),
-          new AbstractConverter<DiscriminatedObject, ISendFilter>()
-        }
-      };
+        // POC: we should probably do a bit more than just swallowing this!
+        Console.WriteLine("*** JSON ERROR: " + args.ErrorContext);
+      },
+      ContractResolver = new CamelCasePropertyNamesContractResolver(),
+      NullValueHandling = NullValueHandling.Ignore,
+      ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+      DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
+      Converters =
+      {
+        new DiscriminatedObjectConverter(serviceProvider),
+        new AbstractConverter<DiscriminatedObject, ISendFilter>(),
+      },
+    };
     return settings;
   }
 }

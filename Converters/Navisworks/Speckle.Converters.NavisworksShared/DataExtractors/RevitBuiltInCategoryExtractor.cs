@@ -81,100 +81,99 @@ public class RevitBuiltInCategoryExtractor(IPropertyConverter converter) : IRevi
   // to Revit BuiltInCategory constants. Case-insensitive.
   // Note: Some mapped categories are not assignable via Revit DirectShape;
   // the receiver will ignore them and apply its own fallback.
-  private static readonly Dictionary<string, string> s_revitCatMap =
-    new(StringComparer.OrdinalIgnoreCase)
-    {
-      // Architectural
-      ["Walls"] = "OST_Walls",
-      ["Floors"] = "OST_Floors",
-      ["Roofs"] = "OST_Roofs",
-      ["Ceilings"] = "OST_Ceilings",
-      ["Doors"] = "OST_Doors",
-      ["Windows"] = "OST_Windows",
-      ["Curtain Panels"] = "OST_CurtainWallPanels",
-      ["Curtain Wall Mullions"] = "OST_CurtainWallMullions",
-      ["Wall Sweeps"] = "OST_Cornices",
-      ["Hardscape"] = "OST_Hardscape",
-      ["Site"] = "OST_Site",
-      ["Parking"] = "OST_Parking",
-      ["Toposolid"] = "OST_Toposolid",
-      ["Levels"] = "OST_Levels",
-      ["Lines"] = "OST_Lines",
-      ["Center line"] = "OST_CenterLines",
-      ["Center Line"] = "OST_CenterLines",
+  private static readonly Dictionary<string, string> s_revitCatMap = new(StringComparer.OrdinalIgnoreCase)
+  {
+    // Architectural
+    ["Walls"] = "OST_Walls",
+    ["Floors"] = "OST_Floors",
+    ["Roofs"] = "OST_Roofs",
+    ["Ceilings"] = "OST_Ceilings",
+    ["Doors"] = "OST_Doors",
+    ["Windows"] = "OST_Windows",
+    ["Curtain Panels"] = "OST_CurtainWallPanels",
+    ["Curtain Wall Mullions"] = "OST_CurtainWallMullions",
+    ["Wall Sweeps"] = "OST_Cornices",
+    ["Hardscape"] = "OST_Hardscape",
+    ["Site"] = "OST_Site",
+    ["Parking"] = "OST_Parking",
+    ["Toposolid"] = "OST_Toposolid",
+    ["Levels"] = "OST_Levels",
+    ["Lines"] = "OST_Lines",
+    ["Center line"] = "OST_CenterLines",
+    ["Center Line"] = "OST_CenterLines",
 
-      // Stairs & Railings
-      ["Stairs"] = "OST_Stairs",
-      ["Supports"] = "OST_Stairs",
-      ["Runs"] = "OST_Stairs",
-      ["Railings"] = "OST_StairsRailing",
-      ["Handrails"] = "OST_RailingHandRail",
-      ["Landings"] = "OST_StairsLandings",
-      ["Vertical Circulation"] = "OST_VerticalCirculation",
+    // Stairs & Railings
+    ["Stairs"] = "OST_Stairs",
+    ["Supports"] = "OST_Stairs",
+    ["Runs"] = "OST_Stairs",
+    ["Railings"] = "OST_StairsRailing",
+    ["Handrails"] = "OST_RailingHandRail",
+    ["Landings"] = "OST_StairsLandings",
+    ["Vertical Circulation"] = "OST_VerticalCirculation",
 
-      // Structural
-      ["Structural Connections"] = "OST_StructConnections",
-      ["Structural Foundations"] = "OST_StructuralFoundation",
-      ["Structural Columns"] = "OST_StructuralColumns",
-      ["Structural Framing"] = "OST_StructuralFraming",
-      ["Structural Loads"] = "OST_Loads",
-      ["Structural Rebar"] = "OST_Rebar",
-      ["Structural Fabric Areas"] = "OST_FabricAreas",
-      ["Structural Fabric Reinforcement"] = "OST_FabricReinforcement",
-      ["Boundary Conditions"] = "OST_BoundaryConditions",
-      ["Slab Edges"] = "OST_EdgeSlab",
-      ["Fascias"] = "OST_Fascia",
-      ["Roof Soffits"] = "OST_RoofSoffit",
+    // Structural
+    ["Structural Connections"] = "OST_StructConnections",
+    ["Structural Foundations"] = "OST_StructuralFoundation",
+    ["Structural Columns"] = "OST_StructuralColumns",
+    ["Structural Framing"] = "OST_StructuralFraming",
+    ["Structural Loads"] = "OST_Loads",
+    ["Structural Rebar"] = "OST_Rebar",
+    ["Structural Fabric Areas"] = "OST_FabricAreas",
+    ["Structural Fabric Reinforcement"] = "OST_FabricReinforcement",
+    ["Boundary Conditions"] = "OST_BoundaryConditions",
+    ["Slab Edges"] = "OST_EdgeSlab",
+    ["Fascias"] = "OST_Fascia",
+    ["Roof Soffits"] = "OST_RoofSoffit",
 
-      // MEP - HVAC
-      ["Air Terminals"] = "OST_DuctTerminal",
-      ["Duct Fittings"] = "OST_DuctFitting",
-      ["Ducts"] = "OST_DuctCurves",
-      ["Flex Ducts"] = "OST_FlexDuctCurves",
-      ["Duct Accessories"] = "OST_DuctAccessory",
-      ["Mechanical Equipment"] = "OST_MechanicalEquipment",
+    // MEP - HVAC
+    ["Air Terminals"] = "OST_DuctTerminal",
+    ["Duct Fittings"] = "OST_DuctFitting",
+    ["Ducts"] = "OST_DuctCurves",
+    ["Flex Ducts"] = "OST_FlexDuctCurves",
+    ["Duct Accessories"] = "OST_DuctAccessory",
+    ["Mechanical Equipment"] = "OST_MechanicalEquipment",
 
-      // MEP - Plumbing
-      ["Plumbing Fixtures"] = "OST_PlumbingFixtures",
-      ["Plumbing Equipment"] = "OST_PlumbingEquipment",
-      ["Pipe Accessories"] = "OST_PipeAccessory",
-      ["Pipe Fittings"] = "OST_PipeFitting",
-      ["Pipes"] = "OST_PipeCurves",
-      ["Flex Pipes"] = "OST_FlexPipeCurves",
-      ["Pipe Insulations"] = "OST_PipeInsulations",
+    // MEP - Plumbing
+    ["Plumbing Fixtures"] = "OST_PlumbingFixtures",
+    ["Plumbing Equipment"] = "OST_PlumbingEquipment",
+    ["Pipe Accessories"] = "OST_PipeAccessory",
+    ["Pipe Fittings"] = "OST_PipeFitting",
+    ["Pipes"] = "OST_PipeCurves",
+    ["Flex Pipes"] = "OST_FlexPipeCurves",
+    ["Pipe Insulations"] = "OST_PipeInsulations",
 
-      // MEP - Electrical
-      ["Electrical Equipment"] = "OST_ElectricalEquipment",
-      ["Electrical Fixtures"] = "OST_ElectricalFixtures",
-      ["Lighting Fixtures"] = "OST_LightingFixtures",
-      ["Lighting Devices"] = "OST_LightingDevices",
-      ["Data Devices"] = "OST_DataDevices",
-      ["Communication Devices"] = "OST_CommunicationDevices",
+    // MEP - Electrical
+    ["Electrical Equipment"] = "OST_ElectricalEquipment",
+    ["Electrical Fixtures"] = "OST_ElectricalFixtures",
+    ["Lighting Fixtures"] = "OST_LightingFixtures",
+    ["Lighting Devices"] = "OST_LightingDevices",
+    ["Data Devices"] = "OST_DataDevices",
+    ["Communication Devices"] = "OST_CommunicationDevices",
 
-      // MEP - Conduits & Cable Trays
-      ["Conduit Fittings"] = "OST_ConduitFitting",
-      ["Conduits"] = "OST_Conduit",
-      ["Conduit Accessories"] = "OST_ConduitAccessory",
-      ["Cable Tray Fittings"] = "OST_CableTrayFitting",
-      ["Cable Trays"] = "OST_CableTray",
+    // MEP - Conduits & Cable Trays
+    ["Conduit Fittings"] = "OST_ConduitFitting",
+    ["Conduits"] = "OST_Conduit",
+    ["Conduit Accessories"] = "OST_ConduitAccessory",
+    ["Cable Tray Fittings"] = "OST_CableTrayFitting",
+    ["Cable Trays"] = "OST_CableTray",
 
-      // Equipment & Furniture
-      ["Casework"] = "OST_Casework",
-      ["Specialty Equipment"] = "OST_SpecialityEquipment",
-      ["Food Service Equipment"] = "OST_FoodServiceEquipment",
-      ["Furniture"] = "OST_Furniture",
-      ["Generic Models"] = "OST_GenericModel",
-      ["Planting"] = "OST_Planting",
-      ["Entourage"] = "OST_Entourage",
+    // Equipment & Furniture
+    ["Casework"] = "OST_Casework",
+    ["Specialty Equipment"] = "OST_SpecialityEquipment",
+    ["Food Service Equipment"] = "OST_FoodServiceEquipment",
+    ["Furniture"] = "OST_Furniture",
+    ["Generic Models"] = "OST_GenericModel",
+    ["Planting"] = "OST_Planting",
+    ["Entourage"] = "OST_Entourage",
 
-      // Separations & Rooms
-      ["<Space Separation>"] = "OST_MEPSpaceSeparationLines",
-      ["<Room Separation>"] = "OST_RoomSeparationLines",
-      ["Rooms"] = "OST_Rooms",
+    // Separations & Rooms
+    ["<Space Separation>"] = "OST_MEPSpaceSeparationLines",
+    ["<Room Separation>"] = "OST_RoomSeparationLines",
+    ["Rooms"] = "OST_Rooms",
 
-      // Misc
-      ["Ramps"] = "OST_Ramps"
-    };
+    // Misc
+    ["Ramps"] = "OST_Ramps",
+  };
 
   /// <summary>
   /// Maps a Navisworks/Revit display category name to a Revit BuiltInCategory.
@@ -182,9 +181,7 @@ public class RevitBuiltInCategoryExtractor(IPropertyConverter converter) : IRevi
   /// Returns the original name when no mapping exists.
   /// </summary>
   private static string DisplayNameToRevitBuiltInCategory(string displayName) =>
-    string.IsNullOrEmpty(displayName)
-      ? displayName
-      : s_revitCatMap.TryGetValue(displayName, out var builtInCategory)
-        ? builtInCategory
-        : displayName;
+    string.IsNullOrEmpty(displayName) ? displayName
+    : s_revitCatMap.TryGetValue(displayName, out var builtInCategory) ? builtInCategory
+    : displayName;
 }

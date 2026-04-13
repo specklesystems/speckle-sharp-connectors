@@ -66,7 +66,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
             {
               SpecklePropertyGoo prop => prop.Value,
               SpecklePropertyGroupGoo pg => pg,
-              _ => value
+              _ => value,
             };
 
             if (!outputParamsDict.TryGetValue(key, out var existingWrapper))
@@ -75,7 +75,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
               {
                 Name = key,
                 NickName = key,
-                Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item
+                Access = outputValue is IList ? GH_ParamAccess.list : GH_ParamAccess.item,
               };
               outputParamsDict[key] = new OutputParamWrapper(param, outputValue);
             }
@@ -115,7 +115,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
         {
           SpecklePropertyGoo prop => prop.Value,
           SpecklePropertyGroupGoo propGroup => propGroup,
-          _ => value
+          _ => value,
         };
 
         if (outParam.Access == GH_ParamAccess.item)
@@ -183,7 +183,7 @@ public class ExpandSpeckleProperties : GH_Component, IGH_VariableParameterCompon
           Name = targetParam.Name,
           NickName = targetParam.NickName,
           MutableNickName = false,
-          Access = targetParam.Access
+          Access = targetParam.Access,
         };
         Params.RegisterOutputParam(newParam, i);
         needsMaintenance = true;

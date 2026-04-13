@@ -31,7 +31,7 @@ public class LineToSpeckleConverter : ITypedConverter<RG.Line, SOG.Line>, ITyped
       start = _pointConverter.Convert(target.From),
       end = _pointConverter.Convert(target.To),
       units = _settingsStore.Current.SpeckleUnits,
-      domain = new SOP.Interval { start = 0, end = target.Length }
+      domain = new SOP.Interval { start = 0, end = target.Length },
     };
 
   public SOG.Line Convert(RG.LineCurve target) => Convert(target.Line);

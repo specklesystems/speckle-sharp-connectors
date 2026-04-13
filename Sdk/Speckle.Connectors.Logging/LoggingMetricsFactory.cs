@@ -5,8 +5,10 @@ namespace Speckle.Connectors.Logging;
 
 public sealed class LoggingMetricsFactory : IDisposable
 {
-  private readonly Meter _meterSource =
-    new(Consts.TRACING_SOURCE, Consts.GetPackageVersion(Assembly.GetExecutingAssembly()));
+  private readonly Meter _meterSource = new(
+    Consts.TRACING_SOURCE,
+    Consts.GetPackageVersion(Assembly.GetExecutingAssembly())
+  );
 
   public LoggingCounter<T> CreateCounter<T>(string name, string? unit = null, string? description = null)
     where T : struct => new(_meterSource.CreateCounter<T>(name, unit, description));

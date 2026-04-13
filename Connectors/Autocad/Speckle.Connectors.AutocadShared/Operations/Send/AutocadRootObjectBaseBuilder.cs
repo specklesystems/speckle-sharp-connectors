@@ -73,15 +73,14 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
   )
   {
     // 0 - Init the root
-    Collection root =
-      new()
-      {
-        name = Application
-          .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
-          .Split(_documentPathSeparator, StringSplitOptions.None)
-          .Reverse()
-          .First()
-      };
+    Collection root = new()
+    {
+      name = Application
+        .DocumentManager.CurrentDocument.Name // POC: https://spockle.atlassian.net/browse/CNX-9319
+        .Split(_documentPathSeparator, StringSplitOptions.None)
+        .Reverse()
+        .First(),
+    };
 
     // TODO: better handling for document and transactions!!
     Document doc = Application.DocumentManager.CurrentDocument;

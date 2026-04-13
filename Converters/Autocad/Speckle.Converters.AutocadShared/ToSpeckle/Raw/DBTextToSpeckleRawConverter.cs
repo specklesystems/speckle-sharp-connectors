@@ -39,7 +39,7 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       screenOriented = false,
       alignmentH = AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
       alignmentV = AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
 
   // For DBText, the following properties are stored in:

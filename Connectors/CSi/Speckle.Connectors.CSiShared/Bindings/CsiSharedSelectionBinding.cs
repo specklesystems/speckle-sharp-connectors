@@ -48,11 +48,10 @@ public class CsiSharedSelectionBinding : ISelectionBinding, IDisposable
     {
       _lastSelection = currentIds;
       // ensure UI updates also run on main thread
-      _threadContext.RunOnMain(
-        () =>
-          _topLevelExceptionHandler.CatchUnhandled(
-            () => Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection)
-          )
+      _threadContext.RunOnMain(() =>
+        _topLevelExceptionHandler.CatchUnhandled(() =>
+          Parent.Send(SelectionBindingEvents.SET_SELECTION, currentSelection)
+        )
       );
     }
   }

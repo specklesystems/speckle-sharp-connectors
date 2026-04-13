@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
@@ -23,5 +22,4 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.projitems" Label="Shared" />
-
 </Project>

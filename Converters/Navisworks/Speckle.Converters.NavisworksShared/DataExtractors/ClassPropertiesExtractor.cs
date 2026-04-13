@@ -27,7 +27,7 @@ public class ClassPropertiesExtractor
       ("DisplayName", modelItem.DisplayName),
       ("InstanceGuid", modelItem.InstanceGuid != Guid.Empty ? modelItem.InstanceGuid : null),
       ("Source", modelItem.Model?.SourceFileName),
-      ("Source Guid", modelItem.Model?.SourceGuid)
+      ("Source Guid", modelItem.Model?.SourceGuid),
     };
 
     // Loop through properties and add them if they are not null or empty

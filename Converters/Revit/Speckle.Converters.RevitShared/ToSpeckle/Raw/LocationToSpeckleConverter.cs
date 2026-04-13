@@ -25,7 +25,7 @@ public class LocationToSpeckleConverter : ITypedConverter<DB.Location, Base>
     {
       DB.LocationCurve curve => (_curveConverter.Convert(curve.Curve) as Base)!, // POC: ICurve and Base are not related but we know they must be, had to soft cast and then !.
       DB.LocationPoint point => _xyzConverter.Convert(point.Point),
-      _ => throw new ValidationException($"Unexpected location type {target.GetType()}")
+      _ => throw new ValidationException($"Unexpected location type {target.GetType()}"),
     };
   }
 }

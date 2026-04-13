@@ -5,8 +5,10 @@ namespace Speckle.Connectors.Logging;
 
 public sealed class LoggingActivityFactory : IDisposable
 {
-  private readonly ActivitySource _activitySource =
-    new(Consts.TRACING_SOURCE, Consts.GetPackageVersion(Assembly.GetExecutingAssembly()));
+  private readonly ActivitySource _activitySource = new(
+    Consts.TRACING_SOURCE,
+    Consts.GetPackageVersion(Assembly.GetExecutingAssembly())
+  );
 
   private readonly Dictionary<string, object?> _tags = new();
 
@@ -49,6 +51,6 @@ public sealed class LoggingActivityFactory : IDisposable
       LoggingActivityKind.Client => ActivityKind.Client,
       LoggingActivityKind.Producer => ActivityKind.Producer,
       LoggingActivityKind.Consumer => ActivityKind.Consumer,
-      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 }

@@ -21,7 +21,7 @@ public enum RepresentationMode
   /// <summary>
   /// Applies a fixed or user-defined representation, overriding others.
   /// </summary>
-  Permanent
+  Permanent,
 }
 
 /// <summary>
@@ -47,5 +47,5 @@ public enum OriginMode
   /// <summary>
   /// Uses the center of the model's bounding box as the base point for the transformation.
   /// </summary>
-  BoundingBoxCenter
+  BoundingBoxCenter,
 }
