@@ -1,3 +1,5 @@
+using Speckle.Converters.Common;
+
 namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 
 /// <summary>
@@ -6,18 +8,24 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
 
-  public PropertiesExtractor(ExtensionDictionaryExtractor extensionDictionaryExtractor)
+  public PropertiesExtractor(
+    ExtensionDictionaryExtractor extensionDictionaryExtractor,
+    IConverterSettingsStore<Plant3dConversionSettings> settingsStore
+  )
   {
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _settingsStore = settingsStore;
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
   {
     Dictionary<string, object?> properties = new();
 
-    // TODO: Add Plant3D class-specific property extraction here
-    // For example, extract pipe spec data, equipment data, etc.
+    // Add source drawing name so objects from multi-drawing Plant 3D
+    // projects can be traced back to their origin file.
+    properties["Drawing Name"] = Path.GetFileName(_settingsStore.Current.Document.Name);
 
     // add property sets and extension dictionaries to the properties dict
     AddDictionaryToPropertyDictionary(
