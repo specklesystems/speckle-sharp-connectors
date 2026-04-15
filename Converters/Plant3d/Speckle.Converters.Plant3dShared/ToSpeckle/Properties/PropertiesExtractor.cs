@@ -8,7 +8,7 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
-  private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
+  private readonly string _drawingName;
 
   public PropertiesExtractor(
     ExtensionDictionaryExtractor extensionDictionaryExtractor,
@@ -16,7 +16,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   )
   {
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
-    _settingsStore = settingsStore;
+    _drawingName = Path.GetFileName(settingsStore.Current.Document.Name);
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
@@ -25,7 +25,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
 
     // Add source drawing name so objects from multi-drawing Plant 3D
     // projects can be traced back to their origin file.
-    properties["Drawing Name"] = Path.GetFileName(_settingsStore.Current.Document.Name);
+    properties["Drawing Name"] = _drawingName;
 
     // add property sets and extension dictionaries to the properties dict
     AddDictionaryToPropertyDictionary(
