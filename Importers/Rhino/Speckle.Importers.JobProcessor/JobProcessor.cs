@@ -216,7 +216,7 @@ internal sealed class JobProcessorInstance(
             await Requeue(connection, job, speckleClient, ex);
             break;
           case IngestionCancelledException { Ingestion.statusData.status: ModelIngestionStatus.failed }:
-            // Server GC will fail inactive ingestions AND request cancel (despite it not being an explicit user cancel request)
+            // The server will fail inactive ingestions AND request cancel (despite it not being an explicit user cancel request)
             // since the ingestion is already in failed status, we don't need to try and move it to Cancelled status
             await repository.FailJob(connection, job.Id, CancellationToken.None);
             break;
@@ -231,12 +231,9 @@ internal sealed class JobProcessorInstance(
       catch (Exception ex2)
       {
         logger.LogError(new AggregateException(ex, ex2), "Failed to report failure status");
-        // somehow we're in a weird state,
-        // let's return the job to the queued state where it will get picked up again until one of total timeout,
-        // max attempts, or exhausted compute budget is reached.
-        // The server is responsible for garbage collecting jobs which have reached these error conditions and moving
-        // them to a failed status.
-        await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None);
+        // somehow we're in a weird state, e.g. we couldn't report the ingestion failure
+        // The server will clean up the ingestion if it still thinks it's processing.
+        await repository.FailJob(connection, job.Id, CancellationToken.None);
 
         if (ex2.IsFatal())
         {
