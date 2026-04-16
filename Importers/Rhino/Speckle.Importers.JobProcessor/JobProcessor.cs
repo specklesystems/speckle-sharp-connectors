@@ -127,11 +127,6 @@ internal sealed class JobProcessorInstance(
 
   private async Task Requeue(IDbConnection connection, FileimportJob job, IClient client, Exception ex)
   {
-    logger.LogWarning(
-      ex,
-      "Re-enqueueing {JobId} because it was interrupted by the windows service is stopping",
-      job.Id
-    );
     await repository.ReturnJobToQueued(connection, job.Id, CancellationToken.None); //this behaviour needs to be kept aligned with the server's GC behaviour
     await client.Ingestion.Requeue(
       new(job.Payload.ModelIngestionId, job.Payload.ProjectId, "Re-enqueuing job"),
@@ -213,6 +208,11 @@ internal sealed class JobProcessorInstance(
         {
           case OperationCanceledException when serviceCancellationToken.IsCancellationRequested:
             // Windows service shut down, re-queue job
+            logger.LogWarning(
+              ex,
+              "Re-enqueueing {JobId} because it was interrupted by the windows service is stopping",
+              job.Id
+            );
             await Requeue(connection, job, speckleClient, ex);
             break;
           case IngestionCancelledException { Ingestion.statusData.status: ModelIngestionStatus.failed }:
