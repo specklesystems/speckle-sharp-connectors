@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Speckle.Converters.CSiShared.Extensions;
 
 /// <summary>
@@ -191,9 +193,9 @@ public record TableData
     throw new InvalidOperationException($"Failed to get value for row '{rowKey}', column '{columnName}'");
   }
 
-  private bool TryGetValue(string rowKey, string columnName, out string value)
+  private bool TryGetValue(string rowKey, string columnName, [NotNullWhen(true)] out string? value)
   {
-    if (Rows.TryGetValue(rowKey, out var row) && row.TryGetValue(columnName, out value!))
+    if (Rows.TryGetValue(rowKey, out var row) && row.TryGetValue(columnName, out value))
     {
       return true;
     }

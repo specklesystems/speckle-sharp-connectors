@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
@@ -12,18 +11,10 @@ namespace Speckle.Converters.TeklaShared;
 public class TeklaRootToSpeckleConverter : IRootToSpeckleConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _toSpeckle;
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-  private readonly ILogger<TeklaRootToSpeckleConverter> _logger;
 
-  public TeklaRootToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
-    ILogger<TeklaRootToSpeckleConverter> logger
-  )
+  public TeklaRootToSpeckleConverter(IConverterManager<IToSpeckleTopLevelConverter> toSpeckle)
   {
     _toSpeckle = toSpeckle;
-    _settingsStore = settingsStore;
-    _logger = logger;
   }
 
   public Base Convert(object target)

@@ -119,15 +119,15 @@ public sealed class NavisworksDocumentEvents
     }
   }
 
-  private void UnsubscribeFromModelEvents(NAV.Document document)
-  {
-    document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
-    document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
-
-    var sendBinding = _serviceProvider
-      .GetRequiredService<IEnumerable<IBinding>>()
-      .OfType<NavisworksSendBinding>()
-      .First();
-    sendBinding.CancelAllSendOperations();
-  }
+  // private void UnsubscribeFromModelEvents(NAV.Document document)
+  // {
+  //   document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
+  //   document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
+  //
+  //   var sendBinding = _serviceProvider
+  //     .GetRequiredService<IEnumerable<IBinding>>()
+  //     .OfType<NavisworksSendBinding>()
+  //     .First();
+  //   sendBinding.CancelAllSendOperations();
+  // }
 }

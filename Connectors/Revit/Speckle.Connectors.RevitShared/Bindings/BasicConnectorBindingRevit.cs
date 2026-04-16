@@ -2,8 +2,6 @@ using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card;
-using Speckle.Connectors.DUI.Utils;
-using Speckle.Connectors.Revit.HostApp;
 using Speckle.Connectors.Revit.Plugin;
 using Speckle.Connectors.RevitShared;
 using Speckle.Connectors.RevitShared.Operations.Send.Filters;
@@ -26,8 +24,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
   private readonly ISpeckleApplication _speckleApplication;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRevitTask _revitTask;
-  private readonly ParameterUpdater _parameterUpdater;
-  private readonly IJsonSerializer _jsonSerializer;
 
   public BasicConnectorBindingRevit(
     DocumentModelStore store,
@@ -35,9 +31,7 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     RevitContext revitContext,
     ISpeckleApplication speckleApplication,
     ITopLevelExceptionHandler topLevelExceptionHandler,
-    IRevitTask revitTask,
-    ParameterUpdater parameterUpdater,
-    IJsonSerializer jsonSerializer
+    IRevitTask revitTask
   )
   {
     Name = "baseBinding";
@@ -47,8 +41,6 @@ internal sealed class BasicConnectorBindingRevit : IBasicConnectorBinding
     _speckleApplication = speckleApplication;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _revitTask = revitTask;
-    _parameterUpdater = parameterUpdater;
-    _jsonSerializer = jsonSerializer;
     Commands = new BasicConnectorBindingCommands(parent);
 
     _store.DocumentChanged += (_, _) =>
