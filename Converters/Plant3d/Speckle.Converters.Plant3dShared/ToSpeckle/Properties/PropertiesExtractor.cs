@@ -23,8 +23,8 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   {
     Dictionary<string, object?> properties = new();
 
-    // Add source drawing name so objects from multi-drawing Plant 3D
-    // projects can be traced back to their origin file.
+    // TODO: Add Plant3D class-specific property extraction here
+    // For example, extract pipe spec data, equipment data, etc.
     properties["Drawing Name"] = _drawingName;
 
     // add property sets and extension dictionaries to the properties dict
