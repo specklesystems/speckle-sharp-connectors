@@ -183,6 +183,15 @@ public class RhinoContinuousTraversalBuilder : IRootContinuousTraversalBuilder<R
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
+        if (!string.IsNullOrEmpty(rhinoObject.Attributes.Name))
+        {
+          converted["name"] = rhinoObject.Attributes.Name;
+        }
+        var instanceProperties = _propertiesExtractor.GetProperties(rhinoObject);
+        if (instanceProperties.Count > 0)
+        {
+          converted["properties"] = instanceProperties;
+        }
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
