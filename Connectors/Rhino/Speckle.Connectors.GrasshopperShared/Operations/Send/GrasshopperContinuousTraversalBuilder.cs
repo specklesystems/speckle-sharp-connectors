@@ -154,6 +154,7 @@ public class GrasshopperContinuousTraversalBuilder(
   {
     Dictionary<string, object?> props = [];
     Base baseObject = wrapper.Base;
+    baseObject.id = null; // force fresh serialization — cached id may point to chunked mesh from original source (CNX-3303)
     if (wrapper.Properties.CastTo(ref props))
     {
       baseObject["properties"] = props;
