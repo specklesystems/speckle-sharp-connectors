@@ -3,6 +3,7 @@ using Speckle.Converters.AutocadShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
+using Speckle.Objects.Data;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
@@ -40,16 +41,27 @@ public class AutocadRootToSpeckleConverter : IRootToSpeckleConverter
     using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
     var objectConverter = _toSpeckle.ResolveConverter(type);
 
-    var convertedObject = objectConverter.Convert(dbObject);
-
-    // add properties
-    Dictionary<string, object?> properties = _propertiesExtractor.GetProperties((Entity)dbObject);
-    if (properties.Count > 0)
-    {
-      convertedObject["properties"] = properties;
-    }
+    var rawGeometry = objectConverter.Convert(dbObject);
 
     tr.Commit();
-    return convertedObject;
+
+    if (dbObject is not Entity entity)
+    {
+      return rawGeometry;
+    }
+
+    var (displayValue, rawEncoding) = DataObjectDisplayValueExtractor.Extract(rawGeometry);
+    var properties = _propertiesExtractor.GetProperties(entity);
+    string typeName = type.Name;
+
+    return new AutocadObject
+    {
+      name = typeName,
+      type = typeName,
+      displayValue = displayValue,
+      properties = properties,
+      units = _settingsStore.Current.SpeckleUnits,
+      rawEncoding = rawEncoding,
+    };
   }
 }
