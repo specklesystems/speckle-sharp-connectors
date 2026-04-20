@@ -11,14 +11,14 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Objects;
+using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
-using Speckle.Objects;
-using Speckle.Objects.Geometry;
-using Speckle.Objects.Other;
 using Speckle.Sdk.Pipelines.Progress;
 using Layer = Rhino.DocObjects.Layer;
 using RhinoDataObject = Speckle.Objects.Data.RhinoObject;
@@ -212,9 +212,7 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
 
         converted = new RhinoDataObject
         {
-          name = !string.IsNullOrEmpty(rhinoObject.Attributes.Name)
-            ? rhinoObject.Attributes.Name
-            : sourceType,
+          name = !string.IsNullOrEmpty(rhinoObject.Attributes.Name) ? rhinoObject.Attributes.Name : sourceType,
           type = sourceType,
           displayValue = displayMeshes,
           properties = _propertiesExtractor.GetProperties(rhinoObject),
