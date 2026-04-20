@@ -5,7 +5,7 @@ namespace Speckle.Importers.Rhino.Internal;
 /// <summary>
 /// Dummy implementation of <see cref="ISqLiteJsonCacheManager"/> to avoid
 /// </summary>
-public sealed class DummySqliteJsonCacheManager : ISqLiteJsonCacheManager
+internal sealed class DummySqliteJsonCacheManager : ISqLiteJsonCacheManager
 {
   public void Dispose() { }
 
@@ -24,7 +24,7 @@ public sealed class DummySqliteJsonCacheManager : ISqLiteJsonCacheManager
   public bool HasObject(string objectId) => false;
 }
 
-public sealed class DummySqliteJsonCacheManagerFactory : ISqLiteJsonCacheManagerFactory
+internal sealed class DummySqliteJsonCacheManagerFactory : ISqLiteJsonCacheManagerFactory
 {
   private static readonly ISqLiteJsonCacheManager s_instance = new DummySqliteJsonCacheManager();
 

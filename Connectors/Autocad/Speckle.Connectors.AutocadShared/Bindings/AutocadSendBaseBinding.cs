@@ -21,7 +21,6 @@ public abstract class AutocadSendBaseBinding : ISendBinding
 {
   public string Name => "sendBinding";
   public SendBindingUICommands Commands { get; }
-  private OperationProgressManager OperationProgressManager { get; }
   public IBrowserBridge Parent { get; }
 
   private readonly DocumentModelStore _store;

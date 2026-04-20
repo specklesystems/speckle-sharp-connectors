@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using Autodesk.Revit.DB;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.RevitShared;
@@ -143,14 +144,18 @@ public class LinkedModelHandler
 
     byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
 
-#pragma warning disable CA1850
-    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+#if NET8_0_OR_GREATER
+    byte[] hashBytes = SHA256.HashData(jsonBytes);
+    // keep only the first 8 characters for a short but unique hash
+    return Convert.ToHexString(hashBytes).ToLowerInvariant()[..8];
+#else
+    using (var sha256 = SHA256.Create())
     {
       byte[] hashBytes = sha256.ComputeHash(jsonBytes);
       // keep only the first 8 characters for a short but unique hash
       return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()[..8];
     }
-#pragma warning restore CA1850
+#endif
   }
 
   /// <summary>

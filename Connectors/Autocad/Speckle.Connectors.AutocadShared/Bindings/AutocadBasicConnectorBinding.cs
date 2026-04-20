@@ -67,7 +67,7 @@ public class AutocadBasicConnectorBinding : IBasicConnectorBinding
     {
       return null;
     }
-    string name = doc.Name.Split(System.IO.Path.PathSeparator).Last();
+    string name = System.IO.Path.GetFileName(doc.Name);
     return new DocumentInfo(doc.Name, name, doc.GetHashCode().ToString());
   }
 

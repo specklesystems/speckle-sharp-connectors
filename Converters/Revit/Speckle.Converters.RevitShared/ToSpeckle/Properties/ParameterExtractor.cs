@@ -262,7 +262,7 @@ public class ParameterExtractor
         }
 
       case DB.StorageType.ElementId:
-        var elId = parameter.AsElementId()!;
+        var elId = parameter.AsElementId();
         if (elId == DB.ElementId.InvalidElementId)
         {
           return null;

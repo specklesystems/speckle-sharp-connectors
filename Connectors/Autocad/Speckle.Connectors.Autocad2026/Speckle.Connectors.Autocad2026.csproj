@@ -8,12 +8,12 @@
 
   <PropertyGroup>
     <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!--This is needed for managed dependencies-->
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!--This is needed for the rest-->
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!--This is needed just to keep folder paths the same as the netframework versions of autocad/civil-->
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

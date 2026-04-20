@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace Build;
 
-public static class Solutions
+internal static class Solutions
 {
 #pragma warning disable CA1802
 #pragma warning disable IDE1006
@@ -12,8 +12,8 @@ public static class Solutions
 #pragma warning restore CA1802
   public static async Task CompareConnectorsToLocal()
   {
-    var localSln = await GetSolution("Local.sln");
-    var connectorsSln = await GetSolution("Speckle.Connectors.sln");
+    var localSln = await GetSolution("Local.slnx");
+    var connectorsSln = await GetSolution("Speckle.Connectors.slnx");
     var localProjects = localSln.SolutionProjects.ToList();
 
     foreach (var value in connectorsSln.SolutionProjects)
@@ -76,8 +76,6 @@ public static class Solutions
     connectors.AddProject("..\\speckle-sharp-sdk\\src\\Speckle.Sdk.Dependencies\\Speckle.Sdk.Dependencies.csproj");
     var sln = Path.Combine(DIRECTORY, "Local.slnx");
     await SolutionSerializers.SlnXml.SaveAsync(sln, connectors, default);
-    sln = Path.Combine(DIRECTORY, "Local.sln");
-    await SolutionSerializers.SlnFileV12.SaveAsync(sln, connectors, default);
 
     var revit = Consts.ProjectGroups.Single(x => x.HostAppSlug.Equals("revit"));
     await GenerateConnector(connectors, revit, "Revit.Local");
@@ -112,6 +110,6 @@ public static class Solutions
   public static async Task<SolutionModel> GetSolution(string solutionName)
   {
     var connectorsSln = Path.Combine(DIRECTORY, solutionName);
-    return await SolutionSerializers.SlnFileV12.OpenAsync(connectorsSln, default);
+    return await SolutionSerializers.SlnXml.OpenAsync(connectorsSln, default);
   }
 }

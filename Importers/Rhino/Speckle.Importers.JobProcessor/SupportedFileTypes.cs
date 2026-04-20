@@ -1,6 +1,6 @@
 ﻿namespace Speckle.Importers.JobProcessor;
 
-public static class SupportedFileTypes
+internal static class SupportedFileTypes
 {
   /// <summary>
   /// This is the full list of file extensions that this job processor will look for jobs with that extension
