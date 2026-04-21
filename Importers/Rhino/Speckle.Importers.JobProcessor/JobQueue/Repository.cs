@@ -96,6 +96,16 @@ internal sealed class Repository(ILogger<Repository> logger)
     await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
 
+  public async Task FinishJob(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.SUCCEEDED, cancellationToken);
+  }
+
+  public async Task FailJob(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.FAILED, cancellationToken);
+  }
+
   private async Task SetJobStatus(
     IDbConnection connection,
     string jobId,
