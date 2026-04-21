@@ -42,7 +42,7 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
       subTx.Start();
       using var importer = new DB.ShapeImporter();
       shapeImportResult = importer.Convert(_settings.Current.Document, filePath);
-    
+
       if (shapeImportResult.Count == 0)
       {
         // clean up any invalid state Revit created otherwise we get issues in PostBakePaint and group creation
