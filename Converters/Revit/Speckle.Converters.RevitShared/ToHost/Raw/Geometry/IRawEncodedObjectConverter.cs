@@ -3,6 +3,7 @@ using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
@@ -26,12 +27,13 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
   }
 
-  public List<DB.GeometryObject> Convert(SOG.IRawEncodedObject target)
+  public List<DB.GeometryObject> Convert(SOG.IRawEncodedObject target) => Convert(target.encodedValue, (Base)target);
+
+  public List<DB.GeometryObject> Convert(RawEncoding encoding, Base targetAsBase)
   {
-    var targetAsBase = (Base)target;
-    var raw = target.encodedValue.contents;
+    var raw = encoding.contents;
     var bytes = System.Convert.FromBase64String(raw!);
-    var filePath = TempFileProvider.GetTempFile("RevitX", target.encodedValue.format);
+    var filePath = TempFileProvider.GetTempFile("RevitX", encoding.format);
     File.WriteAllBytes(filePath, bytes);
 
     using var importer = new DB.ShapeImporter();

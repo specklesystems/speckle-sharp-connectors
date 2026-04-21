@@ -4,6 +4,7 @@ using Speckle.Objects;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
+using RhinoDataObject = Speckle.Objects.Data.RhinoObject;
 
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
@@ -35,6 +36,10 @@ public class BaseToHostGeometryObjectConverter(
       case SOG.IRawEncodedObject elon:
         var res = encodedObjectConverter.Convert(elon);
         result.AddRange(res);
+        break;
+      case RhinoDataObject rhinoData when rhinoData.rawEncoding is not null:
+        var decoded = ((IRawEncodedObjectConverter)encodedObjectConverter).Convert(rhinoData.rawEncoding, rhinoData);
+        result.AddRange(decoded);
         break;
       default:
         var displayValue = target.TryGetDisplayValue<Base>();
