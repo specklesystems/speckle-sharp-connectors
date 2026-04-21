@@ -32,6 +32,7 @@ internal sealed class LocalToGlobalMapHandler
   // injected via constructor (DI-managed)
   private readonly IDataObjectInstanceRegistry _dataObjectInstanceRegistry;
   private readonly ILogger<LocalToGlobalMapHandler> _logger;
+  private readonly ILogger<GrasshopperBlockUnpacker> _blockUnpackerLogger;
   private readonly IConverterSettingsStore<RhinoConversionSettings> _settingsStore;
 
   // set via Initialize() method (per-operation data)
@@ -45,12 +46,14 @@ internal sealed class LocalToGlobalMapHandler
 
   public LocalToGlobalMapHandler(
     IDataObjectInstanceRegistry dataObjectInstanceRegistry,
-    ILogger<LocalToGlobalMapHandler> logger,
+    ILogger<LocalToGlobalMapHandler> logger, 
+    ILogger<GrasshopperBlockUnpacker> blockUnpackerLogger,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )
   {
     _dataObjectInstanceRegistry = dataObjectInstanceRegistry;
     _logger = logger;
+    _blockUnpackerLogger = blockUnpackerLogger;
     _settingsStore = settingsStore;
   }
 
@@ -156,6 +159,22 @@ internal sealed class LocalToGlobalMapHandler
         _processedDataObjects.Add(objId);
 
         var geometries = ConvertToGeometryWrappers(converted);
+
+        if (geometries.Count >= 1)
+        {
+          if (geometries.Count > 1) // ASSUMPTION FOR NOW WITH CNX-3169
+          {
+            _logger.LogWarning(
+              "DataObject {objId} produced {count} geometries; only the first is registered for "
+                + "block-definition resolution. If this object is referenced by an InstanceDefinitionProxy, "
+                + "some geometry may be missing from block instances.",
+              objId,
+              geometries.Count
+            );
+          }
+          ConvertedObjectsMap[objId] = geometries[0].DeepCopy();
+        }
+
         var dataObjectWrapper = CreateDataObjectWrapper(normalDataObject, geometries, path, objectCollection);
 
         CollectionRebuilder.AppendSpeckleGrasshopperObject(dataObjectWrapper, path, _colorUnpacker, _materialUnpacker);
@@ -290,7 +309,12 @@ internal sealed class LocalToGlobalMapHandler
       })
       .ToList();
 
-    var blockUnpacker = new GrasshopperBlockUnpacker(_traversalContextUnpacker, _colorUnpacker, _materialUnpacker);
+    var blockUnpacker = new GrasshopperBlockUnpacker(
+      _traversalContextUnpacker,
+      _colorUnpacker,
+      _materialUnpacker,
+      _blockUnpackerLogger
+    );
 
     // get consumed object IDs from unpacker
     var consumedObjectIds = blockUnpacker.UnpackBlocks(
