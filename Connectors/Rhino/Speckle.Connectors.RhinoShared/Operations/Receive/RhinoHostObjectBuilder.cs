@@ -1,7 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
-using Rhino.Render;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Extensions;
@@ -332,17 +331,17 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   {
     var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
 
-    if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
+    if (_materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(objectId, out int mIndex))
     {
-      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, materialGuid) as RenderMaterial;
+      atts.MaterialIndex = mIndex;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     else if (
       parentObjectId is not null
-      && (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(parentObjectId, out Guid parentGuid))
+      && _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(parentObjectId, out int mIndexParent)
     )
     {
-      atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, parentGuid) as RenderMaterial;
+      atts.MaterialIndex = mIndexParent;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
@@ -353,7 +352,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     }
     else if (
       parentObjectId is not null
-      && (_colorBaker.ObjectColorsIdMap.TryGetValue(parentObjectId, out (Color, ObjectColorSource) colorSpeckleObj))
+      && _colorBaker.ObjectColorsIdMap.TryGetValue(parentObjectId, out (Color, ObjectColorSource) colorSpeckleObj)
     )
     {
       atts.ObjectColor = colorSpeckleObj.Item1;

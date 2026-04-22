@@ -24,10 +24,12 @@ public class RhinoMaterialBaker
   }
 
   /// <summary>
-  /// A map keeping track of ids, either layer id or object id, and their Render Material Guid.
-  /// It's generated from the material proxy list as we <see cref="BakeMaterials"/>.
+  /// Maps object/layer ids to their legacy material index.
+  /// Used by RhinoHostObjectBuilder.BakeObject, RhinoLayerBaker and RhinoInstanceBaker
+  /// for reliable synchronous material assignment without needing RenderContent.FromId,
+  /// which returns null when called off the main thread (CNX-3311).
   /// </summary>
-  public Dictionary<string, Guid> ObjectIdAndMaterialIdMap { get; } = [];
+  public Dictionary<string, int> ObjectIdAndMaterialIndexMap { get; } = [];
 
   public void BakeMaterials(IReadOnlyCollection<RenderMaterialProxy> speckleRenderMaterialProxies)
   {
@@ -45,8 +47,8 @@ public class RhinoMaterialBaker
         matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
 
         // Check if material with this name already exists in the document
+        int materialIndex;
         var existingRenderMaterial = doc.RenderMaterials.FirstOrDefault(m => m.Name == matName);
-        Guid materialGuid;
 
         if (existingRenderMaterial == null)
         {
@@ -72,27 +74,41 @@ public class RhinoMaterialBaker
             rhinoMaterial.Shine = shine;
           }
 
-          // create RenderMaterial wrapper (CNX-2896)
-          var renderMaterial = RenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
+          // Add to legacy table first to get a reliable index (CNX-3311).
+          // We need the integer index for synchronous material assignment via atts.MaterialIndex,
+          // avoiding RenderContent.FromId which returns null when called off the main thread.
+          materialIndex = doc.Materials.Add(rhinoMaterial);
 
-          // add to RenderMaterial table. From my understanding, this internally manages the legacy Material table entry
-          doc.RenderMaterials.Add(renderMaterial);
-          materialGuid = renderMaterial.Id;
+          if (materialIndex == -1)
+          {
+            throw new ConversionException($"Failed to add material to legacy table: '{matName}'");
+          }
+
+          // Wrap the committed legacy entry as a RenderMaterial (CNX-2896).
+          // FromMaterial on an already-committed document material wraps it in place
+          // rather than creating a second entry, keeping the material editable in
+          // the Rhino UI without duplication.
+          var committedMaterial = doc.Materials[materialIndex];
+          var renderMaterial = RenderMaterial.FromMaterial(committedMaterial, doc);
+
+          if (renderMaterial == null)
+          {
+            throw new ConversionException($"Failed to create RenderMaterial wrapper for: '{matName}'");
+          }
         }
         else
         {
-          materialGuid = existingRenderMaterial.Id;
+          materialIndex = doc.Materials.Find(matName, ignoreDeletedMaterials: true);
+
+          if (materialIndex == -1)
+          {
+            throw new ConversionException($"Failed to find existing material in legacy table: '{matName}'");
+          }
         }
 
-        if (materialGuid == Guid.Empty)
-        {
-          throw new ConversionException($"Failed to create or retrieve RenderMaterial Guid for: '{matName}'");
-        }
-
-        // map object ID to Material Guid
         foreach (var objectId in proxy.objects)
         {
-          ObjectIdAndMaterialIdMap[objectId] = materialGuid;
+          ObjectIdAndMaterialIndexMap[objectId] = materialIndex;
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
