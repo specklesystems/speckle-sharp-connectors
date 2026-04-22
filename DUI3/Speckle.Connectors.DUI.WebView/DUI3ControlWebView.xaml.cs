@@ -11,14 +11,13 @@ namespace Speckle.Connectors.DUI.WebView;
 public sealed partial class DUI3ControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
-  public Uri DuiUrl { get; }
+  public Uri DuiUrl { get; } = new("https://dui.speckle.systems");
 
   public DUI3ControlWebView(IServiceProvider serviceProvider, IGlobalConfigResolver globalConfigResolver)
   {
     _serviceProvider = serviceProvider;
     DuiUrl = globalConfigResolver.GetDuiUrl();
     InitializeComponent();
-
     Browser.CoreWebView2InitializationCompleted += (sender, args) =>
       _serviceProvider
         .GetRequiredService<ITopLevelExceptionHandler>()

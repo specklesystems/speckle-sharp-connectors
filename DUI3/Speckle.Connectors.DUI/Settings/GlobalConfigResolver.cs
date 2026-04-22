@@ -8,13 +8,12 @@ using Speckle.Sdk.Common;
 using System.Runtime.Versioning;
 #endif
 
-
 namespace Speckle.Connectors.DUI.Settings;
 
-[GenerateAutoInterface(VisibilityModifier = "public")]
-internal class GlobalConfigResolver(ILogger logger) : IGlobalConfigResolver
+[GenerateAutoInterface]
+public class GlobalConfigResolver(ILogger<IGlobalConfigResolver> logger) : IGlobalConfigResolver
 {
-  private const string REGISTERY_PATH = "Speckle";
+  private const string REGISTRY_PATH = @"Software\Speckle\Connector Config\Global";
 
   public GlobalConfig GetConfig() =>
     new()
@@ -56,7 +55,7 @@ internal class GlobalConfigResolver(ILogger logger) : IGlobalConfigResolver
 
   public bool GetIsUpdateNotificationDisabled()
   {
-    const string KEY = "SPECKLE_DUI_URL";
+    const string KEY = "SPECKLE_IS_UPDATE_NOTIFICATION_DISABLED";
     if (GetConfigValue(KEY, out string? value))
     {
       if (bool.TryParse(value, out bool boolean))
@@ -87,7 +86,7 @@ internal class GlobalConfigResolver(ILogger logger) : IGlobalConfigResolver
 #endif
     {
       // 2. HKEY_LOCAL_MACHINE
-      value = ReadRegistry(RegistryHive.LocalMachine, REGISTERY_PATH, key);
+      value = ReadRegistry(RegistryHive.LocalMachine, REGISTRY_PATH, key);
       if (!string.IsNullOrWhiteSpace(value))
       {
         value.NotNull();
@@ -95,7 +94,7 @@ internal class GlobalConfigResolver(ILogger logger) : IGlobalConfigResolver
       }
 
       // 3. HKEY_CURRENT_USER
-      value = ReadRegistry(RegistryHive.CurrentUser, REGISTERY_PATH, key);
+      value = ReadRegistry(RegistryHive.CurrentUser, REGISTRY_PATH, key);
       if (!string.IsNullOrEmpty(value))
       {
         value.NotNull();

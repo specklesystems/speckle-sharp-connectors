@@ -6,13 +6,16 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:cefSharp="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
   xmlns:local="clr-namespace:Speckle.Connectors.Revit"
-  d:DataContext="{d:DesignInstance Type=local:CefSharpPanel}"
   mc:Ignorable="d"
   Title="Panel"
   Height="450"
   Width="800"
 >
   <Grid>
-    <cefSharp:ChromiumWebBrowser Name="Browser" Grid.Row="0" Address="{Binding DuiUrl}" />
+    <cefSharp:ChromiumWebBrowser
+      Name="Browser"
+      Grid.Row="0"
+      Address="{Binding DuiUrl, RelativeSource={RelativeSource AncestorType=local:CefSharpPanel}}"
+    />
   </Grid>
 </Page>
