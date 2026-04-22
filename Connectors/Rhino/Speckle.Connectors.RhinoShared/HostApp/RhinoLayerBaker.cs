@@ -1,5 +1,6 @@
 using Rhino;
 using Rhino.DocObjects;
+using Rhino.Render;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -131,15 +132,20 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
+
       // set material
       if (
-        _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
+        _materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(
           collection.applicationId ?? collection.id.NotNull(),
-          out int mIndex
+          out Guid materialGuid
         )
       )
       {
-        newLayer.RenderMaterialIndex = mIndex;
+        var rc = RenderContent.FromId(currentDocument, materialGuid);
+        if (rc is RenderMaterial rm)
+        {
+          newLayer.RenderMaterialIndex = rm.DocumentAssoc.Materials.CurrentMaterialIndex;
+        }
       }
 
       // set color
@@ -160,7 +166,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       _hostLayerCache.Add(currentLayerName, index);
-      previousLayer = currentDocument.Layers.FindIndex(index);
+      previousLayer = currentDocument.Layers.FindIndex(index); // note we need to get the correct id out, hence why we're double calling this
     }
   }
 }
