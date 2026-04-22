@@ -3,13 +3,17 @@ using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Revit;
 
 public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvider, IBrowserScriptExecutor
 {
-  public CefSharpPanel()
+  public string DuiUrl { get; }
+
+  public CefSharpPanel(IGlobalConfigResolver globalConfigResolver)
   {
+    DuiUrl = globalConfigResolver.GetDuiUrl().ToString();
     InitializeComponent();
   }
 
