@@ -131,8 +131,7 @@ public class RhinoLayerBaker : TraversalContextUnpacker
       }
 
       Layer newLayer = new() { Name = cleanNewLayerName, ParentLayerId = previousLayer?.Id ?? Guid.Empty };
-
-      // set material (CNX-3311 — use index for reliable synchronous assignment)
+      // set material
       if (
         _materialBaker.ObjectIdAndMaterialIndexMap.TryGetValue(
           collection.applicationId ?? collection.id.NotNull(),

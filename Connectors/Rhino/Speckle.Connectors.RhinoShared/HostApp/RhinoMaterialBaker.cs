@@ -47,8 +47,9 @@ public class RhinoMaterialBaker
         matName = matName.Replace("[", "").Replace("]", ""); // "Material" doesn't like square brackets if we create from here. Once they created from Rhino UI, all good..
 
         // Check if material with this name already exists in the document
-        int materialIndex;
         var existingRenderMaterial = doc.RenderMaterials.FirstOrDefault(m => m.Name == matName);
+        Guid materialGuid;
+        int materialIndex;
 
         if (existingRenderMaterial == null)
         {
@@ -74,38 +75,36 @@ public class RhinoMaterialBaker
             rhinoMaterial.Shine = shine;
           }
 
-          // Add to legacy table first to get a reliable index (CNX-3311).
-          // We need the integer index for synchronous material assignment via atts.MaterialIndex,
-          // avoiding RenderContent.FromId which returns null when called off the main thread.
-          materialIndex = doc.Materials.Add(rhinoMaterial);
+          // create RenderMaterial wrapper (CNX-2896)
+          // From my understanding, this internally manages the legacy Material table entry
+          var renderMaterial = RenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
+          doc.RenderMaterials.Add(renderMaterial);
+          materialGuid = renderMaterial.Id;
 
-          if (materialIndex == -1)
-          {
-            throw new ConversionException($"Failed to add material to legacy table: '{matName}'");
-          }
-
-          // Wrap the committed legacy entry as a RenderMaterial (CNX-2896).
-          // FromMaterial on an already-committed document material wraps it in place
-          // rather than creating a second entry, keeping the material editable in
-          // the Rhino UI without duplication.
-          var committedMaterial = doc.Materials[materialIndex];
-          var renderMaterial = RenderMaterial.FromMaterial(committedMaterial, doc);
-
-          if (renderMaterial == null)
-          {
-            throw new ConversionException($"Failed to create RenderMaterial wrapper for: '{matName}'");
-          }
+          // Resolve the legacy index by name immediately after adding (CNX-3311).
+          // We use the name directly rather than RenderContent.FromId because the RDK
+          // legacy table sync is not guaranteed to be immediate for all material types,
+          // causing FromId to return null. Since we just added this material with matName,
+          // doc.Materials.Find is guaranteed to find it.
+          materialIndex = doc.Materials.Find(matName, ignoreDeletedMaterials: true);
         }
         else
         {
+          materialGuid = existingRenderMaterial.Id;
           materialIndex = doc.Materials.Find(matName, ignoreDeletedMaterials: true);
-
-          if (materialIndex == -1)
-          {
-            throw new ConversionException($"Failed to find existing material in legacy table: '{matName}'");
-          }
         }
 
+        if (materialGuid == Guid.Empty)
+        {
+          throw new ConversionException($"Failed to create or retrieve RenderMaterial Guid for: '{matName}'");
+        }
+
+        if (materialIndex == -1)
+        {
+          throw new ConversionException($"Failed to resolve legacy material index for: '{matName}'");
+        }
+
+        // map object ID to material index
         foreach (var objectId in proxy.objects)
         {
           ObjectIdAndMaterialIndexMap[objectId] = materialIndex;
