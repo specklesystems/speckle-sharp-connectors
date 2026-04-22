@@ -5,4 +5,5 @@ public enum ReferencePointType
   InternalOrigin,
   ProjectBase,
   Survey,
+  SharedCoordinates
 }
