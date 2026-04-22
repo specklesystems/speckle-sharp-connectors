@@ -13,6 +13,9 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
 
   public CefSharpPanel(IGlobalConfigResolver globalConfigResolver)
   {
+#if REVIT2023_OR_GREATER
+    Browser.JavascriptObjectRepository.NameConverter = null;
+#endif
     DuiUrl = globalConfigResolver.GetDuiUrl().ToString();
     InitializeComponent();
   }
