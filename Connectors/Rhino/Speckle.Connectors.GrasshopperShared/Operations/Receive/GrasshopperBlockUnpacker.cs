@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Rhino.Geometry;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -21,16 +22,19 @@ internal sealed class GrasshopperBlockUnpacker
   private readonly TraversalContextUnpacker _traversalContextUnpacker;
   private readonly GrasshopperColorUnpacker _colorUnpacker;
   private readonly GrasshopperMaterialUnpacker _materialUnpacker;
+  private readonly ILogger<GrasshopperBlockUnpacker> _logger;
 
   public GrasshopperBlockUnpacker(
     TraversalContextUnpacker traversalContextUnpacker,
     GrasshopperColorUnpacker colorUnpacker,
-    GrasshopperMaterialUnpacker materialUnpacker
+    GrasshopperMaterialUnpacker materialUnpacker,
+    ILogger<GrasshopperBlockUnpacker> logger
   )
   {
     _traversalContextUnpacker = traversalContextUnpacker;
     _colorUnpacker = colorUnpacker;
     _materialUnpacker = materialUnpacker;
+    _logger = logger;
   }
 
   /// <summary>
@@ -121,7 +125,13 @@ internal sealed class GrasshopperBlockUnpacker
         }
         else
         {
-          // TODO: throw?
+          _logger.LogWarning(
+            "Block definition {defId} ({defName}) could not be built because none of its member "
+              + "objects were found in the converted objects map. All instances of this definition "
+              + "will be dropped.",
+            definitionId,
+            definitionProxy.name
+          );
         }
       }
       else if (component is InstanceProxy instanceProxy)
@@ -142,7 +152,12 @@ internal sealed class GrasshopperBlockUnpacker
         }
         else
         {
-          // TODO: throw?
+          _logger.LogWarning(
+            "Failed to create block instance {instanceId}: definition {defId} was not available. "
+              + "The instance will not appear in the scene.",
+            instanceId,
+            instanceProxy.definitionId
+          );
         }
       }
     }
@@ -175,7 +190,14 @@ internal sealed class GrasshopperBlockUnpacker
       }
       else
       {
-        // TODO: throw?
+        _logger.LogWarning(
+          "Block definition {defId} ({defName}) references object {objId} which was not found in "
+            + "the converted objects map. This geometry will be missing from the definition and "
+            + "therefore from all its instances.",
+          definitionId,
+          definitionProxy.name,
+          objectId
+        );
       }
     }
 
