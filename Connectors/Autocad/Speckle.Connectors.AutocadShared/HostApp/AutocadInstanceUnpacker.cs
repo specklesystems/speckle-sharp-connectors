@@ -78,7 +78,13 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       };
 
       var properties = _propertiesExtractor.GetProperties(instance);
-      if (properties?.Count > 0)
+      var attributes = GetInstanceAttributes(instance, transaction);
+      if (attributes.Count > 0)
+      {
+        properties["Attributes"] = attributes;
+      }
+
+      if (properties.Count > 0)
       {
         instanceProxy["properties"] = properties;
       }
@@ -184,5 +190,18 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     {
       _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
+  }
+
+  private static Dictionary<string, object?> GetInstanceAttributes(BlockReference instance, Transaction transaction)
+  {
+    var attributes = new Dictionary<string, object?>();
+
+    foreach (ObjectId id in instance.AttributeCollection)
+    {
+      var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+      attributes[reference.Tag] = reference.TextString;
+    }
+
+    return attributes;
   }
 }
