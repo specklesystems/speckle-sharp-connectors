@@ -46,7 +46,7 @@ internal sealed class LocalToGlobalMapHandler
 
   public LocalToGlobalMapHandler(
     IDataObjectInstanceRegistry dataObjectInstanceRegistry,
-    ILogger<LocalToGlobalMapHandler> logger, 
+    ILogger<LocalToGlobalMapHandler> logger,
     ILogger<GrasshopperBlockUnpacker> blockUnpackerLogger,
     IConverterSettingsStore<RhinoConversionSettings> settingsStore
   )

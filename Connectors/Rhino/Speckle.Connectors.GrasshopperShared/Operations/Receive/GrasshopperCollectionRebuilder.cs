@@ -120,7 +120,7 @@ internal sealed class GrasshopperCollectionRebuilder
       {
         SpeckleGeometryWrapper obj => obj.ApplicationId != null && consumedObjectIds.Contains(obj.ApplicationId),
         SpeckleDataObjectWrapper dataObj => dataObj.ApplicationId != null
-                                            && consumedObjectIds.Contains(dataObj.ApplicationId),
+          && consumedObjectIds.Contains(dataObj.ApplicationId),
         _ => false,
       }
     );
