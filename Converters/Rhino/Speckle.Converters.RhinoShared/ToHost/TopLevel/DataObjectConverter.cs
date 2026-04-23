@@ -1,11 +1,13 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
+using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using RhinoDataObject = Speckle.Objects.Data.RhinoObject;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
@@ -80,6 +82,19 @@ public class DataObjectConverter
     {
       _dataObjectInstanceRegistry.Register(target.applicationId ?? target.id.NotNull(), target, instanceProxies);
 
+      return resultPairs;
+    }
+
+    // prefer rawEncoding when present: decode native geometry (Brep/Extrusion/SubD) from 3dm blob
+    if (target is RhinoDataObject rhinoData && rhinoData.rawEncoding is not null)
+    {
+      var decoded = RawEncodingToHost.Convert(rhinoData.rawEncoding);
+      var unitsTransform = GetUnitsTransform(target);
+      foreach (var geom in decoded)
+      {
+        geom.Transform(unitsTransform);
+        resultPairs.Add((geom, target));
+      }
       return resultPairs;
     }
 

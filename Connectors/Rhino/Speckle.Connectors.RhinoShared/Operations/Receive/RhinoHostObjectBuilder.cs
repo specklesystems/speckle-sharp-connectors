@@ -375,7 +375,8 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
     int objCount = 0;
     foreach (var (conversionResult, originalBaseObject) in fallbackConversionResult)
     {
-      var id = BakeObject(conversionResult, originalBaseObject, parentId, atts);
+      // Duplicate atts per object to prevent RenderMaterial reference bleed across iterations (CNX-3311)
+      var id = BakeObject(conversionResult, originalBaseObject, parentId, atts.Duplicate());
       objectIds.Add(id);
       objCount++;
     }
