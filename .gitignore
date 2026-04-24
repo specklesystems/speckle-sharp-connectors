@@ -15,6 +15,7 @@ tests/TestArchives/Scratch
 tools
 .vscode
 .idea/
+*wpftmp.csproj
 
 .DS_Store
 *.snupkg
