@@ -13,7 +13,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" NoWarn="NU1902" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all" />
     <PackageReference Include="Serilog" PrivateAssets="all" />
     <PackageReference Include="Serilog.Exceptions" PrivateAssets="all" />
