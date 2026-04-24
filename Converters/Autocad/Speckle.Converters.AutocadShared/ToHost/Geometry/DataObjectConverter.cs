@@ -57,8 +57,11 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
       return []; // return empty - defer to instance baker
     }
 
-    // Check for SAT encoding first for lossless round-trip
-    if (target["encodedValue"] is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_SAT)
+    // Check for SAT encoding first for lossless round-trip.
+    // Prefer the strongly-typed `rawEncoding` field (AutocadObject/Plant3dObject) but
+    // fall back to the legacy dynamic `encodedValue` key used by Civil3dObject.
+    var encodingCandidate = target["rawEncoding"] ?? target["encodedValue"];
+    if (encodingCandidate is RawEncoding encoding && encoding.format == RawEncodingFormats.ACAD_SAT)
     {
       try
       {
