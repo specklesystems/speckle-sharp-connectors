@@ -77,7 +77,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits),
       };
 
-      var properties = _propertiesExtractor.GetProperties(instance);
+      var properties = _propertiesExtractor.GetProperties(instance) ?? new Dictionary<string, object?>();
       var attributes = GetInstanceAttributes(instance, transaction);
       if (attributes.Count > 0)
       {
@@ -192,14 +192,21 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     }
   }
 
-  private static Dictionary<string, object?> GetInstanceAttributes(BlockReference instance, Transaction transaction)
+  private Dictionary<string, object?> GetInstanceAttributes(BlockReference instance, Transaction transaction)
   {
     var attributes = new Dictionary<string, object?>();
 
     foreach (ObjectId id in instance.AttributeCollection)
     {
-      var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
-      attributes[reference.Tag] = reference.TextString;
+      try
+      {
+        var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        attributes[reference.Tag] = reference.TextString;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed reading attribute {id} on block {handle}", id, instance.Handle);
+      }
     }
 
     return attributes;
