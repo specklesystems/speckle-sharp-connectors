@@ -3,9 +3,9 @@ using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Revit2026.Plugin;
 
@@ -17,9 +17,12 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
 #pragma warning restore CA2213
   private bool _isInitializing;
 
-  public RevitControlWebView(IServiceProvider serviceProvider)
+  public Uri DuiUrl { get; }
+
+  public RevitControlWebView(IServiceProvider serviceProvider, IGlobalConfigResolver globalConfigResolver)
   {
     _serviceProvider = serviceProvider;
+    DuiUrl = globalConfigResolver.GetDuiUrl();
     InitializeComponent();
 
     // Delay WebView2 creation until the panel is actually visible
@@ -43,7 +46,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
       CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
       HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
       VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
-      Source = Url.Netlify,
+      Source = DuiUrl,
     };
 
     _browser.CoreWebView2InitializationCompleted += (sender, args) =>
