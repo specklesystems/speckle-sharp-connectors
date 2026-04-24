@@ -6,6 +6,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 
@@ -25,7 +26,8 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager appIdleManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
     : base(
       store,
@@ -36,16 +38,15 @@ public sealed class AutocadSendBinding : AutocadSendBaseBinding
       threadContext,
       topLevelExceptionHandler,
       appIdleManager,
-      sendOperationManagerFactory
+      sendOperationManagerFactory,
+      configStore
     )
   {
     _autocadConversionSettingsFactory = autocadConversionSettingsFactory;
   }
 
-  protected override void InitializeSettings(IServiceProvider serviceProvider)
-  {
+  protected override void InitializeSettings(IServiceProvider serviceProvider) =>
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
       .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
-  }
 }

@@ -39,6 +39,7 @@ public sealed class RhinoSendBinding : ISendBinding
   private readonly IAppIdleManager _idleManager;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
   private readonly RhinoLayerHelper _rhinoLayerHelper;
+  private readonly IConfigStore _configStore;
 
   /// <summary>
   /// Used internally to aggregate the changed objects' id. Objects in this list will be reconverted.
@@ -69,7 +70,8 @@ public sealed class RhinoSendBinding : ISendBinding
     IRhinoConversionSettingsFactory rhinoConversionSettingsFactory,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     ISendOperationManagerFactory sendOperationManagerFactory,
-    RhinoLayerHelper rhinoLayerHelper
+    RhinoLayerHelper rhinoLayerHelper,
+    IConfigStore configStore
   )
   {
     _store = store;
@@ -83,6 +85,7 @@ public sealed class RhinoSendBinding : ISendBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _rhinoLayerHelper = rhinoLayerHelper;
+    _configStore = configStore;
     Commands = new SendBindingUICommands(parent); // POC: Commands are tightly coupled with their bindings, at least for now, saves us injecting a factory.
     PreviousUnitSystem = RhinoDoc.ActiveDoc?.ModelUnitSystem ?? UnitSystem.None;
     SubscribeToRhinoEvents();
@@ -337,6 +340,14 @@ public sealed class RhinoSendBinding : ISendBinding
     if (RhinoDoc.ActiveDoc == null)
     {
       _logger.LogError("Rhino expiration checks were running without an active doc.");
+      return;
+    }
+
+    if (_configStore.GetConnectorConfig().DisableCache)
+    {
+      ChangedObjectIds = new();
+      ChangedObjectIdsInGroupsOrLayers = new();
+      ChangedMaterialIndexes = new();
       return;
     }
 
