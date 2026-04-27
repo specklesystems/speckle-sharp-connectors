@@ -71,6 +71,7 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
     // not the rendered text. The real string lives on each instance's AttributeReference,
     // which we capture below from the parent BlockReference's AttributeCollection.
     if (entity is ADB.AttributeDefinition)
+    {
       return;
     }
 
