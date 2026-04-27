@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects;
 using Speckle.Sdk.Models;
@@ -12,24 +10,18 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<CDB.TinSurface, SOG.Mesh> _tinSurfaceConverter;
   private readonly ITypedConverter<CDB.GridSurface, SOG.Mesh> _gridSurfaceConverter;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _pointCollectionConverter;
-  private readonly ILogger<DisplayValueExtractor> _logger;
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
 
   public DisplayValueExtractor(
     ITypedConverter<ADB.Solid3d, SOG.Mesh> solidConverter,
     ITypedConverter<CDB.TinSurface, SOG.Mesh> tinSurfaceConverter,
     ITypedConverter<CDB.GridSurface, SOG.Mesh> gridSurfaceConverter,
-    ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter,
-    ILogger<DisplayValueExtractor> logger,
-    IConverterSettingsStore<Civil3dConversionSettings> converterSettings
+    ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter
   )
   {
     _solidConverter = solidConverter;
     _tinSurfaceConverter = tinSurfaceConverter;
     _gridSurfaceConverter = gridSurfaceConverter;
     _pointCollectionConverter = pointCollectionConverter;
-    _logger = logger;
-    _converterSettings = converterSettings;
   }
 
   public IEnumerable<Base> GetDisplayValue(CDB.Entity entity)

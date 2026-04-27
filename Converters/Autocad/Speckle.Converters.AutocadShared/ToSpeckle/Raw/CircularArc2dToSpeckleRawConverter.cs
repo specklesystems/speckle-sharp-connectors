@@ -42,7 +42,7 @@ public class CircularArc2dToSpeckleRawConverter : ITypedConverter<AG.CircularArc
       endPoint = _pointConverter.Convert(target.EndPoint),
       midPoint = _pointConverter.Convert(midPoint),
       domain = new SOP.Interval { start = startParam, end = endParam },
-      units = units
+      units = units,
     };
 
     return arc;

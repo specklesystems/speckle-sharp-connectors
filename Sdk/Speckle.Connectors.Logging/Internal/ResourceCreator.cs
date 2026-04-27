@@ -19,18 +19,16 @@ internal static class ResourceCreator
     return ResourceBuilder
       .CreateEmpty()
       .AddService(serviceName: serviceName, serviceVersion: connectorVersion, serviceInstanceId: Consts.StaticSessionId)
-      .AddAttributes(
-        [
-          new(Consts.DEPLOYMENT_ENVIRONMENT, deploymentEnvironment.ToLowerInvariant()),
-          new(Consts.SERVICE_NAME, applicationAndVersion),
-          new(Consts.SERVICE_SLUG, slug),
-          new(Consts.OS_NAME, Environment.OSVersion.ToString()),
-          new(Consts.OS_TYPE, RuntimeInformation.ProcessArchitecture.ToString()),
-          new(Consts.OS_SLUG, DetermineHostOsSlug()),
-          new(Consts.RUNTIME_NAME, ".NET"),
-          new(Consts.RUNTIME_VERSION, RuntimeInformation.FrameworkDescription),
-        ]
-      );
+      .AddAttributes([
+        new(Consts.DEPLOYMENT_ENVIRONMENT, deploymentEnvironment.ToLowerInvariant()),
+        new(Consts.SERVICE_NAME, applicationAndVersion),
+        new(Consts.SERVICE_SLUG, slug),
+        new(Consts.OS_NAME, Environment.OSVersion.ToString()),
+        new(Consts.OS_TYPE, RuntimeInformation.ProcessArchitecture.ToString()),
+        new(Consts.OS_SLUG, DetermineHostOsSlug()),
+        new(Consts.RUNTIME_NAME, ".NET"),
+        new(Consts.RUNTIME_VERSION, RuntimeInformation.FrameworkDescription),
+      ]);
   }
 
   private static string DetermineHostOsSlug()

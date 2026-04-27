@@ -9,15 +9,10 @@ namespace Speckle.Converters.TeklaShared.ToSpeckle.Raw;
 public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base>>
 {
   private readonly IConverterSettingsStore<TeklaConversionSettings> _settingsStore;
-  private readonly ITypedConverter<TG.LineSegment, SOG.Line> _lineConverter;
 
-  public GridToSpeckleConverter(
-    IConverterSettingsStore<TeklaConversionSettings> settingsStore,
-    ITypedConverter<TG.LineSegment, SOG.Line> lineConverter
-  )
+  public GridToSpeckleConverter(IConverterSettingsStore<TeklaConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _lineConverter = lineConverter;
   }
 
   // this function gets the scale factor from the coordinate system
@@ -109,7 +104,7 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
       {
         start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
         end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
       yield return line;
@@ -124,7 +119,7 @@ public class GridToSpeckleConverter : ITypedConverter<TSM.Grid, IEnumerable<Base
       {
         start = new SOG.Point(startPoint.X, startPoint.Y, startPoint.Z, _settingsStore.Current.SpeckleUnits),
         end = new SOG.Point(endPoint.X, endPoint.Y, endPoint.Z, _settingsStore.Current.SpeckleUnits),
-        units = _settingsStore.Current.SpeckleUnits
+        units = _settingsStore.Current.SpeckleUnits,
       };
 
       yield return line;

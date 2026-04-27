@@ -18,13 +18,12 @@ public class DiscriminatedObjectConverter(IServiceProvider serviceProvider) : Js
 {
   // POC: remove, replace with DI
   private static readonly ConcurrentDictionary<string, Type?> s_typeCache = new();
-  private static readonly Speckle.Newtonsoft.Json.JsonSerializer s_localSerializer =
-    new()
-    {
-      DefaultValueHandling = DefaultValueHandling.Ignore,
-      ContractResolver = new CamelCasePropertyNamesContractResolver(),
-      NullValueHandling = NullValueHandling.Ignore
-    };
+  private static readonly Speckle.Newtonsoft.Json.JsonSerializer s_localSerializer = new()
+  {
+    DefaultValueHandling = DefaultValueHandling.Ignore,
+    ContractResolver = new CamelCasePropertyNamesContractResolver(),
+    NullValueHandling = NullValueHandling.Ignore,
+  };
 
   public override void WriteJson(
     JsonWriter writer,

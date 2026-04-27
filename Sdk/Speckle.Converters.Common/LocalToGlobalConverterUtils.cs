@@ -9,16 +9,6 @@ namespace Speckle.Converters.Common;
 // POC: We could pass transformation matrices to converters by default and evaluate there instead as utils.
 public class LocalToGlobalConverterUtils
 {
-  private Vector3 TransformPt(Vector3 vector, Matrix4x4 matrix)
-  {
-    var divisor = matrix.M41 + matrix.M42 + matrix.M43 + matrix.M44;
-    var x = (vector.X * matrix.M11 + vector.Y * matrix.M12 + vector.Z * matrix.M13 + matrix.M14) / divisor;
-    var y = (vector.X * matrix.M21 + vector.Y * matrix.M22 + vector.Z * matrix.M23 + matrix.M24) / divisor;
-    var z = (vector.X * matrix.M31 + vector.Y * matrix.M32 + vector.Z * matrix.M33 + matrix.M34) / divisor;
-
-    return new Vector3(x, y, z);
-  }
-
   // POC: This could move to converters instead handling all cases like this.
   public Base TransformObjects(Base atomicObject, IReadOnlyCollection<Matrix4x4> matrix)
   {

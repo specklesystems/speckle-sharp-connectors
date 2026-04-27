@@ -1,8 +1,14 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Send.Settings;
 
+[SuppressMessage(
+  "Usage",
+  "CA2263:Prefer generic overload when type is known",
+  Justification = "Multi-targeting friction"
+)]
 public class DetailLevelSetting(DetailLevelType value = DetailLevelSetting.DEFAULT_VALUE) : ICardSetting
 {
   public const string SETTING_ID = "detailLevel";

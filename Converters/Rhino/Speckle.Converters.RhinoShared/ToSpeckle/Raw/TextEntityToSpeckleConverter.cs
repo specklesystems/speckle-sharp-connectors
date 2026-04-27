@@ -36,7 +36,7 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
       screenOriented = screenOriented,
       alignmentH = GetHorizontalAlignment(target.TextHorizontalAlignment),
       alignmentV = GetVerticalAlignment(target.TextVerticalAlignment),
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
   }
 
@@ -49,14 +49,13 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
       return _planeConverter.Convert(target.Plane);
     }
     // adjust text plane if rotation applied. Use a new plane to not modify existing object
-    RG.Plane rotatedPlane =
-      new()
-      {
-        Origin = target.Plane.Origin,
-        XAxis = target.Plane.XAxis,
-        YAxis = target.Plane.YAxis,
-        ZAxis = target.Plane.ZAxis,
-      };
+    RG.Plane rotatedPlane = new()
+    {
+      Origin = target.Plane.Origin,
+      XAxis = target.Plane.XAxis,
+      YAxis = target.Plane.YAxis,
+      ZAxis = target.Plane.ZAxis,
+    };
     rotatedPlane.Rotate(target.TextRotationRadians, target.Plane.ZAxis);
     return _planeConverter.Convert(rotatedPlane);
   }
@@ -82,15 +81,12 @@ public class TextEntityToSpeckleConverter : ITypedConverter<RG.TextEntity, SA.Te
   {
     return alignment switch
     {
-      TextVerticalAlignment.Top
-      or TextVerticalAlignment.MiddleOfTop
-      or TextVerticalAlignment.BottomOfTop
-        => SA.AlignmentVertical.Top,
+      TextVerticalAlignment.Top or TextVerticalAlignment.MiddleOfTop or TextVerticalAlignment.BottomOfTop =>
+        SA.AlignmentVertical.Top,
       TextVerticalAlignment.Middle => SA.AlignmentVertical.Center,
       TextVerticalAlignment.MiddleOfBottom
       or TextVerticalAlignment.Bottom
-      or TextVerticalAlignment.BottomOfBoundingBox
-        => SA.AlignmentVertical.Bottom,
+      or TextVerticalAlignment.BottomOfBoundingBox => SA.AlignmentVertical.Bottom,
       _ => SA.AlignmentVertical.Top, // .Auto alignment - only applies to Leaders that we don't support yet
     };
   }

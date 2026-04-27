@@ -54,14 +54,13 @@ public class RhinoMaterialBaker
           Color emissive = Color.FromArgb(speckleRenderMaterial.emissive);
           double transparency = 1 - speckleRenderMaterial.opacity;
 
-          Material rhinoMaterial =
-            new()
-            {
-              Name = matName,
-              DiffuseColor = diffuse,
-              EmissionColor = emissive,
-              Transparency = transparency
-            };
+          Material rhinoMaterial = new()
+          {
+            Name = matName,
+            DiffuseColor = diffuse,
+            EmissionColor = emissive,
+            Transparency = transparency,
+          };
 
           // try to get additional properties
           if (speckleRenderMaterial["ior"] is double ior)

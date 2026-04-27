@@ -31,16 +31,15 @@ public class DBArcToSpeckleRawConverter : ITypedConverter<ADB.Arc, SOG.Arc>
     SOG.Point mid = _pointConverter.Convert(target.GetPointAtDist(target.Length / 2.0));
     SOP.Interval domain = new() { start = target.StartParam, end = target.EndParam };
 
-    SOG.Arc arc =
-      new()
-      {
-        plane = plane,
-        startPoint = start,
-        endPoint = end,
-        midPoint = mid,
-        domain = domain,
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Arc arc = new()
+    {
+      plane = plane,
+      startPoint = start,
+      endPoint = end,
+      midPoint = mid,
+      domain = domain,
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return arc;
   }

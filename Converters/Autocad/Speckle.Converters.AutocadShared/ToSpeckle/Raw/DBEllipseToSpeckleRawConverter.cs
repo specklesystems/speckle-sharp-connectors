@@ -25,30 +25,28 @@ public class DBEllipseToSpeckleRawConverter : ITypedConverter<ADB.Ellipse, SOG.E
 
   public SOG.Ellipse Convert(ADB.Ellipse target)
   {
-    SOG.Plane plane =
-      new()
-      {
-        origin = _pointConverter.Convert(target.Center),
-        normal = _vectorConverter.Convert(target.Normal),
-        xdir = _vectorConverter.Convert(target.MajorAxis),
-        ydir = _vectorConverter.Convert(target.MinorAxis),
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Plane plane = new()
+    {
+      origin = _pointConverter.Convert(target.Center),
+      normal = _vectorConverter.Convert(target.Normal),
+      xdir = _vectorConverter.Convert(target.MajorAxis),
+      ydir = _vectorConverter.Convert(target.MinorAxis),
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     // the start and end param corresponds to start and end angle in radians
     SOP.Interval trim = new() { start = target.StartAngle, end = target.EndAngle };
 
-    SOG.Ellipse ellipse =
-      new()
-      {
-        plane = plane,
-        firstRadius = target.MajorRadius,
-        secondRadius = target.MinorRadius,
-        domain = new SOP.Interval { start = 0, end = Math.PI * 2 },
-        trimDomain = trim,
-        length = target.GetDistanceAtParameter(target.EndParam),
-        units = _settingsStore.Current.SpeckleUnits
-      };
+    SOG.Ellipse ellipse = new()
+    {
+      plane = plane,
+      firstRadius = target.MajorRadius,
+      secondRadius = target.MinorRadius,
+      domain = new SOP.Interval { start = 0, end = Math.PI * 2 },
+      trimDomain = trim,
+      length = target.GetDistanceAtParameter(target.EndParam),
+      units = _settingsStore.Current.SpeckleUnits,
+    };
 
     return ellipse;
   }

@@ -230,6 +230,6 @@ public class SpeckleBlockInstancePassthrough()
     {
       GH_Transform ghTransform => ghTransform.Value,
       GH_Plane ghPlane => Transform.PlaneToPlane(Plane.WorldXY, ghPlane.Value),
-      _ => null
+      _ => null,
     };
 }

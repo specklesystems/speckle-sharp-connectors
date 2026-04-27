@@ -1,8 +1,14 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.RevitShared.Settings;
 
 namespace Speckle.Connectors.Revit.Operations.Receive.Settings;
 
+[SuppressMessage(
+  "Usage",
+  "CA2263:Prefer generic overload when type is known",
+  Justification = "Easier multi-targeting"
+)]
 public class ReceiveReferencePointSetting(ReceiveReferencePointType value = ReceiveReferencePointSetting.DEFAULT_VALUE)
   : ICardSetting
 {

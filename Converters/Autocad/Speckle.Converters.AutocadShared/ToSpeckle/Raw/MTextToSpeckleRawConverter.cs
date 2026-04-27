@@ -35,7 +35,7 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       screenOriented = false,
       alignmentH = GetHorizontalAlignment(target.Attachment),
       alignmentV = GetVerticalAlignment(target.Attachment),
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
 
   // For MText, the following properties are stored in:
@@ -72,18 +72,15 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       ADB.AttachmentPoint.TopLeft
       or ADB.AttachmentPoint.MiddleLeft
       or ADB.AttachmentPoint.BottomLeft
-      or ADB.AttachmentPoint.BaseLeft
-        => SA.AlignmentHorizontal.Left,
+      or ADB.AttachmentPoint.BaseLeft => SA.AlignmentHorizontal.Left,
       ADB.AttachmentPoint.TopCenter
       or ADB.AttachmentPoint.MiddleCenter
       or ADB.AttachmentPoint.BottomCenter
-      or ADB.AttachmentPoint.BaseCenter
-        => SA.AlignmentHorizontal.Center,
+      or ADB.AttachmentPoint.BaseCenter => SA.AlignmentHorizontal.Center,
       ADB.AttachmentPoint.TopRight
       or ADB.AttachmentPoint.MiddleRight
       or ADB.AttachmentPoint.BottomRight
-      or ADB.AttachmentPoint.BaseRight
-        => SA.AlignmentHorizontal.Right,
+      or ADB.AttachmentPoint.BaseRight => SA.AlignmentHorizontal.Right,
       _ => SA.AlignmentHorizontal.Left,
     };
   }
@@ -100,22 +97,19 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       or ADB.AttachmentPoint.TopRight
       or ADB.AttachmentPoint.TopMid
       or ADB.AttachmentPoint.TopAlign
-      or ADB.AttachmentPoint.TopFit
-        => SA.AlignmentVertical.Top,
+      or ADB.AttachmentPoint.TopFit => SA.AlignmentVertical.Top,
       ADB.AttachmentPoint.MiddleLeft
       or ADB.AttachmentPoint.MiddleCenter
       or ADB.AttachmentPoint.MiddleRight
       or ADB.AttachmentPoint.MiddleAlign
       or ADB.AttachmentPoint.MiddleFit
-      or ADB.AttachmentPoint.MiddleMid
-        => SA.AlignmentVertical.Center,
+      or ADB.AttachmentPoint.MiddleMid => SA.AlignmentVertical.Center,
       ADB.AttachmentPoint.BottomLeft
       or ADB.AttachmentPoint.BottomCenter
       or ADB.AttachmentPoint.BottomRight
       or ADB.AttachmentPoint.BottomAlign
       or ADB.AttachmentPoint.BottomFit
-      or ADB.AttachmentPoint.BottomMid
-        => SA.AlignmentVertical.Bottom,
+      or ADB.AttachmentPoint.BottomMid => SA.AlignmentVertical.Bottom,
       _ => SA.AlignmentVertical.Top,
     };
   }

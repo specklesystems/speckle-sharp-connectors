@@ -2,7 +2,7 @@
 
 namespace Speckle.Importers.JobProcessor.JobHandlers;
 
-public sealed class MaxAttemptsExceededException : Exception
+internal sealed class MaxAttemptsExceededException : Exception
 {
   public MaxAttemptsExceededException() { }
 
@@ -13,7 +13,7 @@ public sealed class MaxAttemptsExceededException : Exception
     : base(message, innerException) { }
 }
 
-public sealed class JobTimeoutException : Exception
+internal sealed class JobTimeoutException : Exception
 {
   public JobTimeoutException() { }
 
@@ -24,7 +24,7 @@ public sealed class JobTimeoutException : Exception
     : base(message, innerException) { }
 }
 
-public class IngestionCancelledException : Exception
+internal sealed class IngestionCancelledException : Exception
 {
   public required ModelIngestion Ingestion { get; init; }
 

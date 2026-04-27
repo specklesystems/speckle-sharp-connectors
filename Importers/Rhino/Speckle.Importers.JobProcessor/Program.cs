@@ -8,7 +8,7 @@ using Speckle.Importers.JobProcessor.JobQueue;
 
 namespace Speckle.Importers.JobProcessor;
 
-public static class Program
+internal static class Program
 {
   public static async Task Main(string[] args)
   {

@@ -34,7 +34,7 @@ public class SpecklePropertiesPassthrough : SpeckleSolveInstance
     Replace,
     Remove,
     Update, // pre rewording (cnx-3177), keeping for scripts with settings saved
-    Overwrite // pre rewording (cnx-3177), keeping for scripts with settings saved
+    Overwrite, // pre rewording (cnx-3177), keeping for scripts with settings saved
   }
 
   private PropertyMode _mode = PropertyMode.Update;

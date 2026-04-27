@@ -8,14 +8,17 @@
 
   <PropertyGroup>
     <!-- .NET Core uses this to move native dependencies into a root for runtime selection and usage for non-windows development https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#enablewindowstargeting -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!--This is needed for managed dependencies-->
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies> <!--This is needed for the rest-->
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath> <!--This is needed just to keep folder paths the same as the netframework versions-->
+    <!--This is needed for managed dependencies-->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!--This is needed for the rest-->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!--This is needed just to keep folder paths the same as the netframework versions-->
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2026.0.0" ExcludeAssets="runtime"/>
-    <PackageReference Include="Speckle.Plant3D.API" VersionOverride="2026.0.0" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2026.0.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Speckle.Plant3D.API" VersionOverride="2026.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>

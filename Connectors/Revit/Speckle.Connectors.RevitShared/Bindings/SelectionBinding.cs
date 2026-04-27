@@ -37,10 +37,9 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
       _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
       _selectionTimer.Start();
 #else
-      revitTask.Run(
-        () =>
-          _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
-            idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)
+      revitTask.Run(() =>
+        _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
+          idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)
       );
 #endif
     }

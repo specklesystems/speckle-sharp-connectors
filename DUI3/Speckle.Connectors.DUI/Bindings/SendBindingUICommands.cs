@@ -30,7 +30,7 @@ public class SendBindingUICommands(IBrowserBridge bridge)
       {
         modelCardId,
         idMap,
-        newSelectedObjectIds
+        newSelectedObjectIds,
       }
     );
 
@@ -47,7 +47,7 @@ public class SendBindingUICommands(IBrowserBridge bridge)
         modelCardId,
         versionId,
         sendConversionResults,
-        ingestionId
+        ingestionId,
       }
     );
 }

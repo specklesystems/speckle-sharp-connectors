@@ -30,7 +30,7 @@ public class FamilyMaterialManager
     '>',
     '?',
     '`',
-    '~'
+    '~',
   ];
 
   public Dictionary<string, FamilyParameter> FamilyParameters { get; } = [];

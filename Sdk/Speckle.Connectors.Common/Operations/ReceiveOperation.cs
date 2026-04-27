@@ -37,8 +37,8 @@ public sealed class ReceiveOperation(
     var version = await receiveVersionRetriever.GetVersion(account, receiveInfo, cancellationToken);
 
     cancellationToken.ThrowIfCancellationRequested();
-    var commitObject = await threadContext.RunOnWorkerAsync(
-      () => ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
+    var commitObject = await threadContext.RunOnWorkerAsync(() =>
+      ReceiveData(account, version, receiveInfo, onOperationProgressed, cancellationToken)
     );
 
     // 4 - Convert objects

@@ -155,7 +155,7 @@ public sealed class RevitFamilyBaker : IDisposable
         {
           InstanceDefinitionProxy d => d.applicationId ?? d.id.NotNull(),
           InstanceProxy i => i.applicationId ?? i.id.NotNull(),
-          _ => "unknown"
+          _ => "unknown",
         };
         _logger.LogError(ex, "Failed to process instance component {ComponentId}", componentId);
 

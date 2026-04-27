@@ -34,15 +34,14 @@ public class EtabsMaterialUnpacker : IMaterialUnpacker
       _etabsMaterialPropertyExtractor.ExtractProperties(name, properties);
 
       // create the material proxy
-      GroupProxy materialProxy =
-        new()
-        {
-          id = name,
-          name = name,
-          applicationId = name,
-          objects = sectionIds,
-          ["properties"] = properties
-        };
+      GroupProxy materialProxy = new()
+      {
+        id = name,
+        name = name,
+        applicationId = name,
+        objects = sectionIds,
+        ["properties"] = properties,
+      };
 
       yield return materialProxy;
     }

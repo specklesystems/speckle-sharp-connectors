@@ -1,18 +1,10 @@
-using Speckle.Converters.Common;
-using Speckle.Converters.TeklaShared;
 using Speckle.Sdk.Models.Collections;
 
 namespace Speckle.Connectors.TeklaShared.HostApp;
 
 public class SendCollectionManager
 {
-  private readonly IConverterSettingsStore<TeklaConversionSettings> _converterSettings;
   private readonly Dictionary<string, Collection> _collectionCache = new();
-
-  public SendCollectionManager(IConverterSettingsStore<TeklaConversionSettings> converterSettings)
-  {
-    _converterSettings = converterSettings;
-  }
 
   public Collection GetAndCreateObjectHostCollection(TSM.ModelObject teklaObject, Collection rootObject)
   {

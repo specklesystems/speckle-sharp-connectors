@@ -201,31 +201,22 @@ public class ToSpeckleSettingsManager(
 
     switch (referencePointType)
     {
-      // note that the project base (ui) rotation is registered on the survey pt, not on the base point
       case ReferencePointType.ProjectBase:
-        if (projectPoint is not null)
-        {
-          referencePointTransform = Transform.CreateTranslation(projectPoint.Position);
-        }
-        else
-        {
-          throw new InvalidOperationException("Couldn't retrieve Project Point from document");
-        }
+        referencePointTransform = projectPoint is not null
+          ? Transform.CreateTranslation(projectPoint.Position)
+          : throw new InvalidOperationException("Couldn't retrieve Project Point from document");
         break;
 
       case ReferencePointType.Survey:
-        if (surveyPoint is not null)
-        {
-          ProjectPosition projectPosition = document.ActiveProjectLocation.GetProjectPosition(XYZ.Zero);
-          double angleToTrueNorth = projectPosition.Angle;
-          using Transform translation = Transform.CreateTranslation(surveyPoint.Position);
-          using Transform rotation = Transform.CreateRotation(XYZ.BasisZ, angleToTrueNorth);
-          referencePointTransform = translation.Multiply(rotation);
-        }
-        else
-        {
-          throw new InvalidOperationException("Couldn't retrieve Survey Point from document");
-        }
+        referencePointTransform = surveyPoint is not null
+          ? Transform.CreateTranslation(surveyPoint.Position)
+          : throw new InvalidOperationException("Couldn't retrieve Survey Point from document");
+        break;
+
+      case ReferencePointType.SharedCoordinates:
+        referencePointTransform =
+          document.ActiveProjectLocation?.GetTotalTransform()
+          ?? throw new InvalidOperationException("Couldn't retrieve Shared Coordinates transform from document");
         break;
 
       case ReferencePointType.InternalOrigin:

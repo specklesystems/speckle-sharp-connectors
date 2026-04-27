@@ -16,7 +16,7 @@ public sealed class RevitControlWebViewDockable : UserControl, Autodesk.Revit.UI
     data.InitialState = new Autodesk.Revit.UI.DockablePaneState
     {
       DockPosition = DockPosition.Tabbed,
-      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
+      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser,
     };
   }
 }

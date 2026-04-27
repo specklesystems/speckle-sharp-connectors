@@ -20,7 +20,7 @@ public static class ElementExtensions
         {
           BuiltInCategory.OST_CLines,
           BuiltInCategory.OST_SketchLines,
-          BuiltInCategory.OST_WeakDims
+          BuiltInCategory.OST_WeakDims,
         },
         true
       );
@@ -39,7 +39,7 @@ public static class ElementExtensions
       Wall wall => GetWallChildren(wall),
       FootPrintRoof roof => GetFootPrintRoofChildren(roof),
       DBA.Railing railing => GetRailingChildren(railing),
-      _ => []
+      _ => [],
     };
 
   private static IEnumerable<ElementId> GetWallChildren(Wall wall)

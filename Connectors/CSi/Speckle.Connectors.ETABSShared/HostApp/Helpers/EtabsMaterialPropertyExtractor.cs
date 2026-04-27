@@ -9,26 +9,24 @@ public class EtabsMaterialPropertyExtractor : IApplicationMaterialPropertyExtrac
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
 
-  private readonly Dictionary<int, string?> _ssTypeDict =
-    new()
-    {
-      { 0, "User defined" },
-      { 1, "Parametric - Simple" },
-      { 2, "Parametric - Mander" }
-    };
+  private readonly Dictionary<int, string?> _ssTypeDict = new()
+  {
+    { 0, "User defined" },
+    { 1, "Parametric - Simple" },
+    { 2, "Parametric - Mander" },
+  };
 
-  private readonly Dictionary<int, string?> _ssHysTypeDict =
-    new()
-    {
-      { 0, "Elastic" },
-      { 1, "Kinematic" },
-      { 2, "Takeda" },
-      { 3, "Pivot" },
-      { 4, "Concrete" },
-      { 5, "BRB Hardening" },
-      { 6, "Degrading" },
-      { 7, "Isotropic" }
-    };
+  private readonly Dictionary<int, string?> _ssHysTypeDict = new()
+  {
+    { 0, "Elastic" },
+    { 1, "Kinematic" },
+    { 2, "Takeda" },
+    { 3, "Pivot" },
+    { 4, "Concrete" },
+    { 5, "BRB Hardening" },
+    { 6, "Degrading" },
+    { 7, "Isotropic" },
+  };
 
   private const int TEMP = 0;
 

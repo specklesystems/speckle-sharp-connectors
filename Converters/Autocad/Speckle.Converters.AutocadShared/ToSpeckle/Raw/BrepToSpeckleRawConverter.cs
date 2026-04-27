@@ -66,14 +66,13 @@ public class BrepToSpeckleRawConverter : ITypedConverter<ABR.Brep, SOG.Mesh>
       }
 
       // create speckle mesh
-      SOG.Mesh mesh =
-        new()
-        {
-          faces = faces,
-          vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
-          units = _settingsStore.Current.SpeckleUnits,
-          area = target.GetSurfaceArea()
-        };
+      SOG.Mesh mesh = new()
+      {
+        faces = faces,
+        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
+        units = _settingsStore.Current.SpeckleUnits,
+        area = target.GetSurfaceArea(),
+      };
 
       try
       {

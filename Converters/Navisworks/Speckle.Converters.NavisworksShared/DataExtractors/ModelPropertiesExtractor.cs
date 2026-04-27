@@ -35,7 +35,7 @@ public class ModelPropertiesExtractor(IConverterSettingsStore<NavisworksConversi
       ("Units", model.Units.ToString()),
       ("Transform", model.Transform.ToString()),
       ("Guid", model.Guid != Guid.Empty ? model.Guid : null),
-      ("Source Guid", model.SourceGuid != Guid.Empty ? model.SourceGuid : null)
+      ("Source Guid", model.SourceGuid != Guid.Empty ? model.SourceGuid : null),
     };
 
     // Loop through properties and add them if they are not null or empty

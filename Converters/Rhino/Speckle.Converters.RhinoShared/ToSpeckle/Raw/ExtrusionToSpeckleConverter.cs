@@ -50,7 +50,7 @@ public class ExtrusionToSpeckleConverter : ITypedConverter<RG.Extrusion, SOG.Ext
       volume = volume,
       displayValue = displayValue,
       encodedValue = extrusionEncoding,
-      units = _settingsStore.Current.SpeckleUnits
+      units = _settingsStore.Current.SpeckleUnits,
     };
 
     return bx;

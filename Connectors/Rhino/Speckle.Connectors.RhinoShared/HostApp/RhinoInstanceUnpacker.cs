@@ -48,15 +48,14 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
       var instanceDefinitionId = instance.InstanceDefinition.Id.ToString();
       var currentDoc = RhinoDoc.ActiveDoc; // POC: too much right now to interface around
 
-      InstanceProxy instanceProxy =
-        new()
-        {
-          applicationId = instanceId,
-          definitionId = instance.InstanceDefinition.Id.ToString(),
-          transform = XFormToMatrix(instance.InstanceXform),
-          maxDepth = depth,
-          units = currentDoc.ModelUnitSystem.ToSpeckleString()
-        };
+      InstanceProxy instanceProxy = new()
+      {
+        applicationId = instanceId,
+        definitionId = instance.InstanceDefinition.Id.ToString(),
+        transform = XFormToMatrix(instance.InstanceXform),
+        maxDepth = depth,
+        units = currentDoc.ModelUnitSystem.ToSpeckleString(),
+      };
       _instanceObjectsManager.AddInstanceProxy(instanceId, instanceProxy);
 
       // For each block instance that has the same definition, we need to keep track of the "maximum depth" at which is found.
@@ -107,7 +106,7 @@ public class RhinoInstanceUnpacker : IInstanceUnpacker<RhinoObject>
         objects = new List<string>(),
         maxDepth = depth,
         name = instance.InstanceDefinition.Name,
-        ["description"] = instance.InstanceDefinition.Description
+        ["description"] = instance.InstanceDefinition.Description,
       };
 
       _instanceObjectsManager.AddDefinitionProxy(instance.InstanceDefinition.Id.ToString(), definition);

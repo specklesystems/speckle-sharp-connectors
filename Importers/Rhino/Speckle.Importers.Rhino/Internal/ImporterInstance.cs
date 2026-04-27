@@ -1,5 +1,4 @@
 using System.Diagnostics.Contracts;
-using Microsoft.Extensions.Logging;
 using Rhino;
 using Rhino.Runtime.InProcess;
 using Speckle.Connectors.Common.Builders;
@@ -22,21 +21,13 @@ internal sealed class ImporterInstance : IDisposable
   private readonly ImporterArgs _args;
   private readonly Sender _sender;
   private readonly IClient _speckleClient;
-  private readonly ILogger<ImporterInstance> _logger;
   private readonly ISdkActivityFactory _activityFactory;
 
-  public ImporterInstance(
-    ImporterArgs args,
-    Sender sender,
-    IClient speckleClient,
-    ILogger<ImporterInstance> logger,
-    ISdkActivityFactory activityFactory
-  )
+  public ImporterInstance(ImporterArgs args, Sender sender, IClient speckleClient, ISdkActivityFactory activityFactory)
   {
     _args = args;
     _sender = sender;
     _speckleClient = speckleClient;
-    _logger = logger;
     _activityFactory = activityFactory;
     _rhinoDoc = OpenDocument();
     _scopes =

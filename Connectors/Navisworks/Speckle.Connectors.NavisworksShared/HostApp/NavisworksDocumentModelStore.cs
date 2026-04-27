@@ -50,8 +50,8 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     }
     catch (NAV.Data.DatabaseException ex)
     {
-      _topLevelExceptionHandler.CatchUnhandled(
-        () => throw new InvalidOperationException("Failed to write Speckle state to database", ex)
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+        throw new InvalidOperationException("Failed to write Speckle state to database", ex)
       );
     }
   }
@@ -78,8 +78,8 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
     catch (NAV.Data.DatabaseException ex)
     {
       ClearAndSaveThisState(); // Clear models on failure to avoid stale data
-      _topLevelExceptionHandler.CatchUnhandled(
-        () => throw new InvalidOperationException("Failed to read Speckle state from database", ex)
+      _topLevelExceptionHandler.CatchUnhandled(() =>
+        throw new InvalidOperationException("Failed to read Speckle state from database", ex)
       );
     }
   }

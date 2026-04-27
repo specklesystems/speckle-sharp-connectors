@@ -21,7 +21,7 @@ public sealed class CsiFramePropertiesExtractor
     "Shear 3 (Minor)",
     "Torsion",
     "Moment 22 (Minor)",
-    "Moment 33 (Major)"
+    "Moment 33 (Major)",
   ];
 
   public CsiFramePropertiesExtractor(
@@ -144,7 +144,7 @@ public sealed class CsiFramePropertiesExtractor
       ["I22"] = value[4],
       ["I33"] = value[5],
       ["Mass"] = value[6],
-      ["Weight"] = value[7]
+      ["Weight"] = value[7],
     };
   }
 

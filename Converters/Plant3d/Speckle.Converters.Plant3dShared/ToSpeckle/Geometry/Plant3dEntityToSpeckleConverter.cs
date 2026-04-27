@@ -1,4 +1,3 @@
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
@@ -15,17 +14,12 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle.Geometry;
 public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _converterManager;
-  private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
 
   private const int MAX_DEPTH = 5;
 
-  protected Plant3dEntityToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> converterManager,
-    IConverterSettingsStore<Plant3dConversionSettings> settingsStore
-  )
+  protected Plant3dEntityToSpeckleConverter(IConverterManager<IToSpeckleTopLevelConverter> converterManager)
   {
     _converterManager = converterManager;
-    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => ConvertEntity((ADB.Entity)target);
@@ -45,14 +39,13 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       name = tagValue;
     }
 
-    DataObject dataObject =
-      new()
-      {
-        name = name,
-        displayValue = displayValue,
-        properties = new Dictionary<string, object?>(),
-        applicationId = entity.Handle.Value.ToString()
-      };
+    DataObject dataObject = new()
+    {
+      name = name,
+      displayValue = displayValue,
+      properties = new Dictionary<string, object?>(),
+      applicationId = entity.Handle.Value.ToString(),
+    };
 
     return dataObject;
   }

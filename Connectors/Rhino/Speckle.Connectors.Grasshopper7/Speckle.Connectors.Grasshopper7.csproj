@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <!-- Select the framework(s) you wish to target.
         Rhino 6: net45
@@ -29,8 +28,18 @@
 
   <ItemGroup>
     <PackageReference Include="GrasshopperAsyncComponent" />
-    <PackageReference Include="RhinoCommon" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="7.13.21348.13001" />
-    <PackageReference Include="Grasshopper" IncludeAssets="compile; build" PrivateAssets="all" VersionOverride="7.13.21348.13001" />
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="7.13.21348.13001"
+    />
+    <PackageReference
+      Include="Grasshopper"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="7.13.21348.13001"
+    />
     <PackageReference Include="System.Resources.Extensions" />
   </ItemGroup>
 
@@ -39,6 +48,8 @@
     <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
   </ItemGroup>
 
-  <Import Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems" Label="Shared" />
-  
+  <Import
+    Project="..\Speckle.Connectors.GrasshopperShared\Speckle.Connectors.GrasshopperShared.projitems"
+    Label="Shared"
+  />
 </Project>
