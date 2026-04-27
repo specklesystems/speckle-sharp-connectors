@@ -11,6 +11,9 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Objects;
+using Speckle.Objects.Geometry;
+using Speckle.Objects.Other;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -18,6 +21,7 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
 using Layer = Rhino.DocObjects.Layer;
+using RhinoDataObject = Speckle.Objects.Data.RhinoObject;
 
 namespace Speckle.Connectors.Rhino.Operations.Send;
 
@@ -171,6 +175,15 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       if (rhinoObject is InstanceObject)
       {
         converted = instanceProxies[applicationId];
+        if (!string.IsNullOrEmpty(rhinoObject.Attributes.Name))
+        {
+          converted["name"] = rhinoObject.Attributes.Name;
+        }
+        var instanceProperties = _propertiesExtractor.GetProperties(rhinoObject);
+        if (instanceProperties.Count > 0)
+        {
+          converted["properties"] = instanceProperties;
+        }
       }
       else if (_sendConversionCache.TryGetValue(projectId, applicationId, out ObjectReference? value))
       {
@@ -178,21 +191,35 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
       }
       else
       {
-        converted = _rootToSpeckleConverter.Convert(rhinoObject);
-        converted.applicationId = applicationId;
-      }
+        var rawGeometry = _rootToSpeckleConverter.Convert(rhinoObject);
 
-      // add name and properties
-      // POC: this is NOT done in the converter because we don't have a RootToSpeckle converter that captures all top level converters
-      if (!string.IsNullOrEmpty(rhinoObject.Attributes.Name))
-      {
-        converted["name"] = rhinoObject.Attributes.Name;
-      }
+        List<Base> displayMeshes;
+        RawEncoding? rawEncoding = null;
 
-      var properties = _propertiesExtractor.GetProperties(rhinoObject);
-      if (properties.Count > 0)
-      {
-        converted["properties"] = properties;
+        if (rawGeometry is IDisplayValue<List<Mesh>> hasDisplay && rawGeometry is IRawEncodedObject rawEncoded)
+        {
+          displayMeshes = hasDisplay.displayValue.Cast<Base>().ToList();
+          rawEncoding = rawEncoded.encodedValue;
+        }
+        else if (rawGeometry is IDisplayValue<List<Mesh>> hasDisplayMeshes)
+        {
+          displayMeshes = hasDisplayMeshes.displayValue.Cast<Base>().ToList();
+        }
+        else
+        {
+          displayMeshes = [rawGeometry];
+        }
+
+        converted = new RhinoDataObject
+        {
+          name = !string.IsNullOrEmpty(rhinoObject.Attributes.Name) ? rhinoObject.Attributes.Name : sourceType,
+          type = sourceType,
+          displayValue = displayMeshes,
+          properties = _propertiesExtractor.GetProperties(rhinoObject),
+          units = _converterSettings.Current.SpeckleUnits,
+          applicationId = applicationId,
+          rawEncoding = rawEncoding,
+        };
       }
 
       // add to host

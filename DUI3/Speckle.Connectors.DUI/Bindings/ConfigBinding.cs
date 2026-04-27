@@ -12,7 +12,8 @@ namespace Speckle.Connectors.DUI.Bindings;
 /// ['Rhino',   serialised config]
 /// ['Revit',   serialised config]
 /// </summary>
-public class ConfigBinding(IConfigStore configStore, IBrowserBridge bridge) : IBinding
+public class ConfigBinding(IConfigStore configStore, IGlobalConfigResolver globalConfigResolver, IBrowserBridge bridge)
+  : IBinding
 {
   public string Name => "configBinding";
   public IBrowserBridge Parent { get; } = bridge;
@@ -41,7 +42,7 @@ public class ConfigBinding(IConfigStore configStore, IBrowserBridge bridge) : IB
   // TODO: need to be replaced with `GetAccountsConfig` function after some amount of time to not confuse ourselves.
   public AccountsConfig? GetUserSelectedAccountId() => GetAccountsConfig();
 
-  public GlobalConfig? GetGlobalConfig() => configStore.GetGlobalConfig();
+  public GlobalConfig GetGlobalConfig() => globalConfigResolver.GetConfig();
 
   public AccountsConfig? GetAccountsConfig() => configStore.GetAccountsConfig();
 

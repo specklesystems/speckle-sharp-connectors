@@ -112,11 +112,17 @@ internal sealed class GrasshopperCollectionRebuilder
     HashSet<string> consumedObjectIds
   )
   {
-    // Remove consumed objects from this level
+    // Remove consumed objects from this level.
+    // Matches both SpeckleGeometryWrapper (legacy path) and SpeckleDataObjectWrapper
+    // (current Rhino path, where atomic objects are wrapped in RhinoDataObject).
     collection.Elements.RemoveAll(element =>
-      element is SpeckleGeometryWrapper obj
-      && obj.ApplicationId != null
-      && consumedObjectIds.Contains(obj.ApplicationId)
+      element switch
+      {
+        SpeckleGeometryWrapper obj => obj.ApplicationId != null && consumedObjectIds.Contains(obj.ApplicationId),
+        SpeckleDataObjectWrapper dataObj => dataObj.ApplicationId != null
+          && consumedObjectIds.Contains(dataObj.ApplicationId),
+        _ => false,
+      }
     );
 
     // Recurse into child collections

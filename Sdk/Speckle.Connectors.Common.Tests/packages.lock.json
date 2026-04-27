@@ -276,8 +276,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.17.2-stj-experiment",
-        "contentHash": "+78+C8+0ui78SMTijdAQKs36t/FJD+nIwp4okSNPbEDzUyAYfd5RIVsqh1Lbc32WR4EfKDBEbRSBIO9a5T5nqQ==",
+        "resolved": "3.17.0",
+        "contentHash": "5gDp8cBoFSI4Dy2zaNlFAPl1D6U0tqEpf2szmsTwgP1I5Lz2NS0CoALbvj7qOMdNX6gUL2V8XgELdTB06SZiLw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Data.Sqlite": "7.0.5",
@@ -285,13 +285,13 @@
           "Microsoft.Extensions.Logging": "8.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.17.2-stj-experiment"
+          "Speckle.Sdk.Dependencies": "3.17.0"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.17.2-stj-experiment",
-        "contentHash": "c7TmtjkNK97j7J3LAARxQd/ZlWx7Jo2QJiJdenes/dVqNrLWsGgXszPQ6wuKopz7qe+byQGRRMP5ja+xB62YHA=="
+        "resolved": "3.17.0",
+        "contentHash": "RyEkpnz0A25MekehUNVAy3Mq9dYdz+lXM4SxODIJuAlOoRRREZMI5bPEpP9WmyP6JxPAf0B4h8StFQMRkNOCYw=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -361,7 +361,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.17.2-stj-experiment, )"
+          "Speckle.Objects": "[3.17.0, )"
         }
       },
       "speckle.connectors.logging": {
@@ -370,7 +370,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Objects": "[3.17.2-stj-experiment, )"
+          "Speckle.Objects": "[3.17.0, )"
         }
       },
       "speckle.testing": {
@@ -378,7 +378,7 @@
         "dependencies": {
           "Moq": "[4.20.70, )",
           "NUnit": "[4.5.1, )",
-          "Speckle.Objects": "[3.17.2-stj-experiment, )"
+          "Speckle.Objects": "[3.17.0, )"
         }
       },
       "Moq": {
@@ -404,11 +404,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.17.2-stj-experiment, )",
-        "resolved": "3.17.2-stj-experiment",
-        "contentHash": "O0rvTQGsmpZIAmUyvkrjeUlPZNboc2tb54Q3mF4Km4eHuViws/62NUlMeZ6Vw+a7a01HPRXMrllisohbzcHkFw==",
+        "requested": "[3.17.0, )",
+        "resolved": "3.17.0",
+        "contentHash": "M4LE8007vpoVQYL6UCUCbVcnc9jZ4FkS4szcFo5kX64Mt+lS7qL6ZdxMsRamj5Ycvzdy6eEGVp01H8JYmrs3uA==",
         "dependencies": {
-          "Speckle.Sdk": "3.17.2-stj-experiment"
+          "Speckle.Sdk": "3.17.0"
         }
       }
     }
