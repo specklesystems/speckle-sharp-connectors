@@ -4,6 +4,9 @@ on:
   push:
     branches: ["main", "installer-test/**"]
     tags: ["v3.*.*"] # Manual delivery on every 3.x tag
+  pull_request:
+    types:
+      - labeled
 
 jobs:
   build-connectors:
@@ -14,7 +17,12 @@ jobs:
     outputs:
       semver: ${{ steps.set-version.outputs.semver }}
       file_version: ${{ steps.set-version.outputs.file_version }}
-    steps:
+      
+    # If we're a PR trigger, then check that we have the right label
+    if: github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+
+    steps:          
       - name: Checkout
         uses: actions/checkout@v6
         with:
