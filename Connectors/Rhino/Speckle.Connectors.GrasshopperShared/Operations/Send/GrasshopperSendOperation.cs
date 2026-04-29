@@ -158,6 +158,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   {
     Dictionary<string, object?> props = [];
     Base baseObject = wrapper.Base;
+    baseObject.id = null; // force fresh serialization — cached id may point to chunked mesh from original source (CNX-3303)
     if (wrapper.Properties.CastTo(ref props))
     {
       baseObject["properties"] = props; // setting props here on base since it's not auto-set, like name and appid
