@@ -175,8 +175,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.19.0-stj-experiment",
-        "contentHash": "rkYrRzPIkhwZ/B736MmVTl2hQKfPNOmGLC7RB0d6SyDXH4B0rtlnWawuJo42LYU4Y0RWrGfnVnjtvMI6pfIvgQ==",
+        "resolved": "3.19.1-stj-experiment",
+        "contentHash": "tkp7f3NWQuwWvHaEN65iXJWmYtZR7YV7PAcQAofpeSuY4f7YkOcIYEPaVtAaN3cgf0fg2Ep5M1/4ZgO7GPoKHw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -185,16 +185,17 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.19.0-stj-experiment"
+          "Speckle.Sdk.Dependencies": "3.19.1-stj-experiment"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.19.0-stj-experiment",
-        "contentHash": "B7NsKhUCD1vx+Ec9Oe2P1Ogoa0pRFGMQ4azIDlAbm7JEpIodnFhg+IUlQ9YlWGiPLMIztcz0cpxe9irS7qHkCw==",
+        "resolved": "3.19.1-stj-experiment",
+        "contentHash": "tf1Sb9OI0qBkzz5hFjl4TB2J8i1MkJhT0p492UQ9RmbovRFODiRWyd6UL70lWE0ylN6l+lPG8HFhdFe9/R6Ncg==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "9.0.4",
-          "System.Text.Json": "7.0.0"
+          "System.Memory": "4.5.5",
+          "System.Text.Json": "5.0.2"
         }
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
@@ -271,17 +272,16 @@
       },
       "System.Runtime.CompilerServices.Unsafe": {
         "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg=="
+        "resolved": "5.0.0",
+        "contentHash": "ZD9TMpsmYJLrxbbmdvhwt9YEgG5WntEnZ/d1eH8JBX9LBp+Ju8BSBhUGbZMNVHHomWo2KVImJhTDl2hIgw/6MA=="
       },
       "System.Text.Encodings.Web": {
         "type": "Transitive",
-        "resolved": "7.0.0",
-        "contentHash": "OP6umVGxc0Z0MvZQBVigj4/U31Pw72ITihDWP9WiWDm+q5aoe0GaJivsfYGq53o6dxH7DcXWiCTl7+0o2CGdmg==",
+        "resolved": "5.0.1",
+        "contentHash": "KmJ+CJXizDofbq6mpqDoRRLcxgOd2z9X3XoFNULSbvbqVRZkFX3istvr+MUjL6Zw1RT+RNdoI4GYidIINtgvqQ==",
         "dependencies": {
           "System.Buffers": "4.5.1",
-          "System.Memory": "4.5.5",
-          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+          "System.Memory": "4.5.4"
         }
       },
       "System.Threading.Tasks.Extensions": {
@@ -307,7 +307,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Objects": "[3.19.0-stj-experiment, )"
+          "Speckle.Objects": "[3.19.1-stj-experiment, )"
         }
       },
       "LibTessDotNet": {
@@ -324,25 +324,25 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.19.0-stj-experiment, )",
-        "resolved": "3.19.0-stj-experiment",
-        "contentHash": "z1eMG399kVrHl+8VoIOJ/aB4ihym03zyZ1a1l+wNVEonPWDGywrT/auUN+aB20SCYfiEKJuV1Qsp1S+2iGe79A==",
+        "requested": "[3.19.1-stj-experiment, )",
+        "resolved": "3.19.1-stj-experiment",
+        "contentHash": "NNpmfQOcriAxnjgmwmFp3zafIOlIXVM6O006A0GCbTqtnXswhfNNdDfT4v3PM9luT+I3L8UBZOWLD1R2SB2h1g==",
         "dependencies": {
-          "Speckle.Sdk": "3.19.0-stj-experiment"
+          "Speckle.Sdk": "3.19.1-stj-experiment"
         }
       },
       "System.Text.Json": {
         "type": "CentralTransitive",
         "requested": "[8.0.6, )",
-        "resolved": "7.0.0",
-        "contentHash": "DaGSsVqKsn/ia6RG8frjwmJonfos0srquhw09TlT8KRw5I43E+4gs+/bZj4K0vShJ5H9imCuXupb4RmS+dBy3w==",
+        "resolved": "5.0.2",
+        "contentHash": "I47dVIGiV6SfAyppphxqupertT/5oZkYLDCX6vC3HpOI4ZLjyoKAreUoem2ie6G0RbRuFrlqz/PcTQjfb2DOfQ==",
         "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "7.0.0",
+          "Microsoft.Bcl.AsyncInterfaces": "5.0.0",
           "System.Buffers": "4.5.1",
-          "System.Memory": "4.5.5",
+          "System.Memory": "4.5.4",
           "System.Numerics.Vectors": "4.5.0",
-          "System.Runtime.CompilerServices.Unsafe": "6.0.0",
-          "System.Text.Encodings.Web": "7.0.0",
+          "System.Runtime.CompilerServices.Unsafe": "5.0.0",
+          "System.Text.Encodings.Web": "5.0.1",
           "System.Threading.Tasks.Extensions": "4.5.4",
           "System.ValueTuple": "4.5.0"
         }
