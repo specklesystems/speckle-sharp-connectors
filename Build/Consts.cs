@@ -1,8 +1,8 @@
 ﻿namespace Build;
 
-public static class Consts
+internal static class Consts
 {
-  public static readonly string[] Solutions = ["Speckle.Connectors.sln"];
+  public static readonly string[] Solutions = ["Speckle.Connectors.slnx"];
 
   public static readonly ProjectGroup[] ProjectGroups =
   {
@@ -20,7 +20,7 @@ public static class Consts
         new("Connectors/Revit/Speckle.Connectors.Revit2023", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2024", "net48"),
         new("Connectors/Revit/Speckle.Connectors.Revit2025", "net8.0-windows"),
-        new("Connectors/Revit/Speckle.Connectors.Revit2026", "net8.0-windows")
+        new("Connectors/Revit/Speckle.Connectors.Revit2026", "net8.0-windows"),
       ]
     ),
     new(
@@ -30,7 +30,7 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2025", "net8.0-windows"),
-        new("Connectors/Autocad/Speckle.Connectors.Autocad2026", "net8.0-windows")
+        new("Connectors/Autocad/Speckle.Connectors.Autocad2026", "net8.0-windows"),
       ]
     ),
     new(
@@ -40,7 +40,7 @@ public static class Consts
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows"),
-        new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows")
+        new("Connectors/Autocad/Speckle.Connectors.Civil3d2026", "net8.0-windows"),
       ]
     ),
     new("plant3d", [new("Connectors/Autocad/Speckle.Connectors.Plant3d2026", "net8.0-windows")]),
@@ -53,7 +53,7 @@ public static class Consts
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2023", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2024", "net48"),
         new("Connectors/Navisworks/Speckle.Connectors.Navisworks2025", "net48"),
-        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2026", "net48")
+        new("Connectors/Navisworks/Speckle.Connectors.Navisworks2026", "net48"),
       ]
     ),
     new(
@@ -61,7 +61,7 @@ public static class Consts
       [
         new("Connectors/Tekla/Speckle.Connector.Tekla2023", "net48"),
         new("Connectors/Tekla/Speckle.Connector.Tekla2024", "net48"),
-        new("Connectors/Tekla/Speckle.Connector.Tekla2025", "net48")
+        new("Connectors/Tekla/Speckle.Connector.Tekla2025", "net48"),
       ]
     ),
     new(
@@ -75,9 +75,9 @@ public static class Consts
   };
 }
 
-public readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<InstallerAsset> Projects)
+internal readonly record struct ProjectGroup(string HostAppSlug, IReadOnlyList<InstallerAsset> Projects)
 {
   public override string ToString() => $"{HostAppSlug}";
 }
 
-public readonly record struct InstallerAsset(string ProjectPath, string TargetName);
+internal readonly record struct InstallerAsset(string ProjectPath, string TargetName);

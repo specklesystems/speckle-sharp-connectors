@@ -24,7 +24,7 @@ internal sealed class FileimportPayload
   public TraceContext? TraceContext { get; init; }
 }
 
-public sealed class TraceContext
+internal sealed class TraceContext
 {
   [JsonPropertyName("traceparent")]
   public string? TraceParent { get; init; }

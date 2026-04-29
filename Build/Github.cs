@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Build;
 
-public static class Github
+internal static class Github
 {
   public static async Task BuildInstallers(string token, string runId, string version)
   {
@@ -23,9 +23,9 @@ public static class Github
       {
         Accept = { new MediaTypeWithQualityHeaderValue("application/vnd.github+json") },
         Authorization = new AuthenticationHeaderValue("Bearer", token),
-        UserAgent = { new ProductInfoHeaderValue("Speckle.build", "3.0.0") }
+        UserAgent = { new ProductInfoHeaderValue("Speckle.build", "3.0.0") },
       },
-      Content = content
+      Content = content,
     };
     request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
     var response = await client.SendAsync(request);

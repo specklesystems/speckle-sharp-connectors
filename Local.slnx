@@ -49,7 +49,7 @@
     <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2025\Speckle.Converters.Civil3d2025.csproj" />
   </Folder>
   <Folder Name="/Connectors/Autocad/2026/">
-    <Project Path="Connectors\Autocad\Speckle.Connectors.Plant3d2026/Speckle.Connectors.Plant3d2026.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Plant3d2026\Speckle.Connectors.Plant3d2026.csproj" />
     <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2026\Speckle.Connectors.Autocad2026.csproj" />
     <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2026\Speckle.Connectors.Civil3d2026.csproj" />
     <Project Path="Converters\Plant3d\Speckle.Converters.Plant3d2026\Speckle.Converters.Plant3d2026.csproj" />

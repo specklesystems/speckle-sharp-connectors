@@ -1,11 +1,13 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.ToHost;
+using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Objects.Data;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using RhinoDataObject = Speckle.Objects.Data.RhinoObject;
 
 namespace Speckle.Converters.Rhino.ToHost.TopLevel;
 
@@ -83,6 +85,19 @@ public class DataObjectConverter
       return resultPairs;
     }
 
+    // prefer rawEncoding when present: decode native geometry (Brep/Extrusion/SubD) from 3dm blob
+    if (target is RhinoDataObject rhinoData && rhinoData.rawEncoding is not null)
+    {
+      var decoded = RawEncodingToHost.Convert(rhinoData.rawEncoding);
+      var unitsTransform = GetUnitsTransform(target);
+      foreach (var geom in decoded)
+      {
+        geom.Transform(unitsTransform);
+        resultPairs.Add((geom, target));
+      }
+      return resultPairs;
+    }
+
     // normal display value conversion
     foreach (var item in target.displayValue)
     {
@@ -114,7 +129,7 @@ public class DataObjectConverter
       SOG.Polyline polyline => new() { _polylineConverter.Convert(polyline) },
       SOG.Region region => new() { _regionConverter.Convert(region) },
       SOG.SubDX subd => _subdConverter.Convert(subd),
-      _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}")
+      _ => throw new ConversionException($"Found unsupported fallback geometry: {b.GetType()}"),
     };
 
   private RG.Transform GetUnitsTransform(Base speckleObject)

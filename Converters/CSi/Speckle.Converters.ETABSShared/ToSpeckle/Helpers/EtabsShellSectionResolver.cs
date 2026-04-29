@@ -35,7 +35,7 @@ public class EtabsShellSectionResolver
     [
       new WallSectionResolver(_settingsStore),
       new SlabSectionResolver(_settingsStore),
-      new DeckSectionResolver(_settingsStore)
+      new DeckSectionResolver(_settingsStore),
     ];
   }
 

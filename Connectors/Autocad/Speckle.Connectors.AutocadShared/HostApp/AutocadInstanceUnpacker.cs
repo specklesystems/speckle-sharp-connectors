@@ -68,18 +68,23 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         : instance.BlockTableRecord;
 
       // transforms on instances are always stored in WCS
-      InstanceProxy instanceProxy =
-        new()
-        {
-          applicationId = instanceId,
-          definitionId = definitionId.ToString(),
-          maxDepth = depth,
-          transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
-          units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits)
-        };
+      InstanceProxy instanceProxy = new()
+      {
+        applicationId = instanceId,
+        definitionId = definitionId.ToString(),
+        maxDepth = depth,
+        transform = TransformHelper.ConvertToInstanceMatrix4x4(instance.BlockTransform),
+        units = _unitsConverter.ConvertOrThrow(Application.DocumentManager.CurrentDocument.Database.Insunits),
+      };
 
-      var properties = _propertiesExtractor.GetProperties(instance);
-      if (properties?.Count > 0)
+      var properties = _propertiesExtractor.GetProperties(instance) ?? new Dictionary<string, object?>();
+      var attributes = GetInstanceAttributes(instance, transaction);
+      if (attributes.Count > 0)
+      {
+        properties["Attributes"] = attributes;
+      }
+
+      if (properties.Count > 0)
       {
         instanceProxy["properties"] = properties;
       }
@@ -153,7 +158,7 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
         applicationId = definitionId.ToString(),
         objects = new(),
         maxDepth = depth,
-        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name
+        name = !instance.AnonymousBlockTableRecord.IsNull ? "Dynamic instance " + definitionId : definition.Name,
       };
 
       // Go through each definition object
@@ -185,5 +190,25 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
     {
       _logger.LogError(ex, "Failed unpacking Autocad instance");
     }
+  }
+
+  private Dictionary<string, object?> GetInstanceAttributes(BlockReference instance, Transaction transaction)
+  {
+    var attributes = new Dictionary<string, object?>();
+
+    foreach (ObjectId id in instance.AttributeCollection)
+    {
+      try
+      {
+        var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        attributes[reference.Tag] = reference.TextString;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed reading attribute {id} on block {handle}", id, instance.Handle);
+      }
+    }
+
+    return attributes;
   }
 }

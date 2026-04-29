@@ -151,7 +151,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     [
       new RevitSelectionFilter { IsDefault = true },
       new RevitViewsFilter(_revitContext),
-      new RevitCategoriesFilter(_revitContext)
+      new RevitCategoriesFilter(_revitContext),
     ];
 
   public List<ICardSetting> GetSendSettings() =>
@@ -161,7 +161,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new SendParameterNullOrEmptyStringsSetting(),
       new LinkedModelsSetting(),
       new SendRebarsAsVolumetricSetting(),
-      new SendAreasAsMeshSetting()
+      new SendAreasAsMeshSetting(),
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -260,8 +260,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       viewFilter.SetContext(_revitContext);
     }
 
-    var selectedObjects = await _threadContext.RunOnMainAsync(
-      () => Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
+    var selectedObjects = await _threadContext.RunOnMainAsync(() =>
+      Task.FromResult(modelCard.SendFilter.NotNull().RefreshObjectIds())
     );
 
     var allElements = selectedObjects.Select(uid => document.GetElement(uid)).Where(el => el is not null).ToList();
@@ -424,7 +424,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       SpecTypeId.Area,
       SpecTypeId.Distance,
       SpecTypeId.Length,
-      SpecTypeId.Volume
+      SpecTypeId.Volume,
     };
     var units = "";
     foreach (var typeId in unitSpecTypeIds)

@@ -47,11 +47,9 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
         // this is used to override the name of the material.
         // the nickname should also be used in case of an empty name on the rhino material
         string? name =
-          NickName != NICKNAME
-            ? NickName
-            : string.IsNullOrEmpty(goo.Value.Name)
-              ? NickName
-              : null;
+          NickName != NICKNAME ? NickName
+          : string.IsNullOrEmpty(goo.Value.Name) ? NickName
+          : null;
 
         int bakeIndex = goo.Value.Bake(doc, name);
 
@@ -74,11 +72,9 @@ public class SpeckleMaterialParam : GH_Param<SpeckleMaterialWrapperGoo>, IGH_Bak
         // this is used to override the name of the material.
         // the nickname should also be used in case of an empty name on the rhino material
         string? name =
-          NickName != NICKNAME
-            ? NickName
-            : string.IsNullOrEmpty(goo.Value.Name)
-              ? NickName
-              : null;
+          NickName != NICKNAME ? NickName
+          : string.IsNullOrEmpty(goo.Value.Name) ? NickName
+          : null;
 
         int bakeIndex = goo.Value.Bake(doc, name);
         if (bakeIndex == -1)

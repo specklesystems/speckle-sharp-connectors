@@ -3,26 +3,26 @@ using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
-using Speckle.Connectors.Revit.Plugin;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Revit2026.Plugin;
 
 public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
   private readonly IServiceProvider _serviceProvider;
-  private readonly IRevitTask _revitTask;
 #pragma warning disable CA2213
   private WebView2? _browser;
 #pragma warning restore CA2213
   private bool _isInitializing;
 
-  public RevitControlWebView(IServiceProvider serviceProvider, IRevitTask revitTask)
+  public Uri DuiUrl { get; }
+
+  public RevitControlWebView(IServiceProvider serviceProvider, IGlobalConfigResolver globalConfigResolver)
   {
     _serviceProvider = serviceProvider;
-    _revitTask = revitTask;
+    DuiUrl = globalConfigResolver.GetDuiUrl();
     InitializeComponent();
 
     // Delay WebView2 creation until the panel is actually visible
@@ -46,7 +46,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
       CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = "C:\\temp" },
       HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
       VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
-      Source = Url.Netlify
+      Source = DuiUrl,
     };
 
     _browser.CoreWebView2InitializationCompleted += (sender, args) =>
@@ -125,7 +125,7 @@ public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExe
   //https://github.com/MicrosoftEdge/WebView2Feedback/issues/2161
   public void Dispose()
   {
-    if (_browser != null)
+    if (_browser is not null)
     {
       _browser.Dispatcher.Invoke(() => _browser.Dispose(), DispatcherPriority.Send);
       _browser = null;

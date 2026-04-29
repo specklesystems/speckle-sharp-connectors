@@ -73,7 +73,7 @@ public class NurbsCurveConverter : ITypedConverter<RG.NurbsCurve, SOG.Curve>
       rational = nurbsCurve.IsRational,
       domain = _intervalConverter.Convert(nurbsCurve.Domain),
       closed = nurbsCurve.IsClosed,
-      length = nurbsCurve.GetLength()
+      length = nurbsCurve.GetLength(),
     };
 
     return myCurve;

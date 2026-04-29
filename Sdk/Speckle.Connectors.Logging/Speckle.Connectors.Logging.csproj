@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
     <Configurations>Debug;Release;Local</Configurations>
@@ -14,12 +13,18 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all"/>
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all"/>
-    <PackageReference Include="Serilog" PrivateAssets="all"/>
-    <PackageReference Include="Serilog.Exceptions" PrivateAssets="all"/>
-    <PackageReference Include="Serilog.Extensions.Logging"  PrivateAssets="all"/>
-    <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all"/>
-    <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all"/>
+    <!--
+    OpenTelemetry.Exporter.OpenTelemetryProtocol 1.13.x has two CVEs. The impact on us is minimal since they allow DOS
+    only if our collector to be compromosed or through MitM.
+    Updating to the fixed 1.15.3 doesn't work for us (I suspect it's not compatbile with ILRepack due to some reflection usage)
+    We've decided it's acceptible to supress. 
+    -->
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" NoWarn="NU1902" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" PrivateAssets="all" />
+    <PackageReference Include="Serilog" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Exceptions" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Extensions.Logging" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Sinks.Console" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Sinks.File" PrivateAssets="all" />
   </ItemGroup>
 </Project>

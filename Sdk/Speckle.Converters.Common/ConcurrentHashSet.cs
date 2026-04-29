@@ -500,6 +500,7 @@ public sealed class ConcurrentHashSet<T> : IReadOnlyCollection<T>, ICollection<T
     /// Advances the enumerator to the next element of the collection.
     /// </summary>
     /// <returns>true if the enumerator was successfully advanced to the next element; false if the enumerator has passed the end of the collection.</returns>
+    [SuppressMessage("Style", "IDE0370:Remove unnecessary suppression", Justification = "multi-targeting")]
     public bool MoveNext()
     {
       switch (_state)

@@ -3,14 +3,21 @@ using System.Windows.Threading;
 using Autodesk.Revit.UI;
 using CefSharp;
 using Speckle.Connectors.DUI.Bridge;
+using Speckle.Connectors.DUI.Settings;
 
 namespace Speckle.Connectors.Revit;
 
 public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvider, IBrowserScriptExecutor
 {
-  public CefSharpPanel()
+  public string DuiUrl { get; }
+
+  public CefSharpPanel(IGlobalConfigResolver globalConfigResolver)
   {
+    DuiUrl = globalConfigResolver.GetDuiUrl().ToString();
     InitializeComponent();
+#if REVIT2023_OR_GREATER
+    Browser.JavascriptObjectRepository.NameConverter = null;
+#endif
   }
 
   /// <inheritdoc/>
@@ -68,7 +75,7 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
     data.InitialState = new Autodesk.Revit.UI.DockablePaneState
     {
       DockPosition = DockPosition.Tabbed,
-      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
+      TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser,
     };
   }
 }

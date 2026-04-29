@@ -11,15 +11,10 @@ namespace Speckle.Converters.CSiShared.ToSpeckle.Helpers;
 public sealed class CsiShellPropertiesExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _settingsStore;
-  private readonly CsiToSpeckleCacheSingleton _csiToSpeckleCacheSingleton;
 
-  public CsiShellPropertiesExtractor(
-    IConverterSettingsStore<CsiConversionSettings> settingsStore,
-    CsiToSpeckleCacheSingleton csiToSpeckleCacheSingleton
-  )
+  public CsiShellPropertiesExtractor(IConverterSettingsStore<CsiConversionSettings> settingsStore)
   {
     _settingsStore = settingsStore;
-    _csiToSpeckleCacheSingleton = csiToSpeckleCacheSingleton;
   }
 
   public void ExtractProperties(CsiShellWrapper shell, PropertyExtractionResult shellData)
@@ -79,7 +74,7 @@ public sealed class CsiShellPropertiesExtractor
       ["Shear V13 Modifier"] = value[6],
       ["Shear V23 Modifier"] = value[7],
       ["Mass"] = value[8],
-      ["Weight"] = value[9]
+      ["Weight"] = value[9],
     };
   }
 

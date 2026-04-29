@@ -62,14 +62,13 @@ public class ReceiveOperationManagerTests : MoqTest
   {
     _storeMock.Setup(x => x.GetModelById("id1")).Returns((ModelCard?)null);
     var commands = Create<IReceiveBindingUICommands>();
-    Assert.ThrowsAsync<InvalidOperationException>(
-      async () =>
-        await _manager.Process(
-          commands.Object,
-          "id1",
-          (_, _) => { },
-          (s, f) => Task.FromResult<HostObjectBuilderResult?>(null)
-        )
+    Assert.ThrowsAsync<InvalidOperationException>(async () =>
+      await _manager.Process(
+        commands.Object,
+        "id1",
+        (_, _) => { },
+        (s, f) => Task.FromResult<HostObjectBuilderResult?>(null)
+      )
     );
   }
 

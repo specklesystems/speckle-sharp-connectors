@@ -49,7 +49,7 @@ public class ParameterExtractor
     {
       ["Instance Parameters"] = ParseParameterSet(element.Parameters),
       ["Type Parameters"] = GetTypeParameterDictionary(element),
-      ["System Type Parameters"] = GetSystemTypeParameterDictionary(element)
+      ["System Type Parameters"] = GetSystemTypeParameterDictionary(element),
     };
   }
 
@@ -94,7 +94,7 @@ public class ParameterExtractor
               ["material"] = material.Name,
               ["function"] = layer.Function.ToString(),
               ["thickness"] = layer.Width * factor,
-              ["units"] = _settingsStore.Current.SpeckleUnits
+              ["units"] = _settingsStore.Current.SpeckleUnits,
             };
           }
         }
@@ -210,7 +210,7 @@ public class ParameterExtractor
         {
           ["value"] = value,
           ["name"] = humanReadableName,
-          ["internalDefinitionName"] = internalDefinitionName
+          ["internalDefinitionName"] = internalDefinitionName,
         };
 
         if (units is not null)
@@ -262,7 +262,7 @@ public class ParameterExtractor
         }
 
       case DB.StorageType.ElementId:
-        var elId = parameter.AsElementId()!;
+        var elId = parameter.AsElementId();
         if (elId == DB.ElementId.InvalidElementId)
         {
           return null;

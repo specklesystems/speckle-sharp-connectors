@@ -28,7 +28,6 @@ public sealed class DisplayValueExtractor
   private readonly ITypedConverter<DB.Point, SOG.Point> _pointConverter;
   private readonly ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> _pointcloudConverter;
   private readonly IConverterSettingsStore<RevitConversionSettings> _converterSettings;
-  private readonly IReferencePointConverter _referencePointConverter;
   private readonly ITypedConverter<DB.XYZ, SOG.Point> _xyzToPointConverter;
 
   public DisplayValueExtractor(
@@ -42,7 +41,6 @@ public sealed class DisplayValueExtractor
     ITypedConverter<DB.PointCloudInstance, SOG.Pointcloud> pointcloudConverter,
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
     IScalingServiceToSpeckle toSpeckleScalingService,
-    IReferencePointConverter referencePointConverter,
     ITypedConverter<DB.XYZ, SOG.Point> xyzToPointConverter
   )
   {
@@ -53,7 +51,6 @@ public sealed class DisplayValueExtractor
     _pointcloudConverter = pointcloudConverter;
     _converterSettings = converterSettings;
     _toSpeckleScalingService = toSpeckleScalingService;
-    _referencePointConverter = referencePointConverter;
     _xyzToPointConverter = xyzToPointConverter;
   }
 
@@ -234,7 +231,7 @@ public sealed class DisplayValueExtractor
       (not null, not null) => documentToWorld.Multiply(localToDocument),
       (not null, null) => localToDocument,
       (null, not null) => documentToWorld,
-      (null, null) => null
+      (null, null) => null,
     };
 
     var collections = GetSortedGeometryFromElement(element, options, documentToLocal);
@@ -367,7 +364,7 @@ public sealed class DisplayValueExtractor
       M14 = _toSpeckleScalingService.ScaleLength(transform.Origin.X),
       M24 = _toSpeckleScalingService.ScaleLength(transform.Origin.Y),
       M34 = _toSpeckleScalingService.ScaleLength(transform.Origin.Z),
-      M44 = 1
+      M44 = 1,
     };
 
   private static DB.Transform? GetTransform(DB.Element element)
@@ -423,13 +420,12 @@ public sealed class DisplayValueExtractor
   }
 
   // We do not handle DetailLevelType.Undefined behavior, so we don't use 'DB.ViewDetailLevel' enum directly as option in UI.
-  private readonly Dictionary<DetailLevelType, DB.ViewDetailLevel> _detailLevelMap =
-    new()
-    {
-      { DetailLevelType.Coarse, DB.ViewDetailLevel.Coarse },
-      { DetailLevelType.Medium, DB.ViewDetailLevel.Medium },
-      { DetailLevelType.Fine, DB.ViewDetailLevel.Fine }
-    };
+  private readonly Dictionary<DetailLevelType, DB.ViewDetailLevel> _detailLevelMap = new()
+  {
+    { DetailLevelType.Coarse, DB.ViewDetailLevel.Coarse },
+    { DetailLevelType.Medium, DB.ViewDetailLevel.Medium },
+    { DetailLevelType.Fine, DB.ViewDetailLevel.Fine },
+  };
 
   /// <summary>
   /// Sorts element geometry into solids, meshes, curves, polylines, points.
@@ -786,7 +782,7 @@ public sealed class DisplayValueExtractor
     DB.Transform? combined = (accumulatedTransform, curveTransform) switch
     {
       (not null, not null) => curveTransform.Multiply(accumulatedTransform),
-      _ => accumulatedTransform ?? curveTransform
+      _ => accumulatedTransform ?? curveTransform,
     };
 
     var coords = polyline.GetCoordinates();

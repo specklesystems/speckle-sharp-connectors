@@ -36,7 +36,7 @@ public sealed class ReceiveBindingUICommands : BasicConnectorBindingCommands, IR
       {
         ModelCardId = modelCardId,
         bakedObjectIds,
-        conversionResults
+        conversionResults,
       }
     );
   }

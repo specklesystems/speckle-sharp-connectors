@@ -131,7 +131,7 @@ public class NavisworksMaterialUnpacker(
           renderMaterialProxies[renderMaterialId.ToString()] = new RenderMaterialProxy()
           {
             value = CreateRenderMaterial(materialName, renderTransparency, renderColor, renderMaterialId),
-            objects = [finalId]
+            objects = [finalId],
           };
         }
       }
@@ -161,7 +161,7 @@ public class NavisworksMaterialUnpacker(
       roughness = 1,
       diffuse = color.ToArgb(),
       emissive = 0,
-      applicationId = applicationId.ToString()
+      applicationId = applicationId.ToString(),
     };
 
     return speckleRenderMaterial;

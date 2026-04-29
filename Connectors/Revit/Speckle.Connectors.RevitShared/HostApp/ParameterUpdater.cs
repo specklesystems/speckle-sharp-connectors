@@ -69,7 +69,7 @@ public class ParameterUpdater
       "Instance Parameters" => element,
       "Type Parameters" => GetTypeElement(element),
       "System Type Parameters" => GetSystemTypeElement(element),
-      _ => null
+      _ => null,
     };
 
   private DB.Element? GetTypeElement(DB.Element element)
@@ -222,7 +222,7 @@ public class ParameterUpdater
         DB.StorageType.Integer => SetIntegerValue(parameter, newValue),
         DB.StorageType.Double => SetDoubleValue(parameter, newValue),
         DB.StorageType.ElementId => SetElementIdValue(parameter, newValue),
-        _ => false
+        _ => false,
       };
 
       return success ? UpdateResult.Success() : UpdateResult.Fail($"Failed to set parameter value to: {newValue}");

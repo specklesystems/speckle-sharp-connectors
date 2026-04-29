@@ -3,7 +3,9 @@ using Speckle.Converters.Common.FileOps;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.Objects.Other;
 using Speckle.Sdk.Common;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Extensions;
 
@@ -26,16 +28,43 @@ public class IRawEncodedObjectConverter : ITypedConverter<SOG.IRawEncodedObject,
     _revitToHostCacheSingleton = revitToHostCacheSingleton;
   }
 
-  public List<DB.GeometryObject> Convert(SOG.IRawEncodedObject target)
+  public List<DB.GeometryObject> Convert(SOG.IRawEncodedObject target) => Convert(target.encodedValue, (Base)target);
+
+  public List<DB.GeometryObject> Convert(RawEncoding encoding, Base targetAsBase)
   {
-    var targetAsBase = (Base)target;
-    var raw = target.encodedValue.contents;
+    var raw = encoding.contents;
     var bytes = System.Convert.FromBase64String(raw!);
-    var filePath = TempFileProvider.GetTempFile("RevitX", target.encodedValue.format);
+    var filePath = TempFileProvider.GetTempFile("RevitX", encoding.format);
     File.WriteAllBytes(filePath, bytes);
 
-    using var importer = new DB.ShapeImporter();
-    var shapeImportResult = importer.Convert(_settings.Current.Document, filePath);
+    IList<DB.GeometryObject> shapeImportResult;
+
+    using (var subTx = new DB.SubTransaction(_settings.Current.Document))
+    {
+      subTx.Start();
+      using var importer = new DB.ShapeImporter();
+      shapeImportResult = importer.Convert(_settings.Current.Document, filePath);
+
+      if (shapeImportResult.Count == 0)
+      {
+        // clean up any invalid state Revit created otherwise we get issues in PostBakePaint and group creation
+        // because we get "ghost" objects
+        subTx.RollBack();
+      }
+      else
+      {
+        subTx.Commit();
+      }
+    }
+
+    // there is an argument to be made that we fallback to display meshes BUT I don't know
+    // we're covering shortcomings of the ShapeImporter here. Rather not do some crazy gymnastics
+    if (shapeImportResult.Count == 0)
+    {
+      throw new ConversionException(
+        $"Object {targetAsBase.applicationId ?? targetAsBase.id} could not be loaded. Try repairing or simplifying the geometry in the source application."
+      );
+    }
 
     DB.ElementId materialId = DB.ElementId.InvalidElementId;
     if (

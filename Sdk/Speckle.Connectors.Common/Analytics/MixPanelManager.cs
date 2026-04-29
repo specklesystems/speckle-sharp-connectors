@@ -130,9 +130,9 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
             {
               "Connectors",
               new List<string> { connector }
-            }
+            },
           }
-        }
+        },
       };
       string json = JsonConvert.SerializeObject(data);
       await SendAnalytics("/engage#profile-union", json).ConfigureAwait(false);
@@ -154,7 +154,7 @@ public class MixPanelManager(ISpeckleApplication application, ISpeckleHttp speck
         {
           "$set",
           new Dictionary<string, object> { { "Identified", true } }
-        }
+        },
       };
       string json = JsonConvert.SerializeObject(data);
 

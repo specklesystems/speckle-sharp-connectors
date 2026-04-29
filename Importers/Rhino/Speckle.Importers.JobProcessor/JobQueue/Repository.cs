@@ -39,7 +39,7 @@ internal sealed class Repository(ILogger<Repository> logger)
       Port = connectionUrl.Port > 0 ? connectionUrl.Port : 5432, // Default to 5432 if not specified
       Username = userInfo[0],
       Password = userInfo[1],
-      Database = connectionUrl.AbsolutePath.TrimStart('/')
+      Database = connectionUrl.AbsolutePath.TrimStart('/'),
     };
     return builder.ConnectionString;
   }
@@ -96,6 +96,16 @@ internal sealed class Repository(ILogger<Repository> logger)
     await SetJobStatus(connection, jobId, JobStatus.QUEUED, cancellationToken);
   }
 
+  public async Task FinishJob(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.SUCCEEDED, cancellationToken);
+  }
+
+  public async Task FailJob(IDbConnection connection, string jobId, CancellationToken cancellationToken)
+  {
+    await SetJobStatus(connection, jobId, JobStatus.FAILED, cancellationToken);
+  }
+
   private async Task SetJobStatus(
     IDbConnection connection,
     string jobId,
@@ -114,7 +124,7 @@ internal sealed class Repository(ILogger<Repository> logger)
 
     var command = new CommandDefinition(
       commandText: COMMAND_TEXT,
-      parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId, },
+      parameters: new { status = jobStatus.ToString().ToLowerInvariant(), jobId },
       cancellationToken: cancellationToken
     );
 

@@ -110,19 +110,17 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
     var indexPointer = Faces.Count;
     AddFace(3);
     AddFaces([indexPointer + 0, indexPointer + 1, indexPointer + 2]);
-    AddCoords(
-      [
-        safeTriangle.Vertex1.X,
-        safeTriangle.Vertex1.Y,
-        safeTriangle.Vertex1.Z,
-        safeTriangle.Vertex2.X,
-        safeTriangle.Vertex2.Y,
-        safeTriangle.Vertex2.Z,
-        safeTriangle.Vertex3.X,
-        safeTriangle.Vertex3.Y,
-        safeTriangle.Vertex3.Z
-      ]
-    );
+    AddCoords([
+      safeTriangle.Vertex1.X,
+      safeTriangle.Vertex1.Y,
+      safeTriangle.Vertex1.Z,
+      safeTriangle.Vertex2.X,
+      safeTriangle.Vertex2.Y,
+      safeTriangle.Vertex2.Z,
+      safeTriangle.Vertex3.X,
+      safeTriangle.Vertex3.Y,
+      safeTriangle.Vertex3.Z,
+    ]);
 
     AddTriangle(safeTriangle);
   }

@@ -75,12 +75,11 @@ public sealed class NavisworksDocumentEvents
   {
     _finalModelCount = ((NAV.Document)sender).Models.Count;
 
-    _topLevelExceptionHandler.CatchUnhandled(
-      () =>
-        _idleManager.SubscribeToIdle(
-          nameof(ProcessModelStateChangeAsync),
-          async () => await ProcessModelStateChangeAsync()
-        )
+    _topLevelExceptionHandler.CatchUnhandled(() =>
+      _idleManager.SubscribeToIdle(
+        nameof(ProcessModelStateChangeAsync),
+        async () => await ProcessModelStateChangeAsync()
+      )
     );
   }
 
@@ -120,15 +119,15 @@ public sealed class NavisworksDocumentEvents
     }
   }
 
-  private void UnsubscribeFromModelEvents(NAV.Document document)
-  {
-    document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
-    document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
-
-    var sendBinding = _serviceProvider
-      .GetRequiredService<IEnumerable<IBinding>>()
-      .OfType<NavisworksSendBinding>()
-      .First();
-    sendBinding.CancelAllSendOperations();
-  }
+  // private void UnsubscribeFromModelEvents(NAV.Document document)
+  // {
+  //   document.Models.CollectionChanged -= HandleDocumentModelCountChanged;
+  //   document.Models.CollectionChanging -= HandleDocumentModelCountChanging;
+  //
+  //   var sendBinding = _serviceProvider
+  //     .GetRequiredService<IEnumerable<IBinding>>()
+  //     .OfType<NavisworksSendBinding>()
+  //     .First();
+  //   sendBinding.CancelAllSendOperations();
+  // }
 }

@@ -45,7 +45,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
       SdkActivityKind.Client => LoggingActivityKind.Client,
       SdkActivityKind.Producer => LoggingActivityKind.Producer,
       SdkActivityKind.Consumer => LoggingActivityKind.Consumer,
-      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+      _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
   private readonly struct ConnectorActivity(LoggingActivity activity) : ISdkActivity
@@ -66,7 +66,7 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
           SdkActivityStatusCode.Error => LoggingActivityStatusCode.Error,
           SdkActivityStatusCode.Unset => LoggingActivityStatusCode.Unset,
           SdkActivityStatusCode.Ok => LoggingActivityStatusCode.Ok,
-          _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
+          _ => throw new ArgumentOutOfRangeException(nameof(code), code, null),
         }
       );
 

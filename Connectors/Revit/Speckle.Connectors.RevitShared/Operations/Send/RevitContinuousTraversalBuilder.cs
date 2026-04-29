@@ -45,15 +45,8 @@ public class RevitContinuousTraversalBuilder(
     CancellationToken cancellationToken
   )
   {
-    return await threadContext.RunOnMainAsync(
-      async () =>
-        await BuildMainThread(
-          documentElementContexts,
-          projectId,
-          sendPipeline,
-          onOperationProgressed,
-          cancellationToken
-        )
+    return await threadContext.RunOnMainAsync(async () =>
+      await BuildMainThread(documentElementContexts, projectId, sendPipeline, onOperationProgressed, cancellationToken)
     );
   }
 
@@ -75,8 +68,10 @@ public class RevitContinuousTraversalBuilder(
     }
 
     // init the root
-    Collection rootObject =
-      new() { name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First() };
+    Collection rootObject = new()
+    {
+      name = converterSettings.Current.Document.PathName.Split('\\').Last().Split('.').First(),
+    };
     rootObject["units"] = converterSettings.Current.SpeckleUnits;
 
     var filteredDocumentsToConvert = new List<DocumentToConvert>();
@@ -288,7 +283,7 @@ public class RevitContinuousTraversalBuilder(
       new Collection()
       {
         elements = revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds),
-        name = "definitionGeometry"
+        name = "definitionGeometry",
       }
     );
 

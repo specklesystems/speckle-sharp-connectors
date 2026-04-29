@@ -82,15 +82,14 @@ public class DBPolyfaceMeshToSpeckleConverter : IToSpeckleTopLevelConverter
       tr.Commit();
     }
 
-    SOG.Mesh speckleMesh =
-      new()
-      {
-        vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
-        faces = faces,
-        colors = colors,
-        units = _settingsStore.Current.SpeckleUnits,
-        ["faceVisibility"] = faceVisibility
-      };
+    SOG.Mesh speckleMesh = new()
+    {
+      vertices = _referencePointConverter.ConvertWCSDoublesToExternalCoordinates(vertices), // transform by reference point
+      faces = faces,
+      colors = colors,
+      units = _settingsStore.Current.SpeckleUnits,
+      ["faceVisibility"] = faceVisibility,
+    };
 
     return speckleMesh;
   }

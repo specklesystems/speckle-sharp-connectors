@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
@@ -8,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2022.0.2" ExcludeAssets="runtime"/>
+    <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="2022.0.2" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,5 +15,4 @@
   </ItemGroup>
 
   <Import Project="..\Speckle.Converters.AutocadShared\Speckle.Converters.AutocadShared.projitems" Label="Shared" />
-
 </Project>

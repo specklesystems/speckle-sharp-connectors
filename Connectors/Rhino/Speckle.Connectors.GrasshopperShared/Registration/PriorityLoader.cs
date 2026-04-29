@@ -30,7 +30,6 @@ public static class ServiceScopeExtensions
 
 public class PriorityLoader : GH_AssemblyPriority
 {
-  private IDisposable? _disposableLogger;
   public static ServiceProvider? Container { get; set; }
 
   public static IServiceScope CreateScopeForActiveDocument()
@@ -52,7 +51,7 @@ public class PriorityLoader : GH_AssemblyPriority
     try
     {
       var services = new ServiceCollection();
-      _disposableLogger = services.Initialize(HostApplications.Grasshopper, GetVersion());
+      services.Initialize(HostApplications.Grasshopper, GetVersion());
       services.AddRhinoConverters();
       services.AddConnectors();
 

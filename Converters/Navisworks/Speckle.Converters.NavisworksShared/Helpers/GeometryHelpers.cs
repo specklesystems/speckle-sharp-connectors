@@ -1,6 +1,7 @@
 ﻿using Speckle.Objects.Geometry;
 
 // ReSharper disable UnusedMember.Local
+#pragma warning disable IDE0051 // Private member is unused - disabling because they may be useful in future
 
 namespace Speckle.Converter.Navisworks.Helpers;
 

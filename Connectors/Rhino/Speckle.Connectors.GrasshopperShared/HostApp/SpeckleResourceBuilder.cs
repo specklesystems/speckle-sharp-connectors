@@ -8,10 +8,9 @@ public record SpeckleResourceBuilder
   /// <summary>
   /// The ReGex pattern to determine if a URL's AbsolutePath is a Frontend2 URL or not.
   /// </summary>
-  private static readonly Regex s_fe2UrlRegex =
-    new(
-      @"/projects/(?<projectId>[\w\d]+)(?:/models/(?<model>[\w\d]+(?:@[\w\d]+)?)(?:,(?<additionalModels>[\w\d]+(?:@[\w\d]+)?))*)?"
-    );
+  private static readonly Regex s_fe2UrlRegex = new(
+    @"/projects/(?<projectId>[\w\d]+)(?:/models/(?<model>[\w\d]+(?:@[\w\d]+)?)(?:,(?<additionalModels>[\w\d]+(?:@[\w\d]+)?))*)?"
+  );
 
   public static SpeckleUrlModelResource[] FromUrlString(string speckleModel, string? token)
   {

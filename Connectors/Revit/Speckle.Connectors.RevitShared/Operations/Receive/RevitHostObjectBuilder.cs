@@ -57,8 +57,8 @@ public sealed class RevitHostObjectBuilder(
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   ) =>
-    threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken))
+    threadContext.RunOnMainAsync(() =>
+      Task.FromResult(BuildSync(rootObject, projectName, modelName, onOperationProgressed, cancellationToken))
     );
 
   private HostObjectBuilderResult BuildSync(
@@ -130,7 +130,7 @@ public sealed class RevitHostObjectBuilder(
             ReferencePointTransform = CalculateNewTransform(
               currentSettings.ReferencePointTransform,
               referencePointTransformFromRootObject
-            )
+            ),
           }
         )
       )

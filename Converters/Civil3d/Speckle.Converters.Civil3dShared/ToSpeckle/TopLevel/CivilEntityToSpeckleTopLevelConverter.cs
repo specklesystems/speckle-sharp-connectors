@@ -14,7 +14,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly DisplayValueExtractor _displayValueExtractor;
   private readonly BaseCurveExtractor _baseCurveExtractor;
-  private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly PropertiesExtractor _propertiesExtractor;
   private readonly CorridorHandler _corridorHandler;
 
@@ -22,7 +21,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     DisplayValueExtractor displayValueExtractor,
     BaseCurveExtractor baseCurveExtractor,
-    ClassPropertiesExtractor classPropertiesExtractor,
     PropertiesExtractor propertiesExtractor,
     CorridorHandler corridorHandler
   )
@@ -30,7 +28,6 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     _settingsStore = settingsStore;
     _displayValueExtractor = displayValueExtractor;
     _baseCurveExtractor = baseCurveExtractor;
-    _classPropertiesExtractor = classPropertiesExtractor;
     _propertiesExtractor = propertiesExtractor;
     _corridorHandler = corridorHandler;
   }
@@ -62,18 +59,17 @@ public class CivilEntityToSpeckleTopLevelConverter : IToSpeckleTopLevelConverter
     // this is a bespoke method by class type.
     var children = GetEntityChildren(target).ToList();
 
-    Civil3dObject civilObject =
-      new()
-      {
-        name = name,
-        type = target.GetType().ToString().Split('.').Last(),
-        baseCurves = baseCurves,
-        elements = children,
-        displayValue = displayValue,
-        properties = properties,
-        units = _settingsStore.Current.SpeckleUnits,
-        applicationId = target.GetSpeckleApplicationId()
-      };
+    Civil3dObject civilObject = new()
+    {
+      name = name,
+      type = target.GetType().ToString().Split('.').Last(),
+      baseCurves = baseCurves,
+      elements = children,
+      displayValue = displayValue,
+      properties = properties,
+      units = _settingsStore.Current.SpeckleUnits,
+      applicationId = target.GetSpeckleApplicationId(),
+    };
 
     return civilObject;
   }

@@ -1,4 +1,4 @@
-using Speckle.Converters.Common;
+using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
@@ -15,17 +15,12 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle.Geometry;
 public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConverter
 {
   private readonly IConverterManager<IToSpeckleTopLevelConverter> _converterManager;
-  private readonly IConverterSettingsStore<Plant3dConversionSettings> _settingsStore;
 
   private const int MAX_DEPTH = 5;
 
-  protected Plant3dEntityToSpeckleConverter(
-    IConverterManager<IToSpeckleTopLevelConverter> converterManager,
-    IConverterSettingsStore<Plant3dConversionSettings> settingsStore
-  )
+  protected Plant3dEntityToSpeckleConverter(IConverterManager<IToSpeckleTopLevelConverter> converterManager)
   {
     _converterManager = converterManager;
-    _settingsStore = settingsStore;
   }
 
   public Base Convert(object target) => ConvertEntity((ADB.Entity)target);
@@ -45,14 +40,13 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       name = tagValue;
     }
 
-    DataObject dataObject =
-      new()
-      {
-        name = name,
-        displayValue = displayValue,
-        properties = new Dictionary<string, object?>(),
-        applicationId = entity.Handle.Value.ToString()
-      };
+    DataObject dataObject = new()
+    {
+      name = name,
+      displayValue = displayValue,
+      properties = new Dictionary<string, object?>(),
+      applicationId = entity.Handle.Value.ToString(),
+    };
 
     return dataObject;
   }
@@ -73,9 +67,17 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
   /// </summary>
   private void CollectDisplayObjects(ADB.Entity entity, List<Base> results, int depth)
   {
+    // ATTDEFs in a block definition hold the field template (e.g. "#(TargetObject.Type)"),
+    // not the rendered text. The real string lives on each instance's AttributeReference,
+    // which we capture below from the parent BlockReference's AttributeCollection.
+    if (entity is ADB.AttributeDefinition)
+    {
+      return;
+    }
+
     // If this is NOT a block reference, try converting it directly
     // (Line, Arc, Circle, Polyline, Solid3d, etc.)
-    if (entity is not ADB.BlockReference)
+    if (entity is not ADB.BlockReference blockRef)
     {
       try
       {
@@ -88,6 +90,32 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       catch (System.Exception)
       {
         // Fall through to explode on ConversionNotSupportedException or failed
+      }
+    }
+    else
+    {
+      // AttributeReference inherits from DBText, so it resolves
+      // the existing DBText converter without any template parsing on our side.
+      foreach (
+        ADB.AttributeReference attRef in blockRef.GetSubEntities<ADB.AttributeReference>(
+          source: blockRef.AttributeCollection
+        )
+      )
+      {
+        if (!attRef.Visible || string.IsNullOrWhiteSpace(attRef.TextString))
+        {
+          continue;
+        }
+
+        try
+        {
+          var converter = _converterManager.ResolveConverter(attRef.GetType());
+          results.Add(converter.Convert(attRef));
+        }
+        catch (System.Exception)
+        {
+          // Skip any attribute reference we can't convert; continue with the rest.
+        }
       }
     }
 

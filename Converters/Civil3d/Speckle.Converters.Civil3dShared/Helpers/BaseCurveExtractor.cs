@@ -1,13 +1,9 @@
-using Microsoft.Extensions.Logging;
-using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
 namespace Speckle.Converters.Civil3dShared.Helpers;
 
 public sealed class BaseCurveExtractor
 {
-  private readonly ILogger<DisplayValueExtractor> _logger;
-  private readonly IConverterSettingsStore<Civil3dConversionSettings> _converterSettings;
   private readonly ITypedConverter<AG.LineSegment3d, SOG.Line> _lineConverter;
   private readonly ITypedConverter<AG.CircularArc2d, SOG.Arc> _arcConverter;
   private readonly ITypedConverter<CDB.AlignmentSubEntityLine, SOG.Line> _alignmentLineConverter;
@@ -24,9 +20,7 @@ public sealed class BaseCurveExtractor
     ITypedConverter<CDB.AlignmentSubEntityLine, SOG.Line> alignmentLineConverter,
     ITypedConverter<CDB.AlignmentSubEntityArc, SOG.Arc> alignmentArcConverter,
     ITypedConverter<(CDB.AlignmentSubEntitySpiral, CDB.Alignment), SOG.Polyline> alignmentSpiralConverter,
-    ITypedConverter<ADB.Curve, Objects.ICurve> curveConverter,
-    ILogger<DisplayValueExtractor> logger,
-    IConverterSettingsStore<Civil3dConversionSettings> converterSettings
+    ITypedConverter<ADB.Curve, Objects.ICurve> curveConverter
   )
   {
     _lineConverter = lineConverter;
@@ -35,8 +29,6 @@ public sealed class BaseCurveExtractor
     _alignmentArcConverter = alignmentArcConverter;
     _alignmentSpiralConverter = alignmentSpiralConverter;
     _curveConverter = curveConverter;
-    _logger = logger;
-    _converterSettings = converterSettings;
   }
 
   public List<Speckle.Objects.ICurve>? GetBaseCurves(CDB.Entity entity)

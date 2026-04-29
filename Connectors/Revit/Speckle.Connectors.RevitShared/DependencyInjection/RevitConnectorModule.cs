@@ -106,11 +106,7 @@ public static class ServiceRegistration
 #elif !REVIT2026_OR_GREATER
     // different versions for different versions of CEF
     serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
-
-    var panel = new CefSharpPanel();
-    panel.Browser.JavascriptObjectRepository.NameConverter = null;
-
-    serviceCollection.AddSingleton(panel);
+    serviceCollection.AddSingleton<CefSharpPanel>();
     serviceCollection.AddSingleton<IBrowserScriptExecutor>(c => c.GetRequiredService<CefSharpPanel>());
     serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
 #else
