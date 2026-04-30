@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -57,7 +58,7 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
     };
   }
 
-  private static bool TryGetBackingMText(ADB.DBText target, out ADB.MText? mtext)
+  private static bool TryGetBackingMText(ADB.DBText target, [NotNullWhen(true)] out ADB.MText? mtext)
   {
     switch (target)
     {
