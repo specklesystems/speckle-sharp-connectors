@@ -175,8 +175,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.19.1-stj-experiment",
-        "contentHash": "tkp7f3NWQuwWvHaEN65iXJWmYtZR7YV7PAcQAofpeSuY4f7YkOcIYEPaVtAaN3cgf0fg2Ep5M1/4ZgO7GPoKHw==",
+        "resolved": "3.19.2-stj-experiment",
+        "contentHash": "lkH/JX31gCOJorXpiOOXxI/6CMvR40P5pkHysYKbTbSXn6v9bHgSiphxTz9F3P0kZOUz4sDKCxBftsr/fHlfuw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -185,13 +185,13 @@
           "Microsoft.Extensions.Logging": "2.2.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.19.1-stj-experiment"
+          "Speckle.Sdk.Dependencies": "3.19.2-stj-experiment"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.19.1-stj-experiment",
-        "contentHash": "tf1Sb9OI0qBkzz5hFjl4TB2J8i1MkJhT0p492UQ9RmbovRFODiRWyd6UL70lWE0ylN6l+lPG8HFhdFe9/R6Ncg==",
+        "resolved": "3.19.2-stj-experiment",
+        "contentHash": "7Jz+C/w4au3Ido6ebENX8fUsuX7lQLaXqDqeYNEeJx4ImyHuNa5tvZQDDk7jZi/Hvb34byNiu/bBrSuHHVMJ9Q==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "9.0.4",
           "System.Memory": "4.5.5",
@@ -303,7 +303,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.19.1-stj-experiment, )",
+          "Speckle.Objects": "[3.19.2-stj-experiment, )",
           "System.Text.Json": "[8.0.6, )"
         }
       },
@@ -326,7 +326,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Objects": "[3.19.1-stj-experiment, )"
+          "Speckle.Objects": "[3.19.2-stj-experiment, )"
         }
       },
       "Microsoft.Web.WebView2": {
@@ -343,11 +343,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.19.1-stj-experiment, )",
-        "resolved": "3.19.1-stj-experiment",
-        "contentHash": "NNpmfQOcriAxnjgmwmFp3zafIOlIXVM6O006A0GCbTqtnXswhfNNdDfT4v3PM9luT+I3L8UBZOWLD1R2SB2h1g==",
+        "requested": "[3.19.2-stj-experiment, )",
+        "resolved": "3.19.2-stj-experiment",
+        "contentHash": "Z1AfZGMT4GnFqCkGLKjtedW6SrixhH40f2biUgDfgjhVuwG2ox5L2N63LFeQswbJwxQ1VnWAclMHOYj+uTfQWA==",
         "dependencies": {
-          "Speckle.Sdk": "3.19.1-stj-experiment"
+          "Speckle.Sdk": "3.19.2-stj-experiment"
         }
       },
       "System.Text.Json": {
