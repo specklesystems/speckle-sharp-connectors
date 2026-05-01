@@ -40,6 +40,13 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
 
     foreach (var obj in objects)
     {
+      // Skip hidden attributes from the selection. Their values are kept on the InstanceProxy
+      // via GetInstanceAttributes, so we just avoid sending them as floating Text.
+      if (obj.Root is AttributeReference attrRef && (!attrRef.Visible || attrRef.Invisible))
+      {
+        continue;
+      }
+
       // Note: isDynamicBlock always returns false for a selection of doc objects. Instances of dynamic blocks are represented in the document as blocks that have
       // a definition reference to the anonymous block table record.
       if (obj.Root is BlockReference blockReference && !blockReference.IsDynamicBlock)
@@ -131,6 +138,12 @@ public class AutocadInstanceUnpacker : IInstanceUnpacker<AutocadRootObject>
       foreach (ObjectId id in instance.AttributeCollection)
       {
         var reference = (AttributeReference)transaction.GetObject(id, OpenMode.ForRead);
+        // Skip hidden attributes. Their values are still kept on the InstanceProxy via
+        // GetInstanceAttributes, so we just avoid sending them as floating Text.
+        if (!reference.Visible || reference.Invisible)
+        {
+          continue;
+        }
         string refAppId = reference.GetSpeckleApplicationId();
         _instanceObjectsManager.AddAtomicObject(refAppId, new(reference, refAppId));
       }
