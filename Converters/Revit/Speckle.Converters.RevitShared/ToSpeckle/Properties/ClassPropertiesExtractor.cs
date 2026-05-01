@@ -91,21 +91,8 @@ public class ClassPropertiesExtractor
           elementProperties.Add("fromRoomApplicationId", familyInstance.FromRoom.UniqueId.ToString());
         }
 
-        Element? parent = null;
-
-#if REVIT2023_OR_GREATER
-        BuiltInCategory bic = familyInstance.Category.BuiltInCategory;
-#else
-        // Cast for 2022 and older
-        BuiltInCategory bic = (BuiltInCategory)familyInstance.Category.Id.IntegerValue;
-#endif
-
-        if (bic == BuiltInCategory.OST_CurtainWallMullions || bic == BuiltInCategory.OST_CurtainWallPanels)
-        {
-          parent = familyInstance.Host;
-        }
-
-        parent ??= familyInstance.SuperComponent;
+        // parent: prefer Host (e.g. wall, floor, ceiling), fall back to SuperComponent (nested family)
+        Element? parent = familyInstance.Host ?? familyInstance.SuperComponent;
 
         if (parent != null)
         {
