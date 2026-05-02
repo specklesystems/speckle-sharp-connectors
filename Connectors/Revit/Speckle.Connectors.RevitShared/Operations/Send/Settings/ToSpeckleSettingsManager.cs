@@ -23,6 +23,7 @@ public class ToSpeckleSettingsManager(
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
   private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
   private readonly Dictionary<string, bool?> _sendAreasAsMeshCache = [];
+  private readonly Dictionary<string, AppendRoomsAndAreasMode> _appendRoomsAndAreasCache = [];
 
   public DetailLevelType GetDetailLevelSetting(Document document, SenderModelCard modelCard)
   {
@@ -141,6 +142,70 @@ public class ToSpeckleSettingsManager(
       _sendAreasAsMeshCache,
       "Send areas as mesh"
     );
+
+  public AppendRoomsAndAreasMode GetAppendRoomsAndAreas(Document document, SenderModelCard modelCard)
+  {
+    var valueString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == AppendRoomsAndAreasSetting.SETTING_ID)?.Value as string;
+    if (
+      valueString is not null
+      && AppendRoomsAndAreasSetting.AppendRoomsAndAreasMap.TryGetValue(valueString, out AppendRoomsAndAreasMode mode)
+    )
+    {
+      if (
+        _appendRoomsAndAreasCache.TryGetValue(modelCard.ModelCardId.NotNull(), out AppendRoomsAndAreasMode previous)
+        && previous != mode
+      )
+      {
+        EvictCacheForModelCard(document, modelCard);
+      }
+      _appendRoomsAndAreasCache[modelCard.ModelCardId.NotNull()] = mode;
+      return mode;
+    }
+
+    logger.LogWarning(
+      "Invalid appendRoomsAndAreas setting for model {ModelCardId}, using default: None",
+      modelCard.ModelCardId
+    );
+    _appendRoomsAndAreasCache[modelCard.ModelCardId.NotNull()] = AppendRoomsAndAreasMode.None;
+    return AppendRoomsAndAreasMode.None;
+  }
+
+  /// <summary>
+  /// Collects rooms and/or areas from the document per the card setting, excluding elements already present in <paramref name="existingIds"/>.
+  /// </summary>
+  public IReadOnlyList<Element> GetElementsToAppend(
+    Document document,
+    SenderModelCard modelCard,
+    HashSet<string> existingIds
+  )
+  {
+    var mode = GetAppendRoomsAndAreas(document, modelCard);
+    if (mode == AppendRoomsAndAreasMode.None)
+    {
+      return [];
+    }
+
+    var toAppend = new List<Element>();
+
+    if (mode is AppendRoomsAndAreasMode.RoomsOnly or AppendRoomsAndAreasMode.Both)
+    {
+      using var roomCollector = new FilteredElementCollector(document);
+      toAppend.AddRange(
+        roomCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Rooms).Cast<Element>()
+      );
+    }
+
+    if (mode is AppendRoomsAndAreasMode.AreasOnly or AppendRoomsAndAreasMode.Both)
+    {
+      using var areaCollector = new FilteredElementCollector(document);
+      toAppend.AddRange(
+        areaCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Areas).Cast<Element>()
+      );
+    }
+
+    return toAppend.Where(e => !existingIds.Contains(e.UniqueId)).ToList();
+  }
 
   /// <summary>
   /// Helper method to handle boolean settings with caching and logging
