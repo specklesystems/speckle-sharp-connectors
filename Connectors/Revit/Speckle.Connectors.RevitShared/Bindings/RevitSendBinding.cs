@@ -324,6 +324,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     }
 
     // append rooms and/or areas from the whole document when requested, independent of the active filter
+    //TODO settings should be configured per filter. This setting is only for view filter when selected view is a 3d view.
     var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
     elementsOnMainModel.AddRange(_toSpeckleSettingsManager.GetElementsToAppend(document, modelCard, existingIds));
 

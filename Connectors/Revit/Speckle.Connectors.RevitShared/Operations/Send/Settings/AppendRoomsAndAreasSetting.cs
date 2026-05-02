@@ -28,9 +28,8 @@ public class AppendRoomsAndAreasSetting(AppendRoomsAndAreasMode value = AppendRo
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(AppendRoomsAndAreasMode)).ToList();
   public object? Value { get; set; } = value.ToString();
 
-  public static readonly Dictionary<string, AppendRoomsAndAreasMode> AppendRoomsAndAreasMap =
-    System
-      .Enum.GetValues(typeof(AppendRoomsAndAreasMode))
-      .Cast<AppendRoomsAndAreasMode>()
-      .ToDictionary(v => v.ToString(), v => v);
+  public static readonly Dictionary<string, AppendRoomsAndAreasMode> AppendRoomsAndAreasMap = System
+    .Enum.GetValues(typeof(AppendRoomsAndAreasMode))
+    .Cast<AppendRoomsAndAreasMode>()
+    .ToDictionary(v => v.ToString(), v => v);
 }
