@@ -25,39 +25,16 @@ public class ToSpeckleSettingsManager(
   private readonly Dictionary<string, bool?> _sendAreasAsMeshCache = [];
   private readonly Dictionary<string, AppendRoomsAndAreasMode> _appendRoomsAndAreasCache = [];
 
-  public DetailLevelType GetDetailLevelSetting(Document document, SenderModelCard modelCard)
-  {
-    var fidelityString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == DetailLevelSetting.SETTING_ID)?.Value as string;
-    if (
-      fidelityString is not null
-      && DetailLevelSetting.GeometryFidelityMap.TryGetValue(fidelityString, out DetailLevelType fidelity)
-    )
-    {
-      if (_detailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out DetailLevelType previousType))
-      {
-        if (previousType != fidelity)
-        {
-          EvictCacheForModelCard(document, modelCard);
-        }
-      }
-      _detailLevelCache[modelCard.ModelCardId.NotNull()] = fidelity;
-      return fidelity;
-    }
-
-    // log the issue
-    logger.LogWarning(
-      "Invalid detail level setting received: '{FidelityString}' for model {ModelCardId}, using default: {DefaultValue}",
-      fidelityString,
-      modelCard.ModelCardId,
-      DetailLevelSetting.DEFAULT_VALUE
+  public DetailLevelType GetDetailLevelSetting(Document document, SenderModelCard modelCard) =>
+    GetEnumSettingWithCache(
+      document,
+      DetailLevelSetting.SETTING_ID,
+      DetailLevelSetting.GeometryFidelityMap,
+      DetailLevelSetting.DEFAULT_VALUE,
+      modelCard,
+      _detailLevelCache,
+      "detail level"
     );
-
-    // return sensible default
-    DetailLevelType defaultValue = DetailLevelSetting.DEFAULT_VALUE;
-    _detailLevelCache[modelCard.ModelCardId.NotNull()] = defaultValue;
-    return defaultValue;
-  }
 
   public Transform? GetReferencePointSetting(Document document, ModelCard modelCard)
   {
@@ -143,33 +120,16 @@ public class ToSpeckleSettingsManager(
       "Send areas as mesh"
     );
 
-  public AppendRoomsAndAreasMode GetAppendRoomsAndAreas(Document document, SenderModelCard modelCard)
-  {
-    var valueString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == AppendRoomsAndAreasSetting.SETTING_ID)?.Value as string;
-    if (
-      valueString is not null
-      && AppendRoomsAndAreasSetting.AppendRoomsAndAreasMap.TryGetValue(valueString, out AppendRoomsAndAreasMode mode)
-    )
-    {
-      if (
-        _appendRoomsAndAreasCache.TryGetValue(modelCard.ModelCardId.NotNull(), out AppendRoomsAndAreasMode previous)
-        && previous != mode
-      )
-      {
-        EvictCacheForModelCard(document, modelCard);
-      }
-      _appendRoomsAndAreasCache[modelCard.ModelCardId.NotNull()] = mode;
-      return mode;
-    }
-
-    logger.LogWarning(
-      "Invalid appendRoomsAndAreas setting for model {ModelCardId}, using default: None",
-      modelCard.ModelCardId
+  public AppendRoomsAndAreasMode GetAppendRoomsAndAreas(Document document, SenderModelCard modelCard) =>
+    GetEnumSettingWithCache(
+      document,
+      AppendRoomsAndAreasSetting.SETTING_ID,
+      AppendRoomsAndAreasSetting.AppendRoomsAndAreasMap,
+      AppendRoomsAndAreasMode.None,
+      modelCard,
+      _appendRoomsAndAreasCache,
+      "appendRoomsAndAreas"
     );
-    _appendRoomsAndAreasCache[modelCard.ModelCardId.NotNull()] = AppendRoomsAndAreasMode.None;
-    return AppendRoomsAndAreasMode.None;
-  }
 
   /// <summary>
   /// Collects rooms and/or areas from the document per the card setting, excluding elements already present in <paramref name="existingIds"/>.
@@ -192,7 +152,11 @@ public class ToSpeckleSettingsManager(
     {
       using var roomCollector = new FilteredElementCollector(document);
       toAppend.AddRange(
-        roomCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Rooms).Cast<Element>()
+        roomCollector
+          .OfClass(typeof(SpatialElement))
+          .OfCategory(BuiltInCategory.OST_Rooms)
+          .Cast<Element>()
+          .Where(e => !existingIds.Contains(e.UniqueId))
       );
     }
 
@@ -200,11 +164,54 @@ public class ToSpeckleSettingsManager(
     {
       using var areaCollector = new FilteredElementCollector(document);
       toAppend.AddRange(
-        areaCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Areas).Cast<Element>()
+        areaCollector
+          .OfClass(typeof(SpatialElement))
+          .OfCategory(BuiltInCategory.OST_Areas)
+          .Cast<Element>()
+          .Where(e => !existingIds.Contains(e.UniqueId))
       );
     }
 
-    return toAppend.Where(e => !existingIds.Contains(e.UniqueId)).ToList();
+    return toAppend;
+  }
+
+  /// <summary>
+  /// Helper method to handle enum settings with string-keyed maps, per-card caching, and cache eviction on change.
+  /// </summary>
+  private TEnum GetEnumSettingWithCache<TEnum>(
+    Document document,
+    string settingId,
+    Dictionary<string, TEnum> map,
+    TEnum defaultValue,
+    SenderModelCard modelCard,
+    Dictionary<string, TEnum> cache,
+    string settingName
+  )
+    where TEnum : struct
+  {
+    var valueString = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value as string;
+    if (valueString is not null && map.TryGetValue(valueString, out TEnum value))
+    {
+      if (
+        cache.TryGetValue(modelCard.ModelCardId.NotNull(), out TEnum previous)
+        && !EqualityComparer<TEnum>.Default.Equals(previous, value)
+      )
+      {
+        EvictCacheForModelCard(document, modelCard);
+      }
+      cache[modelCard.ModelCardId.NotNull()] = value;
+      return value;
+    }
+
+    logger.LogWarning(
+      "Invalid {SettingName} setting received: '{ValueString}' for model {ModelCardId}, using default: {DefaultValue}",
+      settingName,
+      valueString,
+      modelCard.ModelCardId,
+      defaultValue
+    );
+    cache[modelCard.ModelCardId.NotNull()] = defaultValue;
+    return defaultValue;
   }
 
   /// <summary>
