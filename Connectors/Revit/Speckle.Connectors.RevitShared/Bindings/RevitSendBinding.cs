@@ -162,6 +162,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new LinkedModelsSetting(),
       new SendRebarsAsVolumetricSetting(),
       new SendAreasAsMeshSetting(),
+      new AppendRoomsAndAreasSetting(),
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -321,6 +322,11 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       }
       documentElementContexts.AddRange(linkedDocumentContexts);
     }
+
+    // append rooms and/or areas from the whole document when requested, independent of the active filter
+    //TODO settings should be configured per filter. This setting is only for view filter when selected view is a 3d view.
+    var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
+    elementsOnMainModel.AddRange(_toSpeckleSettingsManager.GetElementsToAppend(document, modelCard, existingIds));
 
     // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
