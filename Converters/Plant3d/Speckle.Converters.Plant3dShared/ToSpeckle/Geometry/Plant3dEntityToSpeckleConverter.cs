@@ -1,3 +1,4 @@
+using Speckle.Converters.Autocad.Extensions;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
@@ -66,9 +67,17 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
   /// </summary>
   private void CollectDisplayObjects(ADB.Entity entity, List<Base> results, int depth)
   {
+    // ATTDEFs in a block definition hold the field template (e.g. "#(TargetObject.Type)"),
+    // not the rendered text. The real string lives on each instance's AttributeReference,
+    // which we capture below from the parent BlockReference's AttributeCollection.
+    if (entity is ADB.AttributeDefinition)
+    {
+      return;
+    }
+
     // If this is NOT a block reference, try converting it directly
     // (Line, Arc, Circle, Polyline, Solid3d, etc.)
-    if (entity is not ADB.BlockReference)
+    if (entity is not ADB.BlockReference blockRef)
     {
       try
       {
@@ -81,6 +90,32 @@ public abstract class Plant3dEntityToSpeckleConverter : IToSpeckleTopLevelConver
       catch (System.Exception)
       {
         // Fall through to explode on ConversionNotSupportedException or failed
+      }
+    }
+    else
+    {
+      // AttributeReference inherits from DBText, so it resolves
+      // the existing DBText converter without any template parsing on our side.
+      foreach (
+        ADB.AttributeReference attRef in blockRef.GetSubEntities<ADB.AttributeReference>(
+          source: blockRef.AttributeCollection
+        )
+      )
+      {
+        if (!attRef.Visible || string.IsNullOrWhiteSpace(attRef.TextString))
+        {
+          continue;
+        }
+
+        try
+        {
+          var converter = _converterManager.ResolveConverter(attRef.GetType());
+          results.Add(converter.Convert(attRef));
+        }
+        catch (System.Exception)
+        {
+          // Skip any attribute reference we can't convert; continue with the rest.
+        }
       }
     }
 
