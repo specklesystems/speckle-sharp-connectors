@@ -21,4 +21,5 @@ public enum HostAppVersion
   v715,
   v716,
   v717,
+  vCONNECT,
 }

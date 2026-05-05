@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWpf>true</UseWpf>
+    <FileAlignment>512</FileAlignment>
+
+    <MicroStationVersion>2026</MicroStationVersion>
+    <DefineConstants>$(DefineConstants);TRACE;MICROSTATION;MICROSTATION_2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <OutputType>WinExe</OutputType>
+    <!-- CA1515: WinExe projects don't need public types. CA1031: top-level catch-all is intentional for user-facing error dialogs. -->
+    <NoWarn>$(NoWarn);CA1515;CA1031</NoWarn>
+    <Description>Speckle Connector for Bentley MicroStation 2026</Description>
+    <AssemblyName>Speckle.Connectors.MicroStation2026</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Default MicroStation 2026 installation path; override via environment variable or user.props -->
+  <PropertyGroup>
+    <MicroStation2026Dir Condition="'$(MicroStation2026Dir)' == ''">$(ProgramFiles)\Bentley\MicroStation 2026\MicroStation\</MicroStation2026Dir>
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.projitems"
+    Label="Shared"
+  />
+
+  <ItemGroup>
+    <!--
+      MicroStation 2026 managed API DLLs.
+      ExcludeAssets="runtime" — provided by MicroStation installation at runtime.
+      Private="False" ensures they are NOT copied to the output folder.
+    -->
+    <!-- DgnPlatformNET is a mixed-mode DLL; not used directly by the connector exe — keep excluded from output. -->
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- COM interop wrapper — copy to output so the standalone exe can find it at runtime. -->
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Bentley\Speckle.Converters.MicroStationCONNECT\Speckle.Converters.MicroStationCONNECT.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+</Project>

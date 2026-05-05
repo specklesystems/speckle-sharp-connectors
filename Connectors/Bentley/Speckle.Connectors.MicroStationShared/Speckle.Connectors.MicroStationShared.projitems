@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.MicroStation</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleAddIn.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\MsApp.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleWindow.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleToolConstants.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationBasicConnectorBinding.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationSelectionBinding.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationSendBinding.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationDocumentModelStore.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationDocumentEvents.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationIdleManager.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationRootObjectBuilder.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationEverythingFilter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationSelectionFilter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationLevelFilter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConnectorServiceRegistration.cs"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)Plugin\SpeckleWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\Speckle.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)Plugin\SpeckleAddIn.cfg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,45 @@
+<Project>
+  <PropertyGroup>
+    <UseWpf>true</UseWpf>
+    <Description>Speckle Connector for Bentley MicroStation 2026</Description>
+    <PackageTags>$(PackageTags) connector dgn microstation bentley</PackageTags>
+    <RootNamespace>Speckle.Connectors.MicroStation</RootNamespace>
+
+    <!--
+      MicroStation 2026 loads managed add-ins from directories listed in MS_ADDINPATH.
+      SpeckleAddIn.cfg sets MS_ADDINPATH to this directory so MicroStation discovers the DLL.
+    -->
+    <SpeckleMicroStationDeployDir>$(ProgramData)\Speckle\Connectors\MicroStation\$(MicroStationVersion)\</SpeckleMicroStationDeployDir>
+  </PropertyGroup>
+
+  <!--
+    Post-build: copy connector output to the deploy directory so the add-in is automatically
+    picked up by MicroStation 2026 on the developer's machine.
+    Only runs on Windows when MicroStationVersion is set (i.e. in version-specific projects).
+  -->
+  <Target Name="DeployToMicroStation"
+          AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' AND '$(MicroStationVersion)' != ''">
+    <MakeDir Directories="$(SpeckleMicroStationDeployDir)" />
+    <ItemGroup>
+      <_DeployFiles Include="$(OutputPath)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DeployFiles)"
+          DestinationFiles="@(_DeployFiles->'$(SpeckleMicroStationDeployDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[Speckle] Deployed to $(SpeckleMicroStationDeployDir)" />
+  </Target>
+
+  <!-- Post-build: register SpeckleAddIn.cfg in MicroStation's user prefs so the add-in is auto-loaded. -->
+  <Target Name="RegisterMicroStationCfg"
+          AfterTargets="DeployToMicroStation"
+          Condition="'$(OS)' == 'Windows_NT' AND '$(MicroStationVersion)' != ''">
+    <PropertyGroup>
+      <_MsCfgSrc>$(SpeckleMicroStationDeployDir)Plugin\SpeckleAddIn.cfg</_MsCfgSrc>
+      <_MsCfgDst>$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Bentley\MicroStation $(MicroStationVersion)\prefs\SpeckleAddIn.cfg</_MsCfgDst>
+    </PropertyGroup>
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_MsCfgDst)'))" />
+    <Copy SourceFiles="$(_MsCfgSrc)" DestinationFiles="$(_MsCfgDst)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[Speckle] Registered cfg: $(_MsCfgDst)" />
+  </Target>
+</Project>

@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <FileAlignment>512</FileAlignment>
+    <AssemblyName>Speckle.Converters.MicroStation2026</AssemblyName>
+
+    <MicroStationVersion>2026</MicroStationVersion>
+    <DefineConstants>$(DefineConstants);MICROSTATION;MICROSTATION_2026</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <Description>Speckle Converter for Bentley MicroStation 2026</Description>
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Converters.MicroStationShared\Speckle.Converters.MicroStationShared.projitems"
+    Label="Shared"
+  />
+
+  <PropertyGroup>
+    <!-- Path to the MicroStation 2026 installation directory -->
+    <MicroStation2026Dir Condition="'$(MicroStation2026Dir)' == ''">$(ProgramFiles)\Bentley\MicroStation 2026\MicroStation\</MicroStation2026Dir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MicroStation 2026 managed host base class (ManagedHost, DgnPlatformNET) -->
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- MicroStation 2026 COM automation interop (Application, Element, ModelReference, etc.) -->
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+</Project>

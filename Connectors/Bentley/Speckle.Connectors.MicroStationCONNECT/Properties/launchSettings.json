@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Speckle.Connectors.MicroStation2026": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Bentley\\MicroStation 2026\\MicroStation\\microstation.exe"
+    }
+  }
+}

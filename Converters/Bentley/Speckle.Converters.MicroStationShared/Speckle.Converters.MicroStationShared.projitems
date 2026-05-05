@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>B2C3D4E5-F6A7-8901-BCDE-F12345678901</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converter.MicroStation</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettings.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\MicroStationConversionSettingsFactory.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Services\MicroStationToSpeckleUnitConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\DgnPointExtensions.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\MicroStationRootToSpeckleConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\LineElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ArcElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\EllipseElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\PointStringElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\BsplineCurveElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\BSplineSurfaceElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\CellHeaderElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\SharedCellElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\TextElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\SolidElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConverterServiceRegistration.cs"/>
+    <!-- LineStringElementConverter.cs excluded: MSIDGN.LineStringElement does not exist in the 2026 COM API.
+         Line-string (polyline) DGN elements are accessed via PointStringElement (PointStringElementConverter). -->
+  </ItemGroup>
+</Project>
