@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -28,7 +29,7 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
   public SA.Text Convert(ADB.MText target) =>
     new()
     {
-      value = target.Text,
+      value = ConvertMTextToPlainText(target.Contents ?? string.Empty),
       height = target.TextHeight,
       maxWidth = target.Width,
       plane = GetTextPlane(target),
@@ -37,6 +38,32 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       alignmentV = GetVerticalAlignment(target.Attachment),
       units = _settingsStore.Current.SpeckleUnits,
     };
+
+  // Codes with parameters that end in `;` (font, color, height, etc.)
+  private static readonly Regex s_paramCodeRegex = new(@"\\[A-Za-z][^\\;]*;", RegexOptions.Compiled);
+
+  // Toggle codes with no parameters (underline, overline, strikethrough)
+  private static readonly Regex s_toggleCodeRegex = new(@"\\[LlOoKkX]", RegexOptions.Compiled);
+
+  /// <summary>
+  /// Turns raw MText contents into plain text with real newlines, so the viewer can render it
+  /// on multiple lines. Covers common formatting; exotic cases may still need cleanup.
+  /// </summary>
+  private static string ConvertMTextToPlainText(string contents)
+  {
+    if (string.IsNullOrEmpty(contents))
+    {
+      return contents;
+    }
+
+    // Convert paragraph breaks first so they aren't eaten by the strip below.
+    string result = contents.Replace("\\P", "\n");
+    result = s_paramCodeRegex.Replace(result, string.Empty);
+    result = s_toggleCodeRegex.Replace(result, string.Empty);
+    result = result.Replace("\\~", " ");
+    result = result.Replace("{", string.Empty).Replace("}", string.Empty);
+    return result;
+  }
 
   // For MText, the following properties are stored in:
   // - Position: WCS
