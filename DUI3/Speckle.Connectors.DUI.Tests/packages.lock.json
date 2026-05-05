@@ -182,6 +182,11 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0"
         }
       },
+      "Microsoft.Extensions.ObjectPool": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "4pm+XgxSukskwjzDDfSjG4KNUIOdFF2VaqZZDtTzoyQMOVSnlV6ZM8a9aVu5dg9LVZTB//utzSc8fOi0b0Mb2Q=="
+      },
       "Microsoft.Extensions.Options": {
         "type": "Transitive",
         "resolved": "8.0.0",
@@ -271,22 +276,23 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.19.2-stj-experiment",
-        "contentHash": "lkH/JX31gCOJorXpiOOXxI/6CMvR40P5pkHysYKbTbSXn6v9bHgSiphxTz9F3P0kZOUz4sDKCxBftsr/fHlfuw==",
+        "resolved": "3.20.0-stj-experiment",
+        "contentHash": "dQisGzKgeIpbaK6+gbNdDlSYUSzsgvel7IdLX+Ji8kI0a3ectNRSKxHCuLjaxptwqhBQYe+/HsrmVrYOCACTdg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.Data.Sqlite": "7.0.5",
           "Microsoft.Extensions.DependencyInjection": "8.0.0",
           "Microsoft.Extensions.Logging": "8.0.0",
+          "Microsoft.Extensions.ObjectPool": "8.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.19.2-stj-experiment"
+          "Speckle.Sdk.Dependencies": "3.20.0-stj-experiment"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.19.2-stj-experiment",
-        "contentHash": "7Jz+C/w4au3Ido6ebENX8fUsuX7lQLaXqDqeYNEeJx4ImyHuNa5tvZQDDk7jZi/Hvb34byNiu/bBrSuHHVMJ9Q=="
+        "resolved": "3.20.0-stj-experiment",
+        "contentHash": "1Xfonj1k7UXKQ7qSDjd3AA4VVneAHnW+lLl5IQ8xt7noYs9kjR3mXcEb8L/kd2kp9GDA3Ey8qs1kNpG2SH1WaQ=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -356,7 +362,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.19.2-stj-experiment, )"
+          "Speckle.Objects": "[3.20.0-stj-experiment, )"
         }
       },
       "speckle.connectors.dui": {
@@ -371,7 +377,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Objects": "[3.19.2-stj-experiment, )"
+          "Speckle.Objects": "[3.20.0-stj-experiment, )"
         }
       },
       "speckle.testing": {
@@ -379,7 +385,7 @@
         "dependencies": {
           "Moq": "[4.20.70, )",
           "NUnit": "[4.5.1, )",
-          "Speckle.Objects": "[3.19.2-stj-experiment, )"
+          "Speckle.Objects": "[3.20.0-stj-experiment, )"
         }
       },
       "Speckle.DoubleNumerics": {
@@ -390,11 +396,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.19.2-stj-experiment, )",
-        "resolved": "3.19.2-stj-experiment",
-        "contentHash": "Z1AfZGMT4GnFqCkGLKjtedW6SrixhH40f2biUgDfgjhVuwG2ox5L2N63LFeQswbJwxQ1VnWAclMHOYj+uTfQWA==",
+        "requested": "[3.20.0-stj-experiment, )",
+        "resolved": "3.20.0-stj-experiment",
+        "contentHash": "IgcgrTDhMhJuWyRHOMKr05VvcM6tX+Rj5OlIXQ44p0Fc2t+lETufNEZX3N4hlwYhgixwZALeZ4h0NCHSao4EJg==",
         "dependencies": {
-          "Speckle.Sdk": "3.19.2-stj-experiment"
+          "Speckle.Sdk": "3.20.0-stj-experiment"
         }
       }
     }
