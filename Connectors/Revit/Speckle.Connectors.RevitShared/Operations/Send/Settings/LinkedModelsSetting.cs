@@ -9,6 +9,7 @@ public class LinkedModelsSetting(bool value = LinkedModelsSetting.DEFAULT_VALUE)
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Include Linked Models";
+  public string? Description { get; set; }
   public string? Type { get; set; } = "boolean";
   public object? Value { get; set; } = value;
   public List<string>? Enum { get; set; }

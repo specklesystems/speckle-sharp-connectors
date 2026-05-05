@@ -17,6 +17,7 @@ public class SendReferencePointSetting(ReferencePointType value = SendReferenceP
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Reference Point";
+  public string? Description { get; set; } = "Sets the datum used as the origin of the sent geometry.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReferencePointType)).ToList();
   public object? Value { get; set; } = value.ToString();
