@@ -17,7 +17,7 @@ public class SpeckleDataObjectPassthrough()
     ComponentCategories.OBJECTS
   )
 {
-  private const string DESIGN_OPTION_KEY = "isDesignOption";
+  private const string DESIGN_OPTION_PATH = "DesignOption.isDesignOption";
   private bool _isDesignOption;
   private bool IsDesignOption
   {
@@ -207,7 +207,9 @@ public class SpeckleDataObjectPassthrough()
 
     if (_isDesignOption)
     {
-      result.DataObject[DESIGN_OPTION_KEY] = true;
+      var props = result.Properties.Clone();
+      props.SetValueByPath(DESIGN_OPTION_PATH, new SpecklePropertyGoo(true));
+      result.Properties = props;
     }
 
     // get the path
