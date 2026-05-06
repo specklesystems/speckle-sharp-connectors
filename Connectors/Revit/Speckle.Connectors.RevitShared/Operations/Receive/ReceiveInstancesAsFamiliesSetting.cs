@@ -10,7 +10,8 @@ public class ReceiveInstancesAsFamiliesSetting(bool value = ReceiveInstancesAsFa
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Receive Blocks as Families";
-  public string? Description { get; set; } = "Bake incoming blocks as Revit Families. Disable to receive them as DirectShapes for faster receive.";
+  public string? Description { get; set; } =
+    "Bake incoming blocks as Revit Families. Disable to receive them as DirectShapes for faster receive.";
   public string? Type { get; set; } = "boolean";
   public object? Value { get; set; } = value;
   public List<string>? Enum { get; set; }

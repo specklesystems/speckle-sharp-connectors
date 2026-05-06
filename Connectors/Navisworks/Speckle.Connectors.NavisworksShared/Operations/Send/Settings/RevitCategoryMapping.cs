@@ -6,7 +6,8 @@ public class RevitCategoryMappingSetting(bool value) : ICardSetting
 {
   public string? Id { get; set; } = "mappingToRevitCategories";
   public string? Title { get; set; } = "Map to Revit Categories";
-  public string? Description { get; set; } = "Tags elements with inferred Revit categories so they bake correctly when received in Revit.";
+  public string? Description { get; set; } =
+    "Tags elements with inferred Revit categories so they bake correctly when received in Revit.";
   public string? Type { get; set; } = "boolean";
   public List<string>? Enum { get; set; }
   public object? Value { get; set; } = value;
