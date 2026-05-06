@@ -24,6 +24,9 @@ public static class MicroStationConverterServiceRegistration
     // Register the root dispatcher
     serviceCollection.AddRootCommon<MicroStationRootToSpeckleConverter>(converterAssembly);
 
+    // Generic mesh fallback (bounding box) for unmapped element types.
+    serviceCollection.AddTransient<FallbackElementMeshConverter>();
+
     // Unit converter
     serviceCollection.AddSingleton<MicroStationToSpeckleUnitConverter>();
     serviceCollection.AddSingleton<IHostToSpeckleUnitConverter<MeasurementUnit>>(

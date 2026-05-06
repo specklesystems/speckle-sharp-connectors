@@ -28,6 +28,27 @@
       <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <!-- Bentley.GeometryNET / Bentley.TerrainModelNET references temporarily removed.
+         Their inclusion (combined with calling into BrowseTriangleMesh and ElementGraphicsOutput
+         from our managed converter) was crashing the MicroStation process during Send — likely
+         a native-side fault in the kernel/marshaling path that surfaces as a Corrupted State
+         Exception, which bypasses normal try/catch in CLR 4.x and terminates the process.
+         Re-enable once we have a vetted native-interop strategy (e.g. exhaustive defensive
+         checks, [HandleProcessCorruptedStateExceptions], or a separate isolated process). -->
+    <!--
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(MicroStation2026Dir)Bentley.GeometryNET.Structs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.TerrainModelNET">
+      <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.TerrainModelNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    -->
     <!-- MicroStation 2026 COM automation interop (Application, Element, ModelReference, etc.) -->
     <Reference Include="Bentley.Interop.MicroStationDGN">
       <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>

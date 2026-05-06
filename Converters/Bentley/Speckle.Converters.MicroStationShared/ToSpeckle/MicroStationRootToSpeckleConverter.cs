@@ -1,12 +1,13 @@
 using Speckle.Converters.Common;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle;
 
 /// <summary>
 /// Root dispatcher: resolves the correct <see cref="IToSpeckleTopLevelConverter"/> for a given
-/// MicroStation <see cref="Element"/> and delegates the conversion.
+/// MicroStation <see cref="Element"/> and delegates the conversion. Unmapped types fall through
+/// to <see cref="FallbackElementMeshConverter"/> (currently a bounding-box mesh) so nothing is
+/// silently dropped.
 /// <para>
 /// COM RCW objects returned from the DGN element cache have a runtime type of <c>__ComObject</c>
 /// or the CoClass type — neither matches the COM interface types (<c>MSIDGN.LineElement</c> etc.)
@@ -15,13 +16,10 @@ namespace Speckle.Converter.MicroStation.ToSpeckle;
 /// </para>
 /// </summary>
 public class MicroStationRootToSpeckleConverter(
-  IConverterManager<IToSpeckleTopLevelConverter> converterManager
+  IConverterManager<IToSpeckleTopLevelConverter> converterManager,
+  FallbackElementMeshConverter fallbackConverter
 ) : IRootToSpeckleConverter
 {
-  /// <summary>
-  /// Maps each supported DGN element type enum value to the COM interface type that the
-  /// corresponding <see cref="IToSpeckleTopLevelConverter"/> is registered against.
-  /// </summary>
   private static readonly Dictionary<MSIDGN.MsdElementType, Type> s_typeMap =
     new()
     {
@@ -34,9 +32,6 @@ public class MicroStationRootToSpeckleConverter(
       [MSIDGN.MsdElementType.CellHeader] = typeof(MSIDGN.CellElement),
       [MSIDGN.MsdElementType.SharedCell] = typeof(MSIDGN.SharedCellElement),
       [MSIDGN.MsdElementType.BsplineCurve] = typeof(MSIDGN.BsplineCurveElement),
-      // BsplineSurface and SmartSolid omitted: MsdElementType enum values for these
-      // do not exist in the MicroStation 2026 COM API; add back once correct names are confirmed.
-      // MeshHeader/MeshElement also omitted: MSIDGN.MeshElement does not exist in the 2026 COM API
     };
 
   public Base Convert(object target)
@@ -48,9 +43,9 @@ public class MicroStationRootToSpeckleConverter(
 
     if (!s_typeMap.TryGetValue(element.Type, out var interfaceType))
     {
-      throw new ConversionNotSupportedException(
-        $"DGN element type '{element.Type}' is not supported."
-      );
+      var fallback = fallbackConverter.Convert(element);
+      fallback.applicationId ??= element.ID.ToString();
+      return fallback;
     }
 
     var converter = converterManager.ResolveConverter(interfaceType, recursive: false);
