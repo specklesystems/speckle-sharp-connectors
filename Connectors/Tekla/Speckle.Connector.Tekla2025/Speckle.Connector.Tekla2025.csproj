@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Converters\Tekla\Speckle.Converter.Tekla2025\Speckle.Converter.Tekla2025.csproj" />
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="System.Text.Json" VersionOverride="8.0.10" />
   </ItemGroup>
 
   <ItemGroup>
