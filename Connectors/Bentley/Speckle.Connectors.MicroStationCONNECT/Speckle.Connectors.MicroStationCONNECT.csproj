@@ -10,9 +10,10 @@
     <DefineConstants>$(DefineConstants);TRACE;MICROSTATION;MICROSTATION_2026</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
 
-    <OutputType>WinExe</OutputType>
-    <!-- CA1515: WinExe projects don't need public types. CA1031: top-level catch-all is intentional for user-facing error dialogs. -->
-    <NoWarn>$(NoWarn);CA1515;CA1031</NoWarn>
+    <OutputType>Library</OutputType>
+    <!-- CA1031: broad catch in keyin handler is intentional for user-facing error dialogs.
+         IDE0051: SpeckleAddIn's private ctor is invoked by MicroStation via reflection — not dead code. -->
+    <NoWarn>$(NoWarn);CA1031;IDE0051</NoWarn>
     <Description>Speckle Connector for Bentley MicroStation 2026</Description>
     <AssemblyName>Speckle.Connectors.MicroStation2026</AssemblyName>
   </PropertyGroup>
@@ -33,12 +34,21 @@
       ExcludeAssets="runtime" — provided by MicroStation installation at runtime.
       Private="False" ensures they are NOT copied to the output folder.
     -->
-    <!-- DgnPlatformNET is a mixed-mode DLL; not used directly by the connector exe — keep excluded from output. -->
+    <!--
+      ustation.dll is the MicroStation executable itself — it hosts the Bentley.MstnPlatformNET
+      managed types (AddIn base class, CommandMethod attribute, keyin infrastructure).
+      Must be Private=False (not copied to output; loaded from MicroStation's install dir).
+    -->
+    <Reference Include="ustation">
+      <HintPath>$(MicroStation2026Dir)ustation.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!-- DgnPlatformNET is a mixed-mode DLL; not used directly by the connector — keep excluded from output. -->
     <Reference Include="Bentley.DgnPlatformNET">
       <HintPath>$(MicroStation2026Dir)Bentley.DgnPlatformNET.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <!-- COM interop wrapper — copy to output so the standalone exe can find it at runtime. -->
+    <!-- COM interop wrapper — copy to output so it's available in the deploy directory. -->
     <Reference Include="Bentley.Interop.MicroStationDGN">
       <HintPath>$(MicroStation2026Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
       <Private>True</Private>

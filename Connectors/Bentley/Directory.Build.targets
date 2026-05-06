@@ -30,13 +30,23 @@
     <Message Importance="high" Text="[Speckle] Deployed to $(SpeckleMicroStationDeployDir)" />
   </Target>
 
-  <!-- Post-build: register SpeckleAddIn.cfg in MicroStation's user prefs so the add-in is auto-loaded. -->
+  <!--
+    Post-build: register SpeckleAddIn.cfg in MicroStation's system config/appl directory.
+    This is where all Bentley add-in cfgs live (CCAddin.cfg, ClashDetection.cfg, etc.)
+    and is the ONLY location MicroStation auto-loads cfg files from at startup.
+    Note: writing to Program Files requires the build to run with admin rights.
+  -->
   <Target Name="RegisterMicroStationCfg"
           AfterTargets="DeployToMicroStation"
           Condition="'$(OS)' == 'Windows_NT' AND '$(MicroStationVersion)' != ''">
     <PropertyGroup>
       <_MsCfgSrc>$(SpeckleMicroStationDeployDir)Plugin\SpeckleAddIn.cfg</_MsCfgSrc>
-      <_MsCfgDst>$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Bentley\MicroStation $(MicroStationVersion)\prefs\SpeckleAddIn.cfg</_MsCfgDst>
+      <!--
+        User prefs dir: $(_USTN_HOMEPREFS) = %LOCALAPPDATA%\Bentley\MicroStation\26.0.0\prefs\
+        Personal.ucf includes SpeckleAddIn.cfg from this directory via %include.
+        (System config/appl requires admin — not suitable for dev builds.)
+      -->
+      <_MsCfgDst>$([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData))\Bentley\MicroStation\26.0.0\prefs\SpeckleAddIn.cfg</_MsCfgDst>
     </PropertyGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_MsCfgDst)'))" />
     <Copy SourceFiles="$(_MsCfgSrc)" DestinationFiles="$(_MsCfgDst)" SkipUnchangedFiles="true" />

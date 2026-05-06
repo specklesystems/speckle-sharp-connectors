@@ -1,4 +1,5 @@
 using System.Windows;
+using Bentley.MstnPlatformNET;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.DUI;
@@ -9,92 +10,68 @@ using Speckle.Converter.MicroStation.DependencyInjection;
 namespace Speckle.Connectors.MicroStation.Plugin;
 
 /// <summary>
-/// WPF application entry point for the Speckle MicroStation 2026 connector.
-/// Run this exe alongside a running MicroStation 2026 session.
-/// It connects to MicroStation via COM and opens the Speckle DUI3 panel.
+/// In-process MicroStation add-in entry point.
+/// MicroStation loads this DLL via MS_DGNAPPS and instantiates this class using the
+/// private <c>(IntPtr mdlDesc)</c> constructor required by the <see cref="AddIn"/> base class.
+/// Keyin handlers are declared in the embedded <c>CommandTable.xml</c> resource.
+/// Open the panel via keyin: <c>MDL KEYIN SpeckleMicroStation,Speckle show</c>
 /// </summary>
-public sealed class SpeckleApp : System.Windows.Application
+[AddIn(MdlTaskID = "SpeckleMicroStation")]
+public class SpeckleAddIn : AddIn
 {
-  [STAThread]
-  public static void Main()
+  // Static constructor runs before any instance is created — registers the assembly resolver
+  // so Speckle DLLs in the deploy directory are found during DLL load, before Run() is called.
+  static SpeckleAddIn()
   {
-    try
-    {
-      // Register assembly resolver before ANY Bentley types are used so the CLR
-      // can find Bentley.DgnPlatformNET and any other DLLs not in our output folder.
-      AppDomain.CurrentDomain.AssemblyResolve += ResolveAssembly;
-      var app = new SpeckleApp();
-      app.Run();
-    }
-    catch (Exception ex)
-    {
-      MessageBox.Show(
-        $"Speckle failed to start:\n\n{ex}",
-        "Speckle Error",
-        MessageBoxButton.OK,
-        MessageBoxImage.Error
-      );
-    }
+    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleAddIn>;
   }
 
-  private static System.Reflection.Assembly? ResolveAssembly(object? sender, ResolveEventArgs args)
+  // Required constructor signature — MicroStation passes the MDL descriptor handle.
+  private SpeckleAddIn(IntPtr mdlDesc)
+    : base(mdlDesc) { }
+
+  internal static ServiceProvider? Container { get; private set; }
+
+  protected override int Run(string[] commandLine)
   {
-    // Probe MicroStation's install directories for any unresolved Bentley DLLs.
-    var msDir = @"C:\Program Files\Bentley\MicroStation 2026\MicroStation\";
-    var name = new System.Reflection.AssemblyName(args.Name).Name + ".dll";
-    foreach (var probe in new[] { msDir, System.IO.Path.Combine(msDir, "Assemblies\\") })
-    {
-      var path = System.IO.Path.Combine(probe, name);
-      if (System.IO.File.Exists(path))
-      {
-        return System.Reflection.Assembly.LoadFrom(path);
-      }
-    }
-    return AssemblyResolver.OnAssemblyResolve<SpeckleApp>(sender, args);
+    return 0; // Container is initialized lazily on first ShowPanel call
   }
 
-  protected override void OnStartup(StartupEventArgs e)
+  /// <summary>
+  /// Keyin handler — referenced by Function attribute in CommandTable.xml.
+  /// Opens the Speckle panel, or brings it to front if already open.
+  /// </summary>
+  public static void ShowPanel(string _)
   {
-    base.OnStartup(e);
-
-    // AssemblyResolve already registered in Main() — no need to re-register here.
-
-    var msApp = MsApp.TryGetInstance();
-    if (msApp == null)
+    if (SpeckleWindow.IsOpen)
     {
-      MessageBox.Show(
-        "MicroStation 2026 is not running.\n\nPlease start MicroStation first, then launch the Speckle connector.",
-        "Speckle — MicroStation not found",
-        MessageBoxButton.OK,
-        MessageBoxImage.Warning
-      );
-      Shutdown();
+      SpeckleWindow.BringToFront();
       return;
     }
 
     try
     {
-      var services = new ServiceCollection();
-      services.Initialize(HostApplications.MicroStation, SpeckleToolConstants.Version);
-      services.AddMicroStation();
-      services.AddMicroStationConverters();
+      if (Container == null)
+      {
+        var services = new ServiceCollection();
+        services.Initialize(HostApplications.MicroStation, SpeckleToolConstants.Version);
+        services.AddMicroStation();
+        services.AddMicroStationConverters();
+        Container = services.BuildServiceProvider();
+        Container.UseDUI();
+        Container.GetRequiredService<MicroStationDocumentEvents>();
+      }
 
-      var container = services.BuildServiceProvider();
-      container.UseDUI();
-      container.GetRequiredService<MicroStationDocumentEvents>();
-
-      var window = SpeckleWindow.CreateAndShow(container);
-      window.Closed += (_, _) => Shutdown();
+      SpeckleWindow.Show(Container);
     }
     catch (Exception ex)
     {
       MessageBox.Show(
-        $"Speckle failed to start:\n\n{ex.Message}",
+        $"Speckle failed to open:\n\n{ex.Message}",
         "Speckle Error",
         MessageBoxButton.OK,
         MessageBoxImage.Error
       );
-      Shutdown();
     }
   }
 }
