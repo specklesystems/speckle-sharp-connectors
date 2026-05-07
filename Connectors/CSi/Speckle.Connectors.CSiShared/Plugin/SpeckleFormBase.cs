@@ -41,6 +41,8 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 
   public void Initialize(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
+    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleFormBase>;
+    
     // store app-specific model and callback references (callback if at all possible?)
     SapModel = sapModel;
     _pluginCallback = pluginCallback;
