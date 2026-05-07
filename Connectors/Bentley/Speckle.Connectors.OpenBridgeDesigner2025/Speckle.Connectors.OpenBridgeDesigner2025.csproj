@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWpf>true</UseWpf>
+    <FileAlignment>512</FileAlignment>
+
+    <!--
+      OpenBridge Designer ships a MicroStation-based child product called "OpenBridge Modeler"
+      under <Install>\OpenBridgeModeler\ — that's where ustation.dll / DgnPlatformNET / Interop live.
+      The cfg-registration target writes to %LOCALAPPDATA%\Bentley\OpenBridgeModeler\<v>\prefs\.
+    -->
+    <BentleyProductFolder>OpenBridgeModeler</BentleyProductFolder>
+    <BentleyProductVersion>2025</BentleyProductVersion>
+    <!--
+      OpenBridge Modeler 2025 creates THREE prefs subfolders on launch:
+        25.0.0\          (empty)
+        25.0.0_1\prefs\  (the real one — contains Personal.ucf, civil\, dwgdata\, …)
+        10.13.0\         (the OpenBridge product version, also empty)
+      The "_1" suffix is OBM-specific. OpenRoads uses plain "25.0.0".
+    -->
+    <BentleyPrefsVersion>25.0.0_1</BentleyPrefsVersion>
+    <DefineConstants>$(DefineConstants);TRACE;OPENBRIDGEDESIGNER;OPENBRIDGEDESIGNER_2025</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <OutputType>Library</OutputType>
+    <NoWarn>$(NoWarn);CA1031;IDE0051</NoWarn>
+    <Description>Speckle Connector for Bentley OpenBridge Designer 2025</Description>
+    <AssemblyName>Speckle.Connectors.OpenBridgeDesigner2025</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OpenBridgeModeler2025Dir Condition="'$(OpenBridgeModeler2025Dir)' == ''">$(ProgramFiles)\Bentley\OpenBridge Designer 2025.00\OpenBridgeModeler\</OpenBridgeModeler2025Dir>
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.projitems"
+    Label="Shared"
+  />
+  <Import
+    Project="..\Speckle.Connectors.OpenBridgeDesignerShared\Speckle.Connectors.OpenBridgeDesignerShared.projitems"
+    Label="Shared"
+  />
+
+  <ItemGroup>
+    <Reference Include="ustation">
+      <HintPath>$(OpenBridgeModeler2025Dir)ustation.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(OpenBridgeModeler2025Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(OpenBridgeModeler2025Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Bentley\Speckle.Converters.OpenBridgeDesigner2025\Speckle.Converters.OpenBridgeDesigner2025.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+  </ItemGroup>
+</Project>

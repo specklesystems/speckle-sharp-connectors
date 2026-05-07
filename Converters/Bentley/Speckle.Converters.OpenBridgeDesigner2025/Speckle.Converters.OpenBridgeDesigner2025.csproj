@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <FileAlignment>512</FileAlignment>
+    <AssemblyName>Speckle.Converters.OpenBridgeDesigner2025</AssemblyName>
+
+    <DefineConstants>$(DefineConstants);OPENBRIDGEDESIGNER;OPENBRIDGEDESIGNER_2025</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+
+    <Description>Speckle Converter for Bentley OpenBridge Designer 2025</Description>
+  </PropertyGroup>
+
+  <Import
+    Project="..\Speckle.Converters.MicroStationShared\Speckle.Converters.MicroStationShared.projitems"
+    Label="Shared"
+  />
+  <Import
+    Project="..\Speckle.Converters.OpenBridgeDesignerShared\Speckle.Converters.OpenBridgeDesignerShared.projitems"
+    Label="Shared"
+  />
+
+  <PropertyGroup>
+    <OpenBridgeModeler2025Dir Condition="'$(OpenBridgeModeler2025Dir)' == ''">$(ProgramFiles)\Bentley\OpenBridge Designer 2025.00\OpenBridgeModeler\</OpenBridgeModeler2025Dir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(OpenBridgeModeler2025Dir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.Interop.MicroStationDGN">
+      <HintPath>$(OpenBridgeModeler2025Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+</Project>

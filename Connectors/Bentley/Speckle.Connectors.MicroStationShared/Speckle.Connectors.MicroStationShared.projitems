@@ -13,7 +13,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleAddIn.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\MsApp.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleWindow.cs"/>
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleToolConstants.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationBasicConnectorBinding.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationSelectionBinding.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Bindings\MicroStationSendBinding.cs"/>
@@ -31,19 +30,5 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <!--
-      CommandTable.xml is the keyin tree definition referenced by [AddIn(KeyinTree="SpeckleMicroStation.CommandTable")].
-      It must be an embedded resource with LogicalName matching the KeyinTree value.
-    -->
-    <!--
-      CommandTable.xml is the keyin tree definition. MicroStation discovers it as an embedded
-      resource named "CommandTable.xml" when loading the managed add-in DLL.
-    -->
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Plugin\CommandTable.xml">
-      <LogicalName>CommandTable.xml</LogicalName>
-    </EmbeddedResource>
-    <Content Include="$(MSBuildThisFileDirectory)Plugin\SpeckleAddIn.cfg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 </Project>

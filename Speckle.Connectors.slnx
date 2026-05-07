@@ -68,13 +68,23 @@
   <Folder Name="/Connectors/Bentley/">
     <File Path="Connectors\Bentley\Directory.Build.targets" />
   </Folder>
+  <Folder Name="/Connectors/Bentley/2025/">
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenRoadsDesigner2025\Speckle.Connectors.OpenRoadsDesigner2025.csproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenBridgeDesigner2025\Speckle.Connectors.OpenBridgeDesigner2025.csproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenRoadsDesigner2025\Speckle.Converters.OpenRoadsDesigner2025.csproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenBridgeDesigner2025\Speckle.Converters.OpenBridgeDesigner2025.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Bentley/2026/">
     <Project Path="Connectors\Bentley\Speckle.Connectors.MicroStationCONNECT\Speckle.Connectors.MicroStationCONNECT.csproj" />
     <Project Path="Converters\Bentley\Speckle.Converters.MicroStationCONNECT\Speckle.Converters.MicroStationCONNECT.csproj" />
   </Folder>
   <Folder Name="/Connectors/Bentley/Shared/">
     <Project Path="Connectors\Bentley\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.shproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenRoadsDesignerShared\Speckle.Connectors.OpenRoadsDesignerShared.shproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenBridgeDesignerShared\Speckle.Connectors.OpenBridgeDesignerShared.shproj" />
     <Project Path="Converters\Bentley\Speckle.Converters.MicroStationShared\Speckle.Converters.MicroStationShared.shproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenRoadsDesignerShared\Speckle.Converters.OpenRoadsDesignerShared.shproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenBridgeDesignerShared\Speckle.Converters.OpenBridgeDesignerShared.shproj" />
   </Folder>
   <Folder Name="/Connectors/CSi/" />
   <Folder Name="/Connectors/CSi/ETABS21/">

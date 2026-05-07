@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  KeyinTree definition for the Speckle OpenBridge Designer add-in.
+  Open the panel by typing in the Key-in dialog:  Speckle show
+-->
+<KeyinTree xmlns="http://www.bentley.com/schemas/1.0/MicroStation/AddIn/KeyinTree.xsd">
+
+  <RootKeyinTable ID="root">
+    <Keyword SubtableRef="Commands" CommandClass="MacroCommand" CommandWord="Speckle">
+      <Options Required="true"/>
+    </Keyword>
+  </RootKeyinTable>
+
+  <SubKeyinTables>
+    <KeyinTable ID="Commands">
+      <Keyword CommandWord="show"/>
+    </KeyinTable>
+  </SubKeyinTables>
+
+  <KeyinHandlers>
+    <KeyinHandler Keyin="Speckle show"
+                  Function="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn.ShowPanel"/>
+  </KeyinHandlers>
+
+</KeyinTree>

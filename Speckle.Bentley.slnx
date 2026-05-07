@@ -1,0 +1,52 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Local" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/Build/">
+    <Project Path="Build\Build.csproj" />
+    <File Path=".github\workflows\pr.yml" />
+    <File Path=".github\workflows\release.yml" />
+  </Folder>
+  <Folder Name="/Config/">
+    <File Path=".csharpierrc.yaml" />
+    <File Path=".editorconfig" />
+    <File Path="codecov.yml" />
+    <File Path="CodeMetricsConfig.txt" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path=".config\dotnet-tools.json" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Connectors/" />
+  <Folder Name="/Connectors/Bentley/">
+    <File Path="Connectors\Bentley\Directory.Build.targets" />
+  </Folder>
+  <Folder Name="/Connectors/Bentley/2025/">
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenRoadsDesigner2025\Speckle.Connectors.OpenRoadsDesigner2025.csproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenBridgeDesigner2025\Speckle.Connectors.OpenBridgeDesigner2025.csproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenRoadsDesigner2025\Speckle.Converters.OpenRoadsDesigner2025.csproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenBridgeDesigner2025\Speckle.Converters.OpenBridgeDesigner2025.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Bentley/2026/">
+    <Project Path="Connectors\Bentley\Speckle.Connectors.MicroStationCONNECT\Speckle.Connectors.MicroStationCONNECT.csproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.MicroStationCONNECT\Speckle.Converters.MicroStationCONNECT.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/Bentley/Shared/">
+    <Project Path="Connectors\Bentley\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.shproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenRoadsDesignerShared\Speckle.Connectors.OpenRoadsDesignerShared.shproj" />
+    <Project Path="Connectors\Bentley\Speckle.Connectors.OpenBridgeDesignerShared\Speckle.Connectors.OpenBridgeDesignerShared.shproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.MicroStationShared\Speckle.Converters.MicroStationShared.shproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenRoadsDesignerShared\Speckle.Converters.OpenRoadsDesignerShared.shproj" />
+    <Project Path="Converters\Bentley\Speckle.Converters.OpenBridgeDesignerShared\Speckle.Converters.OpenBridgeDesignerShared.shproj" />
+  </Folder>
+  <Folder Name="/Sdk/">
+    <Project Path="DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <Project Path="DUI3\Speckle.Connectors.DUI\Speckle.Connectors.DUI.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <Project Path="Sdk\Speckle.Connectors.Logging\Speckle.Connectors.Logging.csproj" />
+    <Project Path="Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+  </Folder>
+</Solution>

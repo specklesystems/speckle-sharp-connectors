@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>F7558ED6-9B3B-47C8-80B9-23B0A75C8655</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converter.MicroStation</Import_RootNamespace>
+  </PropertyGroup>
+  <!--
+    OpenRoads Designer-specific converter overrides go here (e.g. Civil-domain element converters,
+    custom unit handling, etc). Keep this shproj even when empty — the version-specific converter
+    csproj imports it as a hook for future product-specific code.
+  -->
+  <ItemGroup>
+  </ItemGroup>
+</Project>

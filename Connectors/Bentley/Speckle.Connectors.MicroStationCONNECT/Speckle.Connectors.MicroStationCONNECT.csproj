@@ -6,7 +6,9 @@
     <UseWpf>true</UseWpf>
     <FileAlignment>512</FileAlignment>
 
-    <MicroStationVersion>2026</MicroStationVersion>
+    <BentleyProductFolder>MicroStation</BentleyProductFolder>
+    <BentleyProductVersion>2026</BentleyProductVersion>
+    <BentleyPrefsVersion>26.0.0</BentleyPrefsVersion>
     <DefineConstants>$(DefineConstants);TRACE;MICROSTATION;MICROSTATION_2026</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
 
@@ -27,6 +29,29 @@
     Project="..\Speckle.Connectors.MicroStationShared\Speckle.Connectors.MicroStationShared.projitems"
     Label="Shared"
   />
+
+  <ItemGroup>
+    <!--
+      Plugin\SpeckleAddInIdentity.cs is auto-included by SDK globbing (it's a regular .cs file
+      under the project root). It supplies the per-product identity values consumed by the
+      source-shared SpeckleAddIn class.
+    -->
+    <!--
+      CommandTable.xml is the keyin tree definition. MicroStation discovers it as an embedded
+      resource named "CommandTable.xml" when loading the managed add-in DLL.
+    -->
+    <EmbeddedResource Include="Plugin\CommandTable.xml">
+      <LogicalName>CommandTable.xml</LogicalName>
+    </EmbeddedResource>
+    <!-- Speckle.addin is the managed add-in manifest read by MicroStation when probing MS_ADDINPATH. -->
+    <Content Include="Plugin\Speckle.addin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- SpeckleAddIn.cfg is registered into %LOCALAPPDATA%\Bentley\MicroStation\26.0.0\prefs\ by Directory.Build.targets. -->
+    <Content Include="Plugin\SpeckleAddIn.cfg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <!--

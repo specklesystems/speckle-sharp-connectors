@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Speckle.Connectors.OpenRoadsDesigner2025": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Bentley\\OpenRoads Designer 2025.00\\OpenRoadsDesigner\\OpenRoadsDesigner.exe"
+    }
+  }
+}

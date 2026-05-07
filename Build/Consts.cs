@@ -44,6 +44,15 @@ internal static class Consts
       ]
     ),
     new("plant3d", [new("Connectors/Autocad/Speckle.Connectors.Plant3d2026", "net8.0-windows")]),
+    new("microstation", [new("Connectors/Bentley/Speckle.Connectors.MicroStationCONNECT", "net48")]),
+    new(
+      "openroadsdesigner",
+      [new("Connectors/Bentley/Speckle.Connectors.OpenRoadsDesigner2025", "net48")]
+    ),
+    new(
+      "openbridgedesigner",
+      [new("Connectors/Bentley/Speckle.Connectors.OpenBridgeDesigner2025", "net48")]
+    ),
     new(
       "navisworks",
       [

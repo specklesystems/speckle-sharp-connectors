@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  OpenBridge Designer 2025 (OpenBridge Modeler) managed add-in manifest.
+  Read by the host when MS_ADDINPATH points to the directory containing it.
+  The classname must be the fully-qualified name of the AddIn-decorated class
+  (sourced from Speckle.Connectors.MicroStationShared).
+-->
+<AssemblyAddIn
+  id="SpeckleOpenBridgeDesigner"
+  displayname="Speckle for OpenBridge Designer 2025"
+  assembly="Speckle.Connectors.OpenBridgeDesigner2025.dll"
+  classname="Speckle.Connectors.MicroStation.Plugin.SpeckleAddIn"
+  addintype="ManagedAssembly">
+  <Keywords>Speckle BIM AEC</Keywords>
+  <Description>Speckle connector for Bentley OpenBridge Designer 2025</Description>
+</AssemblyAddIn>

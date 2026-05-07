@@ -10,13 +10,15 @@ using Speckle.Converter.MicroStation.DependencyInjection;
 namespace Speckle.Connectors.MicroStation.Plugin;
 
 /// <summary>
-/// In-process MicroStation add-in entry point.
+/// In-process MicroStation-platform add-in entry point. Shared by every Bentley product
+/// (MicroStation, OpenRoads Designer, OpenBridge Designer, …) — the per-product DLL supplies
+/// its own <see cref="SpeckleAddInIdentity"/> partial that fills in MdlTaskId, slug, host app, and version.
 /// MicroStation loads this DLL via MS_DGNAPPS and instantiates this class using the
 /// private <c>(IntPtr mdlDesc)</c> constructor required by the <see cref="AddIn"/> base class.
 /// Keyin handlers are declared in the embedded <c>CommandTable.xml</c> resource.
-/// Open the panel via keyin: <c>MDL KEYIN SpeckleMicroStation,Speckle show</c>
+/// Open the panel via keyin: <c>Speckle show</c>
 /// </summary>
-[AddIn(MdlTaskID = "SpeckleMicroStation")]
+[AddIn(MdlTaskID = SpeckleAddInIdentity.MDL_TASK_ID)]
 public class SpeckleAddIn : AddIn
 {
   // Static constructor runs before any instance is created — registers the assembly resolver
@@ -54,7 +56,7 @@ public class SpeckleAddIn : AddIn
       if (Container == null)
       {
         var services = new ServiceCollection();
-        services.Initialize(HostApplications.MicroStation, SpeckleToolConstants.Version);
+        services.Initialize(SpeckleAddInIdentity.HostApp, SpeckleAddInIdentity.VERSION);
         services.AddMicroStation();
         services.AddMicroStationConverters();
         Container = services.BuildServiceProvider();

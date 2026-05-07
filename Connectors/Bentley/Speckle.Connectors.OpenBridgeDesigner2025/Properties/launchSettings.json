@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Speckle.Connectors.OpenBridgeDesigner2025": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Bentley\\OpenBridge Designer 2025.00\\OpenBridgeModeler\\OpenBridgeModeler.exe"
+    }
+  }
+}

@@ -17,10 +17,12 @@ namespace Speckle.Connectors.MicroStation.HostApp;
 /// </summary>
 public sealed class MicroStationDocumentModelStore : DocumentModelStore
 {
+  // Per-product subfolder so MicroStation / OpenRoads / OpenBridge keep independent model card state.
+  // SpeckleAddInIdentity.ProductSlug is supplied by the per-product DLL.
   private static readonly string s_stateDir = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
     "Speckle",
-    "MicroStation"
+    SpeckleAddInIdentity.PRODUCT_SLUG
   );
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
