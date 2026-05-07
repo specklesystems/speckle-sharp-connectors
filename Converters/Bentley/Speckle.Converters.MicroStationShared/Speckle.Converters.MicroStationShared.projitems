@@ -26,6 +26,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\SharedCellElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\TextElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\SolidElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ShapeElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ComplexShapeElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ComplexStringElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConverterServiceRegistration.cs"/>
     <!-- LineStringElementConverter.cs excluded: MSIDGN.LineStringElement does not exist in the 2026 COM API.
          Line-string (polyline) DGN elements are accessed via PointStringElement (PointStringElementConverter). -->

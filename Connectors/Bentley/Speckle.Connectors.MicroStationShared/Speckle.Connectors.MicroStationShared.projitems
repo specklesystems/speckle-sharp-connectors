@@ -19,6 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationDocumentModelStore.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationDocumentEvents.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\MicroStationIdleManager.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationElementPropertiesExtractor.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\MicroStationRootObjectBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationEverythingFilter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\MicroStationSelectionFilter.cs"/>
