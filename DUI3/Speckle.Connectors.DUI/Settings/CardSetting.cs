@@ -7,6 +7,7 @@ public class CardSetting : ICardSetting
 {
   public string? Id { get; set; }
   public string? Title { get; set; }
+  public string? Description { get; set; }
   public string? Type { get; set; }
   public object? Value { get; set; }
   public List<string>? Enum { get; set; }
