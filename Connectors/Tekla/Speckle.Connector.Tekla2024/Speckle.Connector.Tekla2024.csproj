@@ -13,6 +13,7 @@
     <PackageReference Include="Tekla.Structures.Drawing" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Tekla.Structures.Model" IncludeAssets="compile; build" PrivateAssets="all" />
     <PackageReference Include="Tekla.Structures.Plugins" IncludeAssets="compile; build" PrivateAssets="all" />
+    <!--To match host app-->
     <PackageReference Include="System.Text.Json" VersionOverride="8.0.6" />
   </ItemGroup>
 
