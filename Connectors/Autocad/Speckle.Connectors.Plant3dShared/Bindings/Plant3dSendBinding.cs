@@ -7,6 +7,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
+using Speckle.Connectors.DUI.Settings;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Plant3dShared;
@@ -29,7 +30,8 @@ public sealed class Plant3dSendBinding : AutocadSendBaseBinding
     IThreadContext threadContext,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IAppIdleManager appIdleManager,
-    ISendOperationManagerFactory sendOperationManagerFactory
+    ISendOperationManagerFactory sendOperationManagerFactory,
+    IConfigStore configStore
   )
     : base(
       store,
@@ -40,7 +42,8 @@ public sealed class Plant3dSendBinding : AutocadSendBaseBinding
       threadContext,
       topLevelExceptionHandler,
       appIdleManager,
-      sendOperationManagerFactory
+      sendOperationManagerFactory,
+      configStore
     )
   {
     _plant3dConversionSettingsFactory = plant3dConversionSettingsFactory;
