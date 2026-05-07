@@ -16,6 +16,9 @@ public class DetailLevelSetting(DetailLevelType value = DetailLevelSetting.DEFAU
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Detail Level";
+
+  public string? Description { get; set; } =
+    "Geometric fidelity used when converting elements. Higher levels produce more accurate geometry but larger sends.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(DetailLevelType)).ToList();
   public object? Value { get; set; } = value.ToString();

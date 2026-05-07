@@ -7,6 +7,8 @@ public class VisualRepresentationSetting(RepresentationMode value) : ICardSettin
 {
   public string? Id { get; set; } = "visualRepresentation";
   public string? Title { get; set; } = "Visual Representation";
+  public string? Description { get; set; } =
+    "Which Navisworks appearance layer to send: Active (current overrides), Permanent (saved overrides), or Original (model defaults).";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(RepresentationMode)).ToList();
   public object? Value { get; set; } = value.ToString();
