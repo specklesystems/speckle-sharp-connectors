@@ -24,6 +24,7 @@ public class AppendRoomsAndAreasSetting(AppendRoomsAndAreasMode value = AppendRo
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Append Rooms and Areas";
+  public string? Description { get; set; }
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(AppendRoomsAndAreasMode)).ToList();
   public object? Value { get; set; } = value.ToString();
