@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
@@ -9,16 +10,19 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
 {
   private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Vector3d, SOG.Vector> _vectorConverter;
+  private readonly ITypedConverter<ADB.MText, Text> _mtextConverter;
   private readonly IConverterSettingsStore<AutocadConversionSettings> _settingsStore;
 
   public DBTextToSpeckleRawConverter(
     ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Vector3d, SOG.Vector> vectorConverter,
+    ITypedConverter<ADB.MText, Text> mtextConverter,
     IConverterSettingsStore<AutocadConversionSettings> settingsStore
   )
   {
     _pointConverter = pointConverter;
     _vectorConverter = vectorConverter;
+    _mtextConverter = mtextConverter;
     _settingsStore = settingsStore;
   }
 
@@ -27,12 +31,23 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
   /// </summary>
   /// <param name="target">The AutoCAD DBText to convert.</param>
   /// <returns>The converted Speckle Text object.</returns>
-  public Text Convert(ADB.DBText target) =>
+  public Text Convert(ADB.DBText target)
+  {
+    // Multi-line attributes are backed by an MText. Convert via the MText converter so the
+    // viewer keeps the wrap and renders multiple lines.
+    if (TryGetBackingMText(target, out ADB.MText? mtext))
+    {
+      using (mtext)
+      {
+        return _mtextConverter.Convert(mtext);
+      }
+    }
+
     // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling
     // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
-    new()
+    return new()
     {
-      value = target.TextString,
+      value = target.TextString ?? string.Empty,
       height = target.Height,
       maxWidth = null, // always 1 line
       plane = GetTextPlane(target),
@@ -41,6 +56,23 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       alignmentV = AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
       units = _settingsStore.Current.SpeckleUnits,
     };
+  }
+
+  private static bool TryGetBackingMText(ADB.DBText target, [NotNullWhen(true)] out ADB.MText? mtext)
+  {
+    switch (target)
+    {
+      case ADB.AttributeReference attRef when attRef.IsMTextAttribute:
+        mtext = attRef.MTextAttribute;
+        return true;
+      case ADB.AttributeDefinition attDef when attDef.IsMTextAttributeDefinition:
+        mtext = attDef.MTextAttributeDefinition;
+        return true;
+      default:
+        mtext = null;
+        return false;
+    }
+  }
 
   // For DBText, the following properties are stored in:
   // - Position: WCS
