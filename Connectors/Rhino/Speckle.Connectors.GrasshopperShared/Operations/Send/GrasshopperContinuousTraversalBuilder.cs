@@ -107,11 +107,7 @@ public class GrasshopperContinuousTraversalBuilder(
           break;
 
         case SpeckleGeometryWrapper so:
-          Base? objectBase = UnwrapGeometry(so);
-          if (objectBase == null)
-          {
-            break;
-          }
+          Base objectBase = GrasshopperSendUnwrapper.UnwrapGeometry(so);
           string applicationId = objectBase.applicationId!;
 
           // NOTE: This is how it differentiate from 'GrasshopperSendOperation'
@@ -138,7 +134,7 @@ public class GrasshopperContinuousTraversalBuilder(
           break;
 
         case SpeckleDataObjectWrapper dataObjectWrapper:
-          DataObject dataObject = UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
 
           // process data object through send pipeline
           var dataRef = await sendPipeline.Process(dataObject).ConfigureAwait(false);
@@ -152,34 +148,6 @@ public class GrasshopperContinuousTraversalBuilder(
     {
       targetCollection[Constants.TOPOLOGY_PROP] = null;
     }
-  }
-
-  private Base? UnwrapGeometry(SpeckleGeometryWrapper wrapper)
-  {
-    Dictionary<string, object?> props = [];
-    Base baseObject = wrapper.Base;
-
-    // chunk confusion ... reconvert to get real data.
-    if (wrapper.GeometryBase != null)
-    {
-      var reconverted = SpeckleConversionContext.Current.ConvertToSpeckle(wrapper.GeometryBase);
-      if (reconverted != null)
-      {
-        reconverted.applicationId = wrapper.Base.applicationId;
-        if (wrapper.Base["name"] is string name)
-        {
-          reconverted["name"] = name;
-        }
-        baseObject = reconverted;
-      }
-    }
-
-    if (wrapper.Properties.CastTo(ref props))
-    {
-      baseObject["properties"] = props;
-    }
-
-    return baseObject;
   }
 
   private async Task ProcessBlockInstanceDefinition(
@@ -200,11 +168,7 @@ public class GrasshopperContinuousTraversalBuilder(
     {
       foreach (var definitionObject in definitionObjects)
       {
-        Base? defObjectBase = UnwrapGeometry(definitionObject);
-        if (defObjectBase == null)
-        {
-          continue;
-        }
+        Base defObjectBase = GrasshopperSendUnwrapper.UnwrapGeometry(definitionObject);
         string applicationId = defObjectBase.applicationId!;
 
         var reference = await sendPipeline.Process(defObjectBase).ConfigureAwait(false);
@@ -214,42 +178,5 @@ public class GrasshopperContinuousTraversalBuilder(
         materialPacker.ProcessMaterial(applicationId, definitionObject.Material);
       }
     }
-  }
-
-  private DataObject UnwrapDataObject(
-    SpeckleDataObjectWrapper wrapper,
-    GrasshopperColorPacker colorPacker,
-    GrasshopperMaterialPacker materialPacker
-  )
-  {
-    var displayValue = new List<Base>();
-    foreach (var geometryWrapper in wrapper.Geometries)
-    {
-      Base? geometryBase = UnwrapGeometry(geometryWrapper);
-      if (geometryBase == null)
-      {
-        continue;
-      }
-      displayValue.Add(geometryBase);
-
-      if (geometryWrapper.ApplicationId != null)
-      {
-        colorPacker.ProcessColor(geometryWrapper.ApplicationId, geometryWrapper.Color);
-        materialPacker.ProcessMaterial(geometryWrapper.ApplicationId, geometryWrapper.Material);
-      }
-    }
-    
-    // Build a clean DataObject instead of mutating the original. The original may carry
-    // IFC-sourced dynamic properties (e.g. an `elements` sub-tree) that, when published
-    // and re-received, would be traversed by GraphTraversal and inflate the object count.
-    DataObject dataObject = new()
-    {
-      applicationId = wrapper.DataObject.applicationId,
-      name = wrapper.DataObject.name,
-      properties = wrapper.DataObject.properties,
-      displayValue = displayValue
-    };
-
-    return dataObject;
   }
 }

@@ -101,11 +101,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
 
         case SpeckleGeometryWrapper so: // handles both SpeckleObjectWrapper and SpeckleBlockInstanceWrapper (inheritance)
           // convert wrapper to base and add to collection - common for all object wrappers
-          Base? objectBase = UnwrapGeometry(so);
-          if (objectBase == null)
-          {
-            break;
-          }
+          Base objectBase = GrasshopperSendUnwrapper.UnwrapGeometry(so);
           string applicationId = objectBase.applicationId!;
           targetCollection.elements.Add(objectBase);
 
@@ -124,7 +120,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           // convert wrapper to DataObject and add to collection
           // UnwrapDataObject will unwrap underlying geometry and handle color and material
           // arguably doing too much, but I'm apprehensive looping twice without good reason
-          DataObject dataObject = UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
           targetCollection.elements.Add(dataObject);
           break;
       }
@@ -153,40 +149,6 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
   }
 
   /// <summary>
-  /// Converts a <see cref="SpeckleGeometryWrapper"/> to underlying Base object with dynamically attached properties.
-  /// Returns null when the wrapper has Rhino geometry but reconversion to Speckle fails — callers must skip null results
-  /// rather than falling back to <see cref="SpeckleGeometryWrapper.Base"/>, which may be an IFC mesh with @-prefix
-  /// chunked arrays that deserialise with null typed properties and cause NullReferenceException on re-receive.
-  /// </summary>
-  private Base? UnwrapGeometry(SpeckleGeometryWrapper wrapper)
-  {
-    Dictionary<string, object?> props = [];
-    Base baseObject = wrapper.Base;
-
-    // chunk confusion ... reconvert to get real data.
-    if (wrapper.GeometryBase != null)
-    {
-      var reconverted = SpeckleConversionContext.Current.ConvertToSpeckle(wrapper.GeometryBase);
-      if (reconverted != null)
-      {
-        reconverted.applicationId = wrapper.Base.applicationId;
-        if (wrapper.Base["name"] is string name)
-        {
-          reconverted["name"] = name;
-        }
-        baseObject = reconverted;
-      }
-    }
-
-    if (wrapper.Properties.CastTo(ref props))
-    {
-      baseObject["properties"] = props; // setting props here on base since it's not auto-set, like name and appid
-    }
-
-    return baseObject;
-  }
-
-  /// <summary>
   /// Processes a block instance's definition and adds the defining objects to the current collection.
   /// Handles nested block hierarchies and depth calculation via GrasshopperBlockPacker.
   /// </summary>
@@ -208,11 +170,7 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
     {
       foreach (var definitionObject in definitionObjects)
       {
-        Base? defObjectBase = UnwrapGeometry(definitionObject);
-        if (defObjectBase == null)
-        {
-          continue;
-        }
+        Base defObjectBase = GrasshopperSendUnwrapper.UnwrapGeometry(definitionObject);
         string applicationId = defObjectBase.applicationId!;
 
         // just add to current collection for now
@@ -222,50 +180,6 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
         materialPacker.ProcessMaterial(applicationId, definitionObject.Material);
       }
     }
-  }
-
-  /// <summary>
-  /// Converts a <see cref="SpeckleDataObjectWrapper"/> to underlying DataObject with properly configured displayValue.
-  /// Processes colors and materials for each individual geometry during conversion.
-  /// </summary>
-  private DataObject UnwrapDataObject(
-    SpeckleDataObjectWrapper wrapper,
-    GrasshopperColorPacker colorPacker,
-    GrasshopperMaterialPacker materialPacker
-  )
-  {
-    // Convert geometries back to Base objects for displayValue
-    var displayValue = new List<Base>();
-    foreach (var geometryWrapper in wrapper.Geometries)
-    {
-      Base? geometryBase = UnwrapGeometry(geometryWrapper);
-      if (geometryBase == null)
-      {
-        continue;
-      }
-      displayValue.Add(geometryBase);
-
-      // process color and material for each geometry while we're iterating
-      // this could be in the switch statements (like SpeckleGeometryWrapper) but then we're unnecessarily looping twice
-      if (geometryWrapper.ApplicationId != null)
-      {
-        colorPacker.ProcessColor(geometryWrapper.ApplicationId, geometryWrapper.Color);
-        materialPacker.ProcessMaterial(geometryWrapper.ApplicationId, geometryWrapper.Material);
-      }
-    }
-
-    // Build a clean DataObject instead of mutating the original. The original may carry
-    // IFC-sourced dynamic properties (e.g. an `elements` sub-tree) that, when published
-    // and re-received, would be traversed by GraphTraversal and inflate the object count.
-    DataObject dataObject = new()
-    {
-      applicationId = wrapper.DataObject.applicationId,
-      name = wrapper.DataObject.name,
-      properties = wrapper.DataObject.properties,
-      displayValue = displayValue
-    };
-
-    return dataObject;
   }
 
   /*
