@@ -50,9 +50,9 @@ internal static class GrasshopperSendUnwrapper
   /// Converts a data object wrapper to a clean <see cref="DataObject"/> with its display value set.
   /// Builds a fresh DataObject rather than mutating the original.
   /// </summary>
-  /// <remarks> 
+  /// <remarks>
   /// IFC objects carry structural dynamic properties (e.g. <c>elements</c>) that inflate object counts when traversed
-  /// on re-receive (See CNX-3303). 
+  /// on re-receive (See CNX-3303).
   /// </remarks>
   public static DataObject UnwrapDataObject(
     SpeckleDataObjectWrapper wrapper,

@@ -134,7 +134,11 @@ public class GrasshopperContinuousTraversalBuilder(
           break;
 
         case SpeckleDataObjectWrapper dataObjectWrapper:
-          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(
+            dataObjectWrapper,
+            colorPacker,
+            materialPacker
+          );
 
           // process data object through send pipeline
           var dataRef = await sendPipeline.Process(dataObject).ConfigureAwait(false);

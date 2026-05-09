@@ -120,7 +120,11 @@ public class GrasshopperRootObjectBuilder : IRootObjectBuilder<SpeckleCollection
           // convert wrapper to DataObject and add to collection
           // UnwrapDataObject will unwrap underlying geometry and handle color and material
           // arguably doing too much, but I'm apprehensive looping twice without good reason
-          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(
+            dataObjectWrapper,
+            colorPacker,
+            materialPacker
+          );
           targetCollection.elements.Add(dataObject);
           break;
       }
