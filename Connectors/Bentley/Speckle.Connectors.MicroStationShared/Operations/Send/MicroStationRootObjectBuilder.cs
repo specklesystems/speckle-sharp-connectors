@@ -27,10 +27,10 @@ public class MicroStationRootObjectBuilder(
   IConverterSettingsStore<MicroStationConversionSettings> converterSettings,
   ILogger<MicroStationRootObjectBuilder> logger,
   ISdkActivityFactory activityFactory
-) : IRootObjectBuilder<Element>
+) : IRootObjectBuilder<MgdElement>
 {
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<Element> elements,
+    IReadOnlyList<MgdElement> elements,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -47,6 +47,7 @@ public class MicroStationRootObjectBuilder(
     var docName =
       app?.HasActiveDesignFile == true ? System.IO.Path.GetFileName(app.ActiveDesignFile.FullName) : "Unnamed Model";
 
+    var model = app?.ActiveModelReference;
     var units = converterSettings.Current.SpeckleUnits;
     var rootCollection = new Collection
     {
@@ -57,12 +58,15 @@ public class MicroStationRootObjectBuilder(
     var results = new List<SendConversionResult>(elements.Count);
     int processed = 0;
 
-    foreach (var element in elements)
+    foreach (var mgdElement in elements)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var appId = element.ID.ToString();
-      var sourceType = element.Type.ToString();
+      // ElementId is a managed struct with implicit conversions to UInt64 / Int64 (no .Value
+      // property); cast once and reuse for the cache key + applicationId + COM bridge below.
+      var elementIdValue = (ulong)mgdElement.ElementId;
+      var appId = elementIdValue.ToString();
+      var sourceType = mgdElement.ElementType.ToString();
 
       try
       {
@@ -73,11 +77,30 @@ public class MicroStationRootObjectBuilder(
         }
         else
         {
-          // Geometric conversion (top-level converter or bounding-box mesh fallback).
-          var geometry = rootToSpeckleConverter.Convert(element);
+          // Geometric conversion (the must-succeed step) — dispatcher pattern-matches managed
+          // element subtypes; bounding-box fallback inside guarantees a non-null result.
+          var geometry = rootToSpeckleConverter.Convert(mgdElement);
 
-          // Per-element metadata (level, color, line style, etc.) → properties dict.
-          var properties = MicroStationElementPropertiesExtractor.Extract(element);
+          // Per-element metadata extraction is best-effort — must NOT sink the whole element.
+          // It still goes through the COM Element surface (color, level, line style) which is
+          // not yet migrated to managed; bridge from the managed element via
+          // ModelReference.GetElementByID64(id). The bridge can return null (orphan / transient
+          // element state) and individual property reads can throw on edge cases — both paths
+          // fall back to an empty properties dict so the element still ships with geometry.
+          Dictionary<string, object?> properties;
+          try
+          {
+            var comBridge = model?.GetElementByID64((long)elementIdValue);
+            properties =
+              comBridge != null
+                ? MicroStationElementPropertiesExtractor.Extract(comBridge)
+                : new Dictionary<string, object?>();
+          }
+          catch (Exception propEx) when (!propEx.IsFatal())
+          {
+            logger.LogWarning(propEx, "Properties extraction failed for element {id}; shipping with empty properties.", appId);
+            properties = new Dictionary<string, object?>();
+          }
 
           // Wrap into the per-product DataObject (MicroStationDataObject / OpenRoadsDataObject / OpenBridgeDataObject).
           converted = SpeckleAddInIdentity.CreateDataObject(

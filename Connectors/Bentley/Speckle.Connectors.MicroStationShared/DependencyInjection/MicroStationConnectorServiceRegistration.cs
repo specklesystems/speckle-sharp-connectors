@@ -47,9 +47,11 @@ public static class MicroStationConnectorServiceRegistration
     // Operation progress
     serviceCollection.AddSingleton<IOperationProgressManager, OperationProgressManager>();
 
-    // Send pipeline
-    serviceCollection.AddScoped<IRootObjectBuilder<Element>, MicroStationRootObjectBuilder>();
-    serviceCollection.AddScoped<SendOperation<Element>>();
+    // Send pipeline — flows the managed Bentley.DgnPlatformNET Element through binding /
+    // builder / dispatcher (debugger-typed, not opaque __ComObject). Per-element bridge to
+    // COM happens inside MicroStationRootToSpeckleConverter for the legacy COM converters.
+    serviceCollection.AddScoped<IRootObjectBuilder<MgdElement>, MicroStationRootObjectBuilder>();
+    serviceCollection.AddScoped<SendOperation<MgdElement>>();
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
 
     // Send filters

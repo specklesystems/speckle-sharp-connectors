@@ -86,7 +86,20 @@ public class MicroStationSendBinding : ISendBinding
       .GetRequiredService<IConverterSettingsStore<MicroStationConversionSettings>>()
       .Initialize(_conversionSettingsFactory.Create());
 
-  private async Task<IReadOnlyList<Element>> GetMicroStationElements(
+  /// <summary>
+  /// Returns the user-selected elements as <see cref="MgdElement"/> (managed
+  /// <c>Bentley.DgnPlatformNET.Elements.Element</c>) so the rest of the Send pipeline operates
+  /// on real typed objects (LineElement, MeshHeaderElement, CellHeaderElement, …) instead of
+  /// the opaque <c>System.__ComObject</c> RCWs that the COM cache hands out.
+  /// <para>
+  /// Implementation: walk the COM <see cref="ModelReference.GraphicalElementCache"/> (still the
+  /// proven path for <c>IsHighlighted</c>-style queries and ID matching), then bridge each
+  /// matched COM <see cref="Element"/> to its managed counterpart via
+  /// <c>MgdElement.GetFromElementRef(MdlElementRef)</c>. Both surfaces address the same
+  /// underlying C++ MSElementRefP, so this is a near-zero-cost wrapper swap.
+  /// </para>
+  /// </summary>
+  private async Task<IReadOnlyList<MgdElement>> GetMicroStationElements(
     SenderModelCard modelCard,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -101,15 +114,27 @@ public class MicroStationSendBinding : ISendBinding
 
     var model = MsApp.ActiveModel ?? throw new InvalidOperationException("No active MicroStation model.");
     var idSet = new HashSet<string>(selectedIds);
-    var elements = new List<Element>(idSet.Count);
+    var elements = new List<MgdElement>(idSet.Count);
 
     var enumerator = model.GraphicalElementCache.Scan(new MSIDGN.ElementScanCriteriaClass());
     while (enumerator.MoveNext())
     {
-      var element = enumerator.Current;
-      if (element != null && idSet.Contains(element.ID.ToString()))
+      var comElement = enumerator.Current;
+      if (comElement == null || !idSet.Contains(comElement.ID.ToString()))
       {
-        elements.Add(element);
+        continue;
+      }
+
+      var refValue = comElement.MdlElementRef();
+      if (refValue == 0)
+      {
+        continue;
+      }
+
+      var mgd = MgdElement.GetFromElementRef(new IntPtr(refValue));
+      if (mgd != null)
+      {
+        elements.Add(mgd);
       }
     }
 

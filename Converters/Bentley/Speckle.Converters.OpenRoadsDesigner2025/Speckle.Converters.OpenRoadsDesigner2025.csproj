@@ -29,6 +29,16 @@
       <HintPath>$(OpenRoadsDesigner2025Dir)Bentley.DgnPlatformNET.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <!-- Needed by MeshHeaderElementConverter.GetMeshData() → PolyfaceHeader. See comment in
+         the MicroStationCONNECT converter csproj. Pure data-read path; no rendering engine. -->
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(OpenRoadsDesigner2025Dir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(OpenRoadsDesigner2025Dir)Bentley.GeometryNET.Structs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Bentley.Interop.MicroStationDGN">
       <HintPath>$(OpenRoadsDesigner2025Dir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
       <Private>False</Private>

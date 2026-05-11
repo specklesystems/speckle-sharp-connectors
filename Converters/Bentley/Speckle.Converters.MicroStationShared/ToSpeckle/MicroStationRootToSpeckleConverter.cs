@@ -1,93 +1,133 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Converter.MicroStation.ToSpeckle.TopLevel;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Models.Collections;
+using MgdElements = Bentley.DgnPlatformNET.Elements;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle;
 
 /// <summary>
-/// Root dispatcher: resolves the correct <see cref="IToSpeckleTopLevelConverter"/> for a given
-/// MicroStation <see cref="Element"/> and delegates the conversion. Two layers of fallback:
-/// <list type="bullet">
-///   <item>Element type not in <see cref="s_typeMap"/> → <see cref="FallbackElementMeshConverter"/> (bounding-box mesh)</item>
-///   <item>Mapped converter throws → also fall back to bounding-box mesh, log the failure</item>
-/// </list>
-/// Either way the caller always gets a non-null geometric <see cref="Base"/> back, so the
-/// per-element catch in the root object builder is a true error path (e.g. orphaned COM
-/// reference, range read crash) rather than a converter-coverage gap.
+/// Root dispatcher: pattern-matches the incoming managed <see cref="MgdElement"/> against the
+/// concrete <c>Bentley.DgnPlatformNET.Elements.*</c> subtypes and delegates to the corresponding
+/// converter. NO COM Element ever flows through this dispatcher anymore — every leaf converter
+/// takes its typed managed element directly. The pre-existing COM bridge (<c>GetElementByID64</c>)
+/// is gone, along with the <c>MsdElementType</c> enum lookup table that drove it.
 /// <para>
-/// COM RCW objects returned from the DGN element cache have a runtime type of <c>__ComObject</c>
-/// or the CoClass type — neither matches the COM interface types (<c>MSIDGN.LineElement</c> etc.)
-/// registered in the converter manager. We therefore dispatch via the DGN <c>MsdElementType</c>
-/// enum (available on every element) and look up the registered interface type directly.
+/// Per-element error handling: if a typed converter throws a managed exception, the catch falls
+/// through to the bounding-box fallback so the element still ships with placeholder geometry.
+/// True CSEs aren't catchable in CLR 4.x and tear down the host — we keep the leaf converters
+/// to data-read-only managed APIs to minimise that risk.
 /// </para>
 /// </summary>
 public class MicroStationRootToSpeckleConverter(
-  IConverterManager<IToSpeckleTopLevelConverter> converterManager,
+  LineElementConverter lineConverter,
+  ArcElementConverter arcConverter,
+  EllipseElementConverter ellipseConverter,
+  LineStringElementConverter lineStringConverter,
+  PointStringElementConverter pointStringConverter,
+  ShapeElementConverter shapeConverter,
+  ComplexShapeElementConverter complexShapeConverter,
+  ComplexStringElementConverter complexStringConverter,
+  BsplineCurveElementConverter bsplineCurveConverter,
+  BSplineSurfaceElementConverter bsplineSurfaceConverter,
+  CellHeaderElementConverter cellConverter,
+  SharedCellElementConverter sharedCellConverter,
+  TextElementConverter textConverter,
+  SolidElementConverter solidConverter,
+  MeshHeaderElementConverter meshHeaderConverter,
   FallbackElementMeshConverter fallbackConverter,
   ILogger<MicroStationRootToSpeckleConverter> logger
 ) : IRootToSpeckleConverter
 {
-  private static readonly Dictionary<MSIDGN.MsdElementType, Type> s_typeMap =
-    new()
-    {
-      [MSIDGN.MsdElementType.Line] = typeof(MSIDGN.LineElement),
-      // LineString and PointString both surface as MSIDGN.PointStringElement in the 2026 COM API
-      // (no dedicated MSIDGN.LineStringElement type).
-      [MSIDGN.MsdElementType.PointString] = typeof(MSIDGN.PointStringElement),
-      [MSIDGN.MsdElementType.LineString] = typeof(MSIDGN.PointStringElement),
-      [MSIDGN.MsdElementType.Arc] = typeof(MSIDGN.ArcElement),
-      [MSIDGN.MsdElementType.Ellipse] = typeof(MSIDGN.EllipseElement),
-      [MSIDGN.MsdElementType.Text] = typeof(MSIDGN.TextElement),
-      [MSIDGN.MsdElementType.CellHeader] = typeof(MSIDGN.CellElement),
-      [MSIDGN.MsdElementType.SharedCell] = typeof(MSIDGN.SharedCellElement),
-      [MSIDGN.MsdElementType.BsplineCurve] = typeof(MSIDGN.BsplineCurveElement),
-      // Surfaces / closed regions / compound chains — common in structural & civil DGN files.
-      [MSIDGN.MsdElementType.BsplineSurface] = typeof(MSIDGN.BsplineSurfaceElement),
-      [MSIDGN.MsdElementType.Shape] = typeof(MSIDGN.ShapeElement),
-      [MSIDGN.MsdElementType.ComplexShape] = typeof(MSIDGN.ComplexShapeElement),
-      [MSIDGN.MsdElementType.ComplexString] = typeof(MSIDGN.ComplexStringElement),
-      // Note: MsdElementType.MeshHeader has no typed COM wrapper in the 2026 interop; tessellated
-      // mesh extraction lives in Bentley.DgnPlatformNET (CSE-prone). MeshHeader elements stay on
-      // bounding-box fallback until a stable native-interop path is in place.
-      // Note: MsdElementType.Solid (SmartSolidElement) is NOT mapped here on purpose. Tessellation
-      // via FacetSolidAsShapes works in many cases but has historically triggered process-
-      // terminating CSEs on certain solids — treated as BREP follow-up work.
-    };
-
   public Base Convert(object target)
   {
-    if (target is not Element element)
+    if (target is not MgdElement element)
     {
-      throw new InvalidOperationException($"Expected a DGN Element but got {target?.GetType().Name ?? "null"}.");
+      throw new InvalidOperationException(
+        $"Expected a managed DGN Element (Bentley.DgnPlatformNET.Elements.Element) but got {target?.GetType().Name ?? "null"}."
+      );
     }
 
-    var elementId = element.ID.ToString();
+    var applicationId = ((ulong)element.ElementId).ToString();
 
-    if (s_typeMap.TryGetValue(element.Type, out var interfaceType))
+    try
     {
+      Base result = element switch
+      {
+        MgdElements.MeshHeaderElement m => meshHeaderConverter.Convert(m),
+        MgdElements.LineElement l => lineConverter.Convert(l),
+        MgdElements.ArcElement a => arcConverter.Convert(a),
+        MgdElements.EllipseElement e => ellipseConverter.Convert(e),
+        MgdElements.LineStringElement ls => lineStringConverter.Convert(ls),
+        MgdElements.PointStringElement ps => pointStringConverter.Convert(ps),
+        MgdElements.ShapeElement sh => shapeConverter.Convert(sh),
+        MgdElements.ComplexShapeElement cs => complexShapeConverter.Convert(cs),
+        MgdElements.ComplexStringElement cst => complexStringConverter.Convert(cst),
+        MgdElements.BSplineCurveElement bc => bsplineCurveConverter.Convert(bc),
+        MgdElements.BSplineSurfaceElement bs => bsplineSurfaceConverter.Convert(bs),
+        // Cell skeleton from the converter; this dispatcher fills in `elements` recursively
+        // below. Keeps the leaf converter free of any back-reference to IRootToSpeckleConverter
+        // (which would otherwise be a DI cycle — a cell can contain any element type).
+        MgdElements.CellHeaderElement c => PopulateCellChildren(c, cellConverter.Convert(c)),
+        MgdElements.SharedCellElement sc => sharedCellConverter.Convert(sc),
+        MgdElements.TextElement t => textConverter.Convert(t),
+        MgdElements.SurfaceOrSolidElement so => solidConverter.Convert(so),
+        _ => fallbackConverter.Convert(element),
+      };
+      result.applicationId ??= applicationId;
+      return result;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(
+        ex,
+        "Top-level converter threw for {ElementType} (id {ElementId}); falling back to bounding-box mesh.",
+        element.GetType().Name,
+        applicationId
+      );
+      var fallback = fallbackConverter.Convert(element);
+      fallback.applicationId ??= applicationId;
+      return fallback;
+    }
+  }
+
+  /// <summary>
+  /// Walks the cell's child elements via the managed <c>GetChildren()</c> enumerator and
+  /// recursively converts each one through this dispatcher. Children that fail to convert
+  /// (managed exceptions from leaf converters) are logged and skipped — the cell skeleton
+  /// is still emitted with whatever children did succeed, so the cell never disappears
+  /// silently from the output.
+  /// </summary>
+  private Collection PopulateCellChildren(MgdElements.CellHeaderElement cell, Collection skeleton)
+  {
+    var children = cell.GetChildren();
+    if (children == null)
+    {
+      return skeleton;
+    }
+
+    foreach (var child in children)
+    {
+      if (child == null)
+      {
+        continue;
+      }
       try
       {
-        var converter = converterManager.ResolveConverter(interfaceType, recursive: false);
-        var result = converter.Convert(element);
-        result.applicationId ??= elementId;
-        return result;
+        skeleton.elements.Add(Convert(child));
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        // Dedicated converter failed — log and fall through to bounding-box mesh so the element
-        // still ships with at least placeholder geometry rather than getting dropped entirely.
         logger.LogWarning(
           ex,
-          "Top-level converter for {ElementType} (id {ElementId}) threw; falling back to bounding-box mesh.",
-          element.Type,
-          elementId
+          "Skipping cell child element (id {ChildId}) — converter threw.",
+          (ulong)child.ElementId
         );
       }
     }
 
-    var fallback = fallbackConverter.Convert(element);
-    fallback.applicationId ??= elementId;
-    return fallback;
+    return skeleton;
   }
 }

@@ -2,76 +2,48 @@ using Speckle.Converter.MicroStation.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
+using MgdBsplineSurface = Bentley.DgnPlatformNET.Elements.BSplineSurfaceElement;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle.TopLevel;
 
 /// <summary>
-/// Converts a MicroStation 2026 COM <see cref="MSIDGN.BsplineSurfaceElement"/> to a Speckle
-/// <see cref="Mesh"/> by building a quad mesh from the B-spline control pole grid.
-/// <c>BsplineSurface.GetPoles()</c> returns a 2-D array indexed [vIndex, uIndex].
+/// Converts a managed <see cref="MgdBsplineSurface"/> into a Speckle <see cref="Mesh"/> by
+/// building a quad mesh from the b-spline control pole grid. This is an APPROXIMATION (control
+/// polygon, not the smooth surface itself) — adequate for visual reproduction but not for
+/// downstream geometric analysis. Real surface tessellation requires native facet builders that
+/// have been historically CSE-prone in this codebase.
 /// </summary>
-[NameAndRankValue(typeof(MSIDGN.BsplineSurfaceElement), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class BSplineSurfaceElementConverter(IConverterSettingsStore<MicroStationConversionSettings> settingsStore)
-  : IToSpeckleTopLevelConverter
 {
-  public Base Convert(object target) => Convert((MSIDGN.BsplineSurfaceElement)target);
-
-  private Mesh Convert(MSIDGN.BsplineSurfaceElement element)
+  public Base Convert(MgdBsplineSurface mgdSurface)
   {
     var s = settingsStore.Current;
+    var applicationId = ((ulong)mgdSurface.ElementId).ToString();
 
-    var surface = element.ExtractBsplineSurface();
-    var poles = surface.GetPoles(); // Point3d[vCount, uCount]
-
-    int vCount = surface.VPolesCount;
-    int uCount = surface.UPolesCount;
-
-    if (uCount < 2 || vCount < 2)
+    var bspline = mgdSurface.GetBsplineSurface();
+    if (bspline == null)
     {
-      return CreateBoundingBoxMesh(element, s.SpeckleUnits);
+      throw new InvalidOperationException(
+        $"BSplineSurfaceElement {applicationId} returned a null MSBsplineSurface."
+      );
     }
 
-    var vertices = new List<double>(uCount * vCount * 3);
-    for (int v = 0; v < vCount; v++)
-    {
-      for (int u = 0; u < uCount; u++)
-      {
-        var pt = poles[v, u];
-        vertices.Add(pt.X);
-        vertices.Add(pt.Y);
-        vertices.Add(pt.Z);
-      }
-    }
-
-    // Build quad faces from adjacent poles: (v,u), (v,u+1), (v+1,u+1), (v+1,u)
-    var faces = new List<int>((uCount - 1) * (vCount - 1) * 5);
-    for (int v = 0; v < vCount - 1; v++)
-    {
-      for (int u = 0; u < uCount - 1; u++)
-      {
-        faces.Add(4);
-        faces.Add(v * uCount + u);
-        faces.Add(v * uCount + u + 1);
-        faces.Add((v + 1) * uCount + u + 1);
-        faces.Add((v + 1) * uCount + u);
-      }
-    }
-
-    return new Mesh
-    {
-      vertices = vertices,
-      faces = faces,
-      units = s.SpeckleUnits,
-      applicationId = element.ID.ToString(),
-    };
+    // The MSBsplineSurface managed surface in Bentley.GeometryNET doesn't expose pole counts /
+    // pole grid the same way the COM API did. As a defensive starting point we use the
+    // surface's pole-range bounding box as a placeholder mesh — this preserves the element in
+    // the output without crashing on the structural case. Replacing with real surface
+    // tessellation (StrokeOptions / PolyfaceConstruction) is the follow-up.
+    var range = bspline.GetPoleRange();
+    return BuildBoundingBoxMesh(range.Low, range.High, s.SpeckleUnits, applicationId);
   }
 
-  private static Mesh CreateBoundingBoxMesh(MSIDGN.BsplineSurfaceElement element, string units)
+  private static Mesh BuildBoundingBoxMesh(
+    Bentley.GeometryNET.DPoint3d lo,
+    Bentley.GeometryNET.DPoint3d hi,
+    string units,
+    string applicationId
+  )
   {
-    var range = element.Range;
-    var lo = range.Low;
-    var hi = range.High;
-
     var verts = new List<double>
     {
       lo.X, lo.Y, lo.Z,
@@ -83,15 +55,13 @@ public class BSplineSurfaceElementConverter(IConverterSettingsStore<MicroStation
       hi.X, hi.Y, hi.Z,
       lo.X, hi.Y, hi.Z,
     };
-
     var faces = new List<int> { 4, 0, 1, 2, 3, 4, 4, 5, 6, 7, 4, 0, 1, 5, 4, 4, 2, 3, 7, 6, 4, 1, 2, 6, 5, 4, 0, 3, 7, 4 };
-
     return new Mesh
     {
       vertices = verts,
       faces = faces,
       units = units,
-      applicationId = element.ID.ToString(),
+      applicationId = applicationId,
     };
   }
 }

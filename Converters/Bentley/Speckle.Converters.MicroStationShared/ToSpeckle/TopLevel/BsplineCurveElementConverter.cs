@@ -1,39 +1,26 @@
 using Speckle.Converter.MicroStation.Settings;
 using Speckle.Converters.Common;
-using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
+using MgdBSplineCurve = Bentley.DgnPlatformNET.Elements.BSplineCurveElement;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle.TopLevel;
 
 /// <summary>
-/// Converts a MicroStation 2026 COM <see cref="MSIDGN.BsplineCurveElement"/> (NURBS curve) to a
-/// Speckle <see cref="Polyline"/> using the B-spline control pole polygon as an approximation.
+/// Converts a managed <see cref="MgdBSplineCurve"/> (NURBS curve) into a stroked Speckle
+/// Polyline. The shared helper strokes the underlying b-spline at chord tolerance via the
+/// curve's <c>MSBsplineCurve</c> proxy. Preserving the NURBS as Speckle <c>Curve</c>
+/// (control poles + knots + weights) is a follow-up.
 /// </summary>
-[NameAndRankValue(typeof(MSIDGN.BsplineCurveElement), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class BsplineCurveElementConverter(IConverterSettingsStore<MicroStationConversionSettings> settingsStore)
-  : IToSpeckleTopLevelConverter
 {
-  public Base Convert(object target) => Convert((MSIDGN.BsplineCurveElement)target);
-
-  private Polyline Convert(MSIDGN.BsplineCurveElement element)
+  public Base Convert(MgdBSplineCurve mgdBspline)
   {
     var s = settingsStore.Current;
-    var curve = element.ExtractBsplineCurve();
-    var poles = curve.GetPoles(); // control polygon — approximation of the NURBS curve
+    var applicationId = ((ulong)mgdBspline.ElementId).ToString();
 
-    var value = new List<double>(poles.Length * 3);
-    foreach (var pt in poles)
-    {
-      value.Add(pt.X);
-      value.Add(pt.Y);
-      value.Add(pt.Z);
-    }
-
-    return new Polyline
-    {
-      value = value,
-      units = s.SpeckleUnits,
-      applicationId = element.ID.ToString(),
-    };
+    var cv =
+      mgdBspline.GetCurveVector()
+      ?? throw new InvalidOperationException($"BSplineCurveElement {applicationId} has no CurveVector.");
+    return CurveVectorToSpeckleHelper.ToSpeckle(cv, s.SpeckleUnits, applicationId);
   }
 }

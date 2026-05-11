@@ -1,37 +1,26 @@
 using Speckle.Converter.MicroStation.Settings;
 using Speckle.Converters.Common;
-using Speckle.Objects.Geometry;
 using Speckle.Sdk.Models;
+using MgdLineString = Bentley.DgnPlatformNET.Elements.LineStringElement;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle.TopLevel;
 
 /// <summary>
-/// Converts a MicroStation 2026 COM <see cref="MSIDGN.LineStringElement"/> (open polyline) to a
-/// Speckle <see cref="Polyline"/>. <c>GetVertices()</c> returns <c>Point3d[]</c> already in master units.
+/// Converts a managed <see cref="MgdLineString"/> (open polyline) into a Speckle Polyline.
+/// Note: the COM interop has no <c>LineStringElement</c> wrapper, so the previous COM-based
+/// path was excluded — line-string elements were forced through <c>PointStringElement</c>.
+/// The managed surface exposes them properly, so they get their own typed converter here.
 /// </summary>
-[NameAndRankValue(typeof(MSIDGN.LineStringElement), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
 public class LineStringElementConverter(IConverterSettingsStore<MicroStationConversionSettings> settingsStore)
-  : IToSpeckleTopLevelConverter
 {
-  public Base Convert(object target) => Convert((MSIDGN.LineStringElement)target);
-
-  private Polyline Convert(MSIDGN.LineStringElement element)
+  public Base Convert(MgdLineString mgdLineString)
   {
     var s = settingsStore.Current;
-    var pts = element.GetVertices();
-    var value = new List<double>(pts.Length * 3);
-    foreach (var pt in pts)
-    {
-      value.Add(pt.X);
-      value.Add(pt.Y);
-      value.Add(pt.Z);
-    }
+    var applicationId = ((ulong)mgdLineString.ElementId).ToString();
 
-    return new Polyline
-    {
-      value = value,
-      units = s.SpeckleUnits,
-      applicationId = element.ID.ToString(),
-    };
+    var cv =
+      mgdLineString.GetCurveVector()
+      ?? throw new InvalidOperationException($"LineStringElement {applicationId} has no CurveVector.");
+    return CurveVectorToSpeckleHelper.ToSpeckle(cv, s.SpeckleUnits, applicationId);
   }
 }

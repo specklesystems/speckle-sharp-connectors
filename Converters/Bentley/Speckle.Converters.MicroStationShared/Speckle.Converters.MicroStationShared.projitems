@@ -16,6 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\DgnPointExtensions.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\MicroStationRootToSpeckleConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\FallbackElementMeshConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\MeshHeaderElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\LineElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ArcElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\EllipseElementConverter.cs"/>
@@ -29,8 +30,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ShapeElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ComplexShapeElementConverter.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\ComplexStringElementConverter.cs"/>
+    <!-- LineStringElement is now compiled (managed Bentley.DgnPlatformNET.Elements.LineStringElement
+         exists, unlike the COM interop). -->
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\TopLevel\LineStringElementConverter.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\CurveVectorToSpeckleHelper.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\MicroStationConverterServiceRegistration.cs"/>
-    <!-- LineStringElementConverter.cs excluded: MSIDGN.LineStringElement does not exist in the 2026 COM API.
-         Line-string (polyline) DGN elements are accessed via PointStringElement (PointStringElementConverter). -->
   </ItemGroup>
 </Project>

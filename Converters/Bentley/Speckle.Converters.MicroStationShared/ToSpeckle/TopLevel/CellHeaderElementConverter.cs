@@ -1,54 +1,45 @@
 using Speckle.Converter.MicroStation.Settings;
 using Speckle.Converters.Common;
-using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using MgdCellHeader = Bentley.DgnPlatformNET.Elements.CellHeaderElement;
 
 namespace Speckle.Converter.MicroStation.ToSpeckle.TopLevel;
 
 /// <summary>
-/// Converts a MicroStation 2026 COM <see cref="MSIDGN.CellElement"/> (named block / group) to a
-/// Speckle <see cref="Collection"/> containing the cell's child elements.
-/// Children are converted individually by the root converter.
+/// Converts a managed <see cref="MgdCellHeader"/> (named group, anonymous compound, or shared
+/// cell instance) into a SKELETON Speckle <see cref="Collection"/> — name + element-type tag,
+/// no children. The dispatcher (<c>MicroStationRootToSpeckleConverter</c>) is responsible for
+/// walking <c>cell.GetChildren()</c> and recursively converting each child via its own
+/// <c>Convert()</c> method.
+/// <para>
+/// Why the dispatcher does the recursion instead of this converter: a cell can contain any
+/// element type, so the converter would have to call back into the root dispatcher — which
+/// creates a DI circular dependency since the root dispatcher is constructed with this
+/// converter as a leaf. Civil3D / Revit / Tekla avoid the issue by recursing on the same type
+/// (Alignment → Profile, ModelObject → ModelObject children), but a DGN cell can mix any
+/// types. Putting the recursion in the dispatcher keeps every leaf converter pure (no
+/// back-references) and avoids <c>Lazy&lt;&gt;</c> / service-locator workarounds.
+/// </para>
+/// <para>
+/// The managed API gives us all cell flavors via this single type — see <c>CellName</c>,
+/// <c>IsAnonymous</c>, <c>IsSharedCell</c>, <c>IsPointCell</c> properties for classification.
+/// </para>
 /// </summary>
-[NameAndRankValue(typeof(MSIDGN.CellElement), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
-public class CellElementConverter(
-  IConverterSettingsStore<MicroStationConversionSettings> settingsStore,
-  IRootToSpeckleConverter rootConverter
-) : IToSpeckleTopLevelConverter
+public class CellHeaderElementConverter(IConverterSettingsStore<MicroStationConversionSettings> settingsStore)
 {
-  public Base Convert(object target) => Convert((MSIDGN.CellElement)target);
-
-  private Collection Convert(MSIDGN.CellElement element)
+  public Collection Convert(MgdCellHeader mgdCell)
   {
     var s = settingsStore.Current;
-    var collection = new Collection
+    var applicationId = ((ulong)mgdCell.ElementId).ToString();
+    var name = string.IsNullOrEmpty(mgdCell.CellName) ? applicationId : mgdCell.CellName;
+
+    return new Collection
     {
-      name = element.Name ?? element.ID.ToString(),
-      ["elementType"] = "Cell",
+      name = name,
+      ["elementType"] = mgdCell.IsSharedCell ? "SharedCell" : (mgdCell.IsAnonymous ? "ComplexHeader" : "Cell"),
       ["units"] = s.SpeckleUnits,
-      applicationId = element.ID.ToString(),
+      applicationId = applicationId,
+      // elements list intentionally left empty — dispatcher fills it via recursive Convert calls.
     };
-
-    var children = element.GetSubElements();
-    while (children.MoveNext())
-    {
-      var child = children.Current;
-      if (child == null)
-      {
-        continue;
-      }
-
-      try
-      {
-        collection.elements.Add(rootConverter.Convert(child));
-      }
-      catch (Exception ex) when (ex is not OutOfMemoryException)
-      {
-        // Skip unconvertible children rather than failing the entire cell
-        _ = ex;
-      }
-    }
-
-    return collection;
   }
 }
