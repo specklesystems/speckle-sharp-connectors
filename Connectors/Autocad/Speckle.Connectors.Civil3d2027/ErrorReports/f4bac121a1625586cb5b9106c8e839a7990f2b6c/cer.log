@@ -1,0 +1,91 @@
+[05/13/26 16:26:34] info     ================= cer started =================
+[05/13/26 16:26:34] info     C:\Program Files\Autodesk\AutoCAD 2027\cer.dll, 7.2.4+20251128.8f05bb68.927
+[05/13/26 16:26:34] info     Setting key SP/SDK_VERSION, value 7.2.4+20251128.8f05bb68.927 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/PRODUCT_NAME_HASH, value f4bac121a1625586cb5b9106c8e839a7990f2b6c (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/RUNTIME_ARCH, value 1 (maxCount 1)
+[05/13/26 16:26:34] info     Set senddmp exe path to C:\Program Files\Autodesk\AutoCAD 2027\CER\senddmp.exe
+[05/13/26 16:26:34] info     The cer_service exe C:\Program Files\Autodesk\AutoCAD 2027\CER\service\cer_service.exe is not in folder C:\Program Files\Autodesk\AutoCAD 2027\CER\, it's not a sandbox
+[05/13/26 16:26:34] info     Set upi exe path to C:\Program Files\Autodesk\AutoCAD 2027\CER\upi.exe
+[05/13/26 16:26:34] info     launching C:\Program Files\Autodesk\AutoCAD 2027\CER\upi.exe --cmd=get-device-id C:\Users\Jedd\AppData\Local\Temp\15FCE767F24F74D1\Temp\upi_deviceid2
+[05/13/26 16:26:34] info     Set deviceID2 to ED63677231E25F5208DA679CA91BAA73E71E3B5224A861BFF501F4C5431D09CD&FBB3FB8CD5A4F52718AF2201BA52ABCD0100F2A259D2F50A49F9E0B4A389AD89&FF2FAA0EF5BA5125F30050831977574E8A1EB70623172CD07E87F061158BFC64
+[05/13/26 16:26:34] info     Setting key SP/DEVICEID2, value ED63677231E25F5208DA679CA91BAA73E71E3B5224A861BFF501F4C5431D09CD&FBB3FB8CD5A4F52718AF2201BA52ABCD0100F2A259D2F50A49F9E0B4A389AD89&FF2FAA0EF5BA5125F30050831977574E8A1EB70623172CD07E87F061158BFC64 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/UUID, value f4bac121a1625586cb5b9106c8e839a7990f2b6cED63677231E25F5208DA679CA91BAA73E71E3B5224A861BFF501F4C5431D09CD&FBB3FB8CD5A4F52718AF2201BA52ABCD0100F2A259D2F50A49F9E0B4A389AD89&FF2FAA0EF5BA5125F30050831977574E8A1EB70623172CD07E87F061158BFC64 (maxCount 1)
+[05/13/26 16:26:34] info     Set senddmp exe path to C:\Program Files\Autodesk\AutoCAD 2027\CER\senddmp.exe
+[05/13/26 16:26:34] info     The cer_service exe C:\Program Files\Autodesk\AutoCAD 2027\CER\service\cer_service.exe is not in folder C:\Program Files\Autodesk\AutoCAD 2027\CER\, it's not a sandbox
+[05/13/26 16:26:34] info     launching C:\Program Files\Autodesk\AutoCAD 2027\CER\upi.exe "C:\Program Files\Autodesk\AutoCAD 2027\en-US\UPI\upiconfig.xml" C:\Users\Jedd\AppData\Local\Temp\15FCE767F24F74D1\Temp\upi_info.xml
+[05/13/26 16:26:34] info     Setting key SP/UPI_PRODUCT, value ACD (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/UPI_RELEASE, value 2027 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/UPI_MASTER, value {28B89EEF-A101-0409-2102-CF3F3A09B77D} (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/UPI_BUILD, value 26.0.60.0.0 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/UPI_FULL_XML, value <?xml version="1.0"?><upipackage><upivalue version="1.0" type="product" requestingapp="true"><level name="productline" id="ACD"><level name="release" id="2027"><level name="master" id="{28B89EEF-A101-0409-2102-CF3F3A09B77D}"><level name="build" id="26.0.60.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000013"><level name="release" id="2022"><level name="master" id="{0197CA72-138B-4A7E-9E95-E0440AFAEE5F}"><level name="build" id="2.3.7.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000013"><level name="release" id="2021"><level name="master" id="{C055C698-1729-4F2C-8FCE-5FF99F25BEEA}"><level name="build" id="2.1.23.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000013"><level name="release" id="2023"><level name="master" id="{C560BA65-D50F-40AD-A1FD-79334BB120E6}"><level name="build" id="3.0.1.1.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id=""/></level></level></level></upivalue>
+<upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2025\en-US\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2024\en-US\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2023\GlobUPI\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2023\en-US\ACADLP\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2023\ACAOE\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2023\en-US\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2022\ACAOE\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2022\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2022\en-US\ACADLP\UPI\upiconfig.xml</upi_error><upi_error>Error loading F:\Program Files\Autodesk\AutoCAD 2022\en-US\UPI\upiconfig.xml</upi_error><upi_error>Error loading C:\Program Files\Autodesk\AutoCAD 2025\C3D\en-US\UPI\upiconfig.xml</upi_error><upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2025"><level name="master" id="{28B89EEE-8104-0000-5102-CF3F3A09B77D}"><level name="build" id="8.7.45.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2025"><level name="master" id="{28B89EEF-8101-0409-2102-CF3F3A09B77D}"><level name="build" id="25.0.171.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2025"><level name="master" id="MUI64"><level name="build" id="25.4.0.32"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000022"><level name="release" id="2025"><level name="master" id="MUI64"><level name="build" id="25.4.0.32"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000022"><level name="release" id="2022"><level name="master" id="MUI64"><level name="build" id="22.0.2.392"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2022"><level name="master" id="MUI64"><level name="build" id="22.0.2.392"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2021"><level name="master" id="MUI64"><level name="build" id="21.1.1.109"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2023"><level name="master" id="{28B89EEF-6101-0000-0102-CF3F3A09B77D}"><level name="build" id="24.2.222.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2023"><level name="master" id="{28B89EEF-6104-0409-4102-CF3F3A09B77D}"><level name="build" id="8.5.50.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2023"><level name="master" id="{28B89EEE-6104-0000-5102-CF3F3A09B77D}"><level name="build" id="8.5.50.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id=""><level name="release" id=""><level name="master" id=""><level name="build" id="26.0.37.26"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="CIV3D"><level name="release" id="2023"><level name="master" id="{28B89EEF-6100-0000-0102-CF3F3A09B77D}"><level name="build" id="13.5.1657.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2023"><level name="master" id="{28B89EEF-6104-0000-4102-CF3F3A09B77D}"><level name="build" id="8.5.50.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="CIV3D"><level name="release" id="2023"><level name="master" id="{28B89EEF-6100-0409-1102-CF3F3A09B77D}"><level name="build" id="13.5.1657.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="CIV3D"><level name="release" id="2023"><level name="master" id="{28B89EEF-6100-0409-2102-CF3F3A09B77D}"><level name="build" id="13.5.1657.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="VEHTRK"><level name="release" id="2023"><level name="master" id="{50A7071A-1345-433D-AC71-85A2359584A1}"><level name="build" id="23.0.0.2518"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="CDX"><level name="release" id="Version17.0.2"><level name="master" id="All64"><level name="build" id="17.0.2.3336"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2026"><level name="master" id="{28B89EEE-9104-0000-5102-CF3F3A09B77D}"><level name="build" id="8.8.53.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2026"><level name="master" id="{28B89EEF-9101-0409-2102-CF3F3A09B77D}"><level name="build" id="25.1.164.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2026"><level name="master" id="MUI64"><level name="build" id="26.4.0.32"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLNT3D"><level name="release" id="2026"><level name="master" id="{28B89EEF-9117-0409-2102-CF3F3A09B77D}"><level name="build" id="17.0.60.1010"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2024"><level name="master" id="MUI64"><level name="build" id="24.3.40.26"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000022"><level name="release" id="2024"><level name="master" id="MUI64"><level name="build" id="24.3.40.26"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLC0000022"><level name="release" id="2023"><level name="master" id="MUI64"><level name="build" id="23.0.11.19"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2023"><level name="master" id="MUI64"><level name="build" id="23.0.11.19"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="RVT"><level name="release" id="2027"><level name="master" id="MUI64"><level name="build" id="27.0.20.10"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2027"><level name="master" id="{28B89EEE-A104-0000-5102-CF3F3A09B77D}"><level name="build" id="8.9.51.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2027"><level name="master" id="{28B89EEF-A101-0000-0102-CF3F3A09B77D}"><level name="build" id="26.0.60.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2027"><level name="master" id="{28B89EEF-A101-0409-1102-CF3F3A09B77D}"><level name="build" id="26.0.60.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="VEHTRK"><level name="release" id="2027"><level name="master" id="{1F998EA5-D0D7-4D77-AF61-65828DBEE474}"><level name="build" id="27.0.0.2932"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2027"><level name="master" id="{28B89EEF-A104-0000-4102-CF3F3A09B77D}"><level name="build" id="8.9.51.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ACD"><level name="release" id="2027"><level name="master" id="{28B89EEF-A101-0809-1102-CF3F3A09B77D}"><level name="build" id="26.0.60.0.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="ARCHDESK"><level name="release" id="2027"><level name="master" id="{28B89EEF-A104-0809-4102-CF3F3A09B77D}"><level name="build" id="8.9.51.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="CIV3D"><level name="release" id="2027"><level name="master" id="{28B89EEF-A100-0809-2102-CF3F3A09B77D}"><level name="build" id="13.9.628.0"/></level></level></level></upivalue>
+<upivalue version="1.0" type="product"><level name="productline" id="PLNT3D"><level name="release" id="2027"><level name="master" id="{28B89EEF-A117-0409-2102-CF3F3A09B77D}"><level name="build" id="18.0.60.1"/></level></level></level></upivalue>
+</upipackage> (maxCount 1)
+[05/13/26 16:26:34] info     set legacy options: /APPICON "C:\Program Files\Autodesk\AutoCAD 2027\AcBrandRes.dll" /APPICONID 1
+[05/13/26 16:26:34] info     Setting key RP/AppIcon, value C:\Program Files\Autodesk\AutoCAD 2027\AcBrandRes.dll (maxCount 1)
+[05/13/26 16:26:34] info     Setting key RP/AppIconId, value 1 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key RP/CadSettingsRegPath, value Software\Autodesk\AutoCAD\R26.0\ACAD-A101:409\CadManagerControl\CustomerErrorReport (maxCount 1)
+[05/13/26 16:26:34] info     Setting key RP/AppLocaleId, value 1033 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key RP/AppXML, value <ProductInformation name ="AutoCAD" build_version="X.60.0.0(x64)" registry_version="26.0" install_id_string="15FCE767F24F74D1" registry_localeID="1033" git_commit_id="90c984aa66a571142ee0757584bac517eec2175a" /> (maxCount 100)
+[05/13/26 16:26:34] info     Setting key SP/THEME_TYPE, value Blue (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/EXCEPTION_INFO_POINTER, value 140705096107288 (maxCount 1)
+[05/13/26 16:26:34] info     Setting key SP/THREAD_ID, value 4294967295 (maxCount 1)
+[05/13/26 16:26:34] info     Get key SP/THREAD_ID, index 0: "4294967295"
+[05/13/26 16:26:34] info     Setting key SP/WER, value 0 (maxCount 1)
+[05/13/26 16:26:34] info     Get key SP/WER, index 0: "0"
+[05/13/26 16:26:34] info     Registered C:\Program Files\Autodesk\AutoCAD 2027\cer.dll as WER runtime exception module
+[05/13/26 16:26:34] info     Current ErrorMode is 32769
+[05/13/26 16:26:34] debug    Receiver ping: pong

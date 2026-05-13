@@ -57,5 +57,14 @@
     >
       <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R25.1" SeriesMax="R25.1" />
     </ComponentEntry>
+
+    <!-- AutoCAD 2027 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Civil3d2027"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Civil3d2027/Speckle.Connectors.Civil3d2027.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Civil3D" SeriesMin="R26.0" SeriesMax="R26.0" />
+    </ComponentEntry>
   </Components>
 </ApplicationPackage>

@@ -12,11 +12,13 @@ public static class AppUtils
 #elif AUTOCAD
     HostApplications.AutoCAD;
 #else
-    throw new NotSupportedException();
+#error Compiler directives misconfigured or the autocad vertical is not supported
 #endif
 
   public static HostAppVersion Version =>
-#if AUTOCAD2026 || CIVIL3D2026 || PLANT3D2026
+#if AUTOCAD2027 || CIVIL3D2027 || PLANT3D2027
+    HostAppVersion.v2027;
+#elif AUTOCAD2026 || CIVIL3D2026 || PLANT3D2026
     HostAppVersion.v2026;
 #elif AUTOCAD2025 || CIVIL3D2025 || PLANT3D2025
     HostAppVersion.v2025;
@@ -27,6 +29,6 @@ public static class AppUtils
 #elif AUTOCAD2022 || CIVIL3D2022
     HostAppVersion.v2022;
 #else
-    throw new NotSupportedException();
+#error Compiler directives misconfigured or the autocad version is not supported
 #endif
 }
