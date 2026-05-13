@@ -26,8 +26,6 @@
     <!--CefSharp.Wpf < 134.3.90 is vunlerable, but many versions of Revit still use it, so we need to build for it, but we don't distribute any vulnerable CEF binaries-->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-f87w-3j5w-v58p" NoWarn="NU1903" />
     <PackageReference Include="CefSharp.Wpf.NETCore" IncludeAssets="compile" VersionOverride="119.4.30.0" />
-    <!--To Match Host APP-->
-    <PackageReference Include="Microsoft.Extensions.Logging" VersionOverride="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
