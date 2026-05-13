@@ -16,7 +16,7 @@ tools
 .vscode
 .idea/
 *wpftmp.csproj
-**/cer.log‎
+cer.log
 
 .DS_Store
 *.snupkg
