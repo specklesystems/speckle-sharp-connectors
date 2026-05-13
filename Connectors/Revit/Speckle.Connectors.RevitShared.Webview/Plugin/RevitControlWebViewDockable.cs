@@ -1,7 +1,7 @@
 ﻿using System.Windows.Controls;
 using Autodesk.Revit.UI;
 
-namespace Speckle.Connectors.Revit2026.Plugin;
+namespace Speckle.Connectors.Revit.Plugin;
 
 public sealed class RevitControlWebViewDockable : UserControl, Autodesk.Revit.UI.IDockablePaneProvider
 {
