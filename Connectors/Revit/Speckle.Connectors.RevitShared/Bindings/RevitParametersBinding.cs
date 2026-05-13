@@ -244,8 +244,3 @@ internal sealed class RevitParametersBinding : IParametersBinding
     // Evaluates if the ID contains the standard transform hash for linked elements
     System.Text.RegularExpressions.Regex.IsMatch(applicationId, @"_t[a-f0-9]+$");
 }
-
-public class ParameterChangesWrapper
-{
-  public List<ParameterChangeRequest>? Changes { get; set; }
-}
