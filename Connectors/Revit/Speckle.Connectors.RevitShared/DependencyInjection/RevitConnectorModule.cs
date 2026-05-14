@@ -72,6 +72,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<LinkedModelHandler>();
     serviceCollection.AddSingleton<RoomsAndAreasHandler>();
     serviceCollection.AddSingleton<ParameterUpdater>();
+    serviceCollection.AddSingleton<RevitSendChangeTracker>();
 
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
