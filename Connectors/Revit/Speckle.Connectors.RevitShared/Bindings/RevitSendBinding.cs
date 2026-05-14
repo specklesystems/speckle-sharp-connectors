@@ -1,6 +1,5 @@
 using System.IO;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.ExtensibleStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Cancellation;
@@ -25,79 +24,71 @@ namespace Speckle.Connectors.Revit.Bindings;
 
 internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 {
-  private readonly RevitIdleManager _revitIdleManager;
   private readonly RevitContext _revitContext;
   private readonly DocumentModelStore _store;
   private readonly ICancellationManager _cancellationManager;
   private readonly ISendConversionCache _sendConversionCache;
 
   private readonly ToSpeckleSettingsManager _toSpeckleSettingsManager;
-  private readonly ElementUnpacker _elementUnpacker;
   private readonly IRevitConversionSettingsFactory _revitConversionSettingsFactory;
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly RoomsAndAreasHandler _roomsAndAreasHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
   private readonly ParameterUpdater _parameterUpdater;
+  private readonly RevitSendChangeTracker _changeTracker;
   private bool _isDocChangedSubscribed;
   private EventHandler<Autodesk.Revit.DB.Events.DocumentChangedEventArgs>? _documentChangedHandler;
   private readonly ConnectorConfig _config;
 
-  /// <summary>
-  /// Used internally to aggregate the changed objects' id. Note we're using a concurrent dictionary here as the expiry check method is not thread safe, and this was causing problems. See:
-  /// [CNX-202: Unhandled Exception Occurred when receiving in Rhino](https://linear.app/speckle/issue/CNX-202/unhandled-exception-occurred-when-receiving-in-rhino)
-  /// As to why a concurrent dictionary, it's because it's the cheapest/easiest way to do so.
-  /// https://stackoverflow.com/questions/18922985/concurrent-hashsett-in-net-framework
-  /// </summary>
-  private ConcurrentHashSet<ElementId> ChangedObjectIds { get; set; } = new();
-
   public RevitSendBinding(
-    RevitIdleManager revitIdleManager,
     RevitContext revitContext,
     DocumentModelStore store,
     ICancellationManager cancellationManager,
     IBrowserBridge bridge,
     ISendConversionCache sendConversionCache,
     ToSpeckleSettingsManager toSpeckleSettingsManager,
-    ElementUnpacker elementUnpacker,
     IRevitConversionSettingsFactory revitConversionSettingsFactory,
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
+    RoomsAndAreasHandler roomsAndAreasHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory,
     ParameterUpdater parameterUpdater,
-    IConfigStore configStore
+    IConfigStore configStore,
+    RevitSendChangeTracker changeTracker
   )
     : base("sendBinding", bridge)
   {
-    _revitIdleManager = revitIdleManager;
     _revitContext = revitContext;
     _store = store;
     _cancellationManager = cancellationManager;
     _sendConversionCache = sendConversionCache;
     _toSpeckleSettingsManager = toSpeckleSettingsManager;
-    _elementUnpacker = elementUnpacker;
     _revitConversionSettingsFactory = revitConversionSettingsFactory;
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
+    _roomsAndAreasHandler = roomsAndAreasHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _parameterUpdater = parameterUpdater;
+    _changeTracker = changeTracker;
     _config = configStore.GetConnectorConfig();
 
     Commands = new SendBindingUICommands(bridge);
+    _changeTracker.Initialize(Commands, RefreshSenderForActiveDocument);
     // TODO expiry events
     // TODO filters need refresh events
 
     revitTask.Run(() =>
     {
-      // revitContext.UIApplication.NotNull().Application.DocumentChanged += (_, e) =>
-      //   _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
-      _documentChangedHandler = (_, e) => _topLevelExceptionHandler.CatchUnhandled(() => DocChangeHandler(e));
+      _documentChangedHandler = (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => _changeTracker.HandleDocChange(e));
       _store.ModelCardsChanged += (_, e) => OnModelCardsChanged(e);
       _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
     });
@@ -162,6 +153,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       new LinkedModelsSetting(),
       new SendRebarsAsVolumetricSetting(),
       new SendAreasAsMeshSetting(),
+      new AppendRoomsAndAreasSetting(),
     ];
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
@@ -191,7 +183,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
               _toSpeckleSettingsManager.GetLinkedModelsSetting(document, card),
               _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card),
               _toSpeckleSettingsManager.GetSendAreasAsMesh(document, card),
-              _toSpeckleSettingsManager.GetSendRebarsAsVolumetric(document, card)
+              false
             )
           );
       },
@@ -322,6 +314,19 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
       documentElementContexts.AddRange(linkedDocumentContexts);
     }
 
+    // append rooms and/or areas from the whole document when requested, independent of the active filter
+    //TODO settings should be configured per filter. This setting is only for view filter when selected view is a 3d view.
+    var roomsAndAreasMode = _toSpeckleSettingsManager.GetAppendRoomsAndAreas(document, modelCard);
+    if (roomsAndAreasMode != AppendRoomsAndAreasMode.None)
+    {
+      var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
+      elementsOnMainModel.AddRange(
+        _roomsAndAreasHandler
+          .CollectRoomsAndAreas(document, roomsAndAreasMode)
+          .Where(e => !existingIds.Contains(e.UniqueId))
+      );
+    }
+
     // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)
     {
@@ -344,220 +349,14 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     return documentElementContexts;
   }
 
-  /// <summary>
-  /// Keeps track of the changed element ids as well as checks if any of them need to trigger
-  /// a filter refresh (e.g., views being added).
-  /// </summary>
-  /// <param name="e"></param>
-  private void DocChangeHandler(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
-  {
-    ICollection<ElementId> modifiedElementIds = e.GetModifiedElementIds();
-    var doc = e.GetDocument();
-    if (doc == null)
-    {
-      return;
-    }
-    // NOTE: Whenever we save data into file this event also trigger changes on its DataStorage.
-    // On every add/remove/update model attempt triggers this handler and was causing unnecessary calls on `RunExpirationChecks`
-    // Re-check it once we implement Linked Documents
-    if (modifiedElementIds.Count == 1)
-    {
-      if (modifiedElementIds.All(el => doc.GetElement(el) is DataStorage))
-      {
-        return;
-      }
-    }
-
-    ICollection<ElementId> addedElementIds = e.GetAddedElementIds();
-    ICollection<ElementId> deletedElementIds = e.GetDeletedElementIds();
-
-    foreach (ElementId elementId in addedElementIds)
-    {
-      ChangedObjectIds.Add(elementId);
-    }
-
-    foreach (ElementId elementId in deletedElementIds)
-    {
-      ChangedObjectIds.Add(elementId);
-    }
-
-    foreach (ElementId elementId in modifiedElementIds)
-    {
-      ChangedObjectIds.Add(elementId);
-    }
-
-    if (addedElementIds.Count > 0)
-    {
-      _revitIdleManager.SubscribeToIdle(nameof(PostSetObjectIds), PostSetObjectIds);
-    }
-
-    if (HaveUnitsChanged(doc))
-    {
-      var objectIds = new List<string>();
-      foreach (var sender in _store.GetSenders().ToList())
-      {
-        if (sender.SendFilter is null)
-        {
-          continue;
-        }
-
-        var selectedObjects = sender.SendFilter.NotNull().SelectedObjectIds;
-        objectIds.AddRange(selectedObjects);
-      }
-      var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objectIds, doc);
-      _sendConversionCache.EvictObjects(unpackedObjectIds);
-    }
-
-    _revitIdleManager.SubscribeToIdle(nameof(CheckFilterExpiration), CheckFilterExpiration);
-    _revitIdleManager.SubscribeToIdle(nameof(RunExpirationChecks), RunExpirationChecks);
-  }
-
-  // Keeps track of doc and current units
-  private readonly Dictionary<string, string> _docUnitCache = new();
-
-  private bool HaveUnitsChanged(Document doc)
-  {
-    var docId = doc.Title + doc.PathName;
-    var unitSpecTypeIds = new List<ForgeTypeId>() // list of units we care about
-    {
-      SpecTypeId.Angle,
-      SpecTypeId.Area,
-      SpecTypeId.Distance,
-      SpecTypeId.Length,
-      SpecTypeId.Volume,
-    };
-    var units = "";
-    foreach (var typeId in unitSpecTypeIds)
-    {
-      units += doc.GetUnits().GetFormatOptions(typeId).GetUnitTypeId().TypeId;
-    }
-
-    if (_docUnitCache.TryGetValue(docId, out string? value))
-    {
-      if (value == units)
-      {
-        return false;
-      }
-      _docUnitCache[docId] = units;
-      return true;
-    }
-
-    _docUnitCache[docId] = units;
-    return false;
-  }
-
-  private async Task PostSetObjectIds()
+  private async Task RefreshSenderForActiveDocument(SenderModelCard sender)
   {
     var document = _revitContext.UIApplication?.ActiveUIDocument?.Document;
     if (document == null)
     {
       return;
     }
-    foreach (var sender in _store.GetSenders().ToList())
-    {
-      await RefreshElementsIdsOnSender(document, sender);
-    }
-  }
-
-  /// <summary>
-  /// Notifies ui if any filters need refreshing. Currently, this only applies for view filters.
-  /// </summary>
-  private async Task CheckFilterExpiration()
-  {
-    // NOTE: below code seems like more make sense in terms of performance, but it causes unmanaged exception on Revit
-    // using var viewCollector = new FilteredElementCollector(RevitContext.UIApplication?.ActiveUIDocument.Document);
-    // var views = viewCollector.OfClass(typeof(View)).Cast<View>().Select(v => v.Id).ToList();
-    // var intersection = ChangedObjectIds.Keys.Intersect(views).ToList();
-    // if (intersection.Count != 0)
-    // {
-    //    await Commands.RefreshSendFilters();
-    // }
-    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
-    if (doc == null)
-    {
-      return;
-    }
-
-    if (ChangedObjectIds.Any(e => doc.GetElement(e) is View))
-    {
-      await Commands.RefreshSendFilters();
-    }
-  }
-
-  private async Task RunExpirationChecks()
-  {
-    var senders = _store.GetSenders().ToList();
-    // string[] objectIdsList = ChangedObjectIds.Keys.ToArray();
-    var doc = _revitContext.UIApplication?.ActiveUIDocument?.Document;
-
-    if (doc == null)
-    {
-      return;
-    }
-
-    var objUniqueIds = new List<string>();
-    var changedIds = ChangedObjectIds.ToList();
-
-    // Handling type changes: if an element's type is changed, we need to mark as changed all objects that have that type.
-    // Step 1: get any changed types
-    var elementTypeIdsList = changedIds
-      .Select(e => doc.GetElement(e))
-      .OfType<ElementType>()
-      .Select(el => el.Id)
-      .ToHashSet(); // ToHashSet() for faster Contains
-
-    // Step 2: Find all elements of the changed types, and add them to the changed ids list.
-    if (elementTypeIdsList.Count != 0)
-    {
-      using var collector = new FilteredElementCollector(doc);
-      var collectorElements = collector
-        .WhereElementIsNotElementType()
-        .Where(e => elementTypeIdsList.Contains(e.GetTypeId()));
-      foreach (var elm in collectorElements)
-      {
-        changedIds.Add(elm.Id);
-      }
-    }
-
-    foreach (var sender in senders)
-    {
-      foreach (var changedElementId in changedIds)
-      {
-        if (sender.SendFilter?.IdMap?.TryGetValue(changedElementId.ToString(), out var id) ?? false)
-        {
-          objUniqueIds.Add(id);
-        }
-      }
-    }
-
-    var unpackedObjectIds = _elementUnpacker.GetUnpackedElementIds(objUniqueIds, doc);
-    _sendConversionCache.EvictObjects(unpackedObjectIds);
-
-    // Note: we're doing object selection and card expiry management by old school ids
-    List<string> expiredSenderIds = new();
-    foreach (SenderModelCard modelCard in senders)
-    {
-      if (modelCard.SendFilter is IRevitSendFilter viewFilter)
-      {
-        viewFilter.SetContext(_revitContext);
-      }
-
-      if (modelCard.SendFilter is null || modelCard.SendFilter.IdMap is null)
-      {
-        continue;
-      }
-
-      var selectedObjects = modelCard.SendFilter.NotNull().IdMap.NotNull().Values;
-      var intersection = selectedObjects.Intersect(objUniqueIds).ToList();
-      bool isExpired = intersection.Count != 0;
-      if (isExpired)
-      {
-        expiredSenderIds.Add(modelCard.ModelCardId.NotNull());
-      }
-    }
-
-    await Commands.SetModelsExpired(expiredSenderIds);
-    ChangedObjectIds = new();
+    await RefreshElementsIdsOnSender(document, sender);
   }
 
   // POC: Will be re-addressed later with better UX with host apps that are friendly on async doc operations.

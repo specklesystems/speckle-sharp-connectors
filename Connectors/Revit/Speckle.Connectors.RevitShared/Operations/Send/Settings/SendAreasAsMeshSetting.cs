@@ -9,6 +9,7 @@ public class SendAreasAsMeshSetting(bool value = SendAreasAsMeshSetting.DEFAULT_
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Send Areas As Mesh";
+  public string? Description { get; set; } = "Sends areas as flat meshes of their boundaries.";
   public string? Type { get; set; } = "boolean";
   public object? Value { get; set; } = value;
   public List<string>? Enum { get; set; }
