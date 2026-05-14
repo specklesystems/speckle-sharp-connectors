@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.DUI.Bindings;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Sdk;
@@ -355,21 +356,4 @@ public class ParameterUpdater
 
     return null;
   }
-}
-
-// TODO: we will see, extract this guy out
-public readonly struct UpdateResult
-{
-  public bool IsSuccess { get; }
-  public string? ErrorMessage { get; }
-
-  private UpdateResult(bool success, string? error)
-  {
-    IsSuccess = success;
-    ErrorMessage = error;
-  }
-
-  public static UpdateResult Success() => new(true, null);
-
-  public static UpdateResult Fail(string message) => new(false, message);
 }
