@@ -33,6 +33,11 @@ public static class Civil3dConnectorModule
     serviceCollection.AddScoped<IHostObjectBuilder, Civil3dHostObjectBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dReceiveBinding>();
 
+    // parameter updater
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IParametersBinding>());
+    serviceCollection.AddSingleton<IParametersBinding, Civil3dParametersBinding>();
+    serviceCollection.AddSingleton<PropertyUpdater>();
+
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<PropertySetBaker>();
