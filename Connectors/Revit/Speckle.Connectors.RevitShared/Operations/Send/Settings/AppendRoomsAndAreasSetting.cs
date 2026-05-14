@@ -24,7 +24,8 @@ public class AppendRoomsAndAreasSetting(AppendRoomsAndAreasMode value = AppendRo
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Append Rooms and Areas";
-  public string? Description { get; set; }
+  public string? Description { get; set; } =
+    "Intended for use with 3D views. Appends rooms and/or areas from the whole document, independent of the active filter.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(AppendRoomsAndAreasMode)).ToList();
   public object? Value { get; set; } = value.ToString();
