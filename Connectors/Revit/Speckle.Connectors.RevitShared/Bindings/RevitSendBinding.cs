@@ -37,6 +37,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
   private readonly RevitToSpeckleCacheSingleton _revitToSpeckleCacheSingleton;
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly LinkedModelHandler _linkedModelHandler;
+  private readonly RoomsAndAreasHandler _roomsAndAreasHandler;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
   private readonly ParameterUpdater _parameterUpdater;
@@ -65,6 +66,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
     ITopLevelExceptionHandler topLevelExceptionHandler,
     LinkedModelHandler linkedModelHandler,
+    RoomsAndAreasHandler roomsAndAreasHandler,
     IThreadContext threadContext,
     IRevitTask revitTask,
     ISendOperationManagerFactory sendOperationManagerFactory,
@@ -84,6 +86,7 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
     _revitToSpeckleCacheSingleton = revitToSpeckleCacheSingleton;
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _linkedModelHandler = linkedModelHandler;
+    _roomsAndAreasHandler = roomsAndAreasHandler;
     _threadContext = threadContext;
     _sendOperationManagerFactory = sendOperationManagerFactory;
     _parameterUpdater = parameterUpdater;
@@ -325,8 +328,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     // append rooms and/or areas from the whole document when requested, independent of the active filter
     //TODO settings should be configured per filter. This setting is only for view filter when selected view is a 3d view.
-    var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
-    elementsOnMainModel.AddRange(_toSpeckleSettingsManager.GetElementsToAppend(document, modelCard, existingIds));
+    var roomsAndAreasMode = _toSpeckleSettingsManager.GetAppendRoomsAndAreas(document, modelCard);
+    if (roomsAndAreasMode != AppendRoomsAndAreasMode.None)
+    {
+      var existingIds = elementsOnMainModel.Select(e => e.UniqueId).ToHashSet();
+      elementsOnMainModel.AddRange(
+        _roomsAndAreasHandler
+          .CollectRoomsAndAreas(document, roomsAndAreasMode)
+          .Where(e => !existingIds.Contains(e.UniqueId))
+      );
+    }
 
     // update ID map
     if (modelCard.SendFilter is not null && modelCard.SendFilter.IdMap is not null)

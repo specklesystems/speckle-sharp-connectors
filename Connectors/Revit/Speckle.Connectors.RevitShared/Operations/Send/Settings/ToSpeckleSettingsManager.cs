@@ -132,50 +132,6 @@ public class ToSpeckleSettingsManager(
     );
 
   /// <summary>
-  /// Collects rooms and/or areas from the document per the card setting, excluding elements already present in <paramref name="existingIds"/>.
-  /// </summary>
-  public IReadOnlyList<Element> GetElementsToAppend(
-    Document document,
-    SenderModelCard modelCard,
-    HashSet<string> existingIds
-  )
-  {
-    var mode = GetAppendRoomsAndAreas(document, modelCard);
-    if (mode == AppendRoomsAndAreasMode.None)
-    {
-      return [];
-    }
-
-    var toAppend = new List<Element>();
-
-    if (mode is AppendRoomsAndAreasMode.RoomsOnly or AppendRoomsAndAreasMode.Both)
-    {
-      using var roomCollector = new FilteredElementCollector(document);
-      toAppend.AddRange(
-        roomCollector
-          .OfClass(typeof(SpatialElement))
-          .OfCategory(BuiltInCategory.OST_Rooms)
-          .Cast<Element>()
-          .Where(e => !existingIds.Contains(e.UniqueId))
-      );
-    }
-
-    if (mode is AppendRoomsAndAreasMode.AreasOnly or AppendRoomsAndAreasMode.Both)
-    {
-      using var areaCollector = new FilteredElementCollector(document);
-      toAppend.AddRange(
-        areaCollector
-          .OfClass(typeof(SpatialElement))
-          .OfCategory(BuiltInCategory.OST_Areas)
-          .Cast<Element>()
-          .Where(e => !existingIds.Contains(e.UniqueId))
-      );
-    }
-
-    return toAppend;
-  }
-
-  /// <summary>
   /// Helper method to handle enum settings with string-keyed maps, per-card caching, and cache eviction on change.
   /// </summary>
   private TEnum GetEnumSettingWithCache<TEnum>(

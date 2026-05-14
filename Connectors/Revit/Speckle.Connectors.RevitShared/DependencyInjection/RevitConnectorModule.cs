@@ -70,6 +70,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();
     serviceCollection.AddSingleton<LinkedModelHandler>();
+    serviceCollection.AddSingleton<RoomsAndAreasHandler>();
     serviceCollection.AddSingleton<ParameterUpdater>();
 
     // receive operation and dependencies
