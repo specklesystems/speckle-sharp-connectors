@@ -18,7 +18,7 @@ public static class SpeckleV3Tool
 #if NAVIS
     HostApplications.Navisworks;
 #else
-    throw new NotSupportedException();
+#error Compiler directives misconfigured
 #endif
   public static HostAppVersion Version =>
 #if NAVIS2020
@@ -35,7 +35,9 @@ public static class SpeckleV3Tool
     HostAppVersion.v2025;
 #elif NAVIS2026
     HostAppVersion.v2026;
+#elif NAVIS2027
+    HostAppVersion.v2027;
 #else
-    throw new NotSupportedException("This version is not supported");
+#error Compiler directives misconfigured or the Navisworks version is not supported
 #endif
 }
