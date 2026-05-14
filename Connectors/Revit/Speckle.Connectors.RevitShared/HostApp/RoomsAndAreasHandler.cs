@@ -4,19 +4,14 @@ using Speckle.Connectors.Revit.Operations.Send.Settings;
 namespace Speckle.Connectors.Revit.HostApp;
 
 /// <summary>
-/// Handles collecting rooms and/or areas from a Revit document.
-/// This class is responsible for the mechanics of retrieving spatial elements per the
-/// requested mode, but not for making decisions about whether rooms/areas should be
-/// appended (which is the responsibility of the calling code)!
+/// Collects rooms and/or areas from a Revit document. Mechanics only — the caller
+/// decides whether to append and is responsible for deduplication.
 /// </summary>
 public class RoomsAndAreasHandler
 {
   /// <summary>
-  /// Collects rooms and/or areas from the document per the requested mode.
-  /// This method handles the specifics of element collection but doesn't make decisions
-  /// about whether rooms/areas should be appended - that's the caller's responsibility.
-  /// Callers are also responsible for deduplicating against any already-collected elements.
-  /// Unplaced rooms (UpperLimit == null) and unplaced areas (Location == null) are excluded.
+  /// Collects rooms and/or areas per <paramref name="mode"/>. Unplaced rooms
+  /// (UpperLimit == null) and unplaced areas (Location == null) are excluded.
   /// </summary>
   public IReadOnlyList<Element> CollectRoomsAndAreas(Document document, AppendRoomsAndAreasMode mode)
   {
