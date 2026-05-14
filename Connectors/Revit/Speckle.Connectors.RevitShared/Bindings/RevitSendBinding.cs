@@ -87,7 +87,8 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
 
     revitTask.Run(() =>
     {
-      _documentChangedHandler = (_, e) => _topLevelExceptionHandler.CatchUnhandled(() => _changeTracker.HandleDocChange(e));
+      _documentChangedHandler = (_, e) =>
+        _topLevelExceptionHandler.CatchUnhandled(() => _changeTracker.HandleDocChange(e));
       _store.ModelCardsChanged += (_, e) => OnModelCardsChanged(e);
       _store.DocumentChanged += (_, _) => topLevelExceptionHandler.FireAndForget(async () => await OnDocumentChanged());
     });
