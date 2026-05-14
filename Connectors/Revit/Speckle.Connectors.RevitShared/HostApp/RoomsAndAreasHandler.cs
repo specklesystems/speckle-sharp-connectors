@@ -16,6 +16,7 @@ public class RoomsAndAreasHandler
   /// This method handles the specifics of element collection but doesn't make decisions
   /// about whether rooms/areas should be appended - that's the caller's responsibility.
   /// Callers are also responsible for deduplicating against any already-collected elements.
+  /// Unplaced rooms (UpperLimit == null) and unplaced areas (Location == null) are excluded.
   /// </summary>
   public IReadOnlyList<Element> CollectRoomsAndAreas(Document document, AppendRoomsAndAreasMode mode)
   {
@@ -30,7 +31,11 @@ public class RoomsAndAreasHandler
     {
       using var roomCollector = new FilteredElementCollector(document);
       collected.AddRange(
-        roomCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Rooms).Cast<Element>()
+        roomCollector
+          .OfClass(typeof(SpatialElement))
+          .OfCategory(BuiltInCategory.OST_Rooms)
+          .Cast<Autodesk.Revit.DB.Architecture.Room>()
+          .Where(r => r.UpperLimit != null)
       );
     }
 
@@ -38,7 +43,11 @@ public class RoomsAndAreasHandler
     {
       using var areaCollector = new FilteredElementCollector(document);
       collected.AddRange(
-        areaCollector.OfClass(typeof(SpatialElement)).OfCategory(BuiltInCategory.OST_Areas).Cast<Element>()
+        areaCollector
+          .OfClass(typeof(SpatialElement))
+          .OfCategory(BuiltInCategory.OST_Areas)
+          .Cast<SpatialElement>()
+          .Where(se => se.Location != null)
       );
     }
 
