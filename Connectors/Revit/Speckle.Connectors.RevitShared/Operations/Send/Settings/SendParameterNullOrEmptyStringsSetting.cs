@@ -10,6 +10,7 @@ public class SendParameterNullOrEmptyStringsSetting(bool value = SendParameterNu
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Send null/empty parameters";
+  public string? Description { get; set; }
   public string? Type { get; set; } = "boolean";
   public List<string>? Enum { get; set; }
   public object? Value { get; set; } = value;

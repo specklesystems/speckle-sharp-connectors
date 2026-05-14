@@ -6,6 +6,7 @@ public class ConvertHiddenElementsSetting(bool value) : ICardSetting
 {
   public string? Id { get; set; } = "convertHiddenElements";
   public string? Title { get; set; } = "Convert Hidden Elements";
+  public string? Description { get; set; } = "Includes elements hidden in the Navisworks scene. Disabled by default.";
   public string? Type { get; set; } = "boolean";
   public List<string>? Enum { get; set; }
   public object? Value { get; set; } = value;

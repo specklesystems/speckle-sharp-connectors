@@ -94,7 +94,12 @@ public class PropertySetExtractor
         // POC: not sure how to support graphic types atm
         var value = data.DataType is AAEC.PropertyData.DataType.Graphic ? null : data.GetData(data.UnitType);
 
-        Dictionary<string, object?> propertyValueDict = new() { ["value"] = value, ["name"] = dataName };
+        Dictionary<string, object?> propertyValueDict = new()
+        {
+          ["value"] = value,
+          ["name"] = dataName,
+          ["internalDefinitionName"] = data.FieldBucketId,
+        };
         PropertyHandler propHandler = new();
         propHandler.TryAddToDictionary(propertyValueDict, "units", () => data.UnitType.GetTypeDisplayName(true)); // units not always applicable to def, will throw
 
