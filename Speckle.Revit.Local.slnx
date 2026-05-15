@@ -12,6 +12,7 @@
   <Folder Name="/Config/">
     <File Path=".csharpierrc.yaml" />
     <File Path=".editorconfig" />
+    <File Path=".gitignore" />
     <File Path="codecov.yml" />
     <File Path="CodeMetricsConfig.txt" />
     <File Path="Directory.Build.props" />
