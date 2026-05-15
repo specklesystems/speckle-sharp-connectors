@@ -14,7 +14,6 @@ using Speckle.Sdk.Api.GraphQL.Enums;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
 using Speckle.Sdk.Common;
-using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Logging;
 
