@@ -22,9 +22,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
 
   private static HostAppVersion GetVersion()
   {
-#if REVIT2022
-    return HostAppVersion.v2022;
-#elif REVIT2023
+#if REVIT2023
     return HostAppVersion.v2023;
 #elif REVIT2024
     return HostAppVersion.v2024;
@@ -32,8 +30,10 @@ internal sealed class RevitExternalApplication : IExternalApplication
     return HostAppVersion.v2025;
 #elif REVIT2026
     return HostAppVersion.v2026;
+#elif REVIT2027
+    return HostAppVersion.v2027;
 #else
-    throw new NotImplementedException();
+#error Compiler directives misconfigured or the revit version is not supported
 #endif
   }
 
