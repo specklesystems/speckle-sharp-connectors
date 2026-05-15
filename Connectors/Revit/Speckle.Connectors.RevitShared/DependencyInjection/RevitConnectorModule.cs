@@ -18,9 +18,7 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
-#if REVIT2026_OR_GREATER
-using Speckle.Connectors.Revit2026.Plugin;
-#else
+#if !REVIT2026_OR_GREATER
 using CefSharp;
 #endif
 

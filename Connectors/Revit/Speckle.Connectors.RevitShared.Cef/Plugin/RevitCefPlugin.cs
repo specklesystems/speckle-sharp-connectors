@@ -1,4 +1,3 @@
-#if !REVIT2026_OR_GREATER
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -182,4 +181,3 @@ internal sealed class RevitCefPlugin : IRevitPlugin
     return null;
   }
 }
-#endif

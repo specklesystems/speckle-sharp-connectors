@@ -7,7 +7,7 @@ using Speckle.Connectors.DUI.Bindings;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Settings;
 
-namespace Speckle.Connectors.Revit2026.Plugin;
+namespace Speckle.Connectors.Revit.Plugin;
 
 public sealed partial class RevitControlWebView : UserControl, IBrowserScriptExecutor, IDisposable
 {
