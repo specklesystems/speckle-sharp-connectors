@@ -25,12 +25,6 @@
   <Folder Name="/Connectors/Autocad/">
     <File Path="Connectors\Autocad\Directory.Build.targets" />
   </Folder>
-  <Folder Name="/Connectors/Autocad/2022/">
-    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2022\Speckle.Connectors.Autocad2022.csproj" />
-    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2022\Speckle.Connectors.Civil3d2022.csproj" />
-    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2022\Speckle.Converters.Autocad2022.csproj" />
-    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2022\Speckle.Converters.Civil3d2022.csproj" />
-  </Folder>
   <Folder Name="/Connectors/Autocad/2023/">
     <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2023\Speckle.Connectors.Autocad2023.csproj" />
     <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2023\Speckle.Connectors.Civil3d2023.csproj" />
@@ -56,6 +50,14 @@
     <Project Path="Converters\Plant3d\Speckle.Converters.Plant3d2026\Speckle.Converters.Plant3d2026.csproj" />
     <Project Path="Converters\Autocad\Speckle.Converters.Autocad2026\Speckle.Converters.Autocad2026.csproj" />
     <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2026\Speckle.Converters.Civil3d2026.csproj" />
+  </Folder>
+    <Folder Name="/Connectors/Autocad/2027/">
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Plant3d2027\Speckle.Connectors.Plant3d2027.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Autocad2027\Speckle.Connectors.Autocad2027.csproj" />
+    <Project Path="Connectors\Autocad\Speckle.Connectors.Civil3d2027\Speckle.Connectors.Civil3d2027.csproj" />
+    <Project Path="Converters\Plant3d\Speckle.Converters.Plant3d2027\Speckle.Converters.Plant3d2027.csproj" />
+    <Project Path="Converters\Autocad\Speckle.Converters.Autocad2027\Speckle.Converters.Autocad2027.csproj" />
+    <Project Path="Converters\Civil3d\Speckle.Converters.Civil3d2027\Speckle.Converters.Civil3d2027.csproj" />
   </Folder>
   <Folder Name="/Connectors/Autocad/Shared/">
     <Project Path="Connectors\Autocad\Speckle.Connectors.Plant3dShared\Speckle.Connectors.Plant3dShared.shproj" />

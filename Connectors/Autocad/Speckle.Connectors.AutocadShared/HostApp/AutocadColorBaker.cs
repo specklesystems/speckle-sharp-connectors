@@ -42,7 +42,7 @@ public class AutocadColorBaker(ILogger<AutocadColorBaker> logger) : IAutocadColo
         foreach (string objectId in colorProxy.objects)
         {
           AutocadColor convertedColor = ConvertColorProxyToColor(colorProxy);
-#if NET8_0
+#if NET8_0_OR_GREATER
           ObjectColorsIdMap.TryAdd(objectId, convertedColor);
 #else
           if (!ObjectColorsIdMap.ContainsKey(objectId))
