@@ -138,11 +138,19 @@ public class ClassPropertiesExtractor
       assignmentProps[NETWORKNAME_PROP] = catchment.ReferencePipeNetworkName;
     }
 
+#if CIVIL3D2027_OR_GREATER
+    if (catchment.ReferenceDischargeObjectId != ADB.ObjectId.Null)
+    {
+      assignmentProps["networkStructureId"] = catchment.ReferenceDischargeObjectId.GetSpeckleApplicationId();
+      assignmentProps["networkStructureName"] = catchment.ReferenceDischargeObjectName;
+    }
+#else
     if (catchment.ReferencePipeNetworkStructureId != ADB.ObjectId.Null)
     {
       assignmentProps["networkStructureId"] = catchment.ReferencePipeNetworkStructureId.GetSpeckleApplicationId();
       assignmentProps["networkStructureName"] = catchment.ReferencePipeNetworkStructureName;
     }
+#endif
 
     AddDictionaryToDictionary(assignmentProps, properties, ASSIGNMENT_PROP);
 
@@ -161,16 +169,26 @@ public class ClassPropertiesExtractor
       ["timeOfConcentration"] = catchment.TimeOfConcentration,
       ["timeOfConcentrationCalculationMethod"] = catchment.TimeOfConcentrationCalculationMethod,
       ["hydrologicallyMostDistantPoint"] = catchment.HydrologicallyMostDistantPoint.ToArray(),
+#if CIVIL3D2027_OR_GREATER
+      ["hydrologicallyMostDistantLength"] = catchment.FlowPathLength,
+#else
       ["hydrologicallyMostDistantLength"] = catchment.HydrologicallyMostDistantLength,
+#endif
       ["runoffCoefficient"] = catchment.RunoffCoefficient,
+#pragma warning disable CS0618
+      //Deprecated in 2027, but so long as the properties work, we'll attach them
       ["hydrologicalSoilGroup"] = catchment.HydrologicalSoilGroup.ToString(),
       ["antecedentWetness"] = catchment.AntecedentWetness,
+#pragma warning restore CS0618
     };
 
     // get hydraulic props
     properties["Hydraulic Properties"] = new Dictionary<string, object?>()
     {
+#pragma warning disable CS0618
+      //Deprecated in 2027, but so long as the properties work, we'll attach them
       ["manningsCoefficient"] = catchment.ManningsCoefficient,
+#pragma warning restore CS0618
 #if CIVIL3D2024_OR_GREATER
       ["sheetFlowSegments"] = catchment.SheetFlowSegments,
       ["sheetFlowTravelTime"] = catchment.SheetFlowTravelTime,
