@@ -538,17 +538,10 @@ public sealed class DisplayValueExtractor
       bjk = _graphicStyleCache[geomObj.GraphicsStyleId.ToString().NotNull()];
     }
 
-#if REVIT2023_OR_GREATER
     if (bjk?.GraphicsStyleCategory.BuiltInCategory == DB.BuiltInCategory.OST_LightingFixtureSource)
     {
       return true;
     }
-#else
-    if (bjk?.GraphicsStyleCategory.Id.IntegerValue == (int)DB.BuiltInCategory.OST_LightingFixtureSource)
-    {
-      return true;
-    }
-#endif
 
     return false;
   }
@@ -556,7 +549,6 @@ public sealed class DisplayValueExtractor
   // Determines if an element should be sent with invisible display values
   private bool ShouldSetElementDisplayToTransparent(DB.Element element)
   {
-#if REVIT2023_OR_GREATER
     switch (element.Category?.BuiltInCategory)
     {
       case DB.BuiltInCategory.OST_Rooms:
@@ -565,9 +557,6 @@ public sealed class DisplayValueExtractor
       default:
         return false;
     }
-#else
-    return false;
-#endif
   }
 
   /// <summary>

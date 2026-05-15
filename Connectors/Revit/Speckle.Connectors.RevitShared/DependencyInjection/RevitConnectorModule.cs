@@ -95,13 +95,7 @@ public static class ServiceRegistration
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)
   {
-#if REVIT2022
-    //different versons for different versions of CEF
-    serviceCollection.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
-    serviceCollection.AddSingleton<CefSharpPanel>();
-    serviceCollection.AddSingleton<IBrowserScriptExecutor>(sp => sp.GetRequiredService<CefSharpPanel>());
-    serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
-#elif !REVIT2026_OR_GREATER
+#if !REVIT2026_OR_GREATER
     // different versions for different versions of CEF
     serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
     serviceCollection.AddSingleton<CefSharpPanel>();
