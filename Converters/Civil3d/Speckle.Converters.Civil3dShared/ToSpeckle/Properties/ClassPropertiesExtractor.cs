@@ -205,10 +205,12 @@ public class ClassPropertiesExtractor
   private Dictionary<string, object?> ExtractParcelProperties(CDB.Parcel parcel)
   {
     // get general props
-    Dictionary<string, object?> properties = new() { ["number"] = parcel.Number, ["area"] = parcel.Area };
-#if CIVIL3D2023_OR_GREATER
-    properties["taxId"] = parcel.TaxId;
-#endif
+    Dictionary<string, object?> properties = new()
+    {
+      ["number"] = parcel.Number,
+      ["area"] = parcel.Area,
+      ["taxId"] = parcel.TaxId,
+    };
     return properties;
   }
 

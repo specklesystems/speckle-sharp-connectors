@@ -13,15 +13,6 @@
 
   <CompanyDetails Name="Speckle" Url="https://speckle.systems" Email="support@speckle.systems" />
   <Components>
-    <!-- AutoCAD 2022 -->
-    <ComponentEntry
-      AppName="Speckle.Connectors.Autocad2022"
-      ModuleName="./Contents/Windows/Speckle.Connectors.Autocad2022/Speckle.Connectors.Autocad2022.dll"
-      LoadOnAutoCADStartup="True"
-    >
-      <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.1" SeriesMax="R24.1" />
-    </ComponentEntry>
-
     <!-- AutoCAD 2023 -->
     <ComponentEntry
       AppName="Speckle.Connectors.Autocad2023"

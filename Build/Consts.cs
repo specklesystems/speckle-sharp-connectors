@@ -27,7 +27,6 @@ internal static class Consts
     new(
       "autocad",
       [
-        new("Connectors/Autocad/Speckle.Connectors.Autocad2022", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Autocad2025", "net8.0-windows"),
@@ -38,7 +37,6 @@ internal static class Consts
     new(
       "civil3d",
       [
-        new("Connectors/Autocad/Speckle.Connectors.Civil3d2022", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2023", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2024", "net48"),
         new("Connectors/Autocad/Speckle.Connectors.Civil3d2025", "net8.0-windows"),
