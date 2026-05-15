@@ -2,7 +2,7 @@
   "profiles": {
     "Speckle.Connector.Navisworks2020": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Autodesk\\Navisworks Manage 2020\\Roamer.exe",
+      "executablePath": "%ProgramFiles%\\Autodesk\\Navisworks Manage 2020\\Roamer.exe",
       "commandLineArgs": " -licensing AdLM"
     }
   }

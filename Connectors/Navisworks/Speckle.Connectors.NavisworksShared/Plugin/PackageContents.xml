@@ -10,6 +10,16 @@
 >
   <CompanyDetails Name="Speckle" />
   <Components>
+    <RuntimeRequirements OS="Win64" Platform="NAVMAN|NAVSIM" SeriesMin="Nw24" SeriesMax="Nw24" />
+    <ComponentEntry
+      AppName="SpeckleNavisworks"
+      AppType="ManagedPlugin"
+      Version="0.1.0"
+      ModuleName="./Contents/2027/Speckle.Connectors.Navisworks2027.dll"
+      AppDescription="Speckle.Connector.Navisworks2027"
+    />
+  </Components>
+  <Components>
     <RuntimeRequirements OS="Win64" Platform="NAVMAN|NAVSIM" SeriesMin="Nw23" SeriesMax="Nw23" />
     <ComponentEntry
       AppName="SpeckleNavisworks"

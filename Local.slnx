@@ -113,6 +113,10 @@
     <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2026\Speckle.Connectors.Navisworks2026.csproj" />
     <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2026\Speckle.Converters.Navisworks2026.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Navisworks/2027/">
+    <Project Path="Connectors\Navisworks\Speckle.Connectors.Navisworks2027\Speckle.Connectors.Navisworks2027.csproj" />
+    <Project Path="Converters\Navisworks\Speckle.Converters.Navisworks2027\Speckle.Converters.Navisworks2027.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Navisworks/Shared/">
     <Project Path="Connectors\Navisworks\Speckle.Connectors.NavisworksShared\Speckle.Connectors.NavisworksShared.shproj" />
     <Project Path="Converters\Navisworks\Speckle.Converters.NavisworksShared\Speckle.Converters.NavisworksShared.shproj" />
