@@ -5,7 +5,7 @@ using CefSharp;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Settings;
 
-namespace Speckle.Connectors.Revit;
+namespace Speckle.Connectors.Revit.Plugin;
 
 public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvider, IBrowserScriptExecutor
 {
@@ -15,9 +15,8 @@ public partial class CefSharpPanel : Page, Autodesk.Revit.UI.IDockablePaneProvid
   {
     DuiUrl = globalConfigResolver.GetDuiUrl().ToString();
     InitializeComponent();
-#if REVIT2023_OR_GREATER
+
     Browser.JavascriptObjectRepository.NameConverter = null;
-#endif
   }
 
   /// <inheritdoc/>

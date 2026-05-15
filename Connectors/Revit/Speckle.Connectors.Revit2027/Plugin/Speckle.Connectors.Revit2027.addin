@@ -3,7 +3,7 @@
   <AddIn Type="Application">
     <Name>Speckle for Revit</Name>
     <Description>Speckle for Revit</Description>
-    <Assembly>Speckle.Connectors.Revit2022\Speckle.Connectors.Revit2022.dll</Assembly>
+    <Assembly>Speckle.Connectors.Revit2027\Speckle.Connectors.Revit2027.dll</Assembly>
     <FullClassName>Speckle.Connectors.Revit.Plugin.RevitExternalApplication</FullClassName>
     <ClientId>27ccff2c-011c-4374-bb79-b93990d0c86a</ClientId>
     <VendorId>speckle</VendorId>

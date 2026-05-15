@@ -12,6 +12,7 @@
   <Folder Name="/Config/">
     <File Path=".csharpierrc.yaml" />
     <File Path=".editorconfig" />
+    <File Path=".gitignore" />
     <File Path="codecov.yml" />
     <File Path="CodeMetricsConfig.txt" />
     <File Path="Directory.Build.props" />
@@ -21,14 +22,6 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Connectors/" />
-  <Folder Name="/Connectors/Rhino/">
-    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoImporter\Speckle.Connectors.RhinoImporter.csproj" Type="C#" />
-    <Project Path="Connectors\Rhino\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.shproj" />
-  </Folder>
-  <Folder Name="/Connectors/Rhino/Converter/">
-    <Project Path="Converters\Rhino\Speckle.Converters.Rhino8\Speckle.Converters.Rhino8.csproj" Type="C#" />
-    <Project Path="Converters\Rhino\Speckle.Converters.RhinoShared\Speckle.Converters.RhinoShared.shproj" />
-  </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Rhino/">
     <Project Path="Importers\Rhino\Speckle.Importers.JobProcessor\Speckle.Importers.JobProcessor.csproj">

@@ -9,12 +9,13 @@
     <Import_RootNamespace>Speckle.Connectors.RevitShared.Cef</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)CefSharpPanel.xaml.cs">
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\CefSharpPanel.xaml.cs">
       <DependentUpon>CefSharpPanel.xaml</DependentUpon>
     </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="$(MSBuildThisFileDirectory)CefSharpPanel.xaml">
+    <Page Include="$(MSBuildThisFileDirectory)Plugin\CefSharpPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

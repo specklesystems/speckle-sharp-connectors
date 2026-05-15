@@ -1,4 +1,4 @@
-﻿<Solution>
+<Solution>
   <Configurations>
     <BuildType Name="Debug" />
     <BuildType Name="Local" />
@@ -118,10 +118,7 @@
   <Folder Name="/Connectors/Revit/">
     <File Path="Connectors\Revit\Directory.Build.targets" />
   </Folder>
-  <Folder Name="/Connectors/Revit/2022/">
-    <Project Path="Connectors\Revit\Speckle.Connectors.Revit2022\Speckle.Connectors.Revit2022.csproj" />
-    <Project Path="Converters\Revit\Speckle.Converters.Revit2022\Speckle.Converters.Revit2022.csproj" />
-  </Folder>
+  <Folder Name="/Connectors/Revit/2022/" />
   <Folder Name="/Connectors/Revit/2023/">
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit2023\Speckle.Connectors.Revit2023.csproj" />
     <Project Path="Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
@@ -138,7 +135,12 @@
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit2026\Speckle.Connectors.Revit2026.csproj" />
     <Project Path="Converters\Revit\Speckle.Converters.Revit2026\Speckle.Converters.Revit2026.csproj" />
   </Folder>
+  <Folder Name="/Connectors/Revit/2027/">
+    <Project Path="Connectors/Revit/Speckle.Connectors.Revit2027/Speckle.Connectors.Revit2027.csproj" />
+    <Project Path="Converters/Revit/Speckle.Converters.Revit2027/Speckle.Converters.Revit2027.csproj" />
+  </Folder>
   <Folder Name="/Connectors/Revit/Shared/">
+    <Project Path="Connectors/Revit/Speckle.Connectors.RevitShared.Webview/Speckle.Connectors.RevitShared.Webview.shproj" Id="6fdedd56-a21c-4188-a2c0-eb3cc6c68e59" />
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit.Common\Speckle.Connectors.Revit.Common.csproj" />
     <Project Path="Connectors\Revit\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.shproj" />
     <Project Path="Connectors\Revit\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.shproj" />

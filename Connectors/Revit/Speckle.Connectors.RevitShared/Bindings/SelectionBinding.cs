@@ -8,20 +8,14 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.Revit.Bindings;
 
 // POC: we need a base a RevitBaseBinding
-internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, IDisposable
+internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding
 {
-#if REVIT2022
-  private readonly System.Timers.Timer _selectionTimer;
-#endif
   private readonly RevitContext _revitContext;
 
   public SelectionBinding(
     RevitContext revitContext,
     IBrowserBridge parent,
     RevitIdleManager idleManager,
-#if REVIT2022
-    ITopLevelExceptionHandler topLevelExceptionHandler,
-#endif
     IRevitTask revitTask,
     IConfigStore configStore
   )
@@ -31,17 +25,10 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
 
     if (!configStore.GetConnectorConfig().SelectionChangeListeningDisabled)
     {
-#if REVIT2022
-      // NOTE: getting the selection data should be a fast function all, even for '000s of elements - and having a timer hitting it every 1s is ok.
-      _selectionTimer = new System.Timers.Timer(1000);
-      _selectionTimer.Elapsed += (_, _) => topLevelExceptionHandler.CatchUnhandled(OnSelectionChanged);
-      _selectionTimer.Start();
-#else
       revitTask.Run(() =>
         _revitContext.UIApplication.NotNull().SelectionChanged += (_, _) =>
           idleManager.SubscribeToIdle(nameof(OnSelectionChanged), OnSelectionChanged)
       );
-#endif
     }
   }
 
@@ -72,12 +59,5 @@ internal sealed class SelectionBinding : RevitBaseBinding, ISelectionBinding, ID
     var selectionUniqueIds = new List<string>(selectionIds.Count);
     selectionUniqueIds.AddRange(selectionIds.Select(eid => doc.GetElement(eid).UniqueId));
     return new SelectionInfo(selectionUniqueIds, $"{selectionIds.Count} objects selected.");
-  }
-
-  public void Dispose()
-  {
-#if REVIT2022
-    _selectionTimer.Dispose();
-#endif
   }
 }

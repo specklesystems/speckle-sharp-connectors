@@ -5,11 +5,10 @@ using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Revit.Common;
-using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Sdk;
 
-namespace Speckle.Connectors.Revit2026.Plugin;
+namespace Speckle.Connectors.Revit.Plugin;
 
 internal sealed class RevitWebViewPlugin(
   UIControlledApplication uIControlledApplication,
