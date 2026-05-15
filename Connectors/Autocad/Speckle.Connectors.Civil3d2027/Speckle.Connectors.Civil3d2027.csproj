@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Civil3DVersion>2027</Civil3DVersion>
-    <DefineConstants>$(DefineConstants);CIVIL3D2027;CIVIL3D;CIVIL3D2022_OR_GREATER;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER;CIVIL3D2026_OR_GREATER;CIVIL3D2027_OR_GREATER</DefineConstants>
+    <DefineConstants>$(DefineConstants);CIVIL3D2027;CIVIL3D;CIVIL3D2023_OR_GREATER;CIVIL3D2024_OR_GREATER;CIVIL3D2025_OR_GREATER;CIVIL3D2026_OR_GREATER;CIVIL3D2027_OR_GREATER</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 

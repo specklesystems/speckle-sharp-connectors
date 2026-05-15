@@ -27,8 +27,6 @@ public static class AppUtils
     HostAppVersion.v2024;
 #elif AUTOCAD2023|| CIVIL3D2023
     HostAppVersion.v2023;
-#elif AUTOCAD2022 || CIVIL3D2022
-    HostAppVersion.v2022;
 #else
     throw new NotSupportedException();
 #error Compiler directives misconfigured or the autocad version is not supported
