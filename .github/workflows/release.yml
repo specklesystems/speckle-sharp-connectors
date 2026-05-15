@@ -68,7 +68,7 @@ jobs:
             "repo": "${{ github.repository }}",
             "is_public_release": ${{ env.IS_PUBLIC_RELEASE }}
             }'
-          ref: main
+          ref: jrm/combined-2027-test
           wait-for-completion: true
           sync-status: true
         timeout-minutes: 15
