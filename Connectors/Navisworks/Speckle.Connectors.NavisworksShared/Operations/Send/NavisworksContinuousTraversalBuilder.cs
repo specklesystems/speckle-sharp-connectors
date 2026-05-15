@@ -70,6 +70,8 @@ public class NavisworksContinuousTraversalBuilder(
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
 
     // Process each final element through the send pipeline
+    int processedCount = 0;
+    int total = finalElements.Count;
     var processedElements = new List<Base>(finalElements.Count);
     foreach (var element in finalElements)
     {
@@ -77,6 +79,11 @@ public class NavisworksContinuousTraversalBuilder(
       // NOTE: this is the main part that differentiate from the main root object builder
       var reference = await sendPipeline.Process(element).ConfigureAwait(false);
       processedElements.Add(reference);
+
+      processedCount++;
+      onOperationProgressed.Report(
+        new CardProgress($"Serializing objects {processedCount:N0}/{total:N0}", (double)processedCount / total)
+      );
     }
 
     rootCollection.elements = processedElements;
