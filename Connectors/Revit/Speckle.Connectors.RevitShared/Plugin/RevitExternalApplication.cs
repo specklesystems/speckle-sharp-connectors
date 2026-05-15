@@ -22,9 +22,7 @@ internal sealed class RevitExternalApplication : IExternalApplication
 
   private static HostAppVersion GetVersion()
   {
-#if REVIT2022
-    return HostAppVersion.v2022;
-#elif REVIT2023
+#if REVIT2023
     return HostAppVersion.v2023;
 #elif REVIT2024
     return HostAppVersion.v2024;
