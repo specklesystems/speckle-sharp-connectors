@@ -36,6 +36,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Registers\InstanceFragmentRegistry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ElementSelectionService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyExtractionMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GeometryToSpeckleConverter.cs" />

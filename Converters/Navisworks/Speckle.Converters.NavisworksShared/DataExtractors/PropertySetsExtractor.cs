@@ -1,4 +1,6 @@
-﻿using Speckle.Converter.Navisworks.Services;
+﻿using System.Diagnostics;
+using System.Text.Json;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
@@ -42,12 +44,17 @@ public class PropertySetsExtractor(
   /// <returns>A dictionary containing property sets of the modelItem.</returns>
   private Dictionary<string, object?> ExtractPropertySets(NAV.ModelItem modelItem)
   {
+    var stopwatch = Stopwatch.StartNew();
     var propertySetDictionary = new Dictionary<string, object?>();
     var modelUnits = GetModelUnits(modelItem);
+    var userFilteredPropertyCategories = modelItem.GetUserFilteredPropertyCategories();
+    int totalCategoryCount = modelItem.PropertyCategories.Count();
+    int userFilteredCategoryCount = userFilteredPropertyCategories.Count();
+    int extractedPropertyCount = 0;
 
     propertyConverter.Reset();
 
-    foreach (var propertyCategory in modelItem.PropertyCategories)
+    foreach (var propertyCategory in userFilteredPropertyCategories)
     {
       if (ShouldSkipCategory(propertyCategory))
       {
@@ -69,8 +76,20 @@ public class PropertySetsExtractor(
       if (propertySet.Count > 0)
       {
         propertySetDictionary[SanitizePropertyName(propertyCategory.DisplayName)] = propertySet;
+        extractedPropertyCount += propertySet.Count;
       }
     }
+
+    stopwatch.Stop();
+    int payloadBytes =
+      propertySetDictionary.Count == 0 ? 0 : JsonSerializer.SerializeToUtf8Bytes(propertySetDictionary).Length;
+    PropertyExtractionMetricsTracker.Record(
+      totalCategoryCount,
+      userFilteredCategoryCount,
+      extractedPropertyCount,
+      payloadBytes,
+      stopwatch.Elapsed.TotalMilliseconds
+    );
 
     return propertySetDictionary;
   }

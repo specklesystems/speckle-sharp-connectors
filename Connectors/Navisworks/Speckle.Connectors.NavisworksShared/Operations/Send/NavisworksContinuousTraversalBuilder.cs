@@ -52,6 +52,7 @@ public class NavisworksContinuousTraversalBuilder(
     SkipNodeMerging = false;
     DisableGroupingForInstanceTesting = false;
 #endif
+    PropertyExtractionMetricsTracker.Reset();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
@@ -91,8 +92,27 @@ public class NavisworksContinuousTraversalBuilder(
     // Process the root collection and wait for all uploads to complete
     await sendPipeline.Process(rootCollection);
     await sendPipeline.WaitForUpload();
+    LogPropertyExtractionMetrics();
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
+  }
+
+  private void LogPropertyExtractionMetrics()
+  {
+    var snapshot = PropertyExtractionMetricsTracker.Snapshot();
+    logger.LogInformation(
+      "Property extraction metrics: objects={ObjectCount}, avgTotalCategories={AvgTotalCategoryCount:F2}, avgUserFilteredCategories={AvgUserFilteredCategoryCount:F2}, avgProperties={AvgPropertyCount:F2}, p95Properties={P95PropertyCount:F0}, avgPayloadBytes={AvgPayloadBytes:F2}, p95PayloadBytes={P95PayloadBytes:F0}, totalPayloadBytes={TotalPayloadBytes}, avgExtractionMs={AvgExtractionMs:F2}, p95ExtractionMs={P95ExtractionMs:F2}",
+      snapshot.ObjectCount,
+      snapshot.AvgTotalCategoryCount,
+      snapshot.AvgUserFilteredCategoryCount,
+      snapshot.AvgPropertyCount,
+      snapshot.P95PropertyCount,
+      snapshot.AvgPayloadBytes,
+      snapshot.P95PayloadBytes,
+      snapshot.TotalPayloadBytes,
+      snapshot.AvgExtractionMs,
+      snapshot.P95ExtractionMs
+    );
   }
 
   private static void ValidateInputs(
