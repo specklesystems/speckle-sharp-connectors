@@ -52,7 +52,8 @@ public class ModelItemToToSpeckleConverter(
       ["properties"] = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
     };
 
-  private static bool ShouldMergeProperties(NAV.ModelItem target) => target.HasGeometry;
+  private bool ShouldMergeProperties(NAV.ModelItem target) =>
+    target.HasGeometry && settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Full;
 
   private static string GetObjectName(NAV.ModelItem target)
   {
