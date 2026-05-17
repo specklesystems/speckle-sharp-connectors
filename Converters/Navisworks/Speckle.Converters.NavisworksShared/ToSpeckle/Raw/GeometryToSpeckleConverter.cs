@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Constants;
@@ -255,8 +254,13 @@ public sealed class GeometryToSpeckleConverter(
 
     try
     {
-      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+      foreach (object fragmentObj in fragments)
       {
+        if (fragmentObj is not InwOaFragment3 fragment)
+        {
+          continue;
+        }
+
         GC.KeepAlive(fragment);
 
         InwOaPath? fragPath = fragment.path;
@@ -295,8 +299,13 @@ public sealed class GeometryToSpeckleConverter(
 
     try
     {
-      foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
+      foreach (object fragmentObj in fragments)
       {
+        if (fragmentObj is not InwOaFragment3 fragment)
+        {
+          continue;
+        }
+
         fragmentCount++;
         GC.KeepAlive(fragment);
 
@@ -443,7 +452,7 @@ public sealed class GeometryToSpeckleConverter(
     var stopwatch = Stopwatch.StartNew();
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
-    var vertexIndexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+    var vertexIndexByKey = new Dictionary<VertexKey, int>();
 
     for (var t = 0; t < triangles.Count; t++)
     {
@@ -472,12 +481,16 @@ public sealed class GeometryToSpeckleConverter(
     };
   }
 
-  private int GetOrAddVertexIndex(SafeVertex vertex, List<double> vertices, Dictionary<string, int> vertexIndexByKey)
+  private int GetOrAddVertexIndex(
+    SafeVertex vertex,
+    List<double> vertices,
+    Dictionary<VertexKey, int> vertexIndexByKey
+  )
   {
     double x = (vertex.X + _transformVector.X) * SCALE;
     double y = (vertex.Y + _transformVector.Y) * SCALE;
     double z = (vertex.Z + _transformVector.Z) * SCALE;
-    string vertexKey = GetVertexKey(x, y, z);
+    var vertexKey = new VertexKey(x, y, z);
 
     if (vertexIndexByKey.TryGetValue(vertexKey, out int existingIndex))
     {
@@ -492,12 +505,7 @@ public sealed class GeometryToSpeckleConverter(
     return newIndex;
   }
 
-  private static string GetVertexKey(double x, double y, double z) =>
-    x.ToString("R", CultureInfo.InvariantCulture)
-    + "|"
-    + y.ToString("R", CultureInfo.InvariantCulture)
-    + "|"
-    + z.ToString("R", CultureInfo.InvariantCulture);
+  private readonly record struct VertexKey(double X, double Y, double Z);
 
   private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
