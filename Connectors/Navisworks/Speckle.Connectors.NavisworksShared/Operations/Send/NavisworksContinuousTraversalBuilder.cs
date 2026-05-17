@@ -82,6 +82,7 @@ public class NavisworksContinuousTraversalBuilder(
     int processedCount = 0;
     int total = finalElements.Count;
     var processedElements = new List<Base>(finalElements.Count);
+    var serializationStopwatch = Stopwatch.StartNew();
     foreach (var element in finalElements)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -94,6 +95,7 @@ public class NavisworksContinuousTraversalBuilder(
         new CardProgress($"Serializing objects {processedCount:N0}/{total:N0}", (double)processedCount / total)
       );
     }
+    serializationStopwatch.Stop();
 
     rootCollection.elements = processedElements;
     logger.LogInformation(
@@ -102,10 +104,20 @@ public class NavisworksContinuousTraversalBuilder(
     );
 
     // Process the root collection and wait for all uploads to complete
+    var uploadStopwatch = Stopwatch.StartNew();
     await sendPipeline.Process(rootCollection);
     await sendPipeline.WaitForUpload();
+    uploadStopwatch.Stop();
     LogPropertyExtractionMetrics();
     LogGeometryConversionMetrics();
+    LogMeshOptimizationMetrics();
+    LogPhaseTimingMetrics(
+      conversionStartMs,
+      conversionEndMs,
+      serializationStopwatch.Elapsed.TotalMilliseconds,
+      uploadStopwatch.Elapsed.TotalMilliseconds,
+      processedCount
+    );
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
