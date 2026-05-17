@@ -26,6 +26,11 @@ public class DisplayValueExtractor(
       return [];
     }
 
+    if (geometryConversionContext.TryGetDisplayValue(modelItem, out var batchedDisplayValue))
+    {
+      return batchedDisplayValue;
+    }
+
     if (settingsStore.Current.User.GeometryDetailLevel != GeometryDetailLevel.SpatialLite)
     {
       return GeometryConverter.Convert(modelItem);
