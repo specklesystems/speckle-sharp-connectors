@@ -221,7 +221,17 @@ public class NavisworksRootObjectBuilder(
 
   private static void ValidateConversionResults(List<SendConversionResult> results)
   {
-    if (results.All(x => x.Status == Status.ERROR))
+    var allErrored = true;
+    for (var i = 0; i < results.Count; i++)
+    {
+      if (results[i].Status != Status.ERROR)
+      {
+        allErrored = false;
+        break;
+      }
+    }
+
+    if (allErrored)
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
