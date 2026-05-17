@@ -1,4 +1,4 @@
-﻿using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle.Raw;
 using Speckle.Converters.Common;
