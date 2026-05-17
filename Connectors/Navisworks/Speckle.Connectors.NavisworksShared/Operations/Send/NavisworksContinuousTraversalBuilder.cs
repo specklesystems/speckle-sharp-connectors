@@ -363,8 +363,13 @@ public class NavisworksContinuousTraversalBuilder(
     HashSet<string> processedPaths
   )
   {
-    foreach (var kvp in convertedBases.Where(kvp => !processedPaths.Contains(kvp.Key)))
+    foreach (var kvp in convertedBases)
     {
+      if (processedPaths.Contains(kvp.Key))
+      {
+        continue;
+      }
+
       switch (kvp.Value)
       {
         case null:
