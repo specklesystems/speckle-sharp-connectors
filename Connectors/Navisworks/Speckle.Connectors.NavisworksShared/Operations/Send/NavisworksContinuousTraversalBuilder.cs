@@ -406,19 +406,34 @@ public class NavisworksContinuousTraversalBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
-    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
+    var estimatedCapacity = 0;
+    for (var i = 0; i < siblingBases.Count; i++)
+    {
+      if (siblingBases[i]["displayValue"] is List<Base> siblingDisplayValues)
+      {
+        estimatedCapacity += siblingDisplayValues.Count;
+      }
+    }
+
     var displayValues = new List<Base>(estimatedCapacity);
-    displayValues.AddRange(
-      siblingBases
-        .Where(sibling => sibling["displayValue"] is List<Base>)
-        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
-    );
+    for (var i = 0; i < siblingBases.Count; i++)
+    {
+      if (siblingBases[i]["displayValue"] is not List<Base> siblingDisplayValues)
+      {
+        continue;
+      }
+
+      for (var j = 0; j < siblingDisplayValues.Count; j++)
+      {
+        displayValues.Add(siblingDisplayValues[j]);
+      }
+    }
 
     return new NavisworksObject
     {
       name = name,
       displayValue = displayValues,
-      properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
+      properties = siblingBases[0]["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
       ["path"] = path,

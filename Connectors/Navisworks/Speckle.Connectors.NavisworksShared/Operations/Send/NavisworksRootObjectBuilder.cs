@@ -354,15 +354,35 @@ public class NavisworksRootObjectBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
-    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
-    var displayValues = new List<Base>(estimatedCapacity);
-    displayValues.AddRange(
-      siblingBases
-        .Where(sibling => sibling["displayValue"] is List<Base>)
-        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
-    );
+    var estimatedCapacity = 0;
+    for (var i = 0; i < siblingBases.Count; i++)
+    {
+      if (siblingBases[i]["displayValue"] is List<Base> siblingDisplayValues)
+      {
+        estimatedCapacity += siblingDisplayValues.Count;
+      }
+    }
 
-    var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+    var displayValues = new List<Base>(estimatedCapacity);
+    var instanceProxyCount = 0;
+    for (var i = 0; i < siblingBases.Count; i++)
+    {
+      if (siblingBases[i]["displayValue"] is not List<Base> siblingDisplayValues)
+      {
+        continue;
+      }
+
+      for (var j = 0; j < siblingDisplayValues.Count; j++)
+      {
+        var displayValue = siblingDisplayValues[j];
+        displayValues.Add(displayValue);
+        if (displayValue is InstanceProxy)
+        {
+          instanceProxyCount++;
+        }
+      }
+    }
+
     if (instanceProxyCount > 0)
     {
       logger.LogDebug(
@@ -377,7 +397,7 @@ public class NavisworksRootObjectBuilder(
     {
       name = name,
       displayValue = displayValues,
-      properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
+      properties = siblingBases[0]["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
       ["path"] = path,
