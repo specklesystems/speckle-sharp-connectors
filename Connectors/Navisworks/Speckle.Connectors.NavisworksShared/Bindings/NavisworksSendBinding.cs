@@ -74,6 +74,7 @@ public class NavisworksSendBinding : ISendBinding
       new VisualRepresentationSetting(RepresentationMode.Active),
       new OriginModeSetting(OriginMode.ModelOrigin),
       new IncludeInternalPropertiesSetting(false),
+      new ExcludePropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
       new RevitCategoryMappingSetting(false),
