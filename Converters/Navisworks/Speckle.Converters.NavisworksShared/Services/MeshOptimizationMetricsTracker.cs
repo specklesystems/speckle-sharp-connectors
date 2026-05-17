@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace Speckle.Converter.Navisworks.Services;
 
 public static class MeshOptimizationMetricsTracker
