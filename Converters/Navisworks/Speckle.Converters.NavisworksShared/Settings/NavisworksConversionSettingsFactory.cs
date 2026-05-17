@@ -25,6 +25,8 @@ public class NavisworksConversionSettingsFactory(
   public NavisworksConversionSettings Create(
     OriginMode originMode,
     RepresentationMode visualRepresentationMode,
+    PropertyDetailLevel propertyDetailLevel,
+    GeometryDetailLevel geometryDetailLevel,
     bool convertHiddenElements,
     bool includeInternalProperties,
     bool excludeProperties,
@@ -68,6 +70,8 @@ public class NavisworksConversionSettingsFactory(
         IncludeInternalProperties: includeInternalProperties,
         ConvertHiddenElements: _convertHiddenElements,
         VisualRepresentationMode: visualRepresentationMode,
+        PropertyDetailLevel: propertyDetailLevel,
+        GeometryDetailLevel: geometryDetailLevel,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
         ExcludeProperties: excludeProperties,
         PreserveModelHierarchy: preserveModelHierarchy,

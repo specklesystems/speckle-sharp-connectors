@@ -17,6 +17,8 @@ public record User(
   bool IncludeInternalProperties,
   bool ConvertHiddenElements,
   RepresentationMode VisualRepresentationMode,
+  PropertyDetailLevel PropertyDetailLevel,
+  GeometryDetailLevel GeometryDetailLevel,
   bool CoalescePropertiesFromFirstObjectAncestor,
   bool ExcludeProperties,
   bool PreserveModelHierarchy,
