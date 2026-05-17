@@ -61,6 +61,10 @@ public class NavisworksContinuousTraversalBuilder(
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();
+    int gcGen0Start = GC.CollectionCount(0);
+    int gcGen1Start = GC.CollectionCount(1);
+    int gcGen2Start = GC.CollectionCount(2);
+    long managedHeapBytesStart = GC.GetTotalMemory(false);
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
