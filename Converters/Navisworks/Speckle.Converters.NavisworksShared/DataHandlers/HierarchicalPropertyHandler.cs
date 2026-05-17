@@ -10,10 +10,11 @@ namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor,
+  InternalPropertiesExtractor internalPropertiesExtractor,
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
   IRevitBuiltInCategoryExtractor revitCategoryExtractor
-) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
+) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor, internalPropertiesExtractor, settingsStore)
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
   private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
