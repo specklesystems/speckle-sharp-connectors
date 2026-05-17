@@ -196,7 +196,12 @@ public class NavisworksRootObjectBuilder(
       meshSnapshot.MeshObjectCount,
       meshSnapshot.VertexCountBeforeWeld,
       meshSnapshot.VertexCountAfterWeld,
-      meshSnapshot.VertexReductionPercent
+      meshSnapshot.VertexReductionPercent,
+      managedHeapBytesStart,
+      managedHeapBytesEnd,
+      gcGen0Delta,
+      gcGen1Delta,
+      gcGen2Delta
     );
   }
 

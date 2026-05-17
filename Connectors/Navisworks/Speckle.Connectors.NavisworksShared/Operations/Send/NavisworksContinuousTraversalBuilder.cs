@@ -228,7 +228,12 @@ public class NavisworksContinuousTraversalBuilder(
       serializedObjectCount,
       -1L,
       -1L,
-      peakWorkingSetBytes
+      peakWorkingSetBytes,
+      managedHeapBytesStart,
+      managedHeapBytesEnd,
+      gcGen0Delta,
+      gcGen1Delta,
+      gcGen2Delta
     );
   }
 
