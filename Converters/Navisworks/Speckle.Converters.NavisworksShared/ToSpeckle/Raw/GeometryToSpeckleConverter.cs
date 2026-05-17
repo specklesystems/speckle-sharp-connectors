@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
@@ -6,6 +7,7 @@ using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Paths;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Geometry;
@@ -51,6 +53,9 @@ public sealed class GeometryToSpeckleConverter(
       return [];
     }
 
+    var stopwatch = Stopwatch.StartNew();
+    int pathCount = 0;
+    int fragmentCount = 0;
     NAV.ModelItemCollection collection = new() { modelItem };
     var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
     try
@@ -66,80 +71,8 @@ public sealed class GeometryToSpeckleConverter(
 
         foreach (InwOaPath path in paths)
         {
-          if (path.ArrayData is not Array pathArr)
-          {
-            continue;
-          }
-
-          var itemPathKey = PathKey.FromComArray(pathArr);
-
-          if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
-          {
-            var members = DiscoverInstancePathsFromFragments(path);
-            members.Add(itemPathKey);
-            groupKey = itemPathKey;
-            _registry.RegisterGroup(groupKey, members);
-            _groupMemberCounts[groupKey] = members.Count;
-          }
-
-          var processor = new PrimitiveProcessor(_isUpright);
-          ProcessPathFragments(path, itemPathKey, groupKey, processor);
-
-          if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-            continue;
-          }
-
-          if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-            continue;
-          }
-
-          if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
-          {
-            var geometries = ProcessGeometries([processor]);
-
-            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
-            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
-            var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
-            var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
-            var groupKeyPath = groupKey.ToPathString();
-            for (int i = 0; i < definitionGeometry.Count; i++)
-            {
-              definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyPath}_{i}";
-            }
-
-            _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
-          }
-
-          if (ENABLE_INSTANCING)
-          {
-            // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
-            var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
-            var instanceProxy = new InstanceProxy
-            {
-              definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToPathString()}",
-              transform = ConvertToMatrix4X4(transformedWorld),
-              units = _settings.Derived.SpeckleUnits,
-              applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToPathString()}",
-              maxDepth = 0,
-            };
-
-            _registry.MarkConverted(itemPathKey);
-            allResults.Add(instanceProxy);
-          }
-          else
-          {
-            var geometries = ProcessGeometries([processor]);
-            _registry.MarkConverted(itemPathKey);
-            allResults.AddRange(geometries);
-          }
+          pathCount++;
+          allResults.AddRange(ProcessPath(path, ref fragmentCount));
         }
 
         return allResults;
@@ -155,8 +88,164 @@ public sealed class GeometryToSpeckleConverter(
       {
         Marshal.ReleaseComObject(comSelection);
       }
+
+      collection.Dispose();
+      stopwatch.Stop();
+      GeometryConversionMetricsTracker.Record(
+        convertedObjectCount: 1,
+        pathCount: pathCount,
+        fragmentCount: fragmentCount,
+        elapsedMs: stopwatch.Elapsed.TotalMilliseconds
+      );
     }
-    collection.Dispose();
+  }
+
+  internal List<List<Base>> ConvertBatch(IReadOnlyList<NAV.ModelItem> modelItems)
+  {
+    if (modelItems == null)
+    {
+      throw new ArgumentNullException(nameof(modelItems));
+    }
+
+    var collection = new NAV.ModelItemCollection();
+    foreach (var modelItem in modelItems)
+    {
+      if (modelItem != null && modelItem.HasGeometry)
+      {
+        collection.Add(modelItem);
+      }
+    }
+
+    if (collection.Count == 0)
+    {
+      return [];
+    }
+
+    var stopwatch = Stopwatch.StartNew();
+    int pathCount = 0;
+    int fragmentCount = 0;
+    int convertedObjectCount = collection.Count;
+    var results = new List<List<Base>>(collection.Count);
+    var comSelection = ComApiBridge.ToInwOpSelection(modelItemCollection: collection);
+
+    try
+    {
+      var paths = comSelection.Paths();
+      if (paths == null)
+      {
+        return [];
+      }
+
+      try
+      {
+        foreach (InwOaPath path in paths)
+        {
+          pathCount++;
+          results.Add(ProcessPath(path, ref fragmentCount));
+        }
+      }
+      finally
+      {
+        Marshal.ReleaseComObject(paths);
+      }
+    }
+    finally
+    {
+      if (comSelection != null)
+      {
+        Marshal.ReleaseComObject(comSelection);
+      }
+
+      collection.Dispose();
+      stopwatch.Stop();
+      GeometryConversionMetricsTracker.Record(
+        convertedObjectCount: convertedObjectCount,
+        pathCount: pathCount,
+        fragmentCount: fragmentCount,
+        elapsedMs: stopwatch.Elapsed.TotalMilliseconds
+      );
+    }
+
+    return results;
+  }
+
+  private List<Base> ProcessPath(InwOaPath path, ref int fragmentCount)
+  {
+    if (path.ArrayData is not Array pathArr)
+    {
+      return [];
+    }
+
+    var allResults = new List<Base>(5);
+    var itemPathKey = PathKey.FromComArray(pathArr);
+
+    if (!_registry.TryGetGroup(itemPathKey, out var groupKey))
+    {
+      var members = DiscoverInstancePathsFromFragments(path);
+      members.Add(itemPathKey);
+      groupKey = itemPathKey;
+      _registry.RegisterGroup(groupKey, members);
+      _groupMemberCounts[groupKey] = members.Count;
+    }
+
+    var processor = new PrimitiveProcessor(_isUpright);
+    ProcessPathFragments(path, itemPathKey, groupKey, processor, ref fragmentCount);
+
+    if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
+    {
+      var geometries = ProcessGeometries([processor]);
+      _registry.MarkConverted(itemPathKey);
+      allResults.AddRange(geometries);
+      return allResults;
+    }
+
+    if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
+    {
+      var geometries = ProcessGeometries([processor]);
+      _registry.MarkConverted(itemPathKey);
+      allResults.AddRange(geometries);
+      return allResults;
+    }
+
+    if (ENABLE_INSTANCING && !_registry.HasDefinitionGeometry(groupKey))
+    {
+      var geometries = ProcessGeometries([processor]);
+
+      // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+      var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+      var invDefWorld = GeometryHelpers.InvertRigid(transformedWorld);
+      var definitionGeometry = UnbakeGeometry(geometries, invDefWorld);
+      var groupKeyPath = groupKey.ToPathString();
+      for (int i = 0; i < definitionGeometry.Count; i++)
+      {
+        definitionGeometry[i].applicationId = $"{GEOMETRY_ID_PREFIX}{groupKeyPath}_{i}";
+      }
+
+      _registry.StoreDefinitionGeometry(groupKey, definitionGeometry);
+    }
+
+    if (ENABLE_INSTANCING)
+    {
+      // Transform matrix to Z-up space if model is Y-up, matching vertex transformation
+      var transformedWorld = _isUpright ? instanceWorld : TransformMatrixYUpToZUp(instanceWorld);
+      var instanceProxy = new InstanceProxy
+      {
+        definitionId = $"{InstanceConstants.DEFINITION_ID_PREFIX}{groupKey.ToPathString()}",
+        transform = ConvertToMatrix4X4(transformedWorld),
+        units = _settings.Derived.SpeckleUnits,
+        applicationId = $"{InstanceConstants.INSTANCE_ID_PREFIX}{itemPathKey.ToPathString()}",
+        maxDepth = 0,
+      };
+
+      _registry.MarkConverted(itemPathKey);
+      allResults.Add(instanceProxy);
+      return allResults;
+    }
+
+    var geometriesWithoutInstancing = ProcessGeometries([processor]);
+    _registry.MarkConverted(itemPathKey);
+    allResults.AddRange(geometriesWithoutInstancing);
+    return allResults;
   }
 
   private static HashSet<PathKey> DiscoverInstancePathsFromFragments(InwOaPath path)
@@ -193,7 +282,13 @@ public sealed class GeometryToSpeckleConverter(
     return set;
   }
 
-  private void ProcessPathFragments(InwOaPath path, PathKey itemPathKey, PathKey groupKey, PrimitiveProcessor processor)
+  private void ProcessPathFragments(
+    InwOaPath path,
+    PathKey itemPathKey,
+    PathKey groupKey,
+    PrimitiveProcessor processor,
+    ref int fragmentCount
+  )
   {
     var observed = false;
     var fragments = path.Fragments();
@@ -202,6 +297,7 @@ public sealed class GeometryToSpeckleConverter(
     {
       foreach (InwOaFragment3 fragment in fragments.OfType<InwOaFragment3>())
       {
+        fragmentCount++;
         GC.KeepAlive(fragment);
 
         InwOaPath? fragPath = null;
