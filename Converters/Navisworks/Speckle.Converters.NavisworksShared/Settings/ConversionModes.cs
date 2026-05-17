@@ -49,3 +49,19 @@ public enum OriginMode
   /// </summary>
   BoundingBoxCenter,
 }
+
+[SuppressMessage("ReSharper", "InconsistentNaming")]
+public enum PropertyDetailLevel
+{
+  Essential,
+  Standard,
+  Full,
+}
+
+[SuppressMessage("ReSharper", "InconsistentNaming")]
+public enum GeometryDetailLevel
+{
+  Full,
+  Optimized,
+  SpatialLite,
+}
