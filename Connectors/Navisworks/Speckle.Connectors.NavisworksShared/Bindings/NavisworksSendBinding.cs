@@ -73,6 +73,8 @@ public class NavisworksSendBinding : ISendBinding
     [
       new VisualRepresentationSetting(RepresentationMode.Active),
       new OriginModeSetting(OriginMode.ModelOrigin),
+      new PropertyDetailLevelSetting(PropertyDetailLevel.Essential),
+      new GeometryDetailLevelSetting(GeometryDetailLevel.Full),
       new IncludeInternalPropertiesSetting(false),
       new ExcludePropertiesSetting(false),
       new ConvertHiddenElementsSetting(false),
@@ -116,6 +118,8 @@ public class NavisworksSendBinding : ISendBinding
         _conversionSettingsFactory.Create(
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
+          propertyDetailLevel: _toSpeckleSettingsManagerNavisworks.GetPropertyDetailLevel(modelCard),
+          geometryDetailLevel: _toSpeckleSettingsManagerNavisworks.GetGeometryDetailLevel(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
           includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
           excludeProperties: _toSpeckleSettingsManagerNavisworks.GetExcludeProperties(modelCard),

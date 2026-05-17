@@ -13,6 +13,8 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   // cache invalidation process run with ModelCardId since the settings are model-specific
   private readonly Dictionary<string, RepresentationMode> _visualRepresentationCache = [];
   private readonly Dictionary<string, OriginMode> _originModeCache = [];
+  private readonly Dictionary<string, PropertyDetailLevel> _propertyDetailLevelCache = [];
+  private readonly Dictionary<string, GeometryDetailLevel> _geometryDetailLevelCache = [];
   private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
   private readonly Dictionary<string, bool> _excludePropertiesCache = [];
@@ -85,6 +87,46 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
         return OriginMode.ModelOrigin;
       },
       OriginMode.ModelOrigin
+    );
+
+  public PropertyDetailLevel GetPropertyDetailLevel(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "propertyDetailLevel",
+      _propertyDetailLevelCache,
+      value =>
+      {
+        var propertyDetailString = value as string;
+        if (
+          propertyDetailString is not null
+          && PropertyDetailLevelSetting.PropertyDetailLevelMap.TryGetValue(propertyDetailString, out var detailLevel)
+        )
+        {
+          return detailLevel;
+        }
+        return PropertyDetailLevel.Essential;
+      },
+      PropertyDetailLevel.Essential
+    );
+
+  public GeometryDetailLevel GetGeometryDetailLevel(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "geometryDetailLevel",
+      _geometryDetailLevelCache,
+      value =>
+      {
+        var geometryDetailString = value as string;
+        if (
+          geometryDetailString is not null
+          && GeometryDetailLevelSetting.GeometryDetailLevelMap.TryGetValue(geometryDetailString, out var detailLevel)
+        )
+        {
+          return detailLevel;
+        }
+        return GeometryDetailLevel.Full;
+      },
+      GeometryDetailLevel.Full
     );
 
   public bool GetMappingToRevitCategories(SenderModelCard modelCard) =>
