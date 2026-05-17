@@ -5,6 +5,7 @@ using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converter.Navisworks.ToSpeckle;
+using Speckle.Converter.Navisworks.ToSpeckle.Raw;
 using Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Registration;
@@ -41,6 +42,7 @@ public static class NavisworksConverterServiceRegistration
     // Register converters and handlers
     serviceCollection.AddApplicationConverters<NavisworksToSpeckleUnitConverter, NAV.Units>(converterAssembly);
     serviceCollection.AddScoped<ModelPropertiesExtractor>();
+    serviceCollection.AddScoped<BoundingBoxToSpeckleRawConverter>();
     serviceCollection.AddScoped<PrimitiveProcessor>();
     serviceCollection.AddScoped<PropertySetsExtractor>();
 
