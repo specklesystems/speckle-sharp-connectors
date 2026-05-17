@@ -26,6 +26,7 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<StandardPropertyHandler>();
     serviceCollection.AddScoped<HierarchicalPropertyHandler>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
+    serviceCollection.AddScoped<InternalPropertiesExtractor>();
 
     // Register settings management
     serviceCollection.AddScoped<INavisworksConversionSettingsFactory, NavisworksConversionSettingsFactory>();

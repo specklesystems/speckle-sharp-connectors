@@ -81,5 +81,23 @@ public abstract class BasePropertyHandler(
   private static Dictionary<string, object?> CreatePropertyDictionary(Dictionary<string, object?> properties) =>
     properties.Where(prop => IsValidPropertyValue(prop.Value)).ToDictionary(prop => prop.Key, prop => prop.Value);
 
+  private void AddInternalProperties(NAV.ModelItem modelItem, Dictionary<string, object?> categorizedProperties)
+  {
+    if (!settingsStore.Current.User.IncludeInternalProperties)
+    {
+      categorizedProperties.Remove("Internal");
+      return;
+    }
+
+    var internalProperties = internalPropertiesExtractor.GetInternalProperties(modelItem);
+    if (internalProperties == null || internalProperties.Count == 0)
+    {
+      categorizedProperties.Remove("Internal");
+      return;
+    }
+
+    categorizedProperties["Internal"] = internalProperties;
+  }
+
   protected static bool IsValidPropertyValue(object? value) => value != null && !string.IsNullOrEmpty(value.ToString());
 }

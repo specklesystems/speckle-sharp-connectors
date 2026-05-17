@@ -14,6 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Constants\PathConstants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\InternalPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\RevitBuiltInCategoryExtractor.cs" />
