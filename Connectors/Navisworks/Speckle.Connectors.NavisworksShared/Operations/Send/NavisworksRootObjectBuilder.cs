@@ -348,7 +348,7 @@ public class NavisworksRootObjectBuilder(
       rootCollection[RENDER_MATERIAL] = renderMaterials;
     }
 
-    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes);
+    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes, twoDElementPaths);
     if (colors.Count > 0)
     {
       rootCollection[COLOR] = colors;
