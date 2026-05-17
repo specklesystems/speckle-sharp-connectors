@@ -1,11 +1,16 @@
-﻿namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
+﻿using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converters.Common;
+
+namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 
 /// <summary>
 /// Base property handler providing common functionality for property assignment.
 /// </summary>
 public abstract class BasePropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
-  ModelPropertiesExtractor modelPropertiesExtractor
+  ModelPropertiesExtractor modelPropertiesExtractor,
+  InternalPropertiesExtractor internalPropertiesExtractor,
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore
 ) : IPropertyHandler
 {
   public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
@@ -18,7 +23,7 @@ public abstract class BasePropertyHandler(
 
     if (propertySets != null)
     {
-      foreach (var category in propertySets.Where(c => c.Key is not "Internal" and not "Transform"))
+      foreach (var category in propertySets.Where(c => c.Key != "Transform"))
       {
         if (category.Value is not Dictionary<string, object?> properties)
         {
@@ -55,6 +60,7 @@ public abstract class BasePropertyHandler(
     }
 
     AddModelProperties(modelItem, categorizedProperties);
+    AddInternalProperties(modelItem, categorizedProperties);
     return categorizedProperties;
   }
 
