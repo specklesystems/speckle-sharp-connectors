@@ -300,6 +300,11 @@ public sealed class GeometryToSpeckleConverter(
 
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
+    if (_settings.User.GeometryDetailLevel == GeometryDetailLevel.Optimized)
+    {
+      return CreateWeldedMesh(triangles);
+    }
+
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
 
