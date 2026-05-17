@@ -354,8 +354,10 @@ public class NavisworksContinuousTraversalBuilder(
   {
     var twoDElementPaths = new HashSet<string>();
 
-    foreach (var (path, convertedBase) in convertedBases)
+    foreach (var kvp in convertedBases)
     {
+      var path = kvp.Key;
+      var convertedBase = kvp.Value;
       if (convertedBase?["displayValue"] is not List<Base> displayValues || displayValues.Count == 0)
       {
         continue;
