@@ -7,6 +7,7 @@ using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using Speckle.Objects.Geometry;
 using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
@@ -62,8 +63,9 @@ public class NavisworksRootObjectBuilder(
 
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
+    var twoDElementPaths = Build2DElementPathSet(convertedElements);
 
-    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
+    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes, twoDElementPaths);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
@@ -334,7 +336,8 @@ public class NavisworksRootObjectBuilder(
   private Task AddProxiesToCollection(
     Collection rootCollection,
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes,
+    ISet<string> twoDElementPaths
   )
   {
     using var _ = activityFactory.Start("UnpackProxies");
@@ -352,6 +355,30 @@ public class NavisworksRootObjectBuilder(
     }
 
     return Task.CompletedTask;
+  }
+
+  private static HashSet<string> Build2DElementPathSet(Dictionary<string, Base?> convertedBases)
+  {
+    var twoDElementPaths = new HashSet<string>();
+
+    foreach (var (path, convertedBase) in convertedBases)
+    {
+      if (convertedBase?["displayValue"] is not List<Base> displayValues || displayValues.Count == 0)
+      {
+        continue;
+      }
+
+      bool hasMesh = displayValues.Any(x => x is Mesh);
+      bool hasLine = displayValues.Any(x => x is Line);
+      bool hasInstanceProxy = displayValues.Any(x => x is InstanceProxy);
+
+      if (!hasMesh && hasLine && !hasInstanceProxy)
+      {
+        twoDElementPaths.Add(path);
+      }
+    }
+
+    return twoDElementPaths;
   }
 
   private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
