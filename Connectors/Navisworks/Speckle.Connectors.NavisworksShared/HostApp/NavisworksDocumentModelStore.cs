@@ -49,7 +49,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
 
     try
     {
-      SaveStateToDatabase(modelCardState);
+      _threadContext.RunOnMain(() => SaveStateToDatabase(modelCardState)).GetAwaiter().GetResult();
       _lastSavedState = modelCardState; // Update last saved state after successful save
     }
     catch (NAV.Data.DatabaseException ex)
@@ -75,7 +75,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
 
     try
     {
-      string serializedState = RetrieveStateFromDatabase();
+      var serializedState = _threadContext.RunOnMain(RetrieveStateFromDatabase).GetAwaiter().GetResult();
       LoadFromString(serializedState);
       _lastSavedState = serializedState; // Store initial state after loading
     }
