@@ -47,16 +47,25 @@ public class PropertySetsExtractor(
     var stopwatch = Stopwatch.StartNew();
     var propertySetDictionary = new Dictionary<string, object?>();
     var modelUnits = GetModelUnits(modelItem);
+    var propertyDetailLevel = settingsStore.Current.User.PropertyDetailLevel;
     var userFilteredPropertyCategories = modelItem.GetUserFilteredPropertyCategories();
+    var categories = propertyDetailLevel == PropertyDetailLevel.Full
+      ? modelItem.PropertyCategories
+      : userFilteredPropertyCategories;
     int totalCategoryCount = modelItem.PropertyCategories.Count();
     int userFilteredCategoryCount = userFilteredPropertyCategories.Count();
     int extractedPropertyCount = 0;
 
     propertyConverter.Reset();
 
-    foreach (var propertyCategory in userFilteredPropertyCategories)
+    foreach (var propertyCategory in categories)
     {
       if (ShouldSkipCategory(propertyCategory))
+      {
+        continue;
+      }
+
+      if (propertyDetailLevel == PropertyDetailLevel.Essential && propertyCategory.DisplayName == "Material")
       {
         continue;
       }

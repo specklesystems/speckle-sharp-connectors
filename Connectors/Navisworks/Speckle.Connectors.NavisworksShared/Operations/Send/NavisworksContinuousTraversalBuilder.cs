@@ -376,6 +376,7 @@ public class NavisworksContinuousTraversalBuilder(
     return twoDElementPaths;
   }
 
+
   private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
   {
     using var _ = activityFactory.Start("BuildInstanceDefinitions");
