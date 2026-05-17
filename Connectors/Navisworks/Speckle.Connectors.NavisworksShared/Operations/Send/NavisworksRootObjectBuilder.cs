@@ -39,6 +39,8 @@ public class NavisworksRootObjectBuilder(
 #pragma warning restore CA1823
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
+  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache =
+    new(StringComparer.Ordinal);
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -54,6 +56,7 @@ public class NavisworksRootObjectBuilder(
     PropertyExtractionMetricsTracker.Reset();
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
+    _elementNameAndPathCache.Clear();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
@@ -319,8 +322,14 @@ public class NavisworksRootObjectBuilder(
 
   private (string name, string path) GetElementNameAndPath(string applicationId)
   {
+    if (_elementNameAndPathCache.TryGetValue(applicationId, out var cached))
+    {
+      return (cached.Name, cached.Path);
+    }
+
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
+    _elementNameAndPathCache[applicationId] = (context.Name, context.Path);
     return (context.Name, context.Path);
   }
 
