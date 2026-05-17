@@ -27,6 +27,7 @@ public class NavisworksConversionSettingsFactory(
     RepresentationMode visualRepresentationMode,
     bool convertHiddenElements,
     bool includeInternalProperties,
+    bool excludeProperties,
     bool preserveModelHierarchy,
     bool mappingToRevitCategories
   )
@@ -68,7 +69,7 @@ public class NavisworksConversionSettingsFactory(
         ConvertHiddenElements: _convertHiddenElements,
         VisualRepresentationMode: visualRepresentationMode,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
-        ExcludeProperties: false, // Not yet exposed in the UI
+        ExcludeProperties: excludeProperties,
         PreserveModelHierarchy: preserveModelHierarchy,
         RevitCategoryMapping: mappingToRevitCategories
       )
