@@ -123,7 +123,11 @@ public class NavisworksContinuousTraversalBuilder(
       conversionEndMs,
       serializationStopwatch.Elapsed.TotalMilliseconds,
       uploadStopwatch.Elapsed.TotalMilliseconds,
-      processedCount
+      processedCount,
+      gcGen0Start,
+      gcGen1Start,
+      gcGen2Start,
+      managedHeapBytesStart
     );
     LogBenchmarkSummary(
       conversionStartMs,

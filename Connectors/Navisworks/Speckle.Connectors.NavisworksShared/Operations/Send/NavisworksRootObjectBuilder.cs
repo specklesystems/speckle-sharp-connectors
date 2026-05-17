@@ -91,7 +91,16 @@ public class NavisworksRootObjectBuilder(
     LogPropertyExtractionMetrics();
     LogGeometryConversionMetrics();
     LogMeshOptimizationMetrics();
-    LogBenchmarkSummary(conversionStartMs, conversionEndMs, reassemblyStopwatch.Elapsed.TotalMilliseconds, finalElements.Count);
+    LogBenchmarkSummary(
+      conversionStartMs,
+      conversionEndMs,
+      reassemblyStopwatch.Elapsed.TotalMilliseconds,
+      finalElements.Count,
+      gcGen0Start,
+      gcGen1Start,
+      gcGen2Start,
+      managedHeapBytesStart
+    );
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
