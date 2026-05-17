@@ -14,6 +14,8 @@ public class StandardPropertyHandler(
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore
 ) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor, internalPropertiesExtractor, settingsStore)
 {
+  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
+
   private static readonly HashSet<string> s_essentialClassProperties = new(StringComparer.Ordinal)
   {
     "InstanceGuid",
@@ -30,7 +32,7 @@ public class StandardPropertyHandler(
       return properties;
     }
 
-    var propertyDetailLevel = settingsStore.Current.User.PropertyDetailLevel;
+    var propertyDetailLevel = _settingsStore.Current.User.PropertyDetailLevel;
     if (propertyDetailLevel == PropertyDetailLevel.Essential)
     {
       foreach (var kvp in classProperties)
