@@ -36,6 +36,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Paths\PathKey.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registers\InstanceFragmentRegistry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ElementSelectionService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryConversionMetricsTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyExtractionMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
