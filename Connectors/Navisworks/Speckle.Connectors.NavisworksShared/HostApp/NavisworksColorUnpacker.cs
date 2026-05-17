@@ -31,7 +31,8 @@ public class NavisworksColorUnpacker(
 
   internal List<ColorProxy> UnpackColor(
     IReadOnlyList<NAV.ModelItem> navisworksObjects,
-    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes,
+    ISet<string> twoDElementPaths
   )
   {
     if (navisworksObjects == null)
@@ -42,6 +43,10 @@ public class NavisworksColorUnpacker(
     if (groupedNodes == null)
     {
       throw new ArgumentNullException(nameof(groupedNodes));
+    }
+    if (twoDElementPaths == null)
+    {
+      throw new ArgumentNullException(nameof(twoDElementPaths));
     }
 
     Dictionary<string, ColorProxy> colorProxies = [];
@@ -61,12 +66,16 @@ public class NavisworksColorUnpacker(
     {
       try
       {
-        if (!Is2DElement(navisworksObject))
+        if (!navisworksObject.HasGeometry)
         {
           continue;
         }
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
+        if (!twoDElementPaths.Contains(navisworksObjectId))
+        {
+          continue;
+        }
 
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
