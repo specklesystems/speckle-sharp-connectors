@@ -159,15 +159,28 @@ public class NavisworksRootObjectBuilder(
     );
   }
 
-  private void LogBenchmarkSummary(long conversionStartMs, long conversionEndMs, double reassemblyMs, int finalElementCount)
+  private void LogBenchmarkSummary(
+    long conversionStartMs,
+    long conversionEndMs,
+    double reassemblyMs,
+    int finalElementCount,
+    int gcGen0Start,
+    int gcGen1Start,
+    int gcGen2Start,
+    long managedHeapBytesStart
+  )
   {
     var user = converterSettings.Current.User;
     var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
     var meshSnapshot = MeshOptimizationMetricsTracker.Snapshot();
     var conversionMs = conversionEndMs - conversionStartMs;
+    int gcGen0Delta = GC.CollectionCount(0) - gcGen0Start;
+    int gcGen1Delta = GC.CollectionCount(1) - gcGen1Start;
+    int gcGen2Delta = GC.CollectionCount(2) - gcGen2Start;
+    long managedHeapBytesEnd = GC.GetTotalMemory(false);
 
     logger.LogInformation(
-      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, excludeProperties={ExcludeProperties}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
+      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, excludeProperties={ExcludeProperties}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
       user.GeometryDetailLevel,
       user.PropertyDetailLevel,
       user.ExcludeProperties,

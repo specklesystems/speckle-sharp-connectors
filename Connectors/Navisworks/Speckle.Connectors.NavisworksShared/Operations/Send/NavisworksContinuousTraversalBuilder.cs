@@ -199,16 +199,24 @@ public class NavisworksContinuousTraversalBuilder(
     long conversionEndMs,
     double serializationMs,
     double uploadMs,
-    int serializedObjectCount
+    int serializedObjectCount,
+    int gcGen0Start,
+    int gcGen1Start,
+    int gcGen2Start,
+    long managedHeapBytesStart
   )
   {
     var geometrySnapshot = GeometryConversionMetricsTracker.Snapshot();
     var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
     long peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64;
     double propertyExtractionMs = propertySnapshot.AvgExtractionMs * propertySnapshot.ObjectCount;
+    int gcGen0Delta = GC.CollectionCount(0) - gcGen0Start;
+    int gcGen1Delta = GC.CollectionCount(1) - gcGen1Start;
+    int gcGen2Delta = GC.CollectionCount(2) - gcGen2Start;
+    long managedHeapBytesEnd = GC.GetTotalMemory(false);
 
     logger.LogInformation(
-      "Send phase metrics: conversionStartMs={ConversionStartMs}, conversionEndMs={ConversionEndMs}, conversionMs={ConversionMs}, geometryExtractionMs={GeometryExtractionMs:F2}, propertyExtractionMs={PropertyExtractionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, cleanupMs={CleanupMs:F2}, serializedObjectCount={SerializedObjectCount}, serializedBytesUncompressed={SerializedBytesUncompressed}, serializedBytesCompressed={SerializedBytesCompressed}, peakWorkingSetBytes={PeakWorkingSetBytes}",
+      "Send phase metrics: conversionStartMs={ConversionStartMs}, conversionEndMs={ConversionEndMs}, conversionMs={ConversionMs}, geometryExtractionMs={GeometryExtractionMs:F2}, propertyExtractionMs={PropertyExtractionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, cleanupMs={CleanupMs:F2}, serializedObjectCount={SerializedObjectCount}, serializedBytesUncompressed={SerializedBytesUncompressed}, serializedBytesCompressed={SerializedBytesCompressed}, peakWorkingSetBytes={PeakWorkingSetBytes}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
       conversionStartMs,
       conversionEndMs,
       conversionEndMs - conversionStartMs,
