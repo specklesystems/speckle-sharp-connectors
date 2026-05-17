@@ -8,6 +8,7 @@ namespace Speckle.Converter.Navisworks.ToSpeckle;
 
 public class DisplayValueExtractor(
   GeometryToSpeckleConverter geometryConverter,
+  GeometryConversionContext geometryConversionContext,
   IElementSelectionService elementSelectionService,
   BoundingBoxToSpeckleRawConverter boundingBoxToSpeckleRawConverter,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore

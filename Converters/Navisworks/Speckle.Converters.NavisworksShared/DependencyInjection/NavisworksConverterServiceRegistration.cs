@@ -50,6 +50,7 @@ public static class NavisworksConverterServiceRegistration
     serviceCollection.AddScoped<ElementSelectionService>();
 
     // Register geometry conversion
+    serviceCollection.AddScoped<GeometryConversionContext>();
     serviceCollection.AddScoped<DisplayValueExtractor>();
     serviceCollection.AddScoped<GeometryToSpeckleConverter>(sp =>
     {

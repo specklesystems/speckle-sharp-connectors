@@ -35,6 +35,7 @@ public class NavisworksContinuousTraversalBuilder(
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
+  GeometryConversionContext geometryConversionContext,
   IUiUnitsCache uiUnitsCache
 ) : IRootContinuousTraversalBuilder<NAV.ModelItem>
 {
@@ -159,14 +160,22 @@ public class NavisworksContinuousTraversalBuilder(
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
 
-    foreach (var item in navisworksModelItems)
+    geometryConversionContext.PrimeBatch(navisworksModelItems);
+    try
     {
-      cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases);
-      results.Add(converted);
+      foreach (var item in navisworksModelItems)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        var converted = ConvertNavisworksItem(item, convertedBases);
+        results.Add(converted);
 
-      processedCount++;
-      onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+        processedCount++;
+        onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+      }
+    }
+    finally
+    {
+      geometryConversionContext.Clear();
     }
 
     return Task.FromResult((convertedBases, results));

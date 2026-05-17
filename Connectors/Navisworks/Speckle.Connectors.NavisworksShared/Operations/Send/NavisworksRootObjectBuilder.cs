@@ -31,6 +31,7 @@ public class NavisworksRootObjectBuilder(
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
+  GeometryConversionContext geometryConversionContext,
   IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
@@ -141,23 +142,31 @@ public class NavisworksRootObjectBuilder(
     int totalCount = navisworksModelItems.Count;
     int instanceProxyCount = 0;
 
-    foreach (var item in navisworksModelItems)
+    geometryConversionContext.PrimeBatch(navisworksModelItems);
+    try
     {
-      cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases, projectId);
-      results.Add(converted);
-
-      if (
-        converted.Status == Status.SUCCESS
-        && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
-        && convertedBase?["displayValue"] is List<Base> displayValues
-      )
+      foreach (var item in navisworksModelItems)
       {
-        instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-      }
+        cancellationToken.ThrowIfCancellationRequested();
+        var converted = ConvertNavisworksItem(item, convertedBases, projectId);
+        results.Add(converted);
 
-      processedCount++;
-      onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+        if (
+          converted.Status == Status.SUCCESS
+          && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
+          && convertedBase?["displayValue"] is List<Base> displayValues
+        )
+        {
+          instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+        }
+
+        processedCount++;
+        onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+      }
+    }
+    finally
+    {
+      geometryConversionContext.Clear();
     }
 
     logger.LogInformation(
