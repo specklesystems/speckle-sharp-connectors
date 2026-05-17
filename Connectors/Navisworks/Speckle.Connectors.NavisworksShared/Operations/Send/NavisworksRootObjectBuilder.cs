@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -62,11 +63,14 @@ public class NavisworksRootObjectBuilder(
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
+    long conversionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
+    long conversionEndMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     ValidateConversionResults(conversionResults);
 
+    var reassemblyStopwatch = Stopwatch.StartNew();
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
     var twoDElementPaths = Build2DElementPathSet(convertedElements);
@@ -74,6 +78,7 @@ public class NavisworksRootObjectBuilder(
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes, twoDElementPaths);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
+    reassemblyStopwatch.Stop();
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
     logger.LogInformation(
       "Final output contains {count} InstanceProxy objects in displayValues",
@@ -82,6 +87,7 @@ public class NavisworksRootObjectBuilder(
     LogPropertyExtractionMetrics();
     LogGeometryConversionMetrics();
     LogMeshOptimizationMetrics();
+    LogBenchmarkSummary(conversionStartMs, conversionEndMs, reassemblyStopwatch.Elapsed.TotalMilliseconds, finalElements.Count);
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -137,6 +143,34 @@ public class NavisworksRootObjectBuilder(
       snapshot.VertexReductionPercent,
       snapshot.MeshWeldMs,
       snapshot.AvgVerticesPerObject
+    );
+  }
+
+  private void LogBenchmarkSummary(long conversionStartMs, long conversionEndMs, double reassemblyMs, int finalElementCount)
+  {
+    var user = converterSettings.Current.User;
+    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
+    var meshSnapshot = MeshOptimizationMetricsTracker.Snapshot();
+    var conversionMs = conversionEndMs - conversionStartMs;
+
+    logger.LogInformation(
+      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, excludeProperties={ExcludeProperties}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
+      user.GeometryDetailLevel,
+      user.PropertyDetailLevel,
+      user.ExcludeProperties,
+      user.IncludeInternalProperties,
+      user.PreserveModelHierarchy,
+      conversionMs,
+      reassemblyMs,
+      conversionMs + reassemblyMs,
+      finalElementCount,
+      propertySnapshot.ObjectCount,
+      propertySnapshot.AvgPropertyCount,
+      propertySnapshot.P95PropertyCount,
+      meshSnapshot.MeshObjectCount,
+      meshSnapshot.VertexCountBeforeWeld,
+      meshSnapshot.VertexCountAfterWeld,
+      meshSnapshot.VertexReductionPercent
     );
   }
 
