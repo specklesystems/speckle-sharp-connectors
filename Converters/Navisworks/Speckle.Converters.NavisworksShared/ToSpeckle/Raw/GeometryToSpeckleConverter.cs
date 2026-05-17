@@ -402,6 +402,14 @@ public sealed class GeometryToSpeckleConverter(
       return CreateWeldedMesh(triangles);
     }
 
+    MeshOptimizationMetricsTracker.RecordMesh(
+      faceCount: triangles.Count,
+      vertexCountBeforeWeld: triangles.Count * 3,
+      vertexCountAfterWeld: triangles.Count * 3,
+      weldMs: 0,
+      isEmpty: triangles.Count == 0
+    );
+
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
 
@@ -432,6 +440,7 @@ public sealed class GeometryToSpeckleConverter(
 
   private Mesh CreateWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
   {
+    var stopwatch = Stopwatch.StartNew();
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
     var vertexIndexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -445,6 +454,15 @@ public sealed class GeometryToSpeckleConverter(
 
       faces.AddRange(new[] { 3, index1, index2, index3 });
     }
+
+    stopwatch.Stop();
+    MeshOptimizationMetricsTracker.RecordMesh(
+      faceCount: triangles.Count,
+      vertexCountBeforeWeld: triangles.Count * 3,
+      vertexCountAfterWeld: vertices.Count / 3,
+      weldMs: stopwatch.Elapsed.TotalMilliseconds,
+      isEmpty: triangles.Count == 0
+    );
 
     return new Mesh
     {
@@ -483,6 +501,7 @@ public sealed class GeometryToSpeckleConverter(
 
   private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
+    MeshOptimizationMetricsTracker.RecordLines(lines.Count);
     var result = new List<Line>(lines.Count);
 
     foreach (var line in lines)
