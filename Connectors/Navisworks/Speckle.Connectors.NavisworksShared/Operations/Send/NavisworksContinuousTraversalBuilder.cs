@@ -294,8 +294,8 @@ public class NavisworksContinuousTraversalBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    var finalElements = new List<Base>();
-    var processedPaths = new HashSet<string>();
+    var finalElements = new List<Base>(convertedBases.Count);
+    var processedPaths = new HashSet<string>(convertedBases.Count, StringComparer.Ordinal);
 
     if (!DisableGroupingForInstanceTesting)
     {
@@ -340,8 +340,9 @@ public class NavisworksContinuousTraversalBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
+      for (var i = 0; i < group.Value.Count; i++)
       {
+        var itemPath = elementSelectionService.GetModelItemPath(group.Value[i]);
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
         {
