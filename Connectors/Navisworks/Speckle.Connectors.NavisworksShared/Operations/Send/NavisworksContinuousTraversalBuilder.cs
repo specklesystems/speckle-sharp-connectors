@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
@@ -56,13 +57,16 @@ public class NavisworksContinuousTraversalBuilder(
 #endif
     PropertyExtractionMetricsTracker.Reset();
     GeometryConversionMetricsTracker.Reset();
+    MeshOptimizationMetricsTracker.Reset();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
+    long conversionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, onOperationProgressed, cancellationToken);
+    long conversionEndMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     ValidateConversionResults(conversionResults);
 
@@ -139,6 +143,53 @@ public class NavisworksContinuousTraversalBuilder(
       snapshot.AvgSelectionElapsedMsPerObject,
       snapshot.AvgPathsPerSelection,
       snapshot.AvgFragmentsPerPath
+    );
+  }
+
+  private void LogMeshOptimizationMetrics()
+  {
+    var snapshot = MeshOptimizationMetricsTracker.Snapshot();
+    logger.LogInformation(
+      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}",
+      snapshot.MeshObjectCount,
+      snapshot.EmptyGeometryObjectCount,
+      snapshot.FaceCount,
+      snapshot.LineCount,
+      snapshot.VertexCountBeforeWeld,
+      snapshot.VertexCountAfterWeld,
+      snapshot.VertexReductionPercent,
+      snapshot.MeshWeldMs,
+      snapshot.AvgVerticesPerObject
+    );
+  }
+
+  private void LogPhaseTimingMetrics(
+    long conversionStartMs,
+    long conversionEndMs,
+    double serializationMs,
+    double uploadMs,
+    int serializedObjectCount
+  )
+  {
+    var geometrySnapshot = GeometryConversionMetricsTracker.Snapshot();
+    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
+    long peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64;
+    double propertyExtractionMs = propertySnapshot.AvgExtractionMs * propertySnapshot.ObjectCount;
+
+    logger.LogInformation(
+      "Send phase metrics: conversionStartMs={ConversionStartMs}, conversionEndMs={ConversionEndMs}, conversionMs={ConversionMs}, geometryExtractionMs={GeometryExtractionMs:F2}, propertyExtractionMs={PropertyExtractionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, cleanupMs={CleanupMs:F2}, serializedObjectCount={SerializedObjectCount}, serializedBytesUncompressed={SerializedBytesUncompressed}, serializedBytesCompressed={SerializedBytesCompressed}, peakWorkingSetBytes={PeakWorkingSetBytes}",
+      conversionStartMs,
+      conversionEndMs,
+      conversionEndMs - conversionStartMs,
+      geometrySnapshot.TotalSelectionElapsedMs,
+      propertyExtractionMs,
+      serializationMs,
+      uploadMs,
+      0d,
+      serializedObjectCount,
+      -1L,
+      -1L,
+      peakWorkingSetBytes
     );
   }
 

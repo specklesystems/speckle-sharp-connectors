@@ -53,6 +53,7 @@ public class NavisworksRootObjectBuilder(
 #endif
     PropertyExtractionMetricsTracker.Reset();
     GeometryConversionMetricsTracker.Reset();
+    MeshOptimizationMetricsTracker.Reset();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
@@ -77,6 +78,7 @@ public class NavisworksRootObjectBuilder(
     );
     LogPropertyExtractionMetrics();
     LogGeometryConversionMetrics();
+    LogMeshOptimizationMetrics();
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -115,6 +117,23 @@ public class NavisworksRootObjectBuilder(
       snapshot.AvgSelectionElapsedMsPerObject,
       snapshot.AvgPathsPerSelection,
       snapshot.AvgFragmentsPerPath
+    );
+  }
+
+  private void LogMeshOptimizationMetrics()
+  {
+    var snapshot = MeshOptimizationMetricsTracker.Snapshot();
+    logger.LogInformation(
+      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}",
+      snapshot.MeshObjectCount,
+      snapshot.EmptyGeometryObjectCount,
+      snapshot.FaceCount,
+      snapshot.LineCount,
+      snapshot.VertexCountBeforeWeld,
+      snapshot.VertexCountAfterWeld,
+      snapshot.VertexReductionPercent,
+      snapshot.MeshWeldMs,
+      snapshot.AvgVerticesPerObject
     );
   }
 
