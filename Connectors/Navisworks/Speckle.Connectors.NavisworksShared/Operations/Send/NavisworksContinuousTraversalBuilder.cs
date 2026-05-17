@@ -121,6 +121,14 @@ public class NavisworksContinuousTraversalBuilder(
       uploadStopwatch.Elapsed.TotalMilliseconds,
       processedCount
     );
+    LogBenchmarkSummary(
+      conversionStartMs,
+      conversionEndMs,
+      serializationStopwatch.Elapsed.TotalMilliseconds,
+      uploadStopwatch.Elapsed.TotalMilliseconds,
+      finalElements.Count,
+      processedCount
+    );
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
@@ -205,6 +213,45 @@ public class NavisworksContinuousTraversalBuilder(
       -1L,
       -1L,
       peakWorkingSetBytes
+    );
+  }
+
+  private void LogBenchmarkSummary(
+    long conversionStartMs,
+    long conversionEndMs,
+    double serializationMs,
+    double uploadMs,
+    int finalElementCount,
+    int serializedObjectCount
+  )
+  {
+    var user = converterSettings.Current.User;
+    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
+    var meshSnapshot = MeshOptimizationMetricsTracker.Snapshot();
+    var postConversionMs = serializationMs + uploadMs;
+    var conversionMs = conversionEndMs - conversionStartMs;
+
+    logger.LogInformation(
+      "Benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, excludeProperties={ExcludeProperties}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, conversionMs={ConversionMs}, postConversionMs={PostConversionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, serializedObjectCount={SerializedObjectCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
+      user.GeometryDetailLevel,
+      user.PropertyDetailLevel,
+      user.ExcludeProperties,
+      user.IncludeInternalProperties,
+      user.PreserveModelHierarchy,
+      conversionMs,
+      postConversionMs,
+      serializationMs,
+      uploadMs,
+      conversionMs + postConversionMs,
+      finalElementCount,
+      serializedObjectCount,
+      propertySnapshot.ObjectCount,
+      propertySnapshot.AvgPropertyCount,
+      propertySnapshot.P95PropertyCount,
+      meshSnapshot.MeshObjectCount,
+      meshSnapshot.VertexCountBeforeWeld,
+      meshSnapshot.VertexCountAfterWeld,
+      meshSnapshot.VertexReductionPercent
     );
   }
 
