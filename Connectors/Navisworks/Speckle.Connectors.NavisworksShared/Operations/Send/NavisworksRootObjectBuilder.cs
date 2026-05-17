@@ -52,6 +52,7 @@ public class NavisworksRootObjectBuilder(
     DisableGroupingForInstanceTesting = false;
 #endif
     PropertyExtractionMetricsTracker.Reset();
+    GeometryConversionMetricsTracker.Reset();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
@@ -75,6 +76,7 @@ public class NavisworksRootObjectBuilder(
       finalInstanceProxyCount
     );
     LogPropertyExtractionMetrics();
+    LogGeometryConversionMetrics();
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -95,6 +97,24 @@ public class NavisworksRootObjectBuilder(
       snapshot.TotalPayloadBytes,
       snapshot.AvgExtractionMs,
       snapshot.P95ExtractionMs
+    );
+  }
+
+  private void LogGeometryConversionMetrics()
+  {
+    var snapshot = GeometryConversionMetricsTracker.Snapshot();
+    logger.LogInformation(
+      "Geometry conversion metrics: toInwOpSelectionCalls={ToInwOpSelectionCalls}, convertedObjects={ConvertedObjectCount}, pathsProcessed={PathsProcessed}, fragmentsProcessed={FragmentsProcessed}, totalSelectionMs={TotalSelectionElapsedMs:F2}, avgSelectionMs={AvgSelectionElapsedMs:F2}, p95SelectionMs={P95SelectionElapsedMs:F2}, avgSelectionMsPerObject={AvgSelectionElapsedMsPerObject:F4}, avgPathsPerSelection={AvgPathsPerSelection:F2}, avgFragmentsPerPath={AvgFragmentsPerPath:F2}",
+      snapshot.ToInwOpSelectionCalls,
+      snapshot.ConvertedObjectCount,
+      snapshot.PathsProcessed,
+      snapshot.FragmentsProcessed,
+      snapshot.TotalSelectionElapsedMs,
+      snapshot.AvgSelectionElapsedMs,
+      snapshot.P95SelectionElapsedMs,
+      snapshot.AvgSelectionElapsedMsPerObject,
+      snapshot.AvgPathsPerSelection,
+      snapshot.AvgFragmentsPerPath
     );
   }
 

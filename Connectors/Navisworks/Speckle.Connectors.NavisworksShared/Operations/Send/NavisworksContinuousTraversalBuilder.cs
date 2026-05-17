@@ -91,11 +91,16 @@ public class NavisworksContinuousTraversalBuilder(
     }
 
     rootCollection.elements = processedElements;
+    logger.LogInformation(
+      "Serialization complete; handoff to upload phase. serializedObjects={SerializedObjectCount}",
+      processedCount
+    );
 
     // Process the root collection and wait for all uploads to complete
     await sendPipeline.Process(rootCollection);
     await sendPipeline.WaitForUpload();
     LogPropertyExtractionMetrics();
+    LogGeometryConversionMetrics();
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
