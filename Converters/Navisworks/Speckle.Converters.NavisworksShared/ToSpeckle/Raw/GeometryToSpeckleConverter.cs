@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Autodesk.Navisworks.Api.Interop.ComApi;
 using Speckle.Converter.Navisworks.Constants;
@@ -332,6 +333,57 @@ public sealed class GeometryToSpeckleConverter(
       units = _settings.Derived.SpeckleUnits,
     };
   }
+
+  private Mesh CreateWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
+  {
+    var vertices = new List<double>(triangles.Count * 9);
+    var faces = new List<int>(triangles.Count * 4);
+    var vertexIndexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+
+    for (var t = 0; t < triangles.Count; t++)
+    {
+      var triangle = triangles[t];
+      int index1 = GetOrAddVertexIndex(triangle.Vertex1, vertices, vertexIndexByKey);
+      int index2 = GetOrAddVertexIndex(triangle.Vertex2, vertices, vertexIndexByKey);
+      int index3 = GetOrAddVertexIndex(triangle.Vertex3, vertices, vertexIndexByKey);
+
+      faces.AddRange(new[] { 3, index1, index2, index3 });
+    }
+
+    return new Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _settings.Derived.SpeckleUnits,
+    };
+  }
+
+  private int GetOrAddVertexIndex(SafeVertex vertex, List<double> vertices, Dictionary<string, int> vertexIndexByKey)
+  {
+    double x = (vertex.X + _transformVector.X) * SCALE;
+    double y = (vertex.Y + _transformVector.Y) * SCALE;
+    double z = (vertex.Z + _transformVector.Z) * SCALE;
+    string vertexKey = GetVertexKey(x, y, z);
+
+    if (vertexIndexByKey.TryGetValue(vertexKey, out int existingIndex))
+    {
+      return existingIndex;
+    }
+
+    int newIndex = vertices.Count / 3;
+    vertices.Add(x);
+    vertices.Add(y);
+    vertices.Add(z);
+    vertexIndexByKey[vertexKey] = newIndex;
+    return newIndex;
+  }
+
+  private static string GetVertexKey(double x, double y, double z) =>
+    x.ToString("R", CultureInfo.InvariantCulture)
+    + "|"
+    + y.ToString("R", CultureInfo.InvariantCulture)
+    + "|"
+    + z.ToString("R", CultureInfo.InvariantCulture);
 
   private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
