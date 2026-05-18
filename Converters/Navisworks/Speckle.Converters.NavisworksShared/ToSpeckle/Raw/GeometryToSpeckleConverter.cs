@@ -574,6 +574,87 @@ public sealed class GeometryToSpeckleConverter(
 
   private readonly record struct VertexKey(double X, double Y, double Z);
 
+  private readonly record struct HardEdgeVertexKey(
+    double X,
+    double Y,
+    double Z,
+    string MaterialKey,
+    int NormalClusterKey,
+    UvKey UvKey
+  );
+
+  private readonly record struct UvKey(bool HasUv, int U, int V);
+
+  private static double MeshCreaseAngleDegrees(GeometryDetailLevel level) =>
+    level switch
+    {
+      GeometryDetailLevel.OptimizedSeams25 => 25,
+      GeometryDetailLevel.OptimizedSeams60 => 60,
+      _ => 0,
+    };
+
+  private static int GetNormalClusterKey(SafeVector? faceNormal, double creaseAngleDegrees)
+  {
+    if (faceNormal is not { } normal)
+    {
+      return 0;
+    }
+
+    double quantizationStep = Math.Max(1e-3, Math.Sin(creaseAngleDegrees * Math.PI / 180.0 * 0.5));
+    int qx = (int)Math.Round(normal.X / quantizationStep);
+    int qy = (int)Math.Round(normal.Y / quantizationStep);
+    int qz = (int)Math.Round(normal.Z / quantizationStep);
+    unchecked
+    {
+      var hash = 17;
+      hash = hash * 31 + qx;
+      hash = hash * 31 + qy;
+      hash = hash * 31 + qz;
+      return hash;
+    }
+  }
+
+  private static UvKey GetUvKey(SafeUv? uv)
+  {
+    if (uv is not { } value)
+    {
+      return new UvKey(false, 0, 0);
+    }
+
+    const int UV_PRECISION = 1_000_000;
+    int quantizedU = (int)Math.Round(value.U * UV_PRECISION);
+    int quantizedV = (int)Math.Round(value.V * UV_PRECISION);
+    return new UvKey(true, quantizedU, quantizedV);
+  }
+
+  private int GetOrAddHardEdgeVertexIndex(
+    SafeVertex vertex,
+    SafeUv? uv,
+    string materialKey,
+    int normalClusterKey,
+    List<double> vertices,
+    Dictionary<HardEdgeVertexKey, int> vertexIndexByKey
+  )
+  {
+    double x = (vertex.X + _transformVector.X) * SCALE;
+    double y = (vertex.Y + _transformVector.Y) * SCALE;
+    double z = (vertex.Z + _transformVector.Z) * SCALE;
+    var uvKey = GetUvKey(uv);
+    var hardEdgeKey = new HardEdgeVertexKey(x, y, z, materialKey, normalClusterKey, uvKey);
+
+    if (vertexIndexByKey.TryGetValue(hardEdgeKey, out int existingIndex))
+    {
+      return existingIndex;
+    }
+
+    int newIndex = vertices.Count / 3;
+    vertices.Add(x);
+    vertices.Add(y);
+    vertices.Add(z);
+    vertexIndexByKey[hardEdgeKey] = newIndex;
+    return newIndex;
+  }
+
   private List<Line> CreateLines(IReadOnlyList<SafeLine> lines)
   {
     MeshOptimizationMetricsTracker.RecordLines(lines.Count);
