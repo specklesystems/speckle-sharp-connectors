@@ -62,6 +62,21 @@ public enum PropertyDetailLevel
 public enum GeometryDetailLevel
 {
   Full,
-  Optimized,
+
+  /// <summary>
+  /// Optimized mesh: seam-aware weld with ~25° crease clustering (tighter seams, larger payload).
+  /// </summary>
+  OptimizedSeams25,
+
+  /// <summary>
+  /// Optimized mesh: seam-aware weld with ~60° crease clustering (more weld, smaller payload than 25°).
+  /// </summary>
+  OptimizedSeams60,
+
+  /// <summary>
+  /// Optimized mesh: position-only weld (smallest payload; more shading risk on hard edges).
+  /// </summary>
+  OptimizedAggressive,
+
   SpatialLite,
 }
