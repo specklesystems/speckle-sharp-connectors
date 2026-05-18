@@ -29,6 +29,7 @@ public class NavisworksConversionSettingsFactory(
     GeometryDetailLevel geometryDetailLevel,
     bool convertHiddenElements,
     bool includeInternalProperties,
+    bool roundMeshVertexDoubles,
     bool preserveModelHierarchy,
     bool mappingToRevitCategories
   )
@@ -67,6 +68,7 @@ public class NavisworksConversionSettingsFactory(
       new User(
         OriginMode: _originMode,
         IncludeInternalProperties: includeInternalProperties,
+        RoundMeshVertexDoubles: roundMeshVertexDoubles,
         ConvertHiddenElements: _convertHiddenElements,
         VisualRepresentationMode: visualRepresentationMode,
         PropertyDetailLevel: propertyDetailLevel,

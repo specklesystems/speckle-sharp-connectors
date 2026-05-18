@@ -15,6 +15,7 @@ public record Derived(
 public record User(
   OriginMode OriginMode,
   bool IncludeInternalProperties,
+  bool RoundMeshVertexDoubles,
   bool ConvertHiddenElements,
   RepresentationMode VisualRepresentationMode,
   PropertyDetailLevel PropertyDetailLevel,
