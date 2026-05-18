@@ -16,7 +16,6 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   private readonly Dictionary<string, PropertyDetailLevel> _propertyDetailLevelCache = [];
   private readonly Dictionary<string, GeometryDetailLevel> _geometryDetailLevelCache = [];
   private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
-  private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
   private readonly Dictionary<string, bool> _roundMeshVertexDoublesCache = [];
   private readonly Dictionary<string, bool> _preserveModelHierarchyCache = [];
   private readonly Dictionary<string, bool> _revitCategoryMappingCache = [];
