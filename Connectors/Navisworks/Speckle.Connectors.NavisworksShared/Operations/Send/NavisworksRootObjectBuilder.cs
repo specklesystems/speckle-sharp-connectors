@@ -40,8 +40,9 @@ public class NavisworksRootObjectBuilder(
 #pragma warning restore CA1823
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
-  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache =
-    new(StringComparer.Ordinal);
+  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
+    StringComparer.Ordinal
+  );
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -544,7 +545,6 @@ public class NavisworksRootObjectBuilder(
 
     return twoDElementPaths;
   }
-
 
   private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
   {
