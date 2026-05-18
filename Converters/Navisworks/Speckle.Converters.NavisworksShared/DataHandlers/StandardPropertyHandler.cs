@@ -25,6 +25,11 @@ public class StandardPropertyHandler(
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
+    if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
+    {
+      return [];
+    }
+
     var properties = ProcessPropertySets(modelItem);
     var classProperties = classPropertiesExtractor.GetClassProperties(modelItem);
     if (classProperties.Count == 0)
