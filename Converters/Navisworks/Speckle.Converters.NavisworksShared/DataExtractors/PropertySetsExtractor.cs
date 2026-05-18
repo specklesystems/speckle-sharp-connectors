@@ -36,7 +36,7 @@ public class PropertySetsExtractor(
   }
 
   /// <summary>
-  /// Extracts property sets from a NAV.ModelItem and adds them to a dictionary,
+  /// Extracts property sets from a NAV.ModelItem and adds them to a dictionary;
   /// PropertySets are the specific set per host application source appended to Navisworks and therefore
   /// arbitrary in nature.
   /// </summary>

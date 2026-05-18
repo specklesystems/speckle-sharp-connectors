@@ -86,7 +86,7 @@ public class NavisworksContinuousTraversalBuilder(
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
 
-    // Process each final element through the send pipeline
+    // Process each final element through the Send pipeline
     int processedCount = 0;
     int total = finalElements.Count;
     var processedElements = new List<Base>(finalElements.Count);
