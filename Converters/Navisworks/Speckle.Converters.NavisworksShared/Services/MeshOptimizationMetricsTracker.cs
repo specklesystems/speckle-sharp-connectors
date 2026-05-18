@@ -9,6 +9,9 @@ public static class MeshOptimizationMetricsTracker
   private static long s_vertexCountBeforeWeld;
   private static long s_vertexCountAfterWeld;
   private static long s_totalWeldMsTicks;
+  private static long s_seamRetentionEnabled;
+  private static long s_geometryDetailLevel;
+  private static long s_creaseAngleDegreesBits;
 
   public static void Reset()
   {
@@ -19,6 +22,20 @@ public static class MeshOptimizationMetricsTracker
     Interlocked.Exchange(ref s_vertexCountBeforeWeld, 0);
     Interlocked.Exchange(ref s_vertexCountAfterWeld, 0);
     Interlocked.Exchange(ref s_totalWeldMsTicks, 0);
+    Interlocked.Exchange(ref s_seamRetentionEnabled, 0);
+    Interlocked.Exchange(ref s_geometryDetailLevel, (long)Settings.GeometryDetailLevel.Full);
+    Interlocked.Exchange(ref s_creaseAngleDegreesBits, BitConverter.DoubleToInt64Bits(0));
+  }
+
+  public static void RecordSettings(
+    bool seamRetentionEnabled,
+    Settings.GeometryDetailLevel geometryDetailLevel,
+    double creaseAngleDegrees
+  )
+  {
+    Interlocked.Exchange(ref s_seamRetentionEnabled, seamRetentionEnabled ? 1 : 0);
+    Interlocked.Exchange(ref s_geometryDetailLevel, (long)geometryDetailLevel);
+    Interlocked.Exchange(ref s_creaseAngleDegreesBits, BitConverter.DoubleToInt64Bits(creaseAngleDegrees));
   }
 
   public static void RecordMesh(
