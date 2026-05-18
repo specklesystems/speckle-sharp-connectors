@@ -80,7 +80,10 @@ public static class MeshOptimizationMetricsTracker
       VertexCountAfterWeld: after,
       VertexReductionPercent: reductionPercent,
       MeshWeldMs: totalWeldMs,
-      AvgVerticesPerObject: meshObjectCount == 0 ? 0 : (double)after / meshObjectCount
+      AvgVerticesPerObject: meshObjectCount == 0 ? 0 : (double)after / meshObjectCount,
+      SeamRetentionEnabled: Interlocked.Read(ref s_seamRetentionEnabled) == 1,
+      GeometryDetailLevel: (Settings.GeometryDetailLevel)Interlocked.Read(ref s_geometryDetailLevel),
+      CreaseAngleDegrees: BitConverter.Int64BitsToDouble(Interlocked.Read(ref s_creaseAngleDegreesBits))
     );
   }
 }
@@ -94,5 +97,8 @@ public readonly record struct MeshOptimizationMetricsSnapshot(
   long VertexCountAfterWeld,
   double VertexReductionPercent,
   double MeshWeldMs,
-  double AvgVerticesPerObject
+  double AvgVerticesPerObject,
+  bool SeamRetentionEnabled,
+  Settings.GeometryDetailLevel GeometryDetailLevel,
+  double CreaseAngleDegrees
 );
