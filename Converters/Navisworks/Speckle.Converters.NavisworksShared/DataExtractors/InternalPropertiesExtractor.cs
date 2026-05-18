@@ -52,20 +52,10 @@ public class InternalPropertiesExtractor
     return filtered.Count > 0 ? filtered : null;
   }
 
-  private static string? ResolveNodeType(NAV.ModelItem modelItem)
-  {
-    if (modelItem.IsCollection)
-    {
-      return "Collection";
-    }
-    if (modelItem.IsComposite)
-    {
-      return "Composite Object";
-    }
-    if (modelItem.IsInsert)
-    {
-      return "Geometry Insert";
-    }
-    return modelItem.IsLayer ? "Layer" : null;
-  }
+  private static string? ResolveNodeType(NAV.ModelItem modelItem) =>
+    modelItem.IsCollection ? "Collection"
+    : modelItem.IsComposite ? "Composite Object"
+    : modelItem.IsInsert ? "Geometry Insert"
+    : modelItem.IsLayer ? "Layer"
+    : null;
 }

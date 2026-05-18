@@ -280,17 +280,13 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
   {
     value = 0;
     var raw = array.GetValue(index);
-    if (raw == null)
+
+    if (raw is not IConvertible convertible)
     {
       return false;
     }
 
-    if (raw is IConvertible convertible)
-    {
-      value = convertible.ToDouble(System.Globalization.CultureInfo.InvariantCulture);
-      return true;
-    }
-
-    return false;
+    value = convertible.ToDouble(System.Globalization.CultureInfo.InvariantCulture);
+    return true;
   }
 }

@@ -70,11 +70,8 @@ public class DisplayValueExtractor(
     }
 
     var getBoundingBoxMethod = modelItemType.GetMethod("GetBoundingBox", new[] { typeof(bool) });
-    if (getBoundingBoxMethod?.ReturnType == typeof(NAV.BoundingBox3D))
-    {
-      return getBoundingBoxMethod.Invoke(modelItem, new object[] { false }) as NAV.BoundingBox3D;
-    }
-
-    return null;
+    return getBoundingBoxMethod?.ReturnType == typeof(NAV.BoundingBox3D)
+      ? getBoundingBoxMethod.Invoke(modelItem, [false]) as NAV.BoundingBox3D
+      : null;
   }
 }
