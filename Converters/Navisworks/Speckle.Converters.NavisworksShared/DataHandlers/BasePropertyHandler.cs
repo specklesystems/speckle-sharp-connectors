@@ -89,6 +89,12 @@ public abstract class BasePropertyHandler(
 
   private void AddInternalProperties(NAV.ModelItem modelItem, Dictionary<string, object?> categorizedProperties)
   {
+    if (settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
+    {
+      categorizedProperties.Remove("Internal");
+      return;
+    }
+
     if (!settingsStore.Current.User.IncludeInternalProperties)
     {
       categorizedProperties.Remove("Internal");
