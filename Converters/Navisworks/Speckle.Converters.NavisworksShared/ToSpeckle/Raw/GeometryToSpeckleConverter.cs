@@ -37,6 +37,8 @@ public sealed class GeometryToSpeckleConverter(
   private readonly bool _isUpright = settings.Derived.IsUpright;
   private readonly SafeVector _transformVector = settings.Derived.TransformVector;
   private const double SCALE = 1.0;
+  private const double MESH_VERTEX_PRECISION_METERS = 1e-4; // 0.1 mm
+  private const int MAX_MESH_VERTEX_DECIMALS = 8;
   private const bool ENABLE_INSTANCING = true;
   private readonly Dictionary<PathKey, int> _groupMemberCounts = new(PathKey.Comparer);
 
@@ -545,12 +547,66 @@ public sealed class GeometryToSpeckleConverter(
       isEmpty: triangles.Count == 0
     );
 
-    return new Mesh
+    return CreateMeshWithRoundedVertices(
+      new Mesh
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _settings.Derived.SpeckleUnits,
+      },
+      _settings.Derived.SpeckleUnits
+    );
+  }
+
+  private static Mesh CreateMeshWithRoundedVertices(Mesh mesh, string units)
+  {
+    var unitStep = GetMeshVertexUnitStep(units);
+    int decimals = GetMeshVertexDecimals(unitStep);
+
+    for (var i = 0; i < mesh.vertices.Count; i++)
     {
-      vertices = vertices,
-      faces = faces,
-      units = _settings.Derived.SpeckleUnits,
-    };
+      var quantized = Math.Round(mesh.vertices[i] / unitStep, MidpointRounding.AwayFromZero) * unitStep;
+      mesh.vertices[i] = Math.Round(quantized, decimals, MidpointRounding.AwayFromZero);
+    }
+
+    return mesh;
+  }
+
+  private static double GetMeshVertexUnitStep(string units)
+  {
+    if (string.IsNullOrWhiteSpace(units))
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+
+    try
+    {
+      // Convert fixed physical precision (meters) into active mesh units.
+      var metersToTarget = SSC.Units.GetConversionFactor(SSC.Units.Meters, units);
+      var step = MESH_VERTEX_PRECISION_METERS * metersToTarget;
+      return step > 0 ? step : MESH_VERTEX_PRECISION_METERS;
+    }
+    catch (ArgumentException)
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+    catch (InvalidOperationException)
+    {
+      return MESH_VERTEX_PRECISION_METERS;
+    }
+  }
+
+  private static int GetMeshVertexDecimals(double unitStep)
+  {
+    if (unitStep <= 0)
+    {
+      return 4;
+    }
+
+    var decimals = (int)Math.Round(-Math.Log10(unitStep), MidpointRounding.AwayFromZero);
+    return decimals < 0 ? 0
+      : decimals > MAX_MESH_VERTEX_DECIMALS ? MAX_MESH_VERTEX_DECIMALS
+      : decimals;
   }
 
   private int GetOrAddVertexIndex(SafeVertex vertex, List<double> vertices, Dictionary<VertexKey, int> vertexIndexByKey)
