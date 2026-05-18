@@ -458,12 +458,15 @@ public sealed class GeometryToSpeckleConverter(
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
 
-    return new Mesh
-    {
-      vertices = vertices,
-      faces = faces,
-      units = _settings.Derived.SpeckleUnits,
-    };
+    return CreateMeshWithRoundedVertices(
+      new Mesh
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _settings.Derived.SpeckleUnits,
+      },
+      _settings.Derived.SpeckleUnits
+    );
   }
 
   private Mesh CreatePositionOnlyWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
@@ -491,12 +494,15 @@ public sealed class GeometryToSpeckleConverter(
       isEmpty: triangles.Count == 0
     );
 
-    return new Mesh
-    {
-      vertices = vertices,
-      faces = faces,
-      units = _settings.Derived.SpeckleUnits,
-    };
+    return CreateMeshWithRoundedVertices(
+      new Mesh
+      {
+        vertices = vertices,
+        faces = faces,
+        units = _settings.Derived.SpeckleUnits,
+      },
+      _settings.Derived.SpeckleUnits
+    );
   }
 
   private Mesh CreateHardEdgeRetainedWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
