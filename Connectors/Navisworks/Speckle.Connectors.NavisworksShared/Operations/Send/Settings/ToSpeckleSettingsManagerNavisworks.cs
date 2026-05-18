@@ -17,7 +17,6 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   private readonly Dictionary<string, GeometryDetailLevel> _geometryDetailLevelCache = [];
   private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
-  private readonly Dictionary<string, bool> _excludePropertiesCache = [];
   private readonly Dictionary<string, bool> _preserveModelHierarchyCache = [];
   private readonly Dictionary<string, bool> _revitCategoryMappingCache = [];
 
@@ -89,25 +88,43 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       OriginMode.ModelOrigin
     );
 
-  public PropertyDetailLevel GetPropertyDetailLevel(SenderModelCard modelCard) =>
-    GetCachedSetting(
-      modelCard,
-      "propertyDetailLevel",
-      _propertyDetailLevelCache,
-      value =>
-      {
-        var propertyDetailString = value as string;
-        if (
-          propertyDetailString is not null
-          && PropertyDetailLevelSetting.PropertyDetailLevelMap.TryGetValue(propertyDetailString, out var detailLevel)
-        )
-        {
-          return detailLevel;
-        }
-        return PropertyDetailLevel.Essential;
-      },
-      PropertyDetailLevel.Essential
-    );
+  public PropertyDetailLevel GetPropertyDetailLevel(SenderModelCard modelCard)
+  {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
+    // Legacy cards: separate "excludeProperties" boolean maps to None.
+    var excludeLegacy = modelCard.Settings?.FirstOrDefault(s => s.Id == "excludeProperties")?.Value is true;
+    var effective = excludeLegacy ? PropertyDetailLevel.None : ResolvePropertyDetailLevelString(modelCard);
+
+    if (
+      _propertyDetailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out var previousValue)
+      && previousValue != effective
+    )
+    {
+      EvictCacheForModelCard(modelCard);
+    }
+
+    _propertyDetailLevelCache[modelCard.ModelCardId.NotNull()] = effective;
+    return effective;
+  }
+
+  private static PropertyDetailLevel ResolvePropertyDetailLevelString(SenderModelCard modelCard)
+  {
+    var propertyDetailString = modelCard.Settings?.FirstOrDefault(s => s.Id == "propertyDetailLevel")?.Value
+      as string;
+    if (
+      propertyDetailString is not null
+      && PropertyDetailLevelSetting.PropertyDetailLevelMap.TryGetValue(propertyDetailString, out var detailLevel)
+    )
+    {
+      return detailLevel;
+    }
+
+    return PropertyDetailLevel.Essential;
+  }
 
   public GeometryDetailLevel GetGeometryDetailLevel(SenderModelCard modelCard) =>
     GetCachedSetting(
@@ -124,9 +141,13 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
         {
           return detailLevel;
         }
-        return GeometryDetailLevel.Full;
+        if (string.Equals(geometryDetailString, "Optimized", StringComparison.Ordinal))
+        {
+          return GeometryDetailLevel.OptimizedSeams25;
+        }
+        return GeometryDetailLevel.OptimizedSeams60;
       },
-      GeometryDetailLevel.Full
+      GeometryDetailLevel.OptimizedSeams60
     );
 
   public bool GetMappingToRevitCategories(SenderModelCard modelCard) =>
@@ -143,9 +164,6 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       value => value is true,
       false
     );
-
-  public bool GetExcludeProperties(SenderModelCard modelCard) =>
-    GetCachedSetting(modelCard, "excludeProperties", _excludePropertiesCache, value => value is true, false);
 
   public bool GetPreserveModelHierarchy(SenderModelCard modelCard) =>
     GetCachedSetting(modelCard, "preserveModelHierarchy", _preserveModelHierarchyCache, value => value is true, false);

@@ -29,7 +29,6 @@ public class NavisworksConversionSettingsFactory(
     GeometryDetailLevel geometryDetailLevel,
     bool convertHiddenElements,
     bool includeInternalProperties,
-    bool excludeProperties,
     bool preserveModelHierarchy,
     bool mappingToRevitCategories
   )
@@ -73,7 +72,6 @@ public class NavisworksConversionSettingsFactory(
         PropertyDetailLevel: propertyDetailLevel,
         GeometryDetailLevel: geometryDetailLevel,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
-        ExcludeProperties: excludeProperties,
         PreserveModelHierarchy: preserveModelHierarchy,
         RevitCategoryMapping: mappingToRevitCategories
       )

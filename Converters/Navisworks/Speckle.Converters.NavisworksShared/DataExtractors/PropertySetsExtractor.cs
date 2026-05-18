@@ -14,7 +14,7 @@ public class PropertySetsExtractor(
 {
   internal Dictionary<string, object?>? GetPropertySets(NAV.ModelItem modelItem)
   {
-    if (settingsStore.Current.User.ExcludeProperties)
+    if (settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
     {
       return null;
     }

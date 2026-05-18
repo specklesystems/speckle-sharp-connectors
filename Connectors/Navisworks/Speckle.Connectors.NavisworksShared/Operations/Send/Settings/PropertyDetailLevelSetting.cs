@@ -7,9 +7,16 @@ public class PropertyDetailLevelSetting(PropertyDetailLevel value) : ICardSettin
 {
   public string? Id { get; set; } = "propertyDetailLevel";
   public string? Title { get; set; } = "Property Detail";
-  public string? Description { get; set; } = "Controls how much property data is extracted and sent.";
+  public string? Description { get; set; } =
+    "Controls how much property data is extracted and sent. Choose None to send geometry only.";
   public string? Type { get; set; } = "string";
-  public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(PropertyDetailLevel)).ToList();
+  public List<string>? Enum { get; set; } =
+  [
+    nameof(PropertyDetailLevel.None),
+    nameof(PropertyDetailLevel.Essential),
+    nameof(PropertyDetailLevel.Standard),
+    nameof(PropertyDetailLevel.Full),
+  ];
   public object? Value { get; set; } = value.ToString();
 
   public static readonly Dictionary<string, PropertyDetailLevel> PropertyDetailLevelMap = System

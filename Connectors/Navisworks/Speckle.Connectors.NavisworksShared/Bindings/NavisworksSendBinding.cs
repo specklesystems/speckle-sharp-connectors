@@ -74,9 +74,7 @@ public class NavisworksSendBinding : ISendBinding
       new VisualRepresentationSetting(RepresentationMode.Active),
       new OriginModeSetting(OriginMode.ModelOrigin),
       new PropertyDetailLevelSetting(PropertyDetailLevel.Essential),
-      new GeometryDetailLevelSetting(GeometryDetailLevel.Full),
-      new IncludeInternalPropertiesSetting(false),
-      new ExcludePropertiesSetting(false),
+      new GeometryDetailLevelSetting(GeometryDetailLevel.OptimizedSeams60),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
       new RevitCategoryMappingSetting(false),
@@ -122,7 +120,6 @@ public class NavisworksSendBinding : ISendBinding
           geometryDetailLevel: _toSpeckleSettingsManagerNavisworks.GetGeometryDetailLevel(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
           includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
-          excludeProperties: _toSpeckleSettingsManagerNavisworks.GetExcludeProperties(modelCard),
           preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard),
           mappingToRevitCategories: _toSpeckleSettingsManagerNavisworks.GetMappingToRevitCategories(modelCard)
         )

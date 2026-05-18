@@ -20,7 +20,6 @@ public record User(
   PropertyDetailLevel PropertyDetailLevel,
   GeometryDetailLevel GeometryDetailLevel,
   bool CoalescePropertiesFromFirstObjectAncestor,
-  bool ExcludeProperties,
   bool PreserveModelHierarchy,
   bool RevitCategoryMapping = true
 );

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
@@ -57,16 +58,23 @@ public class NavisworksRootObjectBuilder(
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();
+    int gcGen0Start = GC.CollectionCount(0);
+    int gcGen1Start = GC.CollectionCount(1);
+    int gcGen2Start = GC.CollectionCount(2);
+    long managedHeapBytesStart = GC.GetTotalMemory(false);
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
+    long conversionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
+    long conversionEndMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     ValidateConversionResults(conversionResults);
 
+    var reassemblyStopwatch = Stopwatch.StartNew();
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
     var twoDElementPaths = Build2DElementPathSet(convertedElements);
@@ -74,6 +82,7 @@ public class NavisworksRootObjectBuilder(
     await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes, twoDElementPaths);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
+    reassemblyStopwatch.Stop();
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
     logger.LogInformation(
       "Final output contains {count} InstanceProxy objects in displayValues",
@@ -82,6 +91,16 @@ public class NavisworksRootObjectBuilder(
     LogPropertyExtractionMetrics();
     LogGeometryConversionMetrics();
     LogMeshOptimizationMetrics();
+    LogBenchmarkSummary(
+      conversionStartMs,
+      conversionEndMs,
+      reassemblyStopwatch.Elapsed.TotalMilliseconds,
+      finalElements.Count,
+      gcGen0Start,
+      gcGen1Start,
+      gcGen2Start,
+      managedHeapBytesStart
+    );
 
     rootCollection.elements = finalElements;
     return new RootObjectBuilderResult(rootCollection, conversionResults);
@@ -127,7 +146,7 @@ public class NavisworksRootObjectBuilder(
   {
     var snapshot = MeshOptimizationMetricsTracker.Snapshot();
     logger.LogInformation(
-      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}",
+      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}, geometryDetailLevel={GeometryDetailLevel}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}",
       snapshot.MeshObjectCount,
       snapshot.EmptyGeometryObjectCount,
       snapshot.FaceCount,
@@ -136,7 +155,57 @@ public class NavisworksRootObjectBuilder(
       snapshot.VertexCountAfterWeld,
       snapshot.VertexReductionPercent,
       snapshot.MeshWeldMs,
-      snapshot.AvgVerticesPerObject
+      snapshot.AvgVerticesPerObject,
+      snapshot.GeometryDetailLevel,
+      snapshot.SeamRetentionEnabled,
+      snapshot.CreaseAngleDegrees
+    );
+  }
+
+  private void LogBenchmarkSummary(
+    long conversionStartMs,
+    long conversionEndMs,
+    double reassemblyMs,
+    int finalElementCount,
+    int gcGen0Start,
+    int gcGen1Start,
+    int gcGen2Start,
+    long managedHeapBytesStart
+  )
+  {
+    var user = converterSettings.Current.User;
+    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
+    var meshSnapshot = MeshOptimizationMetricsTracker.Snapshot();
+    var conversionMs = conversionEndMs - conversionStartMs;
+    int gcGen0Delta = GC.CollectionCount(0) - gcGen0Start;
+    int gcGen1Delta = GC.CollectionCount(1) - gcGen1Start;
+    int gcGen2Delta = GC.CollectionCount(2) - gcGen2Start;
+    long managedHeapBytesEnd = GC.GetTotalMemory(false);
+
+    logger.LogInformation(
+      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
+      user.GeometryDetailLevel,
+      user.PropertyDetailLevel,
+      user.IncludeInternalProperties,
+      user.PreserveModelHierarchy,
+      meshSnapshot.SeamRetentionEnabled,
+      meshSnapshot.CreaseAngleDegrees,
+      conversionMs,
+      reassemblyMs,
+      conversionMs + reassemblyMs,
+      finalElementCount,
+      propertySnapshot.ObjectCount,
+      propertySnapshot.AvgPropertyCount,
+      propertySnapshot.P95PropertyCount,
+      meshSnapshot.MeshObjectCount,
+      meshSnapshot.VertexCountBeforeWeld,
+      meshSnapshot.VertexCountAfterWeld,
+      meshSnapshot.VertexReductionPercent,
+      managedHeapBytesStart,
+      managedHeapBytesEnd,
+      gcGen0Delta,
+      gcGen1Delta,
+      gcGen2Delta
     );
   }
 
