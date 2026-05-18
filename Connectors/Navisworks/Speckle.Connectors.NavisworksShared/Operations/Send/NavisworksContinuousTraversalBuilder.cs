@@ -256,12 +256,13 @@ public class NavisworksContinuousTraversalBuilder(
     var conversionMs = conversionEndMs - conversionStartMs;
 
     logger.LogInformation(
-      "Benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, excludeProperties={ExcludeProperties}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, conversionMs={ConversionMs}, postConversionMs={PostConversionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, serializedObjectCount={SerializedObjectCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
+      "Benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}, conversionMs={ConversionMs}, postConversionMs={PostConversionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, serializedObjectCount={SerializedObjectCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
       user.GeometryDetailLevel,
       user.PropertyDetailLevel,
-      user.ExcludeProperties,
       user.IncludeInternalProperties,
       user.PreserveModelHierarchy,
+      meshSnapshot.SeamRetentionEnabled,
+      meshSnapshot.CreaseAngleDegrees,
       conversionMs,
       postConversionMs,
       serializationMs,
