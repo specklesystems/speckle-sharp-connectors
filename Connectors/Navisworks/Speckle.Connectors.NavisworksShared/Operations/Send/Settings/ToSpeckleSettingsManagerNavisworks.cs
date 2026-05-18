@@ -17,7 +17,6 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   private readonly Dictionary<string, GeometryDetailLevel> _geometryDetailLevelCache = [];
   private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
-  private readonly Dictionary<string, bool> _excludePropertiesCache = [];
   private readonly Dictionary<string, bool> _preserveModelHierarchyCache = [];
   private readonly Dictionary<string, bool> _revitCategoryMappingCache = [];
 
@@ -143,9 +142,6 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       value => value is true,
       false
     );
-
-  public bool GetExcludeProperties(SenderModelCard modelCard) =>
-    GetCachedSetting(modelCard, "excludeProperties", _excludePropertiesCache, value => value is true, false);
 
   public bool GetPreserveModelHierarchy(SenderModelCard modelCard) =>
     GetCachedSetting(modelCard, "preserveModelHierarchy", _preserveModelHierarchyCache, value => value is true, false);
