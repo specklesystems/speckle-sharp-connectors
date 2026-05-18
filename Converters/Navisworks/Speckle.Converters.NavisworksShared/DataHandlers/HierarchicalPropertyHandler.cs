@@ -18,9 +18,15 @@ public class HierarchicalPropertyHandler(
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
   private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
+  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
+    if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
+    {
+      return [];
+    }
+
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
 
     // Interop-lite mapping for Revit built-in categories
