@@ -75,6 +75,7 @@ public class NavisworksSendBinding : ISendBinding
       new OriginModeSetting(OriginMode.ModelOrigin),
       new PropertyDetailLevelSetting(PropertyDetailLevel.Essential),
       new GeometryDetailLevelSetting(GeometryDetailLevel.OptimizedSeams60),
+      new RoundMeshVertexDoublesSetting(false),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
       new RevitCategoryMappingSetting(false),
@@ -120,6 +121,7 @@ public class NavisworksSendBinding : ISendBinding
           geometryDetailLevel: _toSpeckleSettingsManagerNavisworks.GetGeometryDetailLevel(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
           includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
+          roundMeshVertexDoubles: _toSpeckleSettingsManagerNavisworks.GetRoundMeshVertexDoubles(modelCard),
           preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard),
           mappingToRevitCategories: _toSpeckleSettingsManagerNavisworks.GetMappingToRevitCategories(modelCard)
         )
