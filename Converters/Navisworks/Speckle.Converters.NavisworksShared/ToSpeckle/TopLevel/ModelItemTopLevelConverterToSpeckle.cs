@@ -32,25 +32,29 @@ public class ModelItemToToSpeckleConverter(
   private NavisworksObject CreateGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler)
   {
     var displayValue = displayValueExtractor.GetDisplayValue(target);
+    var omitProperties = settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None;
 
     var geometryObject = new NavisworksObject
     {
       units = settingsStore.Current.Derived.SpeckleUnits,
       name = name,
-      properties = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      properties = omitProperties ? [] : propertyHandler.GetProperties(target),
       displayValue = displayValue,
     };
 
     return geometryObject;
   }
 
-  private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler) =>
-    new()
+  private Collection CreateNonGeometryObject(NAV.ModelItem target, string name, IPropertyHandler propertyHandler)
+  {
+    var omitProperties = settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None;
+    return new Collection
     {
       name = name,
       elements = [],
-      ["properties"] = settingsStore.Current.User.ExcludeProperties ? [] : propertyHandler.GetProperties(target),
+      ["properties"] = omitProperties ? [] : propertyHandler.GetProperties(target),
     };
+  }
 
   private bool ShouldMergeProperties(NAV.ModelItem target) =>
     target.HasGeometry && settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Full;
