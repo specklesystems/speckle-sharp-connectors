@@ -31,6 +31,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\PreserveModelHierarchySetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\PropertyDetailLevelSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\RoundMeshVertexDoublesSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\RevitCategoryMapping.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManagerNavisworks.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\VisualRepresentationSetting.cs"/>
