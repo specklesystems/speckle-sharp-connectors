@@ -141,13 +141,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
         {
           return detailLevel;
         }
-        if (string.Equals(geometryDetailString, "Optimized", StringComparison.Ordinal))
-        {
-          return GeometryDetailLevel.OptimizedSeams25;
-        }
-        return GeometryDetailLevel.OptimizedSeams60;
+        return GeometryDetailLevel.Optimised;
       },
-      GeometryDetailLevel.OptimizedSeams60
+      GeometryDetailLevel.Optimised
     );
 
   public bool GetMappingToRevitCategories(SenderModelCard modelCard) =>

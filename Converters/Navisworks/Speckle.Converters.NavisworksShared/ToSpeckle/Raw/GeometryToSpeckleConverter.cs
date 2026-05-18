@@ -410,9 +410,8 @@ public sealed class GeometryToSpeckleConverter(
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
     var level = _settings.User.GeometryDetailLevel;
-    bool optimizedSeamsMode = level is GeometryDetailLevel.OptimizedSeams25 or GeometryDetailLevel.OptimizedSeams60;
-    bool optimizedAggressiveMode = level == GeometryDetailLevel.OptimizedAggressive;
-    bool seamRetentionEnabled = optimizedSeamsMode;
+    bool optimisedMode = level == GeometryDetailLevel.Optimised;
+    bool seamRetentionEnabled = optimisedMode;
     double creaseForMetrics = MeshCreaseAngleDegrees(level);
     MeshOptimizationMetricsTracker.RecordSettings(
       seamRetentionEnabled: seamRetentionEnabled,
@@ -420,14 +419,9 @@ public sealed class GeometryToSpeckleConverter(
       creaseAngleDegrees: creaseForMetrics
     );
 
-    if (optimizedSeamsMode)
+    if (optimisedMode)
     {
       return CreateHardEdgeRetainedWeldedMesh(triangles);
-    }
-
-    if (optimizedAggressiveMode)
-    {
-      return CreatePositionOnlyWeldedMesh(triangles);
     }
 
     MeshOptimizationMetricsTracker.RecordMesh(
@@ -457,42 +451,6 @@ public sealed class GeometryToSpeckleConverter(
       ]);
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
-
-    return CreateMeshWithOptionalRoundedVertices(
-      new Mesh
-      {
-        vertices = vertices,
-        faces = faces,
-        units = _settings.Derived.SpeckleUnits,
-      },
-      _settings.Derived.SpeckleUnits
-    );
-  }
-
-  private Mesh CreatePositionOnlyWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
-  {
-    var stopwatch = Stopwatch.StartNew();
-    var vertices = new List<double>(triangles.Count * 9);
-    var faces = new List<int>(triangles.Count * 4);
-    var vertexIndexByKey = new Dictionary<VertexKey, int>();
-
-    foreach (var triangle in triangles)
-    {
-      int index1 = GetOrAddVertexIndex(triangle.Vertex1, vertices, vertexIndexByKey);
-      int index2 = GetOrAddVertexIndex(triangle.Vertex2, vertices, vertexIndexByKey);
-      int index3 = GetOrAddVertexIndex(triangle.Vertex3, vertices, vertexIndexByKey);
-
-      faces.AddRange([3, index1, index2, index3]);
-    }
-
-    stopwatch.Stop();
-    MeshOptimizationMetricsTracker.RecordMesh(
-      faceCount: triangles.Count,
-      vertexCountBeforeWeld: triangles.Count * 3,
-      vertexCountAfterWeld: vertices.Count / 3,
-      weldMs: stopwatch.Elapsed.TotalMilliseconds,
-      isEmpty: triangles.Count == 0
-    );
 
     return CreateMeshWithOptionalRoundedVertices(
       new Mesh
@@ -566,7 +524,8 @@ public sealed class GeometryToSpeckleConverter(
 
   private Mesh CreateMeshWithOptionalRoundedVertices(Mesh mesh, string units)
   {
-    if (!_settings.User.RoundMeshVertexDoubles)
+    bool shouldRound = _settings.User.GeometryDetailLevel is GeometryDetailLevel.Optimised or GeometryDetailLevel.Lite;
+    if (!shouldRound)
     {
       return mesh;
     }
@@ -620,28 +579,6 @@ public sealed class GeometryToSpeckleConverter(
       : decimals;
   }
 
-  private int GetOrAddVertexIndex(SafeVertex vertex, List<double> vertices, Dictionary<VertexKey, int> vertexIndexByKey)
-  {
-    double x = (vertex.X + _transformVector.X) * SCALE;
-    double y = (vertex.Y + _transformVector.Y) * SCALE;
-    double z = (vertex.Z + _transformVector.Z) * SCALE;
-    var vertexKey = new VertexKey(x, y, z);
-
-    if (vertexIndexByKey.TryGetValue(vertexKey, out int existingIndex))
-    {
-      return existingIndex;
-    }
-
-    int newIndex = vertices.Count / 3;
-    vertices.Add(x);
-    vertices.Add(y);
-    vertices.Add(z);
-    vertexIndexByKey[vertexKey] = newIndex;
-    return newIndex;
-  }
-
-  private readonly record struct VertexKey(double X, double Y, double Z);
-
   private readonly record struct HardEdgeVertexKey(
     double X,
     double Y,
@@ -656,8 +593,7 @@ public sealed class GeometryToSpeckleConverter(
   private static double MeshCreaseAngleDegrees(GeometryDetailLevel level) =>
     level switch
     {
-      GeometryDetailLevel.OptimizedSeams25 => 25,
-      GeometryDetailLevel.OptimizedSeams60 => 60,
+      GeometryDetailLevel.Optimised => 65,
       _ => 0,
     };
 

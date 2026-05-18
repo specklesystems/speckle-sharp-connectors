@@ -17,7 +17,7 @@ public class GeometryConversionContext(
   {
     Clear();
 
-    if (settingsStore.Current.User.GeometryDetailLevel == GeometryDetailLevel.SpatialLite)
+    if (settingsStore.Current.User.GeometryDetailLevel == GeometryDetailLevel.Lite)
     {
       return;
     }

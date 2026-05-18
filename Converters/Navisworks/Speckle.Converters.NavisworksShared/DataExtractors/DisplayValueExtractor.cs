@@ -31,7 +31,7 @@ public class DisplayValueExtractor(
       return batchedDisplayValue;
     }
 
-    if (settingsStore.Current.User.GeometryDetailLevel != GeometryDetailLevel.SpatialLite)
+    if (settingsStore.Current.User.GeometryDetailLevel != GeometryDetailLevel.Lite)
     {
       return GeometryConverter.Convert(modelItem);
     }
