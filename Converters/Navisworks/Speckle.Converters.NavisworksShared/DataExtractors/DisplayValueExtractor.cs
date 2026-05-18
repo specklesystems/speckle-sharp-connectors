@@ -43,7 +43,7 @@ public class DisplayValueExtractor(
     }
 
     var box = boundingBoxToSpeckleRawConverter.Convert(boundingBox);
-    return box == null ? [] : [box];
+    return [box];
   }
 
   /// <summary>
