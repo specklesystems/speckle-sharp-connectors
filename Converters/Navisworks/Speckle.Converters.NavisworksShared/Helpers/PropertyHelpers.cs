@@ -6,7 +6,22 @@ namespace Speckle.Converter.Navisworks.Helpers;
 
 public static class PropertyHelpers
 {
-  private static readonly HashSet<string> s_excludedCategories = ["Geometry", "Metadata"];
+  private static readonly HashSet<string> s_excludedCategories = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "Geometry",
+    "Metadata",
+    "3D_Visualization",
+    "Entity_Handle",
+    "lcldiv_refkeyid",
+  };
+  private static readonly HashSet<string> s_excludedPropertyNames = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "CreatedPhaseId",
+    "Autodesk Material",
+    "Autodesk_Material",
+    "Id",
+    "StructuralMaterialId",
+  };
 
   /// <summary>
   /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
@@ -91,6 +106,9 @@ public static class PropertyHelpers
 
   internal static string SanitizePropertyName(string name) =>
     name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
+
+  internal static bool ShouldSkipProperty(string propertyName) =>
+    s_excludedPropertyNames.Contains(propertyName) || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
 
   internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);

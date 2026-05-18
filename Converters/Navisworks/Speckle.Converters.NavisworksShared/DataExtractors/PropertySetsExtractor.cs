@@ -64,10 +64,23 @@ public class PropertySetsExtractor(
         continue;
       }
 
+      if (
+        propertyDetailLevel == PropertyDetailLevel.Standard
+        && string.Equals(propertyCategory.DisplayName, "Material", StringComparison.Ordinal)
+      )
+      {
+        continue;
+      }
+
       var propertySet = new Dictionary<string, object?>();
 
       foreach (var property in propertyCategory.Properties)
       {
+        if (ShouldSkipProperty(property.DisplayName))
+        {
+          continue;
+        }
+
         var sanitizedName = SanitizePropertyName(property.DisplayName);
         var propertyValue = propertyConverter.ConvertPropertyValue(property.Value, modelUnits, property.DisplayName);
         if (propertyValue != null)
