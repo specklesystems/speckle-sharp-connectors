@@ -292,15 +292,7 @@ public class NavisworksRootObjectBuilder(
 
   private static void ValidateConversionResults(List<SendConversionResult> results)
   {
-    var allErrored = true;
-    for (var i = 0; i < results.Count; i++)
-    {
-      if (results[i].Status != Status.ERROR)
-      {
-        allErrored = false;
-        break;
-      }
-    }
+    var allErrored = results.All(t => t.Status == Status.ERROR);
 
     if (allErrored)
     {
