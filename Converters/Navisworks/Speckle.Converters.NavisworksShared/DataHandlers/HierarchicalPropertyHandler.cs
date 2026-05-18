@@ -130,7 +130,7 @@ public class HierarchicalPropertyHandler(
     }
   }
 
-  private void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
+  private static void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
   {
     string[] bannedNamesForProps =
     [
@@ -173,13 +173,8 @@ public class HierarchicalPropertyHandler(
       var categoryDict = new Dictionary<string, object?>();
       bool hasProperties = false;
 
-      foreach (var kvS in kvp.Value)
+      foreach (var kvS in kvp.Value.Where(kvS => kvS.Value.Count == 1))
       {
-        if ((kvS.Value).Count != 1)
-        {
-          continue;
-        }
-
         categoryDict[kvS.Key] = kvS.Value.First();
         hasProperties = true;
       }
