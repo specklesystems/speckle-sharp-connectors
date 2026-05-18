@@ -42,8 +42,9 @@ public class NavisworksContinuousTraversalBuilder(
 {
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
-  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache =
-    new(StringComparer.Ordinal);
+  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
+    StringComparer.Ordinal
+  );
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
