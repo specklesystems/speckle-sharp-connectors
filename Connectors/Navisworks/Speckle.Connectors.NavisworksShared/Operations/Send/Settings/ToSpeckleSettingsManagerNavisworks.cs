@@ -113,8 +113,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
 
   private static PropertyDetailLevel ResolvePropertyDetailLevelString(SenderModelCard modelCard)
   {
-    var propertyDetailString = modelCard.Settings?.FirstOrDefault(s => s.Id == "propertyDetailLevel")?.Value
-      as string;
+    var propertyDetailString = modelCard.Settings?.FirstOrDefault(s => s.Id == "propertyDetailLevel")?.Value as string;
     if (
       propertyDetailString is not null
       && PropertyDetailLevelSetting.PropertyDetailLevelMap.TryGetValue(propertyDetailString, out var detailLevel)
