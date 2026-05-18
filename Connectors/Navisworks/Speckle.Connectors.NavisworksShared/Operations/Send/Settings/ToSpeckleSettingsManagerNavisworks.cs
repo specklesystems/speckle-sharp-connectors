@@ -151,14 +151,15 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   public bool GetConvertHiddenElements(SenderModelCard modelCard) =>
     GetCachedSetting(modelCard, "convertHiddenElements", _convertHiddenElementsCache, value => value is true, false);
 
-  public bool GetIncludeInternalProperties(SenderModelCard modelCard) =>
-    GetCachedSetting(
-      modelCard,
-      "includeInternalProperties",
-      _includeInternalPropertiesCache,
-      value => value is true,
-      false
-    );
+  public bool GetIncludeInternalProperties(SenderModelCard modelCard)
+  {
+    if (modelCard == null)
+    {
+      throw new ArgumentNullException(nameof(modelCard));
+    }
+
+    return false;
+  }
 
   public bool GetRoundMeshVertexDoubles(SenderModelCard modelCard) =>
     GetCachedSetting(
