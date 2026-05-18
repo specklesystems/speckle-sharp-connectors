@@ -146,7 +146,7 @@ public class NavisworksRootObjectBuilder(
   {
     var snapshot = MeshOptimizationMetricsTracker.Snapshot();
     logger.LogInformation(
-      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}",
+      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}, geometryDetailLevel={GeometryDetailLevel}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}",
       snapshot.MeshObjectCount,
       snapshot.EmptyGeometryObjectCount,
       snapshot.FaceCount,
