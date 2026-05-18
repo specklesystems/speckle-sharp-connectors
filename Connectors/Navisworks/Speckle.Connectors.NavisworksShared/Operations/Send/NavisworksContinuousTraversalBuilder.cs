@@ -190,7 +190,10 @@ public class NavisworksContinuousTraversalBuilder(
       snapshot.VertexCountAfterWeld,
       snapshot.VertexReductionPercent,
       snapshot.MeshWeldMs,
-      snapshot.AvgVerticesPerObject
+      snapshot.AvgVerticesPerObject,
+      snapshot.GeometryDetailLevel,
+      snapshot.SeamRetentionEnabled,
+      snapshot.CreaseAngleDegrees
     );
   }
 
