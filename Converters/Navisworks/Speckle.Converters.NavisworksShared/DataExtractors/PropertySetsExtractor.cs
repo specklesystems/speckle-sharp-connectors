@@ -50,7 +50,7 @@ public class PropertySetsExtractor(
     var propertyDetailLevel = settingsStore.Current.User.PropertyDetailLevel;
     var userFilteredPropertyCategories = modelItem.GetUserFilteredPropertyCategories();
     var categories =
-      propertyDetailLevel == PropertyDetailLevel.Full ? modelItem.PropertyCategories : userFilteredPropertyCategories;
+      propertyDetailLevel == PropertyDetailLevel.All ? modelItem.PropertyCategories : userFilteredPropertyCategories;
     int totalCategoryCount = modelItem.PropertyCategories.Count();
     int userFilteredCategoryCount = userFilteredPropertyCategories.Count();
     int extractedPropertyCount = 0;
@@ -60,11 +60,6 @@ public class PropertySetsExtractor(
     foreach (var propertyCategory in categories)
     {
       if (ShouldSkipCategory(propertyCategory))
-      {
-        continue;
-      }
-
-      if (propertyDetailLevel == PropertyDetailLevel.Essential && propertyCategory.DisplayName == "Material")
       {
         continue;
       }

@@ -16,13 +16,6 @@ public class StandardPropertyHandler(
 {
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
 
-  private static readonly HashSet<string> s_essentialClassProperties = new(StringComparer.Ordinal)
-  {
-    "InstanceGuid",
-    "DisplayName",
-    "ClassName",
-  };
-
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
     if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
@@ -34,22 +27,6 @@ public class StandardPropertyHandler(
     var classProperties = classPropertiesExtractor.GetClassProperties(modelItem);
     if (classProperties.Count == 0)
     {
-      return properties;
-    }
-
-    var propertyDetailLevel = _settingsStore.Current.User.PropertyDetailLevel;
-    if (propertyDetailLevel == PropertyDetailLevel.Essential)
-    {
-      foreach (var kvp in classProperties)
-      {
-        if (!s_essentialClassProperties.Contains(kvp.Key))
-        {
-          continue;
-        }
-
-        properties[kvp.Key] = kvp.Value;
-      }
-
       return properties;
     }
 

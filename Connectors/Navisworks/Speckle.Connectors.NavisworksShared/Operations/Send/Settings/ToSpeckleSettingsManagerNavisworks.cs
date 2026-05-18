@@ -123,7 +123,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       return detailLevel;
     }
 
-    return PropertyDetailLevel.Essential;
+    return PropertyDetailLevel.Standard;
   }
 
   public GeometryDetailLevel GetGeometryDetailLevel(SenderModelCard modelCard) =>
