@@ -164,11 +164,11 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
         }
         else if (obj?.ToSpeckleGeometryWrapper() is not null)
         {
-          const string geometryErrorMessage =
+          const string GEOMETRY_ERROR_MESSAGE =
             "Speckle Geometry cannot be added directly to a Collection. "
             + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection.";
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, geometryErrorMessage);
-          throw new SpeckleException(geometryErrorMessage);
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, GEOMETRY_ERROR_MESSAGE);
+          throw new SpeckleException(GEOMETRY_ERROR_MESSAGE);
         }
         else
         {
