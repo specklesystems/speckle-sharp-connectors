@@ -49,9 +49,8 @@ public class PropertySetsExtractor(
     var modelUnits = GetModelUnits(modelItem);
     var propertyDetailLevel = settingsStore.Current.User.PropertyDetailLevel;
     var userFilteredPropertyCategories = modelItem.GetUserFilteredPropertyCategories();
-    var categories = propertyDetailLevel == PropertyDetailLevel.Full
-      ? modelItem.PropertyCategories
-      : userFilteredPropertyCategories;
+    var categories =
+      propertyDetailLevel == PropertyDetailLevel.Full ? modelItem.PropertyCategories : userFilteredPropertyCategories;
     int totalCategoryCount = modelItem.PropertyCategories.Count();
     int userFilteredCategoryCount = userFilteredPropertyCategories.Count();
     int extractedPropertyCount = 0;
