@@ -192,15 +192,10 @@ public sealed class GeometryToSpeckleConverter(
     var processor = new PrimitiveProcessor(_isUpright);
     ProcessPathFragments(path, itemPathKey, groupKey, processor, ref fragmentCount);
 
-    if (!_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld))
-    {
-      var geometries = ProcessGeometries([processor]);
-      _registry.MarkConverted(itemPathKey);
-      allResults.AddRange(geometries);
-      return allResults;
-    }
-
-    if (_groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1)
+    if (
+      !_registry.TryGetInstanceWorld(itemPathKey, out var instanceWorld)
+      || _groupMemberCounts.TryGetValue(groupKey, out var memberCount) && memberCount == 1
+    )
     {
       var geometries = ProcessGeometries([processor]);
       _registry.MarkConverted(itemPathKey);
@@ -663,28 +658,24 @@ public sealed class GeometryToSpeckleConverter(
   {
     MeshOptimizationMetricsTracker.RecordLines(lines.Count);
     var result = new List<Line>(lines.Count);
-
-    foreach (var line in lines)
-    {
-      result.Add(
-        new Line
-        {
-          start = new Point(
-            (line.Start.X + _transformVector.X) * SCALE,
-            (line.Start.Y + _transformVector.Y) * SCALE,
-            (line.Start.Z + _transformVector.Z) * SCALE,
-            _settings.Derived.SpeckleUnits
-          ),
-          end = new Point(
-            (line.End.X + _transformVector.X) * SCALE,
-            (line.End.Y + _transformVector.Y) * SCALE,
-            (line.End.Z + _transformVector.Z) * SCALE,
-            _settings.Derived.SpeckleUnits
-          ),
-          units = _settings.Derived.SpeckleUnits,
-        }
-      );
-    }
+    result.AddRange(
+      lines.Select(line => new Line
+      {
+        start = new Point(
+          (line.Start.X + _transformVector.X) * SCALE,
+          (line.Start.Y + _transformVector.Y) * SCALE,
+          (line.Start.Z + _transformVector.Z) * SCALE,
+          _settings.Derived.SpeckleUnits
+        ),
+        end = new Point(
+          (line.End.X + _transformVector.X) * SCALE,
+          (line.End.Y + _transformVector.Y) * SCALE,
+          (line.End.Z + _transformVector.Z) * SCALE,
+          _settings.Derived.SpeckleUnits
+        ),
+        units = _settings.Derived.SpeckleUnits,
+      })
+    );
 
     return result;
   }

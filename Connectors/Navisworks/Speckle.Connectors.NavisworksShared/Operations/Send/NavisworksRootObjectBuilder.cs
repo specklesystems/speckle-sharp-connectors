@@ -359,9 +359,9 @@ public class NavisworksRootObjectBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      for (var i = 0; i < group.Value.Count; i++)
+      foreach (var t in group.Value)
       {
-        var itemPath = elementSelectionService.GetModelItemPath(group.Value[i]);
+        var itemPath = elementSelectionService.GetModelItemPath(t);
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
         {
@@ -426,9 +426,9 @@ public class NavisworksRootObjectBuilder(
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
     var estimatedCapacity = 0;
-    for (var i = 0; i < siblingBases.Count; i++)
+    foreach (var t in siblingBases)
     {
-      if (siblingBases[i]["displayValue"] is List<Base> siblingDisplayValues)
+      if (t["displayValue"] is List<Base> siblingDisplayValues)
       {
         estimatedCapacity += siblingDisplayValues.Count;
       }
@@ -436,16 +436,15 @@ public class NavisworksRootObjectBuilder(
 
     var displayValues = new List<Base>(estimatedCapacity);
     var instanceProxyCount = 0;
-    for (var i = 0; i < siblingBases.Count; i++)
+    foreach (var t in siblingBases)
     {
-      if (siblingBases[i]["displayValue"] is not List<Base> siblingDisplayValues)
+      if (t["displayValue"] is not List<Base> siblingDisplayValues)
       {
         continue;
       }
 
-      for (var j = 0; j < siblingDisplayValues.Count; j++)
+      foreach (var displayValue in siblingDisplayValues)
       {
-        var displayValue = siblingDisplayValues[j];
         displayValues.Add(displayValue);
         if (displayValue is InstanceProxy)
         {

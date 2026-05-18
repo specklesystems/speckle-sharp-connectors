@@ -347,15 +347,7 @@ public class NavisworksContinuousTraversalBuilder(
 
   private static void ValidateConversionResults(List<SendConversionResult> results)
   {
-    var allErrored = true;
-    for (var i = 0; i < results.Count; i++)
-    {
-      if (results[i].Status != Status.ERROR)
-      {
-        allErrored = false;
-        break;
-      }
-    }
+    var allErrored = results.All(t => t.Status == Status.ERROR);
 
     if (allErrored)
     {
@@ -414,9 +406,9 @@ public class NavisworksContinuousTraversalBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      for (var i = 0; i < group.Value.Count; i++)
+      foreach (var t in group.Value)
       {
-        var itemPath = elementSelectionService.GetModelItemPath(group.Value[i]);
+        var itemPath = elementSelectionService.GetModelItemPath(t);
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
         {
@@ -481,26 +473,23 @@ public class NavisworksContinuousTraversalBuilder(
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
     var estimatedCapacity = 0;
-    for (var i = 0; i < siblingBases.Count; i++)
+    foreach (var t in siblingBases)
     {
-      if (siblingBases[i]["displayValue"] is List<Base> siblingDisplayValues)
+      if (t["displayValue"] is List<Base> siblingDisplayValues)
       {
         estimatedCapacity += siblingDisplayValues.Count;
       }
     }
 
     var displayValues = new List<Base>(estimatedCapacity);
-    for (var i = 0; i < siblingBases.Count; i++)
+    foreach (var t in siblingBases)
     {
-      if (siblingBases[i]["displayValue"] is not List<Base> siblingDisplayValues)
+      if (t["displayValue"] is not List<Base> siblingDisplayValues)
       {
         continue;
       }
 
-      for (var j = 0; j < siblingDisplayValues.Count; j++)
-      {
-        displayValues.Add(siblingDisplayValues[j]);
-      }
+      displayValues.AddRange(siblingDisplayValues);
     }
 
     return new NavisworksObject
