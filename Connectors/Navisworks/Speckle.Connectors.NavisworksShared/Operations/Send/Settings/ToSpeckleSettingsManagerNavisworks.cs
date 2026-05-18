@@ -171,7 +171,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
     );
 
   public bool GetPreserveModelHierarchy(SenderModelCard modelCard) =>
-    GetCachedSetting(modelCard, "preserveModelHierarchy", _preserveModelHierarchyCache, value => value is true, false);
+    GetCachedSetting(modelCard, "preserveModelHierarchy", _preserveModelHierarchyCache, value => value is true, true);
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
   {

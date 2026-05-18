@@ -76,7 +76,7 @@ public class NavisworksSendBinding : ISendBinding
       new PropertyDetailLevelSetting(PropertyDetailLevel.Standard),
       new GeometryDetailLevelSetting(GeometryDetailLevel.Optimised),
       new ConvertHiddenElementsSetting(false),
-      new PreserveModelHierarchySetting(false),
+      new PreserveModelHierarchySetting(true),
       new RevitCategoryMappingSetting(false),
     ];
 
