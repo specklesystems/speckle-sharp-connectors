@@ -18,6 +18,7 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
   private List<SafePoint> _points = [];
   private List<SafeTriangle> _triangles = [];
   private bool IsUpright { get; set; }
+  internal string CurrentWeldMaterialKey { get; set; } = string.Empty;
 
   internal PrimitiveProcessor(bool isUpright)
   {
@@ -105,7 +106,22 @@ public class PrimitiveProcessor : InwSimplePrimitivesCB
       IsUpright
     );
 
-    var safeTriangle = new SafeTriangle(vD1, vD2, vD3);
+    SafeVector? faceNormal = null;
+    if (TryComputeFaceNormal(vD1, vD2, vD3, out var computedFaceNormal))
+    {
+      faceNormal = computedFaceNormal;
+    }
+
+    var safeTriangle = new SafeTriangle(
+      vD1,
+      vD2,
+      vD3,
+      CurrentWeldMaterialKey,
+      faceNormal,
+      TryGetUv(v1, out var uv1) ? uv1 : null,
+      TryGetUv(v2, out var uv2) ? uv2 : null,
+      TryGetUv(v3, out var uv3) ? uv3 : null
+    );
 
     var indexPointer = Faces.Count;
     AddFace(3);
