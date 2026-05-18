@@ -343,6 +343,7 @@ public sealed class GeometryToSpeckleConverter(
           }
 
           processor.LocalToWorldTransformation = instanceWorld;
+          processor.CurrentWeldMaterialKey = PathKey.FromComArray(fragPathArr).ToPathString();
           fragment.GenerateSimplePrimitives(nwEVertexProperty.eNORMAL, processor);
 
           if (observed)
@@ -749,7 +750,7 @@ public sealed class GeometryToSpeckleConverter(
   }
 
   /// <summary>
-  /// Transforms a 4x4 matrix from Y-up to Z-up coordinate system.
+  /// Transforms a 4x4 matrix from the Y-up to the Z-up coordinate system.
   /// Applies P * M * P^-1 where P is the coordinate transform (x, y, z) -> (x, -z, y).
   /// </summary>
   private static double[] TransformMatrixYUpToZUp(double[] m)
