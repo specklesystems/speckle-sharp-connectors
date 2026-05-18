@@ -53,6 +53,11 @@ public enum OriginMode
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public enum PropertyDetailLevel
 {
+  /// <summary>
+  /// No property data is sent (replaces the legacy "exclude properties" toggle).
+  /// </summary>
+  None,
+
   Essential,
   Standard,
   Full,
