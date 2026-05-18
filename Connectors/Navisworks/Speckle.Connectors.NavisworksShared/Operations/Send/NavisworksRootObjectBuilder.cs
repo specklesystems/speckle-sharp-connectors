@@ -184,9 +184,10 @@ public class NavisworksRootObjectBuilder(
     long managedHeapBytesEnd = GC.GetTotalMemory(false);
 
     logger.LogInformation(
-      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
+      "Build benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, roundMeshVertexDoubles={RoundMeshVertexDoubles}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}, conversionMs={ConversionMs}, reassemblyMs={ReassemblyMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
       user.GeometryDetailLevel,
       user.PropertyDetailLevel,
+      user.RoundMeshVertexDoubles,
       user.IncludeInternalProperties,
       user.PreserveModelHierarchy,
       meshSnapshot.SeamRetentionEnabled,
