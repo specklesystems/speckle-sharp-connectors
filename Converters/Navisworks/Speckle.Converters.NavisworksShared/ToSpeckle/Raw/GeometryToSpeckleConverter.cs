@@ -458,7 +458,7 @@ public sealed class GeometryToSpeckleConverter(
       faces.AddRange([3, t * 3, t * 3 + 1, t * 3 + 2]);
     }
 
-    return CreateMeshWithRoundedVertices(
+    return CreateMeshWithOptionalRoundedVertices(
       new Mesh
       {
         vertices = vertices,
@@ -494,7 +494,7 @@ public sealed class GeometryToSpeckleConverter(
       isEmpty: triangles.Count == 0
     );
 
-    return CreateMeshWithRoundedVertices(
+    return CreateMeshWithOptionalRoundedVertices(
       new Mesh
       {
         vertices = vertices,
@@ -553,7 +553,7 @@ public sealed class GeometryToSpeckleConverter(
       isEmpty: triangles.Count == 0
     );
 
-    return CreateMeshWithRoundedVertices(
+    return CreateMeshWithOptionalRoundedVertices(
       new Mesh
       {
         vertices = vertices,
@@ -564,8 +564,13 @@ public sealed class GeometryToSpeckleConverter(
     );
   }
 
-  private static Mesh CreateMeshWithRoundedVertices(Mesh mesh, string units)
+  private Mesh CreateMeshWithOptionalRoundedVertices(Mesh mesh, string units)
   {
+    if (!_settings.User.RoundMeshVertexDoubles)
+    {
+      return mesh;
+    }
+
     var unitStep = GetMeshVertexUnitStep(units);
     int decimals = GetMeshVertexDecimals(unitStep);
 
