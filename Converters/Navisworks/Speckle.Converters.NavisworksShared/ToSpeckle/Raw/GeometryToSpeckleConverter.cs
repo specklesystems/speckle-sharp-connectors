@@ -406,9 +406,25 @@ public sealed class GeometryToSpeckleConverter(
 
   private Mesh CreateMesh(IReadOnlyList<SafeTriangle> triangles)
   {
-    if (_settings.User.GeometryDetailLevel == GeometryDetailLevel.Optimized)
+    var level = _settings.User.GeometryDetailLevel;
+    bool optimizedSeamsMode = level is GeometryDetailLevel.OptimizedSeams25 or GeometryDetailLevel.OptimizedSeams60;
+    bool optimizedAggressiveMode = level == GeometryDetailLevel.OptimizedAggressive;
+    bool seamRetentionEnabled = optimizedSeamsMode;
+    double creaseForMetrics = MeshCreaseAngleDegrees(level);
+    MeshOptimizationMetricsTracker.RecordSettings(
+      seamRetentionEnabled: seamRetentionEnabled,
+      geometryDetailLevel: level,
+      creaseAngleDegrees: creaseForMetrics
+    );
+
+    if (optimizedSeamsMode)
     {
-      return CreateWeldedMesh(triangles);
+      return CreateHardEdgeRetainedWeldedMesh(triangles);
+    }
+
+    if (optimizedAggressiveMode)
+    {
+      return CreatePositionOnlyWeldedMesh(triangles);
     }
 
     MeshOptimizationMetricsTracker.RecordMesh(
@@ -447,21 +463,20 @@ public sealed class GeometryToSpeckleConverter(
     };
   }
 
-  private Mesh CreateWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
+  private Mesh CreatePositionOnlyWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
   {
     var stopwatch = Stopwatch.StartNew();
     var vertices = new List<double>(triangles.Count * 9);
     var faces = new List<int>(triangles.Count * 4);
     var vertexIndexByKey = new Dictionary<VertexKey, int>();
 
-    for (var t = 0; t < triangles.Count; t++)
+    foreach (var triangle in triangles)
     {
-      var triangle = triangles[t];
       int index1 = GetOrAddVertexIndex(triangle.Vertex1, vertices, vertexIndexByKey);
       int index2 = GetOrAddVertexIndex(triangle.Vertex2, vertices, vertexIndexByKey);
       int index3 = GetOrAddVertexIndex(triangle.Vertex3, vertices, vertexIndexByKey);
 
-      faces.AddRange(new[] { 3, index1, index2, index3 });
+      faces.AddRange([3, index1, index2, index3]);
     }
 
     stopwatch.Stop();
@@ -481,11 +496,63 @@ public sealed class GeometryToSpeckleConverter(
     };
   }
 
-  private int GetOrAddVertexIndex(
-    SafeVertex vertex,
-    List<double> vertices,
-    Dictionary<VertexKey, int> vertexIndexByKey
-  )
+  private Mesh CreateHardEdgeRetainedWeldedMesh(IReadOnlyList<SafeTriangle> triangles)
+  {
+    var stopwatch = Stopwatch.StartNew();
+    var vertices = new List<double>(triangles.Count * 9);
+    var faces = new List<int>(triangles.Count * 4);
+    var vertexIndexByKey = new Dictionary<HardEdgeVertexKey, int>();
+    double creaseAngle = MeshCreaseAngleDegrees(_settings.User.GeometryDetailLevel);
+
+    foreach (var triangle in triangles)
+    {
+      int normalClusterKey = GetNormalClusterKey(triangle.FaceNormal, creaseAngle);
+      int index1 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex1,
+        triangle.Uv1,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+      int index2 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex2,
+        triangle.Uv2,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+      int index3 = GetOrAddHardEdgeVertexIndex(
+        triangle.Vertex3,
+        triangle.Uv3,
+        triangle.MaterialKey,
+        normalClusterKey,
+        vertices,
+        vertexIndexByKey
+      );
+
+      faces.AddRange([3, index1, index2, index3]);
+    }
+
+    stopwatch.Stop();
+    MeshOptimizationMetricsTracker.RecordMesh(
+      faceCount: triangles.Count,
+      vertexCountBeforeWeld: triangles.Count * 3,
+      vertexCountAfterWeld: vertices.Count / 3,
+      weldMs: stopwatch.Elapsed.TotalMilliseconds,
+      isEmpty: triangles.Count == 0
+    );
+
+    return new Mesh
+    {
+      vertices = vertices,
+      faces = faces,
+      units = _settings.Derived.SpeckleUnits,
+    };
+  }
+
+  private int GetOrAddVertexIndex(SafeVertex vertex, List<double> vertices, Dictionary<VertexKey, int> vertexIndexByKey)
   {
     double x = (vertex.X + _transformVector.X) * SCALE;
     double y = (vertex.Y + _transformVector.Y) * SCALE;
