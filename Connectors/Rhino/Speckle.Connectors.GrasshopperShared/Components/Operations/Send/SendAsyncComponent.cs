@@ -330,12 +330,14 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
           dataObjectWrapper.Parent = rootBase;
           rootBase.Elements.Add(dataObjectWrapper);
         }
-        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+        else if (obj?.ToSpeckleGeometryWrapper() is not null)
         {
-          SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
-          wrapper.Path = rootBase.Path;
-          wrapper.Parent = rootBase;
-          rootBase.Elements.Add(wrapper);
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Error,
+            "Speckle Geometry cannot be added directly to a Collection. "
+              + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection."
+          );
+          return;
         }
         else
         {

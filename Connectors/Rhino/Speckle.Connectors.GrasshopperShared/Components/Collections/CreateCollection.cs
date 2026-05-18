@@ -83,7 +83,7 @@ public class CreateCollection : VariableParameterComponentBase
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
-        "Collection contains no valid geometry. All input objects are unsupported types."
+        "Collection contains no valid content. Ensure inputs are Speckle Data Objects or sub-collections."
       );
       return;
     }
@@ -144,13 +144,16 @@ public class CreateCollection : VariableParameterComponentBase
         dataObjectWrapper.Parent = childCollection;
         childCollection.Elements.Add(dataObjectWrapper);
       }
-      // handle geometry objects (deep copy to avoid mutations)
-      else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+      // reject bare geometry — collections may only contain Data Objects or sub-collections.
+      // SpeckleGeometry is easily wrapped: wire your geometry through a 'Speckle Data Object' component first.
+      else if (obj?.ToSpeckleGeometryWrapper() is not null)
       {
-        SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
-        wrapper.Path = childPath;
-        wrapper.Parent = childCollection;
-        childCollection.Elements.Add(wrapper);
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Error,
+          "Speckle Geometry cannot be added directly to a Collection. "
+            + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection."
+        );
+        return null;
       }
       else
       {

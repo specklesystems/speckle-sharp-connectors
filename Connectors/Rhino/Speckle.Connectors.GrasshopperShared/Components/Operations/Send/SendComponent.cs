@@ -162,12 +162,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
           dataObjectWrapper.Parent = rootBase;
           rootBase.Elements.Add(dataObjectWrapper);
         }
-        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+        else if (obj?.ToSpeckleGeometryWrapper() is not null)
         {
-          SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
-          wrapper.Path = rootBase.Path;
-          wrapper.Parent = rootBase;
-          rootBase.Elements.Add(wrapper);
+          const string geometryErrorMessage =
+            "Speckle Geometry cannot be added directly to a Collection. "
+            + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection.";
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, geometryErrorMessage);
+          throw new SpeckleException(geometryErrorMessage);
         }
         else
         {

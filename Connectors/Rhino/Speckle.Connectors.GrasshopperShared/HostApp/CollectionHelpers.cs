@@ -70,12 +70,11 @@ public static class CollectionHelpers
   }
 
   /// <summary>
-  /// Recursively checks if collection or any descendants contain valid geometry/data objects
+  /// Recursively checks if collection or any descendants contain valid content (Data Objects or sub-collections).
   /// </summary>
   public static bool HasAnyValidContent(ISpeckleCollectionObject? element) =>
     element switch
     {
-      SpeckleGeometryWrapper => true,
       SpeckleDataObjectWrapper => true,
       SpeckleCollectionWrapper collection => collection.Elements.Any(HasAnyValidContent),
       _ => false,
