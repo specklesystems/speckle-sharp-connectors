@@ -17,6 +17,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   private readonly Dictionary<string, GeometryDetailLevel> _geometryDetailLevelCache = [];
   private readonly Dictionary<string, bool> _convertHiddenElementsCache = [];
   private readonly Dictionary<string, bool> _includeInternalPropertiesCache = [];
+  private readonly Dictionary<string, bool> _roundMeshVertexDoublesCache = [];
   private readonly Dictionary<string, bool> _preserveModelHierarchyCache = [];
   private readonly Dictionary<string, bool> _revitCategoryMappingCache = [];
 
@@ -160,6 +161,15 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       modelCard,
       "includeInternalProperties",
       _includeInternalPropertiesCache,
+      value => value is true,
+      false
+    );
+
+  public bool GetRoundMeshVertexDoubles(SenderModelCard modelCard) =>
+    GetCachedSetting(
+      modelCard,
+      "roundMeshVertexDoubles",
+      _roundMeshVertexDoublesCache,
       value => value is true,
       false
     );
