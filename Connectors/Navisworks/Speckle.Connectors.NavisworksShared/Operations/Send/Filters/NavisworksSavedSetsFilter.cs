@@ -70,18 +70,28 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
     return SelectionPathPlanner.BuildPlan(EnumerateObjectIds()).RootPaths.ToList();
   }
 
-  private IEnumerable<string> ResolveSelectionSet(NAV.ModelItemCollection selectionSetExplicitModelItems) =>
-    selectionSetExplicitModelItems
-      .Where(_selectionService.IsVisible) // Exclude hidden elements
-      .Select(_selectionService.GetModelItemPath) // Resolve to index paths
-      .ToList();
+  private IEnumerable<string> ResolveSelectionSet(NAV.ModelItemCollection selectionSetExplicitModelItems)
+  {
+    foreach (var modelItem in selectionSetExplicitModelItems)
+    {
+      if (_selectionService.IsVisible(modelItem))
+      {
+        yield return _selectionService.GetModelItemPath(modelItem);
+      }
+    }
+  }
 
-  private IEnumerable<string> ResolveSearchSet(NAV.Search selectionSetSearch) =>
-    selectionSetSearch
-      .FindAll(NavisworksApp.ActiveDocument, false)
-      .Where(_selectionService.IsVisible)
-      .Select(_selectionService.GetModelItemPath)
-      .ToList();
+  private IEnumerable<string> ResolveSearchSet(NAV.Search selectionSetSearch)
+  {
+    var results = selectionSetSearch.FindAll(NavisworksApp.ActiveDocument, false);
+    foreach (var modelItem in results)
+    {
+      if (_selectionService.IsVisible(modelItem))
+      {
+        yield return _selectionService.GetModelItemPath(modelItem);
+      }
+    }
+  }
 
   /// <summary>
   /// Since it is called from constructor, it is re-called whenever UI calls SendBinding.GetSendFilters() on SendFilter dialog.
