@@ -126,35 +126,43 @@ public class NavisworksSendBinding : ISendBinding
         )
       );
 
-  private async Task<IReadOnlyList<NAV.ModelItem>> GetNavisworksModelItems(
+  private Task<IReadOnlyList<NAV.ModelItem>> GetNavisworksModelItems(
     SenderModelCard modelCard,
     IProgress<CardProgress> onOperationProgressed
   )
   {
+    const double PRE_CONVERSION_START = 0d;
+    const double PRE_CONVERSION_END = 0.28d;
+    const double TREE_TRAVERSAL_MAX = 0.26d;
+    const int REPORT_INTERVAL = 1000;
+
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
 
     var convertHiddenElementsSetting =
       modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
+    var includeHiddenElements = convertHiddenElementsSetting;
     var message = convertHiddenElementsSetting
       ? "No visible objects were found to convert. Please update your publish filter!"
       : "No objects were found to convert. Please update your publish filter, or check items are visible!";
 
-    if (selectedPaths.Count == 0)
+    var uniqueSelectedPaths = selectedPaths.Distinct(StringComparer.Ordinal).ToList();
+    if (uniqueSelectedPaths.Count == 0)
     {
       throw new SpeckleSendFilterException(message);
     }
 
-    onOperationProgressed.Report(new CardProgress("Getting selection...", null));
-    await Task.CompletedTask;
+    onOperationProgressed.Report(new CardProgress("Getting selection...", PRE_CONVERSION_START));
 
-    int estimatedCapacity = selectedPaths.Count * 10;
+    int estimatedCapacity = uniqueSelectedPaths.Count * 10;
     var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
+    var seenGeometryItemGuids = new HashSet<Guid>();
     double count = 0;
 
-    foreach (var path in selectedPaths)
+    foreach (var path in uniqueSelectedPaths)
     {
-      onOperationProgressed.Report(new CardProgress("Getting selection...", count / selectedPaths.Count));
-      await Task.CompletedTask;
+      double rootProgress = count / uniqueSelectedPaths.Count;
+      double baseProgress = PRE_CONVERSION_START + (PRE_CONVERSION_END - PRE_CONVERSION_START) * rootProgress;
+      onOperationProgressed.Report(new CardProgress("Getting selection...", baseProgress));
 
       var modelItem = _selectionService.GetModelItemFromPath(path);
       var hasChildren = modelItem.Children.Any();
@@ -210,7 +218,16 @@ public class NavisworksSendBinding : ISendBinding
       count++;
     }
 
-    return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
+    onOperationProgressed.Report(
+      new CardProgress($"Selection resolved: {modelItems.Count:N0} geometry objects", PRE_CONVERSION_END)
+    );
+
+    if (modelItems.Count == 0)
+    {
+      throw new SpeckleSendFilterException(message);
+    }
+
+    return Task.FromResult<IReadOnlyList<NAV.ModelItem>>(modelItems);
   }
 
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
