@@ -145,24 +145,29 @@ public class NavisworksSendBinding : ISendBinding
       ? "No visible objects were found to convert. Please update your publish filter!"
       : "No objects were found to convert. Please update your publish filter, or check items are visible!";
 
-    var uniqueSelectedPaths = selectedPaths.Distinct(StringComparer.Ordinal).ToList();
-    if (uniqueSelectedPaths.Count == 0)
+    var plannedSelection = BuildSelectionPlan(selectedPaths);
+    if (plannedSelection.RootPaths.Count == 0)
     {
       throw new SpeckleSendFilterException(message);
     }
 
     onOperationProgressed.Report(new CardProgress("Getting selection...", PRE_CONVERSION_START));
 
-    int estimatedCapacity = uniqueSelectedPaths.Count * 10;
+    int estimatedCapacity = plannedSelection.RootPaths.Count * 10;
     var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
     var seenGeometryItemGuids = new HashSet<Guid>();
     double count = 0;
 
-    foreach (var path in uniqueSelectedPaths)
+    foreach (var path in plannedSelection.RootPaths)
     {
-      double rootProgress = count / uniqueSelectedPaths.Count;
+      double rootProgress = count / plannedSelection.RootPaths.Count;
       double baseProgress = PRE_CONVERSION_START + (PRE_CONVERSION_END - PRE_CONVERSION_START) * rootProgress;
-      onOperationProgressed.Report(new CardProgress("Getting selection...", baseProgress));
+      onOperationProgressed.Report(
+        new CardProgress(
+          $"Getting selection... ({plannedSelection.PrunedDescendantCount:N0} redundant paths pruned)",
+          baseProgress
+        )
+      );
 
       var modelItem = _selectionService.GetModelItemFromPath(path);
       var hasChildren = modelItem.Children.Any();
@@ -186,7 +191,7 @@ public class NavisworksSendBinding : ISendBinding
             double treeProgress = PRE_CONVERSION_START + TREE_TRAVERSAL_MAX * rootProgress;
             double progress = Math.Min(
               PRE_CONVERSION_END,
-              treeProgress + (TREE_TRAVERSAL_MAX / uniqueSelectedPaths.Count) * visitedSignal
+              treeProgress + (TREE_TRAVERSAL_MAX / plannedSelection.RootPaths.Count) * visitedSignal
             );
             onOperationProgressed.Report(
               new CardProgress(
