@@ -36,6 +36,7 @@ public class NavisworksSendBinding : ISendBinding
   private readonly IElementSelectionService _selectionService;
   private readonly IThreadContext _threadContext;
   private readonly ISendOperationManagerFactory _sendOperationManagerFactory;
+  private SelectionPlanCacheEntry? _selectionPlanCache;
 
   public NavisworksSendBinding(
     DocumentModelStore store,
@@ -151,7 +152,19 @@ public class NavisworksSendBinding : ISendBinding
       : "No objects were found to convert. Please update your publish filter, or check items are visible!";
 
     var selectionPlanStopwatch = Stopwatch.StartNew();
-    var plannedSelection = SelectionPathPlanner.BuildPlan(selectedPaths);
+    string selectionSignature = BuildSelectionSignature(filterId, selectedPaths, includeHiddenElements);
+    bool selectionPlanCacheHit = _selectionPlanCache is { Signature: var cachedSignature } && cachedSignature == selectionSignature;
+    SelectionPathPlan plannedSelection;
+    if (selectionPlanCacheHit)
+    {
+      plannedSelection = _selectionPlanCache!.Value.Plan;
+    }
+    else
+    {
+      plannedSelection = SelectionPathPlanner.BuildPlan(selectedPaths);
+      _selectionPlanCache = new SelectionPlanCacheEntry(selectionSignature, plannedSelection);
+    }
+
     selectionPlanStopwatch.Stop();
     if (plannedSelection.RootPaths.Count == 0)
     {
@@ -181,7 +194,7 @@ public class NavisworksSendBinding : ISendBinding
       double baseProgress = PRE_CONVERSION_START + (PRE_CONVERSION_END - PRE_CONVERSION_START) * rootProgress;
       onOperationProgressed.Report(
         new CardProgress(
-          $"Getting selection... ({plannedSelection.PrunedDescendantCount:N0} redundant paths pruned, plan {selectionPlanStopwatch.ElapsedMilliseconds} ms)",
+          $"Getting selection... ({plannedSelection.PrunedDescendantCount:N0} redundant paths pruned, plan {selectionPlanStopwatch.ElapsedMilliseconds} ms, cache {(selectionPlanCacheHit ? "hit" : "miss")})",
           baseProgress
         )
       );
@@ -277,4 +290,27 @@ public class NavisworksSendBinding : ISendBinding
       CancelSend(modelCardId ?? string.Empty);
     }
   }
+
+  private static string BuildSelectionSignature(string filterId, IReadOnlyList<string> selectedPaths, bool includeHiddenElements)
+  {
+    unchecked
+    {
+      int hash = 17;
+      hash = (hash * 31) + StringComparer.Ordinal.GetHashCode(filterId ?? string.Empty);
+      hash = (hash * 31) + includeHiddenElements.GetHashCode();
+      hash =
+        (hash * 31)
+        + StringComparer.OrdinalIgnoreCase.GetHashCode(NavisworksApp.ActiveDocument?.FileName ?? string.Empty);
+      hash = (hash * 31) + selectedPaths.Count;
+
+      foreach (var path in selectedPaths)
+      {
+        hash = (hash * 31) + StringComparer.Ordinal.GetHashCode(path ?? string.Empty);
+      }
+
+      return hash.ToString();
+    }
+  }
+
+  private readonly record struct SelectionPlanCacheEntry(string Signature, SelectionPathPlan Plan);
 }
