@@ -41,20 +41,23 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
 
   public List<string> RefreshObjectIds()
   {
-    List<string> objectIds = [];
-
     if (SelectedItems.Count == 0)
     {
-      return objectIds;
+      return [];
     }
 
-    foreach (var savedViewItem in SelectedItems.Select(item => ResolveSavedView(item.Id)))
+    IEnumerable<string> EnumerateObjectIds()
     {
-      // Get the visible elements in the saved view.
-      objectIds.AddRange(ResolvedSavedViewObjects(savedViewItem));
+      foreach (var savedViewItem in SelectedItems.Select(item => ResolveSavedView(item.Id)))
+      {
+        foreach (var path in ResolvedSavedViewObjects(savedViewItem))
+        {
+          yield return path;
+        }
+      }
     }
 
-    return SelectionPathPlanner.BuildPlan(objectIds).RootPaths.ToList();
+    return SelectionPathPlanner.BuildPlan(EnumerateObjectIds()).RootPaths.ToList();
   }
 
   private static NAV.SavedViewpoint ResolveSavedView(string savedViewReference)
@@ -78,8 +81,6 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
 
   private IEnumerable<string> ResolvedSavedViewObjects(NAV.SavedViewpoint savedView)
   {
-    var objectIds = new List<string>();
-
     // THIS IS COMMENTED OUT AS IT IS LEGACY DEFENSIVE BEHAVIOR - DISCUSSION REQUIRED
     // if (!savedView.ContainsVisibilityOverrides)
     // {
@@ -98,19 +99,20 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
     foreach (var model in models)
     {
       var rootItem = model.RootItem;
-
-      if (!_selectionService.IsVisible(rootItem))
+      if (_selectionService.IsVisible(rootItem))
       {
-        // If the root item is hidden, we skip it and its descendants.
+        yield return _selectionService.GetModelItemPath(rootItem);
         continue;
       }
 
-      objectIds.AddRange(
-        rootItem.Descendants.Where(_selectionService.IsVisible).Select(_selectionService.GetModelItemPath).ToList()
-      );
+      foreach (var child in rootItem.Children)
+      {
+        if (_selectionService.IsVisible(child))
+        {
+          yield return _selectionService.GetModelItemPath(child);
+        }
+      }
     }
-
-    return objectIds;
   }
 
   /// <summary>
