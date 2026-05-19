@@ -238,6 +238,59 @@ public class NavisworksSendBinding : ISendBinding
     return Task.FromResult<IReadOnlyList<NAV.ModelItem>>(modelItems);
   }
 
+  private static SelectionPlan BuildSelectionPlan(IEnumerable<string> selectedPaths)
+  {
+    var cleanedDistinctPaths = selectedPaths
+      .Where(path => !string.IsNullOrWhiteSpace(path))
+      .Select(ElementSelectionHelper.GetCleanPath)
+      .Distinct(StringComparer.Ordinal)
+      .OrderBy(path => path.Count(c => c == '.'))
+      .ThenBy(path => path, StringComparer.Ordinal)
+      .ToList();
+
+    if (cleanedDistinctPaths.Count == 0)
+    {
+      return new SelectionPlan([], 0);
+    }
+
+    var rootPaths = new List<string>(cleanedDistinctPaths.Count);
+    var acceptedPaths = new HashSet<string>(StringComparer.Ordinal);
+    int prunedDescendantCount = 0;
+
+    foreach (var path in cleanedDistinctPaths)
+    {
+      if (HasSelectedAncestor(path, acceptedPaths))
+      {
+        prunedDescendantCount++;
+        continue;
+      }
+
+      acceptedPaths.Add(path);
+      rootPaths.Add(path);
+    }
+
+    return new SelectionPlan(rootPaths, prunedDescendantCount);
+  }
+
+  private static bool HasSelectedAncestor(string path, ISet<string> acceptedPaths)
+  {
+    int separatorIndex = path.LastIndexOf('.');
+    while (separatorIndex > 0)
+    {
+      string ancestor = path[..separatorIndex];
+      if (acceptedPaths.Contains(ancestor))
+      {
+        return true;
+      }
+
+      separatorIndex = ancestor.LastIndexOf('.');
+    }
+
+    return false;
+  }
+
+  private sealed record SelectionPlan(IReadOnlyList<string> RootPaths, int PrunedDescendantCount);
+
   public void CancelSend(string modelCardId) => _cancellationManager.CancelOperation(modelCardId);
 
   public void CancelAllSendOperations()
