@@ -30,6 +30,25 @@ public sealed class LevelExtractor
     {
       levelId = element.LevelId;
     }
+    // stairs store their base level in a parameter
+    else if (element is DBA.Stairs stairs)
+    {
+      levelId = stairs.get_Parameter(DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM)?.AsElementId();
+    }
+    // roofs store their base constraint level in a parameter
+    else if (element is DB.RoofBase roof)
+    {
+      levelId = roof.get_Parameter(DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM)?.AsElementId();
+    }
+    // railings: recurse into host (e.g. a stair or floor)
+    else if (element is DBA.Railing railing && railing.HostId != DB.ElementId.InvalidElementId)
+    {
+      var host = railing.Document.GetElement(railing.HostId);
+      if (host is not null)
+      {
+        return GetLevel(host);
+      }
+    }
     // otherwise try FamilyInstance-specific sources
     else if (element is DB.FamilyInstance familyInstance)
     {
@@ -40,6 +59,12 @@ public sealed class LevelExtractor
       {
         return GetLevel(familyInstance.Host);
       }
+    }
+
+    // fall back to the sketch plane parameter (sketched elements)
+    if (levelId == null || levelId == DB.ElementId.InvalidElementId)
+    {
+      levelId = element.get_Parameter(DB.BuiltInParameter.SKETCH_PLANE_PARAM)?.AsElementId();
     }
 
     // okay, no valid LevelId found and we've tried A LOT!
