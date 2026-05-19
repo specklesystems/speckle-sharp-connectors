@@ -54,7 +54,7 @@ public class NavisworksSavedViewsFilter : DiscriminatedObject, ISendFilterSelect
       objectIds.AddRange(ResolvedSavedViewObjects(savedViewItem));
     }
 
-    return objectIds;
+    return SelectionPathPlanner.BuildPlan(objectIds).RootPaths.ToList();
   }
 
   private static NAV.SavedViewpoint ResolveSavedView(string savedViewReference)

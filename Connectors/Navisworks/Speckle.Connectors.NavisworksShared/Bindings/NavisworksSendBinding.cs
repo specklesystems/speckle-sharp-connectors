@@ -146,7 +146,7 @@ public class NavisworksSendBinding : ISendBinding
       ? "No visible objects were found to convert. Please update your publish filter!"
       : "No objects were found to convert. Please update your publish filter, or check items are visible!";
 
-    var plannedSelection = BuildSelectionPlan(selectedPaths);
+    var plannedSelection = SelectionPathPlanner.BuildPlan(selectedPaths);
     if (plannedSelection.RootPaths.Count == 0)
     {
       throw new SpeckleSendFilterException(message);

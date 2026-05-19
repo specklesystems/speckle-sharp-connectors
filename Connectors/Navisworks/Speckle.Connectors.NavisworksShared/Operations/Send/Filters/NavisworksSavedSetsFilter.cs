@@ -33,34 +33,41 @@ public class NavisworksSavedSetsFilter : DiscriminatedObject, ISendFilterSelect
 
   public List<string> RefreshObjectIds()
   {
-    List<string> objectIds = [];
-
     if (SelectedItems.Count == 0)
     {
-      return objectIds;
+      return [];
     }
 
     var selectionSets = NavisworksApp.ActiveDocument.SelectionSets;
 
-    foreach (var selectedSetGuid in SelectedItems)
+    IEnumerable<string> EnumerateObjectIds()
     {
-      var guid = new Guid(selectedSetGuid.Id);
-      var selectionSetItem =
-        selectionSets.ResolveGuid(guid)
-        ?? throw new SpeckleSendFilterException($"Selection set with GUID {guid} not found.");
-      var selectionSet = (NAV.SelectionSet)selectionSetItem;
-      if (selectionSet.HasSearch)
+      foreach (var selectedSetGuid in SelectedItems)
       {
-        objectIds.AddRange(ResolveSearchSet(selectionSet.Search));
-      }
+        var guid = new Guid(selectedSetGuid.Id);
+        var selectionSetItem =
+          selectionSets.ResolveGuid(guid)
+          ?? throw new SpeckleSendFilterException($"Selection set with GUID {guid} not found.");
+        var selectionSet = (NAV.SelectionSet)selectionSetItem;
+        if (selectionSet.HasSearch)
+        {
+          foreach (var path in ResolveSearchSet(selectionSet.Search))
+          {
+            yield return path;
+          }
+        }
 
-      if (selectionSet.HasExplicitModelItems)
-      {
-        objectIds.AddRange(ResolveSelectionSet(selectionSet.ExplicitModelItems));
+        if (selectionSet.HasExplicitModelItems)
+        {
+          foreach (var path in ResolveSelectionSet(selectionSet.ExplicitModelItems))
+          {
+            yield return path;
+          }
+        }
       }
     }
 
-    return objectIds;
+    return SelectionPathPlanner.BuildPlan(EnumerateObjectIds()).RootPaths.ToList();
   }
 
   private IEnumerable<string> ResolveSelectionSet(NAV.ModelItemCollection selectionSetExplicitModelItems) =>
