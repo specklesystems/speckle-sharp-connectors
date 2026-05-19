@@ -254,7 +254,10 @@ public class NavisworksSendBinding : ISendBinding
     }
 
     onOperationProgressed.Report(
-      new CardProgress($"Selection resolved: {modelItems.Count:N0} geometry objects", PRE_CONVERSION_END)
+      new CardProgress(
+        $"Selection resolved: {modelItems.Count:N0} geometry objects ({plannedSelection.PrunedDescendantCount:N0} pruned)",
+        PRE_CONVERSION_END
+      )
     );
 
     if (modelItems.Count == 0)
