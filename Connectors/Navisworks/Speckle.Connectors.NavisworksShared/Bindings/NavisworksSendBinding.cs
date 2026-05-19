@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using Autodesk.Navisworks.Api;
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connector.Navisworks.Operations.Send.Filters;
@@ -136,7 +137,11 @@ public class NavisworksSendBinding : ISendBinding
     const double TREE_TRAVERSAL_MAX = 0.26d;
     const int REPORT_INTERVAL = 1000;
 
+    string cancellationId = modelCard.ModelCardId ?? string.Empty;
+    string filterId = modelCard.SendFilter?.Id ?? "unknown";
+    var selectionQueryStopwatch = Stopwatch.StartNew();
     var selectedPaths = modelCard.SendFilter.NotNull().RefreshObjectIds();
+    selectionQueryStopwatch.Stop();
 
     var convertHiddenElementsSetting =
       modelCard.Settings!.FirstOrDefault(s => s.Id == "convertHiddenElements")?.Value as bool? ?? false;
@@ -145,13 +150,20 @@ public class NavisworksSendBinding : ISendBinding
       ? "No visible objects were found to convert. Please update your publish filter!"
       : "No objects were found to convert. Please update your publish filter, or check items are visible!";
 
+    var selectionPlanStopwatch = Stopwatch.StartNew();
     var plannedSelection = SelectionPathPlanner.BuildPlan(selectedPaths);
+    selectionPlanStopwatch.Stop();
     if (plannedSelection.RootPaths.Count == 0)
     {
       throw new SpeckleSendFilterException(message);
     }
 
-    onOperationProgressed.Report(new CardProgress("Getting selection...", PRE_CONVERSION_START));
+    onOperationProgressed.Report(
+      new CardProgress(
+        $"Selection query ({filterId}) resolved {selectedPaths.Count:N0} paths in {selectionQueryStopwatch.ElapsedMilliseconds} ms",
+        PRE_CONVERSION_START
+      )
+    );
 
     int estimatedCapacity = plannedSelection.RootPaths.Count * 10;
     var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
@@ -160,11 +172,16 @@ public class NavisworksSendBinding : ISendBinding
 
     foreach (var path in plannedSelection.RootPaths)
     {
+      if (_cancellationManager.IsCancellationRequested(cancellationId))
+      {
+        throw new OperationCanceledException();
+      }
+
       double rootProgress = count / plannedSelection.RootPaths.Count;
       double baseProgress = PRE_CONVERSION_START + (PRE_CONVERSION_END - PRE_CONVERSION_START) * rootProgress;
       onOperationProgressed.Report(
         new CardProgress(
-          $"Getting selection... ({plannedSelection.PrunedDescendantCount:N0} redundant paths pruned)",
+          $"Getting selection... ({plannedSelection.PrunedDescendantCount:N0} redundant paths pruned, plan {selectionPlanStopwatch.ElapsedMilliseconds} ms)",
           baseProgress
         )
       );
@@ -182,6 +199,11 @@ public class NavisworksSendBinding : ISendBinding
 
         while (traversalStack.Count > 0)
         {
+          if (nodesVisited % 256 == 0 && _cancellationManager.IsCancellationRequested(cancellationId))
+          {
+            throw new OperationCanceledException();
+          }
+
           var (node, ancestorsVisible) = traversalStack.Pop();
           nodesVisited++;
 
