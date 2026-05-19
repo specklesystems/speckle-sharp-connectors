@@ -171,45 +171,53 @@ public class NavisworksSendBinding : ISendBinding
       {
         int nodesVisited = 0;
         int hiddenBranchesPruned = 0;
-        const int REPORT_INTERVAL = 1000;
 
-        void TraverseWithProgress(NAV.ModelItem node)
+        var traversalStack = new Stack<(NAV.ModelItem Node, bool AncestorsVisible)>();
+        traversalStack.Push((modelItem, true));
+
+        while (traversalStack.Count > 0)
         {
+          var (node, ancestorsVisible) = traversalStack.Pop();
           nodesVisited++;
 
           if (nodesVisited % REPORT_INTERVAL == 0)
           {
+            double visitedSignal = (double)nodesVisited / (nodesVisited + REPORT_INTERVAL);
+            double treeProgress = PRE_CONVERSION_START + TREE_TRAVERSAL_MAX * rootProgress;
+            double progress = Math.Min(
+              PRE_CONVERSION_END,
+              treeProgress + (TREE_TRAVERSAL_MAX / uniqueSelectedPaths.Count) * visitedSignal
+            );
             onOperationProgressed.Report(
               new CardProgress(
                 $"Expanding tree: {nodesVisited} visited, {modelItems.Count} with geometry, {hiddenBranchesPruned} hidden",
-                null
+                progress
               )
             );
-            Task.Delay(1).Wait();
           }
 
-          if (!_selectionService.IsVisible(node))
+          bool isVisible = includeHiddenElements || (ancestorsVisible && !node.IsHidden);
+          if (!isVisible)
           {
             hiddenBranchesPruned++;
-            return;
+            continue;
           }
 
-          if (node.HasGeometry)
+          if (node.HasGeometry && seenGeometryItemGuids.Add(node.InstanceGuid))
           {
             modelItems.Add(node);
           }
 
-          foreach (var child in node.Children)
+          for (int i = node.Children.Count - 1; i >= 0; i--)
           {
-            TraverseWithProgress(child);
+            traversalStack.Push((node.Children[i], isVisible));
           }
         }
-
-        TraverseWithProgress(modelItem);
       }
       else
       {
-        if (modelItem.HasGeometry && _selectionService.IsVisible(modelItem))
+        bool isVisible = includeHiddenElements || _selectionService.IsVisible(modelItem);
+        if (modelItem.HasGeometry && isVisible && seenGeometryItemGuids.Add(modelItem.InstanceGuid))
         {
           modelItems.Add(modelItem);
         }
