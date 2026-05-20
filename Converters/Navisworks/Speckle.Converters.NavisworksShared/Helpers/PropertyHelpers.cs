@@ -57,10 +57,14 @@ public static class PropertyHelpers
   internal static dynamic? ConvertPropertyValue(NAV.VariantData? value, string units)
   {
     if (value == null)
+    {
       return null;
+    }
 
     if (s_typeHandlers.TryGetValue(value.DataType, out Func<NAV.VariantData, string, dynamic?>? handler))
+    {
       return handler(value, units);
+    }
 
     return value.DataType is NAV.VariantDataType.None or NAV.VariantDataType.Point2D ? null : value.ToString();
   }
@@ -70,11 +74,15 @@ public static class PropertyHelpers
     switch (value)
     {
       case null:
+      {
         break;
+      }
       case string stringValue:
       {
         if (!string.IsNullOrEmpty(stringValue))
+        {
           AssignProperty(baseObject, propertyName, value);
+        }
 
         break;
       }
