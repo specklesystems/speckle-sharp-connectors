@@ -34,28 +34,20 @@ public sealed class LevelExtractor
     {
       levelId = element.LevelId;
     }
-    // stairs store their base level in a parameter
-    else if (category is DB.BuiltInCategory.OST_Stairs or DB.BuiltInCategory.OST_Ramps)
+    // category-specific level parameter (stairs, ramps, roofs)
+    else if (GetCategoryLevelParam(category) is { } categoryParam)
     {
-      levelId = element.get_Parameter(DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM)?.AsElementId();
-    }
-    // roofs store their base constraint level in a parameter
-    else if (category is DB.BuiltInCategory.OST_Roofs)
-    {
-      levelId = element.get_Parameter(DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM)?.AsElementId();
+      levelId = element.get_Parameter(categoryParam)?.AsElementId();
     }
     // railings: recurse into host (e.g. a stair or floor)
-    else if (category is DB.BuiltInCategory.OST_StairsRailing && element is DB.Architecture.Railing railing)
+    else if (
+      category is DB.BuiltInCategory.OST_StairsRailing
+      && element is DB.Architecture.Railing railing
+      && railing.HostId != DB.ElementId.InvalidElementId
+      && element.Document?.GetElement(railing.HostId) is { } host
+    )
     {
-      var hostId = railing.HostId;
-      if (hostId != DB.ElementId.InvalidElementId)
-      {
-        var host = element.Document?.GetElement(hostId);
-        if (host != null)
-        {
-          return GetLevel(host);
-        }
-      }
+      return GetLevel(host);
     }
     // otherwise try FamilyInstance-specific sources
     else if (element is DB.FamilyInstance familyInstance)
@@ -96,6 +88,14 @@ public sealed class LevelExtractor
 
     return null;
   }
+
+  private static DB.BuiltInParameter? GetCategoryLevelParam(DB.BuiltInCategory? category) =>
+    category switch
+    {
+      DB.BuiltInCategory.OST_Stairs or DB.BuiltInCategory.OST_Ramps => DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM,
+      DB.BuiltInCategory.OST_Roofs => DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM,
+      _ => null,
+    };
 
   /// <summary>
   /// Tries to get a level ID from a FamilyInstance via parameter or host.
