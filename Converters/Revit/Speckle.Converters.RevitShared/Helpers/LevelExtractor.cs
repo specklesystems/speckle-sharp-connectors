@@ -35,7 +35,7 @@ public sealed class LevelExtractor
       levelId = element.LevelId;
     }
     // stairs store their base level in a parameter
-    else if (category is DB.BuiltInCategory.OST_Stairs)
+    else if (category is DB.BuiltInCategory.OST_Stairs or DB.BuiltInCategory.OST_Ramps)
     {
       levelId = element.get_Parameter(DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM)?.AsElementId();
     }
