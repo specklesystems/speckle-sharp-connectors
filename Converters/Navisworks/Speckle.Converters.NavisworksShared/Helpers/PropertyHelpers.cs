@@ -14,6 +14,7 @@ public static class PropertyHelpers
     "Entity_Handle",
     "lcldiv_refkeyid",
   };
+
   private static readonly HashSet<string> s_excludedPropertyNames = new(StringComparer.OrdinalIgnoreCase)
   {
     "CreatedPhaseId",
@@ -24,7 +25,7 @@ public static class PropertyHelpers
   };
 
   /// <summary>
-  /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
+  ///   Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
   /// </summary>
   private static readonly Dictionary<NAV.VariantDataType, Func<NAV.VariantData, string, dynamic?>> s_typeHandlers =
     new()
@@ -46,8 +47,8 @@ public static class PropertyHelpers
         NAV.VariantDataType.Point3D,
         (value, units) =>
         {
-          var point = value.ToPoint3D();
-          var pointProperty = new Point(point.X, point.Y, point.Z, units);
+          NAV.Point3D? point = value.ToPoint3D();
+          Point pointProperty = new(point.X, point.Y, point.Z, units);
           return pointProperty.ToString();
         }
       },
@@ -56,14 +57,10 @@ public static class PropertyHelpers
   internal static dynamic? ConvertPropertyValue(NAV.VariantData? value, string units)
   {
     if (value == null)
-    {
       return null;
-    }
 
-    if (s_typeHandlers.TryGetValue(value.DataType, out var handler))
-    {
+    if (s_typeHandlers.TryGetValue(value.DataType, out Func<NAV.VariantData, string, dynamic?>? handler))
       return handler(value, units);
-    }
 
     return value.DataType is NAV.VariantDataType.None or NAV.VariantDataType.Point2D ? null : value.ToString();
   }
@@ -77,9 +74,7 @@ public static class PropertyHelpers
       case string stringValue:
       {
         if (!string.IsNullOrEmpty(stringValue))
-        {
           AssignProperty(baseObject, propertyName, value);
-        }
 
         break;
       }
@@ -108,7 +103,8 @@ public static class PropertyHelpers
     name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
 
   internal static bool ShouldSkipProperty(string propertyName) =>
-    s_excludedPropertyNames.Contains(propertyName) || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
+    s_excludedPropertyNames.Contains(propertyName)
+    || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
 
   internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
     s_excludedCategories.Contains(propertyCategory.DisplayName);

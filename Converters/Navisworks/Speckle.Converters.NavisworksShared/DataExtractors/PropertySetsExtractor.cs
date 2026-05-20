@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
+using System.Text;
 using Speckle.Converter.Navisworks.Services;
+using Speckle.Newtonsoft.Json;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
@@ -98,7 +99,9 @@ public class PropertySetsExtractor(
 
     stopwatch.Stop();
     int payloadBytes =
-      propertySetDictionary.Count == 0 ? 0 : JsonSerializer.SerializeToUtf8Bytes(propertySetDictionary).Length;
+      propertySetDictionary.Count == 0
+        ? 0
+        : Encoding.UTF8.GetByteCount(JsonConvert.SerializeObject(propertySetDictionary));
     PropertyExtractionMetricsTracker.Record(
       totalCategoryCount,
       userFilteredCategoryCount,
