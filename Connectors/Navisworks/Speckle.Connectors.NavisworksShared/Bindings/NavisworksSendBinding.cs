@@ -210,6 +210,8 @@ public class NavisworksSendBinding : ISendBinding
       count++;
     }
 
+    onOperationProgressed.Report(new CardProgress("Converting", 0));
+
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }
 

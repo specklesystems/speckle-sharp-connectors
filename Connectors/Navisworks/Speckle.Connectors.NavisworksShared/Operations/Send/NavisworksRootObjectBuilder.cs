@@ -255,9 +255,23 @@ public class NavisworksRootObjectBuilder(
     int totalCount = navisworksModelItems.Count;
     int instanceProxyCount = 0;
 
-    geometryConversionContext.PrimeBatch(navisworksModelItems);
+    onOperationProgressed.Report(new CardProgress("Converting", 0));
+
+    double geometryWeight = totalCount > 0 ? CountVisibleGeometryItems(navisworksModelItems) / (double)totalCount : 0;
+
+    geometryConversionContext.PrimeBatch(
+      navisworksModelItems,
+      geometryWeight > 0
+        ? (fraction, pathsProcessed) =>
+          onOperationProgressed.Report(
+            new CardProgress($"Converting geometry ({pathsProcessed:N0} paths)", fraction * geometryWeight)
+          )
+        : null
+    );
     try
     {
+      const int ITEM_PROGRESS_REPORT_INTERVAL = 1000;
+
       foreach (var item in navisworksModelItems)
       {
         cancellationToken.ThrowIfCancellationRequested();
@@ -274,7 +288,12 @@ public class NavisworksRootObjectBuilder(
         }
 
         processedCount++;
-        onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+        if (processedCount % ITEM_PROGRESS_REPORT_INTERVAL == 0 || processedCount == totalCount)
+        {
+          double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
+          onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
+          Task.Delay(1, cancellationToken).Wait(cancellationToken);
+        }
       }
     }
     finally
