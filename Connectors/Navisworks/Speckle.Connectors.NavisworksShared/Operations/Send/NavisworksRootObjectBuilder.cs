@@ -376,9 +376,8 @@ public class NavisworksRootObjectBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      foreach (var t in group.Value)
+      foreach (var itemPath in group.Value.Select(t => elementSelectionService.GetModelItemPath(t)))
       {
-        var itemPath = elementSelectionService.GetModelItemPath(t);
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
         {
@@ -399,13 +398,8 @@ public class NavisworksRootObjectBuilder(
     HashSet<string> processedPaths
   )
   {
-    foreach (var kvp in convertedBases)
+    foreach (var kvp in convertedBases.Where(kvp => !processedPaths.Contains(kvp.Key)))
     {
-      if (processedPaths.Contains(kvp.Key))
-      {
-        continue;
-      }
-
       switch (kvp.Value)
       {
         case null:
