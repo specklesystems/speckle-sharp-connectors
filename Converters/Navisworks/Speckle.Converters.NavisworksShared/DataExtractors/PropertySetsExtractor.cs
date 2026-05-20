@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using Speckle.Converter.Navisworks.Services;
-using Speckle.Newtonsoft.Json;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
+using Speckle.Newtonsoft.Json;
 using static Speckle.Converter.Navisworks.Helpers.PropertyHelpers;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle;
