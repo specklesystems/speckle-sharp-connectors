@@ -356,7 +356,6 @@ public class NavisworksContinuousTraversalBuilder(
         {
           double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
           onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
-          Task.Delay(1, cancellationToken).Wait(cancellationToken);
         }
       }
     }

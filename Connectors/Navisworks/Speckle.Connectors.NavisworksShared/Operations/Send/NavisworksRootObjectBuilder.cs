@@ -292,12 +292,13 @@ public class NavisworksRootObjectBuilder(
         }
 
         processedCount++;
-        if (processedCount % ITEM_PROGRESS_REPORT_INTERVAL == 0 || processedCount == totalCount)
+        if (processedCount % ITEM_PROGRESS_REPORT_INTERVAL != 0 && processedCount != totalCount)
         {
-          double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
-          onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
-          Task.Delay(1, cancellationToken).Wait(cancellationToken);
+          continue;
         }
+
+        double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
+        onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
       }
     }
     finally
