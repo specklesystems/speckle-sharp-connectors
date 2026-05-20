@@ -109,7 +109,7 @@ public sealed class SendOperation<T>(
         sendInfo.ProjectId,
         $"Sending from {speckleApplication.ApplicationAndVersion}",
         new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
-        1200
+        600
       ),
       cancellationToken
     );
