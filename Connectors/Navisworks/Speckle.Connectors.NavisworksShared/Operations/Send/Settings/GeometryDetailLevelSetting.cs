@@ -7,15 +7,10 @@ public class GeometryDetailLevelSetting(GeometryDetailLevel value) : ICardSettin
 {
   public string? Id { get; set; } = "geometryDetailLevel";
   public string? Title { get; set; } = "Geometry Detail";
-  public string? Description { get; set; } =
-    "Full, Optimised (65 degree seam-aware + unit-aware rounding), or Lite.";
+  public string? Description { get; set; } = "Full, Optimised (65 degree seam-aware + unit-aware rounding), or Lite.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } =
-  [
-    GeometryDetailLevel.Full.ToString(),
-    GeometryDetailLevel.Optimised.ToString(),
-    GeometryDetailLevel.Lite.ToString(),
-  ];
+  [GeometryDetailLevel.Full.ToString(), GeometryDetailLevel.Optimised.ToString(), GeometryDetailLevel.Lite.ToString()];
   public object? Value { get; set; } = value.ToString();
 
   public static readonly Dictionary<string, GeometryDetailLevel> GeometryDetailLevelMap = BuildGeometryDetailLevelMap();

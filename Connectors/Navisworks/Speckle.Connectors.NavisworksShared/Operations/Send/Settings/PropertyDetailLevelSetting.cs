@@ -10,15 +10,10 @@ public class PropertyDetailLevelSetting(PropertyDetailLevel value) : ICardSettin
   public string? Description { get; set; } = "All, None, or Standard property payloads.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } =
-  [
-    nameof(PropertyDetailLevel.All),
-    nameof(PropertyDetailLevel.None),
-    nameof(PropertyDetailLevel.Standard),
-  ];
+  [nameof(PropertyDetailLevel.All), nameof(PropertyDetailLevel.None), nameof(PropertyDetailLevel.Standard)];
   public object? Value { get; set; } = value.ToString();
 
-  public static readonly Dictionary<string, PropertyDetailLevel> PropertyDetailLevelMap =
-    BuildPropertyDetailLevelMap();
+  public static readonly Dictionary<string, PropertyDetailLevel> PropertyDetailLevelMap = BuildPropertyDetailLevelMap();
 
   private static Dictionary<string, PropertyDetailLevel> BuildPropertyDetailLevelMap()
   {
