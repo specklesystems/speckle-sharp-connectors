@@ -19,8 +19,8 @@ public class OperationProgressManager : IOperationProgressManager
   }
 
   private const string SET_MODEL_PROGRESS_UI_COMMAND_NAME = "setModelProgress";
-  private static readonly ConcurrentDictionary<string, (DateTime LastCallTime, string Status, double? LastProgress)>
-    s_lastProgressValues = new();
+  private static readonly ConcurrentDictionary<string, (DateTime lastCallTime, string status)> s_lastProgressValues =
+    new();
   private const int THROTTLE_INTERVAL_MS = 400;
 
   public IProgress<CardProgress> CreateOperationProgressEventHandler(
@@ -53,30 +53,23 @@ public class OperationProgressManager : IOperationProgressManager
       return;
     }
 
-    if (!s_lastProgressValues.TryGetValue(modelCardId, out var last))
+    if (!s_lastProgressValues.TryGetValue(modelCardId, out (DateTime, string) t))
     {
-      s_lastProgressValues[modelCardId] = (DateTime.Now, progress.Status, progress.Progress);
+      t.Item1 = DateTime.Now;
+      s_lastProgressValues[modelCardId] = (t.Item1, progress.Status);
+      // Since it's the first time we get a call for this model card, we should send it out
       SendProgress(bridge, modelCardId, progress);
       return;
     }
 
     var currentTime = DateTime.Now;
-    var elapsedMs = (currentTime - last.LastCallTime).TotalMilliseconds;
-    var statusChanged = !string.Equals(progress.Status, last.Status, StringComparison.Ordinal);
-    var progressChanged =
-      progress.Progress.HasValue != last.LastProgress.HasValue
-      || (
-        progress.Progress.HasValue
-        && last.LastProgress.HasValue
-        && Math.Abs(progress.Progress.Value - last.LastProgress.Value) >= 0.01
-      );
+    var elapsedMs = (currentTime - t.Item1).Milliseconds;
 
-    if (elapsedMs < THROTTLE_INTERVAL_MS && !statusChanged && !progressChanged)
+    if (elapsedMs < THROTTLE_INTERVAL_MS)
     {
       return;
     }
-
-    s_lastProgressValues[modelCardId] = (currentTime, progress.Status, progress.Progress);
+    s_lastProgressValues[modelCardId] = (currentTime, progress.Status);
     SendProgress(bridge, modelCardId, progress);
   }
 
