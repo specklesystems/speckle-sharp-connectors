@@ -25,28 +25,36 @@ public sealed class LevelExtractor
   {
     DB.ElementId? levelId = null;
 
+    // hosted/categoryless elements (views, sketch planes, element types) have a null Category;
+    // pattern-matching against this local is null-safe, so all category checks below tolerate that.
+    var category = element.Category?.BuiltInCategory;
+
     // try direct LevelId first
     if (element.LevelId != DB.ElementId.InvalidElementId)
     {
       levelId = element.LevelId;
     }
     // stairs store their base level in a parameter
-    else if (element is DBA.Stairs stairs)
+    else if (category is DB.BuiltInCategory.OST_Stairs)
     {
-      levelId = stairs.get_Parameter(DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM)?.AsElementId();
+      levelId = element.get_Parameter(DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM)?.AsElementId();
     }
     // roofs store their base constraint level in a parameter
-    else if (element is DB.RoofBase roof)
+    else if (category is DB.BuiltInCategory.OST_Roofs)
     {
-      levelId = roof.get_Parameter(DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM)?.AsElementId();
+      levelId = element.get_Parameter(DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM)?.AsElementId();
     }
     // railings: recurse into host (e.g. a stair or floor)
-    else if (element is DBA.Railing railing && railing.HostId != DB.ElementId.InvalidElementId)
+    else if (category is DB.BuiltInCategory.OST_StairsRailing && element is DB.Architecture.Railing railing)
     {
-      var host = railing.Document.GetElement(railing.HostId);
-      if (host is not null)
+      var hostId = railing.HostId;
+      if (hostId != DB.ElementId.InvalidElementId)
       {
-        return GetLevel(host);
+        var host = element.Document?.GetElement(hostId);
+        if (host != null)
+        {
+          return GetLevel(host);
+        }
       }
     }
     // otherwise try FamilyInstance-specific sources
@@ -80,7 +88,7 @@ public sealed class LevelExtractor
     }
 
     // add to the cache if firs occurence of this level
-    if (element.Document.GetElement(levelId) is DB.Level level)
+    if (element.Document?.GetElement(levelId) is DB.Level level)
     {
       _levelCache[levelId] = level;
       return level;
