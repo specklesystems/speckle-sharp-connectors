@@ -61,12 +61,6 @@ public sealed class LevelExtractor
       }
     }
 
-    // fall back to the sketch plane parameter (sketched elements)
-    if (levelId == null || levelId == DB.ElementId.InvalidElementId)
-    {
-      levelId = element.get_Parameter(DB.BuiltInParameter.SKETCH_PLANE_PARAM)?.AsElementId();
-    }
-
     // okay, no valid LevelId found and we've tried A LOT!
     if (levelId == null || levelId == DB.ElementId.InvalidElementId)
     {
