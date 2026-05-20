@@ -142,24 +142,30 @@ public sealed class GeometryToSpeckleConverter(
 
       try
       {
-        const int PROGRESS_REPORT_INTERVAL = 1000;
-        int estimatedPathCount = Math.Max(collection.Count, 1);
+        const int PROGRESS_REPORT_INTERVAL_MS = 500;
+        const double MAX_INTERIM_PROGRESS = 0.98;
+        int pathScale = Math.Max(collection.Count * 3, 10000);
+        double lastProgress = 0;
+        var progressStopwatch = Stopwatch.StartNew();
 
         foreach (InwOaPath path in paths)
         {
           pathCount++;
-          if (pathCount > estimatedPathCount)
-          {
-            estimatedPathCount = Math.Max(estimatedPathCount + collection.Count, (int)(pathCount * 1.25));
-          }
-
-          if (onProgress != null && pathCount % PROGRESS_REPORT_INTERVAL == 0)
-          {
-            onProgress((double)pathCount / estimatedPathCount, pathCount);
-            Task.Delay(1).Wait();
-          }
-
           results.Add(ProcessPath(path, ref fragmentCount));
+
+          if (onProgress == null || progressStopwatch.ElapsedMilliseconds < PROGRESS_REPORT_INTERVAL_MS)
+          {
+            continue;
+          }
+
+          double progress = MAX_INTERIM_PROGRESS * (1d - Math.Exp(-(double)pathCount / pathScale));
+          if (progress > lastProgress)
+          {
+            onProgress(progress, pathCount);
+            lastProgress = progress;
+          }
+
+          progressStopwatch.Restart();
         }
 
         onProgress?.Invoke(1d, pathCount);
