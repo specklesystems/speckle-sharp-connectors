@@ -257,7 +257,11 @@ public class NavisworksRootObjectBuilder(
 
     onOperationProgressed.Report(new CardProgress("Converting", 0));
 
-    double geometryWeight = totalCount > 0 ? CountVisibleGeometryItems(navisworksModelItems) / (double)totalCount : 0;
+    int visibleGeometryCount = CountVisibleGeometryItems(navisworksModelItems);
+    double geometryWeight =
+      visibleGeometryCount == 0
+        ? 0
+        : Math.Min(Math.Max(visibleGeometryCount / (double)Math.Max(totalCount, 1), 0.75), 0.95);
 
     geometryConversionContext.PrimeBatch(
       navisworksModelItems,
