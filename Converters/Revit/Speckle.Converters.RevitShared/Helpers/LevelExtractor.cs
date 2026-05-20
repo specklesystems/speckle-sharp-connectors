@@ -88,6 +88,7 @@ public sealed class LevelExtractor
     {
       DB.BuiltInCategory.OST_Stairs or DB.BuiltInCategory.OST_Ramps => DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM,
       DB.BuiltInCategory.OST_Roofs => DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM,
+      DB.BuiltInCategory.OST_StructuralFraming => DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
       _ => null,
     };
 
