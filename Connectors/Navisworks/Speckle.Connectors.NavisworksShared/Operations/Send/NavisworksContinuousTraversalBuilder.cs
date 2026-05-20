@@ -649,6 +649,20 @@ public class NavisworksContinuousTraversalBuilder(
     );
   }
 
+  private int CountVisibleGeometryItems(IReadOnlyList<NAV.ModelItem> items)
+  {
+    int count = 0;
+    foreach (var item in items)
+    {
+      if (item.HasGeometry && elementSelectionService.IsVisible(item))
+      {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases
