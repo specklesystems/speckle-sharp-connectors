@@ -50,10 +50,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       value =>
       {
         string? originString = value as string;
-        if (OriginModeSetting.OriginModeMap.TryGetValue(originString ?? string.Empty, out OriginMode origin))
-          return origin;
-
-        return OriginMode.ModelOrigin;
+        return OriginModeSetting.OriginModeMap.TryGetValue(originString ?? string.Empty, out OriginMode origin)
+          ? origin
+          : OriginMode.ModelOrigin;
       },
       OriginMode.ModelOrigin
     );
@@ -61,7 +60,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   public PropertyDetailLevel GetPropertyDetailLevel(SenderModelCard modelCard)
   {
     if (modelCard == null)
+    {
       throw new ArgumentNullException(nameof(modelCard));
+    }
 
     // Legacy cards: separate "excludeProperties" boolean maps to None.
     bool excludeLegacy = modelCard.Settings?.FirstOrDefault(s => s.Id == "excludeProperties")?.Value is true;
@@ -73,7 +74,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       _propertyDetailLevelCache.TryGetValue(modelCard.ModelCardId.NotNull(), out PropertyDetailLevel previousValue)
       && previousValue != effective
     )
+    {
       EvictCacheForModelCard(modelCard);
+    }
 
     _propertyDetailLevelCache[modelCard.ModelCardId.NotNull()] = effective;
     return effective;
@@ -94,7 +97,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
             out GeometryDetailLevel detailLevel
           )
         )
+        {
           return detailLevel;
+        }
 
         return GeometryDetailLevel.Optimised;
       },
@@ -107,13 +112,8 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   public bool GetConvertHiddenElements(SenderModelCard modelCard) =>
     GetCachedSetting(modelCard, "convertHiddenElements", _convertHiddenElementsCache, value => value is true, false);
 
-  public bool GetIncludeInternalProperties(SenderModelCard modelCard)
-  {
-    if (modelCard == null)
-      throw new ArgumentNullException(nameof(modelCard));
-
-    return false;
-  }
+  public bool GetIncludeInternalProperties(SenderModelCard modelCard) =>
+    modelCard == null ? throw new ArgumentNullException(nameof(modelCard)) : false;
 
   public bool GetRoundMeshVertexDoubles(SenderModelCard modelCard) =>
     GetCachedSetting(modelCard, "roundMeshVertexDoubles", _roundMeshVertexDoublesCache, value => value is true, false);
@@ -133,7 +133,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   )
   {
     if (modelCard == null)
+    {
       throw new ArgumentNullException(nameof(modelCard));
+    }
 
     object? settingValue = modelCard.Settings?.FirstOrDefault(s => s.Id == settingId)?.Value;
     T? returnValue = settingValue != null ? valueExtractor(settingValue) : defaultValue;
@@ -142,7 +144,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       cache.TryGetValue(modelCard.ModelCardId.NotNull(), out T? previousValue)
       && !EqualityComparer<T>.Default.Equals(previousValue, returnValue)
     )
+    {
       EvictCacheForModelCard(modelCard);
+    }
 
     cache[modelCard.ModelCardId.NotNull()] = returnValue;
     return returnValue;
@@ -159,7 +163,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
         out PropertyDetailLevel detailLevel
       )
     )
+    {
       return detailLevel;
+    }
 
     return PropertyDetailLevel.Standard;
   }
