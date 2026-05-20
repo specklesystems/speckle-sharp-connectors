@@ -4,6 +4,7 @@ using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
