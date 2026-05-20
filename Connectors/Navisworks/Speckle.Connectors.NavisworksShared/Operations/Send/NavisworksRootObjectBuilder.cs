@@ -678,4 +678,6 @@ public class NavisworksRootObjectBuilder(
       return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", null, ex);
     }
   }
+#pragma warning disable CA1823
+#pragma warning restore CA1823
 }
