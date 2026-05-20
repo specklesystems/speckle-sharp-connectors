@@ -20,17 +20,11 @@ public static class SupportedCategoriesUtils
 
     // stacked walls are "not visible in the ui" whereas they clearly are.
     // see [CNX-1301: Revit Stacked Walls are not sending](https://linear.app/speckle/issue/CNX-1301/revit-stacked-walls-are-not-sending)
-#if REVIT2023_OR_GREATER
     if (category.BuiltInCategory == BuiltInCategory.OST_StackedWalls)
     {
       return true;
     }
-#else
-    if (category.Name == "Stacked Walls")
-    {
-      return true;
-    }
-#endif
+
     if (!category.IsVisibleInUI) //&& category.BuiltInCategory != BuiltInCategory.OST_StackedWalls)
     {
       return false;
@@ -39,23 +33,13 @@ public static class SupportedCategoriesUtils
     switch (category.CategoryType)
     {
       case CategoryType.Annotation:
-        return
-#if REVIT2023_OR_GREATER
-          category.BuiltInCategory == BuiltInCategory.OST_Grids;
-#else
-          category.Name == "OST_Grids";
-#endif
+        return category.BuiltInCategory == BuiltInCategory.OST_Grids;
       case CategoryType.AnalyticalModel:
         return true;
 
       case CategoryType.Model:
-        return
-#if REVIT2023_OR_GREATER
-          category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
+        return category.BuiltInCategory != BuiltInCategory.OST_AreaSchemes
           && category.BuiltInCategory != BuiltInCategory.OST_AreaSchemeLines;
-#else
-          category.Name != "OST_AreaSchemeLines" && category.Name != "OST_AreaSchemes";
-#endif
 
       default:
         return false;
