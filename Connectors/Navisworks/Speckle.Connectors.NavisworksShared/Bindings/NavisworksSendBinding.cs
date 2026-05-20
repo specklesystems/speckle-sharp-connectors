@@ -126,7 +126,7 @@ public class NavisworksSendBinding : ISendBinding
         )
       );
 
-  private async Task<IReadOnlyList<NAV.ModelItem>> GetNavisworksModelItems(
+  private async Task<IReadOnlyList<ModelItem>> GetNavisworksModelItems(
     SenderModelCard modelCard,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -148,7 +148,7 @@ public class NavisworksSendBinding : ISendBinding
     await Task.CompletedTask;
 
     int estimatedCapacity = selectedPaths.Count * 10;
-    var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
+    var modelItems = new List<ModelItem>(estimatedCapacity);
     double count = 0;
 
     foreach (var path in selectedPaths)
@@ -165,7 +165,7 @@ public class NavisworksSendBinding : ISendBinding
         int hiddenBranchesPruned = 0;
         const int REPORT_INTERVAL = 1000;
 
-        void TraverseWithProgress(NAV.ModelItem node)
+        void TraverseWithProgress(ModelItem node)
         {
           nodesVisited++;
 

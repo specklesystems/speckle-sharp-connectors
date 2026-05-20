@@ -30,19 +30,19 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
+  IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
   GeometryConversionContext geometryConversionContext,
   IUiUnitsCache uiUnitsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
-#pragma warning disable CA1823
-#pragma warning restore CA1823
-  private bool SkipNodeMerging { get; set; }
-  private bool DisableGroupingForInstanceTesting { get; set; }
   private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
     StringComparer.Ordinal
   );
+
+  private bool SkipNodeMerging { get; set; }
+
+  private bool DisableGroupingForInstanceTesting { get; set; }
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
