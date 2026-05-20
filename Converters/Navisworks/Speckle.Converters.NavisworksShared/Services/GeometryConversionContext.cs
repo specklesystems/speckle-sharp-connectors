@@ -13,13 +13,13 @@ public class GeometryConversionContext(
 {
   private readonly Dictionary<NAV.ModelItem, List<Base>> _batchedDisplayValues = new();
 
-  public void PrimeBatch(IReadOnlyList<NAV.ModelItem> modelItems)
+  public int PrimeBatch(IReadOnlyList<NAV.ModelItem> modelItems, Action<double, int>? onProgress = null)
   {
     Clear();
 
     if (settingsStore.Current.User.GeometryDetailLevel == GeometryDetailLevel.Lite)
     {
-      return;
+      return 0;
     }
 
     var geometryItems = new List<NAV.ModelItem>(modelItems.Count);
@@ -33,20 +33,22 @@ public class GeometryConversionContext(
 
     if (geometryItems.Count == 0)
     {
-      return;
+      return 0;
     }
 
-    var batchedResults = geometryConverter.ConvertBatch(geometryItems);
+    var batchedResults = geometryConverter.ConvertBatch(geometryItems, onProgress);
     if (batchedResults.Count != geometryItems.Count)
     {
       // Fall back to legacy per-item extraction if batch mapping is ambiguous.
-      return;
+      return geometryItems.Count;
     }
 
     for (var i = 0; i < geometryItems.Count; i++)
     {
       _batchedDisplayValues[geometryItems[i]] = batchedResults[i];
     }
+
+    return geometryItems.Count;
   }
 
   public bool TryGetDisplayValue(NAV.ModelItem modelItem, out List<Base> displayValue) =>

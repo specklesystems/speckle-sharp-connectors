@@ -101,7 +101,10 @@ public sealed class GeometryToSpeckleConverter(
     }
   }
 
-  internal List<List<Base>> ConvertBatch(IReadOnlyList<NAV.ModelItem> modelItems)
+  internal List<List<Base>> ConvertBatch(
+    IReadOnlyList<NAV.ModelItem> modelItems,
+    Action<double, int>? onProgress = null
+  )
   {
     if (modelItems == null)
     {
@@ -139,11 +142,27 @@ public sealed class GeometryToSpeckleConverter(
 
       try
       {
+        const int PROGRESS_REPORT_INTERVAL = 1000;
+        int estimatedPathCount = Math.Max(collection.Count, 1);
+
         foreach (InwOaPath path in paths)
         {
           pathCount++;
+          if (pathCount > estimatedPathCount)
+          {
+            estimatedPathCount = Math.Max(estimatedPathCount + collection.Count, (int)(pathCount * 1.25));
+          }
+
+          if (onProgress != null && pathCount % PROGRESS_REPORT_INTERVAL == 0)
+          {
+            onProgress((double)pathCount / estimatedPathCount, pathCount);
+            Task.Delay(1).Wait();
+          }
+
           results.Add(ProcessPath(path, ref fragmentCount));
         }
+
+        onProgress?.Invoke(1d, pathCount);
       }
       finally
       {
