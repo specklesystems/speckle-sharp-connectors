@@ -14,6 +14,7 @@ public enum HostAppVersion
   v2024,
   v2025,
   v2026,
+  v2027,
   v21,
   v22,
   v25,

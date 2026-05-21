@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <DefineConstants>$(DefineConstants);AUTOCAD2025;AUTOCAD</DefineConstants>
+    <DefineConstants>$(DefineConstants);AUTOCAD;AUTOCAD2025;AUTOCAD2023_OR_GREATER;AUTOCAD2024_OR_GREATER;AUTOCAD2025_OR_GREATER;</DefineConstants>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
