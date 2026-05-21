@@ -35,6 +35,7 @@ public sealed class SendOperation<T>(
   IIngestionProgressManagerFactory ingestionProgressManagerFactory,
   ISpeckleHttp speckleHttp,
   ISendPipelineFactory sendPipelineFactory,
+  IAssemblyCompatibilityCheck compatabilityCheck,
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
@@ -53,7 +54,10 @@ public sealed class SendOperation<T>(
     if (useModelIngestionSend)
     {
       bool usePackfileSend =
-        rootContinuousTraversalBuilder != null && await CheckPackfileSendEndpoints(sendInfo, cancellationToken);
+        rootContinuousTraversalBuilder != null
+        && await CheckPackfileSendEndpoints(sendInfo, cancellationToken)
+        && compatabilityCheck.ValidateStjCompatiblity();
+
       if (usePackfileSend)
       {
         return await SendViaPackfile(
