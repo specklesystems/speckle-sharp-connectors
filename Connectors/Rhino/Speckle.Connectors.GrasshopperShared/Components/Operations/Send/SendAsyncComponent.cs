@@ -52,7 +52,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public double OverallProgress { get; set; }
   public string? Url { get; set; }
   public IClient ApiClient { get; set; }
-  public HostApp.SpeckleUrlModelResource? UrlModelResource { get; set; }
+  public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo? RootCollectionWrapper { get; set; }
   public SpecklePropertyGroupGoo? RootProperties { get; private set; }
   public SpeckleUrlModelResource? OutputParam { get; set; }
@@ -109,7 +109,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     var autoSendMi = Menu_AppendItem(
       menu,
       "Publish automatically",
-      (s, e) =>
+      (_, _) =>
       {
         AutoSend = !AutoSend;
         RhinoApp.InvokeOnUiThread(
@@ -130,7 +130,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     {
       Menu_AppendSeparator(menu);
 
-      Menu_AppendItem(menu, $"View created model online ↗", (s, e) => Open(Url));
+      Menu_AppendItem(menu, $"View created model online ↗", (_, _) => Open(Url));
     }
 
     Menu_AppendSeparator(menu);
@@ -140,7 +140,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
       Menu_AppendItem(
         menu,
         "Cancel Publish",
-        (s, e) =>
+        (_, _) =>
         {
           CurrentComponentState = ComponentState.Expired;
           RequestCancellation();
@@ -167,7 +167,10 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
 
     // We need to call this always in here to be able to react and set events :/
-    ParseInput(da, scope);
+    if (!ParseInput(da, scope))
+    {
+      return;
+    }
 
     if (
       (AutoSend || CurrentComponentState == ComponentState.Ready || CurrentComponentState == ComponentState.Sending)
@@ -245,15 +248,18 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     base.DocumentContextChanged(document, context);
   }
 
-  private void ParseInput(IGH_DataAccess da, IServiceScope scope)
+  /// <returns>
+  /// <c>false</c> if any validation failed and the send should be aborted; <c>true</c> if inputs are valid.
+  /// </returns>
+  private bool ParseInput(IGH_DataAccess da, IServiceScope scope)
   {
-    HostApp.SpeckleUrlModelResource? dataInput = null;
+    SpeckleUrlModelResource? dataInput = null;
     da.GetData(0, ref dataInput);
     if (dataInput is null)
     {
       UrlModelResource = null;
       TriggerAutoSave();
-      return;
+      return false;
     }
 
     UrlModelResource = dataInput;
@@ -280,7 +286,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     {
       RootCollectionWrapper = null;
       TriggerAutoSave();
-      return;
+      return false;
     }
 
     SpeckleCollectionWrapper? rootBase;
@@ -330,12 +336,16 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
           dataObjectWrapper.Parent = rootBase;
           rootBase.Elements.Add(dataObjectWrapper);
         }
-        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper objWrapper)
+        // reject bare geometry — collections may only contain Data Objects or sub-collections.
+        // SpeckleGeometry is easily wrapped: wire your geometry through a 'Speckle Data Object' component first.
+        else if (obj?.ToSpeckleGeometryWrapper() is not null)
         {
-          SpeckleGeometryWrapper wrapper = objWrapper.DeepCopy();
-          wrapper.Path = rootBase.Path;
-          wrapper.Parent = rootBase;
-          rootBase.Elements.Add(wrapper);
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Error,
+            "Speckle Geometry cannot be added directly to a Collection. "
+              + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection."
+          );
+          return false;
         }
         else
         {
@@ -363,10 +373,11 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
     if (Params.Input[3].VolatileData.DataCount > 1)
     {
       AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Only one Model Properties group is allowed");
-      return;
+      return false;
     }
 
     RootProperties = rootPropsGoo;
+    return true;
   }
 }
 
