@@ -271,7 +271,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
         throw new SpeckleAccountManagerException($"No default account was found");
       }
 
-      ApiClient.Dispose();
+      ApiClient?.Dispose();
       ApiClient = scope.Get<IClientFactory>().Create(account);
     }
     catch (Exception e) when (!e.IsFatal())
