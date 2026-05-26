@@ -25,10 +25,29 @@ public sealed class LevelExtractor
   {
     DB.ElementId? levelId = null;
 
+    // hosted/categoryless elements (views, sketch planes, element types) have a null Category;
+    // pattern-matching against this local is null-safe, so all category checks below tolerate that.
+    var category = element.Category?.BuiltInCategory;
+
     // try direct LevelId first
     if (element.LevelId != DB.ElementId.InvalidElementId)
     {
       levelId = element.LevelId;
+    }
+    // category-specific level parameter (stairs, ramps, roofs)
+    else if (GetCategoryLevelParam(category) is { } categoryParam)
+    {
+      levelId = element.get_Parameter(categoryParam)?.AsElementId();
+    }
+    // railings: recurse into host (e.g. a stair or floor)
+    else if (
+      category is DB.BuiltInCategory.OST_StairsRailing
+      && element is DB.Architecture.Railing railing
+      && railing.HostId != DB.ElementId.InvalidElementId
+      && element.Document?.GetElement(railing.HostId) is { } host
+    )
+    {
+      return GetLevel(host);
     }
     // otherwise try FamilyInstance-specific sources
     else if (element is DB.FamilyInstance familyInstance)
@@ -55,7 +74,7 @@ public sealed class LevelExtractor
     }
 
     // add to the cache if firs occurence of this level
-    if (element.Document.GetElement(levelId) is DB.Level level)
+    if (element.Document?.GetElement(levelId) is DB.Level level)
     {
       _levelCache[levelId] = level;
       return level;
@@ -63,6 +82,15 @@ public sealed class LevelExtractor
 
     return null;
   }
+
+  private static DB.BuiltInParameter? GetCategoryLevelParam(DB.BuiltInCategory? category) =>
+    category switch
+    {
+      DB.BuiltInCategory.OST_Stairs or DB.BuiltInCategory.OST_Ramps => DB.BuiltInParameter.STAIRS_BASE_LEVEL_PARAM,
+      DB.BuiltInCategory.OST_Roofs => DB.BuiltInParameter.ROOF_CONSTRAINT_LEVEL_PARAM,
+      DB.BuiltInCategory.OST_StructuralFraming => DB.BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM,
+      _ => null,
+    };
 
   /// <summary>
   /// Tries to get a level ID from a FamilyInstance via parameter or host.

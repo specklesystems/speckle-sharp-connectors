@@ -77,7 +77,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitTask.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitExternalApplication.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitThreadContext.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Plugin\RevitCefPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\SpeckleRevitTaskException.cs" />
   </ItemGroup>
   <ItemGroup>

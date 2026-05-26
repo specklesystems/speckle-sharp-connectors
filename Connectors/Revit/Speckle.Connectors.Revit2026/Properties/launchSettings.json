@@ -2,7 +2,7 @@
   "profiles": {
     "ConnectorRevit2026": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Autodesk\\Revit 2026\\Revit.exe",
+      "executablePath": "%ProgramFiles%\\Autodesk\\Revit 2026\\Revit.exe",
       "runtime": "net8.0-windows"
     }
   }
