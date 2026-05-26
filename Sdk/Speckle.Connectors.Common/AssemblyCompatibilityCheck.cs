@@ -1,16 +1,20 @@
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Speckle.InterfaceGenerator;
-using Speckle.Sdk.Pipelines.Send;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Common;
 
 [GenerateAutoInterface]
-public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logger) : IAssemblyCompatibilityCheck
+public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logger, IOperations operations)
+  : IAssemblyCompatibilityCheck
 {
   private readonly HashSet<string> _targets = new()
   {
     "GraphQL.Client",
     "System.Text.Json",
+    "System.Text.Encodings.Web",
     "System.Memory",
     "System.Buffers",
     "System.Reactive",
@@ -28,7 +32,7 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
 
   /// <summary>
   /// Validates that we are able to use System.Text.Json parts of our SDK without any runtime dll
-  /// conflicts in the form of <see cref="MissingMethodException"/> when calling the constructor of UTF8JsonWriter
+  /// conflicts in the form of <see cref="MissingMethodException"/> when calling the constructor of UTsF8JsonWriter
   /// under runtime conditions where STJ binds to a different version of System.Buffers than our SDK
   /// </summary>
   /// <remarks>
@@ -42,15 +46,27 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
   {
     try
     {
-      using var t = new Utf8Json();
-      var report = string.Join("\n", GenerateLoadedAssemblyReport().ToArray());
-      logger.LogInformation("No STJ incompatibility detected {Report}", report);
+      //ensures both UTF8JsonWriter.ctor and JsonWriterHelper.NeedsEscaping are hit
+      operations.SerializeNew(
+        new Base()
+        {
+          ["abcde"] = "This is a test",
+          ["\"\u003C needs\nescaping® \\\u003E\""] = "\"\u003C needs\nescaping® \\\u003E\"",
+        }
+      );
+
+      using (logger.BeginScope(GenerateLoadedAssemblyReport()))
+      {
+        logger.LogInformation("No STJ incompatibility detected");
+      }
       return true;
     }
     catch (MissingMethodException ex)
     {
-      var report = string.Join("\n", GenerateLoadedAssemblyReport().ToArray());
-      logger.LogWarning(ex, "Dll incompatibility detected {Report}", report);
+      using (logger.BeginScope(GenerateLoadedAssemblyReport()))
+      {
+        logger.LogWarning(ex, "Dll incompatibility detected");
+      }
       return false;
     }
   }
@@ -60,16 +76,20 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
   /// This may help when troubleshoot issues with potential DLL conflicts.
   /// </summary>
   /// <returns></returns>
-  public IEnumerable<string> GenerateLoadedAssemblyReport()
+  public List<KeyValuePair<string, object>> GenerateLoadedAssemblyReport()
   {
-    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+    List<KeyValuePair<string, object>> assemblyInfo = new();
+    int i = 0;
+    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
     {
-      var n = asm.GetName();
+      AssemblyName n = assembly.GetName();
 
-      if (_targets.Contains(n.Name))
+      if (n.Name is not null && _targets.Contains(n.Name))
       {
-        yield return $"{n.Name} {n.Version} {asm.Location}";
+        assemblyInfo.Add(new($"AssemblyReport.{i}", $"{n.Name} - {n.Version}, {assembly.Location}"));
       }
     }
+
+    return assemblyInfo;
   }
 }
