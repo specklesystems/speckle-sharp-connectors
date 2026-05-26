@@ -77,6 +77,60 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public override IGH_Goo CreateGoo() => new SpeckleCollectionWrapperGoo(this);
 
   /// <summary>
+  /// Scans all dynamic list-of-Base properties on a root object and builds a single
+  /// <see cref="SpecklePropertyGroupGoo"/> keyed by proxy type name (e.g. "levelProxies",
+  /// "analysisResults"). Each value is a list of property groups, one per proxy instance.
+  /// Returns null when no proxy lists are found.
+  /// </summary>
+  public static SpecklePropertyGroupGoo? BuildProxiesGoo(Base root)
+  {
+    var result = new Dictionary<string, ISpecklePropertyGoo>();
+    foreach (var kvp in root.GetMembers(DynamicBaseMemberType.Dynamic))
+    {
+      if (kvp.Value is not List<object> list)
+      {
+        continue;
+      }
+
+      var proxies = list.OfType<Base>().ToList();
+      if (proxies.Count == 0)
+      {
+        continue;
+      }
+
+      var proxyList = proxies.Select(b => (object)ProxyToPropertyGroup(b)).ToList();
+      result[kvp.Key] = new SpecklePropertyGoo { Value = proxyList };
+    }
+
+    return result.Count > 0 ? new SpecklePropertyGroupGoo(result) : null;
+  }
+
+  private static SpecklePropertyGroupGoo ProxyToPropertyGroup(Base proxy) => new(BaseToPropDict(proxy));
+
+  private static Dictionary<string, object?> BaseToPropDict(Base b)
+  {
+    var dict = new Dictionary<string, object?>();
+    foreach (var kvp in b.GetMembers())
+    {
+      if (kvp.Key == nameof(Base.DynamicPropertyKeys))
+      {
+        continue;
+      }
+
+      dict[kvp.Key] = ConvertProxyValue(kvp.Value);
+    }
+    return dict;
+  }
+
+  private static object? ConvertProxyValue(object? value) =>
+    value switch
+    {
+      Base b => BaseToPropDict(b),
+      List<object> list => list.Select(ConvertProxyValue).ToList(),
+      _ => value,
+    };
+
+  /// <summary>
   /// Will attempt to retrieve an existing Layer from the <see cref="Path"/>.
   /// </summary>
   /// <returns>Index of existing layer if found, or -1 if not.</returns>

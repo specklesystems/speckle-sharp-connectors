@@ -20,18 +20,23 @@ This repo is the home of our next-generation Speckle .NET projects:
 - **Desktop UI**
   - [`DUI3`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/DUI3): our next generation Desktop User Interface for all connectors.
 - **Speckle Connectors**
-  - [`Autocad Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Autocad): for Autodesk AutoCAD and Civil3D 2022+
-  - [`Rhino Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Rhino): for McNeel Rhino 7+
-  - [`Revit Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Revit): for Autodesk Revit 2022+
-  - [`Tekla Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Tekla): for Trimble Tekla 2024
+  - [`AutoCAD Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Autocad): for Autodesk AutoCAD and Civil3D 2023 - 2027
+  - [`Rhino Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Rhino): for McNeel Rhino 7 - 8
+  - [`Revit Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Revit): for Autodesk Revit 2023 - 2027
+  - [`CSi Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/CSi): for CSi ETABS 21 - 22
+  - [`Tekla Connector`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Connectors/Tekla): for Trimble Tekla Structures 2023 - 2025
 - **Speckle Converters**
-  - [`Autocad Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Autocad): for Autodesk AutoCAD 2022+
-  - [`Civil3d Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Civil3d): for Autodesk Civil3D 2022+
-  - [`Rhino Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Rhino): for McNeel Rhino 7+
-  - [`Revit Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Revit): for Autodesk Revit 2023+
-  - [`Tekla Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Tekla/Speckle.Converter.Tekla2024): for Trimble Tekla 2024
-- **SDK**
-  - [`SDK`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Sdk): Autofac module, connector utilities, and dependency injection.
+  - [`AutoCAD Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Autocad)
+  - [`Civil 3D Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Civil3d)
+  - [`Rhino Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Rhino)
+  - [`Revit Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Revit)
+  - [`CSi Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/CSi)
+  - [`Tekla Converter`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Converters/Tekla)
+- **Importers**
+    - [`Rhino`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Importers/Rhino): Job processor and Rhino handler for file imports.
+- **Common**
+  - [`Connectors.Common`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Sdk/Speckle.Connectors.Common): Common connector utilities, and dependency injection.
+  - [`Connectors.Logging`](https://github.com/specklesystems/speckle-sharp-connectors/tree/main/Sdk/Speckle): OTEL.
 
 
 ### Other repos
