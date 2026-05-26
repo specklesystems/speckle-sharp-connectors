@@ -73,6 +73,14 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
       "Model-wide properties from the root collection",
       GH_ParamAccess.item
     );
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Proxies",
+      "proxies",
+      "Proxy objects from the root collection, keyed by type (e.g. levelProxies, analysisResults). Use Deconstruct to access individual lists.",
+      GH_ParamAccess.item
+    );
   }
 
   protected override void SolveInstance(IGH_DataAccess da)
@@ -346,6 +354,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
   public SpeckleUrlModelResource? UrlModelResource { get; set; }
   public SpeckleCollectionWrapperGoo Result { get; set; }
   public SpecklePropertyGroupGoo? RootProperties { get; private set; }
+  public SpecklePropertyGroupGoo? ProxiesGoo { get; private set; }
   private List<(GH_RuntimeMessageLevel, string)> RuntimeMessages { get; } = new();
 
   public override WorkerInstance<ReceiveAsyncComponent> Duplicate(string id, CancellationToken cancellationToken)
@@ -383,6 +392,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
     da.SetData(0, Result);
     da.SetData(1, RootProperties);
+    da.SetData(2, ProxiesGoo);
   }
 
   public override async Task DoWork(Action<string, double> reportProgress, Action done)
@@ -502,6 +512,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
 
       Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
       RootProperties = rootPropertiesGoo;
+      ProxiesGoo = SpeckleCollectionWrapper.BuildProxiesGoo(Root);
 
       // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
       var customProperties = new Dictionary<string, object>()

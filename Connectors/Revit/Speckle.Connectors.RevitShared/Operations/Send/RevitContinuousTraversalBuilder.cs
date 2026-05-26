@@ -120,7 +120,6 @@ public class RevitContinuousTraversalBuilder(
       }
     }
 
-    // TODO: check the exception!!!!
     if (filteredDocumentsToConvert.Count == 0)
     {
       throw new SpeckleSendFilterException("No objects were found. Please update your publish filter!");
