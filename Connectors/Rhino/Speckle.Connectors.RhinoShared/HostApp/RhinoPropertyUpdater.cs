@@ -45,9 +45,7 @@ public class RhinoPropertyUpdater
 
         if (!SetNestedDictValue(attributes.UserDictionary, pathParts, 1, newValue))
         {
-          return UpdateResult.Fail(
-            $"Failed to set User Dictionary path '{string.Join(".", pathParts)}'"
-          );
+          return UpdateResult.Fail($"Failed to set User Dictionary path '{string.Join(".", pathParts)}'");
         }
       }
       else
