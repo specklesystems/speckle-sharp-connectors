@@ -14,8 +14,15 @@ public class HierarchicalPropertyHandler(
   InternalPropertiesExtractor internalPropertiesExtractor,
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-  IRevitBuiltInCategoryExtractor revitCategoryExtractor
-) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor, internalPropertiesExtractor, settingsStore)
+  IRevitBuiltInCategoryExtractor revitCategoryExtractor,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
+) : BasePropertyHandler(
+    propertySetsExtractor,
+    modelPropertiesExtractor,
+    internalPropertiesExtractor,
+    settingsStore,
+    quickPropertyDefinitionsCache
+  )
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
   private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
@@ -25,10 +32,14 @@ public class HierarchicalPropertyHandler(
   {
     if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
     {
-      return [];
+      return ProcessPropertySets(modelItem);
     }
 
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
+    if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Standard)
+    {
+      OmitStandardExcludedClassProperties(propertyDict, quickPropertyDefinitionsCache.Ensure());
+    }
 
     // Interop-lite mapping for Revit built-in categories
     if (_mapRevit && revitCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
@@ -183,6 +194,23 @@ public class HierarchicalPropertyHandler(
       if (hasProperties)
       {
         propertyDict[kvp.Key] = categoryDict;
+      }
+    }
+  }
+
+  private static void OmitStandardExcludedClassProperties(
+    Dictionary<string, object?> propertyDict,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    string[] keys = propertyDict.Keys.ToArray();
+    foreach (string key in keys)
+    {
+      if (
+        PropertyHelpers.ShouldSkipProperty(key, string.Empty, PropertyDetailLevel.Standard, quickPropertyDefinitions)
+      )
+      {
+        propertyDict.Remove(key);
       }
     }
   }

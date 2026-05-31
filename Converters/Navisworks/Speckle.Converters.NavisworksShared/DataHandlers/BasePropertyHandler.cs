@@ -48,10 +48,9 @@ public abstract class BasePropertyHandler(
             continue;
           }
 
-          var excludeStandardItemNoise = settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Standard;
           foreach (var prop in itemProps)
           {
-            if (excludeStandardItemNoise && s_standardItemRootExcludedPropertyKeys.Contains(prop.Key))
+            if (ShouldExcludeItemRootProperty(prop.Key))
             {
               continue;
             }
@@ -74,9 +73,31 @@ public abstract class BasePropertyHandler(
       throw new ArgumentNullException(nameof(modelItem));
     }
 
-    AddModelProperties(modelItem, categorizedProperties);
-    AddInternalProperties(modelItem, categorizedProperties);
+    if (settingsStore.Current.User.PropertyDetailLevel != PropertyDetailLevel.None)
+    {
+      AddModelProperties(modelItem, categorizedProperties);
+      AddInternalProperties(modelItem, categorizedProperties);
+    }
+
     return categorizedProperties;
+  }
+
+  private bool ShouldExcludeItemRootProperty(string sanitizedPropertyKey)
+  {
+    if (settingsStore.Current.User.PropertyDetailLevel != PropertyDetailLevel.Standard)
+    {
+      return false;
+    }
+
+    if (!s_standardItemRootExcludedPropertyKeys.Contains(sanitizedPropertyKey))
+    {
+      return false;
+    }
+
+    return !QuickPropertyMatching.IncludesItemRootProperty(
+      quickPropertyDefinitionsCache.Ensure(),
+      sanitizedPropertyKey
+    );
   }
 
   private void AddModelProperties(NAV.ModelItem modelItem, Dictionary<string, object?> categorizedProperties)
