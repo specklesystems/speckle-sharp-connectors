@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
