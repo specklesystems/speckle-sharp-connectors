@@ -1,4 +1,5 @@
-﻿using Speckle.Converter.Navisworks.Settings;
+using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 
 namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
@@ -10,7 +11,8 @@ public abstract class BasePropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor,
   InternalPropertiesExtractor internalPropertiesExtractor,
-  IConverterSettingsStore<NavisworksConversionSettings> settingsStore
+  IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
 ) : IPropertyHandler
 {
   private static readonly HashSet<string> s_standardItemRootExcludedPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
