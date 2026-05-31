@@ -7,7 +7,8 @@ public class PropertyDetailLevelSetting(PropertyDetailLevel value) : ICardSettin
 {
   public string? Id { get; set; } = "propertyDetailLevel";
   public string? Title { get; set; } = "Property Detail";
-  public string? Description { get; set; } = "All, None, or Standard property payloads.";
+  public string? Description { get; set; } =
+    "All: user-filtered properties. Standard: filtered minus exclusions unless in Quick Properties. None: Item only.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } =
   [nameof(PropertyDetailLevel.All), nameof(PropertyDetailLevel.None), nameof(PropertyDetailLevel.Standard)];
