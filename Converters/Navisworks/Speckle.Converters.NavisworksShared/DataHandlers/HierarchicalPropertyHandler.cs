@@ -28,6 +28,7 @@ public class HierarchicalPropertyHandler(
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
   private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
+  private IQuickPropertyDefinitionsCache _quickPropertyDefinitionsCache = quickPropertyDefinitionsCache;
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
@@ -39,7 +40,7 @@ public class HierarchicalPropertyHandler(
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
     if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Standard)
     {
-      OmitStandardExcludedClassProperties(propertyDict, quickPropertyDefinitionsCache.Ensure());
+      OmitStandardExcludedClassProperties(propertyDict, _quickPropertyDefinitionsCache.Ensure());
     }
 
     // Interop-lite mapping for Revit built-in categories

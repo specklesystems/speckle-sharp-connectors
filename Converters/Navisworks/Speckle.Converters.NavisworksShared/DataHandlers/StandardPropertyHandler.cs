@@ -25,6 +25,7 @@ public class StandardPropertyHandler(
   )
 {
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
+  private IQuickPropertyDefinitionsCache _quickPropertyDefinitionsCache = quickPropertyDefinitionsCache;
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
@@ -41,7 +42,7 @@ public class StandardPropertyHandler(
       return properties;
     }
 
-    var quickPropertyDefinitions = quickPropertyDefinitionsCache.Ensure();
+    var quickPropertyDefinitions = _quickPropertyDefinitionsCache.Ensure();
     foreach (var kvp in classProperties)
     {
       if (
