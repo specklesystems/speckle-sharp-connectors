@@ -37,7 +37,8 @@ public class NavisworksContinuousTraversalBuilder(
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
   GeometryConversionContext geometryConversionContext,
-  IUiUnitsCache uiUnitsCache
+  IUiUnitsCache uiUnitsCache,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
 ) : IRootContinuousTraversalBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -59,6 +60,7 @@ public class NavisworksContinuousTraversalBuilder(
     DisableGroupingForInstanceTesting = false;
 #endif
     PropertyExtractionMetricsTracker.Reset();
+    quickPropertyDefinitionsCache.Reset();
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();

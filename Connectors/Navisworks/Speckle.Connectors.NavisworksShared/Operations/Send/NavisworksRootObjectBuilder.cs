@@ -34,7 +34,8 @@ public class NavisworksRootObjectBuilder(
   IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
   GeometryConversionContext geometryConversionContext,
-  IUiUnitsCache uiUnitsCache
+  IUiUnitsCache uiUnitsCache,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
   private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
@@ -57,6 +58,7 @@ public class NavisworksRootObjectBuilder(
     DisableGroupingForInstanceTesting = false;
 #endif
     PropertyExtractionMetricsTracker.Reset();
+    quickPropertyDefinitionsCache.Reset();
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();
