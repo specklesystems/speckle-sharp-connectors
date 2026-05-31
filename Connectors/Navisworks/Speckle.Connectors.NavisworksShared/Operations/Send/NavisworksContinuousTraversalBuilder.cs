@@ -337,7 +337,7 @@ public class NavisworksContinuousTraversalBuilder(
       geometryWeight > 0
         ? (fraction, pathsProcessed) =>
           onOperationProgressed.Report(
-            new CardProgress($"Converting geometry ({pathsProcessed:N0} paths)", fraction * geometryWeight)
+            new CardProgress($"Converting (Path {pathsProcessed:N0})", fraction * geometryWeight)
           )
         : null
     );
