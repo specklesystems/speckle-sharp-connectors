@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converters.Common;
