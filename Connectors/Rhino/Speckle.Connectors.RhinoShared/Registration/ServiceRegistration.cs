@@ -55,6 +55,10 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<IBinding, RhinoReceiveBinding>();
     serviceCollection.AddSingleton<IBinding, RhinoMapperBinding>();
 
+    serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IParametersBinding>());
+    serviceCollection.AddSingleton<IParametersBinding, RhinoParametersBinding>();
+    serviceCollection.AddSingleton<RhinoPropertyUpdater>();
+
     // register send filters
     serviceCollection.AddScoped<ISendFilter, RhinoSelectionFilter>();
     serviceCollection.AddScoped<IHostObjectBuilder, RhinoHostObjectBuilder>();
