@@ -16,7 +16,8 @@ public class HierarchicalPropertyHandler(
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
   IRevitBuiltInCategoryExtractor revitCategoryExtractor,
   IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
-) : BasePropertyHandler(
+)
+  : BasePropertyHandler(
     propertySetsExtractor,
     modelPropertiesExtractor,
     internalPropertiesExtractor,

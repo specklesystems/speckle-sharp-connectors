@@ -15,7 +15,8 @@ public class StandardPropertyHandler(
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
   IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
-) : BasePropertyHandler(
+)
+  : BasePropertyHandler(
     propertySetsExtractor,
     modelPropertiesExtractor,
     internalPropertiesExtractor,
