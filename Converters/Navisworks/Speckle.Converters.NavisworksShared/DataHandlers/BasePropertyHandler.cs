@@ -13,8 +13,16 @@ public abstract class BasePropertyHandler(
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore
 ) : IPropertyHandler
 {
+  private static readonly HashSet<string> s_standardItemRootExcludedPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "Hidden",
+    "Required",
+    "Internal_Type",
+    "Internal Type",
+    "Icon",
+  };
+
   public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
-  private readonly List<string> _excludedProperties = ["Hidden", "Required", "Internal_Type"];
 
   protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
   {
@@ -38,9 +46,14 @@ public abstract class BasePropertyHandler(
             continue;
           }
 
-          // add all non-excluded properties in the Item category to the root level
-          foreach (var prop in itemProps.Where(prop => !_excludedProperties.Contains(prop.Key)))
+          var excludeStandardItemNoise = settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Standard;
+          foreach (var prop in itemProps)
           {
+            if (excludeStandardItemNoise && s_standardItemRootExcludedPropertyKeys.Contains(prop.Key))
+            {
+              continue;
+            }
+
             categorizedProperties[prop.Key] = prop.Value;
           }
         }
