@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Navisworks.Helpers;
@@ -13,10 +15,14 @@ public static class PropertyHelpers
     "3D_Visualization",
     "Entity_Handle",
     "lcldiv_refkeyid",
+    "lcldrvm_container",
+    "Group",
   };
 
   private static readonly HashSet<string> s_excludedPropertyNames = new(StringComparer.OrdinalIgnoreCase)
   {
+    "ClassName",
+    "ClassDisplayName",
     "CreatedPhaseId",
     "Autodesk Material",
     "Autodesk_Material",
@@ -110,12 +116,61 @@ public static class PropertyHelpers
   internal static string SanitizePropertyName(string name) =>
     name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
 
-  internal static bool ShouldSkipProperty(string propertyName) =>
-    s_excludedPropertyNames.Contains(propertyName)
-    || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
+  internal static bool ShouldSkipProperty(
+    string propertyName,
+    string categoryDisplayName,
+    PropertyDetailLevel propertyDetailLevel,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    if (propertyDetailLevel != PropertyDetailLevel.Standard)
+    {
+      return false;
+    }
 
-  internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
-    s_excludedCategories.Contains(propertyCategory.DisplayName);
+    if (QuickPropertyMatching.IncludesProperty(quickPropertyDefinitions, categoryDisplayName, propertyName))
+    {
+      return false;
+    }
+
+    if (QuickPropertyMatching.IncludesPropertyDisplayName(quickPropertyDefinitions, propertyName))
+    {
+      return false;
+    }
+
+    return s_excludedPropertyNames.Contains(propertyName)
+      || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
+  }
+
+  internal static bool ShouldSkipCategory(
+    NAV.PropertyCategory propertyCategory,
+    PropertyDetailLevel propertyDetailLevel,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    if (propertyDetailLevel != PropertyDetailLevel.Standard)
+    {
+      return false;
+    }
+
+    string? categoryDisplayName = propertyCategory.DisplayName;
+    if (string.IsNullOrEmpty(categoryDisplayName))
+    {
+      return false;
+    }
+
+    if (QuickPropertyMatching.IncludesCategory(quickPropertyDefinitions, categoryDisplayName))
+    {
+      return false;
+    }
+
+    if (string.Equals(categoryDisplayName, "Material", StringComparison.Ordinal))
+    {
+      return true;
+    }
+
+    return s_excludedCategories.Contains(categoryDisplayName);
+  }
 }
 
 internal static class UnitLabels
