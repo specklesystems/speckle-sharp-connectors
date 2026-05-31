@@ -208,9 +208,7 @@ public class HierarchicalPropertyHandler(
     string[] keys = propertyDict.Keys.ToArray();
     foreach (string key in keys)
     {
-      if (
-        PropertyHelpers.ShouldSkipProperty(key, string.Empty, PropertyDetailLevel.Standard, quickPropertyDefinitions)
-      )
+      if (PropertyHelpers.ShouldSkipProperty(key, string.Empty, PropertyDetailLevel.Standard, quickPropertyDefinitions))
       {
         propertyDict.Remove(key);
       }
