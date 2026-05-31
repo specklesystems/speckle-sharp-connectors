@@ -40,6 +40,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryConversionContext.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\MeshOptimizationMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinition.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsCache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsUtil.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyMatching.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyExtractionMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs" />
