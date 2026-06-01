@@ -26,6 +26,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksHierarchyBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksContinuousTraversalBuilder.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksRootObjectBuilder.cs"/>
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\NavisworksSendBenchmarkLogger.cs"/>
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ConvertHiddenElementsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\GeometryDetailLevelSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\OriginModeSetting.cs"/>

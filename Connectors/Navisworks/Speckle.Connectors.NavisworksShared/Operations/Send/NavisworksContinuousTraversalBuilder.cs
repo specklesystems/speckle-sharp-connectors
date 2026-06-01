@@ -38,7 +38,8 @@ public class NavisworksContinuousTraversalBuilder(
   IElementSelectionService elementSelectionService,
   GeometryConversionContext geometryConversionContext,
   IUiUnitsCache uiUnitsCache,
-  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  NavisworksSendBenchmarkLogger benchmarkLogger
 ) : IRootContinuousTraversalBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
@@ -64,10 +65,7 @@ public class NavisworksContinuousTraversalBuilder(
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();
-    int gcGen0Start = GC.CollectionCount(0);
-    int gcGen1Start = GC.CollectionCount(1);
-    int gcGen2Start = GC.CollectionCount(2);
-    long managedHeapBytesStart = GC.GetTotalMemory(false);
+    NavisworksGcSnapshot gcSnapshot = NavisworksGcSnapshot.Capture();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
@@ -118,21 +116,16 @@ public class NavisworksContinuousTraversalBuilder(
     await sendPipeline.Process(rootCollection);
     await sendPipeline.WaitForUpload();
     uploadStopwatch.Stop();
-    LogPropertyExtractionMetrics();
-    LogGeometryConversionMetrics();
-    LogMeshOptimizationMetrics();
-    LogPhaseTimingMetrics(
+    benchmarkLogger.LogConversionMetrics();
+    benchmarkLogger.LogSendPhaseTimingMetrics(
       conversionStartMs,
       conversionEndMs,
       serializationStopwatch.Elapsed.TotalMilliseconds,
       uploadStopwatch.Elapsed.TotalMilliseconds,
       processedCount,
-      gcGen0Start,
-      gcGen1Start,
-      gcGen2Start,
-      managedHeapBytesStart
+      gcSnapshot
     );
-    LogBenchmarkSummary(
+    benchmarkLogger.LogSendBenchmarkSummary(
       conversionStartMs,
       conversionEndMs,
       serializationStopwatch.Elapsed.TotalMilliseconds,
@@ -142,146 +135,6 @@ public class NavisworksContinuousTraversalBuilder(
     );
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
-  }
-
-  private void LogPropertyExtractionMetrics()
-  {
-    var snapshot = PropertyExtractionMetricsTracker.Snapshot();
-    logger.LogInformation(
-      "Property extraction metrics: objects={ObjectCount}, avgTotalCategories={AvgTotalCategoryCount:F2}, avgUserFilteredCategories={AvgUserFilteredCategoryCount:F2}, avgProperties={AvgPropertyCount:F2}, p95Properties={P95PropertyCount:F0}, avgPayloadBytes={AvgPayloadBytes:F2}, p95PayloadBytes={P95PayloadBytes:F0}, totalPayloadBytes={TotalPayloadBytes}, avgExtractionMs={AvgExtractionMs:F2}, p95ExtractionMs={P95ExtractionMs:F2}",
-      snapshot.ObjectCount,
-      snapshot.AvgTotalCategoryCount,
-      snapshot.AvgUserFilteredCategoryCount,
-      snapshot.AvgPropertyCount,
-      snapshot.P95PropertyCount,
-      snapshot.AvgPayloadBytes,
-      snapshot.P95PayloadBytes,
-      snapshot.TotalPayloadBytes,
-      snapshot.AvgExtractionMs,
-      snapshot.P95ExtractionMs
-    );
-  }
-
-  private void LogGeometryConversionMetrics()
-  {
-    var snapshot = GeometryConversionMetricsTracker.Snapshot();
-    logger.LogInformation(
-      "Geometry conversion metrics: toInwOpSelectionCalls={ToInwOpSelectionCalls}, convertedObjects={ConvertedObjectCount}, pathsProcessed={PathsProcessed}, fragmentsProcessed={FragmentsProcessed}, totalSelectionMs={TotalSelectionElapsedMs:F2}, avgSelectionMs={AvgSelectionElapsedMs:F2}, p95SelectionMs={P95SelectionElapsedMs:F2}, avgSelectionMsPerObject={AvgSelectionElapsedMsPerObject:F4}, avgPathsPerSelection={AvgPathsPerSelection:F2}, avgFragmentsPerPath={AvgFragmentsPerPath:F2}",
-      snapshot.ToInwOpSelectionCalls,
-      snapshot.ConvertedObjectCount,
-      snapshot.PathsProcessed,
-      snapshot.FragmentsProcessed,
-      snapshot.TotalSelectionElapsedMs,
-      snapshot.AvgSelectionElapsedMs,
-      snapshot.P95SelectionElapsedMs,
-      snapshot.AvgSelectionElapsedMsPerObject,
-      snapshot.AvgPathsPerSelection,
-      snapshot.AvgFragmentsPerPath
-    );
-  }
-
-  private void LogMeshOptimizationMetrics()
-  {
-    var snapshot = MeshOptimizationMetricsTracker.Snapshot();
-    logger.LogInformation(
-      "Mesh optimization metrics: meshObjectCount={MeshObjectCount}, emptyGeometryObjectCount={EmptyGeometryObjectCount}, faceCount={FaceCount}, lineCount={LineCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}, meshWeldMs={MeshWeldMs:F2}, avgVerticesPerObject={AvgVerticesPerObject:F2}, geometryDetailLevel={GeometryDetailLevel}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}",
-      snapshot.MeshObjectCount,
-      snapshot.EmptyGeometryObjectCount,
-      snapshot.FaceCount,
-      snapshot.LineCount,
-      snapshot.VertexCountBeforeWeld,
-      snapshot.VertexCountAfterWeld,
-      snapshot.VertexReductionPercent,
-      snapshot.MeshWeldMs,
-      snapshot.AvgVerticesPerObject,
-      snapshot.GeometryDetailLevel,
-      snapshot.SeamRetentionEnabled,
-      snapshot.CreaseAngleDegrees
-    );
-  }
-
-  private void LogPhaseTimingMetrics(
-    long conversionStartMs,
-    long conversionEndMs,
-    double serializationMs,
-    double uploadMs,
-    int serializedObjectCount,
-    int gcGen0Start,
-    int gcGen1Start,
-    int gcGen2Start,
-    long managedHeapBytesStart
-  )
-  {
-    var geometrySnapshot = GeometryConversionMetricsTracker.Snapshot();
-    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
-    long peakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64;
-    double propertyExtractionMs = propertySnapshot.AvgExtractionMs * propertySnapshot.ObjectCount;
-    int gcGen0Delta = GC.CollectionCount(0) - gcGen0Start;
-    int gcGen1Delta = GC.CollectionCount(1) - gcGen1Start;
-    int gcGen2Delta = GC.CollectionCount(2) - gcGen2Start;
-    long managedHeapBytesEnd = GC.GetTotalMemory(false);
-
-    logger.LogInformation(
-      "Send phase metrics: conversionStartMs={ConversionStartMs}, conversionEndMs={ConversionEndMs}, conversionMs={ConversionMs}, geometryExtractionMs={GeometryExtractionMs:F2}, propertyExtractionMs={PropertyExtractionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, cleanupMs={CleanupMs:F2}, serializedObjectCount={SerializedObjectCount}, serializedBytesUncompressed={SerializedBytesUncompressed}, serializedBytesCompressed={SerializedBytesCompressed}, peakWorkingSetBytes={PeakWorkingSetBytes}, managedHeapBytesStart={ManagedHeapBytesStart}, managedHeapBytesEnd={ManagedHeapBytesEnd}, gcCollectionsGen0={GcCollectionsGen0}, gcCollectionsGen1={GcCollectionsGen1}, gcCollectionsGen2={GcCollectionsGen2}",
-      conversionStartMs,
-      conversionEndMs,
-      conversionEndMs - conversionStartMs,
-      geometrySnapshot.TotalSelectionElapsedMs,
-      propertyExtractionMs,
-      serializationMs,
-      uploadMs,
-      0d,
-      serializedObjectCount,
-      -1L,
-      -1L,
-      peakWorkingSetBytes,
-      managedHeapBytesStart,
-      managedHeapBytesEnd,
-      gcGen0Delta,
-      gcGen1Delta,
-      gcGen2Delta
-    );
-  }
-
-  private void LogBenchmarkSummary(
-    long conversionStartMs,
-    long conversionEndMs,
-    double serializationMs,
-    double uploadMs,
-    int finalElementCount,
-    int serializedObjectCount
-  )
-  {
-    var user = converterSettings.Current.User;
-    var propertySnapshot = PropertyExtractionMetricsTracker.Snapshot();
-    var meshSnapshot = MeshOptimizationMetricsTracker.Snapshot();
-    var postConversionMs = serializationMs + uploadMs;
-    var conversionMs = conversionEndMs - conversionStartMs;
-
-    logger.LogInformation(
-      "Benchmark summary: geometryPreset={GeometryPreset}, propertyPreset={PropertyPreset}, roundMeshVertexDoubles={RoundMeshVertexDoubles}, includeInternalProperties={IncludeInternalProperties}, preserveHierarchy={PreserveHierarchy}, seamRetentionEnabled={SeamRetentionEnabled}, creaseAngleDegrees={CreaseAngleDegrees:F1}, conversionMs={ConversionMs}, postConversionMs={PostConversionMs:F2}, serializationMs={SerializationMs:F2}, uploadMs={UploadMs:F2}, totalMeasuredMs={TotalMeasuredMs:F2}, finalElementCount={FinalElementCount}, serializedObjectCount={SerializedObjectCount}, propertyObjectCount={PropertyObjectCount}, avgPropertiesPerObject={AvgPropertiesPerObject:F2}, p95PropertiesPerObject={P95PropertiesPerObject:F0}, meshObjectCount={MeshObjectCount}, vertexCountBeforeWeld={VertexCountBeforeWeld}, vertexCountAfterWeld={VertexCountAfterWeld}, vertexReductionPercent={VertexReductionPercent:F2}",
-      user.GeometryDetailLevel,
-      user.PropertyDetailLevel,
-      user.RoundMeshVertexDoubles,
-      user.IncludeInternalProperties,
-      user.PreserveModelHierarchy,
-      meshSnapshot.SeamRetentionEnabled,
-      meshSnapshot.CreaseAngleDegrees,
-      conversionMs,
-      postConversionMs,
-      serializationMs,
-      uploadMs,
-      conversionMs + postConversionMs,
-      finalElementCount,
-      serializedObjectCount,
-      propertySnapshot.ObjectCount,
-      propertySnapshot.AvgPropertyCount,
-      propertySnapshot.P95PropertyCount,
-      meshSnapshot.MeshObjectCount,
-      meshSnapshot.VertexCountBeforeWeld,
-      meshSnapshot.VertexCountAfterWeld,
-      meshSnapshot.VertexReductionPercent
-    );
   }
 
   private static void ValidateInputs(
