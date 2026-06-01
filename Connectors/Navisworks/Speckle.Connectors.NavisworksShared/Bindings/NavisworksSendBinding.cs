@@ -73,8 +73,8 @@ public class NavisworksSendBinding : ISendBinding
     [
       new VisualRepresentationSetting(RepresentationMode.Active),
       new OriginModeSetting(OriginMode.ModelOrigin),
-      new PropertyDetailLevelSetting(PropertyDetailLevel.Standard),
-      new GeometryDetailLevelSetting(GeometryDetailLevel.Optimised),
+      new PropertyDetailLevelSetting(),
+      new GeometryDetailLevelSetting(),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
       new RevitCategoryMappingSetting(false),
