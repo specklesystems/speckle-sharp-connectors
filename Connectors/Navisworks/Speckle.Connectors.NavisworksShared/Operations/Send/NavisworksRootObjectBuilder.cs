@@ -36,6 +36,7 @@ public class NavisworksRootObjectBuilder(
   GeometryConversionContext geometryConversionContext,
   IUiUnitsCache uiUnitsCache,
   IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache,
   NavisworksSendBenchmarkLogger benchmarkLogger
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
@@ -60,6 +61,7 @@ public class NavisworksRootObjectBuilder(
 #endif
     PropertyExtractionMetricsTracker.Reset();
     quickPropertyDefinitionsCache.Reset();
+    modelItemPropertySetsCache.Reset();
     GeometryConversionMetricsTracker.Reset();
     MeshOptimizationMetricsTracker.Reset();
     _elementNameAndPathCache.Clear();
