@@ -44,6 +44,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsCache.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsUtil.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyMatching.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\ModelItemPropertySetsCache.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyExtractionMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs" />
