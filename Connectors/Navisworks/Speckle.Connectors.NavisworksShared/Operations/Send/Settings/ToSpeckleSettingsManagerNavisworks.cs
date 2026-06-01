@@ -85,7 +85,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   public GeometryDetailLevel GetGeometryDetailLevel(SenderModelCard modelCard) =>
     GetCachedSetting(
       modelCard,
-      "geometryDetailLevel",
+      GeometryDetailLevelSetting.SETTING_ID,
       _geometryDetailLevelCache,
       value =>
       {
@@ -101,9 +101,9 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
           return detailLevel;
         }
 
-        return GeometryDetailLevel.Optimised;
+        return GeometryDetailLevelSetting.DEFAULT_VALUE;
       },
-      GeometryDetailLevel.Optimised
+      GeometryDetailLevelSetting.DEFAULT_VALUE
     );
 
   public bool GetMappingToRevitCategories(SenderModelCard modelCard) =>
@@ -155,7 +155,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
   private static PropertyDetailLevel ResolvePropertyDetailLevelString(SenderModelCard modelCard)
   {
     string? propertyDetailString =
-      modelCard.Settings?.FirstOrDefault(s => s.Id == "propertyDetailLevel")?.Value as string;
+      modelCard.Settings?.FirstOrDefault(s => s.Id == PropertyDetailLevelSetting.SETTING_ID)?.Value as string;
     if (
       propertyDetailString is not null
       && PropertyDetailLevelSetting.PropertyDetailLevelMap.TryGetValue(
@@ -167,7 +167,7 @@ public class ToSpeckleSettingsManagerNavisworks(ISendConversionCache sendConvers
       return detailLevel;
     }
 
-    return PropertyDetailLevel.Standard;
+    return PropertyDetailLevelSetting.DEFAULT_VALUE;
   }
 
   private void EvictCacheForModelCard(SenderModelCard modelCard)
