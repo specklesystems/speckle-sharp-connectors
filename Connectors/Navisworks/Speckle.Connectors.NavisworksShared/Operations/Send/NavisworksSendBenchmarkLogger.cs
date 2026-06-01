@@ -19,7 +19,8 @@ public readonly record struct NavisworksGcSnapshot(
 
 public sealed class NavisworksSendBenchmarkLogger(
   ILogger<NavisworksSendBenchmarkLogger> logger,
-  IConverterSettingsStore<NavisworksConversionSettings> converterSettings
+  IConverterSettingsStore<NavisworksConversionSettings> converterSettings,
+  IModelItemPropertySetsCache modelItemPropertySetsCache
 )
 {
   public void LogConversionMetrics()
@@ -152,8 +153,9 @@ public sealed class NavisworksSendBenchmarkLogger(
   private void LogPropertyExtractionMetrics()
   {
     var snapshot = PropertyExtractionMetricsTracker.Snapshot();
+    var cacheSnapshot = modelItemPropertySetsCache.Snapshot();
     logger.LogInformation(
-      "Property extraction metrics: objects={ObjectCount}, avgTotalCategories={AvgTotalCategoryCount:F2}, avgUserFilteredCategories={AvgUserFilteredCategoryCount:F2}, avgProperties={AvgPropertyCount:F2}, p95Properties={P95PropertyCount:F0}, avgPayloadBytes={AvgPayloadBytes:F2}, p95PayloadBytes={P95PayloadBytes:F0}, totalPayloadBytes={TotalPayloadBytes}, avgExtractionMs={AvgExtractionMs:F2}, p95ExtractionMs={P95ExtractionMs:F2}",
+      "Property extraction metrics: objects={ObjectCount}, avgTotalCategories={AvgTotalCategoryCount:F2}, avgUserFilteredCategories={AvgUserFilteredCategoryCount:F2}, avgProperties={AvgPropertyCount:F2}, p95Properties={P95PropertyCount:F0}, avgPayloadBytes={AvgPayloadBytes:F2}, p95PayloadBytes={P95PayloadBytes:F0}, totalPayloadBytes={TotalPayloadBytes}, avgExtractionMs={AvgExtractionMs:F2}, p95ExtractionMs={P95ExtractionMs:F2}, propertySetsCachedNodes={PropertySetsCachedNodes}, propertySetsCacheHits={PropertySetsCacheHits}, propertySetsCacheMisses={PropertySetsCacheMisses}",
       snapshot.ObjectCount,
       snapshot.AvgTotalCategoryCount,
       snapshot.AvgUserFilteredCategoryCount,
@@ -163,7 +165,10 @@ public sealed class NavisworksSendBenchmarkLogger(
       snapshot.P95PayloadBytes,
       snapshot.TotalPayloadBytes,
       snapshot.AvgExtractionMs,
-      snapshot.P95ExtractionMs
+      snapshot.P95ExtractionMs,
+      cacheSnapshot.CachedNodeCount,
+      cacheSnapshot.CacheHits,
+      cacheSnapshot.CacheMisses
     );
   }
 
