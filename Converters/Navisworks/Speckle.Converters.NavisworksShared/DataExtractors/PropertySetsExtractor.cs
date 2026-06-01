@@ -70,13 +70,7 @@ public class PropertySetsExtractor(
     }
 
     stopwatch.Stop();
-    RecordMetrics(
-      modelItem,
-      1,
-      propertySet.Count,
-      propertySetDictionary,
-      stopwatch.Elapsed.TotalMilliseconds
-    );
+    RecordMetrics(modelItem, 1, propertySet.Count, propertySetDictionary, stopwatch.Elapsed.TotalMilliseconds);
 
     return propertySetDictionary;
   }
@@ -141,14 +135,7 @@ public class PropertySetsExtractor(
 
     foreach (var property in propertyCategory.Properties)
     {
-      if (
-        ShouldSkipProperty(
-          property.DisplayName,
-          categoryDisplayName,
-          propertyDetailLevel,
-          quickPropertyDefinitions
-        )
-      )
+      if (ShouldSkipProperty(property.DisplayName, categoryDisplayName, propertyDetailLevel, quickPropertyDefinitions))
       {
         continue;
       }

@@ -66,9 +66,7 @@ public static class QuickPropertyDefinitionsUtil
   }
 
   private static IReadOnlyList<QuickPropertyDefinition> DefaultDefinitions() =>
-  [
-    new QuickPropertyDefinition("Item", "Display Name", null, null),
-  ];
+    [new QuickPropertyDefinition("Item", "Display Name", null, null)];
 
   private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
 }
