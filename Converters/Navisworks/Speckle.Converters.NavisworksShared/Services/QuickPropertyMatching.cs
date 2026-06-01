@@ -82,7 +82,11 @@ internal static class QuickPropertyMatching
 
       if (
         PropertyEquals(definition.PropertyDisplayName, sanitizedPropertyKey)
-        || string.Equals(SanitizePropertyName(definition.PropertyDisplayName), sanitizedPropertyKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(
+          PropertyHelpers.SanitizePropertyName(definition.PropertyDisplayName),
+          sanitizedPropertyKey,
+          StringComparison.OrdinalIgnoreCase
+        )
       )
       {
         return true;
@@ -91,9 +95,6 @@ internal static class QuickPropertyMatching
 
     return false;
   }
-
-  private static string SanitizePropertyName(string name) =>
-    name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
 
   private static bool CategoryEquals(string left, string right) =>
     string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
