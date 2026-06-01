@@ -183,8 +183,8 @@ public static class QuickPropertyDefinitionsUtil
           new QuickPropertyDefinition(
             categoryDisplayName.Trim(),
             propertyDisplayName.Trim(),
-            NullIfWhiteSpace(condition.AttributeInternalName),
-            NullIfWhiteSpace(condition.PropertyInternalName)
+            NullIfWhiteSpace(category.Name),
+            NullIfWhiteSpace(property.Name)
           )
         );
       }
@@ -197,8 +197,22 @@ public static class QuickPropertyDefinitionsUtil
     {
       definitions.Clear();
     }
+    catch (ObjectDisposedException)
+    {
+      definitions.Clear();
+    }
+    catch (InvalidOperationException)
+    {
+      definitions.Clear();
+    }
 
     return definitions;
+  }
+
+  private static NAV.NamedConstant? TryGetNamedConstant(LcUOptionSet options, string optionName)
+  {
+    LcUNameRefPtr? nameRef = options.GetName(optionName);
+    return nameRef?.GetPtr();
   }
 
   private static IReadOnlyList<QuickPropertyDefinition> DefaultDefinitions() =>
