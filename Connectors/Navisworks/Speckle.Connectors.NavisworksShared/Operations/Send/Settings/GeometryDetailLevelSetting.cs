@@ -3,9 +3,13 @@ using Speckle.Converter.Navisworks.Settings;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Settings;
 
-public class GeometryDetailLevelSetting(GeometryDetailLevel value) : ICardSetting
+public class GeometryDetailLevelSetting(GeometryDetailLevel value = GeometryDetailLevelSetting.DEFAULT_VALUE)
+  : ICardSetting
 {
-  public string? Id { get; set; } = "geometryDetailLevel";
+  public const string SETTING_ID = "geometryDetailLevel";
+  public const GeometryDetailLevel DEFAULT_VALUE = GeometryDetailLevel.Optimised;
+
+  public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Geometry Detail";
   public string? Description { get; set; } = "Full, Optimised (65 degree seam-aware + unit-aware rounding), or Lite.";
   public string? Type { get; set; } = "string";

@@ -3,9 +3,13 @@ using Speckle.Converter.Navisworks.Settings;
 
 namespace Speckle.Connector.Navisworks.Operations.Send.Settings;
 
-public class PropertyDetailLevelSetting(PropertyDetailLevel value) : ICardSetting
+public class PropertyDetailLevelSetting(PropertyDetailLevel value = PropertyDetailLevelSetting.DEFAULT_VALUE)
+  : ICardSetting
 {
-  public string? Id { get; set; } = "propertyDetailLevel";
+  public const string SETTING_ID = "propertyDetailLevel";
+  public const PropertyDetailLevel DEFAULT_VALUE = PropertyDetailLevel.Standard;
+
+  public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Property Detail";
   public string? Description { get; set; } =
     "All: user-filtered properties. Standard: filtered minus exclusions unless in Quick Properties. None: Item only.";
