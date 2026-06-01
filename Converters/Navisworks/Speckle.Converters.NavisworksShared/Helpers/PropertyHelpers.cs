@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Objects.Geometry;
@@ -114,7 +113,7 @@ public static class PropertyHelpers
   }
 
   internal static string SanitizePropertyName(string name) =>
-    name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
+    name == "Item" ? "Item" : name.Replace('.', '_').Replace('/', '_').Replace(' ', '_');
 
   internal static bool ShouldSkipProperty(
     string propertyName,
