@@ -14,14 +14,16 @@ public class StandardPropertyHandler(
   InternalPropertiesExtractor internalPropertiesExtractor,
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache
 )
   : BasePropertyHandler(
     propertySetsExtractor,
     modelPropertiesExtractor,
     internalPropertiesExtractor,
     settingsStore,
-    quickPropertyDefinitionsCache
+    quickPropertyDefinitionsCache,
+    modelItemPropertySetsCache
   )
 {
   private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;

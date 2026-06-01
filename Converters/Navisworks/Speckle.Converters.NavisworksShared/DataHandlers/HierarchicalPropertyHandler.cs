@@ -15,14 +15,16 @@ public class HierarchicalPropertyHandler(
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
   IRevitBuiltInCategoryExtractor revitCategoryExtractor,
-  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache
 )
   : BasePropertyHandler(
     propertySetsExtractor,
     modelPropertiesExtractor,
     internalPropertiesExtractor,
     settingsStore,
-    quickPropertyDefinitionsCache
+    quickPropertyDefinitionsCache,
+    modelItemPropertySetsCache
   )
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
@@ -58,7 +60,7 @@ public class HierarchicalPropertyHandler(
 
     foreach (var item in hierarchy)
     {
-      CollectHierarchicalProperties(item, propertyCollection);
+      CollectHierarchicalProperties(item, propertyCollection, storeInCache: item != modelItem);
     }
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
@@ -96,10 +98,11 @@ public class HierarchicalPropertyHandler(
 
   private void CollectHierarchicalProperties(
     NAV.ModelItem item,
-    Dictionary<string, Dictionary<string, HashSet<object?>>> propertyCollection
+    Dictionary<string, Dictionary<string, HashSet<object?>>> propertyCollection,
+    bool storeInCache
   )
   {
-    var categoryDictionaries = ProcessPropertySets(item);
+    var categoryDictionaries = ProcessPropertySets(item, storeInCache);
     if (categoryDictionaries.Count == 0)
     {
       return;

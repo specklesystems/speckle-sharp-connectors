@@ -12,7 +12,8 @@ public abstract class BasePropertyHandler(
   ModelPropertiesExtractor modelPropertiesExtractor,
   InternalPropertiesExtractor internalPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache
 ) : IPropertyHandler
 {
   private static readonly HashSet<string> s_standardItemRootExcludedPropertyKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -26,7 +27,24 @@ public abstract class BasePropertyHandler(
 
   public abstract Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem);
 
-  protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem)
+  protected Dictionary<string, object?> ProcessPropertySets(NAV.ModelItem modelItem, bool storeInCache = true)
+  {
+    if (modelItemPropertySetsCache.TryGet(modelItem, out var cached))
+    {
+      return cached;
+    }
+
+    var result = BuildProcessPropertySets(modelItem);
+
+    if (storeInCache)
+    {
+      modelItemPropertySetsCache.Store(modelItem, result);
+    }
+
+    return result;
+  }
+
+  private Dictionary<string, object?> BuildProcessPropertySets(NAV.ModelItem modelItem)
   {
     var categorizedProperties = new Dictionary<string, object?>();
     var propertySets = propertySetsExtractor.GetPropertySets(modelItem);
