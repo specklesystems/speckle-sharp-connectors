@@ -35,10 +35,17 @@ internal static class QuickPropertyMatching
 
     foreach (var definition in definitions)
     {
-      if (
-        CategoryEquals(definition.CategoryDisplayName, categoryDisplayName)
-        && PropertyEquals(definition.PropertyDisplayName, propertyDisplayName)
-      )
+      if (!CategoryEquals(definition.CategoryDisplayName, categoryDisplayName))
+      {
+        continue;
+      }
+
+      if (definition.IsCategoryOnly)
+      {
+        return true;
+      }
+
+      if (PropertyEquals(definition.PropertyDisplayName!, propertyDisplayName))
       {
         return true;
       }
@@ -59,7 +66,12 @@ internal static class QuickPropertyMatching
 
     foreach (var definition in definitions)
     {
-      if (PropertyEquals(definition.PropertyDisplayName, propertyDisplayName))
+      if (definition.IsCategoryOnly)
+      {
+        continue;
+      }
+
+      if (PropertyEquals(definition.PropertyDisplayName!, propertyDisplayName))
       {
         return true;
       }
@@ -80,10 +92,15 @@ internal static class QuickPropertyMatching
         continue;
       }
 
+      if (definition.IsCategoryOnly)
+      {
+        return true;
+      }
+
       if (
-        PropertyEquals(definition.PropertyDisplayName, sanitizedPropertyKey)
+        PropertyEquals(definition.PropertyDisplayName!, sanitizedPropertyKey)
         || string.Equals(
-          PropertyHelpers.SanitizePropertyName(definition.PropertyDisplayName),
+          PropertyHelpers.SanitizePropertyName(definition.PropertyDisplayName!),
           sanitizedPropertyKey,
           StringComparison.OrdinalIgnoreCase
         )
