@@ -4,7 +4,7 @@ public sealed class QuickPropertyDefinition
 {
   public QuickPropertyDefinition(
     string categoryDisplayName,
-    string propertyDisplayName,
+    string? propertyDisplayName,
     string? categoryInternalName,
     string? propertyInternalName
   )
@@ -17,7 +17,9 @@ public sealed class QuickPropertyDefinition
 
   public string CategoryDisplayName { get; }
 
-  public string PropertyDisplayName { get; }
+  public string? PropertyDisplayName { get; }
+
+  public bool IsCategoryOnly => string.IsNullOrWhiteSpace(PropertyDisplayName);
 
   public string? CategoryInternalName { get; }
 
