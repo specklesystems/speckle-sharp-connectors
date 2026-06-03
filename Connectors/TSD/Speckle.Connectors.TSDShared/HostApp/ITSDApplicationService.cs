@@ -1,11 +1,9 @@
 using TSD.API.Remoting;
+using TSD.API.Remoting.Structure;
+using TSD.API.Remoting.Units;
 
 namespace Speckle.Connectors.TSDShared.HostApp;
 
-/// <summary>
-/// Holds the connection to the TSD instance that launched this connector. TSD starts our exe as a child process and
-/// passes the gRPC port it is listening on; <see cref="ConnectAsync"/> binds to that port via the Remoting API.
-/// </summary>
 internal interface ITSDApplicationService
 {
   int? Port { get; }
@@ -14,5 +12,15 @@ internal interface ITSDApplicationService
   string? ApplicationVersion { get; }
   bool IsConnected { get; }
 
+  event EventHandler? SelectionChanged;
+
   Task ConnectAsync(int port);
+
+  Task<IReadOnlyList<TSDSelectedEntity>> GetSelectedEntitiesAsync();
+
+  Task<IReadOnlyList<IMember>> GetMembersForSendAsync(IReadOnlyList<string> objectIds);
+
+  Task<IUnitBase?> GetLengthUnitAsync();
+
+  Task<IReadOnlyList<double>> ConvertFromBaseAsync(IReadOnlyList<double> values, IUnitBase unit);
 }

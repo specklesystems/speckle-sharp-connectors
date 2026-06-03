@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Common;
+using Speckle.Connectors.Common.Builders;
+using Speckle.Connectors.Common.Caching;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI;
 using Speckle.Connectors.DUI.Bindings;
@@ -9,6 +12,8 @@ using Speckle.Connectors.DUI.WebView;
 using Speckle.Connectors.TSDShared.Bindings;
 using Speckle.Connectors.TSDShared.Filters;
 using Speckle.Connectors.TSDShared.HostApp;
+using Speckle.Connectors.TSDShared.Operations.Send;
+using TSD.API.Remoting.Structure;
 
 namespace Speckle.Connectors.TSDShared;
 
@@ -25,7 +30,6 @@ internal static class ServiceRegistration
     services.AddSingleton<TSDApplicationService>();
     services.AddSingleton<ITSDApplicationService>(sp => sp.GetRequiredService<TSDApplicationService>());
 
-    // Phase 0: just boot DUI with the shared bindings. TSD model connection comes in Phase 1.
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();
     services.AddSingleton<IBinding, AccountBinding>();
@@ -36,6 +40,11 @@ internal static class ServiceRegistration
     services.AddSingleton<IBinding, TSDSelectionBinding>();
     services.AddSingleton<IBinding, TSDSendBinding>();
     services.AddScoped<ISendFilter, TSDSelectionFilter>();
+
+    services.AddSingleton<ISendConversionCache, SendConversionCache>();
+    services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    services.AddScoped<IRootObjectBuilder<IMember>, TsdRootObjectBuilder>();
+    services.AddScoped<SendOperation<IMember>>();
 
     return services;
   }

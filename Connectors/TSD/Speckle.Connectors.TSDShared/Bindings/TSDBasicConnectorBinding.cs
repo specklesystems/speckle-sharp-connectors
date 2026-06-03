@@ -64,14 +64,11 @@ internal sealed class TSDBasicConnectorBinding : IBasicConnectorBinding
 
   public DocumentModelStore GetDocumentState() => _store;
 
-  public void AddModel(ModelCard model) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => _store.AddModel(model));
+  public void AddModel(ModelCard model) => _topLevelExceptionHandler.CatchUnhandled(() => _store.AddModel(model));
 
-  public void UpdateModel(ModelCard model) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => _store.UpdateModel(model));
+  public void UpdateModel(ModelCard model) => _topLevelExceptionHandler.CatchUnhandled(() => _store.UpdateModel(model));
 
-  public void RemoveModel(ModelCard model) =>
-    _topLevelExceptionHandler.CatchUnhandled(() => _store.RemoveModel(model));
+  public void RemoveModel(ModelCard model) => _topLevelExceptionHandler.CatchUnhandled(() => _store.RemoveModel(model));
 
   public void RemoveModels(List<ModelCard> models) =>
     _topLevelExceptionHandler.CatchUnhandled(() => _store.RemoveModels(models));

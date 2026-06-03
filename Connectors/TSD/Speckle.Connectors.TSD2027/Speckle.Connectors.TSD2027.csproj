@@ -29,6 +29,10 @@
     <ItemGroup>
       <TsdDeployFiles Include="$(OutDir)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(TsdDeployFiles)" DestinationFiles="@(TsdDeployFiles->'$(TsdExtensionsDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(TsdDeployFiles)"
+      DestinationFiles="@(TsdDeployFiles->'$(TsdExtensionsDir)%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
   </Target>
 </Project>
