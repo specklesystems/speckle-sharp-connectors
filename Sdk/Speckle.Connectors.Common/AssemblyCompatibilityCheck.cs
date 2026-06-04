@@ -42,7 +42,7 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
   /// If we wish, we can remove this check at a later date if we're confident there's no issues.
   /// </remarks>
   /// <returns></returns>
-  public bool ValidateStjCompatiblity()
+  public bool ValidateStjCompatibility()
   {
     try
     {

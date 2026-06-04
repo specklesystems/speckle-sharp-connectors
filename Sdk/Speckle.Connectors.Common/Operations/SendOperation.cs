@@ -57,7 +57,7 @@ public sealed class SendOperation<T>(
       bool usePackfileSend =
         rootContinuousTraversalBuilder != null
         && await CheckPackfileSendEndpoints(sendInfo, cancellationToken)
-        && compatabilityCheck.ValidateStjCompatiblity();
+        && compatabilityCheck.ValidateStjCompatibility();
 
       if (usePackfileSend)
       {
