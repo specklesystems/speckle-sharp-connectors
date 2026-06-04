@@ -58,8 +58,6 @@ internal static class LogBuilder
                 "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
               );
           }
-
-          loggingBuilder.AddSerilog(serilogLogger);
         }
       }
 
@@ -79,6 +77,7 @@ internal static class LogBuilder
   ) =>
     loggingBuilder.AddOpenTelemetry(x =>
     {
+      x.IncludeScopes = true;
       x.AddOtlpExporter(y =>
         {
           y.Protocol = OtlpExportProtocol.HttpProtobuf;

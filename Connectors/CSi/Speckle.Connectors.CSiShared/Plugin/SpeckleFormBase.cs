@@ -41,6 +41,8 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
 
   public void Initialize(ref cSapModel sapModel, ref cPluginCallback pluginCallback)
   {
+    AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver.OnAssemblyResolve<SpeckleFormBase>;
+
     // store app-specific model and callback references (callback if at all possible?)
     SapModel = sapModel;
     _pluginCallback = pluginCallback;
@@ -51,7 +53,7 @@ public abstract class SpeckleFormBase : Form, ICsiApplicationService
     string resourcePath = $"{assemblyName}.Resources.et_element_Speckle.bmp";
 
     // load and set the speckle icon from embedded resources
-    using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath))
+    using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath))
     {
       if (stream == null)
       {
