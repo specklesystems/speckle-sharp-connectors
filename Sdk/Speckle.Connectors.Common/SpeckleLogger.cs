@@ -41,6 +41,13 @@ public class SpeckleLogger(Logger logger) : ILogger
 
   public bool IsEnabled(LogLevel logLevel) => true;
 
-  public IDisposable BeginScope<TState>(TState state)
-    where TState : notnull => throw new NotImplementedException();
+  /// <summary>
+  /// When performance is not a critical requirement, <c>IEnumerable{KeyValuePair{string, object?}}</c> can be used.
+  /// it is recommended to use <c>IReadOnlyList{KeyValuePair{string, object?}}</c> as the <typeparamref name="TState" /> for the best performance.
+  /// </summary>
+  /// <param name="state"></param>
+  /// <typeparam name="TState"></typeparam>
+  /// <returns></returns>
+  public IDisposable? BeginScope<TState>(TState state)
+    where TState : notnull => logger.BeginScope(state);
 }
