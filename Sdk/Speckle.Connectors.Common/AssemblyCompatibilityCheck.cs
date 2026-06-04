@@ -88,6 +88,8 @@ public class AssemblyCompatibilityCheck(ILogger<AssemblyCompatibilityCheck> logg
       {
         assemblyInfo.Add(new($"AssemblyReport.{i}", $"{n.Name} - {n.Version}, {assembly.Location}"));
       }
+
+      i++;
     }
 
     return assemblyInfo;
