@@ -114,11 +114,7 @@ public sealed class CorridorHandler
       List<Base> regions = new();
       foreach (CDB.BaselineRegion region in baseline.BaselineRegions)
       {
-#if CIVIL3D2023_OR_GREATER
         string regionGuid = region.RegionGUID.ToString();
-#else
-        string regionGuid = "";
-#endif
 
         Base convertedRegion = new()
         {

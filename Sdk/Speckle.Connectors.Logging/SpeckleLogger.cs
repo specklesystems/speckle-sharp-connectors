@@ -24,4 +24,7 @@ public sealed class Logger(ILogger logger)
     Exception? exception,
     Func<TState, Exception?, string> formatter
   ) => logger.Log(GetLevel(speckleLogLevel), new EventId(eventId), state, exception, formatter);
+
+  public IDisposable? BeginScope<TState>(TState state)
+    where TState : notnull => logger.BeginScope(state);
 }

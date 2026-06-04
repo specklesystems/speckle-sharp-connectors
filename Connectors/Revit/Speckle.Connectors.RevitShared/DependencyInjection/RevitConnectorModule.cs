@@ -18,9 +18,7 @@ using Speckle.Connectors.Revit.Plugin;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.GraphTraversal;
-#if REVIT2026_OR_GREATER
-using Speckle.Connectors.Revit2026.Plugin;
-#else
+#if !REVIT2026_OR_GREATER
 using CefSharp;
 #endif
 
@@ -99,13 +97,7 @@ public static class ServiceRegistration
 
   public static void RegisterUiDependencies(IServiceCollection serviceCollection)
   {
-#if REVIT2022
-    //different versons for different versions of CEF
-    serviceCollection.AddSingleton(new BindingOptions() { CamelCaseJavascriptNames = false });
-    serviceCollection.AddSingleton<CefSharpPanel>();
-    serviceCollection.AddSingleton<IBrowserScriptExecutor>(sp => sp.GetRequiredService<CefSharpPanel>());
-    serviceCollection.AddSingleton<IRevitPlugin, RevitCefPlugin>();
-#elif !REVIT2026_OR_GREATER
+#if !REVIT2026_OR_GREATER
     // different versions for different versions of CEF
     serviceCollection.AddSingleton(BindingOptions.DefaultBinder);
     serviceCollection.AddSingleton<CefSharpPanel>();

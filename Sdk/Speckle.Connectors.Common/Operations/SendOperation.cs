@@ -8,6 +8,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Api;
 using Speckle.Sdk.Api.GraphQL.Inputs;
 using Speckle.Sdk.Api.GraphQL.Models;
+using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Helpers;
 using Speckle.Sdk.Logging;
@@ -35,6 +36,7 @@ public sealed class SendOperation<T>(
   IIngestionProgressManagerFactory ingestionProgressManagerFactory,
   ISpeckleHttp speckleHttp,
   ISendPipelineFactory sendPipelineFactory,
+  IAssemblyCompatibilityCheck compatabilityCheck,
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
 ) : ISendOperation<T>
 {
@@ -53,7 +55,10 @@ public sealed class SendOperation<T>(
     if (useModelIngestionSend)
     {
       bool usePackfileSend =
-        rootContinuousTraversalBuilder != null && await CheckPackfileSendEndpoints(sendInfo, cancellationToken);
+        rootContinuousTraversalBuilder != null
+        && await CheckPackfileSendEndpoints(sendInfo, cancellationToken)
+        && compatabilityCheck.ValidateStjCompatibility();
+
       if (usePackfileSend)
       {
         return await SendViaPackfile(
@@ -163,6 +168,14 @@ public sealed class SendOperation<T>(
     {
       _ = await sendInfo.Client.Ingestion.FailWithCancel(
         new(ingestion.id, sendInfo.ProjectId, "User requested cancellation"),
+        CancellationToken.None
+      );
+      throw;
+    }
+    catch (IngestionValidationException ex)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithInvalid(
+        new(ingestion.id, sendInfo.ProjectId, ex.Message),
         CancellationToken.None
       );
       throw;

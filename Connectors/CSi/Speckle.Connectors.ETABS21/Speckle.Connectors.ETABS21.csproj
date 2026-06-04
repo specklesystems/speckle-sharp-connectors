@@ -23,6 +23,8 @@
       IncludeAssets="compile; build"
       VersionOverride="1.30.0"
     />
+    <!--to match host app-->
+    <PackageReference Include="System.Text.Json" VersionOverride="6.0.11" />
   </ItemGroup>
 
   <ItemGroup>

@@ -19,5 +19,14 @@
     >
       <RuntimeRequirements OS="Win64" Platform="Plant3D" SeriesMin="R25.1" SeriesMax="R25.1" />
     </ComponentEntry>
+
+    <!-- Plant 3D 2027 -->
+    <ComponentEntry
+      AppName="Speckle.Connectors.Plant3d2027"
+      ModuleName="./Contents/Windows/Speckle.Connectors.Plant3d2027/Speckle.Connectors.Plant3d2027.dll"
+      LoadOnAutoCADStartup="True"
+    >
+      <RuntimeRequirements OS="Win64" Platform="Plant3D" SeriesMin="R26.0" SeriesMax="R26.0" />
+    </ComponentEntry>
   </Components>
 </ApplicationPackage>

@@ -5,12 +5,16 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWpf>true</UseWpf>
     <RevitVersion>2026</RevitVersion>
-    <DefineConstants>$(DefineConstants);REVIT2026;REVIT2022_OR_GREATER;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER;REVIT2025_OR_GREATER;REVIT2026_OR_GREATER</DefineConstants>
+    <DefineConstants>$(DefineConstants);REVIT2026;REVIT2023_OR_GREATER;REVIT2024_OR_GREATER;REVIT2025_OR_GREATER;REVIT2026_OR_GREATER</DefineConstants>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
+  <Import
+    Project="..\Speckle.Connectors.RevitShared.WebView\Speckle.Connectors.RevitShared.WebView.projitems"
+    Label="Shared"
+  />
   <Import Project="..\Speckle.Connectors.RevitShared\Speckle.Connectors.RevitShared.projitems" Label="Shared" />
 
   <ItemGroup>
@@ -21,7 +25,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" IncludeAssets="compile" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="8.0.0" />
+    <!--To Match Host APP-->
+    <PackageReference Include="Microsoft.Extensions.Logging" VersionOverride="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

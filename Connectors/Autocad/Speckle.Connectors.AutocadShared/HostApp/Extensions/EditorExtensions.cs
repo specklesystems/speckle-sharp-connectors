@@ -8,7 +8,7 @@ public static class EditorExtensions
 {
   public static void Zoom(this Editor? editor, Extents3d ext)
   {
-#if NET8_0
+#if NET8_0_OR_GREATER
     ArgumentNullException.ThrowIfNull(editor);
 #else
     if (editor == null)

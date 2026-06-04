@@ -26,6 +26,8 @@
       PrivateAssets="all"
       VersionOverride="8.9.24194.18121"
     />
+    <!--to match Hostapp-->
+    <PackageReference Include="System.Text.Json" VersionOverride="7.0.0" NoWarn="NU1903" />
   </ItemGroup>
 
   <ItemGroup>
