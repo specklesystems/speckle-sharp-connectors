@@ -92,6 +92,15 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
           foreach (var request in requests)
           {
+            if (request.IsCreation)
+            {
+              errors.Add(
+                $"Cannot create new parameter '{request.Path}': adding parameters to Revit elements via the connector is not supported. "
+                  + "Create a shared or project parameter in Revit first, then use the parameter updater to set its value."
+              );
+              continue;
+            }
+
             if (!TryValidateAndParseRequest(doc, request, out var element, out var parsedPath, out var errorMessage))
             {
               errors.Add(errorMessage!);
