@@ -58,7 +58,7 @@ internal sealed class TSDBasicConnectorBinding : IBasicConnectorBinding
       ? new DocumentInfo(
         _applicationService.ApplicationTitle ?? "Tekla Structural Designer",
         _applicationService.ApplicationTitle ?? "TSD Model",
-        "1"
+        _applicationService.ModelId?.ToString() ?? _applicationService.ApplicationTitle ?? "tsd"
       )
       : null;
 

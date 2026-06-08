@@ -41,7 +41,7 @@ internal static class ServiceRegistration
     services.AddSingleton<IBinding, TSDSendBinding>();
     services.AddScoped<ISendFilter, TSDSelectionFilter>();
 
-    services.AddSingleton<ISendConversionCache, SendConversionCache>();
+    services.AddSingleton<ISendConversionCache, NullSendConversionCache>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
     services.AddScoped<IRootObjectBuilder<IMember>, TsdRootObjectBuilder>();
     services.AddScoped<SendOperation<IMember>>();

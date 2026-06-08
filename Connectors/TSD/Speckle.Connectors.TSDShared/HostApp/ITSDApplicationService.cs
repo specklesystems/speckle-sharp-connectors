@@ -10,6 +10,7 @@ internal interface ITSDApplicationService
   IApplication? Application { get; }
   string? ApplicationTitle { get; }
   string? ApplicationVersion { get; }
+  Guid? ModelId { get; }
   bool IsConnected { get; }
 
   event EventHandler? SelectionChanged;

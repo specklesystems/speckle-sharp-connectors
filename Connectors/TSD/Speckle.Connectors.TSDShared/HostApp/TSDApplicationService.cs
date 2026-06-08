@@ -22,6 +22,7 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
   public IApplication? Application { get; private set; }
   public string? ApplicationTitle { get; private set; }
   public string? ApplicationVersion { get; private set; }
+  public Guid? ModelId { get; private set; }
   public bool IsConnected => Application is not null;
 
   public event EventHandler? SelectionChanged;
@@ -44,6 +45,9 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
 
       ApplicationTitle = await Application.GetApplicationTitleAsync().ConfigureAwait(false);
       ApplicationVersion = await Application.GetVersionStringAsync().ConfigureAwait(false);
+
+      var document = await Application.GetDocumentAsync().ConfigureAwait(false);
+      ModelId = document?.ModelId;
 
       _logger.LogInformation(
         "Connected to TSD: {Title} ({Version}) on port {Port}",
@@ -221,7 +225,7 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
 
     if (Application is IAsyncDisposable asyncDisposable)
     {
-      asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+      Task.Run(() => asyncDisposable.DisposeAsync().AsTask()).GetAwaiter().GetResult();
     }
     else
     {
