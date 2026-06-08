@@ -42,7 +42,7 @@ jobs:
         run: ./build.ps1 zip
 
       - name: ⬆️ Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: output-${{ env.SEMVER }}
           path: output/*.*
@@ -67,7 +67,7 @@ jobs:
       IS_PUBLIC_RELEASE: ${{ github.ref_type == 'tag' }}
     steps:
       - name: 🔫 Trigger Build Installers
-        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # 1.3.2
+        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
         with:
           workflow: Build Installers
           repo: specklesystems/connector-installers
@@ -85,6 +85,6 @@ jobs:
         timeout-minutes: 15
 
       # Allows us to inspect the artifacts of failed builds, since this below step will be skipped if the above step fails
-      - uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # 6.0.0
+      - uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: output-*
