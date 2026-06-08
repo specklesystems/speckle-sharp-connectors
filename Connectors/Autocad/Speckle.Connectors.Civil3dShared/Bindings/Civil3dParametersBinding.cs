@@ -68,6 +68,15 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
 
           foreach (var request in requests)
           {
+            if (request.IsCreation)
+            {
+              errors.Add(
+                $"Cannot create new property '{request.Path}': adding properties to Civil3D entities via the connector is not supported. "
+                  + "Attach the Property Set definition to the entity in Civil3D first, then use the parameter updater to set its value."
+              );
+              continue;
+            }
+
             if (!TryValidateAndParseRequest(doc, tr, request, out var entity, out var parsedPath, out var error))
             {
               errors.Add(error!);
