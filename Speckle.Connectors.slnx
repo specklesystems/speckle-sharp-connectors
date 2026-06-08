@@ -124,7 +124,6 @@
   <Folder Name="/Connectors/Revit/">
     <File Path="Connectors\Revit\Directory.Build.targets" />
   </Folder>
-  <Folder Name="/Connectors/Revit/2022/" />
   <Folder Name="/Connectors/Revit/2023/">
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit2023\Speckle.Connectors.Revit2023.csproj" />
     <Project Path="Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
