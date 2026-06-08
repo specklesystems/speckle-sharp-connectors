@@ -6,6 +6,7 @@ public class ParameterChangeRequest
   public required string Path { get; init; }
   public object? To { get; init; }
   public string? InternalDefinitionName { get; set; }
+
   /// <summary>
   /// When true, the widget is requesting a new parameter be created rather than an existing one updated.
   /// Host apps that support open key-value storage (Rhino) will create the key automatically.
