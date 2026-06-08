@@ -117,8 +117,7 @@ public class RevitParameterCreator
 
   private ExternalDefinition? GetOrCreateDefinition(DefinitionFile defFile, string paramName)
   {
-    var group =
-      defFile.Groups.get_Item(SPECKLE_GROUP_NAME) ?? defFile.Groups.Create(SPECKLE_GROUP_NAME);
+    var group = defFile.Groups.get_Item(SPECKLE_GROUP_NAME) ?? defFile.Groups.Create(SPECKLE_GROUP_NAME);
 
     if (group.Definitions.get_Item(paramName) is ExternalDefinition existing)
     {
@@ -128,7 +127,7 @@ public class RevitParameterCreator
     var opts = new ExternalDefinitionCreationOptions(paramName, SpecTypeId.String.Text)
     {
       UserModifiable = true,
-      Visible = true
+      Visible = true,
     };
 
     return group.Definitions.Create(opts) as ExternalDefinition;
