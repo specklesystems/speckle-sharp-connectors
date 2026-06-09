@@ -3,8 +3,7 @@ using Speckle.InterfaceGenerator;
 namespace Speckle.Converter.Navisworks.Services;
 
 [GenerateAutoInterface]
-public class ModelItemPropertySetsCache(IElementSelectionService elementSelectionService)
-  : IModelItemPropertySetsCache
+public class ModelItemPropertySetsCache(IElementSelectionService elementSelectionService) : IModelItemPropertySetsCache
 {
   private readonly Dictionary<string, Dictionary<string, object?>> _cache = new(StringComparer.Ordinal);
 
@@ -44,12 +43,7 @@ public class ModelItemPropertySetsCache(IElementSelectionService elementSelectio
     CacheMisses = 0;
   }
 
-  public ModelItemPropertySetsCacheSnapshot Snapshot() =>
-    new(_cache.Count, CacheHits, CacheMisses);
+  public ModelItemPropertySetsCacheSnapshot Snapshot() => new(_cache.Count, CacheHits, CacheMisses);
 }
 
-public readonly record struct ModelItemPropertySetsCacheSnapshot(
-  int CachedNodeCount,
-  int CacheHits,
-  int CacheMisses
-);
+public readonly record struct ModelItemPropertySetsCacheSnapshot(int CachedNodeCount, int CacheHits, int CacheMisses);
