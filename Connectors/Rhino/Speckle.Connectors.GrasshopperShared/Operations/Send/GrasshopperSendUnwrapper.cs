@@ -24,7 +24,9 @@ internal static class GrasshopperSendUnwrapper
     Dictionary<string, object?> props = [];
     Base baseObject = wrapper.Base;
 
-    if (wrapper.GeometryBase != null)
+    // Block instances manage their own Base (InstanceProxy with transform + definitionId set by GrasshopperBlockPacker).
+    // Reconverting their GeometryBase would overwrite that with a raw reconverted object and break them.
+    if (wrapper.GeometryBase != null && wrapper is not SpeckleBlockInstanceWrapper)
     {
       var reconverted = SpeckleConversionContext.Current.ConvertToSpeckle(wrapper.GeometryBase);
       if (reconverted != null)
