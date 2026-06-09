@@ -18,11 +18,17 @@ namespace Speckle.Connectors.TSDShared.Operations.Send;
 internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
 {
   private readonly ITSDApplicationService _applicationService;
+  private readonly TsdMemberPropertyExtractor _propertyExtractor;
   private readonly ILogger<TsdRootObjectBuilder> _logger;
 
-  public TsdRootObjectBuilder(ITSDApplicationService applicationService, ILogger<TsdRootObjectBuilder> logger)
+  public TsdRootObjectBuilder(
+    ITSDApplicationService applicationService,
+    TsdMemberPropertyExtractor propertyExtractor,
+    ILogger<TsdRootObjectBuilder> logger
+  )
   {
     _applicationService = applicationService;
+    _propertyExtractor = propertyExtractor;
     _logger = logger;
   }
 
@@ -83,7 +89,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
 
     try
     {
-      var displayValue = await GetDisplayValueAsync(member, unit, speckleUnits).ConfigureAwait(false);
+      var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
+      var displayValue = await GetDisplayValueAsync(spans, unit, speckleUnits).ConfigureAwait(false);
 
       var tsdObject = new TsdObject
       {
@@ -91,7 +98,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
         type = type,
         elements = new List<TsdObject>(),
         displayValue = displayValue,
-        properties = new Dictionary<string, object?>(),
+        properties = _propertyExtractor.Extract(member, spans),
         units = speckleUnits,
         applicationId = applicationId,
       };
@@ -117,12 +124,15 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     }
   }
 
-  private async Task<List<Base>> GetDisplayValueAsync(IMember member, IUnitBase? unit, string speckleUnits)
+  private async Task<List<Base>> GetDisplayValueAsync(
+    IReadOnlyList<IMemberSpan> spans,
+    IUnitBase? unit,
+    string speckleUnits
+  )
   {
     var displayValue = new List<Base>();
 
-    var spans = await member.GetSpanAsync(null).ConfigureAwait(false);
-    if (spans is null)
+    if (spans.Count == 0)
     {
       return displayValue;
     }
