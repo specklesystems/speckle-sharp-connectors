@@ -5,8 +5,17 @@ namespace Speckle.Connectors.Common;
 
 /// <summary>
 /// Provides <see cref="Speckle.Sdk"/> with an implementation of <see cref="ISdkActivityFactory"/>
-/// that wraps <see cref="ISdkActivity"/> with an underlying <see cref="LoggingActivity"/>
+/// that wraps <see cref="ISdkActivity"/> with an underlying <see cref="LoggingActivity"/>.
 /// </summary>
+/// <remarks>
+/// We have several layers of abstraction via interfaces and wrappers:<br/>
+/// <c>System.Diagnostics.DiagnosticSource.Activity</c> is wrapped by
+/// <see cref="LoggingActivity"/> is wrapped by
+/// <see cref="ConnectorActivityFactory"/> implements the sdk abstraction <see cref="ISdkActivityFactory"/>.
+/// <br/>
+/// This is done so that the  .NET Standard 2.0 target of the <see cref="Speckle.Sdk"/> (and therefore consumers e.g. .NET framework connectors) can avoid a
+/// dependency on <c>System.Diagnostics.DiagnosticSource</c>.
+/// </remarks>
 public sealed class ConnectorActivityFactory : ISdkActivityFactory
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
@@ -71,6 +80,8 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     public void Dispose() => activity.Dispose();
 
     public void SetTag(string key, object? value) => activity.SetTag(key, value);
+
+    public void SetBaggage(string key, string? value) => activity.SetBaggage(key, value);
 
     public void RecordException(Exception e) => activity.RecordException(e);
 

@@ -25,6 +25,8 @@ public readonly struct LoggingActivity
 
   public void SetTag(string key, object? value) => _activity.SetTag(key, value);
 
+  public void SetBaggage(string key, string? value) => _activity.SetBaggage(key, value);
+
   public void RecordException(Exception e) => _activity.AddException(e);
 
   /// <summary>W3C <c>tracestate</c> header</summary>

@@ -58,6 +58,9 @@ internal static class LogBuilder
                 "Initialized logger inside {applicationAndVersion}/{connectorVersion}. Path info {userApplicationDataPath} {installApplicationDataPath}."
               );
           }
+
+          //TODO: test this is safe
+          //loggingBuilder.AddSerilog(serilogLogger, true);
         }
       }
 
