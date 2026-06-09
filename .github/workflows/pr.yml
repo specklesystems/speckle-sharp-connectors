@@ -5,22 +5,30 @@ on:
   push:
     branches: ["main"]
 
+permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true # other running workflows get cancelled on the same branch
+
 jobs:
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
         with:
           dotnet-version: 10.0.2xx # Align with global.json (including roll forward rules)
 
       - name: Cache Nuget
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -28,11 +36,13 @@ jobs:
       - name: ⚒️ Run Test
         run: ./build.sh test-and-pack
 
-      - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v6
-        with:
-          files: Converters/**/coverage.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # Skipping codecov due to https://github.com/codecov/codecov-action/issues/1956 and fix being less than cooldown period
+
+      # - name: Upload coverage reports to Codecov with GitHub Action
+      #   uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+      #   with:
+      #     files: Converters/**/coverage.xml
+      #     token: ${{ secrets.CODECOV_TOKEN }}
 
       # Disabling this code for now, since we no longer need to publish nugets from this repo
       # But keeping it around incase we ever need in the future.
@@ -40,3 +50,20 @@ jobs:
 #      - name: Push to nuget.org
 #        if: ${{ inputs.deployNugets }}
 #        run: dotnet nuget push output/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.CONNECTORS_NUGET_TOKEN }}
+
+  lint-github-actions:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # only needed for private or internal repos
+      actions: read # only needed for private or internal repos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor 🌈
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
+        with:
+          advanced-security: false

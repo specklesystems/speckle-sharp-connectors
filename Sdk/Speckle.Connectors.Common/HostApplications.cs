@@ -26,6 +26,7 @@ public static class HostApplications
     CSiBridge = new("CSiBridge", "csibridge"),
     SAFE = new("SAFE", "safe"),
     TeklaStructures = new("Tekla Structures", "teklastructures"),
+    TSD = new("Tekla Structural Designer", "tsd"),
     Dxf = new("DXF Converter", "dxf"),
     Excel = new("Excel", "excel"),
     Unreal = new("Unreal", "unreal"),

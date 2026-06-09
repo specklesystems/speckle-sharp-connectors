@@ -124,7 +124,6 @@
   <Folder Name="/Connectors/Revit/">
     <File Path="Connectors\Revit\Directory.Build.targets" />
   </Folder>
-  <Folder Name="/Connectors/Revit/2022/" />
   <Folder Name="/Connectors/Revit/2023/">
     <Project Path="Connectors\Revit\Speckle.Connectors.Revit2023\Speckle.Connectors.Revit2023.csproj" />
     <Project Path="Converters\Revit\Speckle.Converters.Revit2023\Speckle.Converters.Revit2023.csproj" />
@@ -190,6 +189,13 @@
   <Folder Name="/Connectors/Tekla/Shared/">
     <Project Path="Connectors\Tekla\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.shproj" />
     <Project Path="Converters\Tekla\Speckle.Converters.TeklaShared\Speckle.Converters.TeklaShared.shproj" />
+  </Folder>
+  <Folder Name="/Connectors/TSD/" />
+  <Folder Name="/Connectors/TSD/TSD2027/">
+    <Project Path="Connectors\TSD\Speckle.Connectors.TSD2027\Speckle.Connectors.TSD2027.csproj" />
+  </Folder>
+  <Folder Name="/Connectors/TSD/Shared/">
+    <Project Path="Connectors\TSD\Speckle.Connectors.TSDShared\Speckle.Connectors.TSDShared.shproj" />
   </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Rhino/">
