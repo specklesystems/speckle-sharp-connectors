@@ -22,10 +22,10 @@
     <PackageVersion Include="NUnit.Analyzers" Version="4.12.0" />
     <PackageVersion Include="NUnit3TestAdapter" version="6.2.0" />
     <PackageVersion Include="Revit.Async" Version="2.1.1" />
-    <PackageVersion Include="RhinoCommon" Version="8.28.26041.11001" />
+    <PackageVersion Include="RhinoCommon" Version="8.31.26126.13431" />
     <PackageVersion Include="Rhino.Inside" Version="8.0.7-beta" />
-    <PackageVersion Include="Grasshopper" Version="8.28.26041.11001" />
-    <PackageVersion Include="RhinoWindows" Version="8.28.26041.11001" />
+    <PackageVersion Include="Grasshopper" Version="8.31.26126.13431" />
+    <PackageVersion Include="RhinoWindows" Version="8.31.26126.13431" />
     <PackageVersion Include="Semver" Version="3.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Speckle.CSI.API" Version="2.4.0" />

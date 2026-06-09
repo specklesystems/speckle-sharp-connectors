@@ -10,19 +10,25 @@ public sealed class LoggingActivityFactory : IDisposable
     Consts.GetPackageVersion(Assembly.GetExecutingAssembly())
   );
 
-  private readonly Dictionary<string, object?> _tags = new();
-
-  public void SetTag(string key, object? value) => _tags[key] = value;
-
-  public LoggingActivity? StartRemote(string name, string traceContext, LoggingActivityKind activityKind)
+  public LoggingActivity? StartRemote(
+    string name,
+    string? traceParent,
+    string? traceState,
+    LoggingActivityKind kind,
+    IReadOnlyDictionary<string, object?>? tags,
+    DateTimeOffset startTime
+  )
   {
-    if (!ActivityContext.TryParse(traceContext, null, true, out ActivityContext context))
+    if (!ActivityContext.TryParse(traceParent, traceState, true, out ActivityContext context))
     {
-      throw new ArgumentException("traceContext was not parsable to a valid W3C Header", nameof(traceContext));
+      throw new ArgumentException(
+        "traceContext was not parsable to a valid W3C traceParent or traceState Header",
+        nameof(traceParent)
+      );
     }
 
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource.StartActivity(name, ToOtelType(activityKind), context, _tags);
+    var activity = _activitySource.StartActivity(name, ToOtelType(kind), context, tags, null, startTime);
     if (activity is null)
     {
       return null;
@@ -30,10 +36,15 @@ public sealed class LoggingActivityFactory : IDisposable
     return new LoggingActivity(activity);
   }
 
-  public LoggingActivity? Start(string name, LoggingActivityKind activityKind)
+  public LoggingActivity? Start(
+    string name,
+    LoggingActivityKind kind,
+    IReadOnlyDictionary<string, object?>? tags,
+    DateTimeOffset startTime
+  )
   {
     //If you get a MissingManifestResourceException, Likely source or name is empty string, which is no good.
-    var activity = _activitySource.StartActivity(ToOtelType(activityKind), tags: _tags, name: name);
+    var activity = _activitySource.StartActivity(name, ToOtelType(kind), null, tags, null, startTime);
     if (activity is null)
     {
       return null;

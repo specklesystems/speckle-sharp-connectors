@@ -28,4 +28,7 @@ internal sealed class TraceContext
 {
   [JsonPropertyName("traceparent")]
   public string? TraceParent { get; init; }
+
+  [JsonPropertyName("tracestate")]
+  public string? TraceState { get; init; }
 }

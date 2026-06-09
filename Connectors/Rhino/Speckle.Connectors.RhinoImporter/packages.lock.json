@@ -19,20 +19,20 @@
       },
       "RhinoCommon": {
         "type": "Direct",
-        "requested": "[8.28.26041.11001, )",
-        "resolved": "8.28.26041.11001",
-        "contentHash": "5mByZF+IdHvRLbYvr6Ek95Pwam6otewAyVHIGSC0sUE1+OscSpd9gbrFWnzo1arfCYmUJcUdsGhf7VayW09fQA==",
+        "requested": "[8.31.26126.13431, )",
+        "resolved": "8.31.26126.13431",
+        "contentHash": "fEsA70P6K7oQxQKZ/TytKqZ7EWLa2l8394oHosSFabRJ1rJnT6Q/NsNVhtlmAWuAaOBDDDKLc46kqo0WnsOxJA==",
         "dependencies": {
           "System.Drawing.Common": "7.0.0"
         }
       },
       "RhinoWindows": {
         "type": "Direct",
-        "requested": "[8.28.26041.11001, )",
-        "resolved": "8.28.26041.11001",
-        "contentHash": "7MBG231k5c0/V/USTzbXpaTCiZCECQOuB80DnpgEvvEA3r//IQQDTbrqawDYmN9BEw/FHiFn82bsf6tV+SS5Iw==",
+        "requested": "[8.31.26126.13431, )",
+        "resolved": "8.31.26126.13431",
+        "contentHash": "KeteDrHWbzwHwJZnwYmhuT0bYed7NHPb4Fvgw6DxfPNUBK4WuYClA2M5uOpGE7Lbn8K593MrTb5ksz4ASK2VQw==",
         "dependencies": {
-          "RhinoCommon": "[8.28.26041.11001]"
+          "RhinoCommon": "[8.31.26126.13431]"
         }
       },
       "Speckle.InterfaceGenerator": {
