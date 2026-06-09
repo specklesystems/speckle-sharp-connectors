@@ -19,5 +19,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\TsdObjectIdentifier.cs" />
   </ItemGroup>
 </Project>
