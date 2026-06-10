@@ -73,10 +73,7 @@ public class Civil3dParameterCreator
 
     if (nod.Contains(PROP_SET_DEF_DICT_NAME))
     {
-      var psdDict = (ADB.DBDictionary)tr.GetObject(
-        nod.GetAt(PROP_SET_DEF_DICT_NAME),
-        ADB.OpenMode.ForRead
-      );
+      var psdDict = (ADB.DBDictionary)tr.GetObject(nod.GetAt(PROP_SET_DEF_DICT_NAME), ADB.OpenMode.ForRead);
 
       if (psdDict.Contains(SPECKLE_SET_NAME))
       {
@@ -120,11 +117,7 @@ public class Civil3dParameterCreator
 
     psd.UpgradeOpen();
 
-    var newPropDef = new AAECPDB.PropertyDefinition
-    {
-      DataType = AAEC.PropertyData.DataType.Text,
-      Name = propName
-    };
+    var newPropDef = new AAECPDB.PropertyDefinition { DataType = AAEC.PropertyData.DataType.Text, Name = propName };
     newPropDef.SetToStandard(db);
     newPropDef.SubSetDatabaseDefaults(db);
     newPropDef.DefaultData = string.Empty;
