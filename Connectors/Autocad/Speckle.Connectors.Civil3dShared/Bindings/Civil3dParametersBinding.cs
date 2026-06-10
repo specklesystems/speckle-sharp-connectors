@@ -23,6 +23,7 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
   private readonly IJsonSerializer _jsonSerializer;
   private readonly IBasicConnectorBinding _baseBinding;
   private readonly PropertyUpdater _propertyUpdater;
+  private readonly Civil3dParameterCreator _parameterCreator;
 
   public Civil3dParametersBinding(
     IBrowserBridge parent,
@@ -30,7 +31,8 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IJsonSerializer jsonSerializer,
     IBasicConnectorBinding baseBinding,
-    PropertyUpdater propertyUpdater
+    PropertyUpdater propertyUpdater,
+    Civil3dParameterCreator parameterCreator
   )
   {
     Parent = parent;
@@ -39,6 +41,7 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
     _jsonSerializer = jsonSerializer;
     _baseBinding = baseBinding;
     _propertyUpdater = propertyUpdater;
+    _parameterCreator = parameterCreator;
   }
 
   public async Task Update(string payload)
@@ -70,10 +73,49 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
           {
             if (request.IsCreation)
             {
-              errors.Add(
-                $"Cannot create new property '{request.Path}': adding properties to Civil3D entities via the connector is not supported. "
-                  + "Attach the Property Set definition to the entity in Civil3D first, then use the parameter updater to set its value."
+              var paramName = ExtractCreationParamName(request.Path);
+              if (string.IsNullOrEmpty(paramName))
+              {
+                errors.Add($"Invalid path for new property: '{request.Path}'");
+                continue;
+              }
+
+              if (!long.TryParse(request.ApplicationId, out long handleValue))
+              {
+                errors.Add($"ApplicationId is not a valid handle: {request.ApplicationId}");
+                continue;
+              }
+
+              var handle = new ADB.Handle(handleValue);
+              if (!doc.Database.TryGetObjectId(handle, out ADB.ObjectId objectId))
+              {
+                errors.Add($"Entity not found: {request.ApplicationId}");
+                continue;
+              }
+
+              if (tr.GetObject(objectId, ADB.OpenMode.ForRead) is not ADB.Entity creationEntity)
+              {
+                errors.Add($"Object is not an entity: {request.ApplicationId}");
+                continue;
+              }
+
+              object? rawCreationValue = request.To is Newtonsoft.Json.Linq.JValue jv ? jv.Value : request.To;
+              var creationResult = _parameterCreator.CreateAndSet(
+                creationEntity,
+                tr,
+                doc.Database,
+                paramName,
+                rawCreationValue
               );
+
+              if (creationResult.IsSuccess)
+              {
+                successCount++;
+              }
+              else
+              {
+                errors.Add(creationResult.ErrorMessage ?? "Unknown error");
+              }
               continue;
             }
 
@@ -227,5 +269,22 @@ internal sealed class Civil3dParametersBinding : IParametersBinding
 
     parsedPath = new ParsedPropertyPath(pathParts[0], pathParts[1], pathParts[2]);
     return true;
+  }
+
+  /// <summary>
+  /// Strips the "properties." or "parameters." prefix added by the widget and returns
+  /// the bare property name (e.g. "properties.SpeckleTag" → "SpeckleTag").
+  /// </summary>
+  private static string ExtractCreationParamName(string path)
+  {
+    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..].Trim();
+    }
+    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..].Trim();
+    }
+    return path.Trim();
   }
 }
