@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.TSDShared.Utils;
 using Speckle.Sdk;
 using TSD.API.Remoting;
 using TSD.API.Remoting.Common;
@@ -95,7 +96,9 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
         if (item is ISelectedEntity selectedEntity)
         {
           var entity = selectedEntity.Entity;
-          result.Add(new TSDSelectedEntity(entity.Id.ToString(), entity.Type.ToString()));
+          result.Add(
+            new TSDSelectedEntity(TsdObjectIdentifier.Encode(entity.Type, entity.Index), entity.Type.ToString())
+          );
         }
       }
 
@@ -129,19 +132,29 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
         return Array.Empty<IMember>();
       }
 
-      var members = await model.GetMembersAsync(null).ConfigureAwait(false);
-      if (members is null)
+      if (objectIds.Count == 0)
+      {
+        var allMembers = await model.GetMembersAsync(null).ConfigureAwait(false);
+        return allMembers?.ToList() ?? (IReadOnlyList<IMember>)Array.Empty<IMember>();
+      }
+
+      var memberIndices = new List<int>();
+      foreach (var objectId in objectIds)
+      {
+        var (type, index) = TsdObjectIdentifier.Decode(objectId);
+        if (type == EntityType.Member)
+        {
+          memberIndices.Add(index);
+        }
+      }
+
+      if (memberIndices.Count == 0)
       {
         return Array.Empty<IMember>();
       }
 
-      if (objectIds.Count == 0)
-      {
-        return members.ToList();
-      }
-
-      var idSet = objectIds.ToHashSet();
-      return members.Where(member => idSet.Contains(member.Id.ToString())).ToList();
+      var members = await model.GetMembersAsync(memberIndices).ConfigureAwait(false);
+      return members?.ToList() ?? (IReadOnlyList<IMember>)Array.Empty<IMember>();
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
