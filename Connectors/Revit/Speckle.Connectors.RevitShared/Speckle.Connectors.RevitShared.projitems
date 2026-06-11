@@ -28,6 +28,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\FamilyTransformUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LevelUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\LinkedModelHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitParameterCreator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RoomsAndAreasHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitSendChangeTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ParameterUpdater.cs" />
