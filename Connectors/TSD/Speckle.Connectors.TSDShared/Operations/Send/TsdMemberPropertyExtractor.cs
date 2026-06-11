@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
+using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Materials;
 using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Structure;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
+
+internal sealed record TsdQuantityValue(string Name, double BaseValue, Quantity Quantity, string BaseUnits);
 
 internal sealed class TsdMemberPropertyExtractor
 {
@@ -82,17 +85,22 @@ internal sealed class TsdMemberPropertyExtractor
 
     if (hasLength)
     {
-      geometry["Length"] = WithUnits("Length", totalLength, "mm");
+      geometry["Length"] = new TsdQuantityValue("Length", totalLength, Quantity.Dimension, "mm");
     }
 
     if (spans.Count > 0 && TryGetArea(spans[0]) is double crossSectionalArea)
     {
-      geometry["Cross-Sectional Area"] = WithUnits("Cross-Sectional Area", crossSectionalArea, "mm²");
+      geometry["Cross-Sectional Area"] = new TsdQuantityValue(
+        "Cross-Sectional Area",
+        crossSectionalArea,
+        Quantity.Area,
+        "mm²"
+      );
     }
 
     if (hasVolume)
     {
-      geometry["Volume"] = WithUnits("Volume", totalVolume, "mm³");
+      geometry["Volume"] = new TsdQuantityValue("Volume", totalVolume, Quantity.Volume, "mm³");
     }
 
     if (spans.Count > 0)
@@ -114,14 +122,9 @@ internal sealed class TsdMemberPropertyExtractor
 
     TryAdd(assignments, "Groups", () => member.ElementGroupName);
 
-    if (memberData is not null)
+    if (memberData is not null && TryGetValue(() => (double?)memberData.RotationAngle.Value) is double angle)
     {
-      TryAddWithUnits(
-        assignments,
-        "Local Axis Angle",
-        () => RadiansToDegrees(memberData.RotationAngle.Value),
-        "Degrees"
-      );
+      assignments["Local Axis Angle"] = new TsdQuantityValue("Local Axis Angle", angle, Quantity.Angle, "rad");
     }
 
     if (spans.Count > 0)
@@ -153,10 +156,11 @@ internal sealed class TsdMemberPropertyExtractor
       ["Name"] = material.Name,
       ["Type"] = material.Type.ToString(),
       ["Poisson's Ratio"] = material.PoissonsRatio,
-      ["Shear Modulus"] = WithUnits("Shear Modulus", material.ShearModulus, "N/mm²"),
-      ["Thermal Expansion Coefficient"] = WithUnits(
+      ["Shear Modulus"] = new TsdQuantityValue("Shear Modulus", material.ShearModulus, Quantity.ShearModulus, "N/mm²"),
+      ["Thermal Expansion Coefficient"] = new TsdQuantityValue(
         "Thermal Expansion Coefficient",
         material.ThermalExpansionCoefficient,
+        Quantity.TemperatureCoefficient,
         "1/K"
       ),
     };
@@ -188,16 +192,6 @@ internal sealed class TsdMemberPropertyExtractor
   private static string? TryGetSectionName(IMemberSpan span) =>
     span.ElementSection.Value is IMemberSection memberSection ? memberSection.PhysicalSection.Value?.LongName : null;
 
-  private static Dictionary<string, object?> WithUnits(string key, object value, string? units) =>
-    new()
-    {
-      ["name"] = key,
-      ["value"] = value,
-      ["units"] = units,
-    };
-
-  private static double RadiansToDegrees(double radians) => radians * 180.0 / Math.PI;
-
   private void TryAdd(Dictionary<string, object?> target, string key, Func<object?> getter)
   {
     try
@@ -206,21 +200,6 @@ internal sealed class TsdMemberPropertyExtractor
       if (value is not null)
       {
         target[key] = value;
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      _logger.LogDebug(ex, "Failed to extract TSD member property {Key}", key);
-    }
-  }
-
-  private void TryAddWithUnits(Dictionary<string, object?> target, string key, Func<double?> getter, string units)
-  {
-    try
-    {
-      if (getter() is double value)
-      {
-        target[key] = WithUnits(key, value, units);
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
