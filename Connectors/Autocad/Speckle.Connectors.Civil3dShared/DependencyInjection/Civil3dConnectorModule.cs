@@ -37,6 +37,7 @@ public static class Civil3dConnectorModule
     serviceCollection.AddSingleton<IBinding>(sp => sp.GetRequiredService<IParametersBinding>());
     serviceCollection.AddSingleton<IParametersBinding, Civil3dParametersBinding>();
     serviceCollection.AddSingleton<PropertyUpdater>();
+    serviceCollection.AddSingleton<Civil3dParameterCreator>();
 
     // additional classes
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
