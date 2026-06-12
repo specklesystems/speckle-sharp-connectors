@@ -44,7 +44,7 @@ internal sealed class TSDSelectionBinding : ISelectionBinding
       return new SelectionInfo([], "No objects selected.");
     }
 
-    var ids = entities.Select(entity => entity.Id).ToList();
+    var ids = entities.Select(entity => entity.EncodedId).ToList();
     var typeNames = string.Join(", ", entities.Select(entity => entity.TypeName).Distinct());
     return new SelectionInfo(ids, $"{ids.Count} objects ({typeNames})");
   }
