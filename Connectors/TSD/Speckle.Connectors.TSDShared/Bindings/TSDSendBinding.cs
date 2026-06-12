@@ -48,7 +48,7 @@ internal sealed class TSDSendBinding : ISendBinding
       (_, _) => { },
       async card =>
         await _applicationService
-          .GetMembersForSendAsync(card.SendFilter.NotNull().RefreshObjectIds())
+          .GetObjectsForSendAsync(card.SendFilter.NotNull().RefreshObjectIds())
           .ConfigureAwait(false),
       null,
       null

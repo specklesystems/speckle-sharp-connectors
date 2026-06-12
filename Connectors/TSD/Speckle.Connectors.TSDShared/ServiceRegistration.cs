@@ -13,7 +13,7 @@ using Speckle.Connectors.TSDShared.Bindings;
 using Speckle.Connectors.TSDShared.Filters;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Connectors.TSDShared.Operations.Send;
-using TSD.API.Remoting.Structure;
+using TSD.API.Remoting.Common;
 
 namespace Speckle.Connectors.TSDShared;
 
@@ -43,9 +43,12 @@ internal static class ServiceRegistration
 
     services.AddSingleton<ISendConversionCache, NullSendConversionCache>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    services.AddScoped<TsdDisplayValueExtractor>();
     services.AddScoped<TsdMemberPropertyExtractor>();
-    services.AddScoped<IRootObjectBuilder<IMember>, TsdRootObjectBuilder>();
-    services.AddScoped<SendOperation<IMember>>();
+    services.AddScoped<TsdSlabPropertyExtractor>();
+    services.AddScoped<TsdWallPropertyExtractor>();
+    services.AddScoped<IRootObjectBuilder<IEntity>, TsdRootObjectBuilder>();
+    services.AddScoped<SendOperation<IEntity>>();
 
     return services;
   }
