@@ -163,11 +163,12 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     }
   }
 
-  public async Task<IUnitBase?> GetLengthUnitAsync()
+  public async Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities)
   {
+    var result = new Dictionary<Quantity, IUnitBase>();
     if (Application is null)
     {
-      return null;
+      return result;
     }
 
     try
@@ -175,29 +176,37 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
       var document = await Application.GetDocumentAsync().ConfigureAwait(false);
       if (document is null)
       {
-        return null;
+        return result;
       }
 
       var model = await document.GetModelAsync().ConfigureAwait(false);
       if (model is null)
       {
-        return null;
+        return result;
       }
 
       var settings = await model.GetSettingsAsync(default).ConfigureAwait(false);
       var unitSettings = settings?.UnitSettings.Value;
       if (unitSettings is null)
       {
-        return null;
+        return result;
       }
 
-      var units = await unitSettings.GetUnitsV2Async(new[] { Quantity.Distance }, default).ConfigureAwait(false);
-      return units?.FirstOrDefault();
+      foreach (var quantity in quantities.Distinct())
+      {
+        var units = await unitSettings.GetUnitsV2Async(new[] { quantity }, default).ConfigureAwait(false);
+        if (units?.FirstOrDefault() is IUnitBase unit)
+        {
+          result[quantity] = unit;
+        }
+      }
+
+      return result;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       _logger.LogError(ex, "Failed to read TSD model units");
-      return null;
+      return result;
     }
   }
 

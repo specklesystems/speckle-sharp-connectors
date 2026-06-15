@@ -8,6 +8,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
+using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Geometry;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
@@ -17,12 +18,28 @@ namespace Speckle.Connectors.TSDShared.Operations.Send;
 
 internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
 {
+  private static readonly Quantity[] s_propertyQuantities =
+  {
+    Quantity.Dimension,
+    Quantity.Area,
+    Quantity.Volume,
+    Quantity.ShearModulus,
+    Quantity.TemperatureCoefficient,
+    Quantity.Angle,
+  };
+
   private readonly ITSDApplicationService _applicationService;
+  private readonly TsdMemberPropertyExtractor _propertyExtractor;
   private readonly ILogger<TsdRootObjectBuilder> _logger;
 
-  public TsdRootObjectBuilder(ITSDApplicationService applicationService, ILogger<TsdRootObjectBuilder> logger)
+  public TsdRootObjectBuilder(
+    ITSDApplicationService applicationService,
+    TsdMemberPropertyExtractor propertyExtractor,
+    ILogger<TsdRootObjectBuilder> logger
+  )
   {
     _applicationService = applicationService;
+    _propertyExtractor = propertyExtractor;
     _logger = logger;
   }
 
@@ -33,9 +50,10 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     CancellationToken cancellationToken
   )
   {
-    var unit = await _applicationService.GetLengthUnitAsync().ConfigureAwait(false);
-    string speckleUnits = MapToSpeckleUnits(unit?.Abbreviation);
-    if (unit is null)
+    var units = await _applicationService.GetUnitsAsync(s_propertyQuantities).ConfigureAwait(false);
+    units.TryGetValue(Quantity.Dimension, out var lengthUnit);
+    string speckleUnits = MapToSpeckleUnits(lengthUnit?.Abbreviation);
+    if (lengthUnit is null)
     {
       _logger.LogWarning("Could not read TSD model units, defaulting to {Units}", speckleUnits);
     }
@@ -47,22 +65,29 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     rootObjectCollection["units"] = speckleUnits;
 
     List<SendConversionResult> results = new(members.Count);
+    List<Dictionary<string, object?>> propertyTrees = new(members.Count);
     int count = 0;
 
     foreach (var member in members)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var (result, converted) = await ConvertMemberAsync(member, unit, speckleUnits).ConfigureAwait(false);
+      var (result, converted) = await ConvertMemberAsync(member, lengthUnit, speckleUnits).ConfigureAwait(false);
       results.Add(result);
       if (converted is not null)
       {
         rootObjectCollection.elements.Add(converted);
+        if (converted is TsdObject tsdObject)
+        {
+          propertyTrees.Add(tsdObject.properties);
+        }
       }
 
       count++;
       onOperationProgressed.Report(new CardProgress("Converting", (double)count / members.Count));
     }
+
+    await ApplyUnitsAsync(propertyTrees, units).ConfigureAwait(false);
 
     if (results.Count > 0 && results.TrueForAll(x => x.Status == Status.ERROR))
     {
@@ -83,7 +108,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
 
     try
     {
-      var displayValue = await GetDisplayValueAsync(member, unit, speckleUnits).ConfigureAwait(false);
+      var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
+      var displayValue = await GetDisplayValueAsync(spans, unit, speckleUnits).ConfigureAwait(false);
 
       var tsdObject = new TsdObject
       {
@@ -91,7 +117,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
         type = type,
         elements = new List<TsdObject>(),
         displayValue = displayValue,
-        properties = new Dictionary<string, object?>(),
+        properties = _propertyExtractor.Extract(member, spans),
         units = speckleUnits,
         applicationId = applicationId,
       };
@@ -117,12 +143,15 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     }
   }
 
-  private async Task<List<Base>> GetDisplayValueAsync(IMember member, IUnitBase? unit, string speckleUnits)
+  private async Task<List<Base>> GetDisplayValueAsync(
+    IReadOnlyList<IMemberSpan> spans,
+    IUnitBase? unit,
+    string speckleUnits
+  )
   {
     var displayValue = new List<Base>();
 
-    var spans = await member.GetSpanAsync(null).ConfigureAwait(false);
-    if (spans is null)
+    if (spans.Count == 0)
     {
       return displayValue;
     }
@@ -170,6 +199,74 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
 
     return displayValue;
   }
+
+  private async Task ApplyUnitsAsync(
+    IReadOnlyList<Dictionary<string, object?>> propertyTrees,
+    IReadOnlyDictionary<Quantity, IUnitBase> units
+  )
+  {
+    var placeholders = new List<(Dictionary<string, object?> parent, string key, TsdQuantityValue value)>();
+    foreach (var tree in propertyTrees)
+    {
+      CollectQuantities(tree, placeholders);
+    }
+
+    if (placeholders.Count == 0)
+    {
+      return;
+    }
+
+    foreach (var group in placeholders.GroupBy(p => p.value.Quantity))
+    {
+      var items = group.ToList();
+      units.TryGetValue(group.Key, out var unit);
+
+      IReadOnlyList<double> values;
+      if (unit is null)
+      {
+        values = items.Select(i => i.value.BaseValue).ToList();
+      }
+      else
+      {
+        values = await _applicationService
+          .ConvertFromBaseAsync(items.Select(i => i.value.BaseValue).ToList(), unit)
+          .ConfigureAwait(false);
+      }
+
+      for (int i = 0; i < items.Count; i++)
+      {
+        var (parent, key, value) = items[i];
+        double converted = i < values.Count ? values[i] : value.BaseValue;
+        parent[key] = WithUnits(value.Name, converted, unit?.Abbreviation ?? value.BaseUnits);
+      }
+    }
+  }
+
+  private static void CollectQuantities(
+    Dictionary<string, object?> dict,
+    List<(Dictionary<string, object?> parent, string key, TsdQuantityValue value)> sink
+  )
+  {
+    foreach (var kvp in dict)
+    {
+      if (kvp.Value is TsdQuantityValue quantityValue)
+      {
+        sink.Add((dict, kvp.Key, quantityValue));
+      }
+      else if (kvp.Value is Dictionary<string, object?> child)
+      {
+        CollectQuantities(child, sink);
+      }
+    }
+  }
+
+  private static Dictionary<string, object?> WithUnits(string key, object value, string? units) =>
+    new()
+    {
+      ["name"] = key,
+      ["value"] = value,
+      ["units"] = units,
+    };
 
   private static string MapToSpeckleUnits(string? abbreviation)
   {

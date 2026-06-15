@@ -16,6 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ITSDApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDSelectedEntity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdMemberPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />

@@ -43,6 +43,7 @@ internal static class ServiceRegistration
 
     services.AddSingleton<ISendConversionCache, NullSendConversionCache>();
     services.AddSingleton<IOperationProgressManager, OperationProgressManager>();
+    services.AddScoped<TsdMemberPropertyExtractor>();
     services.AddScoped<IRootObjectBuilder<IMember>, TsdRootObjectBuilder>();
     services.AddScoped<SendOperation<IMember>>();
 

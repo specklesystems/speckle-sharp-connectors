@@ -1,4 +1,5 @@
 using TSD.API.Remoting;
+using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
 
@@ -21,7 +22,7 @@ internal interface ITSDApplicationService
 
   Task<IReadOnlyList<IMember>> GetMembersForSendAsync(IReadOnlyList<string> objectIds);
 
-  Task<IUnitBase?> GetLengthUnitAsync();
+  Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities);
 
   Task<IReadOnlyList<double>> ConvertFromBaseAsync(IReadOnlyList<double> values, IUnitBase unit);
 }
