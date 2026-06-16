@@ -1,11 +1,11 @@
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdOffsetForceResultsExtractor : TsdElementForceResultsExtractorBase
+public sealed class TsdElementEndForceResultsExtractor : TsdElementForceResultsExtractorBase
 {
-  public override string ResultsKey => "offsetForces";
+  public override string ResultsKey => "elementEndForces";
 
   protected override async Task<IEnumerable<IElementEndForces>?> FetchAsync(
     IAnalysis3DResults analysisResults,
@@ -13,6 +13,6 @@ internal sealed class TsdOffsetForceResultsExtractor : TsdElementForceResultsExt
     CancellationToken cancellationToken
   ) =>
     await analysisResults
-      .GetOffsetForcesAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
+      .GetEndForcesAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 }

@@ -1,12 +1,11 @@
-using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Sdk;
 using TSD.API.Remoting.Solver;
 using TSD.API.Remoting.Structure.Analysis;
 using StructureModel = TSD.API.Remoting.Structure.IModel;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdAnalysisResultsExtractor
+public sealed class TsdAnalysisResultsExtractor
 {
   private static readonly AnalysisType[] s_analysisTypePriority =
   {
@@ -23,10 +22,10 @@ internal sealed class TsdAnalysisResultsExtractor
     AnalysisType.SequentialLoading,
   };
 
-  private readonly ITSDApplicationService _applicationService;
+  private readonly ITsdModelDataProvider _applicationService;
   private readonly TsdResultsExtractorFactory _factory;
 
-  public TsdAnalysisResultsExtractor(ITSDApplicationService applicationService, TsdResultsExtractorFactory factory)
+  public TsdAnalysisResultsExtractor(ITsdModelDataProvider applicationService, TsdResultsExtractorFactory factory)
   {
     _applicationService = applicationService;
     _factory = factory;
@@ -49,26 +48,26 @@ internal sealed class TsdAnalysisResultsExtractor
       throw new SpeckleException("Could not access the TSD model to extract analysis results.");
     }
 
-    var analysis = await ResolveAnalysis3DAsync(model, cancellationToken).ConfigureAwait(false);
+    var requestedLoadings = await ResolveLoadingsAsync(model, selectedLoadings, cancellationToken)
+      .ConfigureAwait(false);
+    if (requestedLoadings.Count == 0)
+    {
+      throw new SpeckleException("The selected load cases or combinations were not found in the TSD model.");
+    }
+
+    var requestedIds = requestedLoadings.Select(loading => loading.Id).ToHashSet();
+
+    var analysis = await ResolveAnalysis3DAsync(model, requestedIds, cancellationToken).ConfigureAwait(false);
     if (analysis is null)
     {
       throw new SpeckleException(
-        "No completed analysis with results was found in the TSD model. Run the analysis first."
+        "None of the selected load cases or combinations have completed analysis results. Run the analysis in TSD first."
       );
     }
 
     var (analysis3D, solvedIdSet) = analysis.Value;
 
-    var loadings = (await ResolveLoadingsAsync(model, selectedLoadings, cancellationToken).ConfigureAwait(false))
-      .Where(loading => solvedIdSet.Contains(loading.Id))
-      .ToList();
-
-    if (loadings.Count == 0)
-    {
-      throw new SpeckleException(
-        "None of the selected load cases or combinations have analysis results. Run the analysis in TSD first."
-      );
-    }
+    var loadings = requestedLoadings.Where(loading => solvedIdSet.Contains(loading.Id)).ToList();
 
     var tree = new Dictionary<string, object?>();
     foreach (var resultType in selectedResultTypes)
@@ -85,6 +84,7 @@ internal sealed class TsdAnalysisResultsExtractor
 
   private static async Task<(IAnalysis3DResults Results, HashSet<Guid> SolvedLoadingIds)?> ResolveAnalysis3DAsync(
     StructureModel model,
+    IReadOnlyCollection<Guid> requestedLoadingIds,
     CancellationToken cancellationToken
   )
   {
@@ -102,8 +102,9 @@ internal sealed class TsdAnalysisResultsExtractor
       }
 
       var results = await solverModel.GetResultsAsync(cancellationToken).ConfigureAwait(false);
-      var analysis3D =
-        results is null ? null : await results.GetAnalysis3DAsync(cancellationToken).ConfigureAwait(false);
+      var analysis3D = results is null
+        ? null
+        : await results.GetAnalysis3DAsync(cancellationToken).ConfigureAwait(false);
       if (analysis3D is null)
       {
         continue;
@@ -111,7 +112,7 @@ internal sealed class TsdAnalysisResultsExtractor
 
       var solvedIds = await analysis3D.GetSolvedLoadingIdsAsync(cancellationToken).ConfigureAwait(false);
       var solvedIdSet = solvedIds?.ToHashSet() ?? new HashSet<Guid>();
-      if (solvedIdSet.Count > 0)
+      if (solvedIdSet.Overlaps(requestedLoadingIds))
       {
         return (analysis3D, solvedIdSet);
       }
@@ -129,11 +130,7 @@ internal sealed class TsdAnalysisResultsExtractor
 
     void Add(AnalysisType analysisType)
     {
-      if (
-        analysisType != AnalysisType.Unknown
-        && analysisType != AnalysisType.None
-        && !ordered.Contains(analysisType)
-      )
+      if (analysisType != AnalysisType.Unknown && analysisType != AnalysisType.None && !ordered.Contains(analysisType))
       {
         ordered.Add(analysisType);
       }

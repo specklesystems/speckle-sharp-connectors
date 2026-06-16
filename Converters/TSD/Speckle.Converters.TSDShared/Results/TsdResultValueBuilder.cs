@@ -1,9 +1,9 @@
 using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Loading;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal static class TsdResultValueBuilder
+public static class TsdResultValueBuilder
 {
   public static Dictionary<string, object?> Force(IForce3d force) =>
     new()

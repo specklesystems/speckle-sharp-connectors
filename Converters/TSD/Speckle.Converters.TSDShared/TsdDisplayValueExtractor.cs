@@ -1,5 +1,4 @@
 using Speckle.Common.MeshTriangulation;
-using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.DoubleNumerics;
 using Speckle.Sdk.Models;
 using TSD.API.Remoting.Geometry;
@@ -7,13 +6,13 @@ using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
 using SOG = Speckle.Objects.Geometry;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send;
+namespace Speckle.Converters.TSDShared;
 
-internal sealed class TsdDisplayValueExtractor
+public sealed class TsdDisplayValueExtractor
 {
-  private readonly ITSDApplicationService _applicationService;
+  private readonly ITsdModelDataProvider _applicationService;
 
-  public TsdDisplayValueExtractor(ITSDApplicationService applicationService)
+  public TsdDisplayValueExtractor(ITsdModelDataProvider applicationService)
   {
     _applicationService = applicationService;
   }

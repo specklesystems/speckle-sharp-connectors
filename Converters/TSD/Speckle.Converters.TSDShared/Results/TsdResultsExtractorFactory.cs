@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdResultsExtractorFactory
+public sealed class TsdResultsExtractorFactory
 {
   private readonly IServiceProvider _serviceProvider;
 

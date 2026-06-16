@@ -1,6 +1,6 @@
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal static class TsdResultsKeys
+public static class TsdResultsKeys
 {
   public const string ELEMENT_END_FORCES = "Element End Forces";
   public const string OFFSET_FORCES = "Offset Forces";

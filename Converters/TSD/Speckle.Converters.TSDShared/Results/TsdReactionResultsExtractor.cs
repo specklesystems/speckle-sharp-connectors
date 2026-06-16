@@ -1,11 +1,11 @@
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdWallForceResultsExtractor : TsdNodalForceResultsExtractorBase
+public sealed class TsdReactionResultsExtractor : TsdNodalForceResultsExtractorBase
 {
-  public override string ResultsKey => "wallForces";
+  public override string ResultsKey => "reactions";
 
   protected override async Task<IEnumerable<INodalForce>?> FetchAsync(
     IAnalysis3DResults analysisResults,
@@ -13,6 +13,6 @@ internal sealed class TsdWallForceResultsExtractor : TsdNodalForceResultsExtract
     CancellationToken cancellationToken
   ) =>
     await analysisResults
-      .GetNodalWallForcesAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
+      .GetNodalReactionsAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 }

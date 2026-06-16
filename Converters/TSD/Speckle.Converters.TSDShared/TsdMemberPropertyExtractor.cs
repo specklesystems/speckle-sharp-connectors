@@ -5,11 +5,11 @@ using TSD.API.Remoting.Materials;
 using TSD.API.Remoting.Sections;
 using TSD.API.Remoting.Structure;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send;
+namespace Speckle.Converters.TSDShared;
 
-internal sealed record TsdQuantityValue(string Name, double BaseValue, Quantity Quantity, string BaseUnits);
+public sealed record TsdQuantityValue(string Name, double BaseValue, Quantity Quantity, string BaseUnits);
 
-internal sealed class TsdMemberPropertyExtractor
+public sealed class TsdMemberPropertyExtractor
 {
   private readonly ILogger<TsdMemberPropertyExtractor> _logger;
 

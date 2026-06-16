@@ -37,7 +37,10 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     {
       _logger.LogInformation("ConnectAsync: calling ConnectToRunningApplicationAsync on port {Port}", port);
       Application = await ApplicationFactory.ConnectToRunningApplicationAsync(port).ConfigureAwait(false);
-      _logger.LogInformation("ConnectAsync: ConnectToRunningApplicationAsync returned (connected={Connected})", Application is not null);
+      _logger.LogInformation(
+        "ConnectAsync: ConnectToRunningApplicationAsync returned (connected={Connected})",
+        Application is not null
+      );
 
       if (Application is null)
       {
@@ -46,6 +49,8 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
       }
 
       Application.SelectionChanged += OnApplicationSelectionChanged;
+      Application.ModelOpened += OnModelOpened;
+      Application.ModelClosed += OnModelClosed;
 
       ApplicationTitle = await Application.GetApplicationTitleAsync().ConfigureAwait(false);
       ApplicationVersion = await Application.GetVersionStringAsync().ConfigureAwait(false);
@@ -338,6 +343,28 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
   private void OnApplicationSelectionChanged(object? sender, EventArgs e) =>
     SelectionChanged?.Invoke(this, EventArgs.Empty);
 
+  private void OnModelOpened(object? sender, EventArgs e) => _ = RefreshOnModelOpenedAsync();
+
+  private void OnModelClosed(object? sender, EventArgs e) => LoadingNames = Array.Empty<string>();
+
+  private async Task RefreshOnModelOpenedAsync()
+  {
+    try
+    {
+      if (Application is not null)
+      {
+        var document = await Application.GetDocumentAsync().ConfigureAwait(false);
+        ModelId = document?.ModelId;
+      }
+
+      await RefreshLoadingsAsync().ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to refresh TSD state after a model was opened");
+    }
+  }
+
   public void Dispose()
   {
     if (_disposed)
@@ -349,6 +376,8 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     if (Application is not null)
     {
       Application.SelectionChanged -= OnApplicationSelectionChanged;
+      Application.ModelOpened -= OnModelOpened;
+      Application.ModelClosed -= OnModelClosed;
     }
 
     if (Application is IAsyncDisposable asyncDisposable)

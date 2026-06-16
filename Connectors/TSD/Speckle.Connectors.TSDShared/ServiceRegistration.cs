@@ -13,7 +13,8 @@ using Speckle.Connectors.TSDShared.Bindings;
 using Speckle.Connectors.TSDShared.Filters;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Connectors.TSDShared.Operations.Send;
-using Speckle.Connectors.TSDShared.Operations.Send.Results;
+using Speckle.Converters.TSDShared;
+using Speckle.Converters.TSDShared.Results;
 using TSD.API.Remoting.Common;
 
 namespace Speckle.Connectors.TSDShared;
@@ -30,6 +31,7 @@ internal static class ServiceRegistration
 
     services.AddSingleton<TSDApplicationService>();
     services.AddSingleton<ITSDApplicationService>(sp => sp.GetRequiredService<TSDApplicationService>());
+    services.AddSingleton<ITsdModelDataProvider>(sp => sp.GetRequiredService<TSDApplicationService>());
 
     services.AddSingleton<IBinding, TestBinding>();
     services.AddSingleton<IBinding, ConfigBinding>();

@@ -4,9 +4,9 @@ using TSD.API.Remoting.Common;
 using TSD.API.Remoting.Materials;
 using TSD.API.Remoting.Structure;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send;
+namespace Speckle.Converters.TSDShared;
 
-internal sealed class TsdWallPropertyExtractor
+public sealed class TsdWallPropertyExtractor
 {
   private readonly ILogger<TsdWallPropertyExtractor> _logger;
 

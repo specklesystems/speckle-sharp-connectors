@@ -1,6 +1,6 @@
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared;
 
-internal sealed class TsdConversionSettings
+public sealed class TsdConversionSettings
 {
   public IReadOnlyList<string> SelectedLoadings { get; set; } = Array.Empty<string>();
   public IReadOnlyList<string> SelectedResultTypes { get; set; } = Array.Empty<string>();

@@ -1,5 +1,5 @@
 using Speckle.Connectors.DUI.Settings;
-using Speckle.Connectors.TSDShared.Operations.Send.Results;
+using Speckle.Converters.TSDShared.Results;
 
 namespace Speckle.Connectors.TSDShared.Settings;
 

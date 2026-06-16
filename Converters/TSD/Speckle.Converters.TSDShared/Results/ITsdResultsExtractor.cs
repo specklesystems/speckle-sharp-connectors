@@ -1,10 +1,10 @@
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed record TsdLoadingRef(Guid Id, string Name);
+public sealed record TsdLoadingRef(Guid Id, string Name);
 
-internal interface ITsdResultsExtractor
+public interface ITsdResultsExtractor
 {
   string ResultsKey { get; }
 

@@ -6,8 +6,8 @@ using Speckle.Connectors.DUI.Models.Card;
 using Speckle.Connectors.DUI.Models.Card.SendFilter;
 using Speckle.Connectors.DUI.Settings;
 using Speckle.Connectors.TSDShared.HostApp;
-using Speckle.Connectors.TSDShared.Operations.Send.Results;
 using Speckle.Connectors.TSDShared.Settings;
+using Speckle.Converters.TSDShared;
 using Speckle.Newtonsoft.Json.Linq;
 using Speckle.Sdk.Common;
 

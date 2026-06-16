@@ -1,8 +1,8 @@
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal abstract class TsdElementForceResultsExtractorBase : TsdLoadingResultsExtractorBase<IElementEndForces>
+public abstract class TsdElementForceResultsExtractorBase : TsdLoadingResultsExtractorBase<IElementEndForces>
 {
   protected override Dictionary<string, object?> Build(IEnumerable<IElementEndForces> items)
   {

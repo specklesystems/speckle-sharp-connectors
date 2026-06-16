@@ -1,8 +1,8 @@
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal abstract class TsdLoadingResultsExtractorBase<TResult> : ITsdResultsExtractor
+public abstract class TsdLoadingResultsExtractorBase<TResult> : ITsdResultsExtractor
 {
   public abstract string ResultsKey { get; }
 

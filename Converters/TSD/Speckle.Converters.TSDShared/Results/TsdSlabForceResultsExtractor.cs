@@ -1,9 +1,9 @@
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdSlabForceResultsExtractor : TsdNodalForceResultsExtractorBase
+public sealed class TsdSlabForceResultsExtractor : TsdNodalForceResultsExtractorBase
 {
   public override string ResultsKey => "slabForces";
 

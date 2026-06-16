@@ -1,9 +1,9 @@
 using TSD.API.Remoting.Loading;
 using TSD.API.Remoting.Solver;
 
-namespace Speckle.Connectors.TSDShared.Operations.Send.Results;
+namespace Speckle.Converters.TSDShared.Results;
 
-internal sealed class TsdNodalDisplacementResultsExtractor : TsdLoadingResultsExtractorBase<INodalDisplacement>
+public sealed class TsdNodalDisplacementResultsExtractor : TsdLoadingResultsExtractorBase<INodalDisplacement>
 {
   public override string ResultsKey => "nodalDisplacements";
 
