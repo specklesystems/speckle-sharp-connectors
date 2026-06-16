@@ -13,6 +13,7 @@ using Speckle.Connectors.TSDShared.Bindings;
 using Speckle.Connectors.TSDShared.Filters;
 using Speckle.Connectors.TSDShared.HostApp;
 using Speckle.Connectors.TSDShared.Operations.Send;
+using Speckle.Connectors.TSDShared.Operations.Send.Results;
 using TSD.API.Remoting.Common;
 
 namespace Speckle.Connectors.TSDShared;
@@ -47,6 +48,18 @@ internal static class ServiceRegistration
     services.AddScoped<TsdMemberPropertyExtractor>();
     services.AddScoped<TsdSlabPropertyExtractor>();
     services.AddScoped<TsdWallPropertyExtractor>();
+    services.AddScoped<TsdConversionSettings>();
+    services.AddScoped<TsdElementEndForceResultsExtractor>();
+    services.AddScoped<TsdOffsetForceResultsExtractor>();
+    services.AddScoped<TsdReactionResultsExtractor>();
+    services.AddScoped<TsdSlabForceResultsExtractor>();
+    services.AddScoped<TsdWallForceResultsExtractor>();
+    services.AddScoped<TsdNodalDisplacementResultsExtractor>();
+    services.AddScoped<TsdOffsetDisplacementResultsExtractor>();
+    services.AddScoped<TsdResultLineForceResultsExtractor>();
+    services.AddScoped<TsdWallLineForceResultsExtractor>();
+    services.AddScoped<TsdResultsExtractorFactory>();
+    services.AddScoped<TsdAnalysisResultsExtractor>();
     services.AddScoped<IRootObjectBuilder<IEntity>, TsdRootObjectBuilder>();
     services.AddScoped<SendOperation<IEntity>>();
 

@@ -1,5 +1,6 @@
 using TSD.API.Remoting;
 using TSD.API.Remoting.Common;
+using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
 
 namespace Speckle.Connectors.TSDShared.HostApp;
@@ -15,11 +16,17 @@ internal interface ITSDApplicationService
 
   event EventHandler? SelectionChanged;
 
+  IReadOnlyList<string> LoadingNames { get; }
+
   Task ConnectAsync(int port);
+
+  Task RefreshLoadingsAsync();
 
   Task<IReadOnlyList<TSDSelectedEntity>> GetSelectedEntitiesAsync();
 
   Task<IReadOnlyList<IEntity>> GetObjectsForSendAsync(IReadOnlyList<string> objectIds);
+
+  Task<IModel?> GetModelAsync();
 
   Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities);
 

@@ -25,6 +25,7 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
   public string? ApplicationVersion { get; private set; }
   public Guid? ModelId { get; private set; }
   public bool IsConnected => Application is not null;
+  public IReadOnlyList<string> LoadingNames { get; private set; } = Array.Empty<string>();
 
   public event EventHandler? SelectionChanged;
 
@@ -34,7 +35,9 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
 
     try
     {
+      _logger.LogInformation("ConnectAsync: calling ConnectToRunningApplicationAsync on port {Port}", port);
       Application = await ApplicationFactory.ConnectToRunningApplicationAsync(port).ConfigureAwait(false);
+      _logger.LogInformation("ConnectAsync: ConnectToRunningApplicationAsync returned (connected={Connected})", Application is not null);
 
       if (Application is null)
       {
@@ -49,6 +52,8 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
 
       var document = await Application.GetDocumentAsync().ConfigureAwait(false);
       ModelId = document?.ModelId;
+
+      await RefreshLoadingsAsync().ConfigureAwait(false);
 
       _logger.LogInformation(
         "Connected to TSD: {Title} ({Version}) on port {Port}",
@@ -205,6 +210,62 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     {
       _logger.LogError(ex, "Failed to read TSD objects for send");
       return Array.Empty<IEntity>();
+    }
+  }
+
+  public async Task<IModel?> GetModelAsync()
+  {
+    if (Application is null)
+    {
+      return null;
+    }
+
+    try
+    {
+      var document = await Application.GetDocumentAsync().ConfigureAwait(false);
+      if (document is null)
+      {
+        return null;
+      }
+
+      return await document.GetModelAsync().ConfigureAwait(false);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to read the active TSD model");
+      return null;
+    }
+  }
+
+  public async Task RefreshLoadingsAsync()
+  {
+    try
+    {
+      var model = await GetModelAsync().ConfigureAwait(false);
+      if (model is null)
+      {
+        return;
+      }
+
+      var names = new List<string>();
+
+      var loadcases = await model.GetLoadcasesAsync(null).ConfigureAwait(false);
+      if (loadcases is not null)
+      {
+        names.AddRange(loadcases.Select(loadcase => loadcase.Name).Where(name => !string.IsNullOrEmpty(name)));
+      }
+
+      var combinations = await model.GetCombinationsAsync(null).ConfigureAwait(false);
+      if (combinations is not null)
+      {
+        names.AddRange(combinations.Select(combination => combination.Name).Where(name => !string.IsNullOrEmpty(name)));
+      }
+
+      LoadingNames = names.Distinct().ToList();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to read TSD load cases and combinations");
     }
   }
 
