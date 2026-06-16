@@ -37,7 +37,7 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
       properties
     );
 
-    return properties;
+    return Speckle.Converters.AutocadShared.ToSpeckle.PropertyValueSanitizer.Sanitize(properties);
   }
 
   private void AddDictionaryToPropertyDictionary(

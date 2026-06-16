@@ -43,7 +43,7 @@ public class ExtensionDictionaryExtractor
           Dictionary<string, object?> entryDict = new();
           foreach (ADB.TypedValue xEntry in xRecord.Data)
           {
-            if (GetValidValue(xEntry.Value) is object val)
+            if (PropertyValueSanitizer.Sanitize(xEntry.Value) is object val)
             {
               entryDict[xEntry.TypeCode.ToString()] = val;
             }
@@ -61,7 +61,4 @@ public class ExtensionDictionaryExtractor
 
     return extensionDictionaryDict.Count > 0 ? extensionDictionaryDict : null;
   }
-
-  // xrecord values can contain invalid serialisation types like objectIds
-  private object? GetValidValue(object val) => val.GetType().IsPrimitive ? val : val.ToString();
 }
