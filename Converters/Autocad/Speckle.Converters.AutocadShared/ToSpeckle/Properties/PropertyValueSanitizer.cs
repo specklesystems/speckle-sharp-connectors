@@ -19,16 +19,18 @@ public static class PropertyValueSanitizer
       return objectId == ADB.ObjectId.Null ? null : objectId.Handle.Value.ToString();
     }
 
+    // decimal is not IsPrimitive and the Speckle V2 ObjectSerializer has no decimal case -> emit a serializer-safe double.
+    if (value is decimal decimalValue)
+    {
+      return (double)decimalValue;
+    }
+
     Type valueType = value.GetType();
-    if (
-      valueType.IsPrimitive
-      || value is string
-      || value is decimal
-      || value is Guid
-      || value is DateTime
-      || value is DateTimeOffset
-      || value is TimeSpan
-    )
+
+    // Pass through only types the Speckle V2 ObjectSerializer accepts directly
+    // (primitives, string, Guid, DateTime). DateTimeOffset/TimeSpan are NOT supported
+    // and fall through to ToString() at the end.
+    if (valueType.IsPrimitive || value is string || value is Guid || value is DateTime)
     {
       return value;
     }
