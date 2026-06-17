@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Sdk;
 using TSD.API.Remoting.Common;
+using TSD.API.Remoting.Materials;
 using TSD.API.Remoting.Structure;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
@@ -14,7 +15,7 @@ internal sealed class TsdSlabPropertyExtractor
     _logger = logger;
   }
 
-  public Dictionary<string, object?> Extract(ISlabItem slabItem)
+  public Dictionary<string, object?> Extract(ISlabItem slabItem, ISlabData? slabData)
   {
     ISlabItemData? data = null;
     try
@@ -60,7 +61,29 @@ internal sealed class TsdSlabPropertyExtractor
       }
     }
 
+    if (slabData is not null)
+    {
+      var material = new Dictionary<string, object?>();
+      TryAdd(material, "Slab Type", () => slabData.SlabType.Value.ToString());
+      TryAdd(material, "Concrete Type", () => slabData.ConcreteType.Value.ToString());
+      TryAdd(material, "Material", () => ExtractMaterial(slabData.Material.Value));
+      if (material.Count > 0)
+      {
+        properties["Material"] = material;
+      }
+    }
+
     return properties;
+  }
+
+  private static Dictionary<string, object?>? ExtractMaterial(IMaterial? material)
+  {
+    if (material is null)
+    {
+      return null;
+    }
+
+    return new Dictionary<string, object?> { ["Name"] = material.Name, ["Type"] = material.Type.ToString() };
   }
 
   private void AddDimension(Dictionary<string, object?> target, string key, Func<double> getter)

@@ -1,5 +1,6 @@
 using TSD.API.Remoting;
 using TSD.API.Remoting.Common;
+using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
 
 namespace Speckle.Connectors.TSDShared.HostApp;
@@ -20,6 +21,8 @@ internal interface ITSDApplicationService
   Task<IReadOnlyList<TSDSelectedEntity>> GetSelectedEntitiesAsync();
 
   Task<IReadOnlyList<IEntity>> GetObjectsForSendAsync(IReadOnlyList<string> objectIds);
+
+  Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices);
 
   Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities);
 
