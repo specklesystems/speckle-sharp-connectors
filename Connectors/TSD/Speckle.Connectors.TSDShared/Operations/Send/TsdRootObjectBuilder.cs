@@ -83,6 +83,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     };
     rootObjectCollection["units"] = speckleUnits;
 
+    var slabDataByIndex = await GetSlabDataAsync(entities).ConfigureAwait(false);
+
     List<SendConversionResult> results = new(entities.Count);
     List<Dictionary<string, object?>> propertyTrees = new(entities.Count);
     int count = 0;
@@ -91,7 +93,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var (result, converted) = await ConvertEntityAsync(entity, lengthUnit, speckleUnits).ConfigureAwait(false);
+      var (result, converted) = await ConvertEntityAsync(entity, slabDataByIndex, lengthUnit, speckleUnits)
+        .ConfigureAwait(false);
       results.Add(result);
       if (converted is not null)
       {
@@ -144,6 +147,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
 
   private async Task<(SendConversionResult result, Base? converted)> ConvertEntityAsync(
     IEntity entity,
+    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
     IUnitBase? unit,
     string speckleUnits
   )
@@ -156,7 +160,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       var (displayValue, properties) = entity switch
       {
         IMember member => await ConvertMemberAsync(member, unit, speckleUnits).ConfigureAwait(false),
-        ISlabItem slabItem => await ConvertSlabAsync(slabItem, unit, speckleUnits).ConfigureAwait(false),
+        ISlabItem slabItem => await ConvertSlabAsync(slabItem, slabDataByIndex, unit, speckleUnits)
+          .ConfigureAwait(false),
         IStructuralWall wall => await ConvertWallAsync(wall, unit, speckleUnits).ConfigureAwait(false),
         _ => (new List<Base>(), new Dictionary<string, object?>()),
       };
@@ -214,6 +219,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
 
   private async Task<(List<Base>, Dictionary<string, object?>)> ConvertSlabAsync(
     ISlabItem slabItem,
+    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
     IUnitBase? unit,
     string speckleUnits
   )
@@ -221,8 +227,44 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     var displayValue = await _displayValueExtractor
       .GetSlabDisplayValueAsync(slabItem, unit, speckleUnits)
       .ConfigureAwait(false);
-    var properties = _slabPropertyExtractor.Extract(slabItem);
+
+    ISlabData? slabData = null;
+    if (TryGetSlabIndex(slabItem) is int slabIndex)
+    {
+      slabDataByIndex.TryGetValue(slabIndex, out slabData);
+    }
+
+    var properties = _slabPropertyExtractor.Extract(slabItem, slabData);
     return (displayValue, properties);
+  }
+
+  private async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IReadOnlyList<IEntity> entities)
+  {
+    var slabIndices = new HashSet<int>();
+    foreach (var slabItem in entities.OfType<ISlabItem>())
+    {
+      if (TryGetSlabIndex(slabItem) is int slabIndex)
+      {
+        slabIndices.Add(slabIndex);
+      }
+    }
+
+    return slabIndices.Count == 0
+      ? new Dictionary<int, ISlabData>()
+      : await _applicationService.GetSlabDataAsync(slabIndices).ConfigureAwait(false);
+  }
+
+  private int? TryGetSlabIndex(ISlabItem slabItem)
+  {
+    try
+    {
+      return slabItem.SlabIndex.Value;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogDebug(ex, "Failed to read TSD slab index");
+      return null;
+    }
   }
 
   private async Task<(List<Base>, Dictionary<string, object?>)> ConvertWallAsync(

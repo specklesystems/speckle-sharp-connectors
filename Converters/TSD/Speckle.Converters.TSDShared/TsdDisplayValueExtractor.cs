@@ -11,6 +11,7 @@ namespace Speckle.Converters.TSDShared;
 public sealed class TsdDisplayValueExtractor
 {
   private readonly ITsdModelDataProvider _applicationService;
+  private readonly MeshGenerator _meshGenerator = new(new BaseTransformer(), new LibTessTriangulator());
 
   public TsdDisplayValueExtractor(ITsdModelDataProvider applicationService)
   {
@@ -107,11 +108,7 @@ public sealed class TsdDisplayValueExtractor
       {
         var polygons = new List<Poly3> { new(outer) };
         polygons.AddRange(holes.Select(hole => new Poly3(hole)));
-        AddTriangles(
-          baseVertices,
-          faces,
-          new MeshGenerator(new BaseTransformer(), new LibTessTriangulator()).TriangulateSurface(polygons)
-        );
+        AddTriangles(baseVertices, faces, _meshGenerator.TriangulateSurface(polygons));
       }
     }
 
@@ -136,13 +133,15 @@ public sealed class TsdDisplayValueExtractor
         continue;
       }
 
-      var quad = new List<Vector3>
-      {
-        ToVector(bottom.GetPoint(Location.Start)),
-        ToVector(bottom.GetPoint(Location.End)),
-        ToVector(top.GetPoint(Location.End)),
-        ToVector(top.GetPoint(Location.Start)),
-      };
+      var bottomStart = ToVector(bottom.GetPoint(Location.Start));
+      var bottomEnd = ToVector(bottom.GetPoint(Location.End));
+      var topA = ToVector(top.GetPoint(Location.Start));
+      var topB = ToVector(top.GetPoint(Location.End));
+
+      var (topNearStart, topNearEnd) =
+        (topA - bottomStart).Length() <= (topB - bottomStart).Length() ? (topA, topB) : (topB, topA);
+
+      var quad = new List<Vector3> { bottomStart, bottomEnd, topNearEnd, topNearStart };
 
       AddNgonFace(baseVertices, faces, quad);
     }

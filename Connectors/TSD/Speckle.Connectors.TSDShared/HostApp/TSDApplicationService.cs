@@ -274,6 +274,52 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     }
   }
 
+  public async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices)
+  {
+    var result = new Dictionary<int, ISlabData>();
+    if (Application is null)
+    {
+      return result;
+    }
+
+    var indices = slabIndices.Distinct().ToList();
+    if (indices.Count == 0)
+    {
+      return result;
+    }
+
+    try
+    {
+      var document = await Application.GetDocumentAsync().ConfigureAwait(false);
+      var model = document is null ? null : await document.GetModelAsync().ConfigureAwait(false);
+      if (model is null)
+      {
+        return result;
+      }
+
+      var slabs = await model.GetSlabsAsync(indices).ConfigureAwait(false);
+      if (slabs is null)
+      {
+        return result;
+      }
+
+      foreach (var slab in slabs)
+      {
+        var data = slab.SlabData.Value;
+        if (data is not null)
+        {
+          result[slab.Index] = data;
+        }
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to read TSD slab data");
+    }
+
+    return result;
+  }
+
   public async Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities)
   {
     var result = new Dictionary<Quantity, IUnitBase>();
