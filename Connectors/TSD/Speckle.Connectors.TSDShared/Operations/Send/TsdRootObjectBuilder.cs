@@ -9,14 +9,12 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
 using TSD.API.Remoting.Common;
-using TSD.API.Remoting.Geometry;
 using TSD.API.Remoting.Structure;
 using TSD.API.Remoting.Units;
-using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.TSDShared.Operations.Send;
 
-internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
+internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
 {
   private static readonly Quantity[] s_propertyQuantities =
   {
@@ -29,22 +27,31 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
   };
 
   private readonly ITSDApplicationService _applicationService;
-  private readonly TsdMemberPropertyExtractor _propertyExtractor;
+  private readonly TsdDisplayValueExtractor _displayValueExtractor;
+  private readonly TsdMemberPropertyExtractor _memberPropertyExtractor;
+  private readonly TsdSlabPropertyExtractor _slabPropertyExtractor;
+  private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
   private readonly ILogger<TsdRootObjectBuilder> _logger;
 
   public TsdRootObjectBuilder(
     ITSDApplicationService applicationService,
-    TsdMemberPropertyExtractor propertyExtractor,
+    TsdDisplayValueExtractor displayValueExtractor,
+    TsdMemberPropertyExtractor memberPropertyExtractor,
+    TsdSlabPropertyExtractor slabPropertyExtractor,
+    TsdWallPropertyExtractor wallPropertyExtractor,
     ILogger<TsdRootObjectBuilder> logger
   )
   {
     _applicationService = applicationService;
-    _propertyExtractor = propertyExtractor;
+    _displayValueExtractor = displayValueExtractor;
+    _memberPropertyExtractor = memberPropertyExtractor;
+    _slabPropertyExtractor = slabPropertyExtractor;
+    _wallPropertyExtractor = wallPropertyExtractor;
     _logger = logger;
   }
 
   public async Task<RootObjectBuilderResult> Build(
-    IReadOnlyList<IMember> members,
+    IReadOnlyList<IEntity> entities,
     string projectId,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -64,15 +71,18 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     };
     rootObjectCollection["units"] = speckleUnits;
 
-    List<SendConversionResult> results = new(members.Count);
-    List<Dictionary<string, object?>> propertyTrees = new(members.Count);
+    var slabDataByIndex = await GetSlabDataAsync(entities).ConfigureAwait(false);
+
+    List<SendConversionResult> results = new(entities.Count);
+    List<Dictionary<string, object?>> propertyTrees = new(entities.Count);
     int count = 0;
 
-    foreach (var member in members)
+    foreach (var entity in entities)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
-      var (result, converted) = await ConvertMemberAsync(member, lengthUnit, speckleUnits).ConfigureAwait(false);
+      var (result, converted) = await ConvertEntityAsync(entity, slabDataByIndex, lengthUnit, speckleUnits)
+        .ConfigureAwait(false);
       results.Add(result);
       if (converted is not null)
       {
@@ -84,7 +94,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
       }
 
       count++;
-      onOperationProgressed.Report(new CardProgress("Converting", (double)count / members.Count));
+      onOperationProgressed.Report(new CardProgress("Converting", (double)count / entities.Count));
     }
 
     await ApplyUnitsAsync(propertyTrees, units).ConfigureAwait(false);
@@ -97,27 +107,34 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     return new RootObjectBuilderResult(rootObjectCollection, results);
   }
 
-  private async Task<(SendConversionResult result, Base? converted)> ConvertMemberAsync(
-    IMember member,
+  private async Task<(SendConversionResult result, Base? converted)> ConvertEntityAsync(
+    IEntity entity,
+    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
     IUnitBase? unit,
     string speckleUnits
   )
   {
-    string applicationId = member.Id.ToString();
-    string type = GetMemberType(member);
+    string applicationId = entity.Id.ToString();
+    string type = GetEntityType(entity);
 
     try
     {
-      var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
-      var displayValue = await GetDisplayValueAsync(spans, unit, speckleUnits).ConfigureAwait(false);
+      var (displayValue, properties) = entity switch
+      {
+        IMember member => await ConvertMemberAsync(member, unit, speckleUnits).ConfigureAwait(false),
+        ISlabItem slabItem => await ConvertSlabAsync(slabItem, slabDataByIndex, unit, speckleUnits)
+          .ConfigureAwait(false),
+        IStructuralWall wall => await ConvertWallAsync(wall, unit, speckleUnits).ConfigureAwait(false),
+        _ => (new List<Base>(), new Dictionary<string, object?>()),
+      };
 
       var tsdObject = new TsdObject
       {
-        name = member.Name ?? type,
+        name = (entity as IHaveName)?.Name ?? type,
         type = type,
         elements = new List<TsdObject>(),
         displayValue = displayValue,
-        properties = _propertyExtractor.Extract(member, spans),
+        properties = properties,
         units = speckleUnits,
         applicationId = applicationId,
       };
@@ -126,78 +143,104 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IMember>
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to convert TSD member {ApplicationId}", applicationId);
+      _logger.LogError(ex, "Failed to convert TSD object {ApplicationId}", applicationId);
       return (new SendConversionResult(Status.ERROR, applicationId, type, null, ex), null);
     }
   }
 
-  private static string GetMemberType(IMember member)
+  private static string GetEntityType(IEntity entity)
   {
-    try
+    if (entity is IMember member)
     {
-      return member.Data.Value.MemberType.Value.ToString();
+      try
+      {
+        return member.Data.Value.MemberType.Value.ToString();
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        return nameof(IMember);
+      }
     }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      return nameof(IMember);
-    }
+
+    return entity.EntityType.ToString();
   }
 
-  private async Task<List<Base>> GetDisplayValueAsync(
-    IReadOnlyList<IMemberSpan> spans,
+  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertMemberAsync(
+    IMember member,
     IUnitBase? unit,
     string speckleUnits
   )
   {
-    var displayValue = new List<Base>();
+    var spans = (await member.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IMemberSpan>();
+    var displayValue = await _displayValueExtractor
+      .GetMemberDisplayValueAsync(spans, unit, speckleUnits)
+      .ConfigureAwait(false);
+    var properties = _memberPropertyExtractor.Extract(member, spans);
+    return (displayValue, properties);
+  }
 
-    if (spans.Count == 0)
+  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertSlabAsync(
+    ISlabItem slabItem,
+    IReadOnlyDictionary<int, ISlabData> slabDataByIndex,
+    IUnitBase? unit,
+    string speckleUnits
+  )
+  {
+    var displayValue = await _displayValueExtractor
+      .GetSlabDisplayValueAsync(slabItem, unit, speckleUnits)
+      .ConfigureAwait(false);
+
+    ISlabData? slabData = null;
+    if (TryGetSlabIndex(slabItem) is int slabIndex)
     {
-      return displayValue;
+      slabDataByIndex.TryGetValue(slabIndex, out slabData);
     }
 
-    List<double> baseCoordinates = new();
-    foreach (var span in spans)
+    var properties = _slabPropertyExtractor.Extract(slabItem, slabData);
+    return (displayValue, properties);
+  }
+
+  private async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IReadOnlyList<IEntity> entities)
+  {
+    var slabIndices = new HashSet<int>();
+    foreach (var slabItem in entities.OfType<ISlabItem>())
     {
-      var segment = span.DesignSegment.Value;
-      if (segment is null)
+      if (TryGetSlabIndex(slabItem) is int slabIndex)
       {
-        continue;
+        slabIndices.Add(slabIndex);
       }
-
-      var start = segment.GetPoint(Location.Start);
-      var end = segment.GetPoint(Location.End);
-
-      baseCoordinates.Add(start.X);
-      baseCoordinates.Add(start.Y);
-      baseCoordinates.Add(start.Z);
-      baseCoordinates.Add(end.X);
-      baseCoordinates.Add(end.Y);
-      baseCoordinates.Add(end.Z);
     }
 
-    if (baseCoordinates.Count == 0)
+    return slabIndices.Count == 0
+      ? new Dictionary<int, ISlabData>()
+      : await _applicationService.GetSlabDataAsync(slabIndices).ConfigureAwait(false);
+  }
+
+  private int? TryGetSlabIndex(ISlabItem slabItem)
+  {
+    try
     {
-      return displayValue;
+      return slabItem.SlabIndex.Value;
     }
-
-    var coordinates = unit is null
-      ? baseCoordinates
-      : await _applicationService.ConvertFromBaseAsync(baseCoordinates, unit).ConfigureAwait(false);
-
-    for (int i = 0; i + 5 < coordinates.Count; i += 6)
+    catch (Exception ex) when (!ex.IsFatal())
     {
-      displayValue.Add(
-        new SOG.Line
-        {
-          start = new SOG.Point(coordinates[i], coordinates[i + 1], coordinates[i + 2], speckleUnits),
-          end = new SOG.Point(coordinates[i + 3], coordinates[i + 4], coordinates[i + 5], speckleUnits),
-          units = speckleUnits,
-        }
-      );
+      _logger.LogDebug(ex, "Failed to read TSD slab index");
+      return null;
     }
+  }
 
-    return displayValue;
+  private async Task<(List<Base>, Dictionary<string, object?>)> ConvertWallAsync(
+    IStructuralWall wall,
+    IUnitBase? unit,
+    string speckleUnits
+  )
+  {
+    var panels = (await wall.GetSpanAsync(null).ConfigureAwait(false))?.ToList() ?? new List<IStructuralWallPanel>();
+    var displayValue = await _displayValueExtractor
+      .GetWallDisplayValueAsync(panels, unit, speckleUnits)
+      .ConfigureAwait(false);
+    var properties = _wallPropertyExtractor.Extract(wall, panels);
+    return (displayValue, properties);
   }
 
   private async Task ApplyUnitsAsync(

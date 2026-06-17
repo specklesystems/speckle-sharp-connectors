@@ -20,7 +20,9 @@ internal interface ITSDApplicationService
 
   Task<IReadOnlyList<TSDSelectedEntity>> GetSelectedEntitiesAsync();
 
-  Task<IReadOnlyList<IMember>> GetMembersForSendAsync(IReadOnlyList<string> objectIds);
+  Task<IReadOnlyList<IEntity>> GetObjectsForSendAsync(IReadOnlyList<string> objectIds);
+
+  Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices);
 
   Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities);
 

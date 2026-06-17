@@ -111,11 +111,11 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
     }
   }
 
-  public async Task<IReadOnlyList<IMember>> GetMembersForSendAsync(IReadOnlyList<string> objectIds)
+  public async Task<IReadOnlyList<IEntity>> GetObjectsForSendAsync(IReadOnlyList<string> objectIds)
   {
     if (Application is null)
     {
-      return Array.Empty<IMember>();
+      return Array.Empty<IEntity>();
     }
 
     try
@@ -123,44 +123,135 @@ internal sealed class TSDApplicationService : ITSDApplicationService, IDisposabl
       var document = await Application.GetDocumentAsync().ConfigureAwait(false);
       if (document is null)
       {
-        return Array.Empty<IMember>();
+        return Array.Empty<IEntity>();
       }
 
       var model = await document.GetModelAsync().ConfigureAwait(false);
       if (model is null)
       {
-        return Array.Empty<IMember>();
+        return Array.Empty<IEntity>();
       }
+
+      var result = new List<IEntity>();
 
       if (objectIds.Count == 0)
       {
-        var allMembers = await model.GetMembersAsync(null).ConfigureAwait(false);
-        return allMembers?.ToList() ?? (IReadOnlyList<IMember>)Array.Empty<IMember>();
+        result.AddRange(await model.GetMembersAsync(null).ConfigureAwait(false) ?? Enumerable.Empty<IMember>());
+        result.AddRange(await model.GetSlabItemsAsync(null).ConfigureAwait(false) ?? Enumerable.Empty<ISlabItem>());
+        result.AddRange(
+          await model.GetStructuralWallsAsync(null).ConfigureAwait(false) ?? Enumerable.Empty<IStructuralWall>()
+        );
+        return result;
       }
 
       var memberIndices = new List<int>();
+      var slabIndices = new List<int>();
+      var slabItemIndices = new List<int>();
+      var wallIndices = new List<int>();
       foreach (var objectId in objectIds)
       {
         var (type, index) = TsdObjectIdentifier.Decode(objectId);
-        if (type == EntityType.Member)
+        switch (type)
         {
-          memberIndices.Add(index);
+          case EntityType.Member:
+            memberIndices.Add(index);
+            break;
+          case EntityType.Slab:
+            slabIndices.Add(index);
+            break;
+          case EntityType.SlabItem:
+            slabItemIndices.Add(index);
+            break;
+          case EntityType.StructuralWall:
+            wallIndices.Add(index);
+            break;
         }
       }
 
-      if (memberIndices.Count == 0)
+      if (memberIndices.Count > 0)
       {
-        return Array.Empty<IMember>();
+        result.AddRange(
+          await model.GetMembersAsync(memberIndices).ConfigureAwait(false) ?? Enumerable.Empty<IMember>()
+        );
       }
 
-      var members = await model.GetMembersAsync(memberIndices).ConfigureAwait(false);
-      return members?.ToList() ?? (IReadOnlyList<IMember>)Array.Empty<IMember>();
+      if (wallIndices.Count > 0)
+      {
+        result.AddRange(
+          await model.GetStructuralWallsAsync(wallIndices).ConfigureAwait(false) ?? Enumerable.Empty<IStructuralWall>()
+        );
+      }
+
+      if (slabIndices.Count > 0)
+      {
+        var slabs = await model.GetSlabsAsync(slabIndices).ConfigureAwait(false);
+        if (slabs is not null)
+        {
+          slabItemIndices.AddRange(slabs.SelectMany(slab => slab.SlabItemIndices));
+        }
+      }
+
+      if (slabItemIndices.Count > 0)
+      {
+        result.AddRange(
+          await model.GetSlabItemsAsync(slabItemIndices.Distinct()).ConfigureAwait(false)
+            ?? Enumerable.Empty<ISlabItem>()
+        );
+      }
+
+      return result;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      _logger.LogError(ex, "Failed to read TSD members for send");
-      return Array.Empty<IMember>();
+      _logger.LogError(ex, "Failed to read TSD objects for send");
+      return Array.Empty<IEntity>();
     }
+  }
+
+  public async Task<IReadOnlyDictionary<int, ISlabData>> GetSlabDataAsync(IEnumerable<int> slabIndices)
+  {
+    var result = new Dictionary<int, ISlabData>();
+    if (Application is null)
+    {
+      return result;
+    }
+
+    var indices = slabIndices.Distinct().ToList();
+    if (indices.Count == 0)
+    {
+      return result;
+    }
+
+    try
+    {
+      var document = await Application.GetDocumentAsync().ConfigureAwait(false);
+      var model = document is null ? null : await document.GetModelAsync().ConfigureAwait(false);
+      if (model is null)
+      {
+        return result;
+      }
+
+      var slabs = await model.GetSlabsAsync(indices).ConfigureAwait(false);
+      if (slabs is null)
+      {
+        return result;
+      }
+
+      foreach (var slab in slabs)
+      {
+        var data = slab.SlabData.Value;
+        if (data is not null)
+        {
+          result[slab.Index] = data;
+        }
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogError(ex, "Failed to read TSD slab data");
+    }
+
+    return result;
   }
 
   public async Task<IReadOnlyDictionary<Quantity, IUnitBase>> GetUnitsAsync(IEnumerable<Quantity> quantities)
