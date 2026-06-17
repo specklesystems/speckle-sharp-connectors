@@ -19,8 +19,8 @@ jobs:
       SEMVER: "unset"
       FILE_VERSION: "unset"
     outputs:
-      semver: ${{ steps.set-version.outputs.semver }}
-      file_version: ${{ steps.set-version.outputs.file_version }}
+      semver: ${{ steps.build-and-zip.outputs.semver }}
+      file_version: ${{ steps.build-and-zip.outputs.file_version }}
     permissions:
       contents: read
 
@@ -39,7 +39,11 @@ jobs:
       # we are purposefully not caching releases when publishing artefacts, see https://docs.zizmor.sh/audits/#cache-poisoning
 
       - name: ⚒️ Run build and zip connectors
-        run: ./build.ps1 zip
+        id: build-and-zip
+        run: |
+          ./build.ps1 zip
+          echo "semver=${SEMVER}" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=${FILE_VERSION}" >> "$Env:GITHUB_OUTPUT"
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -49,15 +53,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           compression-level: 0 # no compression
-
-      - id: set-version
-        name: Set version to output
-        run: |
-          echo "semver=${SEMVER}" >> "$Env:GITHUB_OUTPUT"
-          echo "file_version=${FILE_VERSION}" >> "$Env:GITHUB_OUTPUT"
-        env:
-          SEMVER: ${{ steps.get-version.outputs.semver }}
-          FILE_VERSION: ${{ steps.get-version.outputs.file_version }}
 
   deploy-installers:
     name: Deploy Installers
