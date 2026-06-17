@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>db70b5ca-0c5a-496d-b20b-dd8c322a874e</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Converters.TSDShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)ITsdModelDataProvider.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdDisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdMemberPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdSlabPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdWallPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\ITsdResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultValueBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TsdConversionSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultsKeys.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdLoadingResultsExtractorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdNodalForceResultsExtractorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdElementForceResultsExtractorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdElementEndForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdOffsetForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdReactionResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdSlabForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdWallForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdNodalDisplacementResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdOffsetDisplacementResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultLineForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdWallLineForceResultsExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdResultsExtractorFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\TsdAnalysisResultsExtractor.cs" />
+  </ItemGroup>
+</Project>

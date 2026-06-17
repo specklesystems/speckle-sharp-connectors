@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.TSDShared.HostApp;
+using Speckle.Converters.TSDShared;
+using Speckle.Converters.TSDShared.Results;
 using Speckle.Objects.Data;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
@@ -24,6 +27,9 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     Quantity.ShearModulus,
     Quantity.TemperatureCoefficient,
     Quantity.Angle,
+    Quantity.Force,
+    Quantity.Moment,
+    Quantity.Deflection,
   };
 
   private readonly ITSDApplicationService _applicationService;
@@ -31,6 +37,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
   private readonly TsdMemberPropertyExtractor _memberPropertyExtractor;
   private readonly TsdSlabPropertyExtractor _slabPropertyExtractor;
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
+  private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
+  private readonly TsdConversionSettings _conversionSettings;
   private readonly ILogger<TsdRootObjectBuilder> _logger;
 
   public TsdRootObjectBuilder(
@@ -39,6 +47,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     TsdMemberPropertyExtractor memberPropertyExtractor,
     TsdSlabPropertyExtractor slabPropertyExtractor,
     TsdWallPropertyExtractor wallPropertyExtractor,
+    TsdAnalysisResultsExtractor analysisResultsExtractor,
+    TsdConversionSettings conversionSettings,
     ILogger<TsdRootObjectBuilder> logger
   )
   {
@@ -47,6 +57,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     _memberPropertyExtractor = memberPropertyExtractor;
     _slabPropertyExtractor = slabPropertyExtractor;
     _wallPropertyExtractor = wallPropertyExtractor;
+    _analysisResultsExtractor = analysisResultsExtractor;
+    _conversionSettings = conversionSettings;
     _logger = logger;
   }
 
@@ -97,7 +109,45 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       onOperationProgressed.Report(new CardProgress("Converting", (double)count / entities.Count));
     }
 
+    Dictionary<string, object?>? analysisResultsTree;
+    try
+    {
+      analysisResultsTree = await _analysisResultsExtractor
+        .ExtractAsync(_conversionSettings.SelectedLoadings, _conversionSettings.SelectedResultTypes, cancellationToken)
+        .ConfigureAwait(false);
+    }
+    catch (SpeckleException)
+    {
+      throw;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      throw new SpeckleException("Analysis result extraction failed", ex);
+    }
+
+    if (analysisResultsTree is not null)
+    {
+      foreach (var resultBranch in analysisResultsTree.Values)
+      {
+        if (resultBranch is Dictionary<string, object?> branch)
+        {
+          propertyTrees.Add(branch);
+        }
+      }
+    }
+
     await ApplyUnitsAsync(propertyTrees, units).ConfigureAwait(false);
+
+    if (analysisResultsTree is not null)
+    {
+      var analysisResults = new Base();
+      foreach (var (key, value) in analysisResultsTree)
+      {
+        analysisResults[key] = value;
+      }
+
+      rootObjectCollection[RootKeys.ANALYSIS_RESULTS] = analysisResults;
+    }
 
     if (results.Count > 0 && results.TrueForAll(x => x.Status == Status.ERROR))
     {
