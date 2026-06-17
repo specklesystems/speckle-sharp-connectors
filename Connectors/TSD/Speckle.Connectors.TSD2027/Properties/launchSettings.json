@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Launch TSD 2026": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Tekla\\Structural\\Structural Designer 2026\\TSD.exe"
+    }
+  }
+}

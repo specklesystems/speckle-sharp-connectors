@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>b2f1c3a4-7d8e-4f90-a1b2-c3d4e5f60718</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Speckle.Connectors.TSDShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TSDBasicConnectorBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TSDSelectionBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bindings\TSDSendBinding.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Filters\TSDSelectionFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\ITSDApplicationService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDApplicationService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDSelectedEntity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdDisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdMemberPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdSlabPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdWallPropertyExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDDocumentModelStore.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\TsdObjectIdentifier.cs" />
+  </ItemGroup>
+</Project>

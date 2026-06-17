@@ -107,7 +107,7 @@ public class GrasshopperContinuousTraversalBuilder(
           break;
 
         case SpeckleGeometryWrapper so:
-          Base objectBase = UnwrapGeometry(so);
+          Base objectBase = GrasshopperSendUnwrapper.UnwrapGeometry(so);
           string applicationId = objectBase.applicationId!;
 
           // NOTE: This is how it differentiate from 'GrasshopperSendOperation'
@@ -134,7 +134,11 @@ public class GrasshopperContinuousTraversalBuilder(
           break;
 
         case SpeckleDataObjectWrapper dataObjectWrapper:
-          DataObject dataObject = UnwrapDataObject(dataObjectWrapper, colorPacker, materialPacker);
+          DataObject dataObject = GrasshopperSendUnwrapper.UnwrapDataObject(
+            dataObjectWrapper,
+            colorPacker,
+            materialPacker
+          );
 
           // process data object through send pipeline
           var dataRef = await sendPipeline.Process(dataObject).ConfigureAwait(false);
@@ -148,18 +152,6 @@ public class GrasshopperContinuousTraversalBuilder(
     {
       targetCollection[Constants.TOPOLOGY_PROP] = null;
     }
-  }
-
-  private Base UnwrapGeometry(SpeckleGeometryWrapper wrapper)
-  {
-    Dictionary<string, object?> props = [];
-    Base baseObject = wrapper.Base;
-    if (wrapper.Properties.CastTo(ref props))
-    {
-      baseObject["properties"] = props;
-    }
-
-    return baseObject;
   }
 
   private async Task ProcessBlockInstanceDefinition(
@@ -180,7 +172,7 @@ public class GrasshopperContinuousTraversalBuilder(
     {
       foreach (var definitionObject in definitionObjects)
       {
-        Base defObjectBase = UnwrapGeometry(definitionObject);
+        Base defObjectBase = GrasshopperSendUnwrapper.UnwrapGeometry(definitionObject);
         string applicationId = defObjectBase.applicationId!;
 
         var reference = await sendPipeline.Process(defObjectBase).ConfigureAwait(false);
@@ -190,31 +182,5 @@ public class GrasshopperContinuousTraversalBuilder(
         materialPacker.ProcessMaterial(applicationId, definitionObject.Material);
       }
     }
-  }
-
-  private DataObject UnwrapDataObject(
-    SpeckleDataObjectWrapper wrapper,
-    GrasshopperColorPacker colorPacker,
-    GrasshopperMaterialPacker materialPacker
-  )
-  {
-    DataObject dataObject = wrapper.DataObject;
-
-    var displayValue = new List<Base>();
-    foreach (var geometryWrapper in wrapper.Geometries)
-    {
-      Base geometryBase = UnwrapGeometry(geometryWrapper);
-      displayValue.Add(geometryBase);
-
-      if (geometryWrapper.ApplicationId != null)
-      {
-        colorPacker.ProcessColor(geometryWrapper.ApplicationId, geometryWrapper.Color);
-        materialPacker.ProcessMaterial(geometryWrapper.ApplicationId, geometryWrapper.Material);
-      }
-    }
-
-    dataObject.displayValue = displayValue;
-
-    return dataObject;
   }
 }

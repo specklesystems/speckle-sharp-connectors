@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>Speckle.Connector.Tsd2027</AssemblyName>
+    <RootNamespace>Speckle.Connectors.TSD2027</RootNamespace>
+    <TSDVersion>2027</TSDVersion>
+    <DefineConstants>$(DefineConstants);TSD2027</DefineConstants>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TeklaStructuralDesigner.RemotingAPI" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Connectors.TSDShared\Speckle.Connectors.TSDShared.projitems" Label="Shared" />
+
+  <Target Name="DeployToTsdExtensions" AfterTargets="Build" Condition="'$(GITHUB_ACTIONS)' != 'true'">
+    <PropertyGroup>
+      <TsdExtensionsDir>$(LOCALAPPDATA)\Trimble\Tekla Structural Designer\Extensions\</TsdExtensionsDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <TsdDeployFiles Include="$(OutDir)**\*.*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(TsdDeployFiles)"
+      DestinationFiles="@(TsdDeployFiles->'$(TsdExtensionsDir)%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+</Project>
