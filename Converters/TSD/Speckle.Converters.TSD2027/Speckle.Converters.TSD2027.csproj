@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Converters.Common\Speckle.Converters.Common.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Common.MeshTriangulation\Speckle.Common.MeshTriangulation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference
+      Include="TeklaStructuralDesigner.RemotingAPI"
+      PrivateAssets="all"
+      IncludeAssets="compile; build"
+    />
+  </ItemGroup>
+
+  <Import Project="..\Speckle.Converters.TSDShared\Speckle.Converters.TSDShared.projitems" Label="Shared" />
+</Project>
