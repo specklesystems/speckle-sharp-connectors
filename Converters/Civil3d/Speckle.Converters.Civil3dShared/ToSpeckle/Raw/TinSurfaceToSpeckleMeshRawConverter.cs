@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.Geometry;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle.Raw;
 
@@ -23,6 +24,27 @@ public class TinSurfaceToSpeckleMeshRawConverter : ITypedConverter<CDB.TinSurfac
 
   public SOG.Mesh Convert(CDB.TinSurface target)
   {
+    // An empty / no-data TinSurface has no built triangle network. Calling GetTriangles() on it reads
+    // protected native memory -> AccessViolationException -> fatal host crash that cannot be caught
+    // (corrupted-state exception; never delivered to managed catch on .NET 8). Probe the TIN
+    // definition first via GetTinProperties(), a safe managed call that does not touch the native
+    // triangle buffer. If the probe fails, the network is inaccessible and GetTriangles() would crash,
+    // so we throw a catchable SpeckleException -> reported as a per-object conversion error upstream.
+    try
+    {
+      _ = target.GetTinProperties();
+    }
+    // Catch any non-fatal failure to read the TIN definition (the broken surface throws a managed
+    // InvalidOperationException here): the network is inaccessible, so skip the surface rather than
+    // risk the native crash. IsFatal() still lets true corrupted-state exceptions propagate.
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      throw new SpeckleException(
+        $"TinSurface '{target.DisplayName}' has no accessible triangle data and cannot be converted safely.",
+        ex
+      );
+    }
+
     List<double> vertices = new();
     List<int> faces = new();
     Dictionary<Point3d, int> indices = new();
