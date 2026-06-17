@@ -10,7 +10,7 @@ on:
 permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow_ref }}-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true # other running workflows get cancelled on the same branch
 
 jobs:
