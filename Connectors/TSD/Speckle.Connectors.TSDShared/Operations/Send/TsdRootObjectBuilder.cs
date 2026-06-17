@@ -109,9 +109,21 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       onOperationProgressed.Report(new CardProgress("Converting", (double)count / entities.Count));
     }
 
-    var analysisResultsTree = await _analysisResultsExtractor
-      .ExtractAsync(_conversionSettings.SelectedLoadings, _conversionSettings.SelectedResultTypes, cancellationToken)
-      .ConfigureAwait(false);
+    Dictionary<string, object?>? analysisResultsTree;
+    try
+    {
+      analysisResultsTree = await _analysisResultsExtractor
+        .ExtractAsync(_conversionSettings.SelectedLoadings, _conversionSettings.SelectedResultTypes, cancellationToken)
+        .ConfigureAwait(false);
+    }
+    catch (SpeckleException)
+    {
+      throw;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      throw new SpeckleException("Analysis result extraction failed", ex);
+    }
 
     if (analysisResultsTree is not null)
     {
