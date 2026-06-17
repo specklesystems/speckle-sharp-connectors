@@ -44,8 +44,8 @@ jobs:
         id: build-and-zip
         run: |
           ./build.ps1 zip
-          echo "semver=${SEMVER}" >> "$Env:GITHUB_OUTPUT"
-          echo "file_version=${FILE_VERSION}" >> "$Env:GITHUB_OUTPUT"
+          echo "semver=$Env:SEMVER" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=$Env:FILE_VERSION" >> "$Env:GITHUB_OUTPUT"
 
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
