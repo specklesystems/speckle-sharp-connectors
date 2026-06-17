@@ -4,7 +4,9 @@ on:
   push:
     branches: ["main", "installer-test/**"]
     tags: ["v3.*.*"] # Manual delivery on every 3.x tag
-
+  workflow_dispatch: {}
+  workflow_call: {}
+  
 permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
 
 concurrency:
@@ -15,6 +17,9 @@ jobs:
   build-connectors:
     name: Build Connectors
     runs-on: windows-latest # Keeping on windows for now, for cross platform building of exe projects, we need to use dotnet publish
+    env:
+      SEMVER: "unset"
+      FILE_VERSION: "unset"
     outputs:
       semver: ${{ steps.build-and-zip.outputs.semver }}
       file_version: ${{ steps.build-and-zip.outputs.file_version }}

@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/Build/">
     <Project Path="Build\Build.csproj" />
+    <File Path=".github/workflows/extended-ci-test.yml" />
     <File Path=".github\workflows\pr.yml" />
     <File Path=".github\workflows\release.yml" />
   </Folder>

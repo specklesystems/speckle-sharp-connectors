@@ -1,0 +1,20 @@
+name: Extended CI Test
+
+on:
+  push:
+    paths:
+      - 'build/**'
+      - '.github/**'
+      - '.github/**'
+    
+permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true # other running workflows get cancelled on the same branch
+
+jobs:
+  test-deploy-pipeline:
+    uses: './release.yml'
+    permissions:
+      contents: read
