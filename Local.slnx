@@ -194,9 +194,11 @@
   <Folder Name="/Connectors/TSD/" />
   <Folder Name="/Connectors/TSD/TSD2027/">
     <Project Path="Connectors\TSD\Speckle.Connectors.TSD2027\Speckle.Connectors.TSD2027.csproj" />
+    <Project Path="Converters\TSD\Speckle.Converters.TSD2027\Speckle.Converters.TSD2027.csproj" />
   </Folder>
   <Folder Name="/Connectors/TSD/Shared/">
     <Project Path="Connectors\TSD\Speckle.Connectors.TSDShared\Speckle.Connectors.TSDShared.shproj" />
+    <Project Path="Converters\TSD\Speckle.Converters.TSDShared\Speckle.Converters.TSDShared.shproj" />
   </Folder>
   <Folder Name="/Importers/" />
   <Folder Name="/Importers/Rhino/">
