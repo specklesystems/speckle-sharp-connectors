@@ -58,6 +58,9 @@ jobs:
       - id: set-version
         name: Set version to output 
         run: |
+          echo "semver=${SEMVER}"
+          echo "file_version=${FILE_VERSION}"
+          
           echo "semver=${SEMVER}" >> "$Env:GITHUB_OUTPUT"
           echo "file_version=${FILE_VERSION}" >> "$Env:GITHUB_OUTPUT"
 
