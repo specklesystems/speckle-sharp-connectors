@@ -4,8 +4,10 @@ on:
   push:
     branches: ["main", "installer-test/**"]
     tags: ["v3.*.*"] # Manual delivery on every 3.x tag
-  workflow_dispatch: {}
-  workflow_call: {}
+  workflow_call: 
+    secrets:
+      CONNECTORS_GH_TOKEN:
+        required: true
   
 permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
 
