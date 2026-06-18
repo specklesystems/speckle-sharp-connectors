@@ -271,12 +271,10 @@ Target(
       ZipFile.CreateFromDirectory(slugDir, outputPath);
     }
 
-    // string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
-    // Console.WriteLine($"GITHUB_ENV: {githubEnv}");
-    Environment.SetEnvironmentVariable("SEMVER", version.ToString(), EnvironmentVariableTarget.User);
-    Environment.SetEnvironmentVariable("FILE_VERSION", fileVersion, EnvironmentVariableTarget.User);
-    // File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
-    // File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
+    string githubEnv = Environment.GetEnvironmentVariable("GITHUB_ENV") ?? "Unset";
+    Console.WriteLine($"GITHUB_ENV: {githubEnv}");
+    File.AppendAllText(githubEnv, $"SEMVER={version}{Environment.NewLine}");
+    File.AppendAllText(githubEnv, $"FILE_VERSION={fileVersion}{Environment.NewLine}");
   }
 );
 
