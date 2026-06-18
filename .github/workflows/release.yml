@@ -58,11 +58,11 @@ jobs:
       - id: set-version
         name: Set version to output 
         run: |
-          echo "semver=${{ env.SEMVER }}"
-          echo "file_version=${{ env.FILE_VERSION }}"
+          echo "semver=$env:SEMVER"
+          echo "file_version=$env:FILE_VERSION"
           
-          echo "semver=${{ env.SEMVER }}" >> "$Env:GITHUB_OUTPUT"
-          echo "file_version=${{ env.FILE_VERSION }}" >> "$Env:GITHUB_OUTPUT"
+          echo "semver=$env:SEMVER" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=$env:FILE_VERSION" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     name: Deploy Installers
