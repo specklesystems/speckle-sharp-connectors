@@ -210,12 +210,15 @@ public class RhinoRootObjectBuilder : IRootObjectBuilder<RhinoObject>
           displayMeshes = [rawGeometry];
         }
 
+        var properties = _propertiesExtractor.GetProperties(rhinoObject);
+        _propertiesExtractor.AddGeometryProperties(properties, rawGeometry, _converterSettings.Current.SpeckleUnits);
+
         converted = new RhinoDataObject
         {
           name = !string.IsNullOrEmpty(rhinoObject.Attributes.Name) ? rhinoObject.Attributes.Name : sourceType,
           type = sourceType,
           displayValue = displayMeshes,
-          properties = _propertiesExtractor.GetProperties(rhinoObject),
+          properties = properties,
           units = _converterSettings.Current.SpeckleUnits,
           applicationId = applicationId,
           rawEncoding = rawEncoding,
