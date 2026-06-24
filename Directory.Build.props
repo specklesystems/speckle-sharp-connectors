@@ -34,6 +34,8 @@
       CA1815;CA1725;CA1501;CA1510;
       <!-- Package using wrong RIDs (Net8 changed them). Usually fixable by updating.  -->
       NETSDK1206;
+      <!-- NuGet audit: transitive SQLitePCLRaw.lib.e_sqlite3 advisory, pulled in via SDK deps -->
+      NU1903;
       $(NoWarn)
     </NoWarn>
   </PropertyGroup>
