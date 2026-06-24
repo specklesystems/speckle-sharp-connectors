@@ -180,8 +180,8 @@
       },
       "Speckle.Sdk": {
         "type": "Transitive",
-        "resolved": "3.21.0",
-        "contentHash": "HOhzhYCit47/V9MsQF0eajMLDCYH6eH+32WQ39G261d1HrgqcTQABv6Dob41sq6B428ABItD2VNZ03SoEVz2VA==",
+        "resolved": "2026.6.0",
+        "contentHash": "rrbbe+Z8Nql/y0jHod6+B0zRitmHXq+RNw1zZnzY1heLV6NOe/8ntGbMo9JIGTnZ6Bvxg51UxntMiyAYCdvhXg==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -191,14 +191,14 @@
           "Microsoft.Extensions.ObjectPool": "6.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "3.21.0",
+          "Speckle.Sdk.Dependencies": "2026.6.0",
           "System.Text.Json": "5.0.2"
         }
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "3.21.0",
-        "contentHash": "6mc7AJf+ycu5LUTP/NdQtrZ8s6RyaJ5TJMqzYoJ7SeQbeTaBzmlcQa1HBW1s3p9WgcB5tAfxv+WoA2Hk0KYrlA==",
+        "resolved": "2026.6.0",
+        "contentHash": "Nb38i5rAXRkEZlN0nkGbYe5Ph88ZBeHLqkcYCGAXolJcE7eDIPfU5hlWd2KcijFOD/E6f6CEdZJ99PinX2+Ejg==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "9.0.4"
         }
@@ -307,7 +307,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Objects": "[3.21.0, )"
+          "Speckle.Objects": "[2026.6.0, )"
         }
       },
       "speckle.connectors.dui": {
@@ -329,7 +329,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Objects": "[3.21.0, )"
+          "Speckle.Objects": "[2026.6.0, )"
         }
       },
       "speckle.converters.navisworks2020": {
@@ -354,11 +354,11 @@
       },
       "Speckle.Objects": {
         "type": "CentralTransitive",
-        "requested": "[3.21.0, )",
-        "resolved": "3.21.0",
-        "contentHash": "PAgujvXyS8A3IdYw1Kgu5ybYdmtfGKKVMOEv5/+JstiGizrOrH6C3hLJOngaEVhYNn2pyry+3vdjg+Au5rpJGQ==",
+        "requested": "[2026.6.0, )",
+        "resolved": "2026.6.0",
+        "contentHash": "7rfwSQHjuvwxeEWJ4/dHYlIAoeZ5SdiPCCYFiF/Avz1ACp5KoDwkh0FF/5lvWDk86MoH55m5BwxYLFek2ui7Kg==",
         "dependencies": {
-          "Speckle.Sdk": "3.21.0"
+          "Speckle.Sdk": "2026.6.0"
         }
       },
       "System.Text.Json": {

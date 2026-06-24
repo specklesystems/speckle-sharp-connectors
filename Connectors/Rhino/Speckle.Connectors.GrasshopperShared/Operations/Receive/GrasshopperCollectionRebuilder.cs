@@ -15,7 +15,7 @@ internal sealed class GrasshopperCollectionRebuilder
   {
     RootCollectionWrapper = new SpeckleCollectionWrapper()
     {
-      Base = new Collection(),
+      Base = new Collection { name = baseCollection.name },
       Name = baseCollection.name,
       Color = null,
       Material = null,
@@ -67,7 +67,7 @@ internal sealed class GrasshopperCollectionRebuilder
       // create and cache if needed
       SpeckleCollectionWrapper newSpeckleCollectionWrapper = new()
       {
-        Base = new Collection(),
+        Base = new Collection { name = collectionName },
         Name = collectionName,
         ApplicationId = collection.applicationId,
         Path = currentLayerPath,
