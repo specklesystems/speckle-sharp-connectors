@@ -70,6 +70,7 @@ public static class ServiceRegistration
     serviceCollection.AddSingleton<LinkedModelHandler>();
     serviceCollection.AddSingleton<RoomsAndAreasHandler>();
     serviceCollection.AddSingleton<ParameterUpdater>();
+    serviceCollection.AddSingleton<RevitParameterCreator>();
     serviceCollection.AddSingleton<RevitSendChangeTracker>();
 
     // receive operation and dependencies

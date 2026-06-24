@@ -17,7 +17,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDSelectedEntity.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdLoadingSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdResultTypeSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceRegistration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Utils\TsdObjectIdentifier.cs" />
   </ItemGroup>
 </Project>

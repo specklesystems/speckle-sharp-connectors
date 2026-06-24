@@ -82,7 +82,10 @@ public class DataObjectConverter : IToHostTopLevelConverter, ITypedConverter<Dat
     // Fallback: convert displayValue geometry
     foreach (var item in target.displayValue)
     {
-      result.AddRange(ConvertDisplayObject(item));
+      foreach (var (entity, _) in ConvertDisplayObject(item))
+      {
+        result.Add((entity, target));
+      }
     }
 
     return result;

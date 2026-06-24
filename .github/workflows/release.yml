@@ -4,11 +4,15 @@ on:
   push:
     branches: ["main", "installer-test/**"]
     tags: ["v3.*.*"] # Manual delivery on every 3.x tag
-
+  workflow_call: 
+    secrets:
+      CONNECTORS_GH_TOKEN:
+        required: true
+  
 permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow_ref }}-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true # other running workflows get cancelled on the same branch
 
 jobs:
@@ -26,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -39,8 +43,8 @@ jobs:
       # we are purposefully not caching releases when publishing artefacts, see https://docs.zizmor.sh/audits/#cache-poisoning
 
       - name: ⚒️ Run build and zip connectors
-        run: ./build.ps1 zip
-
+        run: ./build.ps1 zip  
+        
       - name: ⬆️ Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -49,15 +53,16 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           compression-level: 0 # no compression
-
+          
+      # build step will write SEMVER and FILE_VERSION to GITHUB_ENV, here we'll forward those to the output
       - id: set-version
-        name: Set version to output
+        name: Set version to output 
         run: |
-          echo "semver=${SEMVER}" >> "$Env:GITHUB_OUTPUT"
-          echo "file_version=${FILE_VERSION}" >> "$Env:GITHUB_OUTPUT"
-        env:
-          SEMVER: ${{ steps.get-version.outputs.semver }}
-          FILE_VERSION: ${{ steps.get-version.outputs.file_version }}
+          echo "semver=$env:SEMVER"
+          echo "file_version=$env:FILE_VERSION"
+          
+          echo "semver=$env:SEMVER" >> "$Env:GITHUB_OUTPUT"
+          echo "file_version=$env:FILE_VERSION" >> "$Env:GITHUB_OUTPUT"
 
   deploy-installers:
     name: Deploy Installers

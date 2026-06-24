@@ -33,6 +33,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
   private readonly IRevitTask _revitTask;
   private readonly ParameterUpdater _parameterUpdater;
+  private readonly RevitParameterCreator _parameterCreator;
   private readonly IJsonSerializer _jsonSerializer;
   private readonly IBasicConnectorBinding _baseBinding;
   private readonly ILogger<RevitParametersBinding> _logger;
@@ -43,6 +44,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
     ITopLevelExceptionHandler topLevelExceptionHandler,
     IRevitTask revitTask,
     ParameterUpdater parameterUpdater,
+    RevitParameterCreator parameterCreator,
     IJsonSerializer jsonSerializer,
     IBasicConnectorBinding baseBinding,
     ILogger<RevitParametersBinding> logger
@@ -53,6 +55,7 @@ internal sealed class RevitParametersBinding : IParametersBinding
     _topLevelExceptionHandler = topLevelExceptionHandler;
     _revitTask = revitTask;
     _parameterUpdater = parameterUpdater;
+    _parameterCreator = parameterCreator;
     _jsonSerializer = jsonSerializer;
     _baseBinding = baseBinding;
     _logger = logger;
@@ -92,6 +95,43 @@ internal sealed class RevitParametersBinding : IParametersBinding
 
           foreach (var request in requests)
           {
+            if (request.IsCreation)
+            {
+              var paramName = ExtractCreationParamName(request.Path);
+              if (string.IsNullOrEmpty(paramName))
+              {
+                errors.Add($"Invalid path for new parameter: '{request.Path}'");
+                continue;
+              }
+
+              if (ContainsLinkedModelTransformHash(request.ApplicationId))
+              {
+                errors.Add("Cannot modify elements from a linked model");
+                continue;
+              }
+
+              var elementId = ElementIdHelper.GetElementIdFromUniqueId(doc, request.ApplicationId);
+              var creationElement = elementId is not null ? doc.GetElement(elementId) : null;
+              if (creationElement is null)
+              {
+                errors.Add($"Element not found: {request.ApplicationId}");
+                continue;
+              }
+
+              object? rawCreationValue = request.To is Newtonsoft.Json.Linq.JValue jv ? jv.Value : request.To;
+              var creationResult = _parameterCreator.CreateAndSet(doc, creationElement, paramName, rawCreationValue);
+
+              if (creationResult.IsSuccess)
+              {
+                successCount++;
+              }
+              else
+              {
+                errors.Add(creationResult.ErrorMessage ?? "Unknown error");
+              }
+              continue;
+            }
+
             if (!TryValidateAndParseRequest(doc, request, out var element, out var parsedPath, out var errorMessage))
             {
               errors.Add(errorMessage!);
@@ -243,4 +283,21 @@ internal sealed class RevitParametersBinding : IParametersBinding
   private static bool ContainsLinkedModelTransformHash(string applicationId) =>
     // Evaluates if the ID contains the standard transform hash for linked elements
     System.Text.RegularExpressions.Regex.IsMatch(applicationId, @"_t[a-f0-9]+$");
+
+  /// <summary>
+  /// Strips the "properties." or "parameters." prefix added by the widget and returns
+  /// the bare parameter name (e.g. "properties.SpeckleTag" → "SpeckleTag").
+  /// </summary>
+  private static string ExtractCreationParamName(string path)
+  {
+    if (path.StartsWith("properties.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..].Trim();
+    }
+    if (path.StartsWith("parameters.", StringComparison.OrdinalIgnoreCase))
+    {
+      return path[11..].Trim();
+    }
+    return path.Trim();
+  }
 }
