@@ -22,7 +22,7 @@ public class SendCollectionManager
     // NOTE: As this point, we need to create a suitable collection
     // This would be done using a recursive approach to see where to add collection
     // However, since data structure is flat, this returns quick (Ref: Revit ;) )
-    Collection childCollection = new(path);
+    Collection childCollection = new() { name = path };
     rootObject.elements.Add(childCollection);
     _collectionCache[path] = childCollection;
 

@@ -173,7 +173,7 @@ public abstract class AutocadRootObjectBaseBuilder : IRootObjectBuilder<AutocadR
 
   public virtual (Collection, LayerTableRecord?) CreateObjectCollection(Entity entity, Transaction tr)
   {
-    return (new(), null);
+    return (new() { name = "unnamed" }, null);
   }
 
   public virtual void AddAdditionalProxiesToRoot(Collection rootCollection)

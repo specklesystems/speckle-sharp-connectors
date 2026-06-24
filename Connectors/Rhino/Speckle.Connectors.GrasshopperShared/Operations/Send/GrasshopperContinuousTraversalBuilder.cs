@@ -30,8 +30,9 @@ public class GrasshopperContinuousTraversalBuilder(
     // create root collection
     var rootCollectionGoo = (SpeckleRootCollectionWrapperGoo)objects[0].Duplicate();
     rootCollectionGoo.Value.Name = "Grasshopper Model";
-    RootCollection rootCollection = new(rootCollectionGoo.Value.Name)
+    RootCollection rootCollection = new()
     {
+      name = rootCollectionGoo.Value.Name,
       applicationId = rootCollectionGoo.Value.ApplicationId,
       properties = rootCollectionGoo.Value.Properties ?? new(),
     };

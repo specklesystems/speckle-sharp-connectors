@@ -72,7 +72,12 @@ internal sealed class JobProcessorInstance(
       );
 
       using var activity = job.Payload.TraceContext?.TraceParent is not null
-        ? activityFactory.StartRemote(job.Payload.TraceContext.TraceParent, SdkActivityKind.Consumer, "Picked up a job")
+        ? activityFactory.StartRemote(
+          job.Payload.TraceContext.TraceParent,
+          job.Payload.TraceContext.TraceState,
+          SdkActivityKind.Consumer,
+          "Picked up a job"
+        )
         : activityFactory.Start("Picked up a job", SdkActivityKind.Consumer);
 
       using var scopeJobId = ActivityScope.SetTag("jobId", job.Id);

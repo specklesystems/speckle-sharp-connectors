@@ -63,7 +63,8 @@ internal sealed class RhinoJobHandler(
       {
         FilePath = file.FileInfo.FullName,
         ResultsPath = resultsPath,
-        TraceContext = $"00-{activity?.TraceId}-{activity?.SpanId}-01",
+        TraceParent = activity?.TraceParent,
+        TraceState = activity?.TraceState,
         Account = client.Account,
         Project = project,
         Ingestion = ingestion,
