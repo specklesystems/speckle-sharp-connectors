@@ -139,7 +139,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
       rootBase = new SpeckleCollectionWrapper
       {
-        Base = new Collection(),
+        Base = new Collection { name = docName },
         Name = docName,
         Path = [docName],
         Color = null,
