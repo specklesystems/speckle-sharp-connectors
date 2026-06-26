@@ -19,7 +19,7 @@ public class AutocadLayerUnpacker
     }
     if (tr.GetObject(entity.LayerId, OpenMode.ForRead) is LayerTableRecord autocadLayer)
     {
-      speckleLayer = new Layer(layerName) { applicationId = autocadLayer.GetSpeckleApplicationId() }; // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
+      speckleLayer = new Layer { name = layerName, applicationId = autocadLayer.GetSpeckleApplicationId() }; // Do not use handle directly, see note in the 'GetSpeckleApplicationId' method
       _layerCollectionCache[layerName] = speckleLayer;
       layer = autocadLayer;
       return speckleLayer;

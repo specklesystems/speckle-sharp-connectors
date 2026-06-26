@@ -313,7 +313,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
       rootBase = new SpeckleCollectionWrapper
       {
-        Base = new Speckle.Sdk.Models.Collections.Collection(),
+        Base = new Speckle.Sdk.Models.Collections.Collection() { name = docName },
         Path = [docName],
         Color = null,
         Material = null,

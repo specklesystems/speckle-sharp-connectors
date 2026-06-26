@@ -38,6 +38,11 @@
     </NoWarn>
   </PropertyGroup>
   
+  <ItemGroup>
+    <!--Waiting for microsoft to update Microsoft.Data.Sqlite-->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+  
   <PropertyGroup Label="Repo Info">
     <RepositoryUrl>https://github.com/specklesystems/speckle-sharp-connectors</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

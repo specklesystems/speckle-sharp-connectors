@@ -12,7 +12,12 @@ internal readonly struct ImporterArgs
   public required string BlobId { get; init; }
   public required int Attempt { get; init; }
   public required string ResultsPath { get; init; }
-  public required string? TraceContext { get; init; }
+
+  /// <summary>W3C <c>traceparent</c> header</summary>
+  public required string? TraceParent { get; init; }
+
+  /// <summary>W3C <c>tracestate</c> header</summary>
+  public required string? TraceState { get; init; }
   public required Project Project { get; init; }
   public required ModelIngestion Ingestion { get; init; }
   public required Account Account { get; init; }
