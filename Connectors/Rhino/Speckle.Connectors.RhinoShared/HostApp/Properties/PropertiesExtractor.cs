@@ -2,7 +2,9 @@ using Rhino;
 using Rhino.Collections;
 using Rhino.DocObjects;
 using Speckle.Connectors.Rhino.Mapper.Revit;
+using Speckle.Objects;
 using Speckle.Sdk;
+using Speckle.Sdk.Models;
 
 namespace Speckle.Connectors.Rhino.HostApp.Properties;
 
@@ -29,6 +31,29 @@ public class PropertiesExtractor
     }
 
     return properties;
+  }
+
+  public void AddGeometryProperties(Dictionary<string, object?> properties, Base geometry, string units)
+  {
+    if (geometry is IHasArea hasArea)
+    {
+      properties["area"] = new Dictionary<string, object?>
+      {
+        ["name"] = "area",
+        ["value"] = hasArea.area,
+        ["units"] = $"{units}²",
+      };
+    }
+
+    if (geometry is IHasVolume hasVolume)
+    {
+      properties["volume"] = new Dictionary<string, object?>
+      {
+        ["name"] = "volume",
+        ["value"] = hasVolume.volume,
+        ["units"] = $"{units}³",
+      };
+    }
   }
 
   private Dictionary<string, object?> GetUserDict(RhinoObject rhObject)

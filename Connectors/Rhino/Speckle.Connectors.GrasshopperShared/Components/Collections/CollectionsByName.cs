@@ -231,7 +231,7 @@ public class CollectionsByName : GH_Component
         // create new child collection
         var newChild = new SpeckleCollectionWrapper
         {
-          Base = new Collection(),
+          Base = new Collection() { name = collectionName },
           Name = collectionName,
           Path = currentPath.ToList(),
           Color = null,

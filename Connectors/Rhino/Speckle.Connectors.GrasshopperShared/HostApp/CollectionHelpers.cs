@@ -14,7 +14,7 @@ public static class CollectionHelpers
   public static SpeckleCollectionWrapper CreateRootCollection(string instanceGuid) =>
     new SpeckleCollectionWrapper
     {
-      Base = new Collection(),
+      Base = new Collection() { name = "Unnamed" },
       Name = "Unnamed",
       Path = new List<string> { "Unnamed" },
       Color = null,
