@@ -64,6 +64,15 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<SendCollectionManager>();
     serviceCollection.AddScoped<IRootObjectBuilder<DocumentToConvert>, RevitRootObjectBuilder>();
     serviceCollection.AddScoped<IRootContinuousTraversalBuilder<DocumentToConvert>, RevitContinuousTraversalBuilder>();
+#if NET8_0_OR_GREATER
+    // Speckle 4.0 client-side artefact send (SGEO + eav + envelope parquet). Registering the builder makes
+    // SendOperation route Revit sends through the artefact path. .NET 8+ only (the SDK producer is net8+).
+    serviceCollection.AddScoped<IArtifactRootObjectBuilder<DocumentToConvert>, RevitArtifactRootObjectBuilder>();
+    serviceCollection.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
+#endif
     serviceCollection.AddSingleton<ISendConversionCache, SendConversionCache>();
     serviceCollection.AddSingleton<ToSpeckleSettingsManager>();
     serviceCollection.AddSingleton<ToHostSettingsManager>();

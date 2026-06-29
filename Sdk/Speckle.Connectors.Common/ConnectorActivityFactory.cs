@@ -1,4 +1,5 @@
-﻿using Speckle.Connectors.Logging;
+﻿using System.Runtime.CompilerServices;
+using Speckle.Connectors.Logging;
 using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
@@ -22,15 +23,17 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
 
   public void Dispose() => _loggingActivityFactory.Dispose();
 
+  // NOTE: signatures updated to match the current Speckle.Sdk `ISdkActivityFactory` (the OpenTelemetry
+  // remote-span refactor dropped the per-call `tags`/`startTime` args and collapsed remote context to a
+  // single W3C `traceContext`). The underlying LoggingActivityFactory still accepts the richer args, so we
+  // pass null/default for the dropped ones and treat `traceContext` as the W3C `traceparent`.
   public ISdkActivity? Start(
     string? name = null,
     SdkActivityKind kind = SdkActivityKind.Internal,
-    IReadOnlyDictionary<string, object?>? tags = null,
-    DateTimeOffset startTime = default,
-    string source = ""
+    [CallerMemberName] string source = ""
   )
   {
-    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind), tags, startTime);
+    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind), null, default);
     if (activity is null)
     {
       return null;
@@ -40,22 +43,19 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
   }
 
   public ISdkActivity? StartRemote(
-    string? traceParent,
-    string? traceState,
+    string traceContext,
     SdkActivityKind kind,
     string? name = null,
-    IReadOnlyDictionary<string, object?>? tags = null,
-    DateTimeOffset startTime = default,
-    string source = ""
+    [CallerMemberName] string source = ""
   )
   {
     LoggingActivity? activity = _loggingActivityFactory.StartRemote(
       name ?? source,
-      traceParent,
-      traceState,
+      traceContext,
+      null,
       ToLoggingType(kind),
-      tags,
-      startTime
+      null,
+      default
     );
     if (activity is null)
     {
@@ -81,15 +81,8 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
 
     public void SetTag(string key, object? value) => activity.SetTag(key, value);
 
-    public void SetBaggage(string key, string? value) => activity.SetBaggage(key, value);
-
     public void RecordException(Exception e) => activity.RecordException(e);
 
-    /// <inheritdoc />
-    public string TraceParent => activity.TraceParent;
-
-    /// <inheritdoc />
-    public string? TraceState => activity.TraceState;
     public string TraceId => activity.TraceId;
     public string SpanId => activity.SpanId;
 

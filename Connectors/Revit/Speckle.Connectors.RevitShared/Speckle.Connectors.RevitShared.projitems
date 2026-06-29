@@ -62,6 +62,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitCategoriesFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Filters\RevitViewsFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitContinuousTraversalBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RevitRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\AppendRoomsAndAreasSetting.cs" />

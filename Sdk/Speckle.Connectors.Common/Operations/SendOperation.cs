@@ -37,7 +37,8 @@ public sealed class SendOperation<T>(
   ISpeckleHttp speckleHttp,
   ISendPipelineFactory sendPipelineFactory,
   IAssemblyCompatibilityCheck compatabilityCheck,
-  IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null
+  IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null,
+  IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null
 ) : ISendOperation<T>
 {
   public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
@@ -54,6 +55,22 @@ public sealed class SendOperation<T>(
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
     if (useModelIngestionSend)
     {
+      // Speckle 4.0 artefact path: when a producer (SGEO + eav + envelope parquet) builder is wired
+      // (only on .NET 8+ targets, only for connectors that register it — today Revit), it owns the whole
+      // write+upload and creates the version via the v2 endpoints. Takes precedence over the packfile /
+      // legacy ingestion paths for those connectors.
+      if (artifactRootObjectBuilder != null)
+      {
+        return await SendViaArtifacts(
+          objects,
+          sendInfo,
+          fileName,
+          fileSizeBytes,
+          uiProgress,
+          cancellationToken
+        );
+      }
+
       bool usePackfileSend =
         rootContinuousTraversalBuilder != null
         && await CheckPackfileSendEndpoints(sendInfo, cancellationToken)
@@ -176,6 +193,88 @@ public sealed class SendOperation<T>(
     {
       _ = await sendInfo.Client.Ingestion.FailWithInvalid(
         new(ingestion.id, sendInfo.ProjectId, ex.Message),
+        CancellationToken.None
+      );
+      throw;
+    }
+    catch (Exception ex)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithError(
+        ModelIngestionFailedInput.FromException(ingestion.id, sendInfo.ProjectId, ex),
+        CancellationToken.None
+      );
+      throw;
+    }
+  }
+
+  private async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> SendViaArtifacts(
+    IReadOnlyList<T> objects,
+    SendInfo sendInfo,
+    string? fileName,
+    long? fileSizeBytes,
+    IProgress<CardProgress> uiProgress,
+    CancellationToken cancellationToken
+  )
+  {
+    if (artifactRootObjectBuilder == null)
+    {
+      throw new InvalidOperationException("artifactRootObjectBuilder cannot be null");
+    }
+
+    ModelIngestion ingestion = await sendInfo.Client.Ingestion.Create(
+      new(
+        sendInfo.ModelId,
+        sendInfo.ProjectId,
+        $"Sending from {speckleApplication.ApplicationAndVersion}",
+        new(speckleApplication.Slug, speckleApplication.HostApplicationVersion, fileName, fileSizeBytes),
+        600
+      ),
+      cancellationToken
+    );
+    using var ingestionScope = ActivityScope.SetTag("modelIngestion.Id", ingestion.id);
+
+    // The artefact pipeline bakes the version id into the artefact filenames and uses it as the commit PK
+    // at complete — so it MUST be pre-allocated at ingestion creation. Older servers that only mint the id
+    // at complete time don't support this path.
+    if (string.IsNullOrEmpty(ingestion.versionId))
+    {
+      throw new InvalidOperationException(
+        "The server did not pre-allocate a version id for this ingestion; the Speckle 4.0 artefact upload path requires a server that supports the v2 data endpoints."
+      );
+    }
+
+    var ingestionProgress = ingestionProgressManagerFactory.CreateInstance(
+      sendInfo.Client,
+      ingestion,
+      TimeSpan.FromSeconds(5),
+      cancellationToken
+    );
+    AggregateProgress<CardProgress> progress = new(ingestionProgress, uiProgress);
+    try
+    {
+      ArtifactBuildResult buildResult = await artifactRootObjectBuilder.BuildAndUpload(
+        objects,
+        sendInfo.ProjectId,
+        ingestion.id,
+        ingestion.versionId!,
+        sendInfo.Account,
+        progress,
+        cancellationToken
+      );
+
+      SendOperationResult result = new(
+        buildResult.RootId,
+        new Dictionary<Id, ObjectReference>(),
+        buildResult.ConversionResults
+      );
+
+      // The artefact pipeline's `complete` call already created the version; no separate Ingestion.Complete.
+      return (result, buildResult.VersionId, null);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      _ = await sendInfo.Client.Ingestion.FailWithCancel(
+        new(ingestion.id, sendInfo.ProjectId, "User requested cancellation"),
         CancellationToken.None
       );
       throw;
