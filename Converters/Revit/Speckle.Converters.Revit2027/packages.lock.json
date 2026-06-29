@@ -29,19 +29,6 @@
         "resolved": "2027.0.0",
         "contentHash": "kjd7sWC0eUGVvPVvo9itDeu0AvhfqJxWI6M8frAhe5VdDvu3apRWcWHAuM6gMY6LRF94CytD9LrGbJNyq0ThIA=="
       },
-      "DuckDB.NET.Bindings.Full": {
-        "type": "Transitive",
-        "resolved": "1.5.3",
-        "contentHash": "3vkxzLkCmPUTRtEBBYrXvl9jOTXJ42uYswsokpysTulOS963ZIcMJRKpcHH2zwa63YI4YchjYvPz0pcR2Helbg=="
-      },
-      "DuckDB.NET.Data.Full": {
-        "type": "Transitive",
-        "resolved": "1.5.3",
-        "contentHash": "B0E3JH6nM9CeYLzmOIGGTz7R5vAKf10516Jiz7VnWj4kV7uMoh8m5mTB6IxTGFJMG6i6aOANwjwP7ud7kA87+Q==",
-        "dependencies": {
-          "DuckDB.NET.Bindings.Full": "1.5.3"
-        }
-      },
       "GraphQL.Client": {
         "type": "Transitive",
         "resolved": "6.1.0",
@@ -72,15 +59,6 @@
         "type": "Transitive",
         "resolved": "6.1.0",
         "contentHash": "L8yQ70Wd9p8hMJvnmpgyZfr2R6Q7S0/lPyEBI1tacJa5XzsoJSVtHdmfsMaHyufwk03hlUsBXgNerAs66kxHdA=="
-      },
-      "IronCompress": {
-        "type": "Transitive",
-        "resolved": "1.6.3",
-        "contentHash": "ygrMPrh20nVW8irdGZpMj9rXnz8WPDNN4fpq9JF1pGNL53Jg484OQOwaD4HaF6mxxIjhzKigRUFopjY/GdDfgg==",
-        "dependencies": {
-          "Snappier": "1.1.6",
-          "ZstdSharp.Port": "0.8.1"
-        }
       },
       "Microsoft.Data.Sqlite": {
         "type": "Transitive",
@@ -233,7 +211,6 @@
       "speckle.sdk": {
         "type": "Project",
         "dependencies": {
-          "DuckDB.NET.Data.Full": "[1.5.3, )",
           "GraphQL.Client": "[6.1.0, )",
           "Microsoft.Data.Sqlite": "[10.0.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.0, )",
@@ -246,6 +223,16 @@
       },
       "speckle.sdk.dependencies": {
         "type": "Project"
+      },
+      "IronCompress": {
+        "type": "CentralTransitive",
+        "requested": "[1.6.3, )",
+        "resolved": "1.6.3",
+        "contentHash": "ygrMPrh20nVW8irdGZpMj9rXnz8WPDNN4fpq9JF1pGNL53Jg484OQOwaD4HaF6mxxIjhzKigRUFopjY/GdDfgg==",
+        "dependencies": {
+          "Snappier": "1.1.6",
+          "ZstdSharp.Port": "0.8.1"
+        }
       },
       "LibTessDotNet": {
         "type": "CentralTransitive",

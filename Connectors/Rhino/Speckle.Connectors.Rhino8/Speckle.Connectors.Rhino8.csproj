@@ -26,8 +26,14 @@
       PrivateAssets="all"
       VersionOverride="8.9.24194.18121"
     />
-    <!--to match Hostapp-->
-    <PackageReference Include="System.Text.Json" VersionOverride="7.0.0" NoWarn="NU1903" />
+    <!-- Bumped from 7.0.0 ("match Hostapp") to 9.0.10: the 4.0 artefact producer (Parquet.Net's netstandard2.0
+         build, via Speckle.Sdk) requires System.Text.Json >= 9.0.10. The net48 plugin ships STJ itself (net48
+         has no in-box STJ); at runtime in Rhino it binding-redirects to the host's STJ. Validate the load in Rhino. -->
+    <PackageReference Include="System.Text.Json" VersionOverride="9.0.10" NoWarn="NU1903" />
+    <!-- Parquet.Net Zstd-compresses via IronCompress's native nironcompress.dll. On net48 it loads via a bare
+         DllImport (no runtimes/ probing), so deploy the native next to the .rhp; the artefact builder pre-loads it
+         by full path (SetDllDirectory-free) so the DllImport resolves. GeneratePathProperty → $(PkgIronCompress). -->
+    <PackageReference Include="IronCompress" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,6 +44,15 @@
   <ItemGroup>
     <EmbeddedResource Include="EmbeddedResources\**\*" />
     <EmbeddedResource Include="Resources\**\*.ico" />
+  </ItemGroup>
+
+  <!-- Copy IronCompress's native Zstd lib next to the .rhp (see the IronCompress PackageReference above). -->
+  <ItemGroup Condition="'$(PkgIronCompress)' != ''">
+    <None Include="$(PkgIronCompress)\runtimes\win-x64\native\nironcompress.dll">
+      <Link>nironcompress.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </None>
   </ItemGroup>
 
   <Import Project="..\Speckle.Connectors.RhinoShared\Speckle.Connectors.RhinoShared.projitems" Label="Shared" />

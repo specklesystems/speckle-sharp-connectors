@@ -55,10 +55,10 @@ public sealed class SendOperation<T>(
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
     if (useModelIngestionSend)
     {
-      // Speckle 4.0 artefact path: when a producer (SGEO + eav + envelope parquet) builder is wired
-      // (only on .NET 8+ targets, only for connectors that register it — today Revit), it owns the whole
-      // write+upload and creates the version via the v2 endpoints. Takes precedence over the packfile /
-      // legacy ingestion paths for those connectors.
+      // Speckle 4.0 artefact path: when a producer (SGEO + eav + envelope parquet) builder is wired (i.e. the
+      // connector registers IArtifactRootObjectBuilder<T> — today Revit + Rhino; the SDK producer now builds on
+      // netstandard2.0 too, so it runs on the net48 plugins as well as net8), it owns the whole write+upload and
+      // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
       if (artifactRootObjectBuilder != null)
       {
         return await SendViaArtifacts(
