@@ -191,7 +191,9 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     Base converted = converter.Convert(entity);
-    var properties = converted is AutocadObject ao ? ao.properties : new Dictionary<string, object?>();
+    // AutoCAD wraps entities in AutocadObject, Civil3D in Civil3dObject — both are DataObjects carrying the
+    // converted properties + display meshes.
+    var properties = converted is DataObject dataObject ? dataObject.properties : new Dictionary<string, object?>();
     return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted);
   }
 
@@ -281,14 +283,19 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     // ── geometry object ───────────────────────────────────────────────────────────────────────────────
-    // The AutocadObject carrier already split display meshes from the lossless raw encoding (a Solid3d carries
-    // both; a plain mesh/curve/point is its own display via DataObjectDisplayValueExtractor).
+    // The DataObject carrier (AutocadObject / Civil3dObject) already split display meshes from the lossless raw
+    // encoding (a Solid3d carries both; a plain mesh/curve/point is its own display). AutoCAD solids carry an
+    // ACIS-SAT rawEncoding; Civil3D objects carry their base curve(s) which are also renderable geometry.
     List<Base> displayGeometry;
     RawEncoding? rawEncoding = null;
-    if (co.Converted is AutocadObject ao)
+    if (co.Converted is DataObject dataObject)
     {
-      displayGeometry = ao.displayValue;
-      rawEncoding = ao.rawEncoding;
+      displayGeometry = new List<Base>(dataObject.displayValue);
+      if (co.Converted is Civil3dObject civil && civil.baseCurves is { Count: > 0 } baseCurves)
+      {
+        displayGeometry.AddRange(baseCurves.Cast<Base>());
+      }
+      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding;
     }
     else
     {
