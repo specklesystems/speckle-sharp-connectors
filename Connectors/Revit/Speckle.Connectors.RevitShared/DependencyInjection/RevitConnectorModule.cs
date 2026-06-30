@@ -85,6 +85,15 @@ public static class ServiceRegistration
     // receive operation and dependencies
     serviceCollection.AddScoped<IHostObjectBuilder, RevitHostObjectBuilder>();
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
+
+    // Speckle 4.0 artefact receive: download the parquet bundle + reconstruct the Base graph (DataObjects with
+    // displayValue meshes → DirectShapes). Revit can't import 3dm, so PreferSolids = false (meshes only).
+    serviceCollection.AddScoped<
+      Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+      Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+    >();
+    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: false));
+    serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
     serviceCollection.AddScoped<RevitFamilyBaker>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();

@@ -1,10 +1,12 @@
 #if NET8_0_OR_GREATER
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
@@ -69,10 +71,17 @@ public class RevitArtifactRootObjectBuilder(
     var outputDir = Path.Combine(Path.GetTempPath(), "Speckle", "artifacts", versionId);
     Directory.CreateDirectory(outputDir);
 
+    // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
+    using var session = ArtefactSessionLog.Start("Revit", ArtefactDirection.Send, projectId, null, versionId, logger);
+
     // Conversion touches the Revit API → must run on the main thread (same as RevitRootObjectBuilder).
-    BundleResult built = await threadContext.RunOnMainAsync(
-      () => Task.FromResult(BuildBundleSync(objects, versionId, outputDir, onOperationProgressed, cancellationToken))
-    );
+    BundleResult built;
+    using (session.Phase("Build"))
+    {
+      built = await threadContext.RunOnMainAsync(
+        () => Task.FromResult(BuildBundleSync(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken))
+      );
+    }
 
     // Upload (HTTP) off the main thread.
     return await threadContext.RunOnWorkerAsync(async () =>
@@ -87,9 +96,13 @@ public class RevitArtifactRootObjectBuilder(
       );
 
       onOperationProgressed.Report(new("Uploading...", null));
-      var finalVersionId = await pipeline
-        .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
-        .ConfigureAwait(false);
+      string finalVersionId;
+      using (session.Phase("Upload"))
+      {
+        finalVersionId = await pipeline
+          .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
+          .ConfigureAwait(false);
+      }
 
       return new ArtifactBuildResult(finalVersionId, built.RootId, built.Results);
     });
@@ -98,6 +111,7 @@ public class RevitArtifactRootObjectBuilder(
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private BundleResult BuildBundleSync(
     IReadOnlyList<DocumentToConvert> documentElementContexts,
+    ArtefactSessionLog session,
     string versionId,
     string outputDir,
     IProgress<CardProgress> onOperationProgressed,
@@ -219,12 +233,14 @@ public class RevitArtifactRootObjectBuilder(
           cancellationToken.ThrowIfCancellationRequested();
           string applicationId = revitElement.UniqueId;
           string sourceType = revitElement.GetType().Name;
+          var sw = Stopwatch.StartNew();
           try
           {
             if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
             {
               var cat = revitElement.Category != null ? revitElement.Category.Name : "No category";
               results.Add(new(Status.WARNING, revitElement.UniqueId, cat, null, new SpeckleException($"Category {cat} is not supported.")));
+              session.RecordObject(applicationId, sourceType, Status.WARNING, $"Category {cat} is not supported", sw.ElapsedMilliseconds);
               skippedObjectCount++;
               continue;
             }
@@ -243,11 +259,13 @@ public class RevitArtifactRootObjectBuilder(
 
             EmitObject(pipeline, converted, modelK, revitElement, applicationId, objectKsByElementUniqueId);
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
+            session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
           }
           catch (Exception ex) when (!ex.IsFatal())
           {
             logger.LogError(ex, "Failed to convert + emit {SourceType}", sourceType);
             results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+            session.RecordObject(applicationId, sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
           }
 
           onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
@@ -290,6 +308,10 @@ public class RevitArtifactRootObjectBuilder(
     // The artefact path has no serialized root object — a synthetic, deterministic root id (same convention
     // as oda's binary path + the server's "synthetic root" expectation).
     var rootId = $"binary-{versionId}";
+
+    session.SetStat("files", bundle.Count);
+    session.SetStat("objects", objectCount);
+    session.SetStat("models", modelContainerKeys.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
     return new BundleResult(bundle, rootId, objectCount, results);

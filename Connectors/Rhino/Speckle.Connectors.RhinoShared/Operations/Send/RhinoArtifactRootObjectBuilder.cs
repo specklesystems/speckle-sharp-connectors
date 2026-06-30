@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Rhino.DocObjects;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
@@ -80,16 +82,27 @@ public class RhinoArtifactRootObjectBuilder(
     var outputDir = Path.Combine(Path.GetTempPath(), "Speckle", "artifacts", versionId);
     Directory.CreateDirectory(outputDir);
 
+    // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
+    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, versionId, logger);
+
     // Phase 1 — convert + unpack on the Rhino UI thread (RhinoCommon is main-thread-affine) → pure-Speckle snapshot.
-    CollectedModel collected = await threadContext.RunOnMainAsync(
-      () => Task.FromResult(CollectOnMain(objects, onOperationProgressed, cancellationToken))
-    );
+    CollectedModel collected;
+    using (session.Phase("Collect"))
+    {
+      collected = await threadContext.RunOnMainAsync(
+        () => Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      );
+    }
 
     // Phase 2 — build the parquet bundle + upload on a WORKER thread (no UI SynchronizationContext/TaskScheduler,
     // so the pipeline's sync-over-async parquet IO doesn't deadlock — see the class <remarks>).
     return await threadContext.RunOnWorkerAsync(async () =>
     {
-      BundleResult built = WriteBundle(collected, versionId, outputDir, onOperationProgressed, cancellationToken);
+      BundleResult built;
+      using (session.Phase("Write"))
+      {
+        built = WriteBundle(collected, session, versionId, outputDir, onOperationProgressed, cancellationToken);
+      }
 
       using var pipeline = artifactPipelineFactory.CreateInstance(
         projectId,
@@ -101,9 +114,13 @@ public class RhinoArtifactRootObjectBuilder(
       );
 
       onOperationProgressed.Report(new("Uploading...", null));
-      var finalVersionId = await pipeline
-        .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
-        .ConfigureAwait(false);
+      string finalVersionId;
+      using (session.Phase("Upload"))
+      {
+        finalVersionId = await pipeline
+          .UploadFilesAsync(built.Bundle, built.RootId, built.ObjectCount)
+          .ConfigureAwait(false);
+      }
 
       return new ArtifactBuildResult(finalVersionId, built.RootId, built.Results);
     });
@@ -112,6 +129,7 @@ public class RhinoArtifactRootObjectBuilder(
   // ── Phase 1 (UI thread): RhinoCommon → pure-Speckle snapshot ─────────────────────────────────────────
   private CollectedModel CollectOnMain(
     IReadOnlyList<RhinoObject> rhinoObjects,
+    ArtefactSessionLog session,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
   )
@@ -133,6 +151,7 @@ public class RhinoArtifactRootObjectBuilder(
       cancellationToken.ThrowIfCancellationRequested();
       string applicationId = rhinoObject.Id.ToString();
       string sourceType = rhinoObject.ObjectType.ToString();
+      var sw = Stopwatch.StartNew();
       try
       {
         int layerIndex = rhinoObject.Attributes.LayerIndex;
@@ -141,11 +160,13 @@ public class RhinoArtifactRootObjectBuilder(
         CollectedObject collected = CollectObject(rhinoObject, applicationId, sourceType, layerIndex, units, instanceProxies);
         collectedObjects.Add(collected);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, collected.Converted));
+        session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
         logger.LogError(ex, "Failed to convert {SourceType}", sourceType);
         results.Add(new(Status.ERROR, applicationId, sourceType, null, ex));
+        session.RecordObject(applicationId, sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
       }
 
       onOperationProgressed.Report(new("Converting", (double)++count / atomicObjects.Count));
@@ -219,6 +240,7 @@ public class RhinoArtifactRootObjectBuilder(
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private BundleResult WriteBundle(
     CollectedModel model,
+    ArtefactSessionLog session,
     string versionId,
     string outputDir,
     IProgress<CardProgress> onOperationProgressed,
@@ -268,6 +290,12 @@ public class RhinoArtifactRootObjectBuilder(
     // The artefact path has no serialized root object — a synthetic, deterministic root id (same convention as
     // the Revit artefact builder + the server's "synthetic root" expectation).
     var rootId = $"binary-{versionId}";
+
+    session.SetStat("files", bundle.Count);
+    session.SetStat("objects", objectCount);
+    session.SetStat("definitions", model.Definitions.Count);
+    session.SetStat("materials", model.Materials.Count);
+    session.SetStat("layers", model.Layers.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
     return new BundleResult(bundle, rootId, objectCount, model.Results);

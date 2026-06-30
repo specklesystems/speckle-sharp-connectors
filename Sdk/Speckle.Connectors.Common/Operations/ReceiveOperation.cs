@@ -19,7 +19,9 @@ public sealed class ReceiveOperation(
   ISdkActivityFactory activityFactory,
   IOperations operations,
   IReceiveVersionRetriever receiveVersionRetriever,
-  IThreadContext threadContext
+  IThreadContext threadContext,
+  IArtifactReceiver? artifactReceiver = null,
+  IArtifactHostObjectBuilder? artifactHostObjectBuilder = null
 ) : IReceiveOperation
 {
   public async Task<HostObjectBuilderResult> Execute(
@@ -35,6 +37,43 @@ public sealed class ReceiveOperation(
     Account account = receiveInfo.Account;
     using var userScope = UserActivityScope.AddUserScope(account);
     var version = await receiveVersionRetriever.GetVersion(account, receiveInfo, cancellationToken);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    // Speckle 4.0 artefact path: when the connector registered an IArtifactReceiver, probe the v2 data endpoints for
+    // this version's parquet bundle. If present, either bake it DIRECTLY (a dedicated IArtifactHostObjectBuilder, e.g.
+    // Rhino) or reconstruct a Base graph and run the v1 host builder (e.g. Revit). Returns to the v1 path when there's
+    // no bundle (legacy version / old server). Detection is by the artefacts endpoint returning files.
+    if (artifactReceiver != null)
+    {
+      receiveProgress.Begin();
+      var bundle = await artifactReceiver
+        .TryGetBundleAsync(account, receiveInfo, onOperationProgressed, cancellationToken)
+        .ConfigureAwait(false);
+      if (bundle != null)
+      {
+        HostObjectBuilderResult artefactRes;
+        if (artifactHostObjectBuilder != null)
+        {
+          // direct-bake path: parquet → host doc, no Base reconstruction.
+          artefactRes = await artifactHostObjectBuilder
+            .Build(bundle, receiveInfo.ProjectName, receiveInfo.ModelName, onOperationProgressed, cancellationToken)
+            .ConfigureAwait(false);
+        }
+        else
+        {
+          // reconstruction path: map the bundle to a Base graph + run the v1 host builder.
+          var artefactRoot = await threadContext.RunOnWorkerAsync(() =>
+            Task.FromResult(artifactReceiver.Reconstruct(bundle, cancellationToken))
+          );
+          artefactRes = await ConvertObjects(artefactRoot, receiveInfo, onOperationProgressed, cancellationToken)
+            .ConfigureAwait(false);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await receiveVersionRetriever.VersionReceived(account, version, receiveInfo, cancellationToken);
+        return artefactRes;
+      }
+    }
 
     cancellationToken.ThrowIfCancellationRequested();
     var commitObject = await threadContext.RunOnWorkerAsync(() =>
@@ -63,11 +102,12 @@ public sealed class ReceiveOperation(
     CancellationToken cancellationToken
   )
   {
+    receiveProgress.Begin();
+
     if (version.referencedObject is null)
     {
       throw new SpeckleException("Version referenced object is null and cannot do a receive operation.");
     }
-    receiveProgress.Begin();
     Base commitObject = await operations.Receive2(
       new Uri(account.serverInfo.url),
       receiveInfo.ProjectId,

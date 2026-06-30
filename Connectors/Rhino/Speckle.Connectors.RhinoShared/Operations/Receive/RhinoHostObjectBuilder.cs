@@ -330,9 +330,13 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
   /// </remarks>
   private Guid BakeObject(GeometryBase obj, Base originalObject, string? parentObjectId, ObjectAttributes atts)
   {
-    var objectId = originalObject.applicationId ?? originalObject.id.NotNull();
+    // Fallback display geometry (e.g. a DataObject's displayValue meshes, and all 4.0
+    // artefact-sourced objects which carry applicationId, not a speckle id) may have
+    // neither applicationId nor id. That's fine — material/colour then come from the
+    // parent (handled by the parentObjectId branches below), so don't NotNull-throw.
+    var objectId = originalObject.applicationId ?? originalObject.id;
 
-    if (_materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
+    if (objectId is not null && _materialBaker.ObjectIdAndMaterialIdMap.TryGetValue(objectId, out Guid materialGuid))
     {
       atts.RenderMaterial = RenderContent.FromId(_converterSettings.Current.Document, materialGuid) as RenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
@@ -346,7 +350,7 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
-    if (_colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
+    if (objectId is not null && _colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
     {
       atts.ObjectColor = color.Item1;
       atts.ColorSource = color.Item2;

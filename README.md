@@ -13,6 +13,14 @@
 
 <p align="center"><a href="https://codecov.io/gh/specklesystems/speckle-sharp-connectors"><img src="https://codecov.io/gh/specklesystems/speckle-sharp-connectors/graph/badge.svg?token=eMhI4M8umi" alt="Codecov"></a></p>
 
+# Speckle 4.0 artefact rewrite
+
+> Migrating connectors onto the client-side parquet artefact pipeline (send/receive without server-side
+> serialization). Architecture, the per-connector status table, and the recipe for migrating a new connector live in
+> **[`docs/4.0-artefact-rewrite.md`](docs/4.0-artefact-rewrite.md)** — read it before starting a connector. Core rule:
+> every sender adds an `IArtifactRootObjectBuilder`, every receiver adds an `IArtifactHostObjectBuilder`, and the old
+> `Base`-oriented logic is not used on the 4.0 path.
+
 # Repo structure
 
 This repo is the home of our next-generation Speckle .NET projects:
