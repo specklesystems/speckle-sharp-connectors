@@ -29,6 +29,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadLayerUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadZstdNativeLoader.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadDocumentModelStore.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadMaterialUnpacker.cs" />

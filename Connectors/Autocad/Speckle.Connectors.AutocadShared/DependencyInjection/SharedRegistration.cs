@@ -24,6 +24,10 @@ public static class SharedRegistration
 {
   public static void AddAutocadBase(this IServiceCollection serviceCollection)
   {
+    // Pre-load IronCompress's native Zstd lib (net48 only) at startup so BOTH the artefact send and receive paths can
+    // (de)compress parquet — receive reads the bundle before the host builder runs. No-op on net8+.
+    AutocadZstdNativeLoader.Ensure();
+
     serviceCollection.AddConnectors();
     serviceCollection.AddDUI<DefaultThreadContext, AutocadDocumentStore>();
     serviceCollection.AddDUIView();
