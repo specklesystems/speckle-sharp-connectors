@@ -51,12 +51,15 @@ public class ReceiveConversionResult : ConversionResult
     Base source,
     string? resultId = null,
     string? resultType = null,
-    Exception? exception = null
+    Exception? exception = null,
+    string? sourceType = null
   )
   {
     Status = status;
     SourceId = source.id.NotNull();
-    SourceType = source.speckle_type; // Note: we'll parse it nicely in FE
+    // The 4.0 artefact path has no deserialized Base graph — it passes a 1-field placeholder Base whose speckle_type
+    // is just "Base". sourceType lets that path report the object's real type instead. (Note: parsed nicely in FE.)
+    SourceType = sourceType ?? source.speckle_type;
     ResultId = resultId;
     ResultType = resultType;
     Error = FormatError(exception);

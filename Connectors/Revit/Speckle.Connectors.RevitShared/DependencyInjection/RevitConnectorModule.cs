@@ -94,6 +94,11 @@ public static class ServiceRegistration
     >();
     serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: false));
     serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
+#if NET8_0_OR_GREATER
+    // Native artefact receive (DirectShape from SGEO meshes, Base-free). Registering this activates the direct-bake
+    // branch in ReceiveOperation; net48 Revit (no builder) falls back to ObjectsArtifactReader reconstruction.
+    serviceCollection.AddScoped<IArtifactHostObjectBuilder, RevitHostObjectArtefactBuilder>();
+#endif
     serviceCollection.AddScoped<RevitFamilyBaker>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
