@@ -42,8 +42,8 @@ is externalized in `speckle-bundle-spec` (schema_version 5; COLLECTION folded in
 |---|---|---|---|
 | **Rhino** (net48) | ✅ committed | ✅ native, committed | **Phase 0** — reference impl |
 | **Revit** (net8/10) | ✅ committed (net8+) | native (net8+), net48 = fallback | **Phase 1** |
-| **AutoCAD / Civil3D** | ❌ | ❌ (Civil3D has v1 receive) | **Phase 2** send + native receive, **then PAUSE** |
-| **Plant3D** | ❌ | send-only | **Phase 2** send only |
+| **AutoCAD / Civil3D** | ✅ native (all TFMs) | ✅ native (all TFMs) | **Phase 2** ✅ done — **PAUSE here** |
+| **Plant3D** | ✅ native (send-only) | send-only | **Phase 2** ✅ done |
 | **CSi (ETABS)** | ❌ | n/a | **Phase 3** (after pause) send only |
 | **Tekla** | ❌ | n/a | **Phase 3** (after pause) send only |
 | ArcGIS | — | — | **EXCLUDED** (unmaintained) |
@@ -207,6 +207,16 @@ Both send-only — only a root builder + DI, no `IArtifactHostObjectBuilder`.
 
 ## Status log
 
+- **2026-07-01 (later)** — **Phase 2 (AutoCAD family) implemented & building.** One shared
+  `AutocadArtifactRootObjectBuilder` (send) + `AutocadHostObjectArtefactBuilder` (native receive) serve
+  AutoCAD / Civil3D / Plant3D — registered in the shared `LoadSend`/`LoadReceive` (so AutoCAD+Civil3D get both,
+  Plant3D send-only) unconditionally (SDK producer/reader build on netstandard2.0). Send reuses
+  `IRootToSpeckleConverter`'s `AutocadObject` carrier transiently (display meshes + ACIS-SAT `rawEncoding`) — no
+  Collection graph. Receive bakes SAT via `Body.AcisIn`, SGEO→`PolyFaceMesh`, flat layers, native materials,
+  blocks for instances — all Base-free (no v1 `AutocadLayerBaker`/`AutocadMaterialBaker`/`AutocadInstanceBaker`).
+  Builds clean on net48 (2024), net8 (2025/Civil3d/Plant3d), net10 (2027). **Next: PAUSE and reassess before
+  Phase 3 (Tekla/CSi)** per plan. Validation is manual (user). Known first-pass simplifications: layer-level
+  materials/colors skipped (object-level only); receive consumes materials, not colors.
 - **2026-07-01** — Plan recovered from stuck session `03de9385` (context overflow) and written to this file.
   **Phase 0 complete & committed** (SDK `7ea929a7`, connectors `545d381b3`). **Phase 1 (Revit native receive)
   built, DI-registered, and test-run successfully** (7133 DirectShapes, 0 errors), but **3 open items**: missing
