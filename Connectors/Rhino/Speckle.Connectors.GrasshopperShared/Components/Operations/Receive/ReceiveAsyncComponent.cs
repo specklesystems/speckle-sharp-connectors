@@ -521,10 +521,6 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
         { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
         { "auto", Parent.AutoReceive },
       };
-      if (receiveInfo.WorkspaceId != null)
-      {
-        customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
-      }
 
       if (receiveInfo.SelectedVersionUserId != null)
       {
@@ -535,8 +531,8 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       }
 
       await scope
-        .Get<IMixPanelManager>()
-        .TrackEvent(MixPanelEvents.Receive, Parent.ApiClient.Account, customProperties);
+        .Get<IPostHogManager>()
+        .TrackEvent(AnalyticsEvent.Receive, Parent.ApiClient.Account, receiveInfo.WorkspaceId, customProperties);
     }
     finally
     {

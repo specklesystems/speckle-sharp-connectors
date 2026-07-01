@@ -196,16 +196,12 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
         { "isAsync", false },
         { "sourceHostApp", HostApplications.GetSlugFromHostAppNameAndVersion(receiveInfo.SourceApplication) },
       };
-      if (receiveInfo.WorkspaceId != null)
-      {
-        customProperties.Add("workspace_id", receiveInfo.WorkspaceId);
-      }
       if (receiveInfo.SelectedVersionUserId != null)
       {
         customProperties.Add("isMultiplayer", receiveInfo.SelectedVersionUserId != client.Account.userInfo.id);
       }
-      var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-      await mixpanel.TrackEvent(MixPanelEvents.Receive, account, customProperties);
+      var analytics = PriorityLoader.Container.GetRequiredService<IPostHogManager>();
+      await analytics.TrackEvent(AnalyticsEvent.Receive, account, receiveInfo.WorkspaceId, customProperties);
 
       // Setup conversion context BEFORE unpacking (which triggers DataObjectConverter)
       SpeckleConversionContext.SetupCurrent(scope);
