@@ -33,8 +33,10 @@
       PrivateAssets="all"
       VersionOverride=" 2023.0.1"
     />
-    <!--To match host app-->
-    <PackageReference Include="System.Text.Json" VersionOverride="8.0.6" />
+    <!-- The SDK's netstandard2.0 Parquet.Net (4.0 artefact writing) requires System.Text.Json >= 9.0.10, so reference
+         it directly to avoid a restore-time downgrade (NU1605). At runtime the net48 plugin binding-redirects STJ to
+         the host app's version (Tekla doesn't invoke Parquet.Net yet). -->
+    <PackageReference Include="System.Text.Json" VersionOverride="9.0.10" NoWarn="NU1903" />
   </ItemGroup>
 
   <ItemGroup>
