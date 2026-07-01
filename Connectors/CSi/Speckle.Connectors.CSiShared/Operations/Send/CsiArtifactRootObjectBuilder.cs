@@ -1,13 +1,16 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.CSiShared.HostApp;
+using Speckle.Connectors.CSiShared.Utils;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
+using Speckle.Converters.CSiShared.Utils;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
@@ -44,6 +47,7 @@ public class CsiArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<CsiConversionSettings> converterSettings,
   CsiSendCollectionManager collectionManager,
+  AnalysisResultsExtractor analysisResultsExtractor,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
   ILogger<CsiArtifactRootObjectBuilder> logger
@@ -115,6 +119,8 @@ public class CsiArtifactRootObjectBuilder(
     var units = converterSettings.Current.SpeckleUnits;
     var collected = new List<CollectedObject>(objects.Count);
     var results = new List<SendConversionResult>(objects.Count);
+    // CSi analysis results key back to objects by the element NAME; interned objects key by applicationId — so map.
+    var nameToAppId = new Dictionary<string, string>(StringComparer.Ordinal);
 
     int count = 0;
     foreach (ICsiWrapper wrapper in objects)
@@ -127,6 +133,7 @@ public class CsiArtifactRootObjectBuilder(
         Base converted = converter.Convert(wrapper);
         var segments = collectionManager.GetCollectionSegments(converted);
         string appId = converted.applicationId ?? Guid.NewGuid().ToString();
+        nameToAppId[wrapper.Name] = appId;
         collected.Add(new CollectedObject(appId, sourceType, converted, segments));
         results.Add(new(Status.SUCCESS, appId, sourceType, converted));
         session.RecordObject(appId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -152,8 +159,185 @@ public class CsiArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    return new CollectedModel(units, collected, results);
+    var resultRows = ExtractResultRows(objects, nameToAppId, session);
+    return new CollectedModel(units, collected, resultRows, results);
   }
+
+  // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
+  // structural-results rows. Covers the object/model-level result types that map cleanly to the results schema:
+  // frame forces, joint reactions, base reactions, modal periods. Pier/spandrel/story results (string position
+  // dimensions, dual identity) are not emitted yet — a schema/mapping decision is pending. A results failure (model
+  // unlocked / analysis not run) is logged and skipped so the geometry+properties send still succeeds.
+  private List<StructuralResultRow> ExtractResultRows(
+    IReadOnlyList<ICsiWrapper> objects,
+    Dictionary<string, string> nameToAppId,
+    ArtefactSessionLog session
+  )
+  {
+    var rows = new List<StructuralResultRow>();
+    var cases = converterSettings.Current.SelectedLoadCasesAndCombinations;
+    var resultTypes = converterSettings.Current.SelectedResultTypes;
+    if (cases is not { Count: > 0 } || resultTypes is not { Count: > 0 })
+    {
+      return rows; // results not requested
+    }
+
+    try
+    {
+      using (session.Phase("Analysis results"))
+      {
+        var summary = BuildObjectSummary(objects);
+        Base analysisResults = analysisResultsExtractor.ExtractAnalysisResults(cases.ToList(), resultTypes.ToList(), summary);
+
+        foreach (var descriptor in s_resultDescriptors)
+        {
+          if (analysisResults[descriptor.ResultsKey] is IDictionary<string, object> node)
+          {
+            FlattenResultType(node, descriptor, nameToAppId, rows);
+          }
+        }
+        session.SetStat("resultRows", rows.Count);
+      }
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogWarning(ex, "Analysis result extraction skipped");
+      session.RecordObject("analysis-results", "AnalysisResults", Status.WARNING, ex.Message, 0);
+    }
+    return rows;
+  }
+
+  private static Dictionary<ModelObjectType, List<string>> BuildObjectSummary(IReadOnlyList<ICsiWrapper> objects)
+  {
+    var summary = new Dictionary<ModelObjectType, List<string>>();
+    foreach (var wrapper in objects)
+    {
+      if (!summary.TryGetValue(wrapper.ObjectType, out var list))
+      {
+        list = new List<string>();
+        summary[wrapper.ObjectType] = list;
+      }
+      list.Add(wrapper.Name);
+    }
+    return summary;
+  }
+
+  // Walks one result type's nested dict (per its GroupingKeys) and emits one row per leaf component value.
+  private static void FlattenResultType(
+    IDictionary<string, object> node,
+    ResultDescriptor descriptor,
+    Dictionary<string, string> nameToAppId,
+    List<StructuralResultRow> rows
+  )
+  {
+    Walk(
+      node,
+      descriptor.GroupingKeys,
+      0,
+      new Dictionary<string, string>(StringComparer.Ordinal),
+      (axes, leaf) =>
+      {
+        string? objectAppId = null;
+        string? location = null;
+        if (descriptor.ElementKey != null && axes.TryGetValue(descriptor.ElementKey, out var elementName))
+        {
+          if (nameToAppId.TryGetValue(elementName, out var appId))
+          {
+            objectAppId = appId;
+          }
+          else
+          {
+            location = elementName; // analysis-only element not among the sent objects — keep its name
+          }
+        }
+
+        axes.TryGetValue("LoadCase", out var loadCase);
+        double? station =
+          axes.TryGetValue("ElmSta", out var sta)
+          && double.TryParse(sta, NumberStyles.Float, CultureInfo.InvariantCulture, out var s)
+            ? s
+            : null;
+        int? step = null;
+        if (axes.TryGetValue("StepNum", out var sn) && int.TryParse(sn, NumberStyles.Integer, CultureInfo.InvariantCulture, out var si))
+        {
+          step = si;
+        }
+        else if (axes.TryGetValue("Mode", out var mo) && int.TryParse(mo, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mi))
+        {
+          step = mi;
+        }
+
+        foreach (var kv in leaf)
+        {
+          double? value = kv.Value is null ? null : Convert.ToDouble(kv.Value, CultureInfo.InvariantCulture);
+          rows.Add(new StructuralResultRow(objectAppId, location, descriptor.ResultType, loadCase ?? "", kv.Key, station, step, value));
+        }
+      }
+    );
+  }
+
+  private static void Walk(
+    object node,
+    IReadOnlyList<string> groupingKeys,
+    int level,
+    Dictionary<string, string> axes,
+    Action<Dictionary<string, string>, IDictionary<string, object>> onLeaf
+  )
+  {
+    if (node is not IDictionary<string, object> dict)
+    {
+      return;
+    }
+    if (level >= groupingKeys.Count)
+    {
+      onLeaf(axes, dict);
+      return;
+    }
+
+    var key = groupingKeys[level];
+    if (key.StartsWith("Wrap:", StringComparison.Ordinal))
+    {
+      var actual = key["Wrap:".Length..];
+      if (dict.TryGetValue(actual, out var wrappedObj) && wrappedObj is IDictionary<string, object> wrapped)
+      {
+        foreach (var entry in wrapped)
+        {
+          axes[actual] = entry.Key;
+          Walk(entry.Value, groupingKeys, level + 1, axes, onLeaf);
+        }
+      }
+    }
+    else
+    {
+      foreach (var entry in dict)
+      {
+        axes[key] = entry.Key;
+        Walk(entry.Value, groupingKeys, level + 1, axes, onLeaf);
+      }
+    }
+  }
+
+  // The result types whose axes map cleanly onto the structural-results schema (all-numeric leaves, single identity).
+  private static readonly ResultDescriptor[] s_resultDescriptors =
+  {
+    new("frameForces", "frameForce", "Elm", new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" }),
+    new("jointReact", "jointReaction", "Elm", new[] { "Elm", "LoadCase", "Wrap:StepNum" }),
+    new("baseReact", "baseReaction", null, new[] { "LoadCase", "Wrap:StepNum" }),
+    new("modalPeriodsAndFrequencies", "modalPeriod", null, new[] { "LoadCase", "Wrap:Mode" }),
+  };
+
+  private sealed record ResultDescriptor(string ResultsKey, string ResultType, string? ElementKey, IReadOnlyList<string> GroupingKeys);
+
+  private sealed record StructuralResultRow(
+    string? ObjectAppId,
+    string? Location,
+    string ResultType,
+    string LoadCase,
+    string Component,
+    double? Station,
+    int? Step,
+    double? Value
+  );
 
   // ── Phase 2 (worker thread): snapshot → parquet bundle ────────────────────────────────────────────────
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
@@ -215,6 +399,12 @@ public class CsiArtifactRootObjectBuilder(
       }
 
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
+    }
+
+    // Analysis results → {v}.eav.structural-results.parquet (object-level rows join back via object_index).
+    foreach (var r in model.ResultRows)
+    {
+      pipeline.AddStructuralResult(r.ObjectAppId, r.Location, r.ResultType, r.LoadCase, r.Component, r.Station, r.Step, r.Value);
     }
 
     // Default scene view: the CSi collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
@@ -313,7 +503,12 @@ public class CsiArtifactRootObjectBuilder(
 
   private sealed record CollectedObject(string ApplicationId, string SourceType, Base Converted, IReadOnlyList<string> Segments);
 
-  private sealed record CollectedModel(string Units, IReadOnlyList<CollectedObject> Objects, IReadOnlyList<SendConversionResult> Results);
+  private sealed record CollectedModel(
+    string Units,
+    IReadOnlyList<CollectedObject> Objects,
+    IReadOnlyList<StructuralResultRow> ResultRows,
+    IReadOnlyList<SendConversionResult> Results
+  );
 
   private sealed record BundleResult(
     IReadOnlyDictionary<string, string> Bundle,
