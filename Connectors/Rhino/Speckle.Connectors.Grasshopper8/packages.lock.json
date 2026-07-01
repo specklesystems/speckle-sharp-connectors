@@ -20,6 +20,18 @@
           "PolySharp": "1.14.1"
         }
       },
+      "IronCompress": {
+        "type": "Direct",
+        "requested": "[1.6.3, )",
+        "resolved": "1.6.3",
+        "contentHash": "ygrMPrh20nVW8irdGZpMj9rXnz8WPDNN4fpq9JF1pGNL53Jg484OQOwaD4HaF6mxxIjhzKigRUFopjY/GdDfgg==",
+        "dependencies": {
+          "Snappier": "1.1.6",
+          "System.Buffers": "4.5.1",
+          "System.Memory": "4.5.5",
+          "ZstdSharp.Port": "0.8.1"
+        }
+      },
       "Microsoft.NETFramework.ReferenceAssemblies": {
         "type": "Direct",
         "requested": "[1.0.3, )",
@@ -448,18 +460,6 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "[9.0.4, )"
-        }
-      },
-      "IronCompress": {
-        "type": "CentralTransitive",
-        "requested": "[1.6.3, )",
-        "resolved": "1.6.3",
-        "contentHash": "ygrMPrh20nVW8irdGZpMj9rXnz8WPDNN4fpq9JF1pGNL53Jg484OQOwaD4HaF6mxxIjhzKigRUFopjY/GdDfgg==",
-        "dependencies": {
-          "Snappier": "1.1.6",
-          "System.Buffers": "4.5.1",
-          "System.Memory": "4.5.5",
-          "ZstdSharp.Port": "0.8.1"
         }
       },
       "Speckle.DoubleNumerics": {

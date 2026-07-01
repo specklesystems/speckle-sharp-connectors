@@ -69,6 +69,17 @@ public class PriorityLoader : GH_AssemblyPriority
         IRootContinuousTraversalBuilder<SpeckleCollectionWrapperGoo>,
         GrasshopperContinuousTraversalBuilder
       >();
+      // Speckle 4.0 client-side artefact send. Registering this makes SendOperation route GH publishes through the
+      // artefact path (SGEO + eav + envelope parquet) with zero component changes; the ctor param is optional so its
+      // presence is the only switch.
+      services.AddTransient<
+        IArtifactRootObjectBuilder<SpeckleCollectionWrapperGoo>,
+        GrasshopperArtifactRootObjectBuilder
+      >();
+      services.AddSingleton<
+        Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+        Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+      >();
       services.AddTransient<SendOperation<SpeckleCollectionWrapperGoo>>();
       services.AddSingleton<IThreadContext>(new DefaultThreadContext());
       services.AddScoped<

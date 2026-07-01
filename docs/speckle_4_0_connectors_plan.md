@@ -207,6 +207,17 @@ Both send-only — only a root builder + DI, no `IArtifactHostObjectBuilder`.
 
 ## Status log
 
+- **2026-07-01 (later still)** — **Grasshopper artefact SEND implemented & building** (net48 GH7/GH8).
+  `GrasshopperArtifactRootObjectBuilder : IArtifactRootObjectBuilder<SpeckleCollectionWrapperGoo>` — GH already rides
+  the generic `SendOperation<T>` which contains the artefact branch, so this + a `PriorityLoader` registration is the
+  whole switch (no component/UX change). It walks the wrapper tree emitting `ObjectsArtifactPipeline` calls **directly,
+  no `Collection` Base graph**, reusing `GrasshopperSendUnwrapper` (same clean geometry + 3dm as Rhino) and the existing
+  color/material/block packers for the HAS_MATERIAL/HAS_COLOR/DEFINES/DISPLAY_INSTANCE edges. net48 zstd native
+  deploy+preload added (`Net48.IronCompress.props` imported by GH7/GH8). **Receive NOT migrated** — GH outputs wrappers
+  onto the canvas (not a doc bake), so artefact receive needs a bundle→wrapper reader (separate, larger). Identity note:
+  cast geometry uses per-solve Guids (fine within a send; deterministic ids only needed for cross-version diffing).
+  Validation is manual (user). Also: SDK branch caught up with `main` (merge `ffb8776e`) incl. #468 STJ serializer;
+  connector OTEL/logo fallout fixed; ETABS/Tekla STJ aligned to 9.0.10.
 - **2026-07-01 (later)** — **Phase 2 (AutoCAD family) implemented & building.** One shared
   `AutocadArtifactRootObjectBuilder` (send) + `AutocadHostObjectArtefactBuilder` (native receive) serve
   AutoCAD / Civil3D / Plant3D — registered in the shared `LoadSend`/`LoadReceive` (so AutoCAD+Civil3D get both,
