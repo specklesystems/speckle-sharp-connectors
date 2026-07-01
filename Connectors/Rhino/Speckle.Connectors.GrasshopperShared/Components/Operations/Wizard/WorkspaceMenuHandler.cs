@@ -99,7 +99,7 @@ public class WorkspaceMenuHandler
         (_, _) => OnWorkspaceSelected(workspace),
         SelectedWorkspace?.id != workspace.id,
         SelectedWorkspace?.id == workspace.id,
-        Base64ToImage(workspace.logoUri)
+        Base64ToImage(workspace.logoUrl)
       );
     }
   }
@@ -120,7 +120,7 @@ public class WorkspaceMenuHandler
       : "Selection is disabled due to component input.";
     if (workspace != null && !IsPersonalProjects)
     {
-      Logo = Get24X24IconFromBase64(workspace.logoUri);
+      Logo = Get24X24IconFromBase64(workspace.logoUrl);
       WorkspaceContextMenuButton.SetIconOverride(Logo);
       WorkspaceContextMenuButton.Name = workspace.name;
       WorkspaceContextMenuButton.NickName = workspace.id;
