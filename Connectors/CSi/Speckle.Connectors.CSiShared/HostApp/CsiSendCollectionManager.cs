@@ -39,6 +39,13 @@ public class CsiSendCollectionManager
 
   protected virtual string GetCollectionPath(Base convertedObject) => convertedObject["type"]?.ToString() ?? "Unknown";
 
+  /// <summary>
+  /// The ordered collection segments (outermost → leaf) a converted object groups under. Shared by the v1 send (which
+  /// builds a <see cref="Collection"/> tree) and the 4.0 artefact send (which emits nested CONTAINER nodes directly).
+  /// Base = flat by type; ETABS overrides to level → category.
+  /// </summary>
+  public virtual IReadOnlyList<string> GetCollectionSegments(Base convertedObject) => new[] { GetCollectionPath(convertedObject) };
+
   protected virtual Collection CreateCollection(Base convertedObject) =>
     new() { name = GetCollectionPath(convertedObject) };
 }

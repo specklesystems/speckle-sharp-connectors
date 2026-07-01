@@ -45,6 +45,14 @@ public static class ServiceRegistration
     services.AddScoped<IRootObjectBuilder<ICsiWrapper>, CsiRootObjectBuilder>();
     services.AddScoped<IRootContinuousTraversalBuilder<ICsiWrapper>, CsiContinuousTraversalBuilder>();
     services.AddScoped<SendOperation<ICsiWrapper>>();
+    // Speckle 4.0 artefact send — registering the builder makes SendOperation route CSi/ETABS through the artefact
+    // path (the ctor param is optional; its presence is the switch). The SDK producer builds on netstandard2.0, so it
+    // runs on ETABS21 (net48) and ETABS22 (net8) alike.
+    services.AddScoped<IArtifactRootObjectBuilder<ICsiWrapper>, CsiArtifactRootObjectBuilder>();
+    services.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
 
     services.AddScoped<CsiMaterialPropertyExtractor>();
     services.AddScoped<CsiResultsExtractorFactory>();

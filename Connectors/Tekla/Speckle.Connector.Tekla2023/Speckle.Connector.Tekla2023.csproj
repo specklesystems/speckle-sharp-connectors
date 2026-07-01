@@ -44,5 +44,6 @@
     <ProjectReference Include="..\..\..\DUI3\Speckle.Connectors.DUI.WebView\Speckle.Connectors.DUI.WebView.csproj" />
   </ItemGroup>
 
+  <Import Project="..\Speckle.Connector.TeklaShared\Net48.IronCompress.props" />
   <Import Project="..\Speckle.Connector.TeklaShared\Speckle.Connectors.TeklaShared.projitems" Label="Shared" />
 </Project>

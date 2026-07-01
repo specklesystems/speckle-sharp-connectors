@@ -56,6 +56,13 @@ public static class ServiceRegistration
     services.AddScoped<IRootObjectBuilder<ModelObject>, TeklaRootObjectBuilder>();
     services.AddScoped<IRootContinuousTraversalBuilder<ModelObject>, TeklaContinuousTraversalBuilder>();
     services.AddScoped<SendOperation<ModelObject>>();
+    // Speckle 4.0 artefact send — registering the builder makes SendOperation route Tekla through the artefact path
+    // (the ctor param is optional; its presence is the switch). net48; needs the Zstd native (Net48.IronCompress.props).
+    services.AddScoped<IArtifactRootObjectBuilder<ModelObject>, TeklaArtifactRootObjectBuilder>();
+    services.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
 
     services.AddSingleton<ToSpeckleSettingsManager>();
 

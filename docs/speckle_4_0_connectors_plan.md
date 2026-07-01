@@ -44,8 +44,9 @@ is externalized in `speckle-bundle-spec` (schema_version 5; COLLECTION folded in
 | **Revit** (net8/10) | ✅ committed (net8+) | native (net8+), net48 = fallback | **Phase 1** |
 | **AutoCAD / Civil3D** | ✅ native (all TFMs) | ✅ native (all TFMs) | **Phase 2** ✅ done — **PAUSE here** |
 | **Plant3D** | ✅ native (send-only) | send-only | **Phase 2** ✅ done |
-| **CSi (ETABS)** | ❌ | n/a | **Phase 3** (after pause) send only |
-| **Tekla** | ❌ | n/a | **Phase 3** (after pause) send only |
+| **CSi (ETABS)** | ✅ native (net48/net8) | n/a | **Phase 3** ✅ done (send only) |
+| **Tekla** | ✅ native (net48) | n/a | **Phase 3** ✅ done (send only) |
+| **Grasshopper** | ✅ native (net48) | ❌ (bundle→wrapper, separate) | done — send only |
 | ArcGIS | — | — | **EXCLUDED** (unmaintained) |
 | Bentley, TSD | — | — | **EXCLUDED** (new connectors, not now) |
 | Navisworks | — | — | **EXCLUDED** (handled natively by ODA) |
@@ -207,6 +208,17 @@ Both send-only — only a root builder + DI, no `IArtifactHostObjectBuilder`.
 
 ## Status log
 
+- **2026-07-01 (Phase 3)** — **CSi/ETABS + Tekla artefact SEND implemented & building** (send-only).
+  `CsiArtifactRootObjectBuilder` (ETABS21 net48 + ETABS22 net8) and `TeklaArtifactRootObjectBuilder` (Tekla 2023/24/25
+  net48). Both: DI flip in `AddCsi`/`AddTekla` + `IArtifactPipelineFactory`; two-phase threading (host COM on main,
+  parquet on worker); Base-free walk (no Collection graph); net48 `Net48.IronCompress.props` zstd deploy+preload.
+  CSi: `EtabsObject` DataObjects → DISPLAY Point/Line/Mesh, level→category collections (reused
+  `CsiSendCollectionManager.GetCollectionSegments`); **deferred** section/material GroupProxies + the gated
+  `root[analysisResults]` blob (nested element→case→station→step, not eav-shaped). Tekla: `TeklaObject` DataObjects →
+  DISPLAY meshes, flat by-type, render materials via `TeklaMaterialUnpacker`, nested `elements` flattened; no analysis
+  results exist. Validation manual. **All in-scope connectors now have artefact send** (Rhino/Revit/AutoCAD family/GH/
+  CSi/Tekla). Remaining migration surface: native artefact **receive** for GH (bundle→wrapper) and the Csi/Tekla
+  analysis-results home — both separate designs.
 - **2026-07-01 (later still)** — **Grasshopper artefact SEND implemented & building** (net48 GH7/GH8).
   `GrasshopperArtifactRootObjectBuilder : IArtifactRootObjectBuilder<SpeckleCollectionWrapperGoo>` — GH already rides
   the generic `SendOperation<T>` which contains the artefact branch, so this + a `PriorityLoader` registration is the

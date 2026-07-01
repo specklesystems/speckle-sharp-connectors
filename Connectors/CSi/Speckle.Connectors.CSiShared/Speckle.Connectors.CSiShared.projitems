@@ -30,6 +30,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionPropertyExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\Helpers\ISectionUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiContinuousTraversalBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\CsiRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Plugin\CsiPluginBase.cs" />
