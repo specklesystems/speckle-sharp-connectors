@@ -53,6 +53,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Objects\PropertyGroupPathsSelector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\LocalToGlobalMapHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperColorUnpacker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperArtefactObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\GrasshopperCollectionRebuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveAsyncComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Operations\Receive\ReceiveComponent.cs" />

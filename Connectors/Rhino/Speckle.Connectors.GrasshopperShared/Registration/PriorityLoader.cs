@@ -57,6 +57,14 @@ public class PriorityLoader : GH_AssemblyPriority
 
       // receive
       services.AddTransient<GrasshopperReceiveOperation>();
+      // Speckle 4.0 artefact receive: download+parse the parquet bundle. GH has no doc bake / IHostObjectBuilder —
+      // GrasshopperArtefactObjectBuilder maps the bundle to the canvas wrapper tree (see ReceiveComponent branch).
+      services.AddScoped<
+        Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
+        Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
+      >();
+      services.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
+      services.AddScoped<IArtifactReceiver, ArtifactReceiver>();
       services.AddSingleton(DefaultTraversal.CreateTraversalFunc());
       services.AddTransient<TraversalContextUnpacker>();
       services.AddScoped<IDataObjectInstanceRegistry, DataObjectInstanceRegistry>();

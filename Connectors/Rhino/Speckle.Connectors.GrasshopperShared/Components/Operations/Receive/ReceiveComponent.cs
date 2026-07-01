@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
@@ -172,6 +173,36 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
 
       // store version id for tracking
       _lastVersionId = receiveInfo.SelectedVersionId;
+
+      // Speckle 4.0 artefact receive: if a parquet bundle exists for this version, build the wrapper tree directly
+      // from it (skips the v1 deserialize + RootObjectUnpacker + LocalToGlobalMapHandler). Legacy versions fall through.
+      var artifactReceiver = scope.ServiceProvider.GetService<IArtifactReceiver>();
+      if (artifactReceiver != null)
+      {
+        var bundleProgress = new Progress<CardProgress>(_ => { });
+        var bundle = await artifactReceiver
+          .TryGetBundleAsync(account, receiveInfo, bundleProgress, cancellationToken)
+          .ConfigureAwait(false);
+        if (bundle != null)
+        {
+          SpeckleConversionContext.SetupCurrent(scope);
+          try
+          {
+            var rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+            await client
+              .Version.Received(
+                new(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug),
+                cancellationToken
+              )
+              .ConfigureAwait(false);
+            return new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
+          }
+          finally
+          {
+            SpeckleConversionContext.EndCurrent();
+          }
+        }
+      }
 
       var progress = new Progress<CardProgress>(_ =>
       {
