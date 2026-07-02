@@ -1,3 +1,4 @@
+using System.Globalization;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Converters.Rhino.ToHost.Helpers;
@@ -21,9 +22,10 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// scene view; per-object properties are carried through.
 /// </summary>
 /// <remarks>
-/// First cut: <b>geometry + collections + properties</b>. Materials (MATERIAL/HAS_MATERIAL) and instances
-/// (DEFINES/DISPLAY_INSTANCE) are NOT reconstructed yet — a fast follow. Non-geometric objects (instance placements /
-/// rooms) are skipped silently.
+/// Reconstructs <b>geometry + collections + properties + instances</b>. Instances (DISPLAY_INSTANCE) are resolved
+/// through their DEFINITION (DEFINES → geometry) and flattened into transformed geometry wrappers — without this, an
+/// instance-only sub-model (e.g. a federated Site/Facades model) receives as empty. Materials (MATERIAL/HAS_MATERIAL)
+/// are NOT reconstructed yet — a fast follow. Genuinely non-geometric objects (rooms/levels/areas) are skipped silently.
 /// </remarks>
 internal sealed class GrasshopperArtefactObjectBuilder
 {
@@ -42,15 +44,49 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var collectionCache = new Dictionary<string, SpeckleCollectionWrapper>(StringComparer.Ordinal);
     var rels = bundle.Relations;
 
+    // Instance definitions decoded once (DEFINITION node → its DEFINES geometry), shared across all placements.
+    var defGeomByNode = BuildDefinitionGeometry(bundle, rels);
+    // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
+    var instEdgesByObject = rels
+      .DisplayInstanceEdges.GroupBy(e => e.Src)
+      .ToDictionary(g => g.Key, g => g.ToList());
+
     foreach (var kv in bundle.ObjectAppIds)
     {
       int objK = kv.Key;
       string appId = kv.Value;
 
       var geometries = DecodeObjectGeometry(objK, bundle, rels);
+
+      // Instances: an object placed as a block carries no direct SOLID/DISPLAY geometry — its geometry lives on the
+      // referenced DEFINITION. Resolve each placement (object → INSTANCE node → DefRef DEFINITION → DEFINES geometry),
+      // clone the shared definition geometry and bake in the instance transform so it lands in world space. Without this,
+      // entire instance-only sub-models (e.g. a federated Site/Facades model) receive as empty.
+      if (instEdgesByObject.TryGetValue(objK, out var instEdges))
+      {
+        foreach (var e in instEdges)
+        {
+          if (
+            !bundle.Nodes.TryGetValue(e.Dst, out var instNode)
+            || instNode.DefRef is not int defNodeK
+            || !defGeomByNode.TryGetValue(defNodeK, out var defGeoms)
+          )
+          {
+            continue;
+          }
+          var xf = BuildTransform(instNode.Transform);
+          foreach (var g in defGeoms)
+          {
+            var dup = g.Duplicate();
+            dup.Transform(xf);
+            geometries.Add(dup);
+          }
+        }
+      }
+
       if (geometries.Count == 0)
       {
-        continue; // instance placement / non-geometric element — not handled in this cut
+        continue; // non-geometric element (room/level/area) or a definition with no decodable geometry
       }
 
       bundle.Properties.TryGetValue(objK, out var props);
@@ -114,6 +150,67 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
     return result;
+  }
+
+  // Decodes each DEFINITION node's geometry once (DEFINES → geometry blobs), keyed by definition node index. The same
+  // definition is referenced by many instances, so we decode once here and duplicate+transform per placement.
+  private static Dictionary<int, List<RG.GeometryBase>> BuildDefinitionGeometry(
+    ArtefactBundle bundle,
+    ArtefactRelations rels
+  )
+  {
+    var map = new Dictionary<int, List<RG.GeometryBase>>();
+    foreach (var kv in rels.DefinesByDefinition)
+    {
+      var geoms = new List<RG.GeometryBase>();
+      foreach (var geomK in kv.Value)
+      {
+        geoms.AddRange(DecodeGeometryIndex(geomK, bundle));
+      }
+      if (geoms.Count > 0)
+      {
+        map[kv.Key] = geoms;
+      }
+    }
+    return map;
+  }
+
+  // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform. Geometry
+  // is already in bundle units, so (unlike the doc-baking Rhino builder) no unit rescale is applied to the translation.
+  private static RG.Transform BuildTransform(string? csv)
+  {
+    var d = new double[16];
+    if (csv is { Length: > 0 } text)
+    {
+      var parts = text.Split(',');
+      for (int i = 0; i < 16 && i < parts.Length; i++)
+      {
+        double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out d[i]);
+      }
+    }
+    else
+    {
+      d[0] = d[5] = d[10] = d[15] = 1.0;
+    }
+
+    var t = RG.Transform.Identity;
+    t.M00 = d[0];
+    t.M01 = d[1];
+    t.M02 = d[2];
+    t.M03 = d[3];
+    t.M10 = d[4];
+    t.M11 = d[5];
+    t.M12 = d[6];
+    t.M13 = d[7];
+    t.M20 = d[8];
+    t.M21 = d[9];
+    t.M22 = d[10];
+    t.M23 = d[11];
+    t.M30 = d[12];
+    t.M31 = d[13];
+    t.M32 = d[14];
+    t.M33 = d[15];
+    return t;
   }
 
   private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle)

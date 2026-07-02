@@ -175,32 +175,68 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       _lastVersionId = receiveInfo.SelectedVersionId;
 
       // Speckle 4.0 artefact receive: if a parquet bundle exists for this version, build the wrapper tree directly
-      // from it (skips the v1 deserialize + RootObjectUnpacker + LocalToGlobalMapHandler). Legacy versions fall through.
+      // from it (skips the v1 deserialize + RootObjectUnpacker + LocalToGlobalMapHandler). This path is opportunistic:
+      // any failure (no bundle, a broken/partial bundle, a 404 on a presigned download, a parse error) is non-fatal —
+      // we surface a remark and fall through to the proven v1 receive path below rather than crashing the receive.
       var artifactReceiver = scope.ServiceProvider.GetService<IArtifactReceiver>();
       if (artifactReceiver != null)
       {
-        var bundleProgress = new Progress<CardProgress>(_ => { });
-        var bundle = await artifactReceiver
-          .TryGetBundleAsync(account, receiveInfo, bundleProgress, cancellationToken)
-          .ConfigureAwait(false);
-        if (bundle != null)
+        try
         {
-          SpeckleConversionContext.SetupCurrent(scope);
-          try
+          var bundleProgress = new Progress<CardProgress>(_ => { });
+          var bundle = await artifactReceiver
+            .TryGetBundleAsync(account, receiveInfo, bundleProgress, cancellationToken)
+            .ConfigureAwait(false);
+          if (bundle != null)
           {
-            var rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
-            await client
-              .Version.Received(
-                new(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug),
-                cancellationToken
-              )
-              .ConfigureAwait(false);
+            SpeckleConversionContext.SetupCurrent(scope);
+            SpeckleCollectionWrapper rootWrapper;
+            try
+            {
+              rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+            }
+            finally
+            {
+              SpeckleConversionContext.EndCurrent();
+            }
+
+            // Marking the version received is a best-effort side-effect — its endpoint may 404 on some servers, and
+            // that must NEVER discard an already-built receive (otherwise we'd wrongly fall through to the v1 path,
+            // which 404s on the synthetic root of an artefact-only version).
+            try
+            {
+              await client
+                .Version.Received(
+                  new(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug),
+                  cancellationToken
+                )
+                .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!ex.IsFatal())
+            {
+              AddRuntimeMessage(
+                GH_RuntimeMessageLevel.Warning,
+                $"Loaded via 4.0 artefacts, but could not mark the version as received ({ex.Message})."
+              );
+            }
+
             return new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
           }
-          finally
-          {
-            SpeckleConversionContext.EndCurrent();
-          }
+
+          // No parquet bundle for this version — the artefacts list endpoint returned nothing. If the version was
+          // actually sent via artefacts, its v1 root is synthetic and the legacy path below will 404 fetching it;
+          // surface a warning so that failure mode is legible rather than a bare 404.
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Warning,
+            "No 4.0 artefact bundle found for this version; using the legacy receive path."
+          );
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Warning,
+            $"4.0 artefact load unavailable ({ex.Message}); loading via the legacy path."
+          );
         }
       }
 

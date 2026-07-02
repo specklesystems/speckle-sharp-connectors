@@ -5,9 +5,11 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using GrasshopperAsyncComponent;
+using Microsoft.Extensions.DependencyInjection;
 using Rhino;
 using Speckle.Connectors.Common;
 using Speckle.Connectors.Common.Analytics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Operations.Receive;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -458,6 +460,69 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
 
     using var scope = PriorityLoader.CreateScopeForActiveDocument();
+
+    // Speckle 4.0 artefact receive (opportunistic; mirrors the sync (Sync) Load component). If a parquet bundle
+    // exists for this version, build the wrapper tree directly from it and return. Any failure (no bundle, broken
+    // bundle, 404) is non-fatal — we surface a warning and fall through to the v1 receive path below.
+    var artifactReceiver = scope.ServiceProvider.GetService<IArtifactReceiver>();
+    if (artifactReceiver != null)
+    {
+      try
+      {
+        var bundle = await artifactReceiver
+          .TryGetBundleAsync(Parent.ApiClient.Account, receiveInfo, progress, CancellationToken)
+          .ConfigureAwait(false);
+        if (bundle != null)
+        {
+          SpeckleConversionContext.SetupCurrent(scope);
+          try
+          {
+            var rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+            try
+            {
+              await Parent
+                .ApiClient.Version.Received(
+                  new(receiveInfo.SelectedVersionId, receiveInfo.ProjectId, receiveInfo.ReceivingApplicationSlug),
+                  CancellationToken
+                )
+                .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!ex.IsFatal())
+            {
+              RuntimeMessages.Add(
+                (
+                  GH_RuntimeMessageLevel.Warning,
+                  $"Loaded via 4.0 artefacts, but could not mark the version as received ({ex.Message})."
+                )
+              );
+            }
+            Result = new SpeckleCollectionWrapperGoo(rootWrapper);
+            return;
+          }
+          finally
+          {
+            SpeckleConversionContext.EndCurrent();
+          }
+        }
+
+        RuntimeMessages.Add(
+          (
+            GH_RuntimeMessageLevel.Warning,
+            "No 4.0 artefact bundle found for this version; using the legacy receive path."
+          )
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        RuntimeMessages.Add(
+          (
+            GH_RuntimeMessageLevel.Warning,
+            $"4.0 artefact load unavailable ({ex.Message}); loading via the legacy path."
+          )
+        );
+      }
+    }
+
     try
     {
       Root = await scope
