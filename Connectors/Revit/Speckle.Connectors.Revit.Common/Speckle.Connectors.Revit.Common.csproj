@@ -8,6 +8,13 @@
     <PolySharpExcludeGeneratedTypes>System.Range;System.Index</PolySharpExcludeGeneratedTypes>
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
+    <!--
+      Make ILRepack.FullAuto's in-place merge incremental-safe (see ILRepackIncremental.targets). Imported via
+      CustomAfterMicrosoftCSharpTargets so our override of ILRepackBuildTarget lands AFTER the package's.
+      Without this, incremental builds double-merge the internalized polyfills into a duplicate
+      System.<guid>IAsyncDisposable and the Revit add-in fails to load (BadImageFormatException).
+    -->
+    <CustomAfterMicrosoftCSharpTargets>$(MSBuildThisFileDirectory)ILRepackIncremental.targets</CustomAfterMicrosoftCSharpTargets>
   </PropertyGroup>
   <!--
   It doesn't matter that these API references are perfectly aligned, because these are specifiying min versions

@@ -7,6 +7,15 @@
     <PolySharpExcludeGeneratedTypes>System.Range;System.Index</PolySharpExcludeGeneratedTypes>
     <ILRepackTargetConfigurations>Debug;Release;Local</ILRepackTargetConfigurations>
     <ILRepackRenameInternalized>true</ILRepackRenameInternalized>
+    <!--
+      Make ILRepack.FullAuto's in-place merge incremental-safe (see ILRepackIncremental.targets). Imported via
+      CustomAfterMicrosoftCSharpTargets, which is imported AFTER the ILRepack.FullAuto package targets (verified
+      by -pp), so our redefinition of ILRepackBuildTarget overrides the package's. Without this, incremental
+      builds double-merge the internalized polyfills into a duplicate System.<guid>IAsyncDisposable and the
+      plugin fails to load (BadImageFormatException). CustomAfterMicrosoftCommonTargets is imported BEFORE the
+      package and does NOT win — do not use it here.
+    -->
+    <CustomAfterMicrosoftCSharpTargets>$(MSBuildThisFileDirectory)ILRepackIncremental.targets</CustomAfterMicrosoftCSharpTargets>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.FullAuto">

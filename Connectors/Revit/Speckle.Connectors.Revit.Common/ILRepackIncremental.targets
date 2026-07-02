@@ -1,0 +1,36 @@
+<Project>
+
+  <!--
+    Incremental-safe override of ILRepack.FullAuto's merge target.
+
+    ILRepack.FullAuto 1.6.0 defines `ILRepackBuildTarget` with NO Inputs/Outputs, so MSBuild runs it on
+    EVERY build. It merges the internalized private-asset dependencies into `@(IntermediateAssembly)` in place
+    (its output path IS that same file). On an incremental build where CoreCompile is skipped, that
+    intermediate is ALREADY merged, so the merge runs a second time and re-internalizes the polyfills,
+    producing a duplicate `System.[guid]IAsyncDisposable` type. The CLR then refuses to load the assembly
+    (System.BadImageFormatException: Duplicate type ... IAsyncDisposable), which crashes any host plugin that
+    loads this assembly at startup on an incremental (e.g. Rider Run/Debug) build.
+
+    This redefinition (imported via CustomAfterMicrosoftCSharpTargets, which is imported AFTER the package
+    targets, so it wins) keeps the exact same merge (it just re-invokes the package's ILRepackPrepareBuild +
+    ILRepackBuildCore, so any BeforeTargets="ILRepackPrepareBuild" customization still runs), but adds
+    Inputs/Outputs plus a stamp so the merge only runs when CoreCompile actually produced a fresh, unmerged
+    assembly. The stamp is touched AFTER the merge, so it is always newer than the (in-place merged)
+    intermediate; on the next incremental build the intermediate is unchanged and the target is skipped. When
+    source changes, CoreCompile overwrites the intermediate (newer than the stamp) and the merge runs once,
+    cleanly.
+  -->
+  <Target Name="ILRepackBuildTarget"
+          BeforeTargets="CopyFilesToOutputDirectory"
+          Condition="'$(ILRepackBuildEnable)' == 'True'"
+          Inputs="@(IntermediateAssembly)"
+          Outputs="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')">
+    <CallTarget Targets="ILRepackPrepareBuild; ILRepackBuildCore" />
+    <Touch Files="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')"
+           AlwaysCreate="true" />
+    <ItemGroup>
+      <FileWrites Include="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')" />
+    </ItemGroup>
+  </Target>
+
+</Project>
