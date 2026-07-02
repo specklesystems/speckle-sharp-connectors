@@ -1,9 +1,14 @@
 # `eav.structural-results.parquet` — structural analysis/design results
 
-> Producer-side design doc for the Speckle 4.0 structural analysis-results artefact. Written for review with a
-> structural engineer — see **Open questions** at the end. Status: **4 of 8 ETABS result types live; 4 pending this
-> review.** Schema is a persisted parquet format — additive nullable columns are safe to add later; retyping/removing
-> is not, so we want the axes right.
+> **Producer-side** doc for the Speckle 4.0 structural analysis-results artefact (CSi/ETABS extraction status +
+> mapping). The **canonical format spec** now lives in the bundle-spec repo:
+> `speckle-bundle-spec/spec/bundle-spec.sql` (`structural_results` table) + `docs/rationale/structural-results.md`
+> (design, caveats, out-of-scope). Keep this doc in sync with that one.
+>
+> Status: **schema FINALIZED after structural-engineer review.** All 8 ETABS analysis types + TSD design outputs map
+> onto one shape. **4 live in the CSi producer** (frame/joint/base/modal); **4 designed + ready to wire**
+> (pier/spandrel/story-drift/story-force). The two columns below (`element_name`, `position_label`) are now part of the
+> schema (additive nullable — the live 4 write null).
 
 ## What it is (and isn't)
 
@@ -43,12 +48,12 @@ results**:
 | `value` | float64 **null** | the numeric result |
 | `value_text` | string **null** | non-numeric design output (`PASS`/`FAIL`); null for analysis results |
 
-**Proposed additions** (needed for the 4 pending types — both nullable, additive/safe; live rows carry null):
+**Schema columns** (added for the group/story types — both nullable, additive; the live 4 write null):
 
 | column | type | meaning |
 |---|---|---|
-| `element_name` | string (dict) **null** | the result's element identity when it is **not** an interned object — pier/spandrel name, or an analysis-only sub-element name |
-| `position_label` | string (dict) **null** | a **categorical** position/direction that isn't a numeric station: pier/spandrel `Location` (`Top`/`Bottom`), story-drift `Direction` (`X`/`Y`) |
+| `element_name` | string (dict) **null** | the result's element identity when it is **not** an interned object — pier/spandrel name (a named group of walls), or an analysis-only sub-element name |
+| `position_label` | string (dict) **null** | a **categorical** position/direction that isn't a numeric station: pier/spandrel/story-force `Location` (`Top`/`Bottom`), story-drift `Direction` (`X`/`Y`) |
 
 ## Object-level vs model-level
 
@@ -70,7 +75,8 @@ The correlation back to geometry is `object_index` → `eav.objects.application_
 | `baseReaction` | `LoadCase, StepNum` | model-level · `load_case` · `step` · `component`∈{FX,FY,FZ,MX,MY,MZ} |
 | `modalPeriod` | `LoadCase, Mode` | model-level · `load_case`=`Modal` · `step`=Mode · `component`∈{Period,Frequency,CircFreq,Eigenvalue} |
 
-**⏳ Pending review (need the proposed columns and/or a rule):**
+**✅ Designed — decided in review, ready to wire in the CSi producer** (piers = named wall groups, not first-class
+objects; story drift = drift-per-direction-per-storey, drop `Label`/`X`/`Y`/`Z`; `Top`/`Bottom` = `position_label`):
 
 | result_type | ETABS grouping keys / result keys | why it doesn't fit yet | proposed mapping |
 |---|---|---|---|
@@ -103,14 +109,16 @@ case not finished) is **logged and skipped** so the geometry + properties still 
 
 ## Open questions for the structural engineer
 
-1. **Story drifts — drop the locating metadata?** ETABS returns `Direction, Drift, Label, X, Y, Z` per row. Plan: keep
-   **`Drift` per `Direction`** (X/Y) and **drop `Label` and the `X/Y/Z` coordinates**. Are `Label` / `X/Y/Z` needed
-   downstream (e.g. to locate the drift point), or is drift-per-direction-per-story-per-case enough?
-2. **Piers & spandrels — identity.** A pier is identified by **(PierName, StoryName)** and isn't an interned object.
-   Plan: `element_name`=PierName, `location`=StoryName, `object_index`=null. Is that the right key, or should piers be
-   promoted to first-class objects (interned, with geometry) so results attach to `object_index` like frames?
-3. **`Location` = Top/Bottom (piers/spandrels/story forces).** Plan: a categorical `position_label` column. Correct, or
-   is Top/Bottom better modelled another way (e.g. two rows with a numeric station 0/1)?
+**✅ Resolved (review, this session):**
+
+1. **Story drifts — drop the locating metadata?** → **Yes.** Keep `Drift` per `Direction` (X/Y as `position_label`);
+   **drop `Label` and `X/Y/Z`**. Drift-per-direction-per-storey is enough.
+2. **Piers & spandrels — identity.** → **Name-keyed, not first-class.** They are *named groups of walls*:
+   `element_name`=Pier/Spandrel name, `location`=StoryName, `object_index`=null. Do **not** intern them or give geometry.
+3. **`Location` = Top/Bottom.** → **`position_label` column** (categorical), not synthetic stations.
+
+**Still open (do NOT block the pending 4 — each is an additive nullable column if ever needed):**
+
 4. **Analysis vs drawn elements (`Elm`).** ETABS forces are keyed by the *analysis* element name, which can differ from
    the drawn member when a member is meshed into several analysis elements. Currently: if `Elm` matches a sent object's
    name → `object_index`; else → `element_name` (name kept, no object join). Is per-analysis-element granularity
