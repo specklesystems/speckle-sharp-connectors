@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.CSiShared.HostApp.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.CSiShared;
@@ -11,14 +12,17 @@ public class AnalysisResultsExtractor
 {
   private readonly IConverterSettingsStore<CsiConversionSettings> _converterSettingsStore;
   private readonly CsiResultsExtractorFactory _resultsExtractorFactory;
+  private readonly ILogger<AnalysisResultsExtractor> _logger;
 
   public AnalysisResultsExtractor(
     IConverterSettingsStore<CsiConversionSettings> converterSettingsStore,
-    CsiResultsExtractorFactory resultsExtractorFactory
+    CsiResultsExtractorFactory resultsExtractorFactory,
+    ILogger<AnalysisResultsExtractor> logger
   )
   {
     _converterSettingsStore = converterSettingsStore;
     _resultsExtractorFactory = resultsExtractorFactory;
+    _logger = logger;
   }
 
   /// <summary>
@@ -51,9 +55,24 @@ public class AnalysisResultsExtractor
   {
     foreach (var resultType in requestedResultTypes)
     {
-      var extractor = _resultsExtractorFactory.GetExtractor(resultType);
-      objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
-      analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+      // Isolate each result type: one extractor failing (e.g. pier/spandrel/story on a model without those
+      // elements, or an API quirk) must NOT abort the others. Previously any throw here bubbled up and the whole
+      // send emitted ZERO results — so "select all" silently produced an empty results file even though frame
+      // forces extracted fine. Skip + log the failing type; the rest still publish.
+      try
+      {
+        var extractor = _resultsExtractorFactory.GetExtractor(resultType);
+        objectSelectionSummary.TryGetValue(extractor.TargetObjectType, out var objectNames);
+        analysisResults[extractor.ResultsKey] = extractor.GetResults(objectNames);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(
+          ex,
+          "Skipped analysis result type '{ResultType}' (extraction failed); other selected result types still publish.",
+          resultType
+        );
+      }
     }
   }
 

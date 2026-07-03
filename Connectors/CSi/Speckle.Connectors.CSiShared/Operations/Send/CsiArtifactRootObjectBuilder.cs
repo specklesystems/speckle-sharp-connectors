@@ -179,7 +179,22 @@ public class CsiArtifactRootObjectBuilder(
     var resultTypes = converterSettings.Current.SelectedResultTypes;
     if (cases is not { Count: > 0 } || resultTypes is not { Count: > 0 })
     {
-      return rows; // results not requested
+      // Diagnostic: this used to return silently, so an empty results file looked like a bug with no signal.
+      // Surface the two selection counts (both must be > 0) in the log AND the conversion report so a missing
+      // model-card selection (or settings not reaching converterSettings.Current) is visible, not silent.
+      logger.LogWarning(
+        "Structural results NOT extracted: SelectedLoadCasesAndCombinations={CaseCount}, SelectedResultTypes={ResultTypeCount} — both must be non-empty. Check the model card's Load Cases & Result Types settings.",
+        cases?.Count ?? 0,
+        resultTypes?.Count ?? 0
+      );
+      session.RecordObject(
+        "analysis-results",
+        "AnalysisResults",
+        Status.WARNING,
+        $"results not extracted — selected load cases: {cases?.Count ?? 0}, selected result types: {resultTypes?.Count ?? 0} (both must be > 0)",
+        0
+      );
+      return rows;
     }
 
     try
@@ -197,6 +212,24 @@ public class CsiArtifactRootObjectBuilder(
           }
         }
         session.SetStat("resultRows", rows.Count);
+
+        // Diagnostic: selections WERE present (we passed the gate) but the extractor produced nothing. Surface it —
+        // usually the model isn't locked/analysed, or the selected cases have no computed results.
+        if (rows.Count == 0)
+        {
+          logger.LogWarning(
+            "Structural results extraction ran for {Cases} case(s) x {Types} result type(s) but produced 0 rows — is the model locked (analysis run) and do the selected cases have results?",
+            cases.Count,
+            resultTypes.Count
+          );
+          session.RecordObject(
+            "analysis-results",
+            "AnalysisResults",
+            Status.WARNING,
+            $"extraction produced 0 rows for {cases.Count} case(s) / {resultTypes.Count} result type(s) — check the model is locked + analysed and the cases have results",
+            0
+          );
+        }
       }
     }
     catch (Exception ex) when (!ex.IsFatal())
