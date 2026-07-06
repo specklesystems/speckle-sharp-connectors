@@ -160,7 +160,7 @@ public class CsiArtifactRootObjectBuilder(
     }
 
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
-    return new CollectedModel(units, collected, resultRows, results);
+    return new CollectedModel(units, collected, resultRows, results, nameToAppId);
   }
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
@@ -440,6 +440,8 @@ public class CsiArtifactRootObjectBuilder(
       pipeline.AddStructuralResult(r.ObjectAppId, r.Location, r.ResultType, r.LoadCase, r.Component, r.Station, r.Step, r.Value);
     }
 
+    EmitFrameJointConnectivity(pipeline, model);
+
     // Default scene view: the CSi collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
 
@@ -534,13 +536,49 @@ public class CsiArtifactRootObjectBuilder(
   }
 #endif
 
+  // Member↔joint connectivity (CONNECTS_TO): a frame → its I-/J-end joint objects. The joint NAMES live in the
+  // frame's "Geometry" properties (CsiFramePropertiesExtractor); NameToAppId maps a CSi element name → its
+  // applicationId, and only sent objects are in that map, so an unsent joint is naturally skipped. This is the
+  // slab↔beam↔column graph via shared joints — reverse-lookup a joint's object_index to find every member meeting
+  // there.
+  private static void EmitFrameJointConnectivity(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  {
+    foreach (var co in model.Objects)
+    {
+      if (
+        co.Converted is not Speckle.Objects.Data.DataObject dataObject
+        || !dataObject.properties.TryGetValue("Geometry", out var g)
+        || g is not IDictionary<string, object?> geometry
+      )
+      {
+        continue;
+      }
+      int frameK = pipeline.InternObject(co.ApplicationId);
+      foreach (var endKey in s_endJointKeys)
+      {
+        if (
+          geometry.TryGetValue(endKey, out var jn)
+          && jn is string jointName
+          && jointName.Length > 0
+          && model.NameToAppId.TryGetValue(jointName, out var jointAppId)
+        )
+        {
+          pipeline.ConnectsTo(frameK, pipeline.InternObject(jointAppId));
+        }
+      }
+    }
+  }
+
+  private static readonly string[] s_endJointKeys = { "I-End Joint", "J-End Joint" };
+
   private sealed record CollectedObject(string ApplicationId, string SourceType, Base Converted, IReadOnlyList<string> Segments);
 
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
-    IReadOnlyList<SendConversionResult> Results
+    IReadOnlyList<SendConversionResult> Results,
+    IReadOnlyDictionary<string, string> NameToAppId
   );
 
   private sealed record BundleResult(
