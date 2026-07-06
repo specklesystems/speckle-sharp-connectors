@@ -483,6 +483,71 @@ public class RevitArtifactRootObjectBuilder(
         }
       }
     }
+
+    // 5) host-API topology from the Revit element graph (rooms / hosting / room-adjacency).
+    EmitElementTopology(pipeline, flatElements, objectKsByElementUniqueId);
+  }
+
+  // Host-API topology, guarded to sent objects via objectKsByElementUniqueId (only interned targets get an edge):
+  //   SUBELEMENT   host / super-component → element (a fixture hosted on a ceiling; a nested family → its super).
+  //                Complements the RevitObject.elements lift, which covers children folded INTO a parent object.
+  //   IN_ROOM      element → its containing Room (or MEP Space) object.
+  //   CONNECTS_TO  a door/window's FromRoom → ToRoom, scoped by the opening's object K (the room-adjacency graph).
+  // Same accessors as ClassPropertiesExtractor; wrapped defensively — Room/ToRoom/FromRoom can throw without an
+  // active phase, and topology is best-effort (must never fail the geometry send).
+  private static void EmitElementTopology(
+    ObjectsArtifactPipeline pipeline,
+    List<Element> flatElements,
+    Dictionary<string, List<int>> objectKsByElementUniqueId
+  )
+  {
+    foreach (var element in flatElements)
+    {
+      if (
+        element is not FamilyInstance fi
+        || !objectKsByElementUniqueId.TryGetValue(element.UniqueId, out var elementKs)
+      )
+      {
+        continue;
+      }
+      try
+      {
+        Element? parent = fi.Host ?? fi.SuperComponent;
+        if (parent is not null && objectKsByElementUniqueId.TryGetValue(parent.UniqueId, out var parentKs))
+        {
+          foreach (var pK in parentKs)
+          {
+            foreach (var eK in elementKs)
+            {
+              pipeline.Subelement(pK, eK, 0);
+            }
+          }
+        }
+
+        Element? room = fi.Room ?? (Element?)fi.Space;
+        if (room is not null && objectKsByElementUniqueId.TryGetValue(room.UniqueId, out var roomKs))
+        {
+          foreach (var eK in elementKs)
+          {
+            pipeline.InRoom(eK, roomKs[0], 0);
+          }
+        }
+
+        if (
+          fi.FromRoom is { } fromRoom
+          && fi.ToRoom is { } toRoom
+          && objectKsByElementUniqueId.TryGetValue(fromRoom.UniqueId, out var fromKs)
+          && objectKsByElementUniqueId.TryGetValue(toRoom.UniqueId, out var toKs)
+        )
+        {
+          pipeline.ConnectsTo(fromKs[0], toKs[0], elementKs[0]);
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: Room/ToRoom/FromRoom can throw without an active phase — skip this element's topology.
+      }
+    }
   }
 
   private static KeyValuePair<string, object?>[] RootScalars(Base converted, RevitObject? revitObject) =>
