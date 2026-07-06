@@ -349,15 +349,37 @@ public class RevitArtifactRootObjectBuilder(
     var revitObject = converted as RevitObject;
     pipeline.AddProperties(applicationId, dataObject.properties, RootScalars(converted, revitObject), TryGetTypeKey(revitElement));
 
+    EmitDisplayValue(pipeline, objK, applicationId, dataObject.displayValue);
+
+    // Recurse into hosted/nested children (RevitObject.elements) — curtain wall → mullions/panels, railing → top
+    // rail, stacked wall → members. RemoveKnownChildElementsWhenParentPresent strips these from the atomic list when
+    // the parent is present, so their geometry lives ONLY here; intern each as its own object, emit its geometry, and
+    // link it to the parent with a SUBELEMENT edge. Materials resolve by mesh applicationId (idempotent
+    // InternGeometryId), which GetElementsAndSubelementIdsFromAtomicObjects already includes for sub-elements.
+    if (revitObject is not null)
+    {
+      int childOrd = 0;
+      foreach (RevitObject child in revitObject.elements)
+      {
+        EmitChild(pipeline, child, modelK, objK, childOrd++);
+      }
+    }
+  }
+
+  // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
+  // DISPLAY_INSTANCE. Line/Arc/Curve display values (door/window swing arcs, symbolic 2D) are intentionally skipped —
+  // they aren't real model geometry and render as spurious arcs (matches ODA's mesh-only Revit extraction).
+  private void EmitDisplayValue(ObjectsArtifactPipeline pipeline, int objK, string appId, IReadOnlyList<Base> displayValue)
+  {
     int ord = 0;
-    foreach (var item in dataObject.displayValue)
+    foreach (var item in displayValue)
     {
       switch (item)
       {
         case InstanceProxy instanceProxy:
           int defK = pipeline.AddDefinition(instanceProxy.definitionId, instanceProxy.definitionId);
           int instK = pipeline.AddInstance(
-            instanceProxy.applicationId ?? $"{applicationId}:i{ord}",
+            instanceProxy.applicationId ?? $"{appId}:i{ord}",
             defK,
             Flatten(instanceProxy.transform),
             instanceProxy.units
@@ -366,18 +388,33 @@ public class RevitArtifactRootObjectBuilder(
           break;
 
         case SOG.Mesh mesh:
-          int gK = pipeline.AddGeometry(mesh.applicationId ?? $"{applicationId}:g{ord}", mesh);
+          int gK = pipeline.AddGeometry(mesh.applicationId ?? $"{appId}:g{ord}", mesh);
           pipeline.Display(objK, gK, ord++);
           break;
 
         default:
-          // Only meshes (+ instances above) are emitted as renderable geometry. Line/Arc/Curve/etc.
-          // display values — e.g. door/window swing arcs and other symbolic 2D curves the converter's
-          // geometry walk collects — are intentionally skipped: they aren't real model geometry and show
-          // up as spurious arcs/lines in the viewer. Matches oda's mesh-only Revit extraction. Revisit if
-          // genuine curve elements (model lines, grids) need rendering.
           break;
       }
+    }
+  }
+
+  // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
+  // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
+  // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
+  private void EmitChild(ObjectsArtifactPipeline pipeline, RevitObject child, int modelK, int parentObjK, int subOrd)
+  {
+    string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
+    int childK = pipeline.InternObject(childAppId);
+    pipeline.InModel(childK, modelK, 0);
+    pipeline.Subelement(parentObjK, childK, subOrd);
+    pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
+
+    EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
+
+    int grandOrd = 0;
+    foreach (RevitObject grandChild in child.elements)
+    {
+      EmitChild(pipeline, grandChild, modelK, childK, grandOrd++);
     }
   }
 

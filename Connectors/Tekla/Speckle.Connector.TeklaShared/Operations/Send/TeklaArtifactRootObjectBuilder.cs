@@ -34,9 +34,10 @@ namespace Speckle.Connectors.TeklaShared.Operations.Send;
 /// <para>Tekla is render-mesh based: parts tessellate to <see cref="Speckle.Objects.Geometry.Mesh"/> (rebar/grids to
 /// lines/arcs), all SGEO-encodable, with no lossless raw solid — so this emits only <c>DISPLAY</c> geometry (no
 /// <c>SOLID</c>) and no instances (Tekla has none). Grouping is flat by object type. Nested <c>TeklaObject.elements</c>
-/// (bolts, sub-parts, …) are flattened into the same collection as sibling objects — matching how
-/// <see cref="TeklaMaterialUnpacker"/> keys materials by each object's applicationId — so <c>HAS_MATERIAL</c> edges
-/// resolve. Tekla sends no analysis results.</para>
+/// (bolts, sub-parts, rebar, …) are interned as their own objects (own geometry + properties, so
+/// <see cref="TeklaMaterialUnpacker"/>'s per-applicationId <c>HAS_MATERIAL</c> edges resolve) and linked to their
+/// owner with a <c>SUBELEMENT</c> edge, while still appearing in the flat by-type scene collection. Tekla sends no
+/// analysis results.</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the Tekla API (<c>GetSolid</c>/report properties/visualisation) is
 /// main-thread-affine, so phase 1 converts on the host thread → a pure-Speckle snapshot; phase 2 builds the parquet
 /// bundle on a worker (the pipeline's sync-over-async IO deadlocks on a UI SynchronizationContext).</para>
@@ -200,12 +201,27 @@ public class TeklaArtifactRootObjectBuilder(
     return new BundleResult(bundle, rootId, objectCount, model.Results);
   }
 
-  // Emits one object (and recursively its TeklaObject children, flattened into the same collection).
-  private void EmitObject(ObjectsArtifactPipeline pipeline, Base obj, int collK, string units, Dictionary<string, List<int>> geometryKsByAppId)
+  // Emits one object (and recursively its TeklaObject children). Children are interned as their own objects (own
+  // geometry + properties) and linked to the parent with a SUBELEMENT edge (part → bolts / rebar / sub-parts), while
+  // still appearing in the flat by-type scene collection. <paramref name="parentObjK"/> is the owner's object K when
+  // this call is a child.
+  private void EmitObject(
+    ObjectsArtifactPipeline pipeline,
+    Base obj,
+    int collK,
+    string units,
+    Dictionary<string, List<int>> geometryKsByAppId,
+    int? parentObjK = null,
+    int subelementOrd = 0
+  )
   {
     string appId = obj.applicationId ?? Guid.NewGuid().ToString();
     int objK = pipeline.InternObject(appId);
     pipeline.InCollection(objK, collK, 0);
+    if (parentObjK is int pK)
+    {
+      pipeline.Subelement(pK, objK, subelementOrd);
+    }
 
     var display = obj is DataObject dataObject ? dataObject.displayValue : new List<Base> { obj };
     var properties = obj is DataObject d ? d.properties : null;
@@ -231,9 +247,10 @@ public class TeklaArtifactRootObjectBuilder(
 
     if (obj is TeklaObject teklaObject)
     {
+      int childOrd = 0;
       foreach (TeklaObject child in teklaObject.elements)
       {
-        EmitObject(pipeline, child, collK, units, geometryKsByAppId);
+        EmitObject(pipeline, child, collK, units, geometryKsByAppId, objK, childOrd++);
       }
     }
   }

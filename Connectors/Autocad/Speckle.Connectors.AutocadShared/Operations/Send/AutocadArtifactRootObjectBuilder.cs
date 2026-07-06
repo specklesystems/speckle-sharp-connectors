@@ -327,6 +327,75 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
+
+    // Civil3D sub-object tree (Civil3dObject.elements): corridor → baseline → region → applied assembly →
+    // subassembly; alignment → profiles; site → parcels/feature-lines. The converter builds this graph but the
+    // display-only path drops it. Intern each child, emit its geometry, and link it to its parent with a SUBELEMENT
+    // edge (guarded against re-emitting geometry for a child that's also a top-level object).
+    if (co.Converted is Civil3dObject civilParent)
+    {
+      int childOrd = 0;
+      foreach (Base child in civilParent.elements)
+      {
+        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId);
+      }
+    }
+  }
+
+  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always; interns + emits the child's own
+  // geometry/properties only once (a child may also be a top-level object — geometryKsByObjectId is the guard);
+  // recurses into its own .elements.
+  private void EmitCivilChild(
+    ObjectsArtifactPipeline pipeline,
+    Base child,
+    int collK,
+    string units,
+    int parentObjK,
+    int subOrd,
+    Dictionary<string, List<int>> geometryKsByObjectId
+  )
+  {
+    string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
+    int childK = pipeline.InternObject(childAppId);
+    pipeline.Subelement(parentObjK, childK, subOrd);
+
+    if (!geometryKsByObjectId.ContainsKey(childAppId))
+    {
+      pipeline.InCollection(childK, collK, 0);
+      var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
+      pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, child.speckle_type, units, child.speckle_type));
+
+      var display = child is Civil3dObject cc ? new List<Base>(cc.displayValue) : new List<Base> { child };
+      if (child is Civil3dObject cb && cb.baseCurves is { Count: > 0 } baseCurves)
+      {
+        display.AddRange(baseCurves.Cast<Base>());
+      }
+      var gKs = new List<int>();
+      int ord = 0;
+      foreach (Base fragment in display)
+      {
+        try
+        {
+          int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
+          pipeline.Display(childK, gK, ord++);
+          gKs.Add(gK);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          logger.LogWarning(ex, "Skipped unsupported Civil3D child geometry {Type} on {AppId}", fragment.speckle_type, childAppId);
+        }
+      }
+      geometryKsByObjectId[childAppId] = gKs;
+    }
+
+    if (child is Civil3dObject civilChild)
+    {
+      int grandOrd = 0;
+      foreach (Base grandChild in civilChild.elements)
+      {
+        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId);
+      }
+    }
   }
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL) → object colors (HAS_COLOR).
