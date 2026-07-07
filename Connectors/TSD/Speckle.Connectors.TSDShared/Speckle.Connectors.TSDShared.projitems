@@ -16,6 +16,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ITSDApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDApplicationService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\TSDSelectedEntity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdArtifactRootObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdEntitySnapshotBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\TsdRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdLoadingSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings\TsdResultTypeSetting.cs" />
