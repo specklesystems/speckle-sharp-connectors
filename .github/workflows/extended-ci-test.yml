@@ -17,5 +17,4 @@ jobs:
     uses: './.github/workflows/release.yml'
     permissions:
       contents: read
-    secrets:
-      CONNECTORS_GH_TOKEN: ${{ secrets.CONNECTORS_GH_TOKEN }}
+    secrets: inherit
