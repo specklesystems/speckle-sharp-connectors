@@ -263,13 +263,18 @@ public class RhinoArtifactRootObjectBuilder(
     var geometryKsByObjectId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     // object id -> its INSTANCE node K, for DEFINES_INSTANCE (nested block placements).
     var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
+    // Block-definition members (geometry + nested instances) are unpacked into model.Objects too, but they must
+    // render ONLY through their definition (DEFINES / DEFINES_INSTANCE) via a placed instance's transform — never as
+    // standalone scene objects. Without suppressing their top-level DISPLAY / DISPLAY_INSTANCE + IN_COLLECTION they
+    // also draw at the model origin (untransformed), duplicating the instance geometry [ENG-8782].
+    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, model.Layers, co.LayerIndex, layerCollectionKByIndex);
-      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId);
+      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -309,11 +314,20 @@ public class RhinoArtifactRootObjectBuilder(
     int collK,
     string units,
     Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId
+    Dictionary<string, int> instanceKByObjectId,
+    HashSet<string> definitionMemberIds
   )
   {
+    // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE) and NO scene-tree membership (IN_COLLECTION).
+    // Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
+
     int objK = pipeline.InternObject(co.ApplicationId);
-    pipeline.InCollection(objK, collK, 0);
+    if (!isDefinitionMember)
+    {
+      pipeline.InCollection(objK, collK, 0);
+    }
     pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType));
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
@@ -321,8 +335,11 @@ public class RhinoArtifactRootObjectBuilder(
     {
       int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
       int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
-      pipeline.DisplayInstance(objK, instK, 0);
       instanceKByObjectId[co.ApplicationId] = instK;
+      if (!isDefinitionMember)
+      {
+        pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
+      }
       return;
     }
 
@@ -346,8 +363,9 @@ public class RhinoArtifactRootObjectBuilder(
       displayGeometry = [rawGeometry];
     }
 
-    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids.
-    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
+    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids. Skipped for definition members —
+    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
@@ -363,8 +381,12 @@ public class RhinoArtifactRootObjectBuilder(
       {
         string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
         int gK = pipeline.AddGeometry(gAppId, fragment);
-        pipeline.Display(objK, gK, ord++);
+        if (!isDefinitionMember)
+        {
+          pipeline.Display(objK, gK, ord); // members render only via DEFINES through a placed instance's transform
+        }
         gKs.Add(gK);
+        ord++;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
