@@ -231,6 +231,7 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
+    EmitCivilNetworkTopology(pipeline, model.Objects);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -397,6 +398,45 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
   }
+
+  // Civil3D pipe-network topology, grounded in the resolved "Assignments" property app-ids (ClassPropertiesExtractor):
+  //   IN_SYSTEM    part (pipe/structure) → its pipe network (a CONTAINER, subtype "Network").
+  //   CONNECTS_TO  pipe → its start/end structure (guarded to sent objects; a structure not in the send set is skipped).
+  // Non-Civil3D objects carry no "Assignments" dict and are skipped. InternObject is idempotent, so re-resolving an
+  // object's K here is a lookup, not a new object.
+  private static void EmitCivilNetworkTopology(ObjectsArtifactPipeline pipeline, IReadOnlyList<CollectedObject> objects)
+  {
+    var sent = objects.Select(o => o.ApplicationId).ToHashSet(StringComparer.Ordinal);
+    var networkKById = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var co in objects)
+    {
+      if (!co.Properties.TryGetValue("Assignments", out var a) || a is not IDictionary<string, object?> assign)
+      {
+        continue;
+      }
+      int objK = pipeline.InternObject(co.ApplicationId);
+
+      if (assign.TryGetValue("networkId", out var nid) && nid is string networkId && networkId.Length > 0)
+      {
+        if (!networkKById.TryGetValue(networkId, out int netK))
+        {
+          netK = pipeline.AddContainer(networkId, assign.TryGetValue("networkName", out var nn) ? nn as string : null, null, "Network");
+          networkKById[networkId] = netK;
+        }
+        pipeline.InSystem(objK, netK, 0);
+      }
+
+      foreach (var key in s_structureKeys)
+      {
+        if (assign.TryGetValue(key, out var sid) && sid is string structId && structId.Length > 0 && sent.Contains(structId))
+        {
+          pipeline.ConnectsTo(objK, pipeline.InternObject(structId));
+        }
+      }
+    }
+  }
+
+  private static readonly string[] s_structureKeys = { "startStructureId", "endStructureId" };
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL) → object colors (HAS_COLOR).
   // Order matters: all referenced meshes/instances must exist (added in the object loop) before the edges resolve them.

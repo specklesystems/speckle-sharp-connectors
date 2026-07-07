@@ -151,10 +151,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             continue;
           }
 
+          var name = ObjectName(bundle, objK);
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
-            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId));
+            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Speckle.Object"));
@@ -309,10 +310,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     RG.GeometryBase geom,
     int layerIndex,
     Dictionary<string, Guid> materialByObject,
-    string appId
+    string appId,
+    string? name
   )
   {
     var atts = new ObjectAttributes { LayerIndex = layerIndex };
+    if (name is { Length: > 0 })
+    {
+      atts.Name = name;
+    }
     if (materialByObject.TryGetValue(appId, out Guid materialGuid))
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
@@ -410,6 +416,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var transform = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : docUnits, docUnits);
       int layerIndex = ResolveLayer(doc, bundle, objK, baseLayerIndex, layerCache);
       var atts = new ObjectAttributes { LayerIndex = layerIndex };
+      if (ObjectName(bundle, objK) is { Length: > 0 } instName)
+      {
+        atts.Name = instName;
+      }
       if (materialByObject.TryGetValue(appId, out Guid materialGuid))
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
@@ -566,6 +576,23 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     bundle.Properties.TryGetValue(objK, out var props) && props.TryGetValue("units", out var v) && v is string s && s.Length > 0
       ? s
       : bundle.Units;
+
+  // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
+  // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
+  // (missing, empty, or the sourceType fallback) so unnamed objects stay unnamed on receive.
+  private static string? ObjectName(ArtefactBundle bundle, int objK)
+  {
+    if (!bundle.Properties.TryGetValue(objK, out var props))
+    {
+      return null;
+    }
+    if (props.TryGetValue("name", out var nv) && nv is string name && name.Length > 0)
+    {
+      var type = props.TryGetValue("type", out var tv) && tv is string t ? t : null;
+      return string.Equals(name, type, StringComparison.Ordinal) ? null : name;
+    }
+    return null;
+  }
 
   private void DeepClean(RhinoDoc doc, string baseLayerName)
   {
