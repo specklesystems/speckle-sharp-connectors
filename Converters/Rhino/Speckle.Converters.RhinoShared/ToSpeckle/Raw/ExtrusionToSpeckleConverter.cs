@@ -36,7 +36,7 @@ public class ExtrusionToSpeckleConverter : ITypedConverter<RG.Extrusion, SOG.Ext
     );
 
     // get area and volume props
-    double area = AreaMassProperties.Compute(target).Area;
+    double area = AreaMassProperties.Compute(target)?.Area ?? 0;
     double volume = 0;
     if (target.IsSolid)
     {
