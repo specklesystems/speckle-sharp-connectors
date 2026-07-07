@@ -62,7 +62,13 @@ internal static class ServiceRegistration
     services.AddScoped<TsdWallLineForceResultsExtractor>();
     services.AddScoped<TsdResultsExtractorFactory>();
     services.AddScoped<TsdAnalysisResultsExtractor>();
+    services.AddScoped<TsdEntitySnapshotBuilder>();
     services.AddScoped<IRootObjectBuilder<IEntity>, TsdRootObjectBuilder>();
+    services.AddScoped<IArtifactRootObjectBuilder<IEntity>, TsdArtifactRootObjectBuilder>();
+    services.AddSingleton<
+      Speckle.Sdk.Pipelines.Send.Artifacts.IArtifactPipelineFactory,
+      Speckle.Sdk.Pipelines.Send.Artifacts.ArtifactPipelineFactory
+    >();
     services.AddScoped<SendOperation<IEntity>>();
 
     return services;
