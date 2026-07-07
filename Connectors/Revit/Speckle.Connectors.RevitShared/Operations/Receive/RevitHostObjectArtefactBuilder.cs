@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -92,7 +91,14 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     var marker = $"Project {projectName}: Model {modelName}";
     using var activity = _activityFactory.Start("Build (artefact)");
-    using var session = ArtefactSessionLog.Start("Revit", ArtefactDirection.Receive, projectName, modelName, null, _logger);
+    using var session = ArtefactSessionLog.Start(
+      "Revit",
+      ArtefactDirection.Receive,
+      projectName,
+      modelName,
+      null,
+      _logger
+    );
     session.SetStat("objects", bundle.ObjectAppIds.Count);
     session.SetStat("geometryBlobs", bundle.Geometries.Count);
     session.SetStat("definitions", bundle.Nodes.Values.Count(n => n.Kind == NodeKind.Definition));
@@ -239,9 +245,22 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         }
         if (geometry.Count == 0)
         {
-          session.RecordObject(appId, srcType, Status.ERROR, "did not convert to any native geometry", sw.ElapsedMilliseconds);
+          session.RecordObject(
+            appId,
+            srcType,
+            Status.ERROR,
+            "did not convert to any native geometry",
+            sw.ElapsedMilliseconds
+          );
           conversionResults.Add(
-            new(Status.ERROR, source, null, null, new ConversionException("Object did not convert to any native geometry"), srcType)
+            new(
+              Status.ERROR,
+              source,
+              null,
+              null,
+              new ConversionException("Object did not convert to any native geometry"),
+              srcType
+            )
           );
           continue;
         }
@@ -315,7 +334,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       session.Increment("placementsAttempted");
       int objK = edge.Src;
       int instNodeK = edge.Dst;
-      if (!bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      if (
+        !bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId)
+      )
       {
         continue;
       }
@@ -325,9 +346,22 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var sw = Stopwatch.StartNew();
       if (instNode.DefRef is not int defNodeK || !defKeyByNode.TryGetValue(defNodeK, out var defKey))
       {
-        session.RecordObject(appId, srcType, Status.ERROR, "references a definition with no geometry", sw.ElapsedMilliseconds);
+        session.RecordObject(
+          appId,
+          srcType,
+          Status.ERROR,
+          "references a definition with no geometry",
+          sw.ElapsedMilliseconds
+        );
         conversionResults.Add(
-          new(Status.ERROR, source, null, null, new ConversionException("Instance references a definition with no geometry"), srcType)
+          new(
+            Status.ERROR,
+            source,
+            null,
+            null,
+            new ConversionException("Instance references a definition with no geometry"),
+            srcType
+          )
         );
         continue;
       }
@@ -504,9 +538,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string MaterialKey(ArtefactNode node) =>
-    string.Create(
+    string.Format(
       CultureInfo.InvariantCulture,
-      $"{node.Argb ?? -1}|{node.Opacity ?? 1.0}|{node.Metalness ?? 0.0}|{node.Roughness ?? 1.0}"
+      "{0}|{1}|{2}|{3}",
+      node.Argb ?? -1,
+      node.Opacity ?? 1.0,
+      node.Metalness ?? 0.0,
+      node.Roughness ?? 1.0
     );
 
   private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node)
@@ -546,7 +584,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return id;
   }
 
-  private static double Clamp01(double v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  private static double Clamp01(double v) =>
+    v < 0 ? 0
+    : v > 1 ? 1
+    : v;
 
   // ── category ──────────────────────────────────────────────────────────────────────────────────────────
   // Top-level valid DirectShape categories by display name, built once per receive.
@@ -685,10 +726,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // The object's real Speckle type for the conversion report (so it shows e.g. "Objects.Data.RevitObject > Direct
   // Shape" instead of "Base > …" — the report's Base source is only a UI placeholder, not reconstructed data).
-  private static string SrcType(Dictionary<string, object?>? props) => PropString(props, "speckle_type") ?? "Speckle Object";
+  private static string SrcType(Dictionary<string, object?>? props) =>
+    PropString(props, "speckle_type") ?? "Speckle Object";
 
   /// <summary>Minimal plain <see cref="Base"/> used only as the <c>source</c> of a conversion report entry (the
   /// TypeLoader only accepts assembly-scanned registered types — never a custom subclass).</summary>
   private static Base Source(string appId) => new() { applicationId = appId, id = appId };
 }
-#endif
