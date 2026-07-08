@@ -402,7 +402,7 @@ public class RhinoArtifactRootObjectBuilder(
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogWarning(ex, "Skipped Region SGEO encode on {AppId}; hatch will receive as mesh", co.ApplicationId);
+        logger.LogWarning(ex, "Skipped Region SGEO encode on {AppId}; hatch sent as display mesh only", co.ApplicationId);
       }
     }
 
