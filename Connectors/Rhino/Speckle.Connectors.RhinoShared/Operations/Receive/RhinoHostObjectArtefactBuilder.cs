@@ -20,9 +20,9 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoRenderMaterial = Rhino.Render.RenderMaterial;
 
@@ -67,7 +67,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   )
   {
     // All Rhino document mutation happens on the main thread in one hop (no awaits inside → no sync-over-async deadlock).
-    return _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
+    return _threadContext.RunOnMain(() =>
+      BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken)
+    );
   }
 
 #pragma warning disable CA1506
@@ -84,7 +86,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     using var activity = _activityFactory.Start("Build (artefact)");
 
     // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
-    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Receive, projectName, modelName, null, _logger);
+    using var session = ArtefactSessionLog.Start(
+      "Rhino",
+      ArtefactDirection.Receive,
+      projectName,
+      modelName,
+      null,
+      _logger
+    );
     session.SetStat("objects", bundle.ObjectAppIds.Count);
     session.SetStat("geometryBlobs", bundle.Geometries.Count);
     session.SetStat("definitions", bundle.Nodes.Values.Count(n => n.Kind == NodeKind.Definition));
@@ -144,9 +153,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
           if (geometries.Count == 0)
           {
-            session.RecordObject(appId, "Speckle.Object", Status.ERROR, "did not convert to any native geometry", sw.ElapsedMilliseconds);
+            session.RecordObject(
+              appId,
+              "Speckle.Object",
+              Status.ERROR,
+              "did not convert to any native geometry",
+              sw.ElapsedMilliseconds
+            );
             conversionResults.Add(
-              new(Status.ERROR, source, null, null, new ConversionException("Object did not convert to any native geometry"))
+              new(
+                Status.ERROR,
+                source,
+                null,
+                null,
+                new ConversionException("Object did not convert to any native geometry")
+              )
             );
             continue;
           }
@@ -175,7 +196,18 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       onOperationProgressed.Report(new("Converting instances", null));
       using (session.Phase("Instances"))
       {
-        BakeInstances(doc, bundle, rels, baseLayerIndex, layerCache, materialByObject, materialByGeometry, bakedObjectIds, conversionResults, session);
+        BakeInstances(
+          doc,
+          bundle,
+          rels,
+          baseLayerIndex,
+          layerCache,
+          materialByObject,
+          materialByGeometry,
+          bakedObjectIds,
+          conversionResults,
+          session
+        );
       }
     }
 
@@ -398,7 +430,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       session.Increment("placementsAttempted");
       int objK = edge.Src;
       int instNodeK = edge.Dst;
-      if (!bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      if (
+        !bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId)
+      )
       {
         continue;
       }
@@ -406,9 +440,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var sw = Stopwatch.StartNew();
       if (instNode.DefRef is not int defNodeK || !defIndexByNode.TryGetValue(defNodeK, out int defIndex))
       {
-        session.RecordObject(appId, "Instance (Block)", Status.ERROR, "references a definition with no geometry", sw.ElapsedMilliseconds);
+        session.RecordObject(
+          appId,
+          "Instance (Block)",
+          Status.ERROR,
+          "references a definition with no geometry",
+          sw.ElapsedMilliseconds
+        );
         conversionResults.Add(
-          new(Status.ERROR, source, null, null, new ConversionException("Instance references a definition with no geometry"))
+          new(
+            Status.ERROR,
+            source,
+            null,
+            null,
+            new ConversionException("Instance references a definition with no geometry")
+          )
         );
         continue;
       }
@@ -429,8 +475,16 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var id = doc.Objects.AddInstanceObject(defIndex, transform, atts);
       if (id == Guid.Empty)
       {
-        session.RecordObject(appId, "Instance (Block)", Status.ERROR, "AddInstanceObject failed", sw.ElapsedMilliseconds);
-        conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException("Failed to place instance")));
+        session.RecordObject(
+          appId,
+          "Instance (Block)",
+          Status.ERROR,
+          "AddInstanceObject failed",
+          sw.ElapsedMilliseconds
+        );
+        conversionResults.Add(
+          new(Status.ERROR, source, null, null, new ConversionException("Failed to place instance"))
+        );
         continue;
       }
       bakedObjectIds.Add(id.ToString());
@@ -462,7 +516,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
-  private static int GetOrCreateLayer(RhinoDoc doc, IReadOnlyList<string> segments, int baseLayerIndex, Dictionary<string, int> cache)
+  private static int GetOrCreateLayer(
+    RhinoDoc doc,
+    IReadOnlyList<string> segments,
+    int baseLayerIndex,
+    Dictionary<string, int> cache
+  )
   {
     int parentIndex = baseLayerIndex;
     var soFar = new List<string>();
@@ -573,7 +632,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
-    bundle.Properties.TryGetValue(objK, out var props) && props.TryGetValue("units", out var v) && v is string s && s.Length > 0
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("units", out var v)
+    && v is string s
+    && s.Length > 0
       ? s
       : bundle.Units;
 

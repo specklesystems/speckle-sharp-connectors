@@ -1,9 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-#if NETFRAMEWORK
-using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
-#endif
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
@@ -23,12 +20,15 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 using AcadColor = Autodesk.AutoCAD.Colors.Color;
 using AcadEntity = Autodesk.AutoCAD.DatabaseServices.Entity;
 using AcadMaterial = Autodesk.AutoCAD.DatabaseServices.Material;
+#if NETFRAMEWORK
+using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
+#endif
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -77,7 +77,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
-  ) => _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
+  ) =>
+    _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
 
 #pragma warning disable CA1506
   private HostObjectBuilderResult BakeAll(
@@ -91,7 +92,14 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     var baseLayerName = _autocadContext.RemoveInvalidChars($"Project {projectName}: Model {modelName}");
     using var activity = _activityFactory.Start("Build (artefact)");
-    using var session = ArtefactSessionLog.Start("Autocad", ArtefactDirection.Receive, projectName, modelName, null, _logger);
+    using var session = ArtefactSessionLog.Start(
+      "Autocad",
+      ArtefactDirection.Receive,
+      projectName,
+      modelName,
+      null,
+      _logger
+    );
     session.SetStat("objects", bundle.ObjectAppIds.Count);
     session.SetStat("geometryBlobs", bundle.Geometries.Count);
     session.SetStat("definitions", bundle.Nodes.Values.Count(n => n.Kind == NodeKind.Definition));
@@ -172,8 +180,23 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
             if (ids.Count == 0)
             {
-              session.RecordObject(appId, srcType, Status.ERROR, "did not convert to any native geometry", sw.ElapsedMilliseconds);
-              conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException("Object did not convert to any native geometry"), srcType));
+              session.RecordObject(
+                appId,
+                srcType,
+                Status.ERROR,
+                "did not convert to any native geometry",
+                sw.ElapsedMilliseconds
+              );
+              conversionResults.Add(
+                new(
+                  Status.ERROR,
+                  source,
+                  null,
+                  null,
+                  new ConversionException("Object did not convert to any native geometry"),
+                  srcType
+                )
+              );
               continue;
             }
 
@@ -195,7 +218,19 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         onOperationProgressed.Report(new("Converting instances", null));
         using (session.Phase("Instances"))
         {
-          BakeInstances(bundle, rels, db, tr, baseLayerName, layerCache, materialIdByGeometry, materialIdByObject, bakedObjectIds, conversionResults, session);
+          BakeInstances(
+            bundle,
+            rels,
+            db,
+            tr,
+            baseLayerName,
+            layerCache,
+            materialIdByGeometry,
+            materialIdByObject,
+            bakedObjectIds,
+            conversionResults,
+            session
+          );
         }
       }
 
@@ -368,9 +403,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       return;
     }
     // PolyFaceMesh face vertex indices are 1-based; 0 in the 4th slot marks a triangle.
-    var face = i4 is int q && q >= 0 && q < vertexCount
-      ? new FaceRecord((short)(i1 + 1), (short)(i2 + 1), (short)(i3 + 1), (short)(q + 1))
-      : new FaceRecord((short)(i1 + 1), (short)(i2 + 1), (short)(i3 + 1), 0);
+    var face =
+      i4 is int q && q >= 0 && q < vertexCount
+        ? new FaceRecord((short)(i1 + 1), (short)(i2 + 1), (short)(i3 + 1), (short)(q + 1))
+        : new FaceRecord((short)(i1 + 1), (short)(i2 + 1), (short)(i3 + 1), 0);
     mesh.AppendFaceRecord(face);
     tr.AddNewlyCreatedDBObject(face, true);
   }
@@ -419,7 +455,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       session.Increment("definitionsSeen");
       var btr = new BlockTableRecord
       {
-        Name = UniqueBlockName(blockTable, _autocadContext.RemoveInvalidChars($"{kv.Value.Name ?? "Definition"}-(def-{kv.Key})-{baseLayerName}")),
+        Name = UniqueBlockName(
+          blockTable,
+          _autocadContext.RemoveInvalidChars($"{kv.Value.Name ?? "Definition"}-(def-{kv.Key})-{baseLayerName}")
+        ),
         Origin = Point3d.Origin,
       };
       ObjectId defId = blockTable.Add(btr);
@@ -455,7 +494,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       session.Increment("placementsAttempted");
       int objK = edge.Src;
       int instNodeK = edge.Dst;
-      if (!bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      if (
+        !bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId)
+      )
       {
         continue;
       }
@@ -465,14 +506,33 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var sw = Stopwatch.StartNew();
       if (instNode.DefRef is not int defNodeK || !defIdByNode.TryGetValue(defNodeK, out ObjectId defId))
       {
-        session.RecordObject(appId, srcType, Status.ERROR, "references a definition with no geometry", sw.ElapsedMilliseconds);
-        conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException("Instance references a definition with no geometry"), srcType));
+        session.RecordObject(
+          appId,
+          srcType,
+          Status.ERROR,
+          "references a definition with no geometry",
+          sw.ElapsedMilliseconds
+        );
+        conversionResults.Add(
+          new(
+            Status.ERROR,
+            source,
+            null,
+            null,
+            new ConversionException("Instance references a definition with no geometry"),
+            srcType
+          )
+        );
         continue;
       }
 
       try
       {
-        Matrix3d matrix = BuildMatrix3d(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : docUnits, docUnits);
+        Matrix3d matrix = BuildMatrix3d(
+          instNode.Transform,
+          instNode.Units is { Length: > 0 } u ? u : docUnits,
+          docUnits
+        );
         Point3d insertion = Point3d.Origin.TransformBy(matrix);
         string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache);
         var blockRef = new BlockReference(insertion, defId) { BlockTransform = matrix, Layer = layerName };
@@ -483,7 +543,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         modelSpace.AppendEntity(blockRef);
         tr.AddNewlyCreatedDBObject(blockRef, true);
         bakedObjectIds.Add(blockRef.ObjectId.ToString());
-        conversionResults.Add(new(Status.SUCCESS, source, blockRef.ObjectId.ToString(), "Instance (Block)", null, srcType));
+        conversionResults.Add(
+          new(Status.SUCCESS, source, blockRef.ObjectId.ToString(), "Instance (Block)", null, srcType)
+        );
         session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -508,7 +570,14 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // ── layers ────────────────────────────────────────────────────────────────────────────────────────────
   // AutoCAD has a flat layer namespace: the scene-view segments are joined into one hyphen-separated layer name under
   // the model prefix (mirrors AutocadLayerBaker's flattening), then created on demand.
-  private string ResolveLayer(ArtefactBundle bundle, int objK, string baseLayerName, Database db, Transaction tr, HashSet<string> cache)
+  private string ResolveLayer(
+    ArtefactBundle bundle,
+    int objK,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> cache
+  )
   {
     var segments = SceneViewResolver.Segments(bundle, objK);
     string name = segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments)}";
@@ -535,7 +604,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
-  private Dictionary<int, ObjectId> CreateMaterials(Database db, Transaction tr, ArtefactBundle bundle, string baseLayerName)
+  private Dictionary<int, ObjectId> CreateMaterials(
+    Database db,
+    Transaction tr,
+    ArtefactBundle bundle,
+    string baseLayerName
+  )
   {
     var result = new Dictionary<int, ObjectId>();
     var materialDict = (DBDictionary)tr.GetObject(db.MaterialDictionaryId, OpenMode.ForWrite);
@@ -637,15 +711,30 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Vector3d newUp = newForward.CrossProduct(right).GetNormal();
     return
     [
-      right.X, newUp.X, newForward.X, matrix[0, 3],
-      right.Y, newUp.Y, newForward.Y, matrix[1, 3],
-      right.Z, newUp.Z, newForward.Z, matrix[2, 3],
-      0, 0, 0, 1,
+      right.X,
+      newUp.X,
+      newForward.X,
+      matrix[0, 3],
+      right.Y,
+      newUp.Y,
+      newForward.Y,
+      matrix[1, 3],
+      right.Z,
+      newUp.Z,
+      newForward.Z,
+      matrix[2, 3],
+      0,
+      0,
+      0,
+      1,
     ];
   }
 
   private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
-    bundle.Properties.TryGetValue(objK, out var props) && props.TryGetValue("units", out var v) && v is string s && s.Length > 0
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("units", out var v)
+    && v is string s
+    && s.Length > 0
       ? s
       : bundle.Units;
 
@@ -659,7 +748,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var modelSpace = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
       foreach (ObjectId id in modelSpace)
       {
-        if (tr.GetObject(id, OpenMode.ForRead) is AcadEntity entity && entity.Layer.StartsWith(baseLayerName, StringComparison.Ordinal))
+        if (
+          tr.GetObject(id, OpenMode.ForRead) is AcadEntity entity
+          && entity.Layer.StartsWith(baseLayerName, StringComparison.Ordinal)
+        )
         {
           entity.UpgradeOpen();
           entity.Erase();
@@ -693,7 +785,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
-    props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0 ? s : "Speckle Object";
+    props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0
+      ? s
+      : "Speckle Object";
 
   /// <summary>Minimal <see cref="Base"/> carrier used only as the <c>source</c> of a conversion report entry. A plain
   /// <see cref="Base"/> (not a custom subclass) so the assembly-scanned TypeLoader accepts it.</summary>

@@ -20,6 +20,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RhinoLayer = Rhino.DocObjects.Layer;
@@ -89,8 +90,8 @@ public class RhinoArtifactRootObjectBuilder(
     CollectedModel collected;
     using (session.Phase("Collect"))
     {
-      collected = await threadContext.RunOnMainAsync(
-        () => Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
       );
     }
 
@@ -157,7 +158,14 @@ public class RhinoArtifactRootObjectBuilder(
         int layerIndex = rhinoObject.Attributes.LayerIndex;
         CollectLayerChain(doc, layerIndex, layers, usedLayers);
 
-        CollectedObject collected = CollectObject(rhinoObject, applicationId, sourceType, layerIndex, units, instanceProxies);
+        CollectedObject collected = CollectObject(
+          rhinoObject,
+          applicationId,
+          sourceType,
+          layerIndex,
+          units,
+          instanceProxies
+        );
         collectedObjects.Add(collected);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, collected.Converted));
         session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -314,7 +322,11 @@ public class RhinoArtifactRootObjectBuilder(
   {
     int objK = pipeline.InternObject(co.ApplicationId);
     pipeline.InCollection(objK, collK, 0);
-    pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType));
+    pipeline.AddProperties(
+      co.ApplicationId,
+      co.Properties,
+      RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType)
+    );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
     if (co.Converted is InstanceProxy instanceProxy)
@@ -370,7 +382,12 @@ public class RhinoArtifactRootObjectBuilder(
       {
         // A display fragment the SGEO encoder doesn't support (hatch/text/…) is skipped without failing the
         // whole object — its solid blob + properties still land.
-        logger.LogWarning(ex, "Skipped unsupported display geometry {Type} on {AppId}", fragment.speckle_type, co.ApplicationId);
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported display geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          co.ApplicationId
+        );
       }
     }
 
@@ -458,7 +475,12 @@ public class RhinoArtifactRootObjectBuilder(
     return collK;
   }
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
@@ -469,7 +491,25 @@ public class RhinoArtifactRootObjectBuilder(
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>
-    new[] { m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44 };
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
 
 #if NETFRAMEWORK
   // Parquet.Net Zstd-compresses row groups via IronCompress's native nironcompress.dll, P/Invoked through a bare
@@ -481,7 +521,9 @@ public class RhinoArtifactRootObjectBuilder(
     CharSet = System.Runtime.InteropServices.CharSet.Unicode,
     SetLastError = true
   )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
+    System.Runtime.InteropServices.DllImportSearchPath.System32
+  )]
   private static extern IntPtr LoadLibrary(string lpFileName);
 
   private static int s_zstdNativePreloaded;
