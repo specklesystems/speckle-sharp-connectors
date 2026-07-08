@@ -22,6 +22,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+using RG = Rhino.Geometry;
 using RhinoLayer = Rhino.DocObjects.Layer;
 using SOG = Speckle.Objects.Geometry;
 
@@ -207,7 +208,24 @@ public class RhinoArtifactRootObjectBuilder(
     Base rawGeometry = converter.Convert(rhinoObject);
     var properties = propertiesExtractor.GetProperties(rhinoObject);
     propertiesExtractor.AddGeometryProperties(properties, rawGeometry, units);
+    if (rhinoObject.Geometry is RG.Hatch hatch)
+    {
+      AddHatchProperties(properties, hatch);
+    }
     return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry);
+  }
+
+  // Hatch styling → EAV so receive can rebuild the pattern. The SGEO Region blob carries only the boundary geometry;
+  // the pattern name/rotation/scale are per-object attributes and ride the eav properties, resolved by name on receive.
+  private void AddHatchProperties(Dictionary<string, object?> properties, RG.Hatch hatch)
+  {
+    var patterns = converterSettings.Current.Document.HatchPatterns;
+    if (hatch.PatternIndex >= 0 && hatch.PatternIndex < patterns.Count)
+    {
+      properties["hatchPatternName"] = patterns[hatch.PatternIndex].Name;
+    }
+    properties["hatchRotation"] = hatch.PatternRotation;
+    properties["hatchScale"] = hatch.PatternScale;
   }
 
   // Walks a layer + its ancestors (via ParentLayerId) into the snapshot, keyed by layer index. RhinoCommon-bound.
@@ -370,6 +388,22 @@ public class RhinoArtifactRootObjectBuilder(
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
       pipeline.Solid(objK, solidK, 0);
+    }
+
+    // Hatch (Region): SGEO-encode the boundary + inner loops as the authoritative geometry (SOLID rel) so receive
+    // rebuilds a native Hatch (pattern styling rides EAV). Display meshes still ride the DISPLAY rel below (for the
+    // viewer). Skipped for definition members. If the Region can't encode, the display meshes still land.
+    if (!isDefinitionMember && rawGeometry is SOG.Region region)
+    {
+      try
+      {
+        int regionK = pipeline.AddGeometry($"{co.ApplicationId}:region", region);
+        pipeline.Solid(objK, regionK, 0);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Skipped Region SGEO encode on {AppId}; hatch will receive as mesh", co.ApplicationId);
+      }
     }
 
     // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).

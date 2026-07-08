@@ -159,6 +159,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
+            if (geom is RG.Hatch hatch)
+            {
+              ApplyHatchPattern(doc, hatch, bundle, objK); // restore pattern/rotation/scale carried as EAV
+            }
             ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
@@ -357,6 +361,64 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
     return doc.Objects.Add(geom, atts);
+  }
+
+  // Restores hatch pattern styling (name → doc pattern index, rotation, scale) carried as EAV by the Rhino send onto a
+  // Hatch rebuilt from a SGEO Region. Resolves the pattern by name in the receiving doc; if it's absent, the Hatch keeps
+  // the default pattern the Region→Hatch converter produced.
+  private static void ApplyHatchPattern(RhinoDoc doc, RG.Hatch hatch, ArtefactBundle bundle, int objK)
+  {
+    // Object properties are reconstructed nested under a "properties" sub-dict (the send flattens co.Properties under
+    // the "properties." path prefix); root scalars like units/name stay bare. The hatch styling lives in that subtree.
+    if (
+      !bundle.Properties.TryGetValue(objK, out var root)
+      || !root.TryGetValue("properties", out var sub)
+      || sub is not Dictionary<string, object?> props
+    )
+    {
+      return;
+    }
+    if (props.TryGetValue("hatchPatternName", out var pv) && pv is string patternName && patternName.Length > 0)
+    {
+      var pattern = doc.HatchPatterns.FindName(patternName);
+      if (pattern != null)
+      {
+        hatch.PatternIndex = pattern.Index;
+      }
+    }
+    if (props.TryGetValue("hatchRotation", out var rv) && TryToDouble(rv, out double rotation))
+    {
+      hatch.PatternRotation = rotation;
+    }
+    if (props.TryGetValue("hatchScale", out var sv) && TryToDouble(sv, out double scale) && scale > 0)
+    {
+      hatch.PatternScale = scale;
+    }
+  }
+
+  private static bool TryToDouble(object? value, out double result)
+  {
+    switch (value)
+    {
+      case double d:
+        result = d;
+        return true;
+      case float f:
+        result = f;
+        return true;
+      case int i:
+        result = i;
+        return true;
+      case long l:
+        result = l;
+        return true;
+      case string s when double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed):
+        result = parsed;
+        return true;
+      default:
+        result = 0;
+        return false;
+    }
   }
 
   // ── instances ─────────────────────────────────────────────────────────────────────────────────────────
