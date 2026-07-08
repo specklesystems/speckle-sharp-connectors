@@ -11,6 +11,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Other;
@@ -208,11 +209,16 @@ public class RhinoArtifactRootObjectBuilder(
     Base rawGeometry = converter.Convert(rhinoObject);
     var properties = propertiesExtractor.GetProperties(rhinoObject);
     propertiesExtractor.AddGeometryProperties(properties, rawGeometry, units);
+    RawEncoding? rawSolid = null;
     if (rhinoObject.Geometry is RG.Hatch hatch)
     {
+      // A hatch converts to a display-only Region (no IRawEncodedObject). Serialize the native hatch to a 3dm blob here
+      // (main thread) so it can be sent as the authoritative SOLID for a lossless Rhino→Rhino receive; the pattern
+      // styling still rides eav for the viewer/other receivers.
       AddHatchProperties(properties, hatch);
+      rawSolid = RawEncodingCreator.Encode(hatch, converterSettings.Current.Document);
     }
-    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry);
+    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry, rawSolid);
   }
 
   // Hatch styling → EAV so receive can rebuild the pattern. The SGEO Region blob carries only the boundary geometry;
@@ -381,29 +387,18 @@ public class RhinoArtifactRootObjectBuilder(
       displayGeometry = [rawGeometry];
     }
 
-    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids. Skipped for definition members —
-    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    // A hatch has no IRawEncodedObject, so its Rhino-native 3dm blob (serialized in phase 1) stands in as the raw
+    // encoding — it flows through the same SOLID path as Brep/Extrusion/SubD below.
+    rawEncoding ??= co.RawSolid;
+
+    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids (Brep/Extrusion/SubD, and hatches).
+    // Skipped for definition members — a member is never a standalone solid; it renders only through its definition's
+    // display meshes (DEFINES).
     if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
       pipeline.Solid(objK, solidK, 0);
-    }
-
-    // Hatch (Region): SGEO-encode the boundary + inner loops as the authoritative geometry (SOLID rel) so receive
-    // rebuilds a native Hatch (pattern styling rides EAV). Display meshes still ride the DISPLAY rel below (for the
-    // viewer). Skipped for definition members. If the Region can't encode, the display meshes still land.
-    if (!isDefinitionMember && rawGeometry is SOG.Region region)
-    {
-      try
-      {
-        int regionK = pipeline.AddGeometry($"{co.ApplicationId}:region", region);
-        pipeline.Solid(objK, regionK, 0);
-      }
-      catch (Exception ex) when (!ex.IsFatal())
-      {
-        logger.LogWarning(ex, "Skipped Region SGEO encode on {AppId}; hatch sent as display mesh only", co.ApplicationId);
-      }
     }
 
     // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).
@@ -580,7 +575,8 @@ public class RhinoArtifactRootObjectBuilder(
     string SourceType,
     int LayerIndex,
     Dictionary<string, object?> Properties,
-    Base Converted // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    Base Converted, // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    RawEncoding? RawSolid = null // a Rhino-native 3dm blob produced in phase 1 when the object has no IRawEncodedObject (hatch)
   );
 
   private sealed record CollectedModel(
