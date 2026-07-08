@@ -64,6 +64,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RhinoMaterialUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\SpeckleRhinoPanelHost.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\DisableRedrawScope.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RhinoHatchStyler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RhinoHostObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RhinoHostObjectArtefactBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\RhinoRootObjectBuilder.cs" />

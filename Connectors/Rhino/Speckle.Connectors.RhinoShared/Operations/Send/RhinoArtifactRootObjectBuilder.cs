@@ -11,6 +11,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Other;
@@ -22,6 +23,7 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+using RG = Rhino.Geometry;
 using RhinoLayer = Rhino.DocObjects.Layer;
 using SOG = Speckle.Objects.Geometry;
 
@@ -207,7 +209,29 @@ public class RhinoArtifactRootObjectBuilder(
     Base rawGeometry = converter.Convert(rhinoObject);
     var properties = propertiesExtractor.GetProperties(rhinoObject);
     propertiesExtractor.AddGeometryProperties(properties, rawGeometry, units);
-    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry);
+    RawEncoding? rawSolid = null;
+    if (rhinoObject.Geometry is RG.Hatch hatch)
+    {
+      // A hatch converts to a display-only Region (no IRawEncodedObject). Serialize the native hatch to a 3dm blob here
+      // (main thread) so it can be sent as the authoritative SOLID for a lossless Rhino→Rhino receive; the pattern
+      // styling still rides eav for the viewer/other receivers.
+      AddHatchProperties(properties, hatch);
+      rawSolid = RawEncodingCreator.Encode(hatch, converterSettings.Current.Document);
+    }
+    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry, rawSolid);
+  }
+
+  // Hatch styling → EAV so receive can rebuild the pattern. The SGEO Region blob carries only the boundary geometry;
+  // the pattern name/rotation/scale are per-object attributes and ride the eav properties, resolved by name on receive.
+  private void AddHatchProperties(Dictionary<string, object?> properties, RG.Hatch hatch)
+  {
+    var patterns = converterSettings.Current.Document.HatchPatterns;
+    if (hatch.PatternIndex >= 0 && hatch.PatternIndex < patterns.Count)
+    {
+      properties["hatchPatternName"] = patterns[hatch.PatternIndex].Name;
+    }
+    properties["hatchRotation"] = hatch.PatternRotation;
+    properties["hatchScale"] = hatch.PatternScale;
   }
 
   // Walks a layer + its ancestors (via ParentLayerId) into the snapshot, keyed by layer index. RhinoCommon-bound.
@@ -363,8 +387,13 @@ public class RhinoArtifactRootObjectBuilder(
       displayGeometry = [rawGeometry];
     }
 
-    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids. Skipped for definition members —
-    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    // A hatch has no IRawEncodedObject, so its Rhino-native 3dm blob (serialized in phase 1) stands in as the raw
+    // encoding — it flows through the same SOLID path as Brep/Extrusion/SubD below.
+    rawEncoding ??= co.RawSolid;
+
+    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids (Brep/Extrusion/SubD, and hatches).
+    // Skipped for definition members — a member is never a standalone solid; it renders only through its definition's
+    // display meshes (DEFINES).
     if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
@@ -546,7 +575,8 @@ public class RhinoArtifactRootObjectBuilder(
     string SourceType,
     int LayerIndex,
     Dictionary<string, object?> Properties,
-    Base Converted // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    Base Converted, // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    RawEncoding? RawSolid = null // a Rhino-native 3dm blob produced in phase 1 when the object has no IRawEncodedObject (hatch)
   );
 
   private sealed record CollectedModel(

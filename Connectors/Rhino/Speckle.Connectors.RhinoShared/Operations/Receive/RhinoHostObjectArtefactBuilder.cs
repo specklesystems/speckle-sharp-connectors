@@ -159,6 +159,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
+            if (geom is RG.Hatch hatch)
+            {
+              // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
+              bundle.Properties.TryGetValue(objK, out var hatchProps);
+              RhinoHatchStyler.Apply(doc, hatch, hatchProps, _converterSettings.Current.SpeckleUnits);
+            }
             ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
