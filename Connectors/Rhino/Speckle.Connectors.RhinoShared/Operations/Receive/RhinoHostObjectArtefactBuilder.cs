@@ -47,6 +47,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RhinoHostObjectArtefactBuilder> _logger;
 
+  // Last per-geometry decode/convert failure reason (type + exception), surfaced into the object's session-log error so
+  // a failed curve/point isn't just "did not convert to any native geometry". Receive is single-threaded (main thread).
+  private string? _lastDecodeFailure;
+
   public RhinoHostObjectArtefactBuilder(
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
     IRootToHostConverter converter,
@@ -148,10 +152,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
           if (geometries.Count == 0)
           {
-            session.RecordObject(appId, "Speckle.Object", Status.ERROR, "did not convert to any native geometry", sw.ElapsedMilliseconds);
-            conversionResults.Add(
-              new(Status.ERROR, source, null, null, new ConversionException("Object did not convert to any native geometry"))
-            );
+            var reason = _lastDecodeFailure ?? "did not convert to any native geometry";
+            session.RecordObject(appId, "Speckle.Object", Status.ERROR, reason, sw.ElapsedMilliseconds);
+            conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException(reason)));
             continue;
           }
 
@@ -201,6 +204,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string fallbackUnits
   )
   {
+    _lastDecodeFailure = null;
     var result = new List<RG.GeometryBase>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
@@ -246,13 +250,25 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       // Curves, points, and other primitives: decode to a Speckle geometry object and convert via the Rhino ToHost
       // converter, which already scales to doc units (so no ApplyUnits here). An unsupported primitive degrades to
       // nothing rather than aborting the whole receive.
+      Base? decoded = null;
       try
       {
-        return ConvertSpeckleGeometry(SgeoDecoder.Decode(g.Content));
+        decoded = SgeoDecoder.Decode(g.Content);
+        var converted = ConvertSpeckleGeometry(decoded);
+        if (converted.Count == 0)
+        {
+          // decode + convert both ran without throwing, but produced no bakeable geometry (e.g. a converter returned an
+          // unhandled result shape). Record it so it isn't a silent drop.
+          _lastDecodeFailure = $"geom {geomK} ({g.Type}, {decoded.speckle_type}): converter returned no native geometry";
+          _logger.LogWarning("Skipped SGEO geometry {GeomK}: {Reason}", geomK, _lastDecodeFailure);
+        }
+        return converted;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogWarning(ex, "Skipped SGEO geometry index {GeomK}: no host conversion", geomK);
+        string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+        _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
+        _logger.LogWarning(ex, "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes) at {Stage}: {Error}", geomK, g.Type, g.Content.Length, stage, ex.Message);
       }
     }
     return new List<RG.GeometryBase>();
