@@ -32,7 +32,8 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Rhino document, talking only to
 /// the neutral dense-int graph + raw Rhino API — no v1 <c>Base</c>/<c>DataObject</c>/<c>Collection</c>/proxy types and
 /// no traversal/converter pipeline. Solids come from raw 3dm blobs (<see cref="RawEncodingToHost.Convert3dm"/>), meshes
-/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="RG.Mesh"/>; layers from the
+/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="RG.Mesh"/>, and other SGEO
+/// primitives (curves, points) decode via <see cref="SgeoDecoder.Decode"/> + the Rhino ToHost converter; layers from the
 /// COLLECTION tree; materials from MATERIAL nodes (HAS_MATERIAL). Instances follow the host-agnostic model used by
 /// Revit and Rhino alike: a DEFINITION node owns its geometry directly (DEFINES → geometry), and each DISPLAY_INSTANCE
 /// edge (object → INSTANCE node) places that definition with the instance node's transform. The receive-side twin of
@@ -41,18 +42,21 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
+  private readonly IRootToHostConverter _converter;
   private readonly IThreadContext _threadContext;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RhinoHostObjectArtefactBuilder> _logger;
 
   public RhinoHostObjectArtefactBuilder(
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
+    IRootToHostConverter converter,
     IThreadContext threadContext,
     ISdkActivityFactory activityFactory,
     ILogger<RhinoHostObjectArtefactBuilder> logger
   )
   {
     _converterSettings = converterSettings;
+    _converter = converter;
     _threadContext = threadContext;
     _activityFactory = activityFactory;
     _logger = logger;
@@ -184,7 +188,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
-  private static List<RG.GeometryBase> DecodeObjectGeometry(
+  private List<RG.GeometryBase> DecodeObjectGeometry(
     int objK,
     ArtefactBundle bundle,
     ArtefactRelations rels,
@@ -210,7 +214,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Decodes one geometry index to Rhino geometry, scaled to doc units (SGEO carries its own units; 3dm uses fallback).
-  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
+  private List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -223,14 +227,42 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ApplyUnits(geoms, fallbackUnits);
       return geoms;
     }
-    if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    if (g.IsSgeo)
     {
-      var mesh = BuildMesh(sm);
-      var list = new List<RG.GeometryBase> { mesh };
-      ApplyUnits(list, sm.Units);
-      return list;
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
+      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      {
+        var mesh = BuildMesh(sm);
+        var list = new List<RG.GeometryBase> { mesh };
+        ApplyUnits(list, sm.Units);
+        return list;
+      }
+      // Curves, points, and other primitives: decode to a Speckle geometry object and convert via the Rhino ToHost
+      // converter, which already scales to doc units (so no ApplyUnits here). An unsupported primitive degrades to
+      // nothing rather than aborting the whole receive.
+      try
+      {
+        return ConvertSpeckleGeometry(SgeoDecoder.Decode(g.Content));
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Skipped SGEO geometry index {GeomK}: no host conversion", geomK);
+      }
     }
     return new List<RG.GeometryBase>();
+  }
+
+  // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the ToHost converter. The top-level converter
+  // returns a single GeometryBase for primitives (curve/point/…) or a list for one-to-many cases; both are unwrapped.
+  private List<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded)
+  {
+    var converted = _converter.Convert(decoded);
+    return converted switch
+    {
+      RG.GeometryBase gb => new List<RG.GeometryBase> { gb },
+      IEnumerable<RG.GeometryBase> many => many.ToList(),
+      _ => new List<RG.GeometryBase>(),
+    };
   }
 
   private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
