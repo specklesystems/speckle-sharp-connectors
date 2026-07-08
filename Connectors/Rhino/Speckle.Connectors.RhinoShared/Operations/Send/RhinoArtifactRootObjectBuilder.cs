@@ -207,9 +207,7 @@ public class RhinoArtifactRootObjectBuilder(
     Base rawGeometry = converter.Convert(rhinoObject);
     var properties = propertiesExtractor.GetProperties(rhinoObject);
     propertiesExtractor.AddGeometryProperties(properties, rawGeometry, units);
-    RawEncoding? rawSolid =
-      rawGeometry is SOG.IRawEncodedObject ? null : RhinoHatchSolidEncoder.TryEncode(rhinoObject, converterSettings.Current.Document);
-    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry, rawSolid);
+    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry);
   }
 
   // Walks a layer + its ancestors (via ParentLayerId) into the snapshot, keyed by layer index. RhinoCommon-bound.
@@ -367,10 +365,9 @@ public class RhinoArtifactRootObjectBuilder(
 
     // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids. Skipped for definition members —
     // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
-    RawEncoding? solid = rawEncoding ?? co.RawSolid;
-    if (!isDefinitionMember && solid is not null && solid.format == RawEncodingFormats.RHINO_3DM)
+    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
-      byte[] solidBytes = Convert.FromBase64String(solid.contents);
+      byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
       pipeline.Solid(objK, solidK, 0);
     }
@@ -549,8 +546,7 @@ public class RhinoArtifactRootObjectBuilder(
     string SourceType,
     int LayerIndex,
     Dictionary<string, object?> Properties,
-    Base Converted, // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
-    RawEncoding? RawSolid = null
+    Base Converted // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
   );
 
   private sealed record CollectedModel(

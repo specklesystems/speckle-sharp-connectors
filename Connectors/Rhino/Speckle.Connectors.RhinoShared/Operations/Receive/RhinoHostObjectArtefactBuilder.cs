@@ -356,10 +356,6 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
-    if (geom is RG.Hatch hatch)
-    {
-      return doc.Objects.AddHatch(hatch, atts);
-    }
     return doc.Objects.Add(geom, atts);
   }
 
