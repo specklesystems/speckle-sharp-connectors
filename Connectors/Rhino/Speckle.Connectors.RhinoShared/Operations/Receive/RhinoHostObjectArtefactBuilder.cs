@@ -522,7 +522,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         {
           foreach (var geomK in memberGeomKs)
           {
-            var decoded = DecodeGeometryIndex(geomK, bundle, docUnits);
+            // Definition geometry is in the model's source units; the raw-3dm path rescales from this fallback to the
+            // doc units. Pass the bundle (source) units, NOT docUnits — otherwise a 3dm member isn't rescaled and a
+            // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
+            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
             materialByGeometry.TryGetValue(geomK, out Guid mg);
             foreach (var geom in decoded)
             {
