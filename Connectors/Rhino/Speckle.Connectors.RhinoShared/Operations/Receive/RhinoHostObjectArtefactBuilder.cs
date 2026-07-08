@@ -345,52 +345,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     var docUnits = _converterSettings.Current.SpeckleUnits;
 
-    // definitions: a DEFINITION node owns its geometry directly (DEFINES → geometry blobs). The geometry's material
-    // (HAS_MATERIAL → geometry) is baked onto the definition members so placed instances aren't all grey.
-    var defIndexByNode = new Dictionary<int, int>();
-    foreach (var kv in bundle.Nodes)
-    {
-      if (kv.Value.Kind != NodeKind.Definition || !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs))
-      {
-        continue;
-      }
-      session.Increment("definitionsSeen");
-      var geometryList = new List<RG.GeometryBase>();
-      var attributeList = new List<ObjectAttributes>();
-      foreach (var geomK in geomKs)
-      {
-        var decoded = DecodeGeometryIndex(geomK, bundle, docUnits);
-        materialByGeometry.TryGetValue(geomK, out Guid mg);
-        foreach (var geom in decoded)
-        {
-          geometryList.Add(geom);
-          // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt
-          // the definition; the doc owns them for the document lifetime.
-#pragma warning disable CA2000
-          var a = new ObjectAttributes();
-#pragma warning restore CA2000
-          if (mg != Guid.Empty)
-          {
-            a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
-            a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-          }
-          attributeList.Add(a);
-        }
-      }
-      if (geometryList.Count == 0)
-      {
-        session.Increment("definitionsEmpty");
-        continue;
-      }
-      var defName = RhinoUtils.CleanBlockDefinitionName($"{kv.Value.Name ?? "Definition"}-(def-{kv.Key})");
-      int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
-      if (defIndex < 0)
-      {
-        session.Increment("definitionsEmpty");
-        continue;
-      }
-      defIndexByNode[kv.Key] = defIndex;
-    }
+    // definitions (incl. nested blocks): a DEFINITION node owns its geometry directly and may contain nested placements.
+    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, session);
 
     // placements: one instance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
     foreach (var edge in rels.DisplayInstanceEdges)
@@ -437,6 +393,123 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       conversionResults.Add(new(Status.SUCCESS, source, id.ToString(), "Instance (Block)"));
       session.RecordObject(appId, "Instance (Block)", Status.SUCCESS, null, sw.ElapsedMilliseconds);
     }
+  }
+
+  // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns
+  // its geometry directly (DEFINES → geometry blobs) and may also contain nested block placements (DEFINES_INSTANCE →
+  // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
+  // child definition's Rhino Guid via an InstanceReferenceGeometry member carrying the nested placement's own transform.
+  // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey.
+  private Dictionary<int, int> BuildDefinitions(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, Guid> materialByGeometry,
+    string docUnits,
+    ArtefactSessionLog session
+  )
+  {
+    var defIndexByNode = new Dictionary<int, int>();
+    var defBuilding = new HashSet<int>();
+
+    int BuildDefinition(int defNodeK)
+    {
+      if (defIndexByNode.TryGetValue(defNodeK, out int already))
+      {
+        return already; // already built (a shared nested definition is reached from several parents)
+      }
+      if (!bundle.Nodes.TryGetValue(defNodeK, out var defNode) || defNode.Kind != NodeKind.Definition)
+      {
+        return -1;
+      }
+      if (!defBuilding.Add(defNodeK))
+      {
+        return -1; // cycle guard — Rhino disallows recursive block definitions; never stack-overflow on a bad bundle
+      }
+      session.Increment("definitionsSeen");
+
+      var geometryList = new List<RG.GeometryBase>();
+      var attributeList = new List<ObjectAttributes>();
+
+      // direct geometry members (DEFINES → geometry blob)
+      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+      {
+        foreach (var geomK in geomKs)
+        {
+          var decoded = DecodeGeometryIndex(geomK, bundle, docUnits);
+          materialByGeometry.TryGetValue(geomK, out Guid mg);
+          foreach (var geom in decoded)
+          {
+            geometryList.Add(geom);
+            // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt
+            // the definition; the doc owns them for the document lifetime.
+#pragma warning disable CA2000
+            var a = new ObjectAttributes();
+#pragma warning restore CA2000
+            if (mg != Guid.Empty)
+            {
+              a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
+              a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+            }
+            attributeList.Add(a);
+          }
+        }
+      }
+
+      // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first (depth-first) and
+      // add an InstanceReferenceGeometry that references it with the nested placement's own transform.
+      if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+      {
+        foreach (var instNodeK in nestedInstNodeKs)
+        {
+          if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+          {
+            continue;
+          }
+          int childDefIndex = BuildDefinition(childDefNodeK);
+          if (childDefIndex < 0)
+          {
+            session.Increment("nestedInstancesUnresolved");
+            continue;
+          }
+          var childDefId = doc.InstanceDefinitions[childDefIndex].Id;
+          var nestedTransform = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : docUnits, docUnits);
+#pragma warning disable CA2000
+          var nestedAtts = new ObjectAttributes();
+#pragma warning restore CA2000
+          geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
+          attributeList.Add(nestedAtts);
+          session.Increment("nestedInstancesPlaced");
+        }
+      }
+
+      defBuilding.Remove(defNodeK);
+
+      if (geometryList.Count == 0)
+      {
+        session.Increment("definitionsEmpty");
+        return -1;
+      }
+      var defName = RhinoUtils.CleanBlockDefinitionName($"{defNode.Name ?? "Definition"}-(def-{defNodeK})");
+      int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
+      if (defIndex < 0)
+      {
+        session.Increment("definitionsEmpty");
+        return -1;
+      }
+      defIndexByNode[defNodeK] = defIndex;
+      return defIndex;
+    }
+
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildDefinition(kv.Key);
+      }
+    }
+
+    return defIndexByNode;
   }
 
   // ── layers ────────────────────────────────────────────────────────────────────────────────────────────
