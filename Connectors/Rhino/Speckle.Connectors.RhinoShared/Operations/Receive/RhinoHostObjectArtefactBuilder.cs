@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Rhino;
@@ -39,6 +40,11 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// edge (object → INSTANCE node) places that definition with the instance node's transform. The receive-side twin of
 /// the send-side <c>RhinoArtifactRootObjectBuilder</c>.
 /// </summary>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "Top-level artefact receive orchestrator; coupling to converters, host API, bundle graph and value nodes is inherent."
+)]
 public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
@@ -121,6 +127,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       (materialByObject, materialByGeometry) = CreateMaterials(doc, bundle, objByGeom);
     }
 
+    // By-object display colours (HAS_COLOR → COLOR node), resolved to owning object like materials. appId → argb.
+    var colorByObject = CreateColors(bundle, objByGeom);
+
     // 3 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
     int total = bundle.ObjectAppIds.Count;
@@ -168,7 +177,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               bundle.Properties.TryGetValue(objK, out var hatchProps);
               RhinoHatchStyler.Apply(doc, hatch, hatchProps, _converterSettings.Current.SpeckleUnits);
             }
-            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId, name));
+            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Speckle.Object"));
@@ -364,6 +373,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     RG.GeometryBase geom,
     int layerIndex,
     Dictionary<string, Guid> materialByObject,
+    Dictionary<string, int> colorByObject,
     string appId,
     string? name
   )
@@ -377,6 +387,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    }
+    if (colorByObject.TryGetValue(appId, out int argb))
+    {
+      atts.ObjectColor = Color.FromArgb(argb);
+      atts.ColorSource = ObjectColorSource.ColorFromObject; // by-object display colour (HAS_COLOR)
     }
     return doc.Objects.Add(geom, atts);
   }
@@ -584,16 +599,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   )
   {
     // Host-agnostic scene-view → grouping segments lives in the SDK (SceneViewResolver) so every connector reuses it.
-    var segments = SceneViewResolver.Segments(bundle, objK);
+    var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
     return segments.Count == 0 ? baseLayerIndex : GetOrCreateLayer(doc, segments, baseLayerIndex, layerCache);
   }
 
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
-  private static int GetOrCreateLayer(RhinoDoc doc, IReadOnlyList<string> segments, int baseLayerIndex, Dictionary<string, int> cache)
+  private static int GetOrCreateLayer(
+    RhinoDoc doc,
+    IReadOnlyList<(string Name, int? Argb)> segments,
+    int baseLayerIndex,
+    Dictionary<string, int> cache
+  )
   {
     int parentIndex = baseLayerIndex;
     var soFar = new List<string>();
-    foreach (var raw in segments)
+    foreach (var (raw, argb) in segments)
     {
       var name = RhinoUtils.CleanLayerName(string.IsNullOrWhiteSpace(raw) ? "unnamed" : raw);
       soFar.Add(name);
@@ -603,7 +623,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         parentIndex = existing;
         continue;
       }
-      int idx = doc.Layers.Add(new Layer { Name = name, ParentLayerId = doc.Layers[parentIndex].Id });
+      var layer = new Layer { Name = name, ParentLayerId = doc.Layers[parentIndex].Id };
+      if (argb is int a)
+      {
+        layer.Color = Color.FromArgb(a); // the layer's source colour, carried on its CONTAINER node's argb
+      }
+      int idx = doc.Layers.Add(layer);
       cache[key] = idx;
       parentIndex = idx;
     }
@@ -659,6 +684,29 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
     return (byObject, byGeometry);
+  }
+
+  // By-object display colours: HAS_COLOR (geometry → COLOR node) resolved to the owning object's appId → argb, mirroring
+  // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.
+  private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
+  {
+    var byObject = new Dictionary<string, int>();
+    foreach (var kv in bundle.Relations.ColorByGeometry)
+    {
+      if (
+        !bundle.Nodes.TryGetValue(kv.Value, out var n)
+        || n.Kind != NodeKind.Color
+        || n.Argb is not int argb
+      )
+      {
+        continue;
+      }
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+    return byObject;
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────

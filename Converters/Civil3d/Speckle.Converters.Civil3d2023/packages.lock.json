@@ -378,7 +378,7 @@
       "speckle.sdk.dependencies": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "[9.0.4, )"
+          "Microsoft.Bcl.AsyncInterfaces": "[9.0.10, )"
         }
       },
       "IronCompress": {
