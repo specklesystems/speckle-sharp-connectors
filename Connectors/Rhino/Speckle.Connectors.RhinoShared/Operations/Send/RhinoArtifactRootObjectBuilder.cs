@@ -23,6 +23,7 @@ using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines;
+using Speckle.Sdk.Models.Proxies;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RG = Rhino.Geometry;
@@ -60,11 +61,17 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
 /// SynchronizationContext or TaskScheduler — lets those continuations resume on the thread pool. Same principle
 /// as speckle-oda, which runs the whole extraction on a dedicated pinned thread off the host UI thread.</para>
 /// </remarks>
+[SuppressMessage(
+  "Maintainability",
+  "CA1506:Avoid excessive class coupling",
+  Justification = "Top-level artefact send orchestrator; coupling to converters, unpackers, host API and the pipeline façade is inherent."
+)]
 public class RhinoArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RhinoConversionSettings> converterSettings,
   RhinoInstanceUnpacker instanceUnpacker,
   RhinoMaterialUnpacker materialUnpacker,
+  RhinoColorUnpacker colorUnpacker,
   PropertiesExtractor propertiesExtractor,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
@@ -191,7 +198,11 @@ public class RhinoArtifactRootObjectBuilder(
     // Render materials are keyed by material name; proxies list OBJECT ids (resolved to geometry K(s) in phase 2).
     var materials = materialUnpacker.UnpackRenderMaterials(atomicObjects, usedLayers);
 
-    return new CollectedModel(units, collectedObjects, layers, materials, instanceDefinitionProxies, results);
+    // By-object display colours → COLOR nodes + HAS_COLOR. Layer colours ride the layer collection nodes' argb, so pass
+    // no layers here (object-level only) to avoid double-emitting them.
+    var colors = colorUnpacker.UnpackColors(atomicObjects, new List<RhinoLayer>());
+
+    return new CollectedModel(units, collectedObjects, layers, materials, colors, instanceDefinitionProxies, results);
   }
 
   // Converts one Rhino object to its Speckle representation (instance proxy or geometry) + extracts properties.
@@ -263,7 +274,7 @@ public class RhinoArtifactRootObjectBuilder(
           parentIndex = parent.Index;
         }
       }
-      layers[layerIndex] = new CollectedLayer(layer.Id.ToString(), layer.Name, parentIndex);
+      layers[layerIndex] = new CollectedLayer(layer.Id.ToString(), layer.Name, parentIndex, layer.Color.ToArgb());
       usedLayers.Add(layer);
       layerIndex = parentIndex ?? -1;
     }
@@ -513,6 +524,23 @@ public class RhinoArtifactRootObjectBuilder(
         }
       }
     }
+
+    // 3) by-object display colors → HAS_COLOR (geometry → COLOR node). Same shape as materials: Rhino color proxies
+    // list OBJECT ids, so resolve each to its display-mesh geometry K(s).
+    foreach (var colorProxy in model.Colors)
+    {
+      int colorK = pipeline.AddColor(colorProxy.value);
+      foreach (var objectId in colorProxy.objects)
+      {
+        if (geometryKsByObjectId.TryGetValue(objectId, out var gKs))
+        {
+          foreach (var gK in gKs)
+          {
+            pipeline.HasColor(gK, colorK);
+          }
+        }
+      }
+    }
   }
 
   // Resolves (and interns once) the COLLECTION node for a layer index, building the ancestor chain from the
@@ -536,7 +564,7 @@ public class RhinoArtifactRootObjectBuilder(
       parentK = GetOrAddLayerCollection(pipeline, layers, parentIndex, cache);
     }
 
-    int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer");
+    int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer", layer.Argb);
     cache[layerIndex] = collK;
     return collK;
   }
@@ -578,7 +606,7 @@ public class RhinoArtifactRootObjectBuilder(
     };
 
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
-  private sealed record CollectedLayer(string Id, string Name, int? ParentIndex);
+  private sealed record CollectedLayer(string Id, string Name, int? ParentIndex, int Argb);
 
   private sealed record CollectedObject(
     string ApplicationId,
@@ -595,6 +623,7 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyDictionary<int, CollectedLayer> Layers,
     IReadOnlyList<RenderMaterialProxy> Materials,
+    IReadOnlyList<ColorProxy> Colors,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<SendConversionResult> Results
   );
