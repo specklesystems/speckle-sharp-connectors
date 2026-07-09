@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.TeklaShared.HostApp;
 using Speckle.Converters.Common;
@@ -165,9 +166,7 @@ public class TeklaArtifactRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-#if NETFRAMEWORK
-    EnsureZstdNativeLoaded();
-#endif
+    ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
     var geometryKsByAppId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
@@ -315,50 +314,6 @@ public class TeklaArtifactRootObjectBuilder(
       new("units", units),
       new("type", sourceType),
     };
-
-#if NETFRAMEWORK
-  [System.Runtime.InteropServices.DllImport(
-    "kernel32",
-    CharSet = System.Runtime.InteropServices.CharSet.Unicode,
-    SetLastError = true
-  )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
-    System.Runtime.InteropServices.DllImportSearchPath.System32
-  )]
-  private static extern IntPtr LoadLibrary(string lpFileName);
-
-  private static int s_zstdNativePreloaded;
-
-  // Parquet.Net Zstd-compresses via IronCompress's native nironcompress.dll (bare DllImport). On .NET Framework that
-  // resolves against the process dir, not the plugin folder, so pre-load it by full path once.
-  private void EnsureZstdNativeLoaded()
-  {
-    if (System.Threading.Interlocked.Exchange(ref s_zstdNativePreloaded, 1) == 1)
-    {
-      return;
-    }
-    try
-    {
-      var dir = Path.GetDirectoryName(typeof(TeklaArtifactRootObjectBuilder).Assembly.Location);
-      var native = Path.Combine(dir ?? string.Empty, "nironcompress.dll");
-      if (System.IO.File.Exists(native))
-      {
-        if (LoadLibrary(native) == IntPtr.Zero)
-        {
-          logger.LogWarning("Failed to pre-load native {Native} (parquet Zstd compression may fail)", native);
-        }
-      }
-      else
-      {
-        logger.LogWarning("Native {Native} not found next to the plugin; parquet Zstd compression may fail", native);
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Could not pre-load the IronCompress native for parquet Zstd compression");
-    }
-  }
-#endif
 
   private sealed record CollectedObject(string CollectionName, Base Converted);
 

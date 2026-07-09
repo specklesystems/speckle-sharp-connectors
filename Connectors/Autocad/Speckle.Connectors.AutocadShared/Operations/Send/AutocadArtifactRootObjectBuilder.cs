@@ -6,6 +6,7 @@ using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Common;
@@ -211,7 +212,7 @@ public class AutocadArtifactRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-    AutocadZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
+    ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
 
     // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).

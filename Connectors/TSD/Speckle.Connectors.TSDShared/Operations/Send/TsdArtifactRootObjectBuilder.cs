@@ -14,6 +14,7 @@ using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using TSD.API.Remoting.Common;

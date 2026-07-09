@@ -6,6 +6,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
@@ -279,9 +280,7 @@ public class RhinoArtifactRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-#if NETFRAMEWORK
-    EnsureZstdNativeLoaded();
-#endif
+    ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
 
     // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
@@ -577,52 +576,6 @@ public class RhinoArtifactRootObjectBuilder(
       m.M43,
       m.M44,
     };
-
-#if NETFRAMEWORK
-  // Parquet.Net Zstd-compresses row groups via IronCompress's native nironcompress.dll, P/Invoked through a bare
-  // [DllImport("nironcompress")]. On .NET Framework that resolves against the process (Rhino.exe) directory, NOT
-  // the plugin folder, so the co-deployed native isn't found. Pre-load it by full path once (Windows then matches
-  // the bare DllImport to the already-loaded module by base name) — no process-global DLL-search-path mutation.
-  [System.Runtime.InteropServices.DllImport(
-    "kernel32",
-    CharSet = System.Runtime.InteropServices.CharSet.Unicode,
-    SetLastError = true
-  )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
-    System.Runtime.InteropServices.DllImportSearchPath.System32
-  )]
-  private static extern IntPtr LoadLibrary(string lpFileName);
-
-  private static int s_zstdNativePreloaded;
-
-  private void EnsureZstdNativeLoaded()
-  {
-    if (System.Threading.Interlocked.Exchange(ref s_zstdNativePreloaded, 1) == 1)
-    {
-      return;
-    }
-    try
-    {
-      var dir = Path.GetDirectoryName(typeof(RhinoArtifactRootObjectBuilder).Assembly.Location);
-      var native = Path.Combine(dir ?? string.Empty, "nironcompress.dll");
-      if (File.Exists(native))
-      {
-        if (LoadLibrary(native) == IntPtr.Zero)
-        {
-          logger.LogWarning("Failed to pre-load native {Native} (parquet Zstd compression may fail)", native);
-        }
-      }
-      else
-      {
-        logger.LogWarning("Native {Native} not found next to the plugin; parquet Zstd compression may fail", native);
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      logger.LogWarning(ex, "Could not pre-load the IronCompress native for parquet Zstd compression");
-    }
-  }
-#endif
 
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
   private sealed record CollectedLayer(string Id, string Name, int? ParentIndex);
