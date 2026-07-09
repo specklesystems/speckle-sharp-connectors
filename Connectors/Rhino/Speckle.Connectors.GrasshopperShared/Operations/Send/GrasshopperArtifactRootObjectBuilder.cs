@@ -204,13 +204,7 @@ public class GrasshopperArtifactRootObjectBuilder(
   // A standalone geometry object (also used for block-definition member geometry): object = its own display geometry.
   // Definition members render ONLY through their definition (DEFINES); pass isDefinitionMember to suppress the
   // standalone top-level edges (IN_COLLECTION / DISPLAY / SOLID) while still registering the geometry K for DEFINES.
-  private void EmitGeometryObject(
-    WalkContext ctx,
-    SpeckleGeometryWrapper wrapper,
-    int collK,
-    int ord,
-    bool isDefinitionMember = false
-  )
+  private void EmitGeometryObject(WalkContext ctx, SpeckleGeometryWrapper wrapper, int collK, int ord, bool isDefinitionMember = false)
   {
     var sw = Stopwatch.StartNew();
     string sourceType = wrapper.Base.speckle_type;
@@ -223,15 +217,11 @@ public class GrasshopperArtifactRootObjectBuilder(
       {
         ctx.Pipeline.InCollection(objK, collK, ord);
       }
-      ctx.Pipeline.AddProperties(
-        appId,
-        PropertiesOf(clean),
-        RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType)
-      );
+      ctx.Pipeline.AddProperties(appId, PropertiesOf(clean), RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType));
 
       int displayOrd = 0;
       int solidOrd = 0;
-      EmitGeometryFragments(ctx, objK, appId, clean, ref displayOrd, ref solidOrd);
+      EmitGeometryFragments(ctx, objK, appId, clean, ref displayOrd, ref solidOrd, isDefinitionMember);
 
       ctx.ColorPacker.ProcessColor(appId, wrapper.Color);
       ctx.MaterialPacker.ProcessMaterial(appId, wrapper.Material);
@@ -312,7 +302,9 @@ public class GrasshopperArtifactRootObjectBuilder(
           }
           else
           {
-            EmitGeometryObject(ctx, definitionObject, collK, ord);
+            // A block-definition member renders ONLY through its definition (DEFINES, via a placed instance's
+            // transform) — emit its geometry K so DEFINES resolves, but NO top-level DISPLAY / SOLID / IN_COLLECTION.
+            EmitGeometryObject(ctx, definitionObject, collK, ord, isDefinitionMember: true);
           }
         }
       }
@@ -361,7 +353,8 @@ public class GrasshopperArtifactRootObjectBuilder(
     string geometryAppId,
     Base clean,
     ref int displayOrd,
-    ref int solidOrd
+    ref int solidOrd,
+    bool isDefinitionMember = false
   )
   {
     List<Base> displayGeometry;
@@ -380,7 +373,8 @@ public class GrasshopperArtifactRootObjectBuilder(
       displayGeometry = [clean];
     }
 
-    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
+    // A definition member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = ctx.Pipeline.AddRawGeometry($"{geometryAppId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
@@ -396,7 +390,10 @@ public class GrasshopperArtifactRootObjectBuilder(
     {
       string gAppId = fragment.applicationId ?? $"{geometryAppId}:g{fragOrd++}";
       int gK = ctx.Pipeline.AddGeometry(gAppId, fragment);
-      ctx.Pipeline.Display(objK, gK, displayOrd++);
+      if (!isDefinitionMember)
+      {
+        ctx.Pipeline.Display(objK, gK, displayOrd++); // members render only via DEFINES through a placed instance's transform
+      }
       gKs.Add(gK);
     }
   }

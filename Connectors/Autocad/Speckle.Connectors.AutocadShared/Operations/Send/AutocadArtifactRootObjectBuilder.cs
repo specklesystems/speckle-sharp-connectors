@@ -224,12 +224,16 @@ public class AutocadArtifactRootObjectBuilder(
     var geometryKsByObjectId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
 
+    // Block-definition members are interned as atomic objects too, but they render ONLY through their definition
+    // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
+    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, co.LayerName, layerCollectionKByName);
-      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId);
+      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -267,24 +271,32 @@ public class AutocadArtifactRootObjectBuilder(
     int collK,
     string units,
     Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId
+    Dictionary<string, int> instanceKByObjectId,
+    HashSet<string> definitionMemberIds
   )
   {
+    // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) and NO scene-tree membership
+    // (IN_COLLECTION). Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
+
     int objK = pipeline.InternObject(co.ApplicationId);
-    pipeline.InCollection(objK, collK, 0);
-    pipeline.AddProperties(
-      co.ApplicationId,
-      co.Properties,
-      RootScalars(co.Converted.speckle_type, co.SourceType, units, co.SourceType)
-    );
+    if (!isDefinitionMember)
+    {
+      pipeline.InCollection(objK, collK, 0);
+    }
+    pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.SourceType, units, co.SourceType));
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
     if (co.Converted is InstanceProxy instanceProxy)
     {
       int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
       int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
-      pipeline.DisplayInstance(objK, instK, 0);
       instanceKByObjectId[co.ApplicationId] = instK;
+      if (!isDefinitionMember)
+      {
+        pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
+      }
       return;
     }
 
@@ -308,8 +320,9 @@ public class AutocadArtifactRootObjectBuilder(
       displayGeometry = new List<Base> { co.Converted };
     }
 
-    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids.
-    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
+    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. Skipped for definition members —
+    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.ACAD_SAT);
@@ -325,8 +338,12 @@ public class AutocadArtifactRootObjectBuilder(
       {
         string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
         int gK = pipeline.AddGeometry(gAppId, fragment);
-        pipeline.Display(objK, gK, ord++);
+        if (!isDefinitionMember)
+        {
+          pipeline.Display(objK, gK, ord); // members render only via DEFINES through a placed instance's transform
+        }
         gKs.Add(gK);
+        ord++;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {

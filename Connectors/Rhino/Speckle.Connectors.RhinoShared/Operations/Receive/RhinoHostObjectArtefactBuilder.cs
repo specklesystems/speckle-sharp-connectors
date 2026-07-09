@@ -32,7 +32,8 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Rhino document, talking only to
 /// the neutral dense-int graph + raw Rhino API — no v1 <c>Base</c>/<c>DataObject</c>/<c>Collection</c>/proxy types and
 /// no traversal/converter pipeline. Solids come from raw 3dm blobs (<see cref="RawEncodingToHost.Convert3dm"/>), meshes
-/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="RG.Mesh"/>; layers from the
+/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="RG.Mesh"/>, and other SGEO
+/// primitives (curves, points) decode via <see cref="SgeoDecoder.Decode"/> + the Rhino ToHost converter; layers from the
 /// COLLECTION tree; materials from MATERIAL nodes (HAS_MATERIAL). Instances follow the host-agnostic model used by
 /// Revit and Rhino alike: a DEFINITION node owns its geometry directly (DEFINES → geometry), and each DISPLAY_INSTANCE
 /// edge (object → INSTANCE node) places that definition with the instance node's transform. The receive-side twin of
@@ -41,18 +42,25 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
   private readonly IConverterSettingsStore<RhinoConversionSettings> _converterSettings;
+  private readonly IRootToHostConverter _converter;
   private readonly IThreadContext _threadContext;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RhinoHostObjectArtefactBuilder> _logger;
 
+  // Last per-geometry decode/convert failure reason (type + exception), surfaced into the object's session-log error so
+  // a failed curve/point isn't just "did not convert to any native geometry". Receive is single-threaded (main thread).
+  private string? _lastDecodeFailure;
+
   public RhinoHostObjectArtefactBuilder(
     IConverterSettingsStore<RhinoConversionSettings> converterSettings,
+    IRootToHostConverter converter,
     IThreadContext threadContext,
     ISdkActivityFactory activityFactory,
     ILogger<RhinoHostObjectArtefactBuilder> logger
   )
   {
     _converterSettings = converterSettings;
+    _converter = converter;
     _threadContext = threadContext;
     _activityFactory = activityFactory;
     _logger = logger;
@@ -153,22 +161,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
           if (geometries.Count == 0)
           {
-            session.RecordObject(
-              appId,
-              "Speckle.Object",
-              Status.ERROR,
-              "did not convert to any native geometry",
-              sw.ElapsedMilliseconds
-            );
-            conversionResults.Add(
-              new(
-                Status.ERROR,
-                source,
-                null,
-                null,
-                new ConversionException("Object did not convert to any native geometry")
-              )
-            );
+            var reason = _lastDecodeFailure ?? "did not convert to any native geometry";
+            session.RecordObject(appId, "Speckle.Object", Status.ERROR, reason, sw.ElapsedMilliseconds);
+            conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException(reason)));
             continue;
           }
 
@@ -176,6 +171,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
+            if (geom is RG.Hatch hatch)
+            {
+              // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
+              bundle.Properties.TryGetValue(objK, out var hatchProps);
+              RhinoHatchStyler.Apply(doc, hatch, hatchProps, _converterSettings.Current.SpeckleUnits);
+            }
             ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
@@ -216,13 +217,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
-  private static List<RG.GeometryBase> DecodeObjectGeometry(
+  private List<RG.GeometryBase> DecodeObjectGeometry(
     int objK,
     ArtefactBundle bundle,
     ArtefactRelations rels,
     string fallbackUnits
   )
   {
+    _lastDecodeFailure = null;
     var result = new List<RG.GeometryBase>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
@@ -242,7 +244,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Decodes one geometry index to Rhino geometry, scaled to doc units (SGEO carries its own units; 3dm uses fallback).
-  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
+  private List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -255,14 +257,54 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ApplyUnits(geoms, fallbackUnits);
       return geoms;
     }
-    if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    if (g.IsSgeo)
     {
-      var mesh = BuildMesh(sm);
-      var list = new List<RG.GeometryBase> { mesh };
-      ApplyUnits(list, sm.Units);
-      return list;
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
+      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      {
+        var mesh = BuildMesh(sm);
+        var list = new List<RG.GeometryBase> { mesh };
+        ApplyUnits(list, sm.Units);
+        return list;
+      }
+      // Curves, points, and other primitives: decode to a Speckle geometry object and convert via the Rhino ToHost
+      // converter, which already scales to doc units (so no ApplyUnits here). An unsupported primitive degrades to
+      // nothing rather than aborting the whole receive.
+      Base? decoded = null;
+      try
+      {
+        decoded = SgeoDecoder.Decode(g.Content);
+        var converted = ConvertSpeckleGeometry(decoded);
+        if (converted.Count == 0)
+        {
+          // decode + convert both ran without throwing, but produced no bakeable geometry (e.g. a converter returned an
+          // unhandled result shape). Record it so it isn't a silent drop.
+          _lastDecodeFailure = $"geom {geomK} ({g.Type}, {decoded.speckle_type}): converter returned no native geometry";
+          _logger.LogWarning("Skipped SGEO geometry {GeomK}: {Reason}", geomK, _lastDecodeFailure);
+        }
+        return converted;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+        _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
+        _logger.LogWarning(ex, "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes) at {Stage}: {Error}", geomK, g.Type, g.Content.Length, stage, ex.Message);
+      }
     }
     return new List<RG.GeometryBase>();
+  }
+
+  // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the ToHost converter. The top-level converter
+  // returns a single GeometryBase for primitives (curve/point/…) or a list for one-to-many cases; both are unwrapped.
+  private List<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded)
+  {
+    var converted = _converter.Convert(decoded);
+    return converted switch
+    {
+      RG.GeometryBase gb => new List<RG.GeometryBase> { gb },
+      IEnumerable<RG.GeometryBase> many => many.ToList(),
+      _ => new List<RG.GeometryBase>(),
+    };
   }
 
   private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
@@ -377,52 +419,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     var docUnits = _converterSettings.Current.SpeckleUnits;
 
-    // definitions: a DEFINITION node owns its geometry directly (DEFINES → geometry blobs). The geometry's material
-    // (HAS_MATERIAL → geometry) is baked onto the definition members so placed instances aren't all grey.
-    var defIndexByNode = new Dictionary<int, int>();
-    foreach (var kv in bundle.Nodes)
-    {
-      if (kv.Value.Kind != NodeKind.Definition || !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs))
-      {
-        continue;
-      }
-      session.Increment("definitionsSeen");
-      var geometryList = new List<RG.GeometryBase>();
-      var attributeList = new List<ObjectAttributes>();
-      foreach (var geomK in geomKs)
-      {
-        var decoded = DecodeGeometryIndex(geomK, bundle, docUnits);
-        materialByGeometry.TryGetValue(geomK, out Guid mg);
-        foreach (var geom in decoded)
-        {
-          geometryList.Add(geom);
-          // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt
-          // the definition; the doc owns them for the document lifetime.
-#pragma warning disable CA2000
-          var a = new ObjectAttributes();
-#pragma warning restore CA2000
-          if (mg != Guid.Empty)
-          {
-            a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
-            a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-          }
-          attributeList.Add(a);
-        }
-      }
-      if (geometryList.Count == 0)
-      {
-        session.Increment("definitionsEmpty");
-        continue;
-      }
-      var defName = RhinoUtils.CleanBlockDefinitionName($"{kv.Value.Name ?? "Definition"}-(def-{kv.Key})");
-      int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
-      if (defIndex < 0)
-      {
-        session.Increment("definitionsEmpty");
-        continue;
-      }
-      defIndexByNode[kv.Key] = defIndex;
-    }
+    // definitions (incl. nested blocks): a DEFINITION node owns its geometry directly and may contain nested placements.
+    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, session);
 
     // placements: one instance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
     foreach (var edge in rels.DisplayInstanceEdges)
@@ -491,6 +489,159 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       conversionResults.Add(new(Status.SUCCESS, source, id.ToString(), "Instance (Block)"));
       session.RecordObject(appId, "Instance (Block)", Status.SUCCESS, null, sw.ElapsedMilliseconds);
     }
+  }
+
+  // Groups a definition's DEFINES geometry Ks by member ordinal (index-aligned with ords), then within each member
+  // prefers the authoritative 3dm solid over its display mesh(es); a member with no solid yields all its geometry.
+  // Member order is preserved. When ords are absent (older bundle) each geometry is its own member — i.e. no grouping.
+  private static IEnumerable<List<int>> GroupDefinesByMember(List<int> geomKs, List<int>? ords, ArtefactBundle bundle)
+  {
+    var members = new List<List<int>>();
+    var indexByOrd = new Dictionary<int, int>();
+    for (int i = 0; i < geomKs.Count; i++)
+    {
+      int ord = ords is not null && i < ords.Count ? ords[i] : -(i + 1); // absent ords → unique key per geometry
+      if (!indexByOrd.TryGetValue(ord, out int idx))
+      {
+        idx = members.Count;
+        indexByOrd[ord] = idx;
+        members.Add(new List<int>());
+      }
+      members[idx].Add(geomKs[i]);
+    }
+    foreach (var geoms in members)
+    {
+      var solids = geoms
+        .Where(k => bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.RHINO_3DM)
+        .ToList();
+      yield return solids.Count > 0 ? solids : geoms;
+    }
+  }
+
+  // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns
+  // its geometry directly (DEFINES → geometry blobs) and may also contain nested block placements (DEFINES_INSTANCE →
+  // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
+  // child definition's Rhino Guid via an InstanceReferenceGeometry member carrying the nested placement's own transform.
+  // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey.
+  private Dictionary<int, int> BuildDefinitions(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, Guid> materialByGeometry,
+    string docUnits,
+    ArtefactSessionLog session
+  )
+  {
+    var defIndexByNode = new Dictionary<int, int>();
+    var defBuilding = new HashSet<int>();
+
+    int BuildDefinition(int defNodeK)
+    {
+      if (defIndexByNode.TryGetValue(defNodeK, out int already))
+      {
+        return already; // already built (a shared nested definition is reached from several parents)
+      }
+      if (!bundle.Nodes.TryGetValue(defNodeK, out var defNode) || defNode.Kind != NodeKind.Definition)
+      {
+        return -1;
+      }
+      if (!defBuilding.Add(defNodeK))
+      {
+        return -1; // cycle guard — Rhino disallows recursive block definitions; never stack-overflow on a bad bundle
+      }
+      session.Increment("definitionsSeen");
+
+      var geometryList = new List<RG.GeometryBase>();
+      var attributeList = new List<ObjectAttributes>();
+
+      // direct geometry members (DEFINES → geometry blob). A member's geometry shares a member ordinal; within each
+      // member we prefer the authoritative 3dm solid over its display mesh(es), so a solid inside a block rebuilds as a
+      // solid, not a mesh. A member with no solid (plain mesh/curve/point) keeps all its geometry.
+      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+      {
+        rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+        foreach (var memberGeomKs in GroupDefinesByMember(geomKs, ords, bundle))
+        {
+          foreach (var geomK in memberGeomKs)
+          {
+            // Definition geometry is in the model's source units; the raw-3dm path rescales from this fallback to the
+            // doc units. Pass the bundle (source) units, NOT docUnits — otherwise a 3dm member isn't rescaled and a
+            // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
+            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
+            materialByGeometry.TryGetValue(geomK, out Guid mg);
+            foreach (var geom in decoded)
+            {
+              geometryList.Add(geom);
+              // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would
+              // corrupt the definition; the doc owns them for the document lifetime.
+#pragma warning disable CA2000
+              var a = new ObjectAttributes();
+#pragma warning restore CA2000
+              if (mg != Guid.Empty)
+              {
+                a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
+                a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+              }
+              attributeList.Add(a);
+            }
+          }
+        }
+      }
+
+      // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first (depth-first) and
+      // add an InstanceReferenceGeometry that references it with the nested placement's own transform.
+      if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+      {
+        foreach (var instNodeK in nestedInstNodeKs)
+        {
+          if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+          {
+            continue;
+          }
+          int childDefIndex = BuildDefinition(childDefNodeK);
+          if (childDefIndex < 0)
+          {
+            session.Increment("nestedInstancesUnresolved");
+            continue;
+          }
+          var childDefId = doc.InstanceDefinitions[childDefIndex].Id;
+          var nestedTransform = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : docUnits, docUnits);
+#pragma warning disable CA2000
+          var nestedAtts = new ObjectAttributes();
+#pragma warning restore CA2000
+          geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
+          attributeList.Add(nestedAtts);
+          session.Increment("nestedInstancesPlaced");
+        }
+      }
+
+      defBuilding.Remove(defNodeK);
+
+      if (geometryList.Count == 0)
+      {
+        session.Increment("definitionsEmpty");
+        return -1;
+      }
+      var defName = RhinoUtils.CleanBlockDefinitionName($"{defNode.Name ?? "Definition"}-(def-{defNodeK})");
+      int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
+      if (defIndex < 0)
+      {
+        session.Increment("definitionsEmpty");
+        return -1;
+      }
+      defIndexByNode[defNodeK] = defIndex;
+      return defIndex;
+    }
+
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildDefinition(kv.Key);
+      }
+    }
+
+    return defIndexByNode;
   }
 
   // ── layers ────────────────────────────────────────────────────────────────────────────────────────────

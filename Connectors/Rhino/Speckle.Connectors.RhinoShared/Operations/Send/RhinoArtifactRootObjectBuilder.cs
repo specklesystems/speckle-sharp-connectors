@@ -11,6 +11,7 @@ using Speckle.Connectors.Rhino.HostApp;
 using Speckle.Connectors.Rhino.HostApp.Properties;
 using Speckle.Converters.Common;
 using Speckle.Converters.Rhino;
+using Speckle.Converters.Rhino.ToSpeckle.Encoding;
 using Speckle.DoubleNumerics;
 using Speckle.Objects;
 using Speckle.Objects.Other;
@@ -23,6 +24,7 @@ using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+using RG = Rhino.Geometry;
 using RhinoLayer = Rhino.DocObjects.Layer;
 using SOG = Speckle.Objects.Geometry;
 
@@ -215,7 +217,29 @@ public class RhinoArtifactRootObjectBuilder(
     Base rawGeometry = converter.Convert(rhinoObject);
     var properties = propertiesExtractor.GetProperties(rhinoObject);
     propertiesExtractor.AddGeometryProperties(properties, rawGeometry, units);
-    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry);
+    RawEncoding? rawSolid = null;
+    if (rhinoObject.Geometry is RG.Hatch hatch)
+    {
+      // A hatch converts to a display-only Region (no IRawEncodedObject). Serialize the native hatch to a 3dm blob here
+      // (main thread) so it can be sent as the authoritative SOLID for a lossless Rhino→Rhino receive; the pattern
+      // styling still rides eav for the viewer/other receivers.
+      AddHatchProperties(properties, hatch);
+      rawSolid = RawEncodingCreator.Encode(hatch, converterSettings.Current.Document);
+    }
+    return new CollectedObject(applicationId, name, sourceType, layerIndex, properties, rawGeometry, rawSolid);
+  }
+
+  // Hatch styling → EAV so receive can rebuild the pattern. The SGEO Region blob carries only the boundary geometry;
+  // the pattern name/rotation/scale are per-object attributes and ride the eav properties, resolved by name on receive.
+  private void AddHatchProperties(Dictionary<string, object?> properties, RG.Hatch hatch)
+  {
+    var patterns = converterSettings.Current.Document.HatchPatterns;
+    if (hatch.PatternIndex >= 0 && hatch.PatternIndex < patterns.Count)
+    {
+      properties["hatchPatternName"] = patterns[hatch.PatternIndex].Name;
+    }
+    properties["hatchRotation"] = hatch.PatternRotation;
+    properties["hatchScale"] = hatch.PatternScale;
   }
 
   // Walks a layer + its ancestors (via ParentLayerId) into the snapshot, keyed by layer index. RhinoCommon-bound.
@@ -271,13 +295,18 @@ public class RhinoArtifactRootObjectBuilder(
     var geometryKsByObjectId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     // object id -> its INSTANCE node K, for DEFINES_INSTANCE (nested block placements).
     var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
+    // Block-definition members (geometry + nested instances) are unpacked into model.Objects too, but they must
+    // render ONLY through their definition (DEFINES / DEFINES_INSTANCE) via a placed instance's transform — never as
+    // standalone scene objects. Without suppressing their top-level DISPLAY / DISPLAY_INSTANCE + IN_COLLECTION they
+    // also draw at the model origin (untransformed), duplicating the instance geometry [ENG-8782].
+    var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, model.Layers, co.LayerIndex, layerCollectionKByIndex);
-      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId);
+      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -317,24 +346,32 @@ public class RhinoArtifactRootObjectBuilder(
     int collK,
     string units,
     Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId
+    Dictionary<string, int> instanceKByObjectId,
+    HashSet<string> definitionMemberIds
   )
   {
+    // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE) and NO scene-tree membership (IN_COLLECTION).
+    // Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
+
     int objK = pipeline.InternObject(co.ApplicationId);
-    pipeline.InCollection(objK, collK, 0);
-    pipeline.AddProperties(
-      co.ApplicationId,
-      co.Properties,
-      RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType)
-    );
+    if (!isDefinitionMember)
+    {
+      pipeline.InCollection(objK, collK, 0);
+    }
+    pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType));
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
     if (co.Converted is InstanceProxy instanceProxy)
     {
       int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
       int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
-      pipeline.DisplayInstance(objK, instK, 0);
       instanceKByObjectId[co.ApplicationId] = instK;
+      if (!isDefinitionMember)
+      {
+        pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
+      }
       return;
     }
 
@@ -358,16 +395,35 @@ public class RhinoArtifactRootObjectBuilder(
       displayGeometry = [rawGeometry];
     }
 
-    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids.
+    // A hatch has no IRawEncodedObject, so its Rhino-native 3dm blob (serialized in phase 1) stands in as the raw
+    // encoding — it flows through the same SOLID path as Brep/Extrusion/SubD below.
+    rawEncoding ??= co.RawSolid;
+
+    // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids (Brep/Extrusion/SubD, and hatches).
+    // A standalone object links it via the SOLID rel; a definition member instead lets it ride DEFINES (added to gKs
+    // below) so the block reconstructs the native solid, not just its display mesh — but a member still gets NO
+    // standalone SOLID edge (it renders only through a placed instance's transform).
+    int? memberSolidK = null;
     if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
-      pipeline.Solid(objK, solidK, 0);
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        pipeline.Solid(objK, solidK, 0);
+      }
     }
 
     // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).
     var gKs = new List<int>();
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the 3dm per member
+    }
     int ord = 0;
     foreach (Base fragment in displayGeometry)
     {
@@ -375,8 +431,12 @@ public class RhinoArtifactRootObjectBuilder(
       {
         string gAppId = fragment.applicationId ?? $"{co.ApplicationId}:g{ord}";
         int gK = pipeline.AddGeometry(gAppId, fragment);
-        pipeline.Display(objK, gK, ord++);
+        if (!isDefinitionMember)
+        {
+          pipeline.Display(objK, gK, ord); // members render only via DEFINES through a placed instance's transform
+        }
         gKs.Add(gK);
+        ord++;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -407,20 +467,23 @@ public class RhinoArtifactRootObjectBuilder(
     foreach (var defProxy in model.Definitions)
     {
       int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
-      int o = 0;
+      int memberOrd = 0;
       foreach (var memberId in defProxy.objects)
       {
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
-          pipeline.DefinesInstance(defK, instK, o++);
+          pipeline.DefinesInstance(defK, instK, memberOrd);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
+          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative solid
+          // + its display mesh(es) and pick the solid over its shadow (see RhinoHostObjectArtefactBuilder.BuildDefinitions).
           foreach (var gK in memberGKs)
           {
-            pipeline.Defines(defK, gK, o++);
+            pipeline.Defines(defK, gK, memberOrd);
           }
         }
+        memberOrd++;
       }
     }
 
@@ -566,7 +629,8 @@ public class RhinoArtifactRootObjectBuilder(
     string SourceType,
     int LayerIndex,
     Dictionary<string, object?> Properties,
-    Base Converted // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    Base Converted, // InstanceProxy for block instances, otherwise the converted geometry (Brep/Extrusion/SubD/Mesh/…)
+    RawEncoding? RawSolid = null // a Rhino-native 3dm blob produced in phase 1 when the object has no IRawEncodedObject (hatch)
   );
 
   private sealed record CollectedModel(
