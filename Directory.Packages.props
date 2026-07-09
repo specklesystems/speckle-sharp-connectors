@@ -10,7 +10,7 @@
     <PackageVersion Include="ILRepack.FullAuto" Version="1.6.0" />
     <!-- Native Zstd backend for Parquet.Net (transitive via Speckle.Sdk). Pinned here so the net48 Rhino plugin can
          copy the native nironcompress.dll next to the .rhp (4.0 artefact send). Must match Parquet.Net's IronCompress. -->
-    <PackageVersion Include="IronCompress" Version="1.7.0" />
+    <PackageVersion Include="IronCompress" Version="1.6.3" />
     <PackageVersion Include="JetBrains.Profiler.SelfApi" Version="2.5.12" />
     <PackageVersion Include="LibTessDotNet" Version="1.1.15" />
     <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
