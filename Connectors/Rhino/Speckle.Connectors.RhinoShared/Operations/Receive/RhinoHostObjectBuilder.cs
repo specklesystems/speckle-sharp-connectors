@@ -350,7 +350,10 @@ public class RhinoHostObjectBuilder : IHostObjectBuilder
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
     }
 
-    if (objectId is not null && _colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color))
+    if (
+      objectId is not null
+      && _colorBaker.ObjectColorsIdMap.TryGetValue(objectId, out (Color, ObjectColorSource) color)
+    )
     {
       atts.ObjectColor = color.Item1;
       atts.ColorSource = color.Item2;

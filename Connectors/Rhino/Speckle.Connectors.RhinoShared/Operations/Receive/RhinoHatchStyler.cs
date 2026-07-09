@@ -44,7 +44,8 @@ internal static class RhinoHatchStyler
     {
       // The boundary geometry was scaled to doc units; PatternScale is a display length that Transform leaves alone, so
       // apply the same source→doc factor here or the pattern renders at the wrong density (e.g. m→mm makes it solid).
-      var sourceUnits = objectProperties.TryGetValue("units", out var u) && u is string us && us.Length > 0 ? us : docUnits;
+      var sourceUnits =
+        objectProperties.TryGetValue("units", out var u) && u is string us && us.Length > 0 ? us : docUnits;
       hatch.PatternScale = scale * Units.GetConversionFactor(sourceUnits, docUnits);
     }
   }

@@ -72,8 +72,8 @@ public class CsiArtifactRootObjectBuilder(
     CollectedModel collected;
     using (session.Phase("Collect"))
     {
-      collected = await threadContext.RunOnMainAsync(
-        () => Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
       );
     }
 
@@ -202,7 +202,11 @@ public class CsiArtifactRootObjectBuilder(
       using (session.Phase("Analysis results"))
       {
         var summary = BuildObjectSummary(objects);
-        Base analysisResults = analysisResultsExtractor.ExtractAnalysisResults(cases.ToList(), resultTypes.ToList(), summary);
+        Base analysisResults = analysisResultsExtractor.ExtractAnalysisResults(
+          cases.ToList(),
+          resultTypes.ToList(),
+          summary
+        );
 
         foreach (var descriptor in s_resultDescriptors)
         {
@@ -291,11 +295,17 @@ public class CsiArtifactRootObjectBuilder(
             ? s
             : null;
         int? step = null;
-        if (axes.TryGetValue("StepNum", out var sn) && int.TryParse(sn, NumberStyles.Integer, CultureInfo.InvariantCulture, out var si))
+        if (
+          axes.TryGetValue("StepNum", out var sn)
+          && int.TryParse(sn, NumberStyles.Integer, CultureInfo.InvariantCulture, out var si)
+        )
         {
           step = si;
         }
-        else if (axes.TryGetValue("Mode", out var mo) && int.TryParse(mo, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mi))
+        else if (
+          axes.TryGetValue("Mode", out var mo)
+          && int.TryParse(mo, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mi)
+        )
         {
           step = mi;
         }
@@ -303,7 +313,18 @@ public class CsiArtifactRootObjectBuilder(
         foreach (var kv in leaf)
         {
           double? value = kv.Value is null ? null : Convert.ToDouble(kv.Value, CultureInfo.InvariantCulture);
-          rows.Add(new StructuralResultRow(objectAppId, location, descriptor.ResultType, loadCase ?? "", kv.Key, station, step, value));
+          rows.Add(
+            new StructuralResultRow(
+              objectAppId,
+              location,
+              descriptor.ResultType,
+              loadCase ?? "",
+              kv.Key,
+              station,
+              step,
+              value
+            )
+          );
         }
       }
     );
@@ -359,7 +380,12 @@ public class CsiArtifactRootObjectBuilder(
     new("modalPeriodsAndFrequencies", "modalPeriod", null, new[] { "LoadCase", "Wrap:Mode" }),
   };
 
-  private sealed record ResultDescriptor(string ResultsKey, string ResultType, string? ElementKey, IReadOnlyList<string> GroupingKeys);
+  private sealed record ResultDescriptor(
+    string ResultsKey,
+    string ResultType,
+    string? ElementKey,
+    IReadOnlyList<string> GroupingKeys
+  );
 
   private sealed record StructuralResultRow(
     string? ObjectAppId,
@@ -427,7 +453,12 @@ public class CsiArtifactRootObjectBuilder(
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          logger.LogWarning(ex, "Skipped unsupported display geometry {Type} on {AppId}", fragment.speckle_type, co.ApplicationId);
+          logger.LogWarning(
+            ex,
+            "Skipped unsupported display geometry {Type} on {AppId}",
+            fragment.speckle_type,
+            co.ApplicationId
+          );
         }
       }
 
@@ -437,7 +468,16 @@ public class CsiArtifactRootObjectBuilder(
     // Analysis results → {v}.eav.structural-results.parquet (object-level rows join back via object_index).
     foreach (var r in model.ResultRows)
     {
-      pipeline.AddStructuralResult(r.ObjectAppId, r.Location, r.ResultType, r.LoadCase, r.Component, r.Station, r.Step, r.Value);
+      pipeline.AddStructuralResult(
+        r.ObjectAppId,
+        r.Location,
+        r.ResultType,
+        r.LoadCase,
+        r.Component,
+        r.Station,
+        r.Step,
+        r.Value
+      );
     }
 
     EmitFrameJointConnectivity(pipeline, model);
@@ -462,7 +502,11 @@ public class CsiArtifactRootObjectBuilder(
   }
 
   // Resolves (and interns once) the nested CONTAINER chain for the given collection segments (outermost → leaf).
-  private static int GetOrAddCollection(ObjectsArtifactPipeline pipeline, IReadOnlyList<string> segments, Dictionary<string, int> cache)
+  private static int GetOrAddCollection(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<string> segments,
+    Dictionary<string, int> cache
+  )
   {
     int? parentK = null;
     var soFar = "";
@@ -485,7 +529,12 @@ public class CsiArtifactRootObjectBuilder(
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string? name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string? name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
@@ -500,7 +549,9 @@ public class CsiArtifactRootObjectBuilder(
     CharSet = System.Runtime.InteropServices.CharSet.Unicode,
     SetLastError = true
   )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
+    System.Runtime.InteropServices.DllImportSearchPath.System32
+  )]
   private static extern IntPtr LoadLibrary(string lpFileName);
 
   private static int s_zstdNativePreloaded;
@@ -571,7 +622,12 @@ public class CsiArtifactRootObjectBuilder(
 
   private static readonly string[] s_endJointKeys = { "I-End Joint", "J-End Joint" };
 
-  private sealed record CollectedObject(string ApplicationId, string SourceType, Base Converted, IReadOnlyList<string> Segments);
+  private sealed record CollectedObject(
+    string ApplicationId,
+    string SourceType,
+    Base Converted,
+    IReadOnlyList<string> Segments
+  );
 
   private sealed record CollectedModel(
     string Units,

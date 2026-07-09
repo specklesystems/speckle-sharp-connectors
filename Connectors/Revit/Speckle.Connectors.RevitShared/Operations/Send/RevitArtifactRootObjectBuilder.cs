@@ -78,8 +78,10 @@ public class RevitArtifactRootObjectBuilder(
     BundleResult built;
     using (session.Phase("Build"))
     {
-      built = await threadContext.RunOnMainAsync(
-        () => Task.FromResult(BuildBundleSync(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken))
+      built = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(
+          BuildBundleSync(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken)
+        )
       );
     }
 
@@ -239,8 +241,22 @@ public class RevitArtifactRootObjectBuilder(
             if (!SupportedCategoriesUtils.IsSupportedCategory(revitElement.Category))
             {
               var cat = revitElement.Category != null ? revitElement.Category.Name : "No category";
-              results.Add(new(Status.WARNING, revitElement.UniqueId, cat, null, new SpeckleException($"Category {cat} is not supported.")));
-              session.RecordObject(applicationId, sourceType, Status.WARNING, $"Category {cat} is not supported", sw.ElapsedMilliseconds);
+              results.Add(
+                new(
+                  Status.WARNING,
+                  revitElement.UniqueId,
+                  cat,
+                  null,
+                  new SpeckleException($"Category {cat} is not supported.")
+                )
+              );
+              session.RecordObject(
+                applicationId,
+                sourceType,
+                Status.WARNING,
+                $"Category {cat} is not supported",
+                sw.ElapsedMilliseconds
+              );
               skippedObjectCount++;
               continue;
             }
@@ -347,7 +363,12 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     var revitObject = converted as RevitObject;
-    pipeline.AddProperties(applicationId, dataObject.properties, RootScalars(converted, revitObject), TryGetTypeKey(revitElement));
+    pipeline.AddProperties(
+      applicationId,
+      dataObject.properties,
+      RootScalars(converted, revitObject),
+      TryGetTypeKey(revitElement)
+    );
 
     EmitDisplayValue(pipeline, objK, applicationId, dataObject.displayValue);
 
@@ -369,7 +390,12 @@ public class RevitArtifactRootObjectBuilder(
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
   // DISPLAY_INSTANCE. Line/Arc/Curve display values (door/window swing arcs, symbolic 2D) are intentionally skipped —
   // they aren't real model geometry and render as spurious arcs (matches ODA's mesh-only Revit extraction).
-  private void EmitDisplayValue(ObjectsArtifactPipeline pipeline, int objK, string appId, IReadOnlyList<Base> displayValue)
+  private void EmitDisplayValue(
+    ObjectsArtifactPipeline pipeline,
+    int objK,
+    string appId,
+    IReadOnlyList<Base> displayValue
+  )
   {
     int ord = 0;
     foreach (var item in displayValue)
@@ -450,7 +476,9 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     // 3) render materials → HAS_MATERIAL (geometry → material node).
-    foreach (var materialProxy in revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds))
+    foreach (
+      var materialProxy in revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds)
+    )
     {
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
@@ -574,7 +602,25 @@ public class RevitArtifactRootObjectBuilder(
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>
-    new[] { m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44 };
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
 
   private static readonly IReadOnlyDictionary<string, object?> s_emptyProperties = new Dictionary<string, object?>();
 
