@@ -1,5 +1,4 @@
 <Project>
-
   <!--
     Incremental-safe override of ILRepack.FullAuto's merge target.
 
@@ -20,17 +19,17 @@
     source changes, CoreCompile overwrites the intermediate (newer than the stamp) and the merge runs once,
     cleanly.
   -->
-  <Target Name="ILRepackBuildTarget"
-          BeforeTargets="CopyFilesToOutputDirectory"
-          Condition="'$(ILRepackBuildEnable)' == 'True'"
-          Inputs="@(IntermediateAssembly)"
-          Outputs="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')">
+  <Target
+    Name="ILRepackBuildTarget"
+    BeforeTargets="CopyFilesToOutputDirectory"
+    Condition="'$(ILRepackBuildEnable)' == 'True'"
+    Inputs="@(IntermediateAssembly)"
+    Outputs="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')"
+  >
     <CallTarget Targets="ILRepackPrepareBuild; ILRepackBuildCore" />
-    <Touch Files="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')"
-           AlwaysCreate="true" />
+    <Touch Files="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')" AlwaysCreate="true" />
     <ItemGroup>
       <FileWrites Include="@(IntermediateAssembly->'%(RootDir)%(Directory)%(Filename).ilrepack.stamp')" />
     </ItemGroup>
   </Target>
-
 </Project>

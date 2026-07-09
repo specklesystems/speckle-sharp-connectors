@@ -1,8 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-#if NETFRAMEWORK
-using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
-#endif
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
@@ -24,6 +21,10 @@ using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Models.Proxies;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+#if NETFRAMEWORK
+using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
+#endif
+
 
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
@@ -85,8 +86,8 @@ public class AutocadArtifactRootObjectBuilder(
     CollectedModel collected;
     using (session.Phase("Collect"))
     {
-      collected = await threadContext.RunOnMainAsync(
-        () => Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
       );
     }
 
@@ -186,7 +187,8 @@ public class AutocadArtifactRootObjectBuilder(
   {
     if (instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
     {
-      var instanceProps = instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
+      var instanceProps =
+        instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
       return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy);
     }
 
@@ -282,7 +284,11 @@ public class AutocadArtifactRootObjectBuilder(
     {
       pipeline.InCollection(objK, collK, 0);
     }
-    pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.SourceType, units, co.SourceType));
+    pipeline.AddProperties(
+      co.ApplicationId,
+      co.Properties,
+      RootScalars(co.Converted.speckle_type, co.SourceType, units, co.SourceType)
+    );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
     if (co.Converted is InstanceProxy instanceProxy)
@@ -344,7 +350,12 @@ public class AutocadArtifactRootObjectBuilder(
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        logger.LogWarning(ex, "Skipped unsupported display geometry {Type} on {AppId}", fragment.speckle_type, co.ApplicationId);
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported display geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          co.ApplicationId
+        );
       }
     }
 
@@ -385,7 +396,11 @@ public class AutocadArtifactRootObjectBuilder(
     {
       pipeline.InCollection(childK, collK, 0);
       var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
-      pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, child.speckle_type, units, child.speckle_type));
+      pipeline.AddProperties(
+        childAppId,
+        props,
+        RootScalars(child.speckle_type, child.speckle_type, units, child.speckle_type)
+      );
 
       var display = child is Civil3dObject cc ? new List<Base>(cc.displayValue) : new List<Base> { child };
       if (child is Civil3dObject cb && cb.baseCurves is { Count: > 0 } baseCurves)
@@ -404,7 +419,12 @@ public class AutocadArtifactRootObjectBuilder(
         }
         catch (Exception ex) when (!ex.IsFatal())
         {
-          logger.LogWarning(ex, "Skipped unsupported Civil3D child geometry {Type} on {AppId}", fragment.speckle_type, childAppId);
+          logger.LogWarning(
+            ex,
+            "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
+            fragment.speckle_type,
+            childAppId
+          );
         }
       }
       geometryKsByObjectId[childAppId] = gKs;
@@ -441,7 +461,12 @@ public class AutocadArtifactRootObjectBuilder(
       {
         if (!networkKById.TryGetValue(networkId, out int netK))
         {
-          netK = pipeline.AddContainer(networkId, assign.TryGetValue("networkName", out var nn) ? nn as string : null, null, "Network");
+          netK = pipeline.AddContainer(
+            networkId,
+            assign.TryGetValue("networkName", out var nn) ? nn as string : null,
+            null,
+            "Network"
+          );
           networkKById[networkId] = netK;
         }
         pipeline.InSystem(objK, netK, 0);
@@ -449,7 +474,12 @@ public class AutocadArtifactRootObjectBuilder(
 
       foreach (var key in s_structureKeys)
       {
-        if (assign.TryGetValue(key, out var sid) && sid is string structId && structId.Length > 0 && sent.Contains(structId))
+        if (
+          assign.TryGetValue(key, out var sid)
+          && sid is string structId
+          && structId.Length > 0
+          && sent.Contains(structId)
+        )
         {
           pipeline.ConnectsTo(objK, pipeline.InternObject(structId));
         }
@@ -530,7 +560,11 @@ public class AutocadArtifactRootObjectBuilder(
   }
 
   // Resolves (and interns once) the flat COLLECTION node for a layer name. AutoCAD has no nested layers.
-  private static int GetOrAddLayerCollection(ObjectsArtifactPipeline pipeline, string layerName, Dictionary<string, int> cache)
+  private static int GetOrAddLayerCollection(
+    ObjectsArtifactPipeline pipeline,
+    string layerName,
+    Dictionary<string, int> cache
+  )
   {
     if (cache.TryGetValue(layerName, out var existing))
     {
@@ -541,7 +575,12 @@ public class AutocadArtifactRootObjectBuilder(
     return collK;
   }
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
@@ -552,7 +591,25 @@ public class AutocadArtifactRootObjectBuilder(
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>
-    new[] { m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44 };
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
 
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
   private sealed record CollectedObject(
