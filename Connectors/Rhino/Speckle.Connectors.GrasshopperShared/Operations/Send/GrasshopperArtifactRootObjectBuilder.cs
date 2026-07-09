@@ -204,7 +204,13 @@ public class GrasshopperArtifactRootObjectBuilder(
   // A standalone geometry object (also used for block-definition member geometry): object = its own display geometry.
   // Definition members render ONLY through their definition (DEFINES); pass isDefinitionMember to suppress the
   // standalone top-level edges (IN_COLLECTION / DISPLAY / SOLID) while still registering the geometry K for DEFINES.
-  private void EmitGeometryObject(WalkContext ctx, SpeckleGeometryWrapper wrapper, int collK, int ord, bool isDefinitionMember = false)
+  private void EmitGeometryObject(
+    WalkContext ctx,
+    SpeckleGeometryWrapper wrapper,
+    int collK,
+    int ord,
+    bool isDefinitionMember = false
+  )
   {
     var sw = Stopwatch.StartNew();
     string sourceType = wrapper.Base.speckle_type;
@@ -217,7 +223,11 @@ public class GrasshopperArtifactRootObjectBuilder(
       {
         ctx.Pipeline.InCollection(objK, collK, ord);
       }
-      ctx.Pipeline.AddProperties(appId, PropertiesOf(clean), RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType));
+      ctx.Pipeline.AddProperties(
+        appId,
+        PropertiesOf(clean),
+        RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType)
+      );
 
       int displayOrd = 0;
       int solidOrd = 0;
@@ -232,7 +242,13 @@ public class GrasshopperArtifactRootObjectBuilder(
     catch (Exception ex) when (!ex.IsFatal())
     {
       ctx.Results.Add(new(Status.ERROR, wrapper.ApplicationId ?? "?", sourceType, null, ex));
-      ctx.Session.RecordObject(wrapper.ApplicationId ?? "?", sourceType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
+      ctx.Session.RecordObject(
+        wrapper.ApplicationId ?? "?",
+        sourceType,
+        Status.ERROR,
+        ex.Message,
+        sw.ElapsedMilliseconds
+      );
     }
   }
 
@@ -329,7 +345,12 @@ public class GrasshopperArtifactRootObjectBuilder(
       RootScalars(instance.InstanceProxy.speckle_type, instance.Name, ctx.Units, "Instance (Block)")
     );
     int defK = ctx.Pipeline.AddDefinition(instance.InstanceProxy.definitionId, null);
-    int instK = ctx.Pipeline.AddInstance(appId, defK, Flatten(instance.InstanceProxy.transform), instance.InstanceProxy.units);
+    int instK = ctx.Pipeline.AddInstance(
+      appId,
+      defK,
+      Flatten(instance.InstanceProxy.transform),
+      instance.InstanceProxy.units
+    );
     ctx.Pipeline.DisplayInstance(objK, instK, 0);
     ctx.InstanceKByAppId[appId] = instK;
   }
@@ -460,7 +481,12 @@ public class GrasshopperArtifactRootObjectBuilder(
   private static IReadOnlyDictionary<string, object?> PropertiesOf(Base @base) =>
     @base["properties"] is IReadOnlyDictionary<string, object?> props ? props : s_emptyProps;
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string? name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string? name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
@@ -470,7 +496,25 @@ public class GrasshopperArtifactRootObjectBuilder(
     };
 
   private static double[] Flatten(Matrix4x4 m) =>
-    new[] { m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44 };
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
 
 #if NETFRAMEWORK
   [System.Runtime.InteropServices.DllImport(
@@ -478,7 +522,9 @@ public class GrasshopperArtifactRootObjectBuilder(
     CharSet = System.Runtime.InteropServices.CharSet.Unicode,
     SetLastError = true
   )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
+    System.Runtime.InteropServices.DllImportSearchPath.System32
+  )]
   private static extern IntPtr LoadLibrary(string lpFileName);
 
   private static int s_zstdNativePreloaded;

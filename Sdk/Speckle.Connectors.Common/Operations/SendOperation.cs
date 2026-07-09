@@ -61,14 +61,7 @@ public sealed class SendOperation<T>(
       // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
       if (artifactRootObjectBuilder != null)
       {
-        return await SendViaArtifacts(
-          objects,
-          sendInfo,
-          fileName,
-          fileSizeBytes,
-          uiProgress,
-          cancellationToken
-        );
+        return await SendViaArtifacts(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
       }
 
       bool usePackfileSend =

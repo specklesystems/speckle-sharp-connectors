@@ -70,8 +70,8 @@ public class TeklaArtifactRootObjectBuilder(
     CollectedModel collected;
     using (session.Phase("Collect"))
     {
-      collected = await threadContext.RunOnMainAsync(
-        () => Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
       );
     }
 
@@ -226,7 +226,11 @@ public class TeklaArtifactRootObjectBuilder(
     var display = obj is DataObject dataObject ? dataObject.displayValue : new List<Base> { obj };
     var properties = obj is DataObject d ? d.properties : null;
     string type = obj["type"]?.ToString() ?? obj.speckle_type;
-    pipeline.AddProperties(appId, properties ?? s_emptyProps, RootScalars(obj.speckle_type, obj["name"]?.ToString(), units, type));
+    pipeline.AddProperties(
+      appId,
+      properties ?? s_emptyProps,
+      RootScalars(obj.speckle_type, obj["name"]?.ToString(), units, type)
+    );
 
     var gKs = geometryKsByAppId[appId] = new List<int>();
     int ord = 0;
@@ -297,7 +301,12 @@ public class TeklaArtifactRootObjectBuilder(
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string? name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string? name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
@@ -312,7 +321,9 @@ public class TeklaArtifactRootObjectBuilder(
     CharSet = System.Runtime.InteropServices.CharSet.Unicode,
     SetLastError = true
   )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(System.Runtime.InteropServices.DllImportSearchPath.System32)]
+  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
+    System.Runtime.InteropServices.DllImportSearchPath.System32
+  )]
   private static extern IntPtr LoadLibrary(string lpFileName);
 
   private static int s_zstdNativePreloaded;

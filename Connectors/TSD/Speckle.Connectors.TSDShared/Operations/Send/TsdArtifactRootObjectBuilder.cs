@@ -138,7 +138,13 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       }
       else
       {
-        session.RecordObject(result.SourceId, result.SourceType, Status.ERROR, result.Error?.Message, sw.ElapsedMilliseconds);
+        session.RecordObject(
+          result.SourceId,
+          result.SourceType,
+          Status.ERROR,
+          result.Error?.Message,
+          sw.ElapsedMilliseconds
+        );
       }
 
       onOperationProgressed.Report(new("Converting", (double)++count / entities.Count));
@@ -172,7 +178,9 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     Dictionary<string, object?>? tree;
     try
     {
-      tree = await _analysisResultsExtractor.ExtractAsync(loadings, resultTypes, cancellationToken).ConfigureAwait(false);
+      tree = await _analysisResultsExtractor
+        .ExtractAsync(loadings, resultTypes, cancellationToken)
+        .ConfigureAwait(false);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -224,18 +232,19 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       var items = group.ToList();
       modelUnits.Units.TryGetValue(group.Key, out var unit);
 
-      IReadOnlyList<double> values =
-        unit is null
-          ? items.Select(i => i.Value.BaseValue).ToList()
-          : await _applicationService
-            .ConvertFromBaseAsync(items.Select(i => i.Value.BaseValue).ToList(), unit)
-            .ConfigureAwait(false);
+      IReadOnlyList<double> values = unit is null
+        ? items.Select(i => i.Value.BaseValue).ToList()
+        : await _applicationService
+          .ConvertFromBaseAsync(items.Select(i => i.Value.BaseValue).ToList(), unit)
+          .ConfigureAwait(false);
 
       for (int i = 0; i < items.Count; i++)
       {
         var p = items[i];
         double value = i < values.Count ? values[i] : p.Value.BaseValue;
-        rows.Add(new StructuralResultRow(null, p.Location, p.ResultType, p.LoadCase, p.Component, p.Station, null, value));
+        rows.Add(
+          new StructuralResultRow(null, p.Location, p.ResultType, p.LoadCase, p.Component, p.Station, null, value)
+        );
       }
     }
 
@@ -272,8 +281,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       {
         if (value is TsdQuantityValue quantityValue)
         {
-          string component =
-            pathParts.Count == 0 ? componentKey : string.Join(".", pathParts) + "." + componentKey;
+          string component = pathParts.Count == 0 ? componentKey : string.Join(".", pathParts) + "." + componentKey;
           sink.Add(new PendingResultRow(resultType, loadCase, location, component, station, quantityValue));
         }
       }
@@ -318,7 +326,16 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
 
     foreach (var r in model.ResultRows)
     {
-      pipeline.AddStructuralResult(r.ObjectAppId, r.Location, r.ResultType, r.LoadCase, r.Component, r.Station, r.Step, r.Value);
+      pipeline.AddStructuralResult(
+        r.ObjectAppId,
+        r.Location,
+        r.ResultType,
+        r.LoadCase,
+        r.Component,
+        r.Station,
+        r.Step,
+        r.Value
+      );
     }
 
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -356,7 +373,11 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
       pipeline.Subelement(pK, objK, subelementOrd);
     }
 
-    pipeline.AddProperties(appId, obj.properties ?? s_emptyProps, RootScalars(obj.speckle_type, obj.name, units, obj.type));
+    pipeline.AddProperties(
+      appId,
+      obj.properties ?? s_emptyProps,
+      RootScalars(obj.speckle_type, obj.name, units, obj.type)
+    );
 
     int ord = 0;
     foreach (Base fragment in obj.displayValue)
@@ -392,7 +413,12 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     return collK;
   }
 
-  private static KeyValuePair<string, object?>[] RootScalars(string speckleType, string? name, string units, string sourceType) =>
+  private static KeyValuePair<string, object?>[] RootScalars(
+    string speckleType,
+    string? name,
+    string units,
+    string sourceType
+  ) =>
     new KeyValuePair<string, object?>[]
     {
       new("speckle_type", speckleType),
