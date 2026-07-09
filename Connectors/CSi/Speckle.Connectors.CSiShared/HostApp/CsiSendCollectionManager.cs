@@ -44,7 +44,8 @@ public class CsiSendCollectionManager
   /// builds a <see cref="Collection"/> tree) and the 4.0 artefact send (which emits nested CONTAINER nodes directly).
   /// Base = flat by type; ETABS overrides to level → category.
   /// </summary>
-  public virtual IReadOnlyList<string> GetCollectionSegments(Base convertedObject) => new[] { GetCollectionPath(convertedObject) };
+  public virtual IReadOnlyList<string> GetCollectionSegments(Base convertedObject) =>
+    new[] { GetCollectionPath(convertedObject) };
 
   protected virtual Collection CreateCollection(Base convertedObject) =>
     new() { name = GetCollectionPath(convertedObject) };

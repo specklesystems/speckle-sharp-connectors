@@ -204,7 +204,13 @@ public class GrasshopperArtifactRootObjectBuilder(
   // A standalone geometry object (also used for block-definition member geometry): object = its own display geometry.
   // Definition members render ONLY through their definition (DEFINES); pass isDefinitionMember to suppress the
   // standalone top-level edges (IN_COLLECTION / DISPLAY / SOLID) while still registering the geometry K for DEFINES.
-  private void EmitGeometryObject(WalkContext ctx, SpeckleGeometryWrapper wrapper, int collK, int ord, bool isDefinitionMember = false)
+  private void EmitGeometryObject(
+    WalkContext ctx,
+    SpeckleGeometryWrapper wrapper,
+    int collK,
+    int ord,
+    bool isDefinitionMember = false
+  )
   {
     var sw = Stopwatch.StartNew();
     string sourceType = wrapper.Base.speckle_type;
@@ -217,7 +223,11 @@ public class GrasshopperArtifactRootObjectBuilder(
       {
         ctx.Pipeline.InCollection(objK, collK, ord);
       }
-      ctx.Pipeline.AddProperties(appId, PropertiesOf(clean), RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType));
+      ctx.Pipeline.AddProperties(
+        appId,
+        PropertiesOf(clean),
+        RootScalars(clean.speckle_type, wrapper.Name, ctx.Units, sourceType)
+      );
 
       int displayOrd = 0;
       int solidOrd = 0;

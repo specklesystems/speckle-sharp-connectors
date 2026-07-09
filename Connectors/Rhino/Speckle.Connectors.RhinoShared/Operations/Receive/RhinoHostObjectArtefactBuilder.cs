@@ -279,7 +279,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         {
           // decode + convert both ran without throwing, but produced no bakeable geometry (e.g. a converter returned an
           // unhandled result shape). Record it so it isn't a silent drop.
-          _lastDecodeFailure = $"geom {geomK} ({g.Type}, {decoded.speckle_type}): converter returned no native geometry";
+          _lastDecodeFailure =
+            $"geom {geomK} ({g.Type}, {decoded.speckle_type}): converter returned no native geometry";
           _logger.LogWarning("Skipped SGEO geometry {GeomK}: {Reason}", geomK, _lastDecodeFailure);
         }
         return converted;
@@ -288,7 +289,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
         _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
-        _logger.LogWarning(ex, "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes) at {Stage}: {Error}", geomK, g.Type, g.Content.Length, stage, ex.Message);
+        _logger.LogWarning(
+          ex,
+          "Skipped SGEO geometry {GeomK} (type '{Type}', {Bytes} bytes) at {Stage}: {Error}",
+          geomK,
+          g.Type,
+          g.Content.Length,
+          stage,
+          ex.Message
+        );
       }
     }
     return new List<RG.GeometryBase>();
@@ -605,7 +614,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             continue;
           }
           var childDefId = doc.InstanceDefinitions[childDefIndex].Id;
-          var nestedTransform = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : docUnits, docUnits);
+          var nestedTransform = BuildTransform(
+            nestedInst.Transform,
+            nestedInst.Units is { Length: > 0 } u ? u : docUnits,
+            docUnits
+          );
 #pragma warning disable CA2000
           var nestedAtts = new ObjectAttributes();
 #pragma warning restore CA2000

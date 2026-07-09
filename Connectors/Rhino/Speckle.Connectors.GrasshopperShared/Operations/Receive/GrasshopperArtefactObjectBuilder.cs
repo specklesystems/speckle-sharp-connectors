@@ -47,9 +47,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // Instance definitions decoded once (DEFINITION node → its DEFINES geometry), shared across all placements.
     var defGeomByNode = BuildDefinitionGeometry(bundle, rels);
     // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
-    var instEdgesByObject = rels
-      .DisplayInstanceEdges.GroupBy(e => e.Src)
-      .ToDictionary(g => g.Key, g => g.ToList());
+    var instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
 
     foreach (var kv in bundle.ObjectAppIds)
     {

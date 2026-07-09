@@ -360,7 +360,11 @@ public class RhinoArtifactRootObjectBuilder(
     {
       pipeline.InCollection(objK, collK, 0);
     }
-    pipeline.AddProperties(co.ApplicationId, co.Properties, RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType));
+    pipeline.AddProperties(
+      co.ApplicationId,
+      co.Properties,
+      RootScalars(co.Converted.speckle_type, co.Name, units, co.SourceType)
+    );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
     if (co.Converted is InstanceProxy instanceProxy)
