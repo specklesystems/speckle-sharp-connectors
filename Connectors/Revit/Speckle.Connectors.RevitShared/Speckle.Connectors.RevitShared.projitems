@@ -31,6 +31,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitParameterCreator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RoomsAndAreasHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitSendChangeTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitZstdNativeLoader.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\ParameterUpdater.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitFamilyBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\RevitMaterialBaker.cs" />

@@ -17,7 +17,6 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
-using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using Path = System.IO.Path;
@@ -203,7 +202,15 @@ public class GrasshopperArtifactRootObjectBuilder(
   }
 
   // A standalone geometry object (also used for block-definition member geometry): object = its own display geometry.
-  private void EmitGeometryObject(WalkContext ctx, SpeckleGeometryWrapper wrapper, int collK, int ord)
+  // Definition members render ONLY through their definition (DEFINES); pass isDefinitionMember to suppress the
+  // standalone top-level edges (IN_COLLECTION / DISPLAY / SOLID) while still registering the geometry K for DEFINES.
+  private void EmitGeometryObject(
+    WalkContext ctx,
+    SpeckleGeometryWrapper wrapper,
+    int collK,
+    int ord,
+    bool isDefinitionMember = false
+  )
   {
     var sw = Stopwatch.StartNew();
     string sourceType = wrapper.Base.speckle_type;
@@ -212,7 +219,10 @@ public class GrasshopperArtifactRootObjectBuilder(
       Base clean = GrasshopperSendUnwrapper.UnwrapGeometry(wrapper);
       string appId = clean.applicationId.NotNull();
       int objK = ctx.Pipeline.InternObject(appId);
-      ctx.Pipeline.InCollection(objK, collK, ord);
+      if (!isDefinitionMember)
+      {
+        ctx.Pipeline.InCollection(objK, collK, ord);
+      }
       ctx.Pipeline.AddProperties(
         appId,
         PropertiesOf(clean),

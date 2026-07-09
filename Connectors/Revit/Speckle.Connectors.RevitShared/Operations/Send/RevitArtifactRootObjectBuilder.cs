@@ -186,6 +186,7 @@ public class RevitArtifactRootObjectBuilder(
       }
     }
 
+    RevitZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
 
     // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
