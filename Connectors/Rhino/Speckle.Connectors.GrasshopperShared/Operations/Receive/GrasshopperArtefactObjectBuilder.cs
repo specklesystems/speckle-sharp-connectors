@@ -162,10 +162,17 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var map = new Dictionary<int, List<RG.GeometryBase>>();
     foreach (var kv in rels.DefinesByDefinition)
     {
+      rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var ords);
       var geoms = new List<RG.GeometryBase>();
-      foreach (var geomK in kv.Value)
+      // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
+      // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without this
+      // it would place both the solid and its shadow mesh).
+      foreach (var memberGeomKs in GroupDefinesByMember(kv.Value, ords, bundle))
       {
-        geoms.AddRange(DecodeGeometryIndex(geomK, bundle));
+        foreach (var geomK in memberGeomKs)
+        {
+          geoms.AddRange(DecodeGeometryIndex(geomK, bundle));
+        }
       }
       if (geoms.Count > 0)
       {
@@ -173,6 +180,33 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
     return map;
+  }
+
+  // Groups a definition's DEFINES geometry Ks by member ordinal (index-aligned with ords), then within each member
+  // prefers the authoritative 3dm solid over its display mesh(es); a member with no solid yields all its geometry.
+  // Member order is preserved. When ords are absent (older bundle) each geometry is its own member — i.e. no grouping.
+  private static IEnumerable<List<int>> GroupDefinesByMember(List<int> geomKs, List<int>? ords, ArtefactBundle bundle)
+  {
+    var members = new List<List<int>>();
+    var indexByOrd = new Dictionary<int, int>();
+    for (int i = 0; i < geomKs.Count; i++)
+    {
+      int ord = ords is not null && i < ords.Count ? ords[i] : -(i + 1);
+      if (!indexByOrd.TryGetValue(ord, out int idx))
+      {
+        idx = members.Count;
+        indexByOrd[ord] = idx;
+        members.Add(new List<int>());
+      }
+      members[idx].Add(geomKs[i]);
+    }
+    foreach (var geoms in members)
+    {
+      var solids = geoms
+        .Where(k => bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.RHINO_3DM)
+        .ToList();
+      yield return solids.Count > 0 ? solids : geoms;
+    }
   }
 
   // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform. Geometry

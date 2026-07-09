@@ -403,17 +403,30 @@ public class RhinoArtifactRootObjectBuilder(
     rawEncoding ??= co.RawSolid;
 
     // Authoritative solid: the raw 3dm blob, kept verbatim for receive-as-solids (Brep/Extrusion/SubD, and hatches).
-    // Skipped for definition members — a member is never a standalone solid; it renders only through its definition's
-    // display meshes (DEFINES).
-    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
+    // A standalone object links it via the SOLID rel; a definition member instead lets it ride DEFINES (added to gKs
+    // below) so the block reconstructs the native solid, not just its display mesh — but a member still gets NO
+    // standalone SOLID edge (it renders only through a placed instance's transform).
+    int? memberSolidK = null;
+    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
-      pipeline.Solid(objK, solidK, 0);
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        pipeline.Solid(objK, solidK, 0);
+      }
     }
 
     // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).
     var gKs = new List<int>();
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the 3dm per member
+    }
     int ord = 0;
     foreach (Base fragment in displayGeometry)
     {
@@ -452,20 +465,23 @@ public class RhinoArtifactRootObjectBuilder(
     foreach (var defProxy in model.Definitions)
     {
       int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
-      int o = 0;
+      int memberOrd = 0;
       foreach (var memberId in defProxy.objects)
       {
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
-          pipeline.DefinesInstance(defK, instK, o++);
+          pipeline.DefinesInstance(defK, instK, memberOrd);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
+          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative solid
+          // + its display mesh(es) and pick the solid over its shadow (see RhinoHostObjectArtefactBuilder.BuildDefinitions).
           foreach (var gK in memberGKs)
           {
-            pipeline.Defines(defK, gK, o++);
+            pipeline.Defines(defK, gK, memberOrd);
           }
         }
+        memberOrd++;
       }
     }
 
