@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -7,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
@@ -21,6 +21,7 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Instances;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using SOG = Speckle.Objects.Geometry;
@@ -41,8 +42,6 @@ namespace Speckle.Connectors.Revit.Operations.Send;
 /// piece is <b>linked models</b>: each source document becomes a <c>CONTAINER</c> node (subtype "Model") and
 /// every object emits an <c>IN_MODEL</c> relation to its owning model; a federated (&gt;1 document) send
 /// prepends the <c>IN_MODEL</c> tier to the default scene view.</para>
-/// <para>.NET 8+ only — the SDK producer types are <c>#if NET8_0_OR_GREATER</c>. The whole file compiles to
-/// nothing on the net48 Revit targets (2023/2024); it is registered + used only on net8/net10 (2025+).</para>
 /// </remarks>
 public class RevitArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
@@ -188,6 +187,7 @@ public class RevitArtifactRootObjectBuilder(
       }
     }
 
+    ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
 
     // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
@@ -631,4 +631,3 @@ public class RevitArtifactRootObjectBuilder(
     IReadOnlyList<SendConversionResult> Results
   );
 }
-#endif

@@ -177,7 +177,7 @@ Both send-only — only a root builder + DI, no `IArtifactHostObjectBuilder`.
   RhinoHostObjectArtefactBuilder.cs` — `BakeAll` (clean → base layer → materials → atomic geometry → instances),
   `DecodeGeometryIndex`, `ResolveLayer`, `CreateMaterials`, `BakeInstances`, `BuildTransform`, `ReceiveDiagnostics`.
 - **Rhino send:** `…/Operations/Send/RhinoArtifactRootObjectBuilder.cs` (two-phase; raw 3dm + SGEO meshes; nested-layer
-  COLLECTION tree; `EnsureZstdNativeLoaded` net48 P/Invoke of `nironcompress.dll`).
+  COLLECTION tree; `ZstdNativeLoader.Ensure` (Speckle.Connectors.Common) net48 pre-load of `nironcompress.dll`).
 - **Revit send:** `Connectors/Revit/Speckle.Connectors.RevitShared/Operations/Send/RevitArtifactRootObjectBuilder.cs`.
 
 ## Build & environment gotchas

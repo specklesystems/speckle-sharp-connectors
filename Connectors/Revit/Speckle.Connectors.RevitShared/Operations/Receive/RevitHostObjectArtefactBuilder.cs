@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -18,9 +17,9 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
@@ -539,9 +538,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   private static string MaterialKey(ArtefactNode node) =>
-    string.Create(
+    string.Format(
       CultureInfo.InvariantCulture,
-      $"{node.Argb ?? -1}|{node.Opacity ?? 1.0}|{node.Metalness ?? 0.0}|{node.Roughness ?? 1.0}"
+      "{0}|{1}|{2}|{3}",
+      node.Argb ?? -1,
+      node.Opacity ?? 1.0,
+      node.Metalness ?? 0.0,
+      node.Roughness ?? 1.0
     );
 
   private ElementId FindOrCreateMaterial(Document doc, ArtefactNode node)
@@ -730,4 +733,3 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   /// TypeLoader only accepts assembly-scanned registered types — never a custom subclass).</summary>
   private static Base Source(string appId) => new() { applicationId = appId, id = appId };
 }
-#endif

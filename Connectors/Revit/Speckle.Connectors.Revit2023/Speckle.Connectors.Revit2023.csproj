@@ -12,6 +12,8 @@
 
   <Import Project="..\Speckle.Connectors.RevitShared.Cef\Speckle.Connectors.RevitShared.Cef.projitems" Label="Shared" />
 
+  <Import Project="..\Speckle.Connectors.RevitShared\Net48.IronCompress.props" />
+
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -31,6 +33,11 @@
 
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf" IncludeAssets="compile" NoWarn="NU1903" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--Better compatiblity with BimCAT plugin-->
+    <PackageReference Include="Microsoft.Data.Sqlite" VersionOverride="8.0.6" />
   </ItemGroup>
 
   <ItemGroup>

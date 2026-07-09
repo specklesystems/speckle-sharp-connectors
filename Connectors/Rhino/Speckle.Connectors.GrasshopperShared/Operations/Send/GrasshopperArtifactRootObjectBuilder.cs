@@ -4,6 +4,7 @@ using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Instances;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
@@ -17,6 +18,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Credentials;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 using Path = System.IO.Path;
@@ -108,9 +110,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     CancellationToken cancellationToken
   )
   {
-#if NETFRAMEWORK
-    EnsureZstdNativeLoaded();
-#endif
+    ZstdNativeLoader.Ensure(); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
     var units = converterSettings.Current.SpeckleUnits;
 
@@ -515,44 +515,6 @@ public class GrasshopperArtifactRootObjectBuilder(
       m.M43,
       m.M44,
     };
-
-#if NETFRAMEWORK
-  [System.Runtime.InteropServices.DllImport(
-    "kernel32",
-    CharSet = System.Runtime.InteropServices.CharSet.Unicode,
-    SetLastError = true
-  )]
-  [System.Runtime.InteropServices.DefaultDllImportSearchPaths(
-    System.Runtime.InteropServices.DllImportSearchPath.System32
-  )]
-  private static extern IntPtr LoadLibrary(string lpFileName);
-
-  private static int s_zstdNativePreloaded;
-
-  // Parquet.Net Zstd-compresses via IronCompress's native nironcompress.dll, P/Invoked through a bare
-  // [DllImport("nironcompress")]. On .NET Framework that resolves against the process (Rhino.exe) directory, not the
-  // plugin folder, so the co-deployed native isn't found. Pre-load it by full path once.
-  private static void EnsureZstdNativeLoaded()
-  {
-    if (System.Threading.Interlocked.Exchange(ref s_zstdNativePreloaded, 1) == 1)
-    {
-      return;
-    }
-    try
-    {
-      var dir = Path.GetDirectoryName(typeof(GrasshopperArtifactRootObjectBuilder).Assembly.Location);
-      var native = Path.Combine(dir ?? string.Empty, "nironcompress.dll");
-      if (File.Exists(native))
-      {
-        LoadLibrary(native);
-      }
-    }
-    catch (Exception ex) when (!ex.IsFatal())
-    {
-      // parquet Zstd compression may fail; surfaced by the pipeline if so.
-    }
-  }
-#endif
 
   // Threaded through the recursive walk instead of a field-per-build, so the builder stays reentrant-safe.
   private sealed record WalkContext(

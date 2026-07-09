@@ -23,10 +23,8 @@
       IncludeAssets="compile; build"
       VersionOverride="1.30.0"
     />
-    <!-- The SDK's netstandard2.0 Parquet.Net (4.0 artefact writing) requires System.Text.Json >= 9.0.10, so reference
-         it directly to avoid a restore-time downgrade (NU1605). At runtime the net48 plugin binding-redirects STJ to
-         the host app's version (ETABS/CSi doesn't invoke Parquet.Net yet). -->
-    <PackageReference Include="System.Text.Json" VersionOverride="9.0.10" NoWarn="NU1903" />
+    <!--to match host app-->
+    <PackageReference Include="System.Text.Json" VersionOverride="6.0.11" />
   </ItemGroup>
 
   <ItemGroup>

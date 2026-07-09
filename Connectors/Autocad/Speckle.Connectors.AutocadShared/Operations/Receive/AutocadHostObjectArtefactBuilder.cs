@@ -20,16 +20,15 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 using AcadColor = Autodesk.AutoCAD.Colors.Color;
 using AcadEntity = Autodesk.AutoCAD.DatabaseServices.Entity;
 using AcadMaterial = Autodesk.AutoCAD.DatabaseServices.Material;
 #if NETFRAMEWORK
 using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
 #endif
-
 
 namespace Speckle.Connectors.Autocad.Operations.Receive;
 
@@ -38,7 +37,7 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// Civil3D), talking only to the neutral dense-int graph + raw AutoCAD API — no v1 <c>Base</c>/<c>DataObject</c>/
 /// <c>Collection</c>/proxy types and no traversal / <c>AutocadLayerBaker</c> / <c>AutocadMaterialBaker</c> machinery.
 /// Solids come from raw ACIS-SAT blobs (<see cref="Body.AcisIn(string)"/>), meshes from SGEO
-/// (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="PolyFaceMesh"/>; layers are the flat
+/// (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="PolyFaceMesh"/>; layers are the flat
 /// AutoCAD layer namespace projected from the scene view; materials from MATERIAL nodes (HAS_MATERIAL). Instances
 /// follow the host-agnostic model: a DEFINITION node owns its geometry directly (DEFINES → geometry) baked into a
 /// <see cref="BlockTableRecord"/>, and each DISPLAY_INSTANCE edge places it as a <see cref="BlockReference"/>. The

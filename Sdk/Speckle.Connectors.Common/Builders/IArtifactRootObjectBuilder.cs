@@ -11,12 +11,6 @@ namespace Speckle.Connectors.Common.Builders;
 /// the v1 serializer), the artefact path owns its own write + upload, so it returns only the resulting
 /// (pre-allocated, now committed) version id, a synthetic root id, and the per-object conversion results.
 /// </summary>
-/// <remarks>
-/// Registered ONLY on targets where the SDK producer is available (.NET 8+: the
-/// <c>ObjectsArtifactPipeline</c> / <c>ArtifactPipeline</c> types are <c>#if NET8_0_OR_GREATER</c>). On
-/// older targets the implementation is absent, the optional dependency in <c>SendOperation</c> stays
-/// <see langword="null"/>, and the send falls back to the v1 ingestion / version-create paths.
-/// </remarks>
 public interface IArtifactRootObjectBuilder<in T>
 {
   /// <summary>

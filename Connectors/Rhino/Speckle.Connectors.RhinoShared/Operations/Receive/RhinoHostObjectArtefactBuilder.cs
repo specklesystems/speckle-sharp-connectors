@@ -21,9 +21,9 @@ using Speckle.Sdk.Common;
 using Speckle.Sdk.Common.Exceptions;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
-using Speckle.Sdk.Pipelines.Send.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoRenderMaterial = Rhino.Render.RenderMaterial;
 
@@ -33,7 +33,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Rhino document, talking only to
 /// the neutral dense-int graph + raw Rhino API — no v1 <c>Base</c>/<c>DataObject</c>/<c>Collection</c>/proxy types and
 /// no traversal/converter pipeline. Solids come from raw 3dm blobs (<see cref="RawEncodingToHost.Convert3dm"/>), meshes
-/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh"/>) built straight into a <see cref="RG.Mesh"/>, and other SGEO
+/// from SGEO (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="RG.Mesh"/>, and other SGEO
 /// primitives (curves, points) decode via <see cref="SgeoDecoder.Decode"/> + the Rhino ToHost converter; layers from the
 /// COLLECTION tree; materials from MATERIAL nodes (HAS_MATERIAL). Instances follow the host-agnostic model used by
 /// Revit and Rhino alike: a DEFINITION node owns its geometry directly (DEFINES → geometry), and each DISPLAY_INSTANCE

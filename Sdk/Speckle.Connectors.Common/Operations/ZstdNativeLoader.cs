@@ -1,25 +1,25 @@
 using Microsoft.Extensions.Logging;
 #if NETFRAMEWORK
-using System.IO;
 using System.Runtime.InteropServices;
 using Speckle.Sdk;
 #endif
 
-namespace Speckle.Connectors.Autocad.HostApp;
+namespace Speckle.Connectors.Common.Operations;
 
 /// <summary>
 /// Pre-loads IronCompress's native <c>nironcompress.dll</c> so Parquet.Net's Zstd codec resolves on .NET Framework.
 /// </summary>
 /// <remarks>
 /// Parquet.Net Zstd-(de)compresses row groups via IronCompress, which P/Invokes a bare <c>[DllImport("nironcompress")]</c>.
-/// On .NET Framework that resolves against the process (<c>acad.exe</c>) directory — NOT the plugin folder — so the
-/// co-deployed native isn't found. We pre-load it by full path once (Windows then matches the bare import to the
-/// already-loaded module by base name). Called at plugin startup so BOTH the artefact send AND receive paths have it —
-/// receive reads the parquet bundle (in <c>ArtifactReceiver</c>) before the host builder runs, so a receive-first
-/// session would otherwise hit "No compression codec for Zstd is available". net8+ resolves the native via its RID, so
-/// this is a no-op there.
+/// On .NET Framework that resolves against the host process (e.g. <c>Revit.exe</c>) directory — NOT the plugin folder —
+/// so the co-deployed native isn't found. We pre-load it by full path once (Windows then matches the bare import to the
+/// already-loaded module by base name); the native is located next to this assembly, which every connector deploys into
+/// its plugin folder alongside <c>nironcompress.dll</c> (see the connectors' <c>Net48.IronCompress.props</c>). Call at
+/// plugin startup so BOTH the artefact send AND receive paths have it — receive reads the parquet bundle (in
+/// <see cref="ArtifactReceiver"/>) before the host builder runs, so a receive-first session would otherwise hit
+/// "No compression codec for Zstd is available". net8+ resolves the native via its RID, so this is a no-op there.
 /// </remarks>
-internal static class AutocadZstdNativeLoader
+public static class ZstdNativeLoader
 {
 #if NETFRAMEWORK
   [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -36,7 +36,7 @@ internal static class AutocadZstdNativeLoader
     }
     try
     {
-      var dir = Path.GetDirectoryName(typeof(AutocadZstdNativeLoader).Assembly.Location);
+      var dir = Path.GetDirectoryName(typeof(ZstdNativeLoader).Assembly.Location);
       var native = Path.Combine(dir ?? string.Empty, "nironcompress.dll");
       if (File.Exists(native))
       {
