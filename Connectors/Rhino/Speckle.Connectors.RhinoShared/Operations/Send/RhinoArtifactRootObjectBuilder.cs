@@ -202,7 +202,87 @@ public class RhinoArtifactRootObjectBuilder(
     // no layers here (object-level only) to avoid double-emitting them.
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<RhinoLayer>());
 
-    return new CollectedModel(units, collectedObjects, layers, materials, colors, instanceDefinitionProxies, results);
+    // Named views → camera_views rows (Base-free). Unlike the v1 Camera path, parallel projections carry over too.
+    var cameraViews = CollectNamedViews(doc, units);
+
+    return new CollectedModel(
+      units,
+      collectedObjects,
+      layers,
+      materials,
+      colors,
+      instanceDefinitionProxies,
+      cameraViews,
+      results
+    );
+  }
+
+  // Rhino named views → envelope camera_views. RhinoCommon-bound (NamedViewTable) → phase 1 only. Positions/target
+  // are in doc model units; forward/up are unitized. Perspective views carry lens_mm + a frustum-derived vertical
+  // fov (degrees); parallel views carry ortho_height (the near-frustum height) instead.
+  private static List<CameraView> CollectNamedViews(global::Rhino.RhinoDoc doc, string units)
+  {
+    var views = new List<CameraView>();
+    int ord = 0;
+    foreach (ViewInfo namedView in doc.NamedViews)
+    {
+      var vp = namedView.Viewport;
+      var forward = vp.CameraDirection;
+      var up = vp.CameraUp;
+      if (!forward.Unitize() || !up.Unitize())
+      {
+        continue; // degenerate camera — skip rather than fail the send
+      }
+
+      bool isOrtho = vp.IsParallelProjection;
+      bool hasFrustum = vp.GetFrustum(
+        out double left,
+        out double right,
+        out double bottom,
+        out double top,
+        out double near,
+        out double far
+      );
+      _ = left;
+      _ = right;
+      double? fov = null;
+      if (!isOrtho && hasFrustum && near > 0)
+      {
+        fov = 2.0 * Math.Atan2((top - bottom) / 2.0, near) * (180.0 / Math.PI);
+      }
+
+      bool hasTarget = vp.TargetPoint.IsValid;
+      views.Add(
+        new CameraView(
+          View: ord,
+          Name: namedView.Name,
+          IsDefault: false,
+          Ord: ord,
+          PosX: vp.CameraLocation.X,
+          PosY: vp.CameraLocation.Y,
+          PosZ: vp.CameraLocation.Z,
+          ForwardX: forward.X,
+          ForwardY: forward.Y,
+          ForwardZ: forward.Z,
+          UpX: up.X,
+          UpY: up.Y,
+          UpZ: up.Z,
+          TargetX: hasTarget ? vp.TargetPoint.X : null,
+          TargetY: hasTarget ? vp.TargetPoint.Y : null,
+          TargetZ: hasTarget ? vp.TargetPoint.Z : null,
+          Units: units,
+          IsOrtho: isOrtho,
+          Fov: fov,
+          LensMm: isOrtho ? null : vp.Camera35mmLensLength,
+          OrthoHeight: isOrtho && hasFrustum ? top - bottom : null,
+          Aspect: vp.FrustumAspect,
+          Near: hasFrustum ? near : null,
+          Far: hasFrustum ? far : null
+        )
+      );
+      ord++;
+    }
+    return views;
   }
 
   // Converts one Rhino object to its Speckle representation (instance proxy or geometry) + extracts properties.
@@ -325,6 +405,12 @@ public class RhinoArtifactRootObjectBuilder(
     // Default scene view: the Rhino layer tree (IN_COLLECTION). The COLLECTION nodes' parent chain carries the
     // nesting, so a single projection key rebuilds the full explorer hierarchy.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
+
+    // Named camera viewpoints (collected on the UI thread in phase 1) → envelope.camera_views.parquet.
+    foreach (var cameraView in model.CameraViews)
+    {
+      pipeline.AddCameraView(cameraView);
+    }
 
     pipeline.Complete();
 
@@ -625,6 +711,7 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<RenderMaterialProxy> Materials,
     IReadOnlyList<ColorProxy> Colors,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
+    IReadOnlyList<CameraView> CameraViews,
     IReadOnlyList<SendConversionResult> Results
   );
 
