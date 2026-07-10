@@ -169,12 +169,51 @@ public class AutocadArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Layer-level
-    // materials/colors are skipped this pass (object-level only) — pass an empty layer list.
+    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Only explicit
+    // object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer COLLECTION nodes'
+    // argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on receive with no edge.
     var materials = materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>());
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
+    var layerArgbByName = CollectLayerColors(atomicObjects);
 
-    return new CollectedModel(units, collectedObjects, materials, colors, instanceDefinitionProxies, results);
+    return new CollectedModel(
+      units,
+      collectedObjects,
+      materials,
+      colors,
+      layerArgbByName,
+      instanceDefinitionProxies,
+      results
+    );
+  }
+
+  // Captures the colour of every layer used by the selection (AutoCAD API is document-bound → phase 1 only), so
+  // phase 2 can stamp each layer COLLECTION node's argb — the layer half of colour inheritance.
+  private Dictionary<string, int> CollectLayerColors(List<AutocadRootObject> atomicObjects)
+  {
+    var result = new Dictionary<string, int>(StringComparer.Ordinal);
+    try
+    {
+      var db = converterSettings.Current.Document.Database;
+      using var tr = db.TransactionManager.StartTransaction();
+      var layerTable = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+      foreach (var (entity, _) in atomicObjects)
+      {
+        string layerName = entity.Layer;
+        if (result.ContainsKey(layerName) || !layerTable.Has(layerName))
+        {
+          continue;
+        }
+        var record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+        result[layerName] = record.Color.ColorValue.ToArgb();
+      }
+      tr.Commit();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(ex, "Failed to collect layer colours for the artefact bundle");
+    }
+    return result;
   }
 
   // Converts one AutoCAD entity to its Speckle representation (instance proxy or AutocadObject carrier). The
@@ -233,7 +272,7 @@ public class AutocadArtifactRootObjectBuilder(
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
-      int collK = GetOrAddLayerCollection(pipeline, co.LayerName, layerCollectionKByName);
+      int collK = GetOrAddLayerCollection(pipeline, co.LayerName, model.LayerArgbByName, layerCollectionKByName);
       EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
@@ -504,20 +543,23 @@ public class AutocadArtifactRootObjectBuilder(
     foreach (var defProxy in model.Definitions)
     {
       int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
-      int o = 0;
+      int memberOrd = 0;
       foreach (var memberId in defProxy.objects)
       {
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
-          pipeline.DefinesInstance(defK, instK, o++);
+          pipeline.DefinesInstance(defK, instK, memberOrd);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
+          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative SAT
+          // solid with its display mesh(es) and prefer the solid (see AutocadHostObjectArtefactBuilder.BuildDefinitions).
           foreach (var gK in memberGKs)
           {
-            pipeline.Defines(defK, gK, o++);
+            pipeline.Defines(defK, gK, memberOrd);
           }
         }
+        memberOrd++;
       }
     }
 
@@ -561,10 +603,12 @@ public class AutocadArtifactRootObjectBuilder(
     }
   }
 
-  // Resolves (and interns once) the flat COLLECTION node for a layer name. AutoCAD has no nested layers.
+  // Resolves (and interns once) the flat COLLECTION node for a layer name (with the layer's colour as its argb).
+  // AutoCAD has no nested layers.
   private static int GetOrAddLayerCollection(
     ObjectsArtifactPipeline pipeline,
     string layerName,
+    IReadOnlyDictionary<string, int> layerArgbByName,
     Dictionary<string, int> cache
   )
   {
@@ -572,7 +616,8 @@ public class AutocadArtifactRootObjectBuilder(
     {
       return existing;
     }
-    int collK = pipeline.AddCollection(layerName, layerName, null, "Layer");
+    int? argb = layerArgbByName.TryGetValue(layerName, out int a) ? a : null;
+    int collK = pipeline.AddCollection(layerName, layerName, null, "Layer", argb);
     cache[layerName] = collK;
     return collK;
   }
@@ -627,6 +672,7 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<RenderMaterialProxy> Materials,
     IReadOnlyList<ColorProxy> Colors,
+    IReadOnlyDictionary<string, int> LayerArgbByName,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<SendConversionResult> Results
   );

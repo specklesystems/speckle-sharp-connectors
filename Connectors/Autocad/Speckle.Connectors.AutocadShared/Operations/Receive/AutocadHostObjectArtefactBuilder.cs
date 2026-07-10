@@ -37,10 +37,13 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// Civil3D), talking only to the neutral dense-int graph + raw AutoCAD API — no v1 <c>Base</c>/<c>DataObject</c>/
 /// <c>Collection</c>/proxy types and no traversal / <c>AutocadLayerBaker</c> / <c>AutocadMaterialBaker</c> machinery.
 /// Solids come from raw ACIS-SAT blobs (<see cref="Body.AcisIn(string)"/>), meshes from SGEO
-/// (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="PolyFaceMesh"/>; layers are the flat
-/// AutoCAD layer namespace projected from the scene view; materials from MATERIAL nodes (HAS_MATERIAL). Instances
-/// follow the host-agnostic model: a DEFINITION node owns its geometry directly (DEFINES → geometry) baked into a
-/// <see cref="BlockTableRecord"/>, and each DISPLAY_INSTANCE edge places it as a <see cref="BlockReference"/>. The
+/// (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="PolyFaceMesh"/>; every other SGEO
+/// primitive (curves, points, text, regions…) decodes to its Speckle geometry object and converts via the AutoCAD
+/// ToHost converter. Layers are the flat AutoCAD layer namespace projected from the scene view (with the source layer
+/// colour); materials from MATERIAL nodes (HAS_MATERIAL), by-object colours from COLOR nodes (HAS_COLOR). Instances
+/// follow the host-agnostic model: a DEFINITION node owns its geometry directly (DEFINES → geometry, member-grouped,
+/// SAT preferred over its display shadow) plus nested placements (DEFINES_INSTANCE) built depth-first as nested
+/// <see cref="BlockReference"/>s, and each DISPLAY_INSTANCE edge places the definition into model space. The
 /// receive-side twin of the send-side <c>AutocadArtifactRootObjectBuilder</c>.
 /// </summary>
 [SuppressMessage(
@@ -51,6 +54,7 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
   private readonly IConverterSettingsStore<AutocadConversionSettings> _converterSettings;
+  private readonly IRootToHostConverter _converter;
   private readonly IThreadContext _threadContext;
   private readonly AutocadContext _autocadContext;
   private readonly ISdkActivityFactory _activityFactory;
@@ -58,6 +62,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   public AutocadHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
+    IRootToHostConverter converter,
     IThreadContext threadContext,
     AutocadContext autocadContext,
     ISdkActivityFactory activityFactory,
@@ -65,6 +70,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   )
   {
     _converterSettings = converterSettings;
+    _converter = converter;
     _threadContext = threadContext;
     _autocadContext = autocadContext;
     _activityFactory = activityFactory;
@@ -119,54 +125,83 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
 
-    using var tr = db.TransactionManager.StartTransaction();
-    try
+    // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
+    // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
+    // on AutoCAD 2023 and fail:
+    // - Database.TransactionManager (single OR per-object): the stock ToHost converters used by the SGEO fallback
+    //   resolve Document.TransactionManager.TopTransaction, which is a SEPARATE stack that does not surface db-TM
+    //   transactions — every spline/hatch conversion throws CheckTopTransaction (67 objects lost, silently);
+    // - one receive-wide Document.TransactionManager transaction: converters work, but the final Commit of a
+    //   250+-entity AppTransaction hangs indefinitely in the modeless DUI3 context.
+    // Per-object doc-TM commits are cheap undebugged (~ms each; the "slow" runs were Rider breaking on first-chance
+    // exceptions); they isolate failures and keep every hatch evaluation small (see the Associative=false guard in
+    // DecodeAndAppend for the other half of the hang).
+
+    // 1 - materials (MATERIAL nodes) into the document material dictionary; map geometry/object → material id.
+    Dictionary<int, ObjectId> materialIdByNode;
+    using (session.Phase("Materials"))
+    using (var mtr = doc.TransactionManager.StartTransaction())
     {
-      // 1 - materials (MATERIAL nodes) into the document material dictionary; map geometry/object → material id.
-      Dictionary<int, ObjectId> materialIdByNode;
-      using (session.Phase("Materials"))
-      {
-        materialIdByNode = CreateMaterials(db, tr, bundle, baseLayerName);
-      }
-      var (materialIdByGeometry, materialIdByObject) = MapMaterials(bundle, rels, objByGeom, materialIdByNode);
+      materialIdByNode = CreateMaterials(db, mtr, bundle, baseLayerName);
+      mtr.Commit();
+    }
+    var (materialIdByGeometry, materialIdByObject) = MapMaterials(bundle, rels, objByGeom, materialIdByNode);
 
-      // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
-      var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
-      int count = 0;
-      int total = bundle.ObjectAppIds.Count;
-      using (session.Phase("Atomic"))
+    // 1b - by-object display colours (HAS_COLOR → COLOR nodes). Applied as explicit entity colour on bake; objects
+    // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
+    var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
+
+    // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
+    int count = 0;
+    int total = bundle.ObjectAppIds.Count;
+    using (session.Phase("Atomic"))
+    {
+      foreach (var kv in bundle.ObjectAppIds)
       {
-        foreach (var kv in bundle.ObjectAppIds)
+        cancellationToken.ThrowIfCancellationRequested();
+        onOperationProgressed.Report(new("Converting objects", (double)++count / total));
+        int objK = kv.Key;
+        string appId = kv.Value;
+
+        bool hasDisplay = rels.DisplayByObject(objK) is { Count: > 0 } || rels.SolidByObject.ContainsKey(objK);
+        if (!hasDisplay)
         {
-          cancellationToken.ThrowIfCancellationRequested();
-          onOperationProgressed.Report(new("Converting objects", (double)++count / total));
-          int objK = kv.Key;
-          string appId = kv.Value;
-
-          bool hasDisplay = rels.DisplayByObject(objK) is { Count: > 0 } || rels.SolidByObject.ContainsKey(objK);
-          if (!hasDisplay)
+          if (!rels.DisplayInstanceByObject.ContainsKey(objK))
           {
-            if (!rels.DisplayInstanceByObject.ContainsKey(objK))
-            {
-              session.Increment("nonGeometricSkipped");
-            }
-            continue;
+            session.Increment("nonGeometricSkipped");
           }
+          continue;
+        }
 
-          bundle.Properties.TryGetValue(objK, out var props);
-          var source = Source(appId);
-          var srcType = SrcType(props);
-          var sw = Stopwatch.StartNew();
-          try
+        bundle.Properties.TryGetValue(objK, out var props);
+        var source = Source(appId);
+        var srcType = SrcType(props);
+        var sw = Stopwatch.StartNew();
+        try
+        {
+          // The layer is created in its own committed transaction so a later per-object abort can't roll it back
+          // out from under the layer cache.
+          string layerName;
+          using (var ltr = doc.TransactionManager.StartTransaction())
           {
-            string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache);
-            materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
+            layerName = ResolveLayer(bundle, objK, baseLayerName, db, ltr, layerCache);
+            ltr.Commit();
+          }
+          materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
+          bool hasObjColor = colorArgbByObject.TryGetValue(appId, out int objArgb);
 
-            var ids = new List<ObjectId>();
+          var ids = new List<ObjectId>();
+          using (var tr = doc.TransactionManager.StartTransaction())
+          {
+            var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
             foreach (var geomK in GeometryIndices(objK, rels))
             {
               materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
               ObjectId materialId = objMaterial != ObjectId.Null ? objMaterial : geomMaterial;
+              int? argb =
+                hasObjColor ? objArgb
+                : colorArgbByGeometry.TryGetValue(geomK, out int geomArgb) ? geomArgb
+                : null;
               foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
               {
                 entity.Layer = layerName;
@@ -174,72 +209,74 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                 {
                   entity.MaterialId = materialId;
                 }
+                if (argb is int a)
+                {
+                  entity.Color = ToAcadColor(a);
+                }
                 ids.Add(entity.ObjectId);
               }
             }
-
-            if (ids.Count == 0)
-            {
-              session.RecordObject(
-                appId,
-                srcType,
-                Status.ERROR,
-                "did not convert to any native geometry",
-                sw.ElapsedMilliseconds
-              );
-              conversionResults.Add(
-                new(
-                  Status.ERROR,
-                  source,
-                  null,
-                  null,
-                  new ConversionException("Object did not convert to any native geometry"),
-                  srcType
-                )
-              );
-              continue;
-            }
-
-            bakedObjectIds.UnionWith(ids.Select(i => i.ToString()));
-            conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Object", null, srcType));
-            session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
+            tr.Commit();
           }
-          catch (Exception ex) when (!ex.IsFatal())
+
+          if (ids.Count == 0)
           {
-            session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
-            conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
+            session.RecordObject(
+              appId,
+              srcType,
+              Status.ERROR,
+              "did not convert to any native geometry",
+              sw.ElapsedMilliseconds
+            );
+            conversionResults.Add(
+              new(
+                Status.ERROR,
+                source,
+                null,
+                null,
+                new ConversionException("Object did not convert to any native geometry"),
+                srcType
+              )
+            );
+            continue;
           }
-        }
-      }
 
-      // 3 - instances: build block definitions from DEFINES → geometry, place one per DISPLAY_INSTANCE edge.
-      if (rels.DisplayInstanceEdges.Count > 0)
-      {
-        onOperationProgressed.Report(new("Converting instances", null));
-        using (session.Phase("Instances"))
+          bakedObjectIds.UnionWith(ids.Select(i => i.ToString()));
+          conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Object", null, srcType));
+          session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
+        }
+        catch (Exception ex) when (!ex.IsFatal())
         {
-          BakeInstances(
-            bundle,
-            rels,
-            db,
-            tr,
-            baseLayerName,
-            layerCache,
-            materialIdByGeometry,
-            materialIdByObject,
-            bakedObjectIds,
-            conversionResults,
-            session
-          );
+          session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
+          conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
         }
       }
-
-      tr.Commit();
     }
-    catch
+
+    // 3 - instances: build block definitions from DEFINES → geometry, place one per DISPLAY_INSTANCE edge.
+    if (rels.DisplayInstanceEdges.Count > 0)
     {
-      tr.Abort();
-      throw;
+      onOperationProgressed.Report(new("Converting instances", null));
+      using (session.Phase("Instances"))
+      using (var itr = doc.TransactionManager.StartTransaction())
+      {
+        BakeInstances(
+          bundle,
+          rels,
+          db,
+          itr,
+          baseLayerName,
+          layerCache,
+          materialIdByGeometry,
+          materialIdByObject,
+          colorArgbByGeometry,
+          colorArgbByObject,
+          bakedObjectIds,
+          conversionResults,
+          session
+        );
+        itr.Commit();
+      }
     }
 
     return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
@@ -288,11 +325,105 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       return result;
     }
 
-    if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    if (g.IsSgeo)
     {
-      var mesh = BuildMesh(sm, target, tr);
-      ScaleEntity(mesh, sm.Units);
-      result.Add(mesh);
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
+      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      {
+        var mesh = BuildMesh(sm, target, tr);
+        ScaleEntity(mesh, sm.Units);
+        result.Add(mesh);
+        return result;
+      }
+      // Curves, points, text and other primitives: decode to a Speckle geometry object and convert via the AutoCAD
+      // ToHost converter, which scales from the object's units to doc units itself (so no ScaleEntity here). An
+      // unsupported primitive degrades to nothing rather than aborting the whole receive.
+      foreach (var entity in ConvertSgeoFallback(g.Content, geomK))
+      {
+        if (entity is Hatch { Associative: true } hatch)
+        {
+          // The Region→Hatch converter hatches from temp boundary curves it ERASES afterwards, leaving the hatch
+          // associative to erased dependents. Commit then re-evaluates that dangling association (worst inside block
+          // definitions after re-parenting) and can hang AutoCAD — the baked hatch is static, so drop associativity.
+          hatch.Associative = false;
+        }
+        if (entity.IsNewObject)
+        {
+          target.AppendEntity(entity);
+          tr.AddNewlyCreatedDBObject(entity, true);
+        }
+        else if (entity.OwnerId != target.ObjectId)
+        {
+          // Some converters (Polyline3d, Hatch/Region) self-append to the CURRENT SPACE via the top transaction —
+          // re-parent into the target record (matters for block-definition members). See v1's EntityExtensions.AppendToDb.
+          target.AssumeOwnershipOf(new ObjectIdCollection { entity.ObjectId });
+        }
+        result.Add(entity);
+      }
+    }
+    return result;
+  }
+
+  // SGEO blob (non-mesh) → Speckle geometry object → native entities via the ToHost converter. Primitives with no
+  // AutoCAD converter get a manual fallback (pointclouds → DBPoints, spirals → their display polyline) or are skipped
+  // with a warning; a bad blob must not abort the receive.
+  private List<AcadEntity> ConvertSgeoFallback(byte[] content, int geomK)
+  {
+    Base? decoded = null;
+    try
+    {
+      decoded = SgeoDecoder.Decode(content);
+      return decoded switch
+      {
+        Speckle.Objects.Geometry.Pointcloud cloud => PointcloudToPoints(cloud),
+        Speckle.Objects.Geometry.Spiral spiral => ConvertViaToHost(spiral.displayValue),
+        _ => ConvertViaToHost(decoded),
+      };
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+      _logger.LogWarning(
+        ex,
+        "Skipped SGEO geometry {GeomK} ({Bytes} bytes) at {Stage}: {Error}",
+        geomK,
+        content.Length,
+        stage,
+        ex.Message
+      );
+      return new List<AcadEntity>();
+    }
+  }
+
+  // The top-level ToHost converter returns a single Entity for primitives or a list of (Entity, Base) for one-to-many
+  // fallback conversions (brep/polycurve/…); both are unwrapped. Returned entities are not yet database-resident.
+  private List<AcadEntity> ConvertViaToHost(Base target)
+  {
+    var converted = _converter.Convert(target);
+    return converted switch
+    {
+      AcadEntity entity => new List<AcadEntity> { entity },
+      IEnumerable<(AcadEntity a, Base)> pairs => pairs.Select(p => p.a).ToList(),
+      IEnumerable<AcadEntity> many => many.ToList(),
+      _ => new List<AcadEntity>(),
+    };
+  }
+
+  // Pointclouds have no AutoCAD ToHost converter — bake one DBPoint per point (with its colour when present).
+  private List<AcadEntity> PointcloudToPoints(Speckle.Objects.Geometry.Pointcloud cloud)
+  {
+    double f = Units.GetConversionFactor(cloud.units, _converterSettings.Current.SpeckleUnits);
+    var pts = cloud.points;
+    bool hasColors = cloud.colors.Count * 3 == pts.Count;
+    var result = new List<AcadEntity>(pts.Count / 3);
+    for (int i = 0; i + 2 < pts.Count; i += 3)
+    {
+      var point = new DBPoint(new Point3d(pts[i] * f, pts[i + 1] * f, pts[i + 2] * f));
+      if (hasColors)
+      {
+        point.Color = ToAcadColor(cloud.colors[i / 3]);
+      }
+      result.Add(point);
     }
     return result;
   }
@@ -436,28 +567,85 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     HashSet<string> layerCache,
     Dictionary<int, ObjectId> materialIdByGeometry,
     Dictionary<string, ObjectId> materialIdByObject,
+    Dictionary<int, int> colorArgbByGeometry,
+    Dictionary<string, int> colorArgbByObject,
     HashSet<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
     ArtefactSessionLog session
   )
   {
-    var docUnits = _converterSettings.Current.SpeckleUnits;
     var blockTable = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForWrite);
 
-    // definitions: a DEFINITION node owns its geometry directly (DEFINES → geometry blobs) → a BlockTableRecord.
+    var defIdByNode = BuildDefinitions(
+      bundle,
+      rels,
+      blockTable,
+      tr,
+      baseLayerName,
+      materialIdByGeometry,
+      colorArgbByGeometry,
+      session
+    );
+
+    // placements: one BlockReference per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
+    var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
+    PlaceInstances(
+      bundle,
+      rels,
+      db,
+      tr,
+      baseLayerName,
+      layerCache,
+      materialIdByObject,
+      colorArgbByObject,
+      defIdByNode,
+      modelSpace,
+      bakedObjectIds,
+      conversionResults,
+      session
+    );
+  }
+
+  // Builds every DEFINITION node into a BlockTableRecord, returning node K → block ObjectId. A DEFINITION owns its
+  // geometry directly (DEFINES → geometry, grouped by member ordinal with the authoritative SAT solid preferred over
+  // its display-mesh shadow) and may contain nested block placements (DEFINES_INSTANCE → INSTANCE node), built
+  // depth-first (memoized, cycle-guarded) as nested BlockReferences — mirrors RhinoHostObjectArtefactBuilder.
+  private Dictionary<int, ObjectId> BuildDefinitions(
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    BlockTable blockTable,
+    Transaction tr,
+    string baseLayerName,
+    Dictionary<int, ObjectId> materialIdByGeometry,
+    Dictionary<int, int> colorArgbByGeometry,
+    ArtefactSessionLog session
+  )
+  {
+    var docUnits = _converterSettings.Current.SpeckleUnits;
     var defIdByNode = new Dictionary<int, ObjectId>();
-    foreach (var kv in bundle.Nodes)
+    var defBuilding = new HashSet<int>();
+
+    ObjectId BuildDefinition(int defNodeK)
     {
-      if (kv.Value.Kind != NodeKind.Definition || !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs))
+      if (defIdByNode.TryGetValue(defNodeK, out var already))
       {
-        continue;
+        return already; // already built (a shared nested definition is reached from several parents)
+      }
+      if (!bundle.Nodes.TryGetValue(defNodeK, out var defNode) || defNode.Kind != NodeKind.Definition)
+      {
+        return ObjectId.Null;
+      }
+      if (!defBuilding.Add(defNodeK))
+      {
+        return ObjectId.Null; // cycle guard — never stack-overflow on a bad bundle
       }
       session.Increment("definitionsSeen");
+
       var btr = new BlockTableRecord
       {
         Name = UniqueBlockName(
           blockTable,
-          _autocadContext.RemoveInvalidChars($"{kv.Value.Name ?? "Definition"}-(def-{kv.Key})-{baseLayerName}")
+          _autocadContext.RemoveInvalidChars($"{defNode.Name ?? "Definition"}-(def-{defNodeK})-{baseLayerName}")
         ),
         Origin = Point3d.Origin,
       };
@@ -465,30 +653,106 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       tr.AddNewlyCreatedDBObject(btr, true);
 
       int memberCount = 0;
-      foreach (var geomK in geomKs)
+
+      // direct geometry members. Definition geometry is in the model's source units (no per-object context here) —
+      // pass the bundle units so a SAT member from a metre model isn't baked 1000x off in a millimetre doc.
+      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
       {
-        materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
-        foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, docUnits))
+        rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+        foreach (var memberGeomKs in GroupDefinesByMember(geomKs, ords, bundle))
         {
-          if (geomMaterial != ObjectId.Null)
+          foreach (var geomK in memberGeomKs)
           {
-            entity.MaterialId = geomMaterial;
+            materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
+            bool hasGeomColor = colorArgbByGeometry.TryGetValue(geomK, out int geomArgb);
+            foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, bundle.Units))
+            {
+              if (geomMaterial != ObjectId.Null)
+              {
+                entity.MaterialId = geomMaterial;
+              }
+              if (hasGeomColor)
+              {
+                entity.Color = ToAcadColor(geomArgb);
+              }
+              memberCount++;
+            }
           }
-          memberCount++;
         }
       }
+
+      // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first, then place it
+      // inside this BTR as a nested BlockReference with the nested placement's own transform.
+      if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+      {
+        foreach (var instNodeK in nestedInstNodeKs)
+        {
+          if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+          {
+            continue;
+          }
+          ObjectId childDefId = BuildDefinition(childDefNodeK);
+          if (childDefId == ObjectId.Null)
+          {
+            session.Increment("nestedInstancesUnresolved");
+            continue;
+          }
+          Matrix3d nestedMatrix = BuildMatrix3d(
+            nestedInst.Transform,
+            nestedInst.Units is { Length: > 0 } u ? u : docUnits,
+            docUnits
+          );
+          var nestedRef = new BlockReference(Point3d.Origin.TransformBy(nestedMatrix), childDefId)
+          {
+            BlockTransform = nestedMatrix,
+          };
+          btr.AppendEntity(nestedRef);
+          tr.AddNewlyCreatedDBObject(nestedRef, true);
+          memberCount++;
+          session.Increment("nestedInstancesPlaced");
+        }
+      }
+
+      defBuilding.Remove(defNodeK);
 
       if (memberCount == 0)
       {
         session.Increment("definitionsEmpty");
         btr.Erase();
-        continue;
+        return ObjectId.Null;
       }
-      defIdByNode[kv.Key] = defId;
+      defIdByNode[defNodeK] = defId;
+      return defId;
     }
 
-    // placements: one BlockReference per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
-    var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildDefinition(kv.Key);
+      }
+    }
+
+    return defIdByNode;
+  }
+
+  private void PlaceInstances(
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Database db,
+    Transaction tr,
+    string baseLayerName,
+    HashSet<string> layerCache,
+    Dictionary<string, ObjectId> materialIdByObject,
+    Dictionary<string, int> colorArgbByObject,
+    Dictionary<int, ObjectId> defIdByNode,
+    BlockTableRecord modelSpace,
+    HashSet<string> bakedObjectIds,
+    HashSet<ReceiveConversionResult> conversionResults,
+    ArtefactSessionLog session
+  )
+  {
+    var docUnits = _converterSettings.Current.SpeckleUnits;
     foreach (var edge in rels.DisplayInstanceEdges)
     {
       session.Increment("placementsAttempted");
@@ -540,6 +804,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         {
           blockRef.MaterialId = objMaterial;
         }
+        if (colorArgbByObject.TryGetValue(appId, out int objArgb))
+        {
+          blockRef.Color = ToAcadColor(objArgb); // ByBlock members pick this up from the reference
+        }
         modelSpace.AppendEntity(blockRef);
         tr.AddNewlyCreatedDBObject(blockRef, true);
         bakedObjectIds.Add(blockRef.ObjectId.ToString());
@@ -553,6 +821,33 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
         conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
       }
+    }
+  }
+
+  // Groups a definition's DEFINES geometry Ks by member ordinal (index-aligned with ords), then within each member
+  // prefers the authoritative SAT solid over its display mesh(es); a member with no solid yields all its geometry.
+  // Member order is preserved. When ords are absent (older bundle) each geometry is its own member — i.e. no grouping.
+  private static IEnumerable<List<int>> GroupDefinesByMember(List<int> geomKs, List<int>? ords, ArtefactBundle bundle)
+  {
+    var members = new List<List<int>>();
+    var indexByOrd = new Dictionary<int, int>();
+    for (int i = 0; i < geomKs.Count; i++)
+    {
+      int ord = ords is not null && i < ords.Count ? ords[i] : -(i + 1); // absent ords → unique key per geometry
+      if (!indexByOrd.TryGetValue(ord, out int idx))
+      {
+        idx = members.Count;
+        indexByOrd[ord] = idx;
+        members.Add(new List<int>());
+      }
+      members[idx].Add(geomKs[i]);
+    }
+    foreach (var geoms in members)
+    {
+      var solids = geoms
+        .Where(k => bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.ACAD_SAT)
+        .ToList();
+      yield return solids.Count > 0 ? solids : geoms;
     }
   }
 
@@ -579,13 +874,32 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     HashSet<string> cache
   )
   {
-    var segments = SceneViewResolver.Segments(bundle, objK);
-    string name = segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments)}";
+    var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
+    string name =
+      segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments.Select(s => s.Name))}";
     name = _autocadContext.RemoveInvalidChars(name);
-    return GetOrCreateLayer(name, db, tr, cache);
+
+    // The flattened AutoCAD layer stands in for the whole segment chain — colour it from the innermost
+    // (leaf-most) segment that carries one, matching what the object would inherit in the source app.
+    int? argb = null;
+    for (int i = segments.Count - 1; i >= 0; i--)
+    {
+      if (segments[i].Argb is int a)
+      {
+        argb = a;
+        break;
+      }
+    }
+    return GetOrCreateLayer(name, db, tr, cache, argb);
   }
 
-  private static string GetOrCreateLayer(string layerName, Database db, Transaction tr, HashSet<string> cache)
+  private static string GetOrCreateLayer(
+    string layerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> cache,
+    int? argb
+  )
   {
     if (cache.Contains(layerName))
     {
@@ -596,6 +910,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       layerTable.UpgradeOpen();
       var record = new LayerTableRecord { Name = layerName };
+      if (argb is int a)
+      {
+        record.Color = ToAcadColor(a);
+      }
       layerTable.Add(record);
       tr.AddNewlyCreatedDBObject(record, true);
     }
@@ -669,6 +987,39 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
     return (byGeometry, byObject);
+  }
+
+  // ── colours ───────────────────────────────────────────────────────────────────────────────────────────
+  // By-object display colours: HAS_COLOR (geometry → COLOR node) mapped both by geometry (definition members) and by
+  // owning object appId (atomic objects + block references), mirroring MapMaterials.
+  private static (Dictionary<int, int> byGeometry, Dictionary<string, int> byObject) MapColors(
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, int> objByGeom
+  )
+  {
+    var byGeometry = new Dictionary<int, int>();
+    var byObject = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var kv in rels.ColorByGeometry)
+    {
+      if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
+      {
+        continue;
+      }
+      byGeometry[kv.Key] = argb;
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+    return (byGeometry, byObject);
+  }
+
+  // AutoCAD colours have no alpha channel (transparency is a separate entity property) — strip it.
+  private static AcadColor ToAcadColor(int argb)
+  {
+    var c = System.Drawing.Color.FromArgb(argb);
+    return AcadColor.FromRgb(c.R, c.G, c.B);
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
