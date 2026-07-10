@@ -11,7 +11,9 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
+using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
@@ -52,6 +54,8 @@ public class RevitArtifactRootObjectBuilder(
   RevitToSpeckleCacheSingleton revitToSpeckleCacheSingleton,
   LinkedModelHandler linkedModelHandler,
   IArtifactPipelineFactory artifactPipelineFactory,
+  IScalingServiceToSpeckle scalingService,
+  IReferencePointConverter referencePointConverter,
   ILogger<RevitArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<DocumentToConvert>
 {
@@ -195,6 +199,7 @@ public class RevitArtifactRootObjectBuilder(
     // ON_LEVEL post-loop (LevelUnpacker keys by the plain UniqueId).
     var objectKsByElementUniqueId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     var modelContainerKeys = new HashSet<string>(StringComparer.Ordinal);
+    var cameraViews = new List<CameraView>();
     var countProgress = 0;
     var skippedObjectCount = 0;
 
@@ -286,6 +291,11 @@ public class RevitArtifactRootObjectBuilder(
 
           onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
         }
+
+        // Named 3D views (perspective AND orthographic) of this document → camera_views rows. Collected inside
+        // this settings push so linked-model cameras ride the exact ReferencePointTransform + scaling path the
+        // document's element geometry does; linked views get the model display name as a prefix.
+        CollectDocumentViews(documentContext.Doc, documentContext.Doc.IsLinked ? modelName : null, cameraViews);
       }
     }
 
@@ -313,6 +323,12 @@ public class RevitArtifactRootObjectBuilder(
     sceneKeys.Add(SceneViewKey.Eav("family"));
     pipeline.AddSceneView(new SceneView(0, "Default", true, sceneKeys));
 
+    // Named camera viewpoints (host + linked 3D views) → envelope.camera_views.parquet.
+    foreach (var cameraView in cameraViews)
+    {
+      pipeline.AddCameraView(cameraView);
+    }
+
     pipeline.Complete();
 
     var bundle = Directory
@@ -328,9 +344,78 @@ public class RevitArtifactRootObjectBuilder(
     session.SetStat("files", bundle.Count);
     session.SetStat("objects", objectCount);
     session.SetStat("models", modelContainerKeys.Count);
+    session.SetStat("cameras", cameraViews.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
     return new BundleResult(bundle, rootId, objectCount, results);
+  }
+
+  // Revit 3D views → envelope camera_views (Base-free; unlike the v1 Camera path, orthographic views carry over
+  // too). MUST run inside the caller's converterSettings.Push for the owning document, so origin/forward/up go
+  // through the same ReferencePointTransform + main-document scaling as the document's element geometry (this is
+  // what places linked-model cameras correctly in host coordinates). View/Ord = the running dense index.
+  private void CollectDocumentViews(Document doc, string? linkedModelName, List<CameraView> cameraViews)
+  {
+    string units = converterSettings.Current.SpeckleUnits;
+    using FilteredElementCollector collector = new(doc);
+    var views = collector
+      .WhereElementIsNotElementType()
+      .OfCategory(BuiltInCategory.OST_Views)
+      .Cast<View>()
+      .Where(x => x.ViewType == ViewType.ThreeD);
+
+    foreach (View view in views)
+    {
+      if (view is not View3D view3D || view3D.IsTemplate)
+      {
+        continue;
+      }
+      try
+      {
+        bool isOrtho = !view3D.IsPerspective; // throws InvalidOperationException on some template-ish views
+        if (view3D.Origin == null)
+        {
+          continue; // some 3D views carry no camera position
+        }
+
+        ViewOrientation3D orientation = view3D.GetSavedOrientation();
+        XYZ origin = referencePointConverter.ConvertToExternalCoordinates(view3D.Origin, true);
+        XYZ forward = referencePointConverter.ConvertToExternalCoordinates(orientation.ForwardDirection, false);
+        XYZ up = referencePointConverter.ConvertToExternalCoordinates(orientation.UpDirection, false);
+        if (forward.IsZeroLength() || up.IsZeroLength())
+        {
+          continue; // degenerate camera — skip rather than fail the send
+        }
+        forward = forward.Normalize();
+        up = up.Normalize();
+
+        int ord = cameraViews.Count;
+        cameraViews.Add(
+          new CameraView(
+            View: ord,
+            Name: linkedModelName is null ? view3D.Name : $"{linkedModelName} - {view3D.Name}",
+            IsDefault: false,
+            Ord: ord,
+            PosX: scalingService.ScaleLength(origin.X),
+            PosY: scalingService.ScaleLength(origin.Y),
+            PosZ: scalingService.ScaleLength(origin.Z),
+            ForwardX: forward.X,
+            ForwardY: forward.Y,
+            ForwardZ: forward.Z,
+            UpX: up.X,
+            UpY: up.Y,
+            UpZ: up.Z,
+            Units: units,
+            IsOrtho: isOrtho
+          )
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // A single unreadable view (locked orientation, odd template state, …) never fails the send.
+        logger.LogWarning(ex, "Skipped unreadable 3D view {ViewName}", view.Name);
+      }
+    }
   }
 
   // Emits one atomic object: its eav labels + IN_MODEL edge + per-fragment DISPLAY (→ geometry) /
