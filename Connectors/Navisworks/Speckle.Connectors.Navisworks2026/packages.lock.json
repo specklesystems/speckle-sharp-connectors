@@ -235,8 +235,8 @@
       },
       "System.Memory": {
         "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "1MbJTHS1lZ4bS4FmsJjnuGJOu88ZzTT2rLvrhW7Ygic+pC0NWA+3hgAen0HRdsocuQXCkUTdFn9yHJJhsijDXw==",
+        "resolved": "4.5.5",
+        "contentHash": "XIWiDvKPXaTveaB7HVganDlOCRoj03l+jrwNvcge/t8vhGYKvqV+dMv6G4SAX2NoNmN0wZfVPTAlFwZcZvVOUw==",
         "dependencies": {
           "System.Buffers": "4.5.1",
           "System.Numerics.Vectors": "4.5.0",
@@ -326,7 +326,8 @@
       "speckle.objects": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Sdk": "[1.0.0, )"
+          "Speckle.Sdk": "[1.0.0, )",
+          "System.Memory": "[4.5.5, )"
         }
       },
       "speckle.sdk": {
@@ -342,6 +343,7 @@
           "Speckle.Newtonsoft.Json": "[13.0.2, )",
           "Speckle.Sdk.Dependencies": "[1.0.0, )",
           "Speckle.Sdk.Parquet": "[1.0.0, )",
+          "System.Memory": "[4.5.5, )",
           "System.Text.Json": "[5.0.2, )"
         }
       },
