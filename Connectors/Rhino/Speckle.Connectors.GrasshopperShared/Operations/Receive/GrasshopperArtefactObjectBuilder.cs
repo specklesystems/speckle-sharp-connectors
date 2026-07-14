@@ -9,6 +9,7 @@ using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
 
@@ -46,10 +47,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var collectionCache = new Dictionary<string, SpeckleCollectionWrapper>(StringComparer.Ordinal);
     var rels = bundle.Relations;
 
-    // Instance definitions decoded once (DEFINITION node → its DEFINES geometry), shared across all placements.
+    // Instance definitions decoded once (DEFINITION node → its DEFINES + composed DEFINES_INSTANCE geometry), shared
+    // across all placements.
     var defGeomByNode = BuildDefinitionGeometry(bundle, rels);
     // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
     var instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
+    // INSTANCE nodes that are a nested/child placement inside some DEFINITION (DEFINES_INSTANCE targets). Their content
+    // is already composed into the parent definition's geometry by BuildDefinitionGeometry, so their own top-level
+    // DISPLAY_INSTANCE placement (using their un-composed, definition-local transform) must be skipped below — otherwise
+    // the nested block appears an extra time at the wrong (definition-space) location instead of once per parent placement.
+    var nestedInstanceNodes = new HashSet<int>(rels.DefinesInstanceByDefinition.Values.SelectMany(v => v));
 
     foreach (var kv in bundle.ObjectAppIds)
     {
@@ -66,6 +73,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         foreach (var e in instEdges)
         {
+          if (nestedInstanceNodes.Contains(e.Dst))
+          {
+            continue; // nested placement — already composed into its parent definition's geometry above
+          }
           if (
             !bundle.Nodes.TryGetValue(e.Dst, out var instNode)
             || instNode.DefRef is not int defNodeK
@@ -167,36 +178,94 @@ internal sealed class GrasshopperArtefactObjectBuilder
       ? s
       : bundle.Units;
 
-  // Decodes each DEFINITION node's geometry once (DEFINES → geometry blobs), keyed by definition node index. The same
-  // definition is referenced by many instances, so we decode once here and duplicate+transform per placement.
+  // Decodes every DEFINITION node's geometry once — direct DEFINES → geometry blobs, plus DEFINES_INSTANCE → nested
+  // definitions recursively built and composed with their own (definition-local) transform — keyed by definition node
+  // index. The same definition is referenced by many instances, so we decode/compose once here and duplicate+transform
+  // per placement (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions' nested composition, ENG-8793): without
+  // this, a block-inside-a-block's content is placed once at its own definition-space transform instead of once per
+  // parent placement.
   private static Dictionary<int, List<RG.GeometryBase>> BuildDefinitionGeometry(
     ArtefactBundle bundle,
     ArtefactRelations rels
   )
   {
     var map = new Dictionary<int, List<RG.GeometryBase>>();
-    foreach (var kv in rels.DefinesByDefinition)
+    var building = new HashSet<int>();
+
+    List<RG.GeometryBase> BuildDefinition(int defNodeK)
     {
-      rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var ords);
-      var geoms = new List<RG.GeometryBase>();
-      // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
-      // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without this
-      // it would place both the solid and its shadow mesh).
-      foreach (var memberGeomKs in GroupDefinesByMember(kv.Value, ords, bundle))
+      if (map.TryGetValue(defNodeK, out var already))
       {
-        foreach (var geomK in memberGeomKs)
+        return already; // already built (a shared nested definition is reached from several parents)
+      }
+      if (!building.Add(defNodeK))
+      {
+        return new List<RG.GeometryBase>(); // cycle guard — never stack-overflow on a bad bundle
+      }
+
+      var geoms = new List<RG.GeometryBase>();
+
+      // direct geometry members (DEFINES → geometry blob).
+      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+      {
+        rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+        // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
+        // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without
+        // this it would place both the solid and its shadow mesh).
+        foreach (var memberGeomKs in GroupDefinesByMember(geomKs, ords, bundle))
         {
-          // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
-          // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
-          // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
-          geoms.AddRange(DecodeGeometryIndex(geomK, bundle, bundle.Units));
+          foreach (var geomK in memberGeomKs)
+          {
+            // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
+            // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
+            // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
+            geoms.AddRange(DecodeGeometryIndex(geomK, bundle, bundle.Units));
+          }
         }
       }
+
+      // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first (depth-first,
+      // memoized above), then duplicate+bake its own transform so a placement of THIS definition already carries the
+      // composed nested content.
+      if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+      {
+        foreach (var instNodeK in nestedInstNodeKs)
+        {
+          if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+          {
+            continue;
+          }
+          var childGeoms = BuildDefinition(childDefNodeK);
+          if (childGeoms.Count == 0)
+          {
+            continue;
+          }
+          var xf = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : bundle.Units);
+          foreach (var g in childGeoms)
+          {
+            var dup = g.Duplicate();
+            dup.Transform(xf);
+            geoms.Add(dup);
+          }
+        }
+      }
+
+      building.Remove(defNodeK);
       if (geoms.Count > 0)
       {
-        map[kv.Key] = geoms;
+        map[defNodeK] = geoms;
+      }
+      return geoms;
+    }
+
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildDefinition(kv.Key);
       }
     }
+
     return map;
   }
 
