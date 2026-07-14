@@ -784,11 +784,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var byObject = new Dictionary<string, int>();
     foreach (var kv in bundle.Relations.ColorByGeometry)
     {
-      if (
-        !bundle.Nodes.TryGetValue(kv.Value, out var n)
-        || n.Kind != NodeKind.Color
-        || n.Argb is not int argb
-      )
+      if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
       {
         continue;
       }
