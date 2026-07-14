@@ -73,7 +73,8 @@ public class NavisworksSendBinding : ISendBinding
     [
       new VisualRepresentationSetting(RepresentationMode.Active),
       new OriginModeSetting(OriginMode.ModelOrigin),
-      new IncludeInternalPropertiesSetting(false),
+      new PropertyDetailLevelSetting(),
+      new GeometryDetailLevelSetting(),
       new ConvertHiddenElementsSetting(false),
       new PreserveModelHierarchySetting(false),
       new RevitCategoryMappingSetting(false),
@@ -115,14 +116,17 @@ public class NavisworksSendBinding : ISendBinding
         _conversionSettingsFactory.Create(
           originMode: _toSpeckleSettingsManagerNavisworks.GetOriginMode(modelCard),
           visualRepresentationMode: _toSpeckleSettingsManagerNavisworks.GetVisualRepresentationMode(modelCard),
+          propertyDetailLevel: _toSpeckleSettingsManagerNavisworks.GetPropertyDetailLevel(modelCard),
+          geometryDetailLevel: _toSpeckleSettingsManagerNavisworks.GetGeometryDetailLevel(modelCard),
           convertHiddenElements: _toSpeckleSettingsManagerNavisworks.GetConvertHiddenElements(modelCard),
           includeInternalProperties: _toSpeckleSettingsManagerNavisworks.GetIncludeInternalProperties(modelCard),
+          roundMeshVertexDoubles: _toSpeckleSettingsManagerNavisworks.GetRoundMeshVertexDoubles(modelCard),
           preserveModelHierarchy: _toSpeckleSettingsManagerNavisworks.GetPreserveModelHierarchy(modelCard),
           mappingToRevitCategories: _toSpeckleSettingsManagerNavisworks.GetMappingToRevitCategories(modelCard)
         )
       );
 
-  private async Task<IReadOnlyList<NAV.ModelItem>> GetNavisworksModelItems(
+  private async Task<IReadOnlyList<ModelItem>> GetNavisworksModelItems(
     SenderModelCard modelCard,
     IProgress<CardProgress> onOperationProgressed
   )
@@ -144,7 +148,7 @@ public class NavisworksSendBinding : ISendBinding
     await Task.CompletedTask;
 
     int estimatedCapacity = selectedPaths.Count * 10;
-    var modelItems = new List<NAV.ModelItem>(estimatedCapacity);
+    var modelItems = new List<ModelItem>(estimatedCapacity);
     double count = 0;
 
     foreach (var path in selectedPaths)
@@ -161,7 +165,7 @@ public class NavisworksSendBinding : ISendBinding
         int hiddenBranchesPruned = 0;
         const int REPORT_INTERVAL = 1000;
 
-        void TraverseWithProgress(NAV.ModelItem node)
+        void TraverseWithProgress(ModelItem node)
         {
           nodesVisited++;
 
@@ -205,6 +209,8 @@ public class NavisworksSendBinding : ISendBinding
 
       count++;
     }
+
+    onOperationProgressed.Report(new CardProgress("Converting", 0));
 
     return modelItems.Count == 0 ? throw new SpeckleSendFilterException(message) : modelItems;
   }

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -14,6 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Constants\PathConstants.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ClassPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\DisplayValueExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\InternalPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\ModelPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\PropertySetsExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DataExtractors\RevitBuiltInCategoryExtractor.cs" />
@@ -35,7 +36,16 @@
     <Compile Include="$(MSBuildThisFileDirectory)Paths\PathKey.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Registers\InstanceFragmentRegistry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\ElementSelectionService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryConversionMetricsTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\GeometryConversionContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\MeshOptimizationMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyConversion.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinition.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsCache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyDefinitionsUtil.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\QuickPropertyMatching.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\ModelItemPropertySetsCache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\PropertyExtractionMetricsTracker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\UIUnits.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\SharedGeometryStores.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Raw\GeometryToSpeckleConverter.cs" />
