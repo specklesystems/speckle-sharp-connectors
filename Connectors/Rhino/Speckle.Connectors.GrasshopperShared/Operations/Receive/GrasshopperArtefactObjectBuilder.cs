@@ -1,10 +1,12 @@
 using System.Globalization;
+using Rhino;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Objects.Other;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
@@ -54,7 +56,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       int objK = kv.Key;
       string appId = kv.Value;
 
-      var geometries = DecodeObjectGeometry(objK, bundle, rels);
+      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
 
       // Instances: an object placed as a block carries no direct SOLID/DISPLAY geometry — its geometry lives on the
       // referenced DEFINITION. Resolve each placement (object → INSTANCE node → DefRef DEFINITION → DEFINES geometry),
@@ -72,7 +74,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
           {
             continue;
           }
-          var xf = BuildTransform(instNode.Transform);
+          var xf = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : DocUnits());
           foreach (var g in defGeoms)
           {
             var dup = g.Duplicate();
@@ -130,25 +132,40 @@ internal sealed class GrasshopperArtefactObjectBuilder
   }
 
   // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes.
-  private static List<RG.GeometryBase> DecodeObjectGeometry(int objK, ArtefactBundle bundle, ArtefactRelations rels)
+  private static List<RG.GeometryBase> DecodeObjectGeometry(
+    int objK,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    string fallbackUnits
+  )
   {
     var result = new List<RG.GeometryBase>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
       {
-        result.AddRange(DecodeGeometryIndex(solidK, bundle));
+        result.AddRange(DecodeGeometryIndex(solidK, bundle, fallbackUnits));
       }
     }
     if (result.Count == 0 && rels.DisplayByObject(objK) is { } displayEdges)
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        result.AddRange(DecodeGeometryIndex(e.Dst, bundle));
+        result.AddRange(DecodeGeometryIndex(e.Dst, bundle, fallbackUnits));
       }
     }
     return result;
   }
+
+  // The send side stores "units" per object as an EAV property, falling back to the bundle's overall units when absent
+  // (mirrors RhinoHostObjectArtefactBuilder.ObjectUnits).
+  private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("units", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : bundle.Units;
 
   // Decodes each DEFINITION node's geometry once (DEFINES → geometry blobs), keyed by definition node index. The same
   // definition is referenced by many instances, so we decode once here and duplicate+transform per placement.
@@ -169,7 +186,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         foreach (var geomK in memberGeomKs)
         {
-          geoms.AddRange(DecodeGeometryIndex(geomK, bundle));
+          // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
+          // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
+          // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
+          geoms.AddRange(DecodeGeometryIndex(geomK, bundle, bundle.Units));
         }
       }
       if (geoms.Count > 0)
@@ -207,9 +227,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
   }
 
-  // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform. Geometry
-  // is already in bundle units, so (unlike the doc-baking Rhino builder) no unit rescale is applied to the translation.
-  private static RG.Transform BuildTransform(string? csv)
+  // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform, scaling
+  // the translation from the instance's own units to DocUnits (mirrors RhinoHostObjectArtefactBuilder.BuildTransform;
+  // rotation/scale entries are unitless ratios and need no conversion).
+  private static RG.Transform BuildTransform(string? csv, string units)
   {
     var d = new double[16];
     if (csv is { Length: > 0 } text)
@@ -225,19 +246,20 @@ internal sealed class GrasshopperArtefactObjectBuilder
       d[0] = d[5] = d[10] = d[15] = 1.0;
     }
 
+    double scale = Units.GetConversionFactor(units, DocUnits());
     var t = RG.Transform.Identity;
     t.M00 = d[0];
     t.M01 = d[1];
     t.M02 = d[2];
-    t.M03 = d[3];
+    t.M03 = d[3] * scale;
     t.M10 = d[4];
     t.M11 = d[5];
     t.M12 = d[6];
-    t.M13 = d[7];
+    t.M13 = d[7] * scale;
     t.M20 = d[8];
     t.M21 = d[9];
     t.M22 = d[10];
-    t.M23 = d[11];
+    t.M23 = d[11] * scale;
     t.M30 = d[12];
     t.M31 = d[13];
     t.M32 = d[14];
@@ -245,7 +267,11 @@ internal sealed class GrasshopperArtefactObjectBuilder
     return t;
   }
 
-  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle)
+  // Decodes one geometry index to Rhino geometry, scaled from its source units to DocUnits (SGEO carries its own
+  // units; 3dm uses the caller-supplied fallback) — mirrors RhinoHostObjectArtefactBuilder.DecodeGeometryIndex.
+  // ConvertToSpeckle (below) stamps the *active document's* units onto the converted Base without rescaling the
+  // numeric values, so geometry must already be in DocUnits by the time it gets there.
+  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -253,14 +279,40 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
     if (g.Type == RawEncodingFormats.RHINO_3DM)
     {
-      return RawEncodingToHost.Convert3dm(g.Content);
+      var geoms = RawEncodingToHost.Convert3dm(g.Content);
+      ApplyUnits(geoms, fallbackUnits);
+      return geoms;
     }
     if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
     {
-      return new List<RG.GeometryBase> { BuildMesh(sm) };
+      var list = new List<RG.GeometryBase> { BuildMesh(sm) };
+      ApplyUnits(list, sm.Units);
+      return list;
     }
     return new List<RG.GeometryBase>();
   }
+
+  private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
+  {
+    if (units is not { Length: > 0 } u)
+    {
+      return;
+    }
+    var docUnits = DocUnits();
+    if (string.Equals(u, docUnits, StringComparison.OrdinalIgnoreCase))
+    {
+      return;
+    }
+    var t = RG.Transform.Scale(RG.Point3d.Origin, Units.GetConversionFactor(u, docUnits));
+    foreach (var geom in geoms)
+    {
+      geom.Transform(t);
+    }
+  }
+
+  // The active Rhino/GH document's units — what ConvertToSpeckle's converters (e.g. MeshToSpeckleConverter) stamp
+  // as the converted Base's "units" without rescaling, so all decoded geometry must land here before conversion.
+  private static string DocUnits() => RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.Meters;
 
   // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; mirrors RhinoHostObjectArtefactBuilder).
   private static RG.Mesh BuildMesh(SgeoMesh sm)
