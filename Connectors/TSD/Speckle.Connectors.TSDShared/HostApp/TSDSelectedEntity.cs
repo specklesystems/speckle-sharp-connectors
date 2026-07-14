@@ -1,3 +1,3 @@
 namespace Speckle.Connectors.TSDShared.HostApp;
 
-internal sealed record TSDSelectedEntity(string Id, string TypeName);
+internal sealed record TSDSelectedEntity(string EncodedId, string TypeName);

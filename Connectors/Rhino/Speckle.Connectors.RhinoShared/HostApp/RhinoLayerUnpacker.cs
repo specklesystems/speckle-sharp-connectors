@@ -83,8 +83,9 @@ public class RhinoLayerUnpacker
       }
       else
       {
-        childCollection = new SpeckleLayer(layerName)
+        childCollection = new SpeckleLayer()
         {
+          name = layerName,
           applicationId = RhinoDoc.ActiveDoc.Layers[existingLayerIndex].Id.ToString(),
         };
 

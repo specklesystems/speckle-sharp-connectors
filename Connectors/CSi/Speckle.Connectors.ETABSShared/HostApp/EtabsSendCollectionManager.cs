@@ -136,7 +136,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
       return existingCollection;
     }
 
-    var levelCollection = new Collection(level);
+    var levelCollection = new Collection { name = level };
     root.elements.Add(levelCollection);
     CollectionCache[levelKey] = levelCollection;
 
@@ -145,7 +145,7 @@ public class EtabsSendCollectionManager : CsiSendCollectionManager
 
   private Collection CreateCategoryCollection(ElementCategory category, Collection levelCollection)
   {
-    var categoryCollection = new Collection(_categoryNames[category]);
+    var categoryCollection = new Collection { name = _categoryNames[category] };
     levelCollection.elements.Add(categoryCollection);
     return categoryCollection;
   }

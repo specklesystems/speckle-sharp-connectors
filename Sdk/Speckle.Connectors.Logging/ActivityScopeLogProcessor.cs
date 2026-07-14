@@ -3,6 +3,9 @@ using OpenTelemetry.Logs;
 
 namespace Speckle.Connectors.Logging;
 
+/// <summary>
+/// Adds <see cref="ActivityScope"/> tags to <see cref="LogRecord"/>s
+/// </summary>
 internal sealed class ActivityScopeLogProcessor : BaseProcessor<LogRecord>
 {
   public override void OnEnd(LogRecord data)

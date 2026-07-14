@@ -44,8 +44,8 @@ internal static class Program
         logger.LogCritical(eventArgs.Exception, "Unobserved Task Exception");
 
       ISdkActivityFactory activityFactory = serviceProvider.GetRequiredService<ISdkActivityFactory>();
-      using var activity = importerArgs.TraceContext is not null
-        ? activityFactory.StartRemote(importerArgs.TraceContext, SdkActivityKind.Consumer)
+      using var activity = importerArgs.TraceParent is not null
+        ? activityFactory.StartRemote(importerArgs.TraceParent, importerArgs.TraceState, SdkActivityKind.Consumer)
         : activityFactory.Start();
 
       var factory = serviceProvider.GetRequiredService<ImporterInstanceFactory>();

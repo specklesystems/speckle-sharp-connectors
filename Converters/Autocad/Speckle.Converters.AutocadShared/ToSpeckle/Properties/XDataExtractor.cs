@@ -42,7 +42,7 @@ public class XDataExtractor
         case (int)DxfCode.ExtendedDataControlString: // this is the start and end brace code for this list of entries
           break;
         default:
-          if (GetValidValue(entry.Value) is object val)
+          if (PropertyValueSanitizer.Sanitize(entry.Value) is object val)
           {
             string key = entry.TypeCode.ToString();
             if (currentXData.TryGetValue(key, out List<object?>? value))
@@ -74,7 +74,4 @@ public class XDataExtractor
       appXData.Clear();
     }
   }
-
-  // xrecord values can contain invalid serialisation types like objectIds
-  private object? GetValidValue(object val) => val.GetType().IsPrimitive ? val : val.ToString();
 }

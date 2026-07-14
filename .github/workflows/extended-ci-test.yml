@@ -1,0 +1,20 @@
+name: Extended CI Test
+
+on:
+  push:
+    paths:
+      - 'build/**'
+      - '.github/**'
+    
+permissions: {} # We will use fine-grained permissions for each job, so we start with no permissions at all and then add them back as needed.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-deploy-pipeline:
+    uses: './.github/workflows/release.yml' # zizmor: ignore[secrets-inherit] zizmor's suggested fix here doesn't work
+    permissions:
+      contents: read
+    secrets: inherit

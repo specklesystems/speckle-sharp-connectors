@@ -37,7 +37,10 @@ public class ExtensionDictionaryExtractor
           Dictionary<string, object?> entryDict = new();
           foreach (ADB.TypedValue xEntry in xRecord.Data)
           {
-            entryDict[xEntry.TypeCode.ToString()] = xEntry.Value;
+            if (Speckle.Converters.AutocadShared.ToSpeckle.PropertyValueSanitizer.Sanitize(xEntry.Value) is object val)
+            {
+              entryDict[xEntry.TypeCode.ToString()] = val;
+            }
           }
 
           if (entryDict.Count > 0)

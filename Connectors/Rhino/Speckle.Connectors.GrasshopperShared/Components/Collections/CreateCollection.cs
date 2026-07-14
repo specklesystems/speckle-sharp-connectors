@@ -96,7 +96,7 @@ public class CreateCollection : VariableParameterComponentBase
     var childPath = new List<string> { rootName, inputParam.NickName };
     var childCollection = new SpeckleCollectionWrapper
     {
-      Base = new Collection(),
+      Base = new Collection() { name = inputParam.NickName },
       Name = inputParam.NickName,
       Path = childPath,
       Color = null,

@@ -3,17 +3,34 @@ using Speckle.Sdk.Logging;
 
 namespace Speckle.Connectors.Common;
 
+/// <summary>
+/// Provides <see cref="Speckle.Sdk"/> with an implementation of <see cref="ISdkActivityFactory"/>
+/// that wraps <see cref="ISdkActivity"/> with an underlying <see cref="LoggingActivity"/>.
+/// </summary>
+/// <remarks>
+/// We have several layers of abstraction via interfaces and wrappers:<br/>
+/// <c>System.Diagnostics.DiagnosticSource.Activity</c> is wrapped by
+/// <see cref="LoggingActivity"/> is wrapped by
+/// <see cref="ConnectorActivityFactory"/> implements the sdk abstraction <see cref="ISdkActivityFactory"/>.
+/// <br/>
+/// This is done so that the  .NET Standard 2.0 target of the <see cref="Speckle.Sdk"/> (and therefore consumers e.g. .NET framework connectors) can avoid a
+/// dependency on <c>System.Diagnostics.DiagnosticSource</c>.
+/// </remarks>
 public sealed class ConnectorActivityFactory : ISdkActivityFactory
 {
   private readonly LoggingActivityFactory _loggingActivityFactory = new();
 
-  public void SetTag(string key, object? value) => _loggingActivityFactory.SetTag(key, value);
-
   public void Dispose() => _loggingActivityFactory.Dispose();
 
-  public ISdkActivity? Start(string? name, SdkActivityKind kind, string source)
+  public ISdkActivity? Start(
+    string? name = null,
+    SdkActivityKind kind = SdkActivityKind.Internal,
+    IReadOnlyDictionary<string, object?>? tags = null,
+    DateTimeOffset startTime = default,
+    string source = ""
+  )
   {
-    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind));
+    LoggingActivity? activity = _loggingActivityFactory.Start(name ?? source, ToLoggingType(kind), tags, startTime);
     if (activity is null)
     {
       return null;
@@ -22,13 +39,24 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     return new ConnectorActivity(activity.Value);
   }
 
-  /// <param name="traceContext">W3C trace context header</param>
-  /// <param name="kind"></param>
-  /// <param name="name"></param>
-  /// <returns></returns>
-  public ISdkActivity? StartRemote(string traceContext, SdkActivityKind kind, string? name, string source)
+  public ISdkActivity? StartRemote(
+    string? traceParent,
+    string? traceState,
+    SdkActivityKind kind,
+    string? name = null,
+    IReadOnlyDictionary<string, object?>? tags = null,
+    DateTimeOffset startTime = default,
+    string source = ""
+  )
   {
-    LoggingActivity? activity = _loggingActivityFactory.StartRemote(name ?? source, traceContext, ToLoggingType(kind));
+    LoggingActivity? activity = _loggingActivityFactory.StartRemote(
+      name ?? source,
+      traceParent,
+      traceState,
+      ToLoggingType(kind),
+      tags,
+      startTime
+    );
     if (activity is null)
     {
       return null;
@@ -36,7 +64,6 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
     return new ConnectorActivity(activity.Value);
   }
 
-  //We need to do this gymnastics due to ILRepack
   private static LoggingActivityKind ToLoggingType(SdkActivityKind kind) =>
     kind switch
     {
@@ -54,8 +81,15 @@ public sealed class ConnectorActivityFactory : ISdkActivityFactory
 
     public void SetTag(string key, object? value) => activity.SetTag(key, value);
 
+    public void SetBaggage(string key, string? value) => activity.SetBaggage(key, value);
+
     public void RecordException(Exception e) => activity.RecordException(e);
 
+    /// <inheritdoc />
+    public string TraceParent => activity.TraceParent;
+
+    /// <inheritdoc />
+    public string? TraceState => activity.TraceState;
     public string TraceId => activity.TraceId;
     public string SpanId => activity.SpanId;
 
