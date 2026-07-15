@@ -191,13 +191,21 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
           {
             SpeckleConversionContext.SetupCurrent(scope);
             SpeckleCollectionWrapper rootWrapper;
+            IReadOnlyList<string> buildWarnings;
             try
             {
-              rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+              (rootWrapper, buildWarnings) = new GrasshopperArtefactObjectBuilder().Build(
+                bundle,
+                receiveInfo.ModelName
+              );
             }
             finally
             {
               SpeckleConversionContext.EndCurrent();
+            }
+            foreach (var warning in buildWarnings)
+            {
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, warning);
             }
 
             // Marking the version received is a best-effort side-effect — its endpoint may 404 on some servers, and
