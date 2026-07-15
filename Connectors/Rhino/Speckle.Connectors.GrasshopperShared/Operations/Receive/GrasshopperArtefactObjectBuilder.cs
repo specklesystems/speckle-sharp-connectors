@@ -20,20 +20,25 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// <see cref="ArtefactBundle"/> — the receive-side twin of <c>GrasshopperArtifactRootObjectBuilder</c>. Unlike the
 /// Rhino/Revit artefact receivers it does NOT bake into a document; it emits the same wrapper graph the GH Load
 /// component outputs onto the canvas (so no <c>IHostObjectBuilder</c>). Geometry is decoded straight from the bundle
-/// (SGEO → <see cref="RG.Mesh"/>, raw 3dm → <see cref="RawEncodingToHost.Convert3dm"/>) and reconverted to a clean
-/// Speckle <see cref="Base"/> via the shared Rhino converters; the collection tree comes from the bundle's default
-/// scene view; per-object properties are carried through.
+/// (meshes/point clouds/curves/points → SGEO via <see cref="SgeoDecoder"/>, raw 3dm →
+/// <see cref="RawEncodingToHost.Convert3dm"/>) and reconverted to a clean Speckle <see cref="Base"/> via the shared
+/// Rhino converters; the collection tree comes from the bundle's default scene view; per-object properties are
+/// carried through.
 /// </summary>
 /// <remarks>
 /// Reconstructs <b>geometry + collections + properties + instances</b>. Instances (DISPLAY_INSTANCE) are resolved
 /// through their DEFINITION (DEFINES → geometry) and flattened into transformed geometry wrappers — without this, an
 /// instance-only sub-model (e.g. a federated Site/Facades model) receives as empty. Materials (MATERIAL/HAS_MATERIAL)
-/// are NOT reconstructed yet — a fast follow. Genuinely non-geometric objects (rooms/levels/areas) are skipped silently.
+/// are NOT reconstructed yet — a fast follow. Genuinely non-geometric objects (rooms/levels/areas) are skipped silently;
+/// a geometry fragment that fails to decode/convert is reported back via <c>Build</c>'s warnings, not silently dropped.
 /// </remarks>
 internal sealed class GrasshopperArtefactObjectBuilder
 {
-  public SpeckleCollectionWrapper Build(ArtefactBundle bundle, string rootName)
+  // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
+  // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
+  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(ArtefactBundle bundle, string rootName)
   {
+    var warnings = new List<string>();
     var root = new SpeckleCollectionWrapper
     {
       Base = new Collection { name = rootName },
@@ -49,7 +54,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
     // Instance definitions decoded once (DEFINITION node → its DEFINES + composed DEFINES_INSTANCE geometry), shared
     // across all placements.
-    var defGeomByNode = BuildDefinitionGeometry(bundle, rels);
+    var defGeomByNode = BuildDefinitionGeometry(bundle, rels, warnings);
     // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
     var instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
     // INSTANCE nodes that are a nested/child placement inside some DEFINITION (DEFINES_INSTANCE targets). Their content
@@ -63,7 +68,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       int objK = kv.Key;
       string appId = kv.Value;
 
-      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
+      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK), warnings);
 
       // Instances: an object placed as a block carries no direct SOLID/DISPLAY geometry — its geometry lives on the
       // referenced DEFINITION. Resolve each placement (object → INSTANCE node → DefRef DEFINITION → DEFINES geometry),
@@ -139,7 +144,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
 
-    return root;
+    return (root, warnings);
   }
 
   // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes.
@@ -147,7 +152,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
     int objK,
     ArtefactBundle bundle,
     ArtefactRelations rels,
-    string fallbackUnits
+    string fallbackUnits,
+    List<string> warnings
   )
   {
     var result = new List<RG.GeometryBase>();
@@ -155,14 +161,14 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       foreach (var solidK in solidKs)
       {
-        result.AddRange(DecodeGeometryIndex(solidK, bundle, fallbackUnits));
+        result.AddRange(DecodeGeometryIndex(solidK, bundle, fallbackUnits, warnings));
       }
     }
     if (result.Count == 0 && rels.DisplayByObject(objK) is { } displayEdges)
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        result.AddRange(DecodeGeometryIndex(e.Dst, bundle, fallbackUnits));
+        result.AddRange(DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, warnings));
       }
     }
     return result;
@@ -186,7 +192,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // parent placement.
   private static Dictionary<int, List<RG.GeometryBase>> BuildDefinitionGeometry(
     ArtefactBundle bundle,
-    ArtefactRelations rels
+    ArtefactRelations rels,
+    List<string> warnings
   )
   {
     var map = new Dictionary<int, List<RG.GeometryBase>>();
@@ -219,7 +226,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
             // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
             // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
             // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
-            geoms.AddRange(DecodeGeometryIndex(geomK, bundle, bundle.Units));
+            geoms.AddRange(DecodeGeometryIndex(geomK, bundle, bundle.Units, warnings));
           }
         }
       }
@@ -339,8 +346,13 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // Decodes one geometry index to Rhino geometry, scaled from its source units to DocUnits (SGEO carries its own
   // units; 3dm uses the caller-supplied fallback) — mirrors RhinoHostObjectArtefactBuilder.DecodeGeometryIndex.
   // ConvertToSpeckle (below) stamps the *active document's* units onto the converted Base without rescaling the
-  // numeric values, so geometry must already be in DocUnits by the time it gets there.
-  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
+  // numeric values, so mesh/3dm geometry must already be in DocUnits by the time it gets there.
+  private static List<RG.GeometryBase> DecodeGeometryIndex(
+    int geomK,
+    ArtefactBundle bundle,
+    string fallbackUnits,
+    List<string> warnings
+  )
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -352,14 +364,47 @@ internal sealed class GrasshopperArtefactObjectBuilder
       ApplyUnits(geoms, fallbackUnits);
       return geoms;
     }
-    if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    if (g.IsSgeo)
     {
-      var list = new List<RG.GeometryBase> { BuildMesh(sm) };
-      ApplyUnits(list, sm.Units);
-      return list;
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
+      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      {
+        var list = new List<RG.GeometryBase> { BuildMesh(sm) };
+        ApplyUnits(list, sm.Units);
+        return list;
+      }
+      // Curves, points, and point clouds: decode to a Speckle geometry object and convert via the shared Rhino ToHost
+      // converter (ConvertSpeckleGeometry below), which already scales from the decoded Base's own `units` to
+      // DocUnits (SpeckleToHostGeometryBaseTopLevelConverter) — so no extra ApplyUnits here, unlike mesh/3dm above.
+      // An unsupported/undecodable primitive degrades to nothing (with a warning) rather than aborting the receive.
+      Base? decoded = null;
+      try
+      {
+        decoded = SgeoDecoder.Decode(g.Content);
+        var converted = ConvertSpeckleGeometry(decoded);
+        if (converted.Count == 0)
+        {
+          warnings.Add($"Geometry {geomK} ({decoded.speckle_type}) did not convert to any native geometry.");
+        }
+        return converted;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+        warnings.Add($"Geometry {geomK} ({g.Type}) failed to {stage}: {ex.Message}");
+      }
     }
     return new List<RG.GeometryBase>();
   }
+
+  // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the shared Rhino ToHost converter (the
+  // same one Rhino's own artefact receive uses, ENG-8781). Mirrors RhinoHostObjectArtefactBuilder.ConvertSpeckleGeometry.
+  private static List<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded) =>
+    SpeckleConversionContext
+      .Current.ConvertToHost(decoded)
+      .Select(pair => pair.Item1)
+      .OfType<RG.GeometryBase>()
+      .ToList();
 
   private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
   {
