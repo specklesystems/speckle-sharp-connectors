@@ -1,15 +1,36 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
+using Speckle.Converter.Navisworks.Services;
+using Speckle.Converter.Navisworks.Settings;
 using Speckle.Objects.Geometry;
 
 namespace Speckle.Converter.Navisworks.Helpers;
 
 public static class PropertyHelpers
 {
-  private static readonly HashSet<string> s_excludedCategories = ["Geometry", "Metadata"];
+  private static readonly HashSet<string> s_excludedCategories = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "Geometry",
+    "Metadata",
+    "3D_Visualization",
+    "Entity_Handle",
+    "lcldiv_refkeyid",
+    "lcldrvm_container",
+    "Group",
+  };
+
+  private static readonly HashSet<string> s_excludedPropertyNames = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "ClassName",
+    "ClassDisplayName",
+    "CreatedPhaseId",
+    "Autodesk Material",
+    "Autodesk_Material",
+    "Id",
+    "StructuralMaterialId",
+  };
 
   /// <summary>
-  /// Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
+  ///   Adds a property to an object (either a Base object or a Dictionary) if the value is not null or empty.
   /// </summary>
   private static readonly Dictionary<NAV.VariantDataType, Func<NAV.VariantData, string, dynamic?>> s_typeHandlers =
     new()
@@ -31,8 +52,8 @@ public static class PropertyHelpers
         NAV.VariantDataType.Point3D,
         (value, units) =>
         {
-          var point = value.ToPoint3D();
-          var pointProperty = new Point(point.X, point.Y, point.Z, units);
+          NAV.Point3D? point = value.ToPoint3D();
+          Point pointProperty = new(point.X, point.Y, point.Z, units);
           return pointProperty.ToString();
         }
       },
@@ -45,7 +66,7 @@ public static class PropertyHelpers
       return null;
     }
 
-    if (s_typeHandlers.TryGetValue(value.DataType, out var handler))
+    if (s_typeHandlers.TryGetValue(value.DataType, out Func<NAV.VariantData, string, dynamic?>? handler))
     {
       return handler(value, units);
     }
@@ -58,7 +79,9 @@ public static class PropertyHelpers
     switch (value)
     {
       case null:
+      {
         break;
+      }
       case string stringValue:
       {
         if (!string.IsNullOrEmpty(stringValue))
@@ -90,10 +113,63 @@ public static class PropertyHelpers
   }
 
   internal static string SanitizePropertyName(string name) =>
-    name == "Item" ? "Item" : Regex.Replace(name, @"[\.\/\s]", "_");
+    name == "Item" ? "Item" : name.Replace('.', '_').Replace('/', '_').Replace(' ', '_');
 
-  internal static bool ShouldSkipCategory(NAV.PropertyCategory propertyCategory) =>
-    s_excludedCategories.Contains(propertyCategory.DisplayName);
+  internal static bool ShouldSkipProperty(
+    string propertyName,
+    string categoryDisplayName,
+    PropertyDetailLevel propertyDetailLevel,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    if (propertyDetailLevel != PropertyDetailLevel.Standard)
+    {
+      return false;
+    }
+
+    if (QuickPropertyMatching.IncludesProperty(quickPropertyDefinitions, categoryDisplayName, propertyName))
+    {
+      return false;
+    }
+
+    if (QuickPropertyMatching.IncludesPropertyDisplayName(quickPropertyDefinitions, propertyName))
+    {
+      return false;
+    }
+
+    return s_excludedPropertyNames.Contains(propertyName)
+      || s_excludedPropertyNames.Contains(SanitizePropertyName(propertyName));
+  }
+
+  internal static bool ShouldSkipCategory(
+    NAV.PropertyCategory propertyCategory,
+    PropertyDetailLevel propertyDetailLevel,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    if (propertyDetailLevel != PropertyDetailLevel.Standard)
+    {
+      return false;
+    }
+
+    string? categoryDisplayName = propertyCategory.DisplayName;
+    if (string.IsNullOrEmpty(categoryDisplayName))
+    {
+      return false;
+    }
+
+    if (QuickPropertyMatching.IncludesCategory(quickPropertyDefinitions, categoryDisplayName))
+    {
+      return false;
+    }
+
+    if (string.Equals(categoryDisplayName, "Material", StringComparison.Ordinal))
+    {
+      return true;
+    }
+
+    return s_excludedCategories.Contains(categoryDisplayName);
+  }
 }
 
 internal static class UnitLabels

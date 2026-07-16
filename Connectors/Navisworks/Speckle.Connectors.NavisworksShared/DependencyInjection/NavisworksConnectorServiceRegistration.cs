@@ -52,6 +52,7 @@ public static class NavisworksConnectorServiceRegistration
 
     serviceCollection.AddScoped<NavisworksMaterialUnpacker>();
     serviceCollection.AddScoped<NavisworksColorUnpacker>();
+    serviceCollection.AddScoped<NavisworksSendBenchmarkLogger>();
 
     serviceCollection.AddSingleton<IAppIdleManager, NavisworksIdleManager>();
 
