@@ -106,6 +106,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
 
       bundle.Properties.TryGetValue(objK, out var props);
+      var name = ObjectName(props);
       var segments = SceneViewResolver.Segments(bundle, objK);
       var collection = GetOrCreateCollection(root, rootName, segments, collectionCache);
 
@@ -136,6 +137,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
           Color = null,
           Material = null,
         };
+        if (name is not null)
+        {
+          wrapper.Name = name;
+        }
         if (props is { Count: > 0 })
         {
           wrapper.Properties = new SpecklePropertyGroupGoo(props);
@@ -183,6 +188,24 @@ internal sealed class GrasshopperArtefactObjectBuilder
     && s.Length > 0
       ? s
       : bundle.Units;
+
+  // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
+  // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
+  // (missing, empty, or the sourceType fallback) so unnamed objects stay unnamed on receive (mirrors
+  // RhinoHostObjectArtefactBuilder.ObjectName).
+  private static string? ObjectName(Dictionary<string, object?>? props)
+  {
+    if (props is null)
+    {
+      return null;
+    }
+    if (props.TryGetValue("name", out var nv) && nv is string name && name.Length > 0)
+    {
+      var type = props.TryGetValue("type", out var tv) && tv is string t ? t : null;
+      return string.Equals(name, type, StringComparison.Ordinal) ? null : name;
+    }
+    return null;
+  }
 
   // Decodes every DEFINITION node's geometry once — direct DEFINES → geometry blobs, plus DEFINES_INSTANCE → nested
   // definitions recursively built and composed with their own (definition-local) transform — keyed by definition node
