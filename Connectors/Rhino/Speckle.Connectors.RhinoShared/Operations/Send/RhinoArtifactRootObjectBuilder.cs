@@ -195,6 +195,9 @@ public class RhinoArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
+    // Authored scene groups → plain snapshot records (Base-free — no GroupProxy). Membership lists OBJECT ids.
+    var groups = CollectGroups(doc, atomicObjects);
+
     // Render materials are keyed by material name; proxies list OBJECT ids (resolved to geometry K(s) in phase 2).
     var materials = materialUnpacker.UnpackRenderMaterials(atomicObjects, usedLayers);
 
@@ -212,9 +215,49 @@ public class RhinoArtifactRootObjectBuilder(
       materials,
       colors,
       instanceDefinitionProxies,
+      groups,
       cameraViews,
       results
     );
+  }
+
+  // Rhino groups → plain snapshot records. An object's GetGroupList carries ALL its groups (nesting in Rhino is
+  // implicit via overlapping membership — there is no group parent chain), so each entry becomes one IN_GROUP edge.
+  // RhinoCommon-bound (GroupTable) → phase 1 only.
+  private List<CollectedGroup> CollectGroups(global::Rhino.RhinoDoc doc, IReadOnlyList<RhinoObject> atomicObjects)
+  {
+    var groups = new Dictionary<string, CollectedGroup>(StringComparer.Ordinal);
+    foreach (RhinoObject rhinoObject in atomicObjects)
+    {
+      try
+      {
+        int[]? groupList = rhinoObject.GetGroupList();
+        if (groupList is null)
+        {
+          continue;
+        }
+        foreach (int groupIndex in groupList)
+        {
+          Group? group = doc.Groups.FindIndex(groupIndex);
+          if (group is null)
+          {
+            continue;
+          }
+          string groupId = group.Id.ToString();
+          if (!groups.TryGetValue(groupId, out CollectedGroup? collected))
+          {
+            collected = new CollectedGroup(groupId, group.Name, new List<string>());
+            groups[groupId] = collected;
+          }
+          collected.MemberIds.Add(rhinoObject.Id.ToString());
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Failed to unpack groups for {AppId}", rhinoObject.Id);
+      }
+    }
+    return groups.Values.ToList();
   }
 
   // Rhino named views → envelope camera_views. RhinoCommon-bound (NamedViewTable) → phase 1 only. Positions/target
@@ -401,6 +444,7 @@ public class RhinoArtifactRootObjectBuilder(
     }
 
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
+    EmitGroups(pipeline, model.Groups, definitionMemberIds);
 
     // Default scene view: the Rhino layer tree (IN_COLLECTION). The COLLECTION nodes' parent chain carries the
     // nesting, so a single projection key rebuilds the full explorer hierarchy.
@@ -429,6 +473,7 @@ public class RhinoArtifactRootObjectBuilder(
     session.SetStat("definitions", model.Definitions.Count);
     session.SetStat("materials", model.Materials.Count);
     session.SetStat("layers", model.Layers.Count);
+    session.SetStat("groups", model.Groups.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
     return new BundleResult(bundle, rootId, objectCount, model.Results);
@@ -629,6 +674,32 @@ public class RhinoArtifactRootObjectBuilder(
     }
   }
 
+  // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
+  // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
+  // edges. Definition members get no scene edges (same suppression as IN_COLLECTION), so a group emptied by
+  // that is skipped entirely.
+  private static void EmitGroups(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<CollectedGroup> groups,
+    HashSet<string> definitionMemberIds
+  )
+  {
+    foreach (CollectedGroup group in groups)
+    {
+      var memberIds = group.MemberIds.Where(id => !definitionMemberIds.Contains(id)).ToList();
+      if (memberIds.Count == 0)
+      {
+        continue;
+      }
+      int groupK = pipeline.AddContainer(group.Id, group.Name, null, "Group");
+      int ord = 0;
+      foreach (string memberId in memberIds)
+      {
+        pipeline.InGroup(pipeline.InternObject(memberId), groupK, ord++);
+      }
+    }
+  }
+
   // Resolves (and interns once) the COLLECTION node for a layer index, building the ancestor chain from the
   // collected layer tree so the nesting is reproduced as nested COLLECTION nodes. Cached by layer index.
   private static int GetOrAddLayerCollection(
@@ -694,6 +765,8 @@ public class RhinoArtifactRootObjectBuilder(
   // ── pure-Speckle snapshot passed from the UI thread (phase 1) to the worker thread (phase 2) ──────────
   private sealed record CollectedLayer(string Id, string Name, int? ParentIndex, int Argb);
 
+  private sealed record CollectedGroup(string Id, string? Name, List<string> MemberIds);
+
   private sealed record CollectedObject(
     string ApplicationId,
     string Name,
@@ -711,6 +784,7 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<RenderMaterialProxy> Materials,
     IReadOnlyList<ColorProxy> Colors,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
+    IReadOnlyList<CollectedGroup> Groups,
     IReadOnlyList<CameraView> CameraViews,
     IReadOnlyList<SendConversionResult> Results
   );

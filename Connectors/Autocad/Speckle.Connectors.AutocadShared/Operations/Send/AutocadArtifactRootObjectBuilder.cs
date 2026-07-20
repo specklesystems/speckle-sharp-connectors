@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -55,7 +56,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 /// sync-over-async parquet IO that deadlocks on the UI thread).</para>
 /// <para>The single builder serves AutoCAD, Civil3D and Plant3D: the injected <see cref="IRootToSpeckleConverter"/>
 /// and unpackers resolve to each vertical's registrations, so per-vertical geometry/property extraction is correct
-/// without subclassing. Deferred this pass: AutoCAD groups, Civil3D property-set definitions.</para>
+/// without subclassing. Deferred this pass: Civil3D property-set definitions.</para>
 /// </remarks>
 public class AutocadArtifactRootObjectBuilder(
   IRootToSpeckleConverter converter,
@@ -176,6 +177,9 @@ public class AutocadArtifactRootObjectBuilder(
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
     var layerArgbByName = CollectLayerColors(atomicObjects);
 
+    // Authored scene groups → plain snapshot records (Base-free — no GroupProxy). Membership lists OBJECT ids.
+    var groups = CollectGroups(atomicObjects);
+
     return new CollectedModel(
       units,
       collectedObjects,
@@ -183,8 +187,43 @@ public class AutocadArtifactRootObjectBuilder(
       colors,
       layerArgbByName,
       instanceDefinitionProxies,
+      groups,
       results
     );
+  }
+
+  // AutoCAD groups → plain snapshot records. Membership rides persistent reactors on each entity (a Group is a
+  // reactor on its members); AutoCAD groups don't nest, so each membership is one flat IN_GROUP edge.
+  // AutoCAD-API-bound (transaction) → phase 1 only.
+  private List<CollectedGroup> CollectGroups(List<AutocadRootObject> atomicObjects)
+  {
+    var groups = new Dictionary<string, CollectedGroup>(StringComparer.Ordinal);
+    using var transaction = converterSettings.Current.Document.Database.TransactionManager.StartTransaction();
+    foreach (var (dbObject, applicationId) in atomicObjects)
+    {
+      try
+      {
+        foreach (ObjectId reactorId in dbObject.GetPersistentReactorIds())
+        {
+          if (transaction.GetObject(reactorId, OpenMode.ForRead) is not Group group)
+          {
+            continue;
+          }
+          string groupAppId = group.GetSpeckleApplicationId();
+          if (!groups.TryGetValue(groupAppId, out CollectedGroup? collected))
+          {
+            collected = new CollectedGroup(groupAppId, group.Name, new List<string>());
+            groups[groupAppId] = collected;
+          }
+          collected.MemberIds.Add(applicationId);
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Failed to unpack groups for {AppId}", applicationId);
+      }
+    }
+    return groups.Values.ToList();
   }
 
   // Captures the colour of every layer used by the selection (AutoCAD API is document-bound → phase 1 only), so
@@ -278,6 +317,7 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
+    EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
@@ -298,6 +338,7 @@ public class AutocadArtifactRootObjectBuilder(
     session.SetStat("definitions", model.Definitions.Count);
     session.SetStat("materials", model.Materials.Count);
     session.SetStat("layers", layerCollectionKByName.Count);
+    session.SetStat("groups", model.Groups.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
     return new BundleResult(bundle, rootId, objectCount, model.Results);
@@ -603,6 +644,32 @@ public class AutocadArtifactRootObjectBuilder(
     }
   }
 
+  // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
+  // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
+  // edges. Definition members get no scene edges (same suppression as IN_COLLECTION), so a group emptied by
+  // that is skipped entirely.
+  private static void EmitGroups(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<CollectedGroup> groups,
+    HashSet<string> definitionMemberIds
+  )
+  {
+    foreach (CollectedGroup group in groups)
+    {
+      var memberIds = group.MemberIds.Where(id => !definitionMemberIds.Contains(id)).ToList();
+      if (memberIds.Count == 0)
+      {
+        continue;
+      }
+      int groupK = pipeline.AddContainer(group.Id, group.Name, null, "Group");
+      int ord = 0;
+      foreach (string memberId in memberIds)
+      {
+        pipeline.InGroup(pipeline.InternObject(memberId), groupK, ord++);
+      }
+    }
+  }
+
   // Resolves (and interns once) the flat COLLECTION node for a layer name (with the layer's colour as its argb).
   // AutoCAD has no nested layers.
   private static int GetOrAddLayerCollection(
@@ -667,6 +734,8 @@ public class AutocadArtifactRootObjectBuilder(
     Base Converted // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
   );
 
+  private sealed record CollectedGroup(string Id, string? Name, List<string> MemberIds);
+
   private sealed record CollectedModel(
     string Units,
     IReadOnlyList<CollectedObject> Objects,
@@ -674,6 +743,7 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyList<ColorProxy> Colors,
     IReadOnlyDictionary<string, int> LayerArgbByName,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
+    IReadOnlyList<CollectedGroup> Groups,
     IReadOnlyList<SendConversionResult> Results
   );
 
