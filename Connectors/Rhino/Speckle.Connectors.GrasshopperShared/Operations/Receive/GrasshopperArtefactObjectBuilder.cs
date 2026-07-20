@@ -56,9 +56,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // DISPLAY_INSTANCE placement (using their un-composed, definition-local transform) must be skipped below — otherwise
     // the nested block appears an extra time at the wrong (definition-space) location instead of once per parent placement.
     var nestedInstanceNodes = new HashSet<int>(rels.DefinesInstanceByDefinition.Values.SelectMany(v => v));
-    // MATERIAL/COLOR nodes resolved to their HAS_MATERIAL/HAS_COLOR geometry K targets, once for the whole bundle.
-    var materialByGeometry = CreateMaterials(bundle);
-    var colorByGeometry = CreateColors(bundle);
+    // HAS_MATERIAL/HAS_COLOR bind to an object's *display-mesh* geometry K specifically — never its SOLID (3dm) K, per
+    // both RhinoArtifactRootObjectBuilder and GrasshopperArtifactRootObjectBuilder's send-side comments. DecodeObjectGeometry
+    // prefers the solid when both exist, so for a solid-backed object the geomK actually decoded never appears in
+    // MaterialByGeometry/ColorByGeometry at all. Resolve via the object instead (through the Display-edges reverse map),
+    // matching RhinoHostObjectArtefactBuilder.CreateMaterials/CreateColors, so material/color don't depend on which of
+    // solid/display happened to be decoded. materialByGeometry still covers DEFINITION/instance content, which has no
+    // owning object reachable this way (mirrors Rhino's "standalone definition geometry" byGeometry fallback).
+    var objByGeom = rels.ObjectByGeometry();
+    var (materialByObject, materialByGeometry) = CreateMaterials(bundle, objByGeom);
+    var colorByObject = CreateColors(bundle, objByGeom);
 
     foreach (var kv in bundle.ObjectAppIds)
     {
@@ -132,8 +139,11 @@ internal sealed class GrasshopperArtefactObjectBuilder
           GeometryBase = rg,
           Path = collection.Path,
           Parent = collection,
-          Color = colorByGeometry.TryGetValue(geomK, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
-          Material = materialByGeometry.TryGetValue(geomK, out var mat) ? mat : null,
+          Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
+          Material =
+            materialByObject.TryGetValue(appId, out var objMat) ? objMat
+            : materialByGeometry.TryGetValue(geomK, out var geomMat) ? geomMat
+            : null,
         };
         if (name is not null)
         {
@@ -151,7 +161,9 @@ internal sealed class GrasshopperArtefactObjectBuilder
   }
 
   // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes. Each
-  // decoded fragment keeps the geometry K it came from so HAS_MATERIAL/HAS_COLOR (both geometry-K keyed) can resolve.
+  // decoded fragment keeps the geometry K it came from — for an atomic object this K is only used as the definition-
+  // geometry material fallback (materials/colors on atomic objects resolve via appId instead, see Build's comment),
+  // since HAS_MATERIAL/HAS_COLOR target the DISPLAY-mesh K specifically and this object may have decoded via SOLID.
   private static List<(int GeomK, RG.GeometryBase Geom)> DecodeObjectGeometry(
     int objK,
     ArtefactBundle bundle,
@@ -213,10 +225,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
   }
 
   // Builds a SpeckleMaterialWrapper per MATERIAL node, then resolves HAS_MATERIAL (Relations.MaterialByGeometry:
-  // geometry K → material node K) to a geometry-K-keyed lookup — mirrors RhinoHostObjectArtefactBuilder.CreateMaterials,
-  // reusing the same SpeckleMaterialWrapperGoo.CastFrom(RenderMaterial) construction path the v1 GH receive uses
-  // (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
-  private static Dictionary<int, SpeckleMaterialWrapper> CreateMaterials(ArtefactBundle bundle)
+  // display-mesh geometry K → material node K) to BOTH a geometry-K lookup (covers standalone DEFINITION/instance
+  // geometry, which has no owning object) and an object-appId lookup (covers atomic display objects, resolved via the
+  // Display-edges reverse map — robust to whether the object's decoded geometry actually came from its SOLID or
+  // DISPLAY blob, since HAS_MATERIAL only ever targets the display-mesh K). Mirrors
+  // RhinoHostObjectArtefactBuilder.CreateMaterials exactly; reuses the same SpeckleMaterialWrapperGoo.CastFrom(RenderMaterial)
+  // construction path the v1 GH receive uses (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
+  private static (
+    Dictionary<string, SpeckleMaterialWrapper> ByObject,
+    Dictionary<int, SpeckleMaterialWrapper> ByGeometry
+  ) CreateMaterials(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var wrapperByMaterialNode = new Dictionary<int, SpeckleMaterialWrapper>();
     foreach (var kv in bundle.Nodes)
@@ -247,32 +265,43 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
 
+    var byObject = new Dictionary<string, SpeckleMaterialWrapper>();
     var byGeometry = new Dictionary<int, SpeckleMaterialWrapper>();
     foreach (var kv in bundle.Relations.MaterialByGeometry)
     {
-      if (wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper))
+      if (!wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper))
       {
-        byGeometry[kv.Key] = wrapper;
+        continue;
+      }
+      byGeometry[kv.Key] = wrapper; // geometry → material (covers standalone definition geometry)
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = wrapper; // object → material (atomic display objects)
       }
     }
-    return byGeometry;
+    return (byObject, byGeometry);
   }
 
-  // Resolves HAS_COLOR (Relations.ColorByGeometry: geometry K → COLOR node) to a geometry-K-keyed argb lookup — the
-  // object's by-geometry display colour, distinct from a render material. Mirrors RhinoHostObjectArtefactBuilder.CreateColors
-  // (which resolves to the owning object instead, since Rhino bakes one native object per fragment; GH keeps a
-  // per-fragment wrapper already, so binding directly by geometry K is the more precise equivalent here).
-  private static Dictionary<int, int> CreateColors(ArtefactBundle bundle)
+  // Resolves HAS_COLOR (Relations.ColorByGeometry: display-mesh geometry K → COLOR node) to the owning object's
+  // appId → argb — the object's by-object display colour, distinct from a render material. Resolved via the same
+  // Display-edges reverse map as materials, for the same reason (HAS_COLOR only ever targets the display-mesh K, not
+  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors, which likewise only resolves to the owning
+  // object (definition/instance geometry doesn't get a colour in the Rhino reference either).
+  private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
-    var byGeometry = new Dictionary<int, int>();
+    var byObject = new Dictionary<string, int>();
     foreach (var kv in bundle.Relations.ColorByGeometry)
     {
-      if (bundle.Nodes.TryGetValue(kv.Value, out var n) && n.Kind == NodeKind.Color && n.Argb is int argb)
+      if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
       {
-        byGeometry[kv.Key] = argb;
+        continue;
+      }
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
       }
     }
-    return byGeometry;
+    return byObject;
   }
 
   // Decodes every DEFINITION node's geometry once — direct DEFINES → geometry blobs, plus DEFINES_INSTANCE → nested
