@@ -26,6 +26,18 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// Rhino converters; the collection tree comes from the bundle's default scene view; per-object properties are
 /// carried through.
 /// </summary>
+/// <remarks>
+/// Reconstructs <b>geometry + collections + properties + instances + materials + colors</b>. Instances
+/// (DISPLAY_INSTANCE) are resolved through their DEFINITION (DEFINES → geometry) and flattened into transformed
+/// geometry wrappers — without this, an instance-only sub-model (e.g. a federated Site/Facades model) receives as
+/// empty. MATERIAL/HAS_MATERIAL and COLOR/HAS_COLOR bind only to an object's *display-mesh* geometry K (never its
+/// SOLID/3dm K), so atomic display objects resolve materials/colors via the owning object (through the Display-edges
+/// reverse map), independent of whether solid or display was actually decoded; the decode pipeline still threads each
+/// geometry's dense-int K alongside its decoded <see cref="RG.GeometryBase"/> so DEFINITION/instance geometry — which
+/// has no owning object — can fall back to a direct geometry-K material lookup (colors don't get this fallback,
+/// matching the Rhino reference). Genuinely non-geometric objects (rooms/levels/areas) are skipped silently; a
+/// geometry fragment that fails to decode/convert is reported back via <c>Build</c>'s warnings, not silently dropped.
+/// </remarks>
 internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
@@ -45,6 +57,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
     var collectionCache = new Dictionary<string, SpeckleCollectionWrapper>(StringComparer.Ordinal);
     var rels = bundle.Relations;
+    // GH data-tree topology (R4) per collection node K, precomputed once (mirrors CreateMaterials/CreateColors below).
+    var collectionTopologies = CreateCollectionTopologies(bundle);
 
     // Instance definitions decoded once (DEFINITION node → its DEFINES + composed DEFINES_INSTANCE geometry), shared
     // across all placements.
@@ -113,7 +127,15 @@ internal sealed class GrasshopperArtefactObjectBuilder
       bundle.Properties.TryGetValue(objK, out var props);
       var name = ObjectName(props);
       var segments = SceneViewResolver.Segments(bundle, objK);
-      var collection = GetOrCreateCollection(root, rootName, segments, collectionCache);
+      var collection = GetOrCreateCollection(
+        root,
+        rootName,
+        segments,
+        collectionCache,
+        objK,
+        rels,
+        collectionTopologies
+      );
 
       int ord = 0;
       foreach (var (geomK, rg) in geometries)
@@ -606,17 +628,23 @@ internal sealed class GrasshopperArtefactObjectBuilder
   }
 
   // Resolves (and creates once) the nested collection-wrapper chain for the given scene-view segments under the root.
+  // Topology (R4) is set only on the LAST segment (v1 only ever set it on the leaf, per CollectionsByName.cs) and
+  // only on first creation, so the lookup runs once per collection, not once per object.
   private static SpeckleCollectionWrapper GetOrCreateCollection(
     SpeckleCollectionWrapper root,
     string rootName,
     IReadOnlyList<string> segments,
-    Dictionary<string, SpeckleCollectionWrapper> cache
+    Dictionary<string, SpeckleCollectionWrapper> cache,
+    int objK,
+    ArtefactRelations rels,
+    Dictionary<int, string> collectionTopologies
   )
   {
     var previous = root;
     var current = new List<string> { rootName };
-    foreach (var raw in segments)
+    for (int i = 0; i < segments.Count; i++)
     {
+      var raw = segments[i];
       var name = string.IsNullOrWhiteSpace(raw) ? "unnamed" : raw;
       current.Add(name);
       var key = string.Concat(current);
@@ -635,10 +663,52 @@ internal sealed class GrasshopperArtefactObjectBuilder
         Color = null,
         Material = null,
       };
+      if (
+        i == segments.Count - 1
+        && rels.CollectionByObject.TryGetValue(objK, out int leafNodeK)
+        && collectionTopologies.TryGetValue(leafNodeK, out var topology)
+      )
+      {
+        wrapper.Topology = topology;
+      }
       cache[key] = wrapper;
       previous.Elements.Add(wrapper);
       previous = wrapper;
     }
     return previous;
   }
+
+  // Resolves each CONTAINER node's topology (R4) from its send-side sidecar object (WalkCollection /
+  // CollectionTopologyAppId), via a one-off reverse of ObjectAppIds.
+  private static Dictionary<int, string> CreateCollectionTopologies(ArtefactBundle bundle)
+  {
+    var objKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var kv in bundle.ObjectAppIds)
+    {
+      objKByAppId[kv.Value] = kv.Key;
+    }
+
+    var result = new Dictionary<int, string>();
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind != NodeKind.Container)
+      {
+        continue;
+      }
+      if (
+        objKByAppId.TryGetValue(CollectionTopologyAppId(kv.Key), out int topologyObjK)
+        && bundle.Properties.TryGetValue(topologyObjK, out var topologyProps)
+        && topologyProps.TryGetValue("topology", out var topologyVal)
+        && topologyVal is string topologyStr
+      )
+      {
+        result[kv.Key] = topologyStr;
+      }
+    }
+    return result;
+  }
+
+  // Mirrors GrasshopperArtifactRootObjectBuilder.CollectionTopologyAppId — must stay byte-identical so the deterministic
+  // key round-trips.
+  private static string CollectionTopologyAppId(int collectionNodeK) => $"__collection_topology_{collectionNodeK}";
 }
