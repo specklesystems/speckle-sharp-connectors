@@ -52,8 +52,11 @@ is externalized in `speckle-bundle-spec` (schema_version 5; COLLECTION folded in
 | Navisworks | — | — | **EXCLUDED** (handled natively by ODA) |
 
 **Deferred by request** (v1 concepts with no artefact-node equivalent — leave for a later, scoped design):
-CSi sections, Civil3D property-sets, AutoCAD groups, analysis-results blobs. Emit geometry + standard topology
-(layers/levels/materials/instances) only this pass.
+CSi sections, Civil3D property-sets, analysis-results blobs. Emit geometry + standard topology
+(layers/levels/materials/instances) only this pass. (Rhino/AutoCAD groups landed since: `IN_GROUP` (17) was
+un-retired in the spec — authored groups now emit `CONTAINER("Group")` nodes + `IN_GROUP` membership edges on
+send; receive rebuilds them natively — Rhino group table / AutoCAD group dictionary, with a baseLayerName-suffixed
+name purged on re-receive.)
 
 ## Cross-cutting requirement — per-session diagnostics logging
 
@@ -121,7 +124,9 @@ the v1 split). Mirror Rhino's two-phase collect-on-UI → write+upload-on-worker
   meshes/curves (Line/Polyline/Arc/Circle/Ellipse/Point/Mesh) → `AddGeometry` + `Display`; blocks →
   `AddDefinition`/`AddInstance`/`DisplayInstance`. Properties via `AddProperties`. Render materials →
   `AddMaterial`+`HasMaterial`; colors → `AddColor`+`HasColor`. Default scene view `[IN_COLLECTION]` (single layer tier).
-- **Deferred:** AutoCAD groups, Civil3D property-set defs.
+- Authored **groups** (via persistent reactors) → `AddContainer(…, "Group")` + `InGroup` membership edges —
+  a separate axis from `IN_COLLECTION` (an object keeps its layer AND its group(s)).
+- **Deferred:** Civil3D property-set defs.
 
 **Receive — `AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder`** (new; Civil3D variant; **Plant3D
 send-only**). Mirror the Rhino receiver, baking into AutoCAD **layers** (`GetOrCreateLayer` from `SceneViewResolver`

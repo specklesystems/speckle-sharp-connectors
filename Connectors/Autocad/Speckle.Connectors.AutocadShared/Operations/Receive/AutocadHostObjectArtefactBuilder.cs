@@ -119,6 +119,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
     var layerCache = new HashSet<string>(StringComparer.Ordinal);
+    // objK → its baked entity ids, tracked only for grouped objects (IN_GROUP) so step 4 can rebuild native groups.
+    var bakedIdsByObjK = new Dictionary<int, List<ObjectId>>();
 
     using var docLock = doc.LockDocument();
 
@@ -242,6 +244,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
 
           bakedObjectIds.UnionWith(ids.Select(i => i.ToString()));
+          if (rels.GroupsByObject.ContainsKey(objK))
+          {
+            bakedIdsByObjK[objK] = ids;
+          }
           conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Object", null, srcType));
           session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
         }
@@ -272,10 +278,22 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           colorArgbByGeometry,
           colorArgbByObject,
           bakedObjectIds,
+          bakedIdsByObjK,
           conversionResults,
           session
         );
         itr.Commit();
+      }
+    }
+
+    // 4 - authored scene groups (IN_GROUP → CONTAINER(Group) nodes) → native AutoCAD groups.
+    if (rels.GroupsByObject.Count > 0)
+    {
+      using (session.Phase("Groups"))
+      using (var gtr = doc.TransactionManager.StartTransaction())
+      {
+        BakeGroups(bundle, rels, db, gtr, bakedIdsByObjK, baseLayerName, session);
+        gtr.Commit();
       }
     }
 
@@ -570,6 +588,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, int> colorArgbByGeometry,
     Dictionary<string, int> colorArgbByObject,
     HashSet<string> bakedObjectIds,
+    Dictionary<int, List<ObjectId>> bakedIdsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
     ArtefactSessionLog session
   )
@@ -601,6 +620,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       defIdByNode,
       modelSpace,
       bakedObjectIds,
+      bakedIdsByObjK,
       conversionResults,
       session
     );
@@ -748,6 +768,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, ObjectId> defIdByNode,
     BlockTableRecord modelSpace,
     HashSet<string> bakedObjectIds,
+    Dictionary<int, List<ObjectId>> bakedIdsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
     ArtefactSessionLog session
   )
@@ -811,6 +832,14 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         modelSpace.AppendEntity(blockRef);
         tr.AddNewlyCreatedDBObject(blockRef, true);
         bakedObjectIds.Add(blockRef.ObjectId.ToString());
+        if (rels.GroupsByObject.ContainsKey(objK))
+        {
+          if (!bakedIdsByObjK.TryGetValue(objK, out var grouped))
+          {
+            bakedIdsByObjK[objK] = grouped = new List<ObjectId>();
+          }
+          grouped.Add(blockRef.ObjectId); // an object may place several instances; all of them join its group(s)
+        }
         conversionResults.Add(
           new(Status.SUCCESS, source, blockRef.ObjectId.ToString(), "Instance (Block)", null, srcType)
         );
@@ -820,6 +849,75 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
         conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
+      }
+    }
+  }
+
+  // ── groups ────────────────────────────────────────────────────────────────────────────────────────────
+  // Authored scene groups: inverts GroupsByObject (object → its CONTAINER(Group) nodes) to group → member entity ids
+  // and creates one native Group per node in the document group dictionary (mirrors the v1 AutocadGroupBaker). The
+  // name carries the baseLayerName suffix so PreClean purges this model's groups on re-receive; the dictionary
+  // requires unique keys (unlike Rhino's group table), so a clashing name gets a -N suffix. A member that failed to
+  // bake (or is non-geometric) is skipped; the group keeps its other members. Smaller groups first, as in v1.
+  private void BakeGroups(
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Database db,
+    Transaction tr,
+    Dictionary<int, List<ObjectId>> bakedIdsByObjK,
+    string baseLayerName,
+    ArtefactSessionLog session
+  )
+  {
+    var membersByGroup = new Dictionary<int, List<ObjectId>>();
+    foreach (var kv in rels.GroupsByObject)
+    {
+      if (!bakedIdsByObjK.TryGetValue(kv.Key, out var ids))
+      {
+        continue;
+      }
+      foreach (int groupK in kv.Value)
+      {
+        if (!membersByGroup.TryGetValue(groupK, out var list))
+        {
+          membersByGroup[groupK] = list = new List<ObjectId>();
+        }
+        list.AddRange(ids);
+      }
+    }
+    if (membersByGroup.Count == 0)
+    {
+      return;
+    }
+
+    var groupDictionary = (DBDictionary)tr.GetObject(db.GroupDictionaryId, OpenMode.ForWrite);
+    foreach (var kv in membersByGroup.OrderBy(g => g.Value.Count))
+    {
+      try
+      {
+        bundle.Nodes.TryGetValue(kv.Key, out var node);
+        var rawName = node?.Name is { Length: > 0 } n ? n : "Group";
+        var baseName = $"{_autocadContext.RemoveInvalidChars(rawName)} ({baseLayerName})";
+        string name = baseName;
+        for (int i = 1; groupDictionary.Contains(name); i++)
+        {
+          name = $"{baseName}-{i}";
+        }
+
+        var memberIds = new ObjectIdCollection();
+        foreach (var id in kv.Value)
+        {
+          memberIds.Add(id);
+        }
+        var group = new Group(name, true); // NOTE: this constructor sets both description and name
+        group.Append(memberIds);
+        groupDictionary.SetAt(name, group);
+        tr.AddNewlyCreatedDBObject(group, true);
+        session.Increment("groupsBaked");
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogError(ex, "Failed to bake AutoCAD group node {GroupK}", kv.Key);
       }
     }
   }
@@ -1106,6 +1204,25 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         {
           entity.UpgradeOpen();
           entity.Erase();
+        }
+      }
+
+      // purge this model's groups from the prior receive — they carry the baseLayerName suffix (BakeGroups).
+      // Collect first, then erase: erasing while enumerating the dictionary invalidates the enumerator.
+      var groupDictionary = (DBDictionary)tr.GetObject(db.GroupDictionaryId, OpenMode.ForRead);
+      var staleGroupIds = new List<ObjectId>();
+      foreach (DBDictionaryEntry entry in groupDictionary)
+      {
+        if (entry.Key.Contains(baseLayerName))
+        {
+          staleGroupIds.Add(entry.Value);
+        }
+      }
+      foreach (var groupId in staleGroupIds)
+      {
+        if (tr.GetObject(groupId, OpenMode.ForWrite) is Group staleGroup)
+        {
+          staleGroup.Erase();
         }
       }
 
