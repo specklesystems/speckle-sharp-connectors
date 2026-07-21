@@ -477,11 +477,9 @@ public class AutocadArtifactRootObjectBuilder(
     {
       pipeline.InCollection(childK, collK, 0);
       var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
-      pipeline.AddProperties(
-        childAppId,
-        props,
-        RootScalars(child.speckle_type, child.speckle_type, units, child.speckle_type)
-      );
+      string childName = child is DataObject dn ? dn.name : child.speckle_type;
+      string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
+      pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
 
       var display = child is Civil3dObject cc ? new List<Base>(cc.displayValue) : new List<Base> { child };
       if (child is Civil3dObject cb && cb.baseCurves is { Count: > 0 } baseCurves)
