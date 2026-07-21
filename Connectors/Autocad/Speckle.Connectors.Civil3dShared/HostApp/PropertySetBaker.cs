@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Civil3dShared;
@@ -18,6 +19,9 @@ namespace Speckle.Connectors.Civil3dShared.HostApp;
 public class PropertySetBaker
 {
   private const string PROP_SET_DEF_DICT_NAME = "AecPropertySetDefs";
+
+  public const string DEFINITIONS_CARRIER_APP_ID = "speckle:civil3d:property-set-definitions";
+
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
   private readonly ILogger<PropertySetBaker> _logger;
   private readonly PropertyHandler _propertyHandler;
@@ -88,12 +92,18 @@ public class PropertySetBaker
   /// </summary>
   public void ParseAndBakePropertySetDefinitions(Base rootObject, string namePrefix)
   {
-    _propertySetDefinitionMap.Clear();
-
     if (rootObject[ProxyKeys.PROPERTYSET_DEFINITIONS] is not Dictionary<string, object?> definitions)
     {
+      _propertySetDefinitionMap.Clear();
       return;
     }
+
+    ParseAndBakePropertySetDefinitions(definitions, namePrefix);
+  }
+
+  public void ParseAndBakePropertySetDefinitions(Dictionary<string, object?> definitions, string namePrefix)
+  {
+    _propertySetDefinitionMap.Clear();
 
     if (definitions.Count == 0)
     {
@@ -140,9 +150,18 @@ public class PropertySetBaker
   /// </summary>
   public bool TryBakePropertySets(ADB.Entity entity, Base sourceObject, ADB.Transaction tr)
   {
+    if (sourceObject["properties"] is not Dictionary<string, object?> properties)
+    {
+      return false;
+    }
+
+    return TryBakePropertySets(entity, properties, tr);
+  }
+
+  public bool TryBakePropertySets(ADB.Entity entity, Dictionary<string, object?> properties, ADB.Transaction tr)
+  {
     if (
-      sourceObject["properties"] is not Dictionary<string, object?> properties
-      || !properties.TryGetValue("Property Sets", out var propertySetsObj)
+      !properties.TryGetValue("Property Sets", out var propertySetsObj)
       || propertySetsObj is not Dictionary<string, object?> propertySets
       || propertySets.Count == 0
     )
@@ -279,8 +298,8 @@ public class PropertySetBaker
           // Cast numeric types to avoid bad numeric value errors
           var convertedValue = dataType switch
           {
-            AAEC.PropertyData.DataType.Integer => (int)(long)defaultValue,
-            AAEC.PropertyData.DataType.AutoIncrement => (int)(long)defaultValue,
+            AAEC.PropertyData.DataType.Integer => Convert.ToInt32(defaultValue, CultureInfo.InvariantCulture),
+            AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(defaultValue, CultureInfo.InvariantCulture),
             _ => defaultValue,
           };
 
@@ -366,14 +385,15 @@ public class PropertySetBaker
       foreach (var propertyEntry in setData)
       {
         string propertyName = propertyEntry.Key;
-        object? propertyDataObj = propertyEntry.Value;
 
-        if (propertyDataObj is not Dictionary<string, object?> propertyDataDict)
-        {
-          continue;
-        }
+        object? value =
+          propertyEntry.Value is Dictionary<string, object?> propertyDataDict
+            ? propertyDataDict.TryGetValue("value", out var nested)
+              ? nested
+              : null
+            : propertyEntry.Value;
 
-        if (!propertyDataDict.TryGetValue("value", out var value) || value == null)
+        if (value == null)
         {
           continue;
         }

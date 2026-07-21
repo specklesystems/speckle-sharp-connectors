@@ -126,6 +126,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
+    PreCleanAdditional(baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
     // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
@@ -152,6 +153,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 1b - by-object display colours (HAS_COLOR → COLOR nodes). Applied as explicit entity colour on bake; objects
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
+
+    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
@@ -216,6 +219,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   entity.Color = ToAcadColor(a);
                 }
                 ids.Add(entity.ObjectId);
+                PostBakeEntity(entity, props, tr);
               }
             }
             tr.Commit();
@@ -1251,6 +1255,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       _logger.LogError(ex, "Artefact receive pre-clean failed for '{BaseLayer}'", baseLayerName);
     }
   }
+
+  protected virtual void PreCleanAdditional(string baseLayerName) { }
+
+  protected virtual void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName) { }
+
+  protected virtual void PostBakeEntity(AcadEntity entity, Dictionary<string, object?>? properties, Transaction tr) { }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
     props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0

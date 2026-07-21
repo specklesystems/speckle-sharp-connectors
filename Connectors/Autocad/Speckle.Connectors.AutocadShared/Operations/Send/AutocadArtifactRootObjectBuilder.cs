@@ -318,6 +318,7 @@ public class AutocadArtifactRootObjectBuilder(
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
+    EmitAdditionalNodes(pipeline);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -640,6 +641,8 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
   }
+
+  protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
 
   // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
   // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
