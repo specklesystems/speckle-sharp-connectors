@@ -118,6 +118,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var objByGeom = rels.ObjectByGeometry();
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
+    // objK → its baked Rhino guids, tracked only for grouped objects (IN_GROUP) so step 5 can rebuild native groups.
+    var bakedGuidsByObjK = new Dictionary<int, List<Guid>>();
 
     using var noDraw = new DisableRedrawScope(doc.Views);
 
@@ -189,6 +191,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
+          if (rels.GroupsByObject.ContainsKey(objK))
+          {
+            bakedGuidsByObjK[objK] = ids;
+          }
           conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Speckle.Object"));
           session.RecordObject(appId, "Speckle.Object", Status.SUCCESS, null, sw.ElapsedMilliseconds);
         }
@@ -215,9 +221,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           materialByObject,
           materialByGeometry,
           bakedObjectIds,
+          bakedGuidsByObjK,
           conversionResults,
           session
         );
+      }
+    }
+
+    // 5 - authored scene groups (IN_GROUP → CONTAINER(Group) nodes) → native Rhino groups.
+    if (rels.GroupsByObject.Count > 0)
+    {
+      using (session.Phase("Groups"))
+      {
+        BakeGroups(doc, bundle, rels, bakedGuidsByObjK, baseLayerName, session);
       }
     }
 
@@ -437,6 +453,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
     HashSet<string> bakedObjectIds,
+    Dictionary<int, List<Guid>> bakedGuidsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
     ArtefactSessionLog session
   )
@@ -510,6 +527,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         continue;
       }
       bakedObjectIds.Add(id.ToString());
+      if (rels.GroupsByObject.ContainsKey(objK))
+      {
+        if (!bakedGuidsByObjK.TryGetValue(objK, out var grouped))
+        {
+          bakedGuidsByObjK[objK] = grouped = new List<Guid>();
+        }
+        grouped.Add(id); // an object may place several instances; all of them join its group(s)
+      }
       conversionResults.Add(new(Status.SUCCESS, source, id.ToString(), "Instance (Block)"));
       session.RecordObject(appId, "Instance (Block)", Status.SUCCESS, null, sw.ElapsedMilliseconds);
     }
@@ -670,6 +695,47 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
 
     return defIndexByNode;
+  }
+
+  // ── groups ────────────────────────────────────────────────────────────────────────────────────────────
+  // Authored scene groups: inverts GroupsByObject (object → its CONTAINER(Group) nodes) to group → member guids and
+  // adds one native Rhino group per node. An overlapping/nested source group works out of the box — Rhino models
+  // nesting the same way (an object simply belongs to several groups). The name carries the baseLayerName suffix
+  // (like the v1 RhinoGroupBaker) so DeepClean purges this model's groups on re-receive. A member that failed to
+  // bake (or is non-geometric) is skipped; the group keeps its other members. Smaller groups first, as in v1.
+  private static void BakeGroups(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, List<Guid>> bakedGuidsByObjK,
+    string baseLayerName,
+    ArtefactSessionLog session
+  )
+  {
+    var membersByGroup = new Dictionary<int, List<Guid>>();
+    foreach (var kv in rels.GroupsByObject)
+    {
+      if (!bakedGuidsByObjK.TryGetValue(kv.Key, out var guids))
+      {
+        continue;
+      }
+      foreach (int groupK in kv.Value)
+      {
+        if (!membersByGroup.TryGetValue(groupK, out var list))
+        {
+          membersByGroup[groupK] = list = new List<Guid>();
+        }
+        list.AddRange(guids);
+      }
+    }
+
+    foreach (var kv in membersByGroup.OrderBy(g => g.Value.Count))
+    {
+      bundle.Nodes.TryGetValue(kv.Key, out var node);
+      var name = node?.Name is { Length: > 0 } n ? n : "Group";
+      doc.Groups.Add($"{name} ({baseLayerName})", kv.Value);
+      session.Increment("groupsBaked");
+    }
   }
 
   // ── layers ────────────────────────────────────────────────────────────────────────────────────────────
@@ -863,6 +929,16 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     try
     {
+      // purge this model's groups from the prior receive first — they carry the baseLayerName suffix (BakeGroups)
+      for (int i = doc.Groups.Count - 1; i >= 0; i--)
+      {
+        var group = doc.Groups.FindIndex(i);
+        if (group is { Name: not null } && group.Name.Contains(baseLayerName))
+        {
+          doc.Groups.Delete(i);
+        }
+      }
+
       int rootLayerIndex = doc.Layers.Find(Guid.Empty, baseLayerName, RhinoMath.UnsetIntIndex);
       if (rootLayerIndex != RhinoMath.UnsetIntIndex)
       {

@@ -26,18 +26,6 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// Rhino converters; the collection tree comes from the bundle's default scene view; per-object properties are
 /// carried through.
 /// </summary>
-/// <remarks>
-/// Reconstructs <b>geometry + collections + properties + instances + materials + colors</b>. Instances
-/// (DISPLAY_INSTANCE) are resolved through their DEFINITION (DEFINES → geometry) and flattened into transformed
-/// geometry wrappers — without this, an instance-only sub-model (e.g. a federated Site/Facades model) receives as
-/// empty. MATERIAL/HAS_MATERIAL and COLOR/HAS_COLOR bind only to an object's *display-mesh* geometry K (never its
-/// SOLID/3dm K), so atomic display objects resolve materials/colors via the owning object (through the Display-edges
-/// reverse map), independent of whether solid or display was actually decoded; the decode pipeline still threads each
-/// geometry's dense-int K alongside its decoded <see cref="RG.GeometryBase"/> so DEFINITION/instance geometry — which
-/// has no owning object — can fall back to a direct geometry-K material lookup (colors don't get this fallback,
-/// matching the Rhino reference). Genuinely non-geometric objects (rooms/levels/areas) are skipped silently; a
-/// geometry fragment that fails to decode/convert is reported back via <c>Build</c>'s warnings, not silently dropped.
-/// </remarks>
 internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
