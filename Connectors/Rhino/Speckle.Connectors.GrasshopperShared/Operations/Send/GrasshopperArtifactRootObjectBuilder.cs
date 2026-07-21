@@ -173,6 +173,19 @@ public class GrasshopperArtifactRootObjectBuilder(
     collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
     int collK = ctx.Pipeline.AddCollection(collWrapper.ApplicationId, collWrapper.Name, parentCollK, "Collection");
 
+    // GH data-tree topology (R4) has no home on AddCollection's columns, so it rides on a sidecar object keyed off
+    // the collection's own node K (CollectionTopologyAppId) instead of an SDK signature change.
+    if (collWrapper.Topology is { Length: > 0 } topology)
+    {
+      string topologyAppId = CollectionTopologyAppId(collK);
+      ctx.Pipeline.InternObject(topologyAppId);
+      ctx.Pipeline.AddProperties(
+        topologyAppId,
+        s_emptyProps,
+        [new KeyValuePair<string, object?>("topology", topology)]
+      );
+    }
+
     // collection-level color/material are collected for parity with the v1 walk; they resolve to no geometry K and are
     // therefore not emitted as HAS_* edges (same as Rhino's layer-level materials).
     ctx.ColorPacker.ProcessColor(collWrapper.ApplicationId, collWrapper.Color);
@@ -477,6 +490,10 @@ public class GrasshopperArtifactRootObjectBuilder(
   }
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
+
+  // Deterministic key for a collection's topology sidecar object (see WalkCollection).
+  // Mirrored in GrasshopperArtefactObjectBuilder.CollectionTopologyAppId — must stay byte-identical.
+  private static string CollectionTopologyAppId(int collectionNodeK) => $"__collection_topology_{collectionNodeK}";
 
   private static IReadOnlyDictionary<string, object?> PropertiesOf(Base @base) =>
     @base["properties"] is IReadOnlyDictionary<string, object?> props ? props : s_emptyProps;

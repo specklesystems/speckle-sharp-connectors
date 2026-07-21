@@ -166,7 +166,7 @@ public class CsiArtifactRootObjectBuilder(
   }
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
-  // structural-results rows. Covers the object/model-level result types that map cleanly to the results schema:
+  // structural_results rows. Covers the object/model-level result types that map cleanly to the results schema:
   // frame forces, joint reactions, base reactions, modal periods. Pier/spandrel/story results (string position
   // dimensions, dual identity) are not emitted yet — a schema/mapping decision is pending. A results failure (model
   // unlocked / analysis not run) is logged and skipped so the geometry+properties send still succeeds.
@@ -373,7 +373,7 @@ public class CsiArtifactRootObjectBuilder(
     }
   }
 
-  // The result types whose axes map cleanly onto the structural-results schema (all-numeric leaves, single identity).
+  // The result types whose axes map cleanly onto the structural_results schema (all-numeric leaves, single identity).
   private static readonly ResultDescriptor[] s_resultDescriptors =
   {
     new("frameForces", "frameForce", "Elm", new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" }),
@@ -465,7 +465,7 @@ public class CsiArtifactRootObjectBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    // Analysis results → {v}.eav.structural-results.parquet (object-level rows join back via object_index).
+    // Analysis results → {v}.eav.structural_results.parquet (object-level rows join back via object_index).
     foreach (var r in model.ResultRows)
     {
       pipeline.AddStructuralResult(
