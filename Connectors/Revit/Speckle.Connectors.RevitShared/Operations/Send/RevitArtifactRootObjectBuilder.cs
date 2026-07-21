@@ -473,8 +473,13 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
-  // DISPLAY_INSTANCE. Line/Arc/Curve display values (door/window swing arcs, symbolic 2D) are intentionally skipped —
-  // they aren't real model geometry and render as spurious arcs (matches ODA's mesh-only Revit extraction).
+  // DISPLAY_INSTANCE, curves/points → DISPLAY (via the SGEO encoder, same as Rhino's artefact send).
+  //
+  // Curves are role-filtered [ENG-8801]: on an element that ALSO has mesh/instance geometry, curve display values are
+  // symbolic 2D (door/window swing arcs) that render as spurious arcs (matches ODA's mesh-only extraction), so they
+  // stay suppressed. On an element whose ENTIRE display value is curves/points (model lines, grids, curve-based
+  // generic annotations) the curves ARE the geometry — dropping them made the element publish invisible, so we emit
+  // them.
   private void EmitDisplayValue(
     ObjectsArtifactPipeline pipeline,
     int objK,
@@ -482,6 +487,17 @@ public class RevitArtifactRootObjectBuilder(
     IReadOnlyList<Base> displayValue
   )
   {
+    // Does this element carry real 3D geometry (mesh/instance)? If so, any accompanying curves are symbolic 2D.
+    bool hasSolidGeometry = false;
+    foreach (var item in displayValue)
+    {
+      if (item is InstanceProxy or SOG.Mesh)
+      {
+        hasSolidGeometry = true;
+        break;
+      }
+    }
+
     int ord = 0;
     foreach (var item in displayValue)
     {
@@ -504,6 +520,28 @@ public class RevitArtifactRootObjectBuilder(
           break;
 
         default:
+          // Curves / polylines / points. Emit only on curve/point-only elements (see role-filter note above); on
+          // mesh/instance-bearing elements these are swing arcs and stay suppressed.
+          if (hasSolidGeometry)
+          {
+            break;
+          }
+          try
+          {
+            int curveK = pipeline.AddGeometry(item.applicationId ?? $"{appId}:g{ord}", item);
+            pipeline.Display(objK, curveK, ord++);
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            // A display fragment the SGEO encoder doesn't support is skipped without failing the whole object —
+            // its properties + topology still land (same tolerance as Rhino's artefact send).
+            logger.LogWarning(
+              ex,
+              "Skipped unsupported curve display geometry {Type} on {AppId}",
+              item.speckle_type,
+              appId
+            );
+          }
           break;
       }
     }
