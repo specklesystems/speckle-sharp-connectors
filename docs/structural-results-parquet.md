@@ -1,4 +1,4 @@
-# `eav.structural-results.parquet` — structural analysis/design results
+# `eav.structural_results.parquet` — structural analysis/design results
 
 > **Producer-side** doc for the Speckle 4.0 structural analysis-results artefact (CSi/ETABS extraction status +
 > mapping). The **canonical format spec** now lives in the bundle-spec repo:
@@ -17,7 +17,7 @@ and `envelope.*.parquet` (topology graph). This adds one more **purpose file** f
 results**:
 
 ```
-{versionId}.eav.structural-results.parquet
+{versionId}.eav.structural_results.parquet
 ```
 
 - **Per-domain, not per-connector.** ETABS/CSi, SAP2000, and **TSD** (Tekla Structural Designer, coming soon) all
@@ -100,7 +100,7 @@ case not finished) is **logged and skipped** so the geometry + properties still 
 
 ## Consumer notes (querying)
 
-- Join object-level results to geometry/properties: `structural-results.object_index = eav.objects.object_index`.
+- Join object-level results to geometry/properties: `structural_results.object_index = eav.objects.object_index`.
 - Model-level rows have `object_index IS NULL`; group by `location` (story) / `step` (mode).
 - `result_type` / `load_case` / `component` are dictionary-encoded → cheap to filter/group.
 - Numeric result = `value`; design verdicts = `value_text` (TSD).
