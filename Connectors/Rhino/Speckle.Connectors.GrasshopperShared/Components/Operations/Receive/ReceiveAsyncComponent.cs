@@ -477,7 +477,12 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
           SpeckleConversionContext.SetupCurrent(scope);
           try
           {
-            var rootWrapper = new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+            (SpeckleCollectionWrapper rootWrapper, IReadOnlyList<string> buildWarnings) =
+              new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+            foreach (var warning in buildWarnings)
+            {
+              RuntimeMessages.Add((GH_RuntimeMessageLevel.Warning, warning));
+            }
             try
             {
               await Parent

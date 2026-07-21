@@ -28,7 +28,6 @@ using Speckle.Sdk.Pipelines.Send.Artifacts;
 using System.IO; // net8+ provides this via ImplicitUsings; net48 needs it explicitly.
 #endif
 
-
 namespace Speckle.Connectors.Autocad.Operations.Send;
 
 /// <summary>

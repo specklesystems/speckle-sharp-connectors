@@ -1,14 +1,18 @@
 using System.Globalization;
+using Rhino;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Converters.Rhino.ToHost.Helpers;
 using Speckle.Objects.Other;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
+using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
+using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
@@ -17,20 +21,18 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// <see cref="ArtefactBundle"/> — the receive-side twin of <c>GrasshopperArtifactRootObjectBuilder</c>. Unlike the
 /// Rhino/Revit artefact receivers it does NOT bake into a document; it emits the same wrapper graph the GH Load
 /// component outputs onto the canvas (so no <c>IHostObjectBuilder</c>). Geometry is decoded straight from the bundle
-/// (SGEO → <see cref="RG.Mesh"/>, raw 3dm → <see cref="RawEncodingToHost.Convert3dm"/>) and reconverted to a clean
-/// Speckle <see cref="Base"/> via the shared Rhino converters; the collection tree comes from the bundle's default
-/// scene view; per-object properties are carried through.
+/// (meshes/point clouds/curves/points → SGEO via <see cref="SgeoDecoder"/>, raw 3dm →
+/// <see cref="RawEncodingToHost.Convert3dm"/>) and reconverted to a clean Speckle <see cref="Base"/> via the shared
+/// Rhino converters; the collection tree comes from the bundle's default scene view; per-object properties are
+/// carried through.
 /// </summary>
-/// <remarks>
-/// Reconstructs <b>geometry + collections + properties + instances</b>. Instances (DISPLAY_INSTANCE) are resolved
-/// through their DEFINITION (DEFINES → geometry) and flattened into transformed geometry wrappers — without this, an
-/// instance-only sub-model (e.g. a federated Site/Facades model) receives as empty. Materials (MATERIAL/HAS_MATERIAL)
-/// are NOT reconstructed yet — a fast follow. Genuinely non-geometric objects (rooms/levels/areas) are skipped silently.
-/// </remarks>
 internal sealed class GrasshopperArtefactObjectBuilder
 {
-  public SpeckleCollectionWrapper Build(ArtefactBundle bundle, string rootName)
+  // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
+  // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
+  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(ArtefactBundle bundle, string rootName)
   {
+    var warnings = new List<string>();
     var root = new SpeckleCollectionWrapper
     {
       Base = new Collection { name = rootName },
@@ -44,17 +46,33 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var collectionCache = new Dictionary<string, SpeckleCollectionWrapper>(StringComparer.Ordinal);
     var rels = bundle.Relations;
 
-    // Instance definitions decoded once (DEFINITION node → its DEFINES geometry), shared across all placements.
-    var defGeomByNode = BuildDefinitionGeometry(bundle, rels);
+    // Instance definitions decoded once (DEFINITION node → its DEFINES + composed DEFINES_INSTANCE geometry), shared
+    // across all placements.
+    var defGeomByNode = BuildDefinitionGeometry(bundle, rels, warnings);
     // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
     var instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
+    // INSTANCE nodes that are a nested/child placement inside some DEFINITION (DEFINES_INSTANCE targets). Their content
+    // is already composed into the parent definition's geometry by BuildDefinitionGeometry, so their own top-level
+    // DISPLAY_INSTANCE placement (using their un-composed, definition-local transform) must be skipped below — otherwise
+    // the nested block appears an extra time at the wrong (definition-space) location instead of once per parent placement.
+    var nestedInstanceNodes = new HashSet<int>(rels.DefinesInstanceByDefinition.Values.SelectMany(v => v));
+    // HAS_MATERIAL/HAS_COLOR bind to an object's *display-mesh* geometry K specifically — never its SOLID (3dm) K, per
+    // both RhinoArtifactRootObjectBuilder and GrasshopperArtifactRootObjectBuilder's send-side comments. DecodeObjectGeometry
+    // prefers the solid when both exist, so for a solid-backed object the geomK actually decoded never appears in
+    // MaterialByGeometry/ColorByGeometry at all. Resolve via the object instead (through the Display-edges reverse map),
+    // matching RhinoHostObjectArtefactBuilder.CreateMaterials/CreateColors, so material/color don't depend on which of
+    // solid/display happened to be decoded. materialByGeometry still covers DEFINITION/instance content, which has no
+    // owning object reachable this way (mirrors Rhino's "standalone definition geometry" byGeometry fallback).
+    var objByGeom = rels.ObjectByGeometry();
+    var (materialByObject, materialByGeometry) = CreateMaterials(bundle, objByGeom);
+    var colorByObject = CreateColors(bundle, objByGeom);
 
     foreach (var kv in bundle.ObjectAppIds)
     {
       int objK = kv.Key;
       string appId = kv.Value;
 
-      var geometries = DecodeObjectGeometry(objK, bundle, rels);
+      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK), warnings);
 
       // Instances: an object placed as a block carries no direct SOLID/DISPLAY geometry — its geometry lives on the
       // referenced DEFINITION. Resolve each placement (object → INSTANCE node → DefRef DEFINITION → DEFINES geometry),
@@ -64,6 +82,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         foreach (var e in instEdges)
         {
+          if (nestedInstanceNodes.Contains(e.Dst))
+          {
+            continue; // nested placement — already composed into its parent definition's geometry above
+          }
           if (
             !bundle.Nodes.TryGetValue(e.Dst, out var instNode)
             || instNode.DefRef is not int defNodeK
@@ -72,12 +94,13 @@ internal sealed class GrasshopperArtefactObjectBuilder
           {
             continue;
           }
-          var xf = BuildTransform(instNode.Transform);
-          foreach (var g in defGeoms)
+          var xf = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : DocUnits());
+          foreach (var (geomK, g) in defGeoms)
           {
             var dup = g.Duplicate();
             dup.Transform(xf);
-            geometries.Add(dup);
+            // preserve the definition geometry's own K so its material/color still resolves after duplication+transform
+            geometries.Add((geomK, dup));
           }
         }
       }
@@ -88,11 +111,12 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
 
       bundle.Properties.TryGetValue(objK, out var props);
+      var name = ObjectName(props);
       var segments = SceneViewResolver.Segments(bundle, objK);
       var collection = GetOrCreateCollection(root, rootName, segments, collectionCache);
 
       int ord = 0;
-      foreach (var rg in geometries)
+      foreach (var (geomK, rg) in geometries)
       {
         Base? converted;
         try
@@ -115,9 +139,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
           GeometryBase = rg,
           Path = collection.Path,
           Parent = collection,
-          Color = null,
-          Material = null,
+          Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
+          Material =
+            materialByObject.TryGetValue(appId, out var objMat) ? objMat
+            : materialByGeometry.TryGetValue(geomK, out var geomMat) ? geomMat
+            : null,
         };
+        if (name is not null)
+        {
+          wrapper.Name = name;
+        }
         if (props is { Count: > 0 })
         {
           wrapper.Properties = new SpecklePropertyGroupGoo(props);
@@ -126,57 +157,246 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
 
-    return root;
+    return (root, warnings);
   }
 
-  // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes.
-  private static List<RG.GeometryBase> DecodeObjectGeometry(int objK, ArtefactBundle bundle, ArtefactRelations rels)
+  // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes. Each
+  // decoded fragment keeps the geometry K it came from — for an atomic object this K is only used as the definition-
+  // geometry material fallback (materials/colors on atomic objects resolve via appId instead, see Build's comment),
+  // since HAS_MATERIAL/HAS_COLOR target the DISPLAY-mesh K specifically and this object may have decoded via SOLID.
+  private static List<(int GeomK, RG.GeometryBase Geom)> DecodeObjectGeometry(
+    int objK,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    string fallbackUnits,
+    List<string> warnings
+  )
   {
-    var result = new List<RG.GeometryBase>();
+    var result = new List<(int, RG.GeometryBase)>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
       {
-        result.AddRange(DecodeGeometryIndex(solidK, bundle));
+        foreach (var g in DecodeGeometryIndex(solidK, bundle, fallbackUnits, warnings))
+        {
+          result.Add((solidK, g));
+        }
       }
     }
     if (result.Count == 0 && rels.DisplayByObject(objK) is { } displayEdges)
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        result.AddRange(DecodeGeometryIndex(e.Dst, bundle));
+        foreach (var g in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, warnings))
+        {
+          result.Add((e.Dst, g));
+        }
       }
     }
     return result;
   }
 
-  // Decodes each DEFINITION node's geometry once (DEFINES → geometry blobs), keyed by definition node index. The same
-  // definition is referenced by many instances, so we decode once here and duplicate+transform per placement.
-  private static Dictionary<int, List<RG.GeometryBase>> BuildDefinitionGeometry(
-    ArtefactBundle bundle,
-    ArtefactRelations rels
-  )
+  // The send side stores "units" per object as an EAV property, falling back to the bundle's overall units when absent
+  // (mirrors RhinoHostObjectArtefactBuilder.ObjectUnits).
+  private static string ObjectUnits(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("units", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : bundle.Units;
+
+  // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
+  // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
+  // (missing, empty, or the sourceType fallback) so unnamed objects stay unnamed on receive (mirrors
+  // RhinoHostObjectArtefactBuilder.ObjectName).
+  private static string? ObjectName(Dictionary<string, object?>? props)
   {
-    var map = new Dictionary<int, List<RG.GeometryBase>>();
-    foreach (var kv in rels.DefinesByDefinition)
+    if (props is null)
     {
-      rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var ords);
-      var geoms = new List<RG.GeometryBase>();
-      // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
-      // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without this
-      // it would place both the solid and its shadow mesh).
-      foreach (var memberGeomKs in GroupDefinesByMember(kv.Value, ords, bundle))
+      return null;
+    }
+    if (props.TryGetValue("name", out var nv) && nv is string name && name.Length > 0)
+    {
+      var type = props.TryGetValue("type", out var tv) && tv is string t ? t : null;
+      return string.Equals(name, type, StringComparison.Ordinal) ? null : name;
+    }
+    return null;
+  }
+
+  // Builds a SpeckleMaterialWrapper per MATERIAL node, then resolves HAS_MATERIAL (Relations.MaterialByGeometry:
+  // display-mesh geometry K → material node K) to BOTH a geometry-K lookup (covers standalone DEFINITION/instance
+  // geometry, which has no owning object) and an object-appId lookup (covers atomic display objects, resolved via the
+  // Display-edges reverse map — robust to whether the object's decoded geometry actually came from its SOLID or
+  // DISPLAY blob, since HAS_MATERIAL only ever targets the display-mesh K). Mirrors
+  // RhinoHostObjectArtefactBuilder.CreateMaterials exactly; reuses the same SpeckleMaterialWrapperGoo.CastFrom(RenderMaterial)
+  // construction path the v1 GH receive uses (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
+  private static (
+    Dictionary<string, SpeckleMaterialWrapper> ByObject,
+    Dictionary<int, SpeckleMaterialWrapper> ByGeometry
+  ) CreateMaterials(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
+  {
+    var wrapperByMaterialNode = new Dictionary<int, SpeckleMaterialWrapper>();
+    foreach (var kv in bundle.Nodes)
+    {
+      var n = kv.Value;
+      if (n.Kind != NodeKind.Material)
       {
-        foreach (var geomK in memberGeomKs)
-        {
-          geoms.AddRange(DecodeGeometryIndex(geomK, bundle));
-        }
+        continue;
       }
-      if (geoms.Count > 0)
+      try
       {
-        map[kv.Key] = geoms;
+        var speckleMaterial = new SpeckleRenderMaterial
+        {
+          name = n.Name ?? "material",
+          diffuse = n.Argb ?? unchecked((int)0xFFFFFFFF),
+          opacity = n.Opacity ?? 1.0,
+          metalness = n.Metalness ?? 0.0,
+          roughness = n.Roughness ?? 1.0,
+          applicationId = $"material-{kv.Key}",
+        };
+        var goo = new SpeckleMaterialWrapperGoo();
+        goo.CastFrom(speckleMaterial);
+        wrapperByMaterialNode[kv.Key] = goo.Value;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // a malformed material node shouldn't fail the whole receive — the bound geometry just stays unmaterialed.
       }
     }
+
+    var byObject = new Dictionary<string, SpeckleMaterialWrapper>();
+    var byGeometry = new Dictionary<int, SpeckleMaterialWrapper>();
+    foreach (var kv in bundle.Relations.MaterialByGeometry)
+    {
+      if (!wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper))
+      {
+        continue;
+      }
+      byGeometry[kv.Key] = wrapper; // geometry → material (covers standalone definition geometry)
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = wrapper; // object → material (atomic display objects)
+      }
+    }
+    return (byObject, byGeometry);
+  }
+
+  // Resolves HAS_COLOR (Relations.ColorByGeometry: display-mesh geometry K → COLOR node) to the owning object's
+  // appId → argb — the object's by-object display colour, distinct from a render material. Resolved via the same
+  // Display-edges reverse map as materials, for the same reason (HAS_COLOR only ever targets the display-mesh K, not
+  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors, which likewise only resolves to the owning
+  // object (definition/instance geometry doesn't get a colour in the Rhino reference either).
+  private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
+  {
+    var byObject = new Dictionary<string, int>();
+    foreach (var kv in bundle.Relations.ColorByGeometry)
+    {
+      if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
+      {
+        continue;
+      }
+      if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+    return byObject;
+  }
+
+  // Decodes every DEFINITION node's geometry once — direct DEFINES → geometry blobs, plus DEFINES_INSTANCE → nested
+  // definitions recursively built and composed with their own (definition-local) transform — keyed by definition node
+  // index. Each fragment keeps its geometry K (see DecodeObjectGeometry) so HAS_MATERIAL/HAS_COLOR still resolve after
+  // duplication. The same definition is referenced by many instances, so we decode/compose once here and
+  // duplicate+transform per placement (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions' nested composition,
+  // ENG-8793): without this, a block-inside-a-block's content is placed once at its own definition-space transform
+  // instead of once per parent placement.
+  private static Dictionary<int, List<(int GeomK, RG.GeometryBase Geom)>> BuildDefinitionGeometry(
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    List<string> warnings
+  )
+  {
+    var map = new Dictionary<int, List<(int, RG.GeometryBase)>>();
+    var building = new HashSet<int>();
+
+    List<(int, RG.GeometryBase)> BuildDefinition(int defNodeK)
+    {
+      if (map.TryGetValue(defNodeK, out var already))
+      {
+        return already; // already built (a shared nested definition is reached from several parents)
+      }
+      if (!building.Add(defNodeK))
+      {
+        return new List<(int, RG.GeometryBase)>(); // cycle guard — never stack-overflow on a bad bundle
+      }
+
+      var geoms = new List<(int, RG.GeometryBase)>();
+
+      // direct geometry members (DEFINES → geometry blob).
+      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+      {
+        rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+        // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
+        // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without
+        // this it would place both the solid and its shadow mesh).
+        foreach (var memberGeomKs in GroupDefinesByMember(geomKs, ords, bundle))
+        {
+          foreach (var geomK in memberGeomKs)
+          {
+            // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
+            // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
+            // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
+            foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, warnings))
+            {
+              geoms.Add((geomK, g));
+            }
+          }
+        }
+      }
+
+      // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first (depth-first,
+      // memoized above), then duplicate+bake its own transform so a placement of THIS definition already carries the
+      // composed nested content.
+      if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+      {
+        foreach (var instNodeK in nestedInstNodeKs)
+        {
+          if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+          {
+            continue;
+          }
+          var childGeoms = BuildDefinition(childDefNodeK);
+          if (childGeoms.Count == 0)
+          {
+            continue;
+          }
+          var xf = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : bundle.Units);
+          foreach (var (geomK, g) in childGeoms)
+          {
+            var dup = g.Duplicate();
+            dup.Transform(xf);
+            geoms.Add((geomK, dup));
+          }
+        }
+      }
+
+      building.Remove(defNodeK);
+      if (geoms.Count > 0)
+      {
+        map[defNodeK] = geoms;
+      }
+      return geoms;
+    }
+
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildDefinition(kv.Key);
+      }
+    }
+
     return map;
   }
 
@@ -207,9 +427,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
   }
 
-  // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform. Geometry
-  // is already in bundle units, so (unlike the doc-baking Rhino builder) no unit rescale is applied to the translation.
-  private static RG.Transform BuildTransform(string? csv)
+  // Parses an instance node's transform (a 16-value row-major CSV of the 4x4 matrix) into a Rhino transform, scaling
+  // the translation from the instance's own units to DocUnits (mirrors RhinoHostObjectArtefactBuilder.BuildTransform;
+  // rotation/scale entries are unitless ratios and need no conversion).
+  private static RG.Transform BuildTransform(string? csv, string units)
   {
     var d = new double[16];
     if (csv is { Length: > 0 } text)
@@ -225,19 +446,20 @@ internal sealed class GrasshopperArtefactObjectBuilder
       d[0] = d[5] = d[10] = d[15] = 1.0;
     }
 
+    double scale = Units.GetConversionFactor(units, DocUnits());
     var t = RG.Transform.Identity;
     t.M00 = d[0];
     t.M01 = d[1];
     t.M02 = d[2];
-    t.M03 = d[3];
+    t.M03 = d[3] * scale;
     t.M10 = d[4];
     t.M11 = d[5];
     t.M12 = d[6];
-    t.M13 = d[7];
+    t.M13 = d[7] * scale;
     t.M20 = d[8];
     t.M21 = d[9];
     t.M22 = d[10];
-    t.M23 = d[11];
+    t.M23 = d[11] * scale;
     t.M30 = d[12];
     t.M31 = d[13];
     t.M32 = d[14];
@@ -245,7 +467,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
     return t;
   }
 
-  private static List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle)
+  // Decodes one geometry index to Rhino geometry, scaled from its source units to DocUnits (SGEO carries its own
+  // units; 3dm uses the caller-supplied fallback) — mirrors RhinoHostObjectArtefactBuilder.DecodeGeometryIndex.
+  // ConvertToSpeckle (below) stamps the *active document's* units onto the converted Base without rescaling the
+  // numeric values, so mesh/3dm geometry must already be in DocUnits by the time it gets there.
+  private static List<RG.GeometryBase> DecodeGeometryIndex(
+    int geomK,
+    ArtefactBundle bundle,
+    string fallbackUnits,
+    List<string> warnings
+  )
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -253,14 +484,73 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
     if (g.Type == RawEncodingFormats.RHINO_3DM)
     {
-      return RawEncodingToHost.Convert3dm(g.Content);
+      var geoms = RawEncodingToHost.Convert3dm(g.Content);
+      ApplyUnits(geoms, fallbackUnits);
+      return geoms;
     }
-    if (g.IsSgeo && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    if (g.IsSgeo)
     {
-      return new List<RG.GeometryBase> { BuildMesh(sm) };
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
+      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      {
+        var list = new List<RG.GeometryBase> { BuildMesh(sm) };
+        ApplyUnits(list, sm.Units);
+        return list;
+      }
+      // Curves, points, and point clouds: decode to a Speckle geometry object and convert via the shared Rhino ToHost
+      // converter (ConvertSpeckleGeometry below), which already scales from the decoded Base's own `units` to
+      // DocUnits (SpeckleToHostGeometryBaseTopLevelConverter) — so no extra ApplyUnits here, unlike mesh/3dm above.
+      // An unsupported/undecodable primitive degrades to nothing (with a warning) rather than aborting the receive.
+      Base? decoded = null;
+      try
+      {
+        decoded = SgeoDecoder.Decode(g.Content);
+        var converted = ConvertSpeckleGeometry(decoded);
+        if (converted.Count == 0)
+        {
+          warnings.Add($"Geometry {geomK} ({decoded.speckle_type}) did not convert to any native geometry.");
+        }
+        return converted;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+        warnings.Add($"Geometry {geomK} ({g.Type}) failed to {stage}: {ex.Message}");
+      }
     }
     return new List<RG.GeometryBase>();
   }
+
+  // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the shared Rhino ToHost converter (the
+  // same one Rhino's own artefact receive uses, ENG-8781). Mirrors RhinoHostObjectArtefactBuilder.ConvertSpeckleGeometry.
+  private static List<RG.GeometryBase> ConvertSpeckleGeometry(Base decoded) =>
+    SpeckleConversionContext
+      .Current.ConvertToHost(decoded)
+      .Select(pair => pair.Item1)
+      .OfType<RG.GeometryBase>()
+      .ToList();
+
+  private static void ApplyUnits(List<RG.GeometryBase> geoms, string? units)
+  {
+    if (units is not { Length: > 0 } u)
+    {
+      return;
+    }
+    var docUnits = DocUnits();
+    if (string.Equals(u, docUnits, StringComparison.OrdinalIgnoreCase))
+    {
+      return;
+    }
+    var t = RG.Transform.Scale(RG.Point3d.Origin, Units.GetConversionFactor(u, docUnits));
+    foreach (var geom in geoms)
+    {
+      geom.Transform(t);
+    }
+  }
+
+  // The active Rhino/GH document's units — what ConvertToSpeckle's converters (e.g. MeshToSpeckleConverter) stamp
+  // as the converted Base's "units" without rescaling, so all decoded geometry must land here before conversion.
+  private static string DocUnits() => RhinoDoc.ActiveDoc?.ModelUnitSystem.ToSpeckleString() ?? Units.Meters;
 
   // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; mirrors RhinoHostObjectArtefactBuilder).
   private static RG.Mesh BuildMesh(SgeoMesh sm)
