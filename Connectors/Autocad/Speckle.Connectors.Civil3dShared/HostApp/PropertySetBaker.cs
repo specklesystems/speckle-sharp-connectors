@@ -375,11 +375,11 @@ public class PropertySetBaker
       var propertySet = (AAECPDB.PropertySet)tr.GetObject(propertySetId, ADB.OpenMode.ForWrite);
       var setDefinition = (AAECPDB.PropertySetDefinition)tr.GetObject(propertySetDefId, ADB.OpenMode.ForRead);
 
-      // Build a map of property names to definition IDs
-      Dictionary<string, int> propertyNameToId = new();
+      // Build a map of property names to definition IDs + data types (for value coercion below)
+      Dictionary<string, (int Id, AAEC.PropertyData.DataType Type)> propertyNameToDef = new();
       foreach (AAECPDB.PropertyDefinition propDef in setDefinition.Definitions)
       {
-        propertyNameToId[propDef.Name] = propDef.Id;
+        propertyNameToDef[propDef.Name] = (propDef.Id, propDef.DataType);
       }
 
       foreach (var propertyEntry in setData)
@@ -398,15 +398,42 @@ public class PropertySetBaker
           continue;
         }
 
-        if (!propertyNameToId.TryGetValue(propertyName, out int propertyId))
+        if (!propertyNameToDef.TryGetValue(propertyName, out var propDefInfo))
         {
+          continue;
+        }
+
+        // The eav path round-trips every number as double, and SetAt's failure is swallowed by the handler —
+        // without coercion an Integer-typed property silently stays unset (empty in the palette). Mirror the
+        // default-value cast in CreatePropertySetDefinition, driven by the definition's data type.
+        object coercedValue;
+        try
+        {
+          coercedValue = propDefInfo.Type switch
+          {
+            AAEC.PropertyData.DataType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+            AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+            AAEC.PropertyData.DataType.Real => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+            AAEC.PropertyData.DataType.Text => value.ToString() ?? "",
+            AAEC.PropertyData.DataType.TrueFalse => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
+            _ => value,
+          };
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(
+            ex,
+            "Could not coerce received value for property {PropertyName} to {DataType}",
+            propertyName,
+            propDefInfo.Type
+          );
           continue;
         }
 
         _propertyHandler.TryGetValue(
           () =>
           {
-            propertySet.SetAt(propertyId, value);
+            propertySet.SetAt(propDefInfo.Id, coercedValue);
             return true;
           },
           out _
