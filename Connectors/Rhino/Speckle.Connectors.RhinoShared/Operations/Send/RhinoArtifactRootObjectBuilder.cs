@@ -670,6 +670,12 @@ public class RhinoArtifactRootObjectBuilder(
             pipeline.HasColor(gK, colorK);
           }
         }
+        else if (instanceKByObjectId.ContainsKey(objectId))
+        {
+          // block instance: no geometry of its own — emit the colour OBJECT-sourced (spec HAS_COLOR src is
+          // geometry|object; the viewer looks up both) so per-placement overrides survive [ENG-8825].
+          pipeline.HasColor(pipeline.InternObject(objectId), colorK);
+        }
       }
     }
   }

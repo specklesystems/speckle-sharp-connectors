@@ -624,7 +624,10 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
 
-    // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids.
+    // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids. A block INSTANCE has
+    // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour edge is
+    // emitted OBJECT-sourced instead — spec HAS_COLOR src is geometry|object, and the viewer looks up both
+    // namespaces — so per-placement colour overrides survive [ENG-8825].
     foreach (var colorProxy in model.Colors)
     {
       int colorK = pipeline.AddColor(colorProxy.value);
@@ -636,6 +639,10 @@ public class AutocadArtifactRootObjectBuilder(
           {
             pipeline.HasColor(gK, colorK);
           }
+        }
+        else if (instanceKByObjectId.ContainsKey(objectId))
+        {
+          pipeline.HasColor(pipeline.InternObject(objectId), colorK);
         }
       }
     }
