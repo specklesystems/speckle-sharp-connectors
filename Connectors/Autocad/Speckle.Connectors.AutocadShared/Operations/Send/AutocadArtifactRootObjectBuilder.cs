@@ -306,12 +306,34 @@ public class AutocadArtifactRootObjectBuilder(
     // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
+    // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
+    // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
+    var results = model.Results.ToList();
+    var resultIndexByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    for (int i = 0; i < results.Count; i++)
+    {
+      resultIndexByAppId[results[i].SourceId] = i;
+    }
+
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, co.LayerName, model.LayerArgbByName, layerCollectionKByName);
-      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
+      string? dropReason = EmitObject(
+        pipeline,
+        co,
+        collK,
+        model.Units,
+        geometryKsByObjectId,
+        instanceKByObjectId,
+        definitionMemberIds
+      );
+      if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
+      {
+        results[ri] = new(Status.ERROR, co.ApplicationId, co.SourceType, null, new SpeckleException(dropReason));
+        session.RecordObject(co.ApplicationId, co.SourceType, Status.ERROR, dropReason, 0);
+      }
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -329,7 +351,7 @@ public class AutocadArtifactRootObjectBuilder(
       .Where(p => p.EndsWith(".parquet", StringComparison.Ordinal))
       .ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.Ordinal);
 
-    var objectCount = model.Results.Count(r => r.Status == Status.SUCCESS);
+    var objectCount = results.Count(r => r.Status == Status.SUCCESS);
     var rootId = $"binary-{versionId}";
 
     session.SetStat("files", bundle.Count);
@@ -340,12 +362,14 @@ public class AutocadArtifactRootObjectBuilder(
     session.SetStat("groups", model.Groups.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
-    return new BundleResult(bundle, rootId, objectCount, model.Results);
+    return new BundleResult(bundle, rootId, objectCount, results);
   }
 
   // Emits one object: eav labels + IN_COLLECTION, then a block placement (DISPLAY_INSTANCE → INSTANCE node) or
   // geometry — the lossless SAT SOLID blob (if present) plus the DISPLAY meshes. Pure Speckle (no AutoCAD API).
-  private void EmitObject(
+  // Returns null on success, or a drop reason when the object had display geometry but NONE of it could be
+  // encoded (and no solid landed) — the caller downgrades the object's Collect-phase SUCCESS [ENG-8826].
+  private string? EmitObject(
     ObjectsArtifactPipeline pipeline,
     CollectedObject co,
     int collK,
@@ -381,7 +405,7 @@ public class AutocadArtifactRootObjectBuilder(
       {
         pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
       }
-      return;
+      return null;
     }
 
     // ── geometry object ───────────────────────────────────────────────────────────────────────────────
@@ -406,15 +430,20 @@ public class AutocadArtifactRootObjectBuilder(
 
     // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. Skipped for definition members —
     // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    bool hasSolid = false;
     if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.ACAD_SAT);
       pipeline.Solid(objK, solidK, 0);
+      hasSolid = true;
     }
 
-    // Renderable display meshes (and self-display primitives the SGEO encoder supports: points/curves).
+    // Renderable display meshes (and self-display primitives the SGEO encoder supports: points/curves). A bad
+    // fragment is isolated (poison-element rule: it must never abort the send) — but its reason is kept so a
+    // fully-dropped object can be reported instead of silently claiming SUCCESS.
     var gKs = new List<int>();
+    string? lastSkip = null;
     int ord = 0;
     foreach (Base fragment in displayGeometry)
     {
@@ -431,6 +460,7 @@ public class AutocadArtifactRootObjectBuilder(
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
+        lastSkip = $"{fragment.speckle_type}: {ex.Message}";
         logger.LogWarning(
           ex,
           "Skipped unsupported display geometry {Type} on {AppId}",
@@ -441,6 +471,14 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
+
+    // Every display fragment was dropped and no solid landed → the bundle carries nothing renderable for this
+    // object; report it instead of standing on the Collect-phase SUCCESS. An object that never had display
+    // geometry (e.g. a Civil3D parent whose content rides its children) is NOT a drop.
+    string? dropReason =
+      displayGeometry.Count > 0 && gKs.Count == 0 && !hasSolid
+        ? lastSkip ?? "no display geometry could be encoded"
+        : null;
 
     // Civil3D sub-object tree (Civil3dObject.elements): corridor → baseline → region → applied assembly →
     // subassembly; alignment → profiles; site → parcels/feature-lines. The converter builds this graph but the
@@ -453,7 +491,13 @@ public class AutocadArtifactRootObjectBuilder(
       {
         EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId);
       }
+      if (childOrd > 0)
+      {
+        return null; // the parent's content rides its emitted children — not a drop even if its own display failed
+      }
     }
+
+    return dropReason;
   }
 
   // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always; interns + emits the child's own
