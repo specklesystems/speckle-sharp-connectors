@@ -37,7 +37,13 @@ public class SpeckleDataObjectPassthrough()
 
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_dataobject;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
+
+  /// <remarks>
+  /// Marks this component as obsolete in the Grasshopper UI (hides it from the ribbon, adds the
+  /// "obsolete" overlay icon on canvas).
+  /// </remarks>
+  public override bool Obsolete => true;
 
   protected override int FixedInputCount => 4;
   protected override int FixedOutputCount => 5;
@@ -113,6 +119,11 @@ public class SpeckleDataObjectPassthrough()
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    AddRuntimeMessage(
+      GH_RuntimeMessageLevel.Remark,
+      "The 'Speckle Data Object' component is deprecated. We recommend using the 'Speckle Geometry' component(s) instead."
+    );
+
     // process the object
     // deep copy so we don't mutate the object
     SpeckleDataObjectWrapperGoo inputObject = new();
