@@ -126,6 +126,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
+    PreCleanAdditional(baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
     // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
@@ -152,6 +153,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 1b - by-object display colours (HAS_COLOR → COLOR nodes). Applied as explicit entity colour on bake; objects
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
+
+    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
@@ -196,29 +199,41 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           using (var tr = doc.TransactionManager.StartTransaction())
           {
             var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
-            foreach (var geomK in GeometryIndices(objK, rels))
+            var (primaryKs, fallbackKs) = GeometryIndices(objK, rels, bundle);
+            BakeGeometry(primaryKs);
+            if (ids.Count == 0)
             {
-              materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
-              ObjectId materialId = objMaterial != ObjectId.Null ? objMaterial : geomMaterial;
-              int? argb =
-                hasObjColor ? objArgb
-                : colorArgbByGeometry.TryGetValue(geomK, out int geomArgb) ? geomArgb
-                : null;
-              foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
-              {
-                entity.Layer = layerName;
-                if (materialId != ObjectId.Null)
-                {
-                  entity.MaterialId = materialId;
-                }
-                if (argb is int a)
-                {
-                  entity.Color = ToAcadColor(a);
-                }
-                ids.Add(entity.ObjectId);
-              }
+              // the solid blob(s) produced nothing (SAT AcisIn failure) — bake the DISPLAY shadow instead [ENG-8820]
+              BakeGeometry(fallbackKs);
             }
             tr.Commit();
+
+            void BakeGeometry(IReadOnlyList<int> geomKs)
+            {
+              foreach (var geomK in geomKs)
+              {
+                materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
+                ObjectId materialId = objMaterial != ObjectId.Null ? objMaterial : geomMaterial;
+                int? argb =
+                  hasObjColor ? objArgb
+                  : colorArgbByGeometry.TryGetValue(geomK, out int geomArgb) ? geomArgb
+                  : null;
+                foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
+                {
+                  entity.Layer = layerName;
+                  if (materialId != ObjectId.Null)
+                  {
+                    entity.MaterialId = materialId;
+                  }
+                  if (argb is int a)
+                  {
+                    entity.Color = ToAcadColor(a);
+                  }
+                  ids.Add(entity.ObjectId);
+                  PostBakeEntity(entity, props, tr); // Civil3D hook (property sets) — fires for fallback bakes too
+                }
+              }
+            }
           }
 
           if (ids.Count == 0)
@@ -302,17 +317,31 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
   // Geometry indices to bake for an object: prefer the lossless SOLID (SAT) blobs, else its DISPLAY meshes.
-  private static IEnumerable<int> GeometryIndices(int objK, ArtefactRelations rels)
+  // The SOLID preference is a preference, NOT a commitment [ENG-8820]: a foreign solid blob (a Rhino 3dm this
+  // host can never read) is filtered out up front, and the caller retries the Fallback list when the Primary
+  // produced no entities (a SAT from a newer ACIS that Body.AcisIn rejects). The display meshes exist precisely
+  // so a host that can't read the raw format still gets renderable geometry.
+  private static (IReadOnlyList<int> Primary, IReadOnlyList<int> Fallback) GeometryIndices(
+    int objK,
+    ArtefactRelations rels,
+    ArtefactBundle bundle
+  )
   {
+    var display =
+      rels.DisplayByObject(objK) is { } displayEdges
+        ? displayEdges.OrderBy(x => x.Ord).Select(e => e.Dst).ToList()
+        : new List<int>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs) && solidKs.Count > 0)
     {
-      return solidKs;
+      var decodable = solidKs
+        .Where(k => bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.ACAD_SAT)
+        .ToList();
+      if (decodable.Count > 0)
+      {
+        return (decodable, display);
+      }
     }
-    if (rels.DisplayByObject(objK) is { } displayEdges)
-    {
-      return displayEdges.OrderBy(x => x.Ord).Select(e => e.Dst);
-    }
-    return Array.Empty<int>();
+    return (display, Array.Empty<int>());
   }
 
   // Decodes one geometry index and appends the resulting native entity(ies) to the target block-table record,
@@ -333,7 +362,19 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     if (g.Type == RawEncodingFormats.ACAD_SAT)
     {
-      foreach (var entity in DecodeSat(g.Content))
+      // A throwing AcisIn (SAT from a newer ACIS version) must degrade to "no entities", not error the whole
+      // object — the caller falls back to the DISPLAY meshes when the solid produced nothing [ENG-8820].
+      List<AcadEntity> satEntities;
+      try
+      {
+        satEntities = DecodeSat(g.Content);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "SAT decode failed for geometry {GeomK} ({Bytes} bytes)", geomK, g.Content.Length);
+        return result;
+      }
+      foreach (var entity in satEntities)
       {
         target.AppendEntity(entity);
         tr.AddNewlyCreatedDBObject(entity, true);
@@ -679,7 +720,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
       {
         rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
-        foreach (var memberGeomKs in GroupDefinesByMember(geomKs, ords, bundle))
+        foreach (var (preferredKs, fallbackKs) in GroupDefinesByMember(geomKs, ords, bundle))
+        {
+          int before = memberCount;
+          BakeMember(preferredKs);
+          if (memberCount == before)
+          {
+            // the member's solid blob produced nothing — bake its DISPLAY shadow instead [ENG-8820]
+            BakeMember(fallbackKs);
+          }
+        }
+
+        void BakeMember(List<int> memberGeomKs)
         {
           foreach (var geomK in memberGeomKs)
           {
@@ -923,9 +975,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Groups a definition's DEFINES geometry Ks by member ordinal (index-aligned with ords), then within each member
-  // prefers the authoritative SAT solid over its display mesh(es); a member with no solid yields all its geometry.
-  // Member order is preserved. When ords are absent (older bundle) each geometry is its own member — i.e. no grouping.
-  private static IEnumerable<List<int>> GroupDefinesByMember(List<int> geomKs, List<int>? ords, ArtefactBundle bundle)
+  // PREFERS the authoritative SAT solid over its display mesh(es) — but doesn't commit [ENG-8820]: the caller
+  // bakes Preferred and retries Fallback (the member's remaining display geometry) when it produced no entities
+  // (foreign/undecodable solid blob). A member with no decodable solid yields all its geometry up front. Member
+  // order is preserved. When ords are absent (older bundle) each geometry is its own member — i.e. no grouping.
+  private static IEnumerable<(List<int> Preferred, List<int> Fallback)> GroupDefinesByMember(
+    List<int> geomKs,
+    List<int>? ords,
+    ArtefactBundle bundle
+  )
   {
     var members = new List<List<int>>();
     var indexByOrd = new Dictionary<int, int>();
@@ -945,7 +1003,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var solids = geoms
         .Where(k => bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.ACAD_SAT)
         .ToList();
-      yield return solids.Count > 0 ? solids : geoms;
+      if (solids.Count > 0)
+      {
+        var solidSet = new HashSet<int>(solids);
+        yield return (solids, geoms.Where(k => !solidSet.Contains(k)).ToList());
+      }
+      else
+      {
+        yield return (geoms, new List<int>());
+      }
     }
   }
 
@@ -1251,6 +1317,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       _logger.LogError(ex, "Artefact receive pre-clean failed for '{BaseLayer}'", baseLayerName);
     }
   }
+
+  protected virtual void PreCleanAdditional(string baseLayerName) { }
+
+  protected virtual void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName) { }
+
+  protected virtual void PostBakeEntity(AcadEntity entity, Dictionary<string, object?>? properties, Transaction tr) { }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
     props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0

@@ -22,6 +22,7 @@ public static class Civil3dConnectorModule
     // add send
     serviceCollection.LoadSend();
     serviceCollection.AddScoped<IRootObjectBuilder<AutocadRootObject>, Civil3dRootObjectBuilder>();
+    serviceCollection.AddScoped<IArtifactRootObjectBuilder<AutocadRootObject>, Civil3dArtifactRootObjectBuilder>();
     serviceCollection.AddScoped<
       IRootContinuousTraversalBuilder<AutocadRootObject>,
       Civil3dContinuousTraversalBuilder
@@ -31,6 +32,7 @@ public static class Civil3dConnectorModule
     // add receive
     serviceCollection.LoadReceive();
     serviceCollection.AddScoped<IHostObjectBuilder, Civil3dHostObjectBuilder>();
+    serviceCollection.AddScoped<IArtifactHostObjectBuilder, Civil3dHostObjectArtefactBuilder>();
     serviceCollection.AddSingleton<IBinding, Civil3dReceiveBinding>();
 
     // parameter updater

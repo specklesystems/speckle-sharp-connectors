@@ -75,7 +75,7 @@ public static class CollectionHelpers
   public static bool HasAnyValidContent(ISpeckleCollectionObject? element) =>
     element switch
     {
-      SpeckleGeometryWrapper => true, // kept for legacy receive (before ENG-8234): old models may have bare geometry in collections
+      SpeckleGeometryWrapper => true,
       SpeckleDataObjectWrapper => true,
       SpeckleCollectionWrapper collection => collection.Elements.Any(HasAnyValidContent),
       _ => false,
