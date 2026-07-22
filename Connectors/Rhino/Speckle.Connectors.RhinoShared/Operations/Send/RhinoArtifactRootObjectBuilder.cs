@@ -434,12 +434,34 @@ public class RhinoArtifactRootObjectBuilder(
     // also draw at the model origin (untransformed), duplicating the instance geometry [ENG-8782].
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
+    // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
+    // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
+    var results = model.Results.ToList();
+    var resultIndexByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    for (int i = 0; i < results.Count; i++)
+    {
+      resultIndexByAppId[results[i].SourceId] = i;
+    }
+
     int count = 0;
     foreach (CollectedObject co in model.Objects)
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, model.Layers, co.LayerIndex, layerCollectionKByIndex);
-      EmitObject(pipeline, co, collK, model.Units, geometryKsByObjectId, instanceKByObjectId, definitionMemberIds);
+      string? dropReason = EmitObject(
+        pipeline,
+        co,
+        collK,
+        model.Units,
+        geometryKsByObjectId,
+        instanceKByObjectId,
+        definitionMemberIds
+      );
+      if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
+      {
+        results[ri] = new(Status.ERROR, co.ApplicationId, co.SourceType, null, new SpeckleException(dropReason));
+        session.RecordObject(co.ApplicationId, co.SourceType, Status.ERROR, dropReason, 0);
+      }
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
@@ -463,7 +485,7 @@ public class RhinoArtifactRootObjectBuilder(
       .Where(p => p.EndsWith(".parquet", StringComparison.Ordinal))
       .ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.Ordinal);
 
-    var objectCount = model.Results.Count(r => r.Status == Status.SUCCESS);
+    var objectCount = results.Count(r => r.Status == Status.SUCCESS);
     // The artefact path has no serialized root object — a synthetic, deterministic root id (same convention as
     // the Revit artefact builder + the server's "synthetic root" expectation).
     var rootId = $"binary-{versionId}";
@@ -476,12 +498,14 @@ public class RhinoArtifactRootObjectBuilder(
     session.SetStat("groups", model.Groups.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
-    return new BundleResult(bundle, rootId, objectCount, model.Results);
+    return new BundleResult(bundle, rootId, objectCount, results);
   }
 
   // Emits one object: eav labels + IN_COLLECTION, then a block placement (DISPLAY_INSTANCE → INSTANCE node) or
   // geometry — the lossless 3dm SOLID blob (if present) plus the DISPLAY meshes. Pure Speckle (no RhinoCommon).
-  private void EmitObject(
+  // Returns null on success, or a drop reason when the object had display geometry but NONE of it could be
+  // encoded (and no solid landed) — the caller downgrades the object's Collect-phase SUCCESS [ENG-8826].
+  private string? EmitObject(
     ObjectsArtifactPipeline pipeline,
     CollectedObject co,
     int collK,
@@ -517,7 +541,7 @@ public class RhinoArtifactRootObjectBuilder(
       {
         pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
       }
-      return;
+      return null;
     }
 
     // ── geometry object ───────────────────────────────────────────────────────────────────────────────
@@ -549,6 +573,7 @@ public class RhinoArtifactRootObjectBuilder(
     // below) so the block reconstructs the native solid, not just its display mesh — but a member still gets NO
     // standalone SOLID edge (it renders only through a placed instance's transform).
     int? memberSolidK = null;
+    bool hasSolid = false;
     if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
@@ -560,11 +585,13 @@ public class RhinoArtifactRootObjectBuilder(
       else
       {
         pipeline.Solid(objK, solidK, 0);
+        hasSolid = true;
       }
     }
 
     // Renderable display meshes (and self-display primitives: points/curves the SGEO encoder supports).
     var gKs = new List<int>();
+    string? lastSkip = null;
     if (memberSolidK is int msk)
     {
       gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the 3dm per member
@@ -587,6 +614,7 @@ public class RhinoArtifactRootObjectBuilder(
       {
         // A display fragment the SGEO encoder doesn't support (hatch/text/…) is skipped without failing the
         // whole object — its solid blob + properties still land.
+        lastSkip = $"{fragment.speckle_type}: {ex.Message}";
         logger.LogWarning(
           ex,
           "Skipped unsupported display geometry {Type} on {AppId}",
@@ -597,6 +625,13 @@ public class RhinoArtifactRootObjectBuilder(
     }
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
+
+    // Every display fragment was dropped and neither a standalone SOLID nor a member solid landed (gKs would
+    // carry the member solid) → nothing renderable made the bundle; report it instead of standing on the
+    // Collect-phase SUCCESS. An object with no display geometry at all is NOT a drop.
+    return displayGeometry.Count > 0 && gKs.Count == 0 && !hasSolid
+      ? lastSkip ?? "no display geometry could be encoded"
+      : null;
   }
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL). Order matters: all
