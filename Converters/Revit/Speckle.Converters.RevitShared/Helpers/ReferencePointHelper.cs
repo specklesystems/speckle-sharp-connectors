@@ -10,35 +10,62 @@ namespace Speckle.Converters.RevitShared.Helpers;
 public static class ReferencePointHelper
 {
   /// <summary>
+  /// Flattens a Revit <see cref="Transform"/> to the 16-element matrix Speckle stores (basis vectors in the first
+  /// three "columns", translation in the last), used by <see cref="CreateTransformDataForRootObject"/> — the same
+  /// element order <see cref="GetTransformFromRootObject"/> reads back.
+  /// </summary>
+  private static double[] TransformToArray(Transform transform) =>
+    new[]
+    {
+      transform.BasisX.X,
+      transform.BasisX.Y,
+      transform.BasisX.Z,
+      0,
+      transform.BasisY.X,
+      transform.BasisY.Y,
+      transform.BasisY.Z,
+      0,
+      transform.BasisZ.X,
+      transform.BasisZ.Y,
+      transform.BasisZ.Z,
+      0,
+      transform.Origin.X,
+      transform.Origin.Y,
+      transform.Origin.Z,
+      1,
+    };
+
+  /// <summary>
   /// Changes Revit Transform to a double array.
   /// Uses a 16-element column-major matrix representation. See https://speckle.guide/dev/objects.html
   /// </summary>
   public static Dictionary<string, object> CreateTransformDataForRootObject(Transform transform) =>
     new()
     {
-      {
-        "transform", // TODO: it would also be nice to include the key-value pair for reference point type as a string
-        new[]
-        {
-          transform.BasisX.X,
-          transform.BasisX.Y,
-          transform.BasisX.Z,
-          0,
-          transform.BasisY.X,
-          transform.BasisY.Y,
-          transform.BasisY.Z,
-          0,
-          transform.BasisZ.X,
-          transform.BasisZ.Y,
-          transform.BasisZ.Z,
-          0,
-          transform.Origin.X,
-          transform.Origin.Y,
-          transform.Origin.Z,
-          1,
-        }
-      },
+      // TODO: it would also be nice to include the key-value pair for reference point type as a string
+      { "transform", TransformToArray(transform) },
     };
+
+  /// <summary>
+  /// Combines the receiver's local reference-point setting with the transform the sender baked into the geometry,
+  /// so the received model lands where the receive setting asks. Mirrors the v1 receive-side composition: with no
+  /// local setting (receive = Source) the sender's transform is applied as-is (restoring the source's internal
+  /// coordinates); with no sender transform the local setting stands alone; otherwise they compose.
+  /// </summary>
+  public static Transform? CalculateNewTransform(Transform? receiveTransform, Transform? rootTransform)
+  {
+    if (receiveTransform == null)
+    {
+      return rootTransform;
+    }
+
+    if (rootTransform == null)
+    {
+      return receiveTransform;
+    }
+
+    return rootTransform.Multiply(receiveTransform);
+  }
 
   public static Matrix4x4 TransformToMatrix(Transform transform) =>
     new()

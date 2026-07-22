@@ -78,6 +78,26 @@ public class ToSpeckleSettingsManager(
     return null;
   }
 
+  /// <summary>
+  /// The REQUESTED reference-point kind (independent of whether the model actually has that base point). Mirrors
+  /// the setting resolution in <see cref="GetReferencePointSetting"/>; used by the 4.0 send pipeline to record
+  /// reference_point_kind in the bundle meta (ENG-8947). Absent/invalid setting → InternalOrigin.
+  /// </summary>
+  public ReferencePointType GetReferencePointKind(ModelCard modelCard)
+  {
+    var referencePointString =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == SendReferencePointSetting.SETTING_ID)?.Value as string;
+    if (
+      referencePointString is not null
+      && SendReferencePointSetting.ReferencePointMap.TryGetValue(referencePointString, out ReferencePointType kind)
+    )
+    {
+      return kind;
+    }
+
+    return SendReferencePointSetting.DEFAULT_VALUE;
+  }
+
   public bool GetSendParameterNullOrEmptyStringsSetting(Document document, SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(
       document,

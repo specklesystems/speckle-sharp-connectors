@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
@@ -224,6 +225,8 @@ public class RevitArtifactRootObjectBuilder(
 
       int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
       modelContainerKeys.Add(modelKey);
+
+      EmitMainModelReferencePoint(pipeline, documentContext);
 
       using (
         converterSettings.Push(s =>
@@ -471,6 +474,50 @@ public class RevitArtifactRootObjectBuilder(
       }
     }
   }
+
+  // ENG-8947: record the MAIN-model reference point in the bundle meta — the SINGLE source for both federation and
+  // Revit→Revit round-trip (the receiver rebuilds the translation from the offset). Only the host (non-linked)
+  // document's Transform is the pure reference-point transform — a linked doc's is (referencePoint ∘ linkPlacement⁻¹)
+  // and must NOT be persisted. Only the translation kinds are recorded: projectBasePoint / surveyPoint (offset in
+  // display units — the vector subtracted) + the requested-but-missing internalOriginFallback. Internal origin and
+  // Shared Coordinates record nothing: internal origin has nothing to record, and Shared Coordinates is a
+  // connector-only kind outside the shared spec vocabulary whose true-north rotation a translation offset can't
+  // represent (so it does not round-trip — a deliberate scope call, see ENG-8808 discussion).
+  private void EmitMainModelReferencePoint(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
+  {
+    if (
+      documentContext.Doc.IsLinked
+      || converterSettings.Current.ReferencePointKind
+        is not (ReferencePointType.ProjectBase or ReferencePointType.Survey)
+    )
+    {
+      return;
+    }
+
+    if (documentContext.Transform is { } transform)
+    {
+      var kind =
+        converterSettings.Current.ReferencePointKind == ReferencePointType.ProjectBase
+          ? "projectBasePoint"
+          : "surveyPoint";
+      pipeline.SetReferencePoint(kind, FormatReferencePointOffset(transform));
+    }
+    else
+    {
+      // requested a base point the model doesn't have → converted at internal origin, recorded (not silent).
+      pipeline.SetReferencePoint("internalOriginFallback", null);
+    }
+  }
+
+  // ENG-8947 reference_point_offset: the translation subtracted from world-space output, in display units.
+  private string FormatReferencePointOffset(Transform transform) =>
+    string.Format(
+      CultureInfo.InvariantCulture,
+      "{0},{1},{2}",
+      scalingService.ScaleLength(transform.Origin.X),
+      scalingService.ScaleLength(transform.Origin.Y),
+      scalingService.ScaleLength(transform.Origin.Z)
+    );
 
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
   // DISPLAY_INSTANCE, curves/points → DISPLAY (via the SGEO encoder, same as Rhino's artefact send).

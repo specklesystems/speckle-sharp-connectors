@@ -10,6 +10,7 @@ using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared;
+using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Objects.Utils;
@@ -106,6 +107,20 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     var doc = _converterSettings.Current.Document;
     var rels = bundle.Relations;
+
+    // ENG-8808: undo/redo the sender's reference-point re-basing. The send pipeline baked its main-model
+    // reference-point transform into geometry and recorded it in the bundle; compose it with the receiver's own
+    // reference-point setting (Source = no local transform → apply the sender's as-is, restoring the source
+    // model's internal coordinates) and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every
+    // vertex. Mirrors v1 RevitHostObjectBuilder's composition. No recorded transform + no local setting = no-op.
+    var sourceReferencePoint = ReadSourceReferencePointTransform(bundle);
+    using var referencePointScope = _converterSettings.Push(s =>
+      s with
+      {
+        ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(s.ReferencePointTransform, sourceReferencePoint),
+      }
+    );
+
     var bakedObjectIds = new List<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
 
@@ -637,6 +652,41 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     cache[key] = resolved;
     return resolved;
+  }
+
+  // ENG-8947: rebuild the sender's reference-point transform from the bundle meta offset (translation kinds only).
+  // The offset is in the bundle's display units; scale to internal feet so it composes with the receive setting and
+  // applies through ConvertToInternalCoordinates. Null (internal origin / fallback / Shared Coordinates) → no source
+  // re-basing.
+  private Transform? ReadSourceReferencePointTransform(ArtefactBundle bundle)
+  {
+    if (bundle.ReferencePointOffset is not { Length: > 0 } offsetCsv)
+    {
+      return null;
+    }
+    var parts = offsetCsv.Split(',');
+    if (parts.Length != 3)
+    {
+      return null;
+    }
+    var o = new double[3];
+    for (int i = 0; i < 3; i++)
+    {
+      if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out o[i]))
+      {
+        return null;
+      }
+    }
+    var fTypeId = ResolveForge(bundle.Units);
+    // Identity + Origin (not Transform.CreateTranslation) to match ReferencePointHelper.GetTransformFromRootObject and
+    // keep the analyzer's disposable-ownership tracking happy — the result is pushed into converter settings.
+    var t = Transform.Identity;
+    t.Origin = new XYZ(
+      _scalingService.ScaleToNative(o[0], fTypeId),
+      _scalingService.ScaleToNative(o[1], fTypeId),
+      _scalingService.ScaleToNative(o[2], fTypeId)
+    );
+    return t;
   }
 
   // ── transforms ────────────────────────────────────────────────────────────────────────────────────────
