@@ -1,13 +1,16 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Caching;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Converter.Navisworks.Constants.Registers;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -28,14 +31,21 @@ public class NavisworksRootObjectBuilder(
   ISdkActivityFactory activityFactory,
   NavisworksMaterialUnpacker materialUnpacker,
   NavisworksColorUnpacker colorUnpacker,
-  Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
+  IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache
+  GeometryConversionContext geometryConversionContext,
+  IUiUnitsCache uiUnitsCache,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache,
+  NavisworksSendBenchmarkLogger benchmarkLogger
 ) : IRootObjectBuilder<NAV.ModelItem>
 {
-#pragma warning disable CA1823
-#pragma warning restore CA1823
+  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
+    StringComparer.Ordinal
+  );
+
   private bool SkipNodeMerging { get; set; }
+
   private bool DisableGroupingForInstanceTesting { get; set; }
 
   public async Task<RootObjectBuilderResult> Build(
@@ -49,26 +59,46 @@ public class NavisworksRootObjectBuilder(
     SkipNodeMerging = false;
     DisableGroupingForInstanceTesting = false;
 #endif
+    PropertyExtractionMetricsTracker.Reset();
+    quickPropertyDefinitionsCache.Reset();
+    modelItemPropertySetsCache.Reset();
+    GeometryConversionMetricsTracker.Reset();
+    MeshOptimizationMetricsTracker.Reset();
+    _elementNameAndPathCache.Clear();
+    NavisworksGcSnapshot gcSnapshot = NavisworksGcSnapshot.Capture();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
+    long conversionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, projectId, onOperationProgressed, cancellationToken);
+    long conversionEndMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     ValidateConversionResults(conversionResults);
 
+    var reassemblyStopwatch = Stopwatch.StartNew();
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
+    var twoDElementPaths = Build2DElementPathSet(convertedElements);
 
-    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
+    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes, twoDElementPaths);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
+    reassemblyStopwatch.Stop();
     int finalInstanceProxyCount = CountInstanceProxiesRecursive(finalElements);
     logger.LogInformation(
       "Final output contains {count} InstanceProxy objects in displayValues",
       finalInstanceProxyCount
+    );
+    benchmarkLogger.LogConversionMetrics();
+    benchmarkLogger.LogBuildBenchmarkSummary(
+      conversionStartMs,
+      conversionEndMs,
+      reassemblyStopwatch.Elapsed.TotalMilliseconds,
+      finalElements.Count,
+      gcSnapshot
     );
 
     rootCollection.elements = finalElements;
@@ -119,23 +149,55 @@ public class NavisworksRootObjectBuilder(
     int totalCount = navisworksModelItems.Count;
     int instanceProxyCount = 0;
 
-    foreach (var item in navisworksModelItems)
+    onOperationProgressed.Report(new CardProgress("Converting", 0));
+
+    int visibleGeometryCount = CountVisibleGeometryItems(navisworksModelItems);
+    double geometryWeight =
+      visibleGeometryCount == 0
+        ? 0
+        : Math.Min(Math.Max(visibleGeometryCount / (double)Math.Max(totalCount, 1), 0.75), 0.95);
+
+    geometryConversionContext.PrimeBatch(
+      navisworksModelItems,
+      geometryWeight > 0
+        ? (fraction, pathsProcessed) =>
+          onOperationProgressed.Report(
+            new CardProgress($"Converting (Path {pathsProcessed:N0})", fraction * geometryWeight)
+          )
+        : null
+    );
+    try
     {
-      cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases, projectId);
-      results.Add(converted);
+      const int ITEM_PROGRESS_REPORT_INTERVAL = 1000;
 
-      if (
-        converted.Status == Status.SUCCESS
-        && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
-        && convertedBase?["displayValue"] is List<Base> displayValues
-      )
+      foreach (var item in navisworksModelItems)
       {
-        instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
-      }
+        cancellationToken.ThrowIfCancellationRequested();
+        var converted = ConvertNavisworksItem(item, convertedBases, projectId);
+        results.Add(converted);
 
-      processedCount++;
-      onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+        if (
+          converted.Status == Status.SUCCESS
+          && convertedBases.TryGetValue(elementSelectionService.GetModelItemPath(item), out var convertedBase)
+          && convertedBase?["displayValue"] is List<Base> displayValues
+        )
+        {
+          instanceProxyCount += displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+        }
+
+        processedCount++;
+        if (processedCount % ITEM_PROGRESS_REPORT_INTERVAL != 0 && processedCount != totalCount)
+        {
+          continue;
+        }
+
+        double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
+        onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
+      }
+    }
+    finally
+    {
+      geometryConversionContext.Clear();
     }
 
     logger.LogInformation(
@@ -148,7 +210,9 @@ public class NavisworksRootObjectBuilder(
 
   private static void ValidateConversionResults(List<SendConversionResult> results)
   {
-    if (results.All(x => x.Status == Status.ERROR))
+    var allErrored = results.All(t => t.Status == Status.ERROR);
+
+    if (allErrored)
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
@@ -159,8 +223,8 @@ public class NavisworksRootObjectBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    var finalElements = new List<Base>();
-    var processedPaths = new HashSet<string>();
+    var finalElements = new List<Base>(convertedBases.Count);
+    var processedPaths = new HashSet<string>(convertedBases.Count, StringComparer.Ordinal);
 
     if (!DisableGroupingForInstanceTesting)
     {
@@ -205,7 +269,7 @@ public class NavisworksRootObjectBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
+      foreach (var itemPath in group.Value.Select(t => elementSelectionService.GetModelItemPath(t)))
       {
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
@@ -249,8 +313,14 @@ public class NavisworksRootObjectBuilder(
 
   private (string name, string path) GetElementNameAndPath(string applicationId)
   {
+    if (_elementNameAndPathCache.TryGetValue(applicationId, out var cached))
+    {
+      return (cached.Name, cached.Path);
+    }
+
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
+    _elementNameAndPathCache[applicationId] = (context.Name, context.Path);
     return (context.Name, context.Path);
   }
 
@@ -259,15 +329,34 @@ public class NavisworksRootObjectBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
-    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
-    var displayValues = new List<Base>(estimatedCapacity);
-    displayValues.AddRange(
-      siblingBases
-        .Where(sibling => sibling["displayValue"] is List<Base>)
-        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
-    );
+    var estimatedCapacity = 0;
+    foreach (var t in siblingBases)
+    {
+      if (t["displayValue"] is List<Base> siblingDisplayValues)
+      {
+        estimatedCapacity += siblingDisplayValues.Count;
+      }
+    }
 
-    var instanceProxyCount = displayValues.Count(dv => dv.GetType().Name == "InstanceProxy");
+    var displayValues = new List<Base>(estimatedCapacity);
+    var instanceProxyCount = 0;
+    foreach (var t in siblingBases)
+    {
+      if (t["displayValue"] is not List<Base> siblingDisplayValues)
+      {
+        continue;
+      }
+
+      foreach (var displayValue in siblingDisplayValues)
+      {
+        displayValues.Add(displayValue);
+        if (displayValue is InstanceProxy)
+        {
+          instanceProxyCount++;
+        }
+      }
+    }
+
     if (instanceProxyCount > 0)
     {
       logger.LogDebug(
@@ -282,7 +371,7 @@ public class NavisworksRootObjectBuilder(
     {
       name = name,
       displayValue = displayValues,
-      properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
+      properties = siblingBases[0]["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
       ["path"] = path,
@@ -314,7 +403,8 @@ public class NavisworksRootObjectBuilder(
   private Task AddProxiesToCollection(
     Collection rootCollection,
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes,
+    ISet<string> twoDElementPaths
   )
   {
     using var _ = activityFactory.Start("UnpackProxies");
@@ -325,13 +415,39 @@ public class NavisworksRootObjectBuilder(
       rootCollection[RENDER_MATERIAL] = renderMaterials;
     }
 
-    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes);
+    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes, twoDElementPaths);
     if (colors.Count > 0)
     {
       rootCollection[COLOR] = colors;
     }
 
     return Task.CompletedTask;
+  }
+
+  private static HashSet<string> Build2DElementPathSet(Dictionary<string, Base?> convertedBases)
+  {
+    var twoDElementPaths = new HashSet<string>();
+
+    foreach (var kvp in convertedBases)
+    {
+      var path = kvp.Key;
+      var convertedBase = kvp.Value;
+      if (convertedBase?["displayValue"] is not List<Base> displayValues || displayValues.Count == 0)
+      {
+        continue;
+      }
+
+      bool hasMesh = displayValues.Any(x => x is Mesh);
+      bool hasLine = displayValues.Any(x => x is Line);
+      bool hasInstanceProxy = displayValues.Any(x => x is InstanceProxy);
+
+      if (!hasMesh && hasLine && !hasInstanceProxy)
+      {
+        twoDElementPaths.Add(path);
+      }
+    }
+
+    return twoDElementPaths;
   }
 
   private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
@@ -416,6 +532,20 @@ public class NavisworksRootObjectBuilder(
     return count;
   }
 
+  private int CountVisibleGeometryItems(IReadOnlyList<NAV.ModelItem> items)
+  {
+    int count = 0;
+    foreach (var item in items)
+    {
+      if (item.HasGeometry && elementSelectionService.IsVisible(item))
+      {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   private SendConversionResult ConvertNavisworksItem(
     NAV.ModelItem navisworksItem,
     Dictionary<string, Base?> convertedBases,
@@ -441,4 +571,6 @@ public class NavisworksRootObjectBuilder(
       return new SendConversionResult(Status.ERROR, applicationId, "ModelItem", null, ex);
     }
   }
+#pragma warning disable CA1823
+#pragma warning restore CA1823
 }

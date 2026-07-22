@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Geometry;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converters.Common;
@@ -25,8 +25,11 @@ public class NavisworksConversionSettingsFactory(
   public NavisworksConversionSettings Create(
     OriginMode originMode,
     RepresentationMode visualRepresentationMode,
+    PropertyDetailLevel propertyDetailLevel,
+    GeometryDetailLevel geometryDetailLevel,
     bool convertHiddenElements,
     bool includeInternalProperties,
+    bool roundMeshVertexDoubles,
     bool preserveModelHierarchy,
     bool mappingToRevitCategories
   )
@@ -65,10 +68,12 @@ public class NavisworksConversionSettingsFactory(
       new User(
         OriginMode: _originMode,
         IncludeInternalProperties: includeInternalProperties,
+        RoundMeshVertexDoubles: roundMeshVertexDoubles,
         ConvertHiddenElements: _convertHiddenElements,
         VisualRepresentationMode: visualRepresentationMode,
+        PropertyDetailLevel: propertyDetailLevel,
+        GeometryDetailLevel: geometryDetailLevel,
         CoalescePropertiesFromFirstObjectAncestor: false, // Not yet exposed in the UI
-        ExcludeProperties: false, // Not yet exposed in the UI
         PreserveModelHierarchy: preserveModelHierarchy,
         RevitCategoryMapping: mappingToRevitCategories
       )

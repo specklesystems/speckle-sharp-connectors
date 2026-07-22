@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Converter.Navisworks.Helpers;
 using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Sdk;
 using Speckle.Sdk.Models.Proxies;
-using ComApi = Autodesk.Navisworks.Api.Interop.ComApi;
-using ComBridge = Autodesk.Navisworks.Api.ComApi.ComApiBridge;
 
 namespace Speckle.Connector.Navisworks.HostApp;
 
@@ -33,7 +31,8 @@ public class NavisworksColorUnpacker(
 
   internal List<ColorProxy> UnpackColor(
     IReadOnlyList<NAV.ModelItem> navisworksObjects,
-    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes,
+    ISet<string> twoDElementPaths
   )
   {
     if (navisworksObjects == null)
@@ -44,6 +43,10 @@ public class NavisworksColorUnpacker(
     if (groupedNodes == null)
     {
       throw new ArgumentNullException(nameof(groupedNodes));
+    }
+    if (twoDElementPaths == null)
+    {
+      throw new ArgumentNullException(nameof(twoDElementPaths));
     }
 
     Dictionary<string, ColorProxy> colorProxies = [];
@@ -63,12 +66,16 @@ public class NavisworksColorUnpacker(
     {
       try
       {
-        if (!Is2DElement(navisworksObject))
+        if (!navisworksObject.HasGeometry)
         {
           continue;
         }
 
         var navisworksObjectId = selectionService.GetModelItemPath(navisworksObject);
+        if (!twoDElementPaths.Contains(navisworksObjectId))
+        {
+          continue;
+        }
 
         var finalId = mergedIds.TryGetValue(navisworksObjectId, out var mergedId) ? mergedId : navisworksObjectId;
 
@@ -117,83 +124,4 @@ public class NavisworksColorUnpacker(
 
     return colorProxies.Values.ToList();
   }
-
-  private static bool Is2DElement(NAV.ModelItem modelItem)
-  {
-    if (!modelItem.HasGeometry)
-    {
-      return false;
-    }
-
-    var primitiveChecker = new PrimitiveChecker();
-
-    var comSelection = ComBridge.ToInwOpSelection([modelItem]);
-    try
-    {
-      var paths = comSelection.Paths();
-      try
-      {
-        foreach (ComApi.InwOaPath path in paths)
-        {
-          GC.KeepAlive(path);
-
-          var fragments = path.Fragments();
-          try
-          {
-            foreach (ComApi.InwOaFragment3 fragment in fragments)
-            {
-              GC.KeepAlive(fragment);
-
-              fragment.GenerateSimplePrimitives(ComApi.nwEVertexProperty.eNORMAL, primitiveChecker);
-
-              if (primitiveChecker.HasTriangles)
-              {
-                return false;
-              }
-            }
-          }
-          finally
-          {
-            if (fragments != null)
-            {
-              System.Runtime.InteropServices.Marshal.ReleaseComObject(fragments);
-            }
-          }
-        }
-
-        return primitiveChecker.HasLines || primitiveChecker.HasPoints || primitiveChecker.HasSnapPoints;
-      }
-      finally
-      {
-        if (paths != null)
-        {
-          System.Runtime.InteropServices.Marshal.ReleaseComObject(paths);
-        }
-      }
-    }
-    finally
-    {
-      if (comSelection != null)
-      {
-        System.Runtime.InteropServices.Marshal.ReleaseComObject(comSelection);
-      }
-    }
-  }
-}
-
-public class PrimitiveChecker : ComApi.InwSimplePrimitivesCB
-{
-  public bool HasTriangles { get; private set; }
-  public bool HasLines { get; private set; }
-  public bool HasPoints { get; private set; }
-  public bool HasSnapPoints { get; private set; }
-
-  public void Line(ComApi.InwSimpleVertex v1, ComApi.InwSimpleVertex v2) => HasLines = true;
-
-  public void Point(ComApi.InwSimpleVertex v1) => HasPoints = true;
-
-  public void SnapPoint(ComApi.InwSimpleVertex v1) => HasSnapPoints = true;
-
-  public void Triangle(ComApi.InwSimpleVertex v1, ComApi.InwSimpleVertex v2, ComApi.InwSimpleVertex v3) =>
-    HasTriangles = true;
 }

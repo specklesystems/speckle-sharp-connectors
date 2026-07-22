@@ -100,7 +100,7 @@ public class MeshToSpeckleConverter : ITypedConverter<RG.Mesh, SOG.Mesh>
     }
 
     // get area and volume props
-    double area = AreaMassProperties.Compute(target).Area;
+    double area = AreaMassProperties.Compute(target)?.Area ?? 0;
     double volume = target.IsClosed ? target.Volume() : 0;
 
     return new SOG.Mesh
