@@ -101,7 +101,17 @@ public class PropertySetExtractor
           ["internalDefinitionName"] = data.FieldBucketId,
         };
         PropertyHandler propHandler = new();
-        propHandler.TryAddToDictionary(propertyValueDict, "units", () => data.UnitType.GetTypeDisplayName(true)); // units not always applicable to def, will throw
+        // Units aren't always applicable to a def (the getter throws — swallowed by TryGetValue), and a unitless
+        // def reports Autodesk's literal display name "(none)" — UI text, not a unit. The eav `unit` column
+        // contract is real-unit-or-absent, so add `units` only when a genuine unit comes back.
+        if (
+          propHandler.TryGetValue(() => data.UnitType.GetTypeDisplayName(true), out string? unitDisplay)
+          && unitDisplay is { Length: > 0 }
+          && unitDisplay != "(none)"
+        )
+        {
+          propertyValueDict["units"] = unitDisplay;
+        }
 
         propertySetData[dataName] = propertyValueDict;
       }

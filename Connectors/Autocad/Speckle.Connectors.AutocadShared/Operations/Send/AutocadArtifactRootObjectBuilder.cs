@@ -340,6 +340,7 @@ public class AutocadArtifactRootObjectBuilder(
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
+    EmitAdditionalNodes(pipeline);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -428,15 +429,26 @@ public class AutocadArtifactRootObjectBuilder(
       displayGeometry = new List<Base> { co.Converted };
     }
 
-    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. Skipped for definition members —
-    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
+    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. A standalone object links it
+    // via the SOLID rel (tracked in hasSolid so a mesh-less solid isn't reported as a drop [ENG-8826]); a definition
+    // member instead lets it ride DEFINES (added to gKs below) so the block reconstructs the native Solid3d, not
+    // just its display mesh [ENG-8855] — but a member still gets NO standalone SOLID edge (it renders only through
+    // a placed instance's transform). Mirrors the Rhino builder.
     bool hasSolid = false;
-    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
+    int? memberSolidK = null;
+    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.ACAD_SAT);
-      pipeline.Solid(objK, solidK, 0);
-      hasSolid = true;
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        pipeline.Solid(objK, solidK, 0);
+        hasSolid = true;
+      }
     }
 
     // Renderable display meshes (and self-display primitives the SGEO encoder supports: points/curves). A bad
@@ -444,6 +456,10 @@ public class AutocadArtifactRootObjectBuilder(
     // fully-dropped object can be reported instead of silently claiming SUCCESS.
     var gKs = new List<int>();
     string? lastSkip = null;
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the SAT per member
+    }
     int ord = 0;
     foreach (Base fragment in displayGeometry)
     {
@@ -684,6 +700,8 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
   }
+
+  protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
 
   // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
   // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
