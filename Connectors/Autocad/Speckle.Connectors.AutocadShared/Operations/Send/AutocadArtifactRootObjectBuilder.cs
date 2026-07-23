@@ -405,17 +405,31 @@ public class AutocadArtifactRootObjectBuilder(
       displayGeometry = new List<Base> { co.Converted };
     }
 
-    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. Skipped for definition members —
-    // a member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
-    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
+    // Authoritative solid: the raw ACIS-SAT blob, kept verbatim for receive-as-solids. A standalone object links it
+    // via the SOLID rel; a definition member instead lets it ride DEFINES (added to gKs below) so the block
+    // reconstructs the native Solid3d, not just its display mesh [ENG-8855] — but a member still gets NO standalone
+    // SOLID edge (it renders only through a placed instance's transform). Mirrors the Rhino builder.
+    int? memberSolidK = null;
+    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.ACAD_SAT)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = pipeline.AddRawGeometry($"{co.ApplicationId}:solid", solidBytes, RawEncodingFormats.ACAD_SAT);
-      pipeline.Solid(objK, solidK, 0);
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        pipeline.Solid(objK, solidK, 0);
+      }
     }
 
     // Renderable display meshes (and self-display primitives the SGEO encoder supports: points/curves).
     var gKs = new List<int>();
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the SAT per member
+    }
     int ord = 0;
     foreach (Base fragment in displayGeometry)
     {
