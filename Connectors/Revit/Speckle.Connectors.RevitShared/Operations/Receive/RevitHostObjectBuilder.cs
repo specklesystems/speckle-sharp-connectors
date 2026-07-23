@@ -127,7 +127,7 @@ public sealed class RevitHostObjectBuilder(
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
-            ReferencePointTransform = CalculateNewTransform(
+            ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
               currentSettings.ReferencePointTransform,
               referencePointTransformFromRootObject
             ),
@@ -248,23 +248,6 @@ public sealed class RevitHostObjectBuilder(
     );
   }
 
-  private Autodesk.Revit.DB.Transform? CalculateNewTransform(
-    Autodesk.Revit.DB.Transform? receiveTransform,
-    Autodesk.Revit.DB.Transform? rootTransform
-  )
-  {
-    if (receiveTransform == null)
-    {
-      return rootTransform;
-    }
-
-    if (rootTransform == null)
-    {
-      return receiveTransform;
-    }
-
-    return rootTransform.Multiply(receiveTransform);
-  }
 
   private (
     HostObjectBuilderResult builderResult,

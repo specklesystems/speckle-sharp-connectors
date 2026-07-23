@@ -19,7 +19,8 @@ public class RevitConversionSettingsFactory(
     bool sendRebarsAsVolumetric,
     bool sendAreasAsMesh,
     bool receiveInstancesAsFamilies,
-    double tolerance = 0.0164042 // 5mm in ft
+    double tolerance = 0.0164042, // 5mm in ft
+    ReferencePointType referencePointKind = ReferencePointType.InternalOrigin
   )
   {
     var document = revitContext.UIApplication.NotNull().ActiveUIDocument.Document;
@@ -33,7 +34,8 @@ public class RevitConversionSettingsFactory(
       sendRebarsAsVolumetric,
       sendAreasAsMesh,
       receiveInstancesAsFamilies,
-      tolerance
+      tolerance,
+      referencePointKind
     );
   }
 }

@@ -3,12 +3,14 @@ using Rhino;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Converters.Rhino.ToHost.Helpers;
+using Speckle.DoubleNumerics;
 using Speckle.Objects.Other;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
@@ -48,16 +50,6 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // GH data-tree topology (R4) per collection node K, precomputed once (mirrors CreateMaterials/CreateColors below).
     var collectionTopologies = CreateCollectionTopologies(bundle);
 
-    // Instance definitions decoded once (DEFINITION node → its DEFINES + composed DEFINES_INSTANCE geometry), shared
-    // across all placements.
-    var defGeomByNode = BuildDefinitionGeometry(bundle, rels, warnings);
-    // DISPLAY_INSTANCE edges grouped by owning object (an object may place several instances, e.g. a railing → balusters).
-    var instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
-    // INSTANCE nodes that are a nested/child placement inside some DEFINITION (DEFINES_INSTANCE targets). Their content
-    // is already composed into the parent definition's geometry by BuildDefinitionGeometry, so their own top-level
-    // DISPLAY_INSTANCE placement (using their un-composed, definition-local transform) must be skipped below — otherwise
-    // the nested block appears an extra time at the wrong (definition-space) location instead of once per parent placement.
-    var nestedInstanceNodes = new HashSet<int>(rels.DefinesInstanceByDefinition.Values.SelectMany(v => v));
     // HAS_MATERIAL/HAS_COLOR bind to an object's *display-mesh* geometry K specifically — never its SOLID (3dm) K, per
     // both RhinoArtifactRootObjectBuilder and GrasshopperArtifactRootObjectBuilder's send-side comments. DecodeObjectGeometry
     // prefers the solid when both exist, so for a solid-backed object the geomK actually decoded never appears in
@@ -69,6 +61,24 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var (materialByObject, materialByGeometry) = CreateMaterials(bundle, objByGeom);
     var colorByObject = CreateColors(bundle, objByGeom);
 
+    // Instances (skip entirely if the bundle has none, mirrors RhinoHostObjectArtefactBuilder.BakeAll's gate): one
+    // SpeckleBlockDefinitionWrapper per DEFINITION node, built once and shared by every placement, so a placement
+    // becomes a SpeckleBlockInstanceWrapper referencing the shared definition instead of duplicated+transformed geometry.
+    var definitions = new Dictionary<int, SpeckleBlockDefinitionWrapper>();
+    var instEdgesByObject = new Dictionary<int, List<ArtefactEdge>>();
+    var nestedInstanceNodes = new HashSet<int>();
+    if (rels.DisplayInstanceEdges.Count > 0)
+    {
+      definitions = BuildDefinitions(bundle, rels, materialByGeometry, warnings);
+      // grouped by owning object: an object may place several instances (e.g. a railing → balusters).
+      instEdgesByObject = rels.DisplayInstanceEdges.GroupBy(e => e.Src).ToDictionary(g => g.Key, g => g.ToList());
+      // INSTANCE nodes that are a nested placement inside some DEFINITION (DEFINES_INSTANCE targets) — already
+      // represented as a nested SpeckleBlockInstanceWrapper inside the parent definition (see BuildDefinitions), so
+      // their own top-level DISPLAY_INSTANCE edge (definition-local transform) is skipped below to avoid placing the
+      // nested block twice.
+      nestedInstanceNodes = new HashSet<int>(rels.DefinesInstanceByDefinition.Values.SelectMany(v => v));
+    }
+
     foreach (var kv in bundle.ObjectAppIds)
     {
       int objK = kv.Key;
@@ -76,38 +86,12 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
       var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK), warnings);
 
-      // Instances: an object placed as a block carries no direct SOLID/DISPLAY geometry — its geometry lives on the
-      // referenced DEFINITION. Resolve each placement (object → INSTANCE node → DefRef DEFINITION → DEFINES geometry),
-      // clone the shared definition geometry and bake in the instance transform so it lands in world space. Without this,
-      // entire instance-only sub-models (e.g. a federated Site/Facades model) receive as empty.
-      if (instEdgesByObject.TryGetValue(objK, out var instEdges))
-      {
-        foreach (var e in instEdges)
-        {
-          if (nestedInstanceNodes.Contains(e.Dst))
-          {
-            continue; // nested placement — already composed into its parent definition's geometry above
-          }
-          if (
-            !bundle.Nodes.TryGetValue(e.Dst, out var instNode)
-            || instNode.DefRef is not int defNodeK
-            || !defGeomByNode.TryGetValue(defNodeK, out var defGeoms)
-          )
-          {
-            continue;
-          }
-          var xf = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : DocUnits());
-          foreach (var (geomK, g) in defGeoms)
-          {
-            var dup = g.Duplicate();
-            dup.Transform(xf);
-            // preserve the definition geometry's own K so its material/color still resolves after duplication+transform
-            geometries.Add((geomK, dup));
-          }
-        }
-      }
+      // An object placed as a block carries no direct SOLID/DISPLAY geometry — resolve its placement(s) to the shared
+      // SpeckleBlockDefinitionWrapper built above instead. Without this, instance-only sub-models receive as empty.
+      var validInstEdges = ResolveValidInstanceEdges(objK, instEdgesByObject, nestedInstanceNodes, bundle, definitions);
+      int instCount = validInstEdges?.Count ?? 0;
 
-      if (geometries.Count == 0)
+      if (geometries.Count == 0 && instCount == 0)
       {
         continue; // non-geometric element (room/level/area) or a definition with no decodable geometry
       }
@@ -125,49 +109,184 @@ internal sealed class GrasshopperArtefactObjectBuilder
         collectionTopologies
       );
 
-      int ord = 0;
-      foreach (var (geomK, rg) in geometries)
-      {
-        Base? converted;
-        try
-        {
-          converted = SpeckleConversionContext.Current.ConvertToSpeckle(rg);
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          continue; // a fragment the converter can't round-trip — skip without failing the object
-        }
-        if (converted is null)
-        {
-          continue;
-        }
+      int totalCount = geometries.Count + instCount;
+      int ord = EmitGeometryWrappers(
+        geometries,
+        totalCount,
+        appId,
+        name,
+        props,
+        collection,
+        colorByObject,
+        materialByObject,
+        materialByGeometry
+      );
 
-        converted.applicationId = geometries.Count == 1 ? appId : $"{appId}:g{ord++}";
-        var wrapper = new SpeckleGeometryWrapper
-        {
-          Base = converted,
-          GeometryBase = rg,
-          Path = collection.Path,
-          Parent = collection,
-          Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
-          Material =
-            materialByObject.TryGetValue(appId, out var objMat) ? objMat
-            : materialByGeometry.TryGetValue(geomK, out var geomMat) ? geomMat
-            : null,
-        };
-        if (name is not null)
-        {
-          wrapper.Name = name;
-        }
-        if (props is { Count: > 0 })
-        {
-          wrapper.Properties = new SpecklePropertyGroupGoo(props);
-        }
-        collection.Elements.Add(wrapper);
+      if (validInstEdges is not null)
+      {
+        EmitInstanceWrappers(
+          validInstEdges,
+          bundle,
+          definitions,
+          totalCount,
+          ord,
+          appId,
+          name,
+          props,
+          collection,
+          colorByObject,
+          materialByObject
+        );
       }
     }
 
     return (root, warnings);
+  }
+
+  // Filters an object's DISPLAY_INSTANCE edges down to the ones this receive path can actually place: not a nested
+  // placement already represented inside its parent definition (see nestedInstanceNodes), and resolving to a
+  // successfully-built SpeckleBlockDefinitionWrapper.
+  private static List<ArtefactEdge>? ResolveValidInstanceEdges(
+    int objK,
+    Dictionary<int, List<ArtefactEdge>> instEdgesByObject,
+    HashSet<int> nestedInstanceNodes,
+    ArtefactBundle bundle,
+    Dictionary<int, SpeckleBlockDefinitionWrapper> definitions
+  )
+  {
+    if (!instEdgesByObject.TryGetValue(objK, out var instEdges))
+    {
+      return null;
+    }
+    List<ArtefactEdge>? valid = null;
+    foreach (var e in instEdges)
+    {
+      if (nestedInstanceNodes.Contains(e.Dst))
+      {
+        continue; // nested placement — already represented inside its parent definition above
+      }
+      if (
+        !bundle.Nodes.TryGetValue(e.Dst, out var instNode)
+        || instNode.DefRef is not int defNodeK
+        || !definitions.ContainsKey(defNodeK)
+      )
+      {
+        continue;
+      }
+      (valid ??= new List<ArtefactEdge>()).Add(e);
+    }
+    return valid;
+  }
+
+  // Converts and emits this object's own direct geometry as SpeckleGeometryWrappers. Returns the ordinal reached, so
+  // any instance placements emitted afterward for the same object continue the same `:gN` numbering.
+  private static int EmitGeometryWrappers(
+    List<(int GeomK, RG.GeometryBase Geom)> geometries,
+    int totalCount,
+    string appId,
+    string? name,
+    Dictionary<string, object?>? props,
+    SpeckleCollectionWrapper collection,
+    Dictionary<string, int> colorByObject,
+    Dictionary<string, SpeckleMaterialWrapper> materialByObject,
+    Dictionary<int, SpeckleMaterialWrapper> materialByGeometry
+  )
+  {
+    int ord = 0;
+    foreach (var (geomK, rg) in geometries)
+    {
+      Base? converted;
+      try
+      {
+        converted = SpeckleConversionContext.Current.ConvertToSpeckle(rg);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        continue; // a fragment the converter can't round-trip — skip without failing the object
+      }
+      if (converted is null)
+      {
+        continue;
+      }
+
+      converted.applicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}";
+      var wrapper = new SpeckleGeometryWrapper
+      {
+        Base = converted,
+        GeometryBase = rg,
+        Path = collection.Path,
+        Parent = collection,
+        Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
+        Material =
+          materialByObject.TryGetValue(appId, out var objMat) ? objMat
+          : materialByGeometry.TryGetValue(geomK, out var geomMat) ? geomMat
+          : null,
+      };
+      if (name is not null)
+      {
+        wrapper.Name = name;
+      }
+      if (props is { Count: > 0 })
+      {
+        wrapper.Properties = new SpecklePropertyGroupGoo(props);
+      }
+      collection.Elements.Add(wrapper);
+    }
+    return ord;
+  }
+
+  // Builds a SpeckleBlockInstanceWrapper per resolved DISPLAY_INSTANCE placement, referencing the shared
+  // SpeckleBlockDefinitionWrapper (see BuildDefinitions) instead of duplicating its geometry.
+  private static void EmitInstanceWrappers(
+    List<ArtefactEdge> validInstEdges,
+    ArtefactBundle bundle,
+    Dictionary<int, SpeckleBlockDefinitionWrapper> definitions,
+    int totalCount,
+    int ord,
+    string appId,
+    string? name,
+    Dictionary<string, object?>? props,
+    SpeckleCollectionWrapper collection,
+    Dictionary<string, int> colorByObject,
+    Dictionary<string, SpeckleMaterialWrapper> materialByObject
+  )
+  {
+    foreach (var e in validInstEdges)
+    {
+      var instNode = bundle.Nodes[e.Dst];
+      int defNodeK = instNode.DefRef!.Value;
+      var definition = definitions[defNodeK];
+      var xf = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : DocUnits());
+
+      var proxy = new InstanceProxy
+      {
+        definitionId = definition.ApplicationId!,
+        transform = Matrix4x4.Identity,
+        units = DocUnits(),
+        maxDepth = 0,
+      };
+      var instanceWrapper = new SpeckleBlockInstanceWrapper
+      {
+        Base = proxy,
+        Transform = xf,
+        Definition = definition,
+        GeometryBase = new RG.InstanceReferenceGeometry(Guid.Empty, xf),
+        Path = collection.Path,
+        Parent = collection,
+        ApplicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}",
+        Color = colorByObject.TryGetValue(appId, out var iArgb) ? System.Drawing.Color.FromArgb(iArgb) : null,
+        Material = materialByObject.TryGetValue(appId, out var iMat) ? iMat : null,
+      };
+      if (name is not null)
+      {
+        instanceWrapper.Name = name;
+      }
+      if (props is { Count: > 0 })
+      {
+        instanceWrapper.Properties = new SpecklePropertyGroupGoo(props);
+      }
+      collection.Elements.Add(instanceWrapper);
+    }
   }
 
   // Geometry indices to decode for an object: prefer the lossless SOLID (3dm) blobs, else its DISPLAY meshes. Each
@@ -314,39 +433,47 @@ internal sealed class GrasshopperArtefactObjectBuilder
     return byObject;
   }
 
-  // Decodes every DEFINITION node's geometry once — direct DEFINES → geometry blobs, plus DEFINES_INSTANCE → nested
-  // definitions recursively built and composed with their own (definition-local) transform — keyed by definition node
-  // index. Each fragment keeps its geometry K (see DecodeObjectGeometry) so HAS_MATERIAL/HAS_COLOR still resolve after
-  // duplication. The same definition is referenced by many instances, so we decode/compose once here and
-  // duplicate+transform per placement (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions' nested composition,
-  // ENG-8793): without this, a block-inside-a-block's content is placed once at its own definition-space transform
-  // instead of once per parent placement.
-  private static Dictionary<int, List<(int GeomK, RG.GeometryBase Geom)>> BuildDefinitionGeometry(
+  // Builds one SpeckleBlockDefinitionWrapper per DEFINITION node, keyed by node index: direct DEFINES → converted
+  // geometry members, DEFINES_INSTANCE → nested SpeckleBlockInstanceWrapper members (mirrors
+  // RhinoHostObjectArtefactBuilder.BuildDefinitions' nested composition, but keeps nested blocks as real nested
+  // instances instead of baked geometry, matching GrasshopperBlockUnpacker's wrapper shape). Built once per bundle and
+  // shared by reference from every placement's SpeckleBlockInstanceWrapper.Definition.
+  // A definition member is still interned as an object, but never gets IN_COLLECTION/DISPLAY/SOLID edges (send side:
+  // EmitGeometryObject isDefinitionMember: true), so Build()'s main loop naturally skips it standalone — no separate
+  // "consumed object" tracking (cf. GrasshopperBlockUnpacker.consumedObjectIds) needed here.
+  private static Dictionary<int, SpeckleBlockDefinitionWrapper> BuildDefinitions(
     ArtefactBundle bundle,
     ArtefactRelations rels,
+    Dictionary<int, SpeckleMaterialWrapper> materialByGeometry,
     List<string> warnings
   )
   {
-    var map = new Dictionary<int, List<(int, RG.GeometryBase)>>();
+    var map = new Dictionary<int, SpeckleBlockDefinitionWrapper>();
     var building = new HashSet<int>();
 
-    List<(int, RG.GeometryBase)> BuildDefinition(int defNodeK)
+    SpeckleBlockDefinitionWrapper? BuildDefinition(int defNodeK)
     {
       if (map.TryGetValue(defNodeK, out var already))
       {
         return already; // already built (a shared nested definition is reached from several parents)
       }
+      if (!bundle.Nodes.TryGetValue(defNodeK, out var defNode))
+      {
+        return null; // dangling DefRef in a malformed bundle
+      }
       if (!building.Add(defNodeK))
       {
-        return new List<(int, RG.GeometryBase)>(); // cycle guard — never stack-overflow on a bad bundle
+        return null; // cycle guard — never stack-overflow on a bad bundle
       }
 
-      var geoms = new List<(int, RG.GeometryBase)>();
+      var members = new List<SpeckleGeometryWrapper>();
+      string defAppId = $"def-{defNodeK}";
 
       // direct geometry members (DEFINES → geometry blob).
       if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
       {
         rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+        int memberOrd = 0;
         // A member's geometry shares a member ordinal; within each member prefer the authoritative 3dm solid over its
         // display mesh(es) so a solid inside a block rebuilds as a solid (Grasshopper decodes Rhino 3dm, so without
         // this it would place both the solid and its shadow mesh).
@@ -359,15 +486,37 @@ internal sealed class GrasshopperArtefactObjectBuilder
             // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
             foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, warnings))
             {
-              geoms.Add((geomK, g));
+              Base? converted;
+              try
+              {
+                converted = SpeckleConversionContext.Current.ConvertToSpeckle(g);
+              }
+              catch (Exception ex) when (!ex.IsFatal())
+              {
+                continue; // a fragment the converter can't round-trip — skip without failing the definition
+              }
+              if (converted is null)
+              {
+                continue;
+              }
+              converted.applicationId = $"{defAppId}:m{memberOrd++}";
+              members.Add(
+                new SpeckleGeometryWrapper
+                {
+                  Base = converted,
+                  GeometryBase = g,
+                  Material = materialByGeometry.TryGetValue(geomK, out var geomMat) ? geomMat : null,
+                }
+              );
             }
           }
         }
       }
 
       // nested block members (DEFINES_INSTANCE → INSTANCE node): build the child definition first (depth-first,
-      // memoized above), then duplicate+bake its own transform so a placement of THIS definition already carries the
-      // composed nested content.
+      // memoized above), then wrap it as a nested SpeckleBlockInstanceWrapper carrying its own definition-local
+      // transform — so a placement of THIS definition composes the nested block via SpeckleBlockInstanceWrapper's own
+      // transform-combining logic (GetTransformedObjectsForDisplay) instead of pre-baked/duplicated geometry.
       if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
       {
         foreach (var instNodeK in nestedInstNodeKs)
@@ -376,27 +525,54 @@ internal sealed class GrasshopperArtefactObjectBuilder
           {
             continue;
           }
-          var childGeoms = BuildDefinition(childDefNodeK);
-          if (childGeoms.Count == 0)
+          var childDef = BuildDefinition(childDefNodeK);
+          if (childDef is null)
           {
             continue;
           }
           var xf = BuildTransform(nestedInst.Transform, nestedInst.Units is { Length: > 0 } u ? u : bundle.Units);
-          foreach (var (geomK, g) in childGeoms)
+          string nestedAppId = $"{defAppId}:i{instNodeK}";
+          var nestedProxy = new InstanceProxy
           {
-            var dup = g.Duplicate();
-            dup.Transform(xf);
-            geoms.Add((geomK, dup));
-          }
+            definitionId = childDef.ApplicationId!,
+            transform = Matrix4x4.Identity,
+            units = DocUnits(),
+            maxDepth = 0,
+          };
+          members.Add(
+            new SpeckleBlockInstanceWrapper
+            {
+              Base = nestedProxy,
+              Transform = xf,
+              Definition = childDef,
+              GeometryBase = new RG.InstanceReferenceGeometry(Guid.Empty, xf),
+              ApplicationId = nestedAppId,
+            }
+          );
         }
       }
 
       building.Remove(defNodeK);
-      if (geoms.Count > 0)
+      if (members.Count == 0)
       {
-        map[defNodeK] = geoms;
+        return null;
       }
-      return geoms;
+
+      var defProxy = new InstanceDefinitionProxy
+      {
+        objects = members.Select(m => m.ApplicationId!).ToList(),
+        maxDepth = 0,
+        name = defNode.Name ?? defAppId,
+      };
+      var definition = new SpeckleBlockDefinitionWrapper
+      {
+        Base = defProxy,
+        Name = defProxy.name,
+        ApplicationId = defAppId,
+        Objects = members,
+      };
+      map[defNodeK] = definition;
+      return definition;
     }
 
     foreach (var kv in bundle.Nodes)

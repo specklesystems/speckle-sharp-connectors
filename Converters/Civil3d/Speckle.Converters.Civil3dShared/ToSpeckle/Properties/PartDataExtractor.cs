@@ -62,8 +62,12 @@ public class PartDataExtractor
         ["value"] = value,
         ["name"] = field.Name,
         ["context"] = fieldName,
-        ["units"] = field.Units,
       };
+      // eav `unit` contract is real-unit-or-absent — skip empty / "(none)" placeholder units.
+      if (field.Units is { Length: > 0 } fieldUnits && fieldUnits != "(none)")
+      {
+        fieldDictionary["units"] = fieldUnits;
+      }
 
       if (!result.ContainsKey(fieldName))
       {

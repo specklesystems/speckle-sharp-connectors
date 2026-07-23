@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
@@ -224,6 +225,8 @@ public class RevitArtifactRootObjectBuilder(
 
       int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
       modelContainerKeys.Add(modelKey);
+
+      EmitMainModelReferencePoint(pipeline, documentContext);
 
       using (
         converterSettings.Push(s =>
@@ -472,9 +475,58 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
+  // ENG-8947: record the MAIN-model reference point in the bundle meta — the SINGLE source for both federation and
+  // Revit→Revit round-trip (the receiver rebuilds the translation from the offset). Only the host (non-linked)
+  // document's Transform is the pure reference-point transform — a linked doc's is (referencePoint ∘ linkPlacement⁻¹)
+  // and must NOT be persisted. Only the translation kinds are recorded: projectBasePoint / surveyPoint (offset in
+  // display units — the vector subtracted) + the requested-but-missing internalOriginFallback. Internal origin and
+  // Shared Coordinates record nothing: internal origin has nothing to record, and Shared Coordinates is a
+  // connector-only kind outside the shared spec vocabulary whose true-north rotation a translation offset can't
+  // represent (so it does not round-trip — a deliberate scope call, see ENG-8808 discussion).
+  private void EmitMainModelReferencePoint(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
+  {
+    if (
+      documentContext.Doc.IsLinked
+      || converterSettings.Current.ReferencePointKind
+        is not (ReferencePointType.ProjectBase or ReferencePointType.Survey)
+    )
+    {
+      return;
+    }
+
+    if (documentContext.Transform is { } transform)
+    {
+      var kind =
+        converterSettings.Current.ReferencePointKind == ReferencePointType.ProjectBase
+          ? "projectBasePoint"
+          : "surveyPoint";
+      pipeline.SetReferencePoint(kind, FormatReferencePointOffset(transform));
+    }
+    else
+    {
+      // requested a base point the model doesn't have → converted at internal origin, recorded (not silent).
+      pipeline.SetReferencePoint("internalOriginFallback", null);
+    }
+  }
+
+  // ENG-8947 reference_point_offset: the translation subtracted from world-space output, in display units.
+  private string FormatReferencePointOffset(Transform transform) =>
+    string.Format(
+      CultureInfo.InvariantCulture,
+      "{0},{1},{2}",
+      scalingService.ScaleLength(transform.Origin.X),
+      scalingService.ScaleLength(transform.Origin.Y),
+      scalingService.ScaleLength(transform.Origin.Z)
+    );
+
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
-  // DISPLAY_INSTANCE. Line/Arc/Curve display values (door/window swing arcs, symbolic 2D) are intentionally skipped —
-  // they aren't real model geometry and render as spurious arcs (matches ODA's mesh-only Revit extraction).
+  // DISPLAY_INSTANCE, curves/points → DISPLAY (via the SGEO encoder, same as Rhino's artefact send).
+  //
+  // Curves are role-filtered [ENG-8801]: on an element that ALSO has mesh/instance geometry, curve display values are
+  // symbolic 2D (door/window swing arcs) that render as spurious arcs (matches ODA's mesh-only extraction), so they
+  // stay suppressed. On an element whose ENTIRE display value is curves/points (model lines, grids, curve-based
+  // generic annotations) the curves ARE the geometry — dropping them made the element publish invisible, so we emit
+  // them.
   private void EmitDisplayValue(
     ObjectsArtifactPipeline pipeline,
     int objK,
@@ -482,6 +534,17 @@ public class RevitArtifactRootObjectBuilder(
     IReadOnlyList<Base> displayValue
   )
   {
+    // Does this element carry real 3D geometry (mesh/instance)? If so, any accompanying curves are symbolic 2D.
+    bool hasSolidGeometry = false;
+    foreach (var item in displayValue)
+    {
+      if (item is InstanceProxy or SOG.Mesh)
+      {
+        hasSolidGeometry = true;
+        break;
+      }
+    }
+
     int ord = 0;
     foreach (var item in displayValue)
     {
@@ -504,6 +567,28 @@ public class RevitArtifactRootObjectBuilder(
           break;
 
         default:
+          // Curves / polylines / points. Emit only on curve/point-only elements (see role-filter note above); on
+          // mesh/instance-bearing elements these are swing arcs and stay suppressed.
+          if (hasSolidGeometry)
+          {
+            break;
+          }
+          try
+          {
+            int curveK = pipeline.AddGeometry(item.applicationId ?? $"{appId}:g{ord}", item);
+            pipeline.Display(objK, curveK, ord++);
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            // A display fragment the SGEO encoder doesn't support is skipped without failing the whole object —
+            // its properties + topology still land (same tolerance as Rhino's artefact send).
+            logger.LogWarning(
+              ex,
+              "Skipped unsupported curve display geometry {Type} on {AppId}",
+              item.speckle_type,
+              appId
+            );
+          }
           break;
       }
     }
