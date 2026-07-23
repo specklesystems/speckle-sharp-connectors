@@ -743,10 +743,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               {
                 entity.MaterialId = geomMaterial;
               }
-              if (hasGeomColor)
-              {
-                entity.Color = ToAcadColor(geomArgb);
-              }
+              // A member with an explicit colour edge keeps it (an explicit override, or the resolved layer colour
+              // a ByLayer member carries). A member with NO edge was ByBlock on send — bake it ByBlock so it
+              // inherits the placing BlockReference's colour instead of the block table record's default [ENG-8822].
+              entity.Color = hasGeomColor ? ToAcadColor(geomArgb) : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0);
               memberCount++;
             }
           }
@@ -1172,6 +1172,21 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       byGeometry[kv.Key] = argb;
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+
+    // Object-sourced edges (ord=1): a block placement's own colour. It owns no geometry, so it never appears in
+    // objByGeom — resolve it straight through the object dictionary [ENG-8822].
+    foreach (var kv in rels.ColorByObject)
+    {
+      if (
+        bundle.Nodes.TryGetValue(kv.Value, out var n)
+        && n.Kind == NodeKind.Color
+        && n.Argb is int argb
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = argb;
       }

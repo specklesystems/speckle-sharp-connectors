@@ -709,7 +709,9 @@ public class RhinoArtifactRootObjectBuilder(
         {
           // block instance: no geometry of its own — emit the colour OBJECT-sourced (spec HAS_COLOR src is
           // geometry|object; the viewer looks up both) so per-placement overrides survive [ENG-8825].
-          pipeline.HasColor(pipeline.InternObject(objectId), colorK);
+          // srcIsObject: the object and geometry K-spaces overlap numerically, so the edge carries a namespace
+          // tag (ord=1) — without it receive can't tell this from a geometry-sourced colour [ENG-8822].
+          pipeline.HasColor(pipeline.InternObject(objectId), colorK, srcIsObject: true);
         }
       }
     }
