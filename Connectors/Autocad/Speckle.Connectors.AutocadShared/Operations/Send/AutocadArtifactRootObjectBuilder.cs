@@ -738,7 +738,9 @@ public class AutocadArtifactRootObjectBuilder(
         }
         else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          pipeline.HasColor(pipeline.InternObject(objectId), colorK);
+          // srcIsObject: the object and geometry K-spaces overlap numerically, so the edge carries a namespace
+          // tag (ord=1) — without it receive can't tell this from a geometry-sourced colour [ENG-8822].
+          pipeline.HasColor(pipeline.InternObject(objectId), colorK, srcIsObject: true);
         }
       }
     }
