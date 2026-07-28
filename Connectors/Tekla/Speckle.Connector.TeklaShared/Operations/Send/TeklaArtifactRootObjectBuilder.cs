@@ -270,10 +270,13 @@ public class TeklaArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
+        value.name,
         value.diffuse,
         value.opacity,
         value.metalness,
-        value.roughness
+        value.roughness,
+        value.emissive,
+        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
       );
       foreach (var objectId in materialProxy.objects)
       {

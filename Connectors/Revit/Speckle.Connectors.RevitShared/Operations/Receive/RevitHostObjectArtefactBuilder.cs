@@ -117,7 +117,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     using var referencePointScope = _converterSettings.Push(s =>
       s with
       {
-        ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(s.ReferencePointTransform, sourceReferencePoint),
+        ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
+          s.ReferencePointTransform,
+          sourceReferencePoint
+        ),
       }
     );
 
@@ -524,8 +527,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private Dictionary<int, ElementId> CreateMaterials(Document doc, ArtefactBundle bundle)
   {
     var idByNode = new Dictionary<int, ElementId>();
-    // MATERIAL nodes carry NO name (the producer keys them by colour, not name) — so dedup by the full colour
-    // signature. Keying by name would collapse every material into one (all-grey/white) element.
+    // Dedup on name + the full colour signature. Name alone is not enough (older bundles carry no name, so every
+    // material would collapse into one all-grey element); colour alone is not enough either, since two distinctly
+    // named materials may share a diffuse and must stay separate Revit elements.
     var byKey = new Dictionary<string, ElementId>(StringComparer.Ordinal);
     foreach (var kv in bundle.Nodes)
     {
@@ -555,7 +559,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private static string MaterialKey(ArtefactNode node) =>
     string.Format(
       CultureInfo.InvariantCulture,
-      "{0}|{1}|{2}|{3}",
+      "{0}|{1}|{2}|{3}|{4}",
+      node.Name ?? string.Empty,
       node.Argb ?? -1,
       node.Opacity ?? 1.0,
       node.Metalness ?? 0.0,
@@ -569,8 +574,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     double metalness = Clamp01(node.Metalness ?? 0.0);
     double roughness = Clamp01(node.Roughness ?? 1.0);
 
-    // Producer materials are unnamed → derive a stable, distinct name from the colour (+ opacity) so each colour gets
-    // its own Revit material and re-receives reuse it by name.
+    // Prefer the authored material name (Rhino/Revit/AutoCAD material table entry); fall back to a colour-derived
+    // label for bundles produced before names were carried, so each colour still gets its own Revit material.
     var label = node.Name is { Length: > 0 } n ? n : $"Speckle {(uint)argb:X8}";
     if (opacity < 0.999)
     {
@@ -578,26 +583,44 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     var name = _revitUtils.RemoveInvalidChars(label);
 
-    using (var collector = new FilteredElementCollector(doc))
+    // A Revit material is identified by name, so re-receives reuse the existing element — but only when its colour
+    // still matches. Two source materials can legitimately share a name with different colours (Rhino allows it);
+    // suffixing the ARGB keeps the second one from silently inheriting the first one's appearance. Names are only
+    // authoritative now that producers carry them; the colour-derived fallback label was already unique per colour.
+    var revitColor = new Color((byte)((argb >> 16) & 0xFF), (byte)((argb >> 8) & 0xFF), (byte)(argb & 0xFF));
+    var existing = FindMaterialByName(doc, name);
+    if (existing is not null && !SameColor(existing.Color, revitColor))
     {
-      var existing = collector
-        .OfClass(typeof(Material))
-        .Cast<Material>()
-        .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
-      if (existing is not null)
-      {
-        return existing.Id;
-      }
+      name = _revitUtils.RemoveInvalidChars($"{label} {(uint)argb:X8}");
+      existing = FindMaterialByName(doc, name);
+    }
+    if (existing is not null)
+    {
+      return existing.Id;
     }
 
     var id = Material.Create(doc, name);
     var material = (Material)doc.GetElement(id);
-    material.Color = new Color((byte)((argb >> 16) & 0xFF), (byte)((argb >> 8) & 0xFF), (byte)(argb & 0xFF));
+    material.Color = revitColor;
     material.Transparency = (int)((1 - opacity) * 100);
     material.Shininess = (int)(metalness * 128);
     material.Smoothness = (int)((1 - roughness) * 100);
     return id;
   }
+
+  private static Material? FindMaterialByName(Document doc, string name)
+  {
+    using var collector = new FilteredElementCollector(doc);
+    return collector
+      .OfClass(typeof(Material))
+      .Cast<Material>()
+      .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
+  }
+
+  // An existing material with no valid colour counts as a match — there is nothing to compare against, and minting a
+  // suffixed duplicate on every receive would be worse than reusing it.
+  private static bool SameColor(Color existing, Color wanted) =>
+    !existing.IsValid || (existing.Red == wanted.Red && existing.Green == wanted.Green && existing.Blue == wanted.Blue);
 
   private static double Clamp01(double v) =>
     v < 0 ? 0
