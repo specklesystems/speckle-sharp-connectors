@@ -36,3 +36,13 @@ public record ArtifactBuildResult(
   string RootId,
   IReadOnlyList<SendConversionResult> ConversionResults
 );
+
+/// <summary>Result of the build-only phase: the bundle sits in a local output directory, nothing has been
+/// uploaded. Carries what an uploader needs, whether in-process (<c>BuildAndUpload</c>) or out of process
+/// (the headless converter legs).</summary>
+public record ArtifactBundleResult(
+  IReadOnlyDictionary<string, string> Bundle,
+  string RootId,
+  int ObjectCount,
+  IReadOnlyList<SendConversionResult> ConversionResults
+);
