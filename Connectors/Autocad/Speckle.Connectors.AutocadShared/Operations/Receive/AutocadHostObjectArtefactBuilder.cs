@@ -7,6 +7,7 @@ using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.GraphicsInterface;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
+using Speckle.Connectors.Autocad.HostApp.Extensions;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
@@ -117,6 +118,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var docUnits = _converterSettings.Current.SpeckleUnits;
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
+    // Baked entities are identified by their AutoCAD HANDLE (decimal, as GetSpeckleApplicationId spells it) — the id
+    // space the receiver model card, the conversion report and DocumentExtensions.GetObjects all speak. Reporting
+    // ObjectId.ToString() (a parenthesised in-memory pointer) instead meant "Highlight" on a received card resolved
+    // nothing and errored with "No objects found to highlight" [ENG-8833].
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
     var layerCache = new HashSet<string>(StringComparer.Ordinal);
@@ -196,13 +201,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
           bool hasObjColor = colorArgbByObject.TryGetValue(appId, out int objArgb);
 
-          var ids = new List<ObjectId>();
+          // (ObjectId, handle) per baked entity: the ObjectId drives native grouping below, while the model card and
+          // the conversion report identify entities by their HANDLE — see the note on bakedObjectIds [ENG-8833].
+          var baked = new List<(ObjectId Id, string Handle)>();
           using (var tr = doc.TransactionManager.StartTransaction())
           {
             var modelSpace = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
             var (primaryKs, fallbackKs) = GeometryIndices(objK, rels, bundle);
             BakeGeometry(primaryKs);
-            if (ids.Count == 0)
+            if (baked.Count == 0)
             {
               // the solid blob(s) produced nothing (SAT AcisIn failure) — bake the DISPLAY shadow instead [ENG-8820]
               BakeGeometry(fallbackKs);
@@ -230,14 +237,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   {
                     entity.Color = ToAcadColor(a);
                   }
-                  ids.Add(entity.ObjectId);
+                  // The handle is read while the entity is still open in this transaction (it is assigned on append).
+                  baked.Add((entity.ObjectId, entity.GetSpeckleApplicationId()));
                   PostBakeEntity(entity, props, tr); // Civil3D hook (property sets) — fires for fallback bakes too
                 }
               }
             }
           }
 
-          if (ids.Count == 0)
+          if (baked.Count == 0)
           {
             session.RecordObject(
               appId,
@@ -259,12 +267,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             continue;
           }
 
-          bakedObjectIds.UnionWith(ids.Select(i => i.ToString()));
+          bakedObjectIds.UnionWith(baked.Select(b => b.Handle));
           if (rels.GroupsByObject.ContainsKey(objK))
           {
-            bakedIdsByObjK[objK] = ids;
+            bakedIdsByObjK[objK] = baked.Select(b => b.Id).ToList();
           }
-          conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Object", null, srcType));
+          conversionResults.Add(new(Status.SUCCESS, source, baked[0].Handle, "Object", null, srcType));
           session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -998,7 +1006,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         }
         modelSpace.AppendEntity(blockRef);
         tr.AddNewlyCreatedDBObject(blockRef, true);
-        bakedObjectIds.Add(blockRef.ObjectId.ToString());
+        string blockRefHandle = blockRef.GetSpeckleApplicationId(); // handle, not ObjectId — see bakedObjectIds
+        bakedObjectIds.Add(blockRefHandle);
         if (rels.GroupsByObject.ContainsKey(objK))
         {
           if (!bakedIdsByObjK.TryGetValue(objK, out var grouped))
@@ -1007,9 +1016,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
           grouped.Add(blockRef.ObjectId); // an object may place several instances; all of them join its group(s)
         }
-        conversionResults.Add(
-          new(Status.SUCCESS, source, blockRef.ObjectId.ToString(), "Instance (Block)", null, srcType)
-        );
+        conversionResults.Add(new(Status.SUCCESS, source, blockRefHandle, "Instance (Block)", null, srcType));
         session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
       }
       catch (Exception ex) when (!ex.IsFatal())
