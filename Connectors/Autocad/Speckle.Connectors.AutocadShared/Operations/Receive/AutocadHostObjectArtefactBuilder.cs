@@ -60,6 +60,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<AutocadHostObjectArtefactBuilder> _logger;
 
+  // Why the last geometry blob produced no entities (missing blob / decode / convert), so an object that bakes nothing
+  // reports the actual cause instead of the opaque "did not convert to any native geometry" [ENG-8819]. Set by
+  // DecodeAndAppend, consumed + reset per object by the caller — the bake is single-threaded on the main thread.
+  private string? _lastDecodeFailure;
+
   public AutocadHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
     IRootToHostConverter converter,
@@ -182,6 +187,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var source = Source(appId);
         var srcType = SrcType(props);
         var sw = Stopwatch.StartNew();
+        _lastDecodeFailure = null;
         try
         {
           // The layer is created in its own committed transaction so a later per-object abort can't roll it back
@@ -238,23 +244,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
           if (ids.Count == 0)
           {
-            session.RecordObject(
-              appId,
-              srcType,
-              Status.ERROR,
-              "did not convert to any native geometry",
-              sw.ElapsedMilliseconds
-            );
-            conversionResults.Add(
-              new(
-                Status.ERROR,
-                source,
-                null,
-                null,
-                new ConversionException("Object did not convert to any native geometry"),
-                srcType
-              )
-            );
+            // Carry the decode/convert failure through to the report card — a dropped curve/point must say why
+            // [ENG-8819], not just that nothing landed.
+            var reason = _lastDecodeFailure ?? "did not convert to any native geometry";
+            session.RecordObject(appId, srcType, Status.ERROR, reason, sw.ElapsedMilliseconds);
+            conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException(reason), srcType));
             continue;
           }
 
@@ -356,6 +350,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var result = new List<AcadEntity>();
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
+      _lastDecodeFailure = $"geom {geomK}: no blob for this geometry index in the bundle";
       return result;
     }
 
@@ -370,6 +365,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
+        _lastDecodeFailure = $"geom {geomK} (SAT) decode failed — {ex.GetType().Name}: {ex.Message}";
         _logger.LogWarning(ex, "SAT decode failed for geometry {GeomK} ({Bytes} bytes)", geomK, g.Content.Length);
         return result;
       }
@@ -431,16 +427,25 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     try
     {
       decoded = SgeoDecoder.Decode(content);
-      return decoded switch
+      var converted = decoded switch
       {
         Speckle.Objects.Geometry.Pointcloud cloud => PointcloudToPoints(cloud),
         Speckle.Objects.Geometry.Spiral spiral => ConvertViaToHost(spiral.displayValue),
         _ => ConvertViaToHost(decoded),
       };
+      if (converted.Count == 0)
+      {
+        // decode + convert both ran without throwing but produced nothing (e.g. a converter returned an unhandled
+        // result shape) — record it so it isn't a silent drop.
+        _lastDecodeFailure = $"geom {geomK} ({decoded.speckle_type}): converter returned no native geometry";
+        _logger.LogWarning("Skipped SGEO geometry {GeomK}: {Reason}", geomK, _lastDecodeFailure);
+      }
+      return converted;
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+      _lastDecodeFailure = $"geom {geomK} (SGEO) {stage} failed — {ex.GetType().Name}: {ex.Message}";
       _logger.LogWarning(
         ex,
         "Skipped SGEO geometry {GeomK} ({Bytes} bytes) at {Stage}: {Error}",
@@ -788,6 +793,13 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
       if (memberCount == 0)
       {
+        // A definition whose members all failed to decode leaves every placement of it unbaked — say why [ENG-8819].
+        _logger.LogWarning(
+          "Block definition {DefNodeK} ('{Name}') baked no members: {Reason}",
+          defNodeK,
+          defNode.Name,
+          _lastDecodeFailure ?? "no member geometry decoded"
+        );
         session.Increment("definitionsEmpty");
         btr.Erase();
         return ObjectId.Null;

@@ -703,6 +703,7 @@ public class AutocadArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
+        value.name,
         value.diffuse,
         value.opacity,
         value.metalness,
