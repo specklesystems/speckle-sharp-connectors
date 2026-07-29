@@ -132,9 +132,8 @@ public class RhinoArtifactRootObjectBuilder(
 
   /// <summary>
   /// Build-only entry point: converts <paramref name="objects"/> and writes the artefact bundle into
-  /// <paramref name="outputDir"/>, touching no auth, storage, or server API. Headless hosts (the containerized
-  /// converter legs) call this and hand the outdir to their own uploader; <see cref="BuildAndUpload"/> is this
-  /// plus the connector's in-process upload.
+  /// <paramref name="outputDir"/> — no auth, storage, or server API involved. For hosts that upload out of
+  /// process (the headless converter legs); <see cref="BuildAndUpload"/> is the in-process path.
   /// </summary>
   public async Task<ArtifactBundleResult> Build(
     IReadOnlyList<RhinoObject> objects,
@@ -150,8 +149,7 @@ public class RhinoArtifactRootObjectBuilder(
     return await BuildCore(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken);
   }
 
-  // Collect + write under one session: phase 1 on the Rhino UI thread, phase 2 on a worker thread (the artefact
-  // pipeline's sync-over-async parquet IO deadlocks on a UI SynchronizationContext — see the class <remarks>).
+  // Collect must run on the Rhino UI thread and the bundle write on a worker — see the class <remarks>.
   private async Task<ArtifactBundleResult> BuildCore(
     IReadOnlyList<RhinoObject> objects,
     ArtefactSessionLog session,
