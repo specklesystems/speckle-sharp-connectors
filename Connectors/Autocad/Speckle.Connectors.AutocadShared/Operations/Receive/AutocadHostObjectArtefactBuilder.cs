@@ -37,7 +37,8 @@ namespace Speckle.Connectors.Autocad.Operations.Receive;
 /// Civil3D), talking only to the neutral dense-int graph + raw AutoCAD API — no v1 <c>Base</c>/<c>DataObject</c>/
 /// <c>Collection</c>/proxy types and no traversal / <c>AutocadLayerBaker</c> / <c>AutocadMaterialBaker</c> machinery.
 /// Solids come from raw ACIS-SAT blobs (<see cref="Body.AcisIn(string)"/>), meshes from SGEO
-/// (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="PolyFaceMesh"/>; every other SGEO
+/// (<see cref="SgeoDecoder.TryDecodeMesh(ReadOnlySpan{byte}, out SgeoMesh)"/>) built straight into a <see cref="PolyFaceMesh"/> (or a
+/// <see cref="SubDMesh"/> past its 16-bit vertex-index ceiling); every other SGEO
 /// primitive (curves, points, text, regions…) decodes to its Speckle geometry object and converts via the AutoCAD
 /// ToHost converter. Layers are the flat AutoCAD layer namespace projected from the scene view (with the source layer
 /// colour); materials from MATERIAL nodes (HAS_MATERIAL), by-object colours from COLOR nodes (HAS_COLOR). Instances
@@ -521,10 +522,16 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return entities;
   }
 
-  // SGEO neutral mesh → AutoCAD PolyFaceMesh (must be appended to a BTR before adding vertices/faces; vertex indices
-  // are 1-based; faces are Speckle count-prefixed). Mirrors the construction in MeshToHostConverter, Base-free.
-  private static PolyFaceMesh BuildMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr)
+  // SGEO neutral mesh → native AutoCAD mesh. Mirrors the construction in MeshToHostConverter, Base-free: a
+  // PolyFaceMesh (must be appended to a BTR before adding vertices/faces; vertex indices are 1-based; faces are
+  // Speckle count-prefixed), or a SubDMesh once the mesh outgrows PolyFaceMesh's 16-bit vertex indices [ENG-8836].
+  private static AcadEntity BuildMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr)
   {
+    if (sm.Vertices.Length / 3 > MAX_POLYFACE_MESH_VERTICES)
+    {
+      return BuildSubDMesh(sm, target, tr);
+    }
+
     var mesh = new PolyFaceMesh();
     mesh.SetDatabaseDefaults();
     target.AppendEntity(mesh);
@@ -584,6 +591,114 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
 
     return mesh;
+  }
+
+  /// <summary>
+  /// A <see cref="PolyFaceMesh"/> addresses its vertices through <see cref="FaceRecord"/>, whose 1-based vertex
+  /// indices are 16-bit — so it cannot hold more than <see cref="short.MaxValue"/> vertices. Beyond that the index
+  /// casts in <see cref="AppendFace"/> silently wrapped negative and the mesh baked as garbage [ENG-8836]; larger
+  /// meshes become a native MESH (<see cref="SubDMesh"/>) instead, whose face array is 32-bit.
+  /// </summary>
+  private const int MAX_POLYFACE_MESH_VERTICES = short.MaxValue;
+
+  // A mesh too large for a PolyFaceMesh [ENG-8836]. The MESH entity takes its whole topology in one call: a vertex
+  // array plus a count-prefixed, 0-based face array — the layout SGEO already carries — with 32-bit indices, and
+  // per-vertex colours on its EntityColor array. Smooth level 0 keeps the faceting exactly as sent.
+  private static SubDMesh BuildSubDMesh(SgeoMesh sm, BlockTableRecord target, Transaction tr)
+  {
+    var v = sm.Vertices;
+    int vertexCount = v.Length / 3;
+    var points = new Point3d[vertexCount];
+    for (int i = 0; i < vertexCount; i++)
+    {
+      points[i] = new Point3d(v[i * 3], v[i * 3 + 1], v[i * 3 + 2]);
+    }
+
+    using var vertices = new Point3dCollection(points);
+    var faceArray = new Int32Collection(SubDMeshFaces(sm.Faces, vertexCount));
+
+    var mesh = new SubDMesh();
+    mesh.SetDatabaseDefaults();
+    mesh.SetSubDMesh(vertices, faceArray, 0);
+
+    if (sm.Colors.Length == vertexCount)
+    {
+      try
+      {
+        var colors = new EntityColor[vertexCount];
+        for (int i = 0; i < vertexCount; i++)
+        {
+          var c = System.Drawing.Color.FromArgb(sm.Colors[i]);
+          colors[i] = new EntityColor(c.R, c.G, c.B);
+        }
+        mesh.VertexColorArray = colors;
+      }
+      catch (Exception e) when (!e.IsFatal())
+      {
+        // a bad vertex color must not abort the mesh (same rule as the polyface path)
+      }
+    }
+
+    target.AppendEntity(mesh);
+    tr.AddNewlyCreatedDBObject(mesh, true);
+    return mesh;
+  }
+
+  // SGEO faces are already the count-prefixed, 0-based layout SetSubDMesh expects, so this only normalizes it: the
+  // legacy 0/1 count encoding (triangle/quad), repeated corners, and faces that are truncated or point outside the
+  // vertex array. SetSubDMesh takes the topology in one call and rejects the WHOLE mesh on a single bad face, so a
+  // malformed face is dropped here instead of costing us the entire mesh. Mirrors MeshToHostConverter.
+  private static int[] SubDMeshFaces(int[] faces, int vertexCount)
+  {
+    var result = new List<int>(faces.Length);
+    var corners = new List<int>(4);
+    int p = 0;
+    while (p < faces.Length)
+    {
+      int n = faces[p];
+      if (n < 3)
+      {
+        n += 3; // legacy 0 -> triangle, 1 -> quad
+      }
+      if (p + n >= faces.Length)
+      {
+        break; // truncated face list
+      }
+
+      corners.Clear();
+      int lastCorner = -1;
+      for (int k = p + 1; k <= p + n; k++)
+      {
+        int index = faces[k];
+        if (index < 0 || index >= vertexCount)
+        {
+          corners.Clear(); // face points outside the vertex array — drop it whole
+          break;
+        }
+        // Collapse a repeated corner: a quad written [a, b, c, c] is really a triangle, and a face left with fewer
+        // than 3 distinct corners has no area to bake.
+        if (index != lastCorner)
+        {
+          corners.Add(index);
+          lastCorner = index;
+        }
+      }
+
+      if (corners.Count > 3 && corners[0] == lastCorner)
+      {
+        corners.RemoveAt(corners.Count - 1); // closed face: last corner repeats the first
+      }
+
+      if (corners.Count >= 3)
+      {
+        result.Add(corners.Count);
+        result.AddRange(corners);
+      }
+
+      p += n + 1;
+    }
+
+    return result.ToArray();
   }
 
   private static void AppendFace(PolyFaceMesh mesh, Transaction tr, int i1, int i2, int i3, int? i4, int vertexCount)
