@@ -36,3 +36,14 @@ public record ArtifactBuildResult(
   string RootId,
   IReadOnlyList<SendConversionResult> ConversionResults
 );
+
+/// <summary>Result of the build-only phase (bundle written to a local output directory, nothing uploaded):
+/// the bundle's parquet files keyed by file name, the synthetic root id, the count of successfully
+/// converted objects, and the per-object conversion results. Consumed by <c>BuildAndUpload</c>'s upload
+/// phase — and directly by headless hosts whose upload happens out of process (the converter legs).</summary>
+public record ArtifactBundleResult(
+  IReadOnlyDictionary<string, string> Bundle,
+  string RootId,
+  int ObjectCount,
+  IReadOnlyList<SendConversionResult> ConversionResults
+);

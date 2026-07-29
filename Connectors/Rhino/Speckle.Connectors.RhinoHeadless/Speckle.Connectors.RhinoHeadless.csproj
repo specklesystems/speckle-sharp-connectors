@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless (DUI3-free) slice of Speckle.Connectors.RhinoShared for the containerized converter legs:
+       the artefact send path around RhinoArtifactRootObjectBuilder, cherry-picked by file link. The shared
+       project compiles wholesale and hard-requires DUI3 WebView/WPF/RhinoWindows, so it cannot be consumed
+       headless as-is; this project links exactly the builder's closure. Consumed by the speckle-converters
+       host via sibling-checkout project references (Local configuration). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Configurations>Debug;Release;Local</Configurations>
+    <DefineConstants>$(DefineConstants);RHINO9;RHINO7_OR_GREATER;RHINO8_OR_GREATER;RHINO9_OR_GREATER</DefineConstants>
+    <RootNamespace>Speckle.Connectors.Rhino</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The Windows heads get this implicitly via UseWindowsForms; the slice only uses Color
+         (System.Drawing.Primitives — cross-platform). -->
+    <Using Include="System.Drawing" />
+    <!-- The WPF heads drop System.IO from implicit usings, so the shared files carry explicit
+         System.IO usings; mirror that view here or IDE0005 flags them as redundant. -->
+    <Using Remove="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same exact pin as the Rhino 9 head (see its csproj for the lockstep rule). -->
+    <PackageReference
+      Include="RhinoCommon"
+      IncludeAssets="compile; build"
+      PrivateAssets="all"
+      VersionOverride="9.0.26167.11545-wip"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Converters\Rhino\Speckle.Converters.Rhino9\Speckle.Converters.Rhino9.csproj" />
+    <ProjectReference Include="..\..\..\Sdk\Speckle.Connectors.Common\Speckle.Connectors.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Operations\Send\RhinoArtifactRootObjectBuilder.cs" Link="Operations\Send\RhinoArtifactRootObjectBuilder.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\HostApp\RhinoInstanceUnpacker.cs" Link="HostApp\RhinoInstanceUnpacker.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\HostApp\RhinoMaterialUnpacker.cs" Link="HostApp\RhinoMaterialUnpacker.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\HostApp\RhinoColorUnpacker.cs" Link="HostApp\RhinoColorUnpacker.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\HostApp\RhinoLayerHelper.cs" Link="HostApp\RhinoLayerHelper.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\HostApp\Properties\PropertiesExtractor.cs" Link="HostApp\Properties\PropertiesExtractor.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Mapper\Revit\CategoryMapping.cs" Link="Mapper\Revit\CategoryMapping.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Mapper\Revit\LayerCategoryMapping.cs" Link="Mapper\Revit\LayerCategoryMapping.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Mapper\Revit\LayerOption.cs" Link="Mapper\Revit\LayerOption.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Mapper\Revit\RevitMappingConstants.cs" Link="Mapper\Revit\RevitMappingConstants.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Mapper\Revit\RevitMappingResolver.cs" Link="Mapper\Revit\RevitMappingResolver.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Extensions\AttributeExtensions.cs" Link="Extensions\AttributeExtensions.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Extensions\BoundingBox.cs" Link="Extensions\BoundingBox.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Extensions\RhinoUnitsExtension.cs" Link="Extensions\RhinoUnitsExtension.cs" />
+    <Compile Include="..\Speckle.Connectors.RhinoShared\Extensions\SpeckleApplicationIdExtensions.cs" Link="Extensions\SpeckleApplicationIdExtensions.cs" />
+  </ItemGroup>
+</Project>
