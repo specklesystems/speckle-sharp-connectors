@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -49,6 +50,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly RevitUtils _revitUtils;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RevitHostObjectArtefactBuilder> _logger;
+  private readonly IArtifactReceiver _artifactReceiver;
+  private readonly IHostObjectBuilder _hostObjectBuilder;
+  private readonly RevitGroupBaker _groupBaker;
 
   public RevitHostObjectArtefactBuilder(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -58,7 +62,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     IReferencePointConverter referencePointConverter,
     RevitUtils revitUtils,
     ISdkActivityFactory activityFactory,
-    ILogger<RevitHostObjectArtefactBuilder> logger
+    ILogger<RevitHostObjectArtefactBuilder> logger,
+    IArtifactReceiver artifactReceiver,
+    IHostObjectBuilder hostObjectBuilder,
+    RevitGroupBaker groupBaker
   )
   {
     _converterSettings = converterSettings;
@@ -69,17 +76,36 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _revitUtils = revitUtils;
     _activityFactory = activityFactory;
     _logger = logger;
+    _artifactReceiver = artifactReceiver;
+    _hostObjectBuilder = hostObjectBuilder;
+    _groupBaker = groupBaker;
   }
 
-  public Task<HostObjectBuilderResult> Build(
+  public async Task<HostObjectBuilderResult> Build(
     ArtefactBundle bundle,
     string projectName,
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
-  ) =>
+  )
+  {
+    if (_converterSettings.Current.ReceiveInstancesAsFamilies)
+    {
+      // No bundle-native family baking yet (see remarks) — reconstruct a Base graph off the main thread (mirrors
+      // ReceiveOperation's own reconstruction branch) and hand the whole receive to the v1 builder.
+      var rootObject = await _threadContext
+        .RunOnWorkerAsync(() => Task.FromResult(_artifactReceiver.Reconstruct(bundle, cancellationToken)))
+        .ConfigureAwait(false);
+      return await _hostObjectBuilder
+        .Build(rootObject, projectName, modelName, onOperationProgressed, cancellationToken)
+        .ConfigureAwait(false);
+    }
+
     // Revit API is main-thread-affine and mutations require a transaction → everything runs on the main thread.
-    _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
+    return await _threadContext
+      .RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken))
+      .ConfigureAwait(false);
+  }
 
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private HostObjectBuilderResult BakeAll(
@@ -423,12 +449,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // to internal units + apply the reference-point transform, fan/triangulate, salvage fallback.
   private List<GeometryObject> BuildMesh(SgeoMesh sm, ElementId materialId)
   {
-    using var tsb = new TessellatedShapeBuilder
-    {
-      Fallback = TessellatedShapeBuilderFallback.Salvage,
-      Target = TessellatedShapeBuilderTarget.Mesh,
-      GraphicsStyleId = ElementId.InvalidElementId,
-    };
+    using var tsb = new TessellatedShapeBuilder();
+    tsb.Fallback = TessellatedShapeBuilderFallback.Salvage;
+    tsb.Target = TessellatedShapeBuilderTarget.Mesh;
+    tsb.GraphicsStyleId = ElementId.InvalidElementId;
     tsb.OpenConnectedFaceSet(false);
 
     var verts = ToInternalPoints(sm.Vertices, sm.Units);
@@ -731,6 +755,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private void PreClean(Document doc, string marker)
   {
     DirectShapeLibrary.GetDirectShapeLibrary(doc).Reset();
+    // A previous receive of this model may have gone through the family-baking fallback (setting was on) and left a
+    // pinned top-level Group of real families — not tracked by the Comments marker below, so purge it here too.
+    _groupBaker.PurgeGroups(marker);
     var toDelete = new List<ElementId>();
     using (var collector = new FilteredElementCollector(doc))
     {
