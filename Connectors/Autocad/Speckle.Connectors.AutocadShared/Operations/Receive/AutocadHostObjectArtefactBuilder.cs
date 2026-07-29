@@ -327,10 +327,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle
   )
   {
-    var display =
-      rels.DisplayByObject(objK) is { } displayEdges
-        ? displayEdges.OrderBy(x => x.Ord).Select(e => e.Dst).ToList()
-        : new List<int>();
+    var display = rels.DisplayByObject(objK) is { } displayEdges
+      ? displayEdges.OrderBy(x => x.Ord).Select(e => e.Dst).ToList()
+      : new List<int>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs) && solidKs.Count > 0)
     {
       var decodable = solidKs

@@ -268,7 +268,14 @@ public class AutocadArtifactRootObjectBuilder(
     {
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-      return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy, entity.Color.IsByLayer);
+      return new CollectedObject(
+        applicationId,
+        sourceType,
+        entity.Layer,
+        instanceProps,
+        instanceProxy,
+        entity.Color.IsByLayer
+      );
     }
 
     Base converted = converter.Convert(entity);

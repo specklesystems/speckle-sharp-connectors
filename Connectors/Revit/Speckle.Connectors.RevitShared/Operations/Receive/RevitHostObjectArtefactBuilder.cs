@@ -117,7 +117,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     using var referencePointScope = _converterSettings.Push(s =>
       s with
       {
-        ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(s.ReferencePointTransform, sourceReferencePoint),
+        ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
+          s.ReferencePointTransform,
+          sourceReferencePoint
+        ),
       }
     );
 

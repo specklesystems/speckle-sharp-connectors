@@ -386,12 +386,11 @@ public class PropertySetBaker
       {
         string propertyName = propertyEntry.Key;
 
-        object? value =
-          propertyEntry.Value is Dictionary<string, object?> propertyDataDict
-            ? propertyDataDict.TryGetValue("value", out var nested)
-              ? nested
-              : null
-            : propertyEntry.Value;
+        object? value = propertyEntry.Value is Dictionary<string, object?> propertyDataDict
+          ? propertyDataDict.TryGetValue("value", out var nested)
+            ? nested
+            : null
+          : propertyEntry.Value;
 
         if (value == null)
         {
