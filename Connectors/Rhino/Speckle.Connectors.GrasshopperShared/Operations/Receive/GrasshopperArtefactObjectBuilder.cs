@@ -384,6 +384,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
           roughness = n.Roughness ?? 1.0,
           applicationId = $"material-{kv.Key}",
         };
+        // ENG-8791: remaining PBR channels; ior as the v1 dynamic prop so SpeckleMaterialWrapperGoo maps it
+        // onto PhysicallyBasedMaterial.IndexOfRefraction (`mat["ior"]` cast in CastFrom).
+        if (n.Emissive is int emissive)
+        {
+          speckleMaterial.emissive = emissive;
+        }
+        if (n.Ior is double ior)
+        {
+          speckleMaterial["ior"] = ior;
+        }
         var goo = new SpeckleMaterialWrapperGoo();
         goo.CastFrom(speckleMaterial);
         wrapperByMaterialNode[kv.Key] = goo.Value;

@@ -816,7 +816,30 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           DiffuseColor = Color.FromArgb(n.Argb ?? unchecked((int)0xFFFFFFFF)),
           Transparency = 1 - (n.Opacity ?? 1.0),
         };
-        var renderMaterial = RhinoRenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
+        // Legacy channels first (v1 RhinoMaterialBaker parity) so the basic-material fallback below still carries them.
+        if (n.Emissive is int emissive)
+        {
+          rhinoMaterial.EmissionColor = Color.FromArgb(emissive);
+        }
+        if (n.Ior is double ior)
+        {
+          rhinoMaterial.IndexOfRefraction = ior;
+        }
+
+        // ENG-8791 receive half: bake as a Physically Based material so the bundle's metalness/roughness apply
+        // (CreateBasicMaterial ignores them) and a re-send finds the PBR channels where the unpacker reads them.
+        rhinoMaterial.ToPhysicallyBased();
+        var pbr = rhinoMaterial.PhysicallyBased;
+        if (pbr is not null)
+        {
+          pbr.Metallic = n.Metalness ?? 0.0;
+          pbr.Roughness = n.Roughness ?? 1.0;
+        }
+
+        // FromMaterial returns null on headless docs (importer) — same fallback as RhinoMaterialUnpacker.
+        var renderMaterial =
+          RhinoRenderMaterial.FromMaterial(rhinoMaterial, doc)
+          ?? RhinoRenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
         doc.RenderMaterials.Add(renderMaterial);
         guidByMaterialNode[kv.Key] = renderMaterial.Id;
       }

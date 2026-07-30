@@ -715,10 +715,13 @@ public class RhinoArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
+        value.name,
         value.diffuse,
         value.opacity,
         value.metalness,
-        value.roughness
+        value.roughness,
+        value.emissive,
+        value["ior"] as double? // dynamic prop set by RhinoMaterialUnpacker (PBR IndexOfRefraction) [ENG-8791]
       );
       foreach (var objectId in materialProxy.objects)
       {
