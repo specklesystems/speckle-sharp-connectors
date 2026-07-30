@@ -7,11 +7,17 @@ public class PropertiesExtractor : IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
   private readonly XDataExtractor _xDataExtractor;
+  private readonly TextPropertiesExtractor _textPropertiesExtractor;
 
-  public PropertiesExtractor(ExtensionDictionaryExtractor extensionDictionaryExtractor, XDataExtractor xDataExtractor)
+  public PropertiesExtractor(
+    ExtensionDictionaryExtractor extensionDictionaryExtractor,
+    XDataExtractor xDataExtractor,
+    TextPropertiesExtractor textPropertiesExtractor
+  )
   {
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
     _xDataExtractor = xDataExtractor;
+    _textPropertiesExtractor = textPropertiesExtractor;
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
@@ -23,6 +29,7 @@ public class PropertiesExtractor : IPropertiesExtractor
       properties
     );
     AddDictionaryToPropertyDictionary(_xDataExtractor.GetXData(entity), "XData", properties);
+    AddDictionaryToPropertyDictionary(_textPropertiesExtractor.GetTextProperties(entity), "Text", properties);
 
     return properties;
   }

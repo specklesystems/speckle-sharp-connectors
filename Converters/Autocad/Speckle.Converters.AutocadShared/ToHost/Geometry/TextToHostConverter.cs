@@ -28,7 +28,7 @@ public class TextToHostConverter : IToHostTopLevelConverter, ITypedConverter<SA.
     double f = Units.GetConversionFactor(target.units, _settingsStore.Current.SpeckleUnits);
     var mtext = new ADB.MText
     {
-      Contents = target.value,
+      Contents = ToMTextContents(target.value),
       TextHeight = target.height * f,
       Attachment = GetAttachment(target.alignmentH, target.alignmentV),
     };
@@ -46,11 +46,31 @@ public class TextToHostConverter : IToHostTopLevelConverter, ITypedConverter<SA.
     }
     mtext.Location = _pointConverter.Convert(target.plane.origin);
 
-    if (target.maxWidth is double maxWidth)
+    // Only a positive wrap width is a wrap width: MText.Width == 0 IS AutoCAD's "no wrap", and versions before
+    // [ENG-8827] published that 0 verbatim, so treat a non-positive maxWidth as "unset" rather than a zero column.
+    if (target.maxWidth is double maxWidth && maxWidth > 0)
     {
       mtext.Width = maxWidth * f;
     }
     return mtext;
+  }
+
+  /// <summary>
+  /// Turns the plain text Speckle carries into MText contents. MText contents is a mini markup language:
+  /// <c>\</c>, <c>{</c> and <c>}</c> are control characters that must be escaped or AutoCAD swallows them as
+  /// formatting, and a paragraph break is <c>\P</c>, not a newline character.
+  /// </summary>
+  private static string ToMTextContents(string value)
+  {
+    if (string.IsNullOrEmpty(value))
+    {
+      return value;
+    }
+
+    // Escape the control characters FIRST (so the \P inserted below isn't escaped in turn), then fold
+    // CRLF/CR/LF down to the single paragraph-break code.
+    string result = value.Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}");
+    return result.Replace("\r\n", "\\P").Replace("\r", "\\P").Replace("\n", "\\P");
   }
 
   private static ADB.AttachmentPoint GetAttachment(SA.AlignmentHorizontal h, SA.AlignmentVertical v) =>

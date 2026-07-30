@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 
@@ -31,11 +32,13 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
     {
       value = ConvertMTextToPlainText(target.Contents ?? string.Empty),
       height = target.TextHeight,
-      maxWidth = target.Width,
+      // AutoCAD spells "no wrap" as Width == 0, but Speckle spells it as maxWidth == null: publishing the 0
+      // verbatim made consumers wrap the text to a zero-width column, which renders as nothing [ENG-8827].
+      maxWidth = target.Width > 0 ? target.Width : null,
       plane = GetTextPlane(target),
       screenOriented = false,
-      alignmentH = GetHorizontalAlignment(target.Attachment),
-      alignmentV = GetVerticalAlignment(target.Attachment),
+      alignmentH = TextAlignmentMap.GetHorizontalAlignment(target.Attachment),
+      alignmentV = TextAlignmentMap.GetVerticalAlignment(target.Attachment),
       units = _settingsStore.Current.SpeckleUnits,
     };
 
@@ -49,7 +52,7 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
   /// Turns raw MText contents into plain text with real newlines, so the viewer can render it
   /// on multiple lines. Covers common formatting; exotic cases may still need cleanup.
   /// </summary>
-  private static string ConvertMTextToPlainText(string contents)
+  public static string ConvertMTextToPlainText(string contents)
   {
     if (string.IsNullOrEmpty(contents))
     {
@@ -86,58 +89,6 @@ public class MTextToSpeckleRawConverter : ITypedConverter<ADB.MText, SA.Text>
       xdir = new(xDir.X, xDir.Y, xDir.Z, _settingsStore.Current.SpeckleUnits),
       ydir = new(yDir.X, yDir.Y, yDir.Z, _settingsStore.Current.SpeckleUnits),
       units = _settingsStore.Current.SpeckleUnits,
-    };
-  }
-
-  /// <summary>
-  /// Simplify horizontal text alignment to 3 options: Left, Center, Right
-  /// </summary>
-  private SA.AlignmentHorizontal GetHorizontalAlignment(ADB.AttachmentPoint attachmentPt)
-  {
-    return attachmentPt switch
-    {
-      ADB.AttachmentPoint.TopLeft
-      or ADB.AttachmentPoint.MiddleLeft
-      or ADB.AttachmentPoint.BottomLeft
-      or ADB.AttachmentPoint.BaseLeft => SA.AlignmentHorizontal.Left,
-      ADB.AttachmentPoint.TopCenter
-      or ADB.AttachmentPoint.MiddleCenter
-      or ADB.AttachmentPoint.BottomCenter
-      or ADB.AttachmentPoint.BaseCenter => SA.AlignmentHorizontal.Center,
-      ADB.AttachmentPoint.TopRight
-      or ADB.AttachmentPoint.MiddleRight
-      or ADB.AttachmentPoint.BottomRight
-      or ADB.AttachmentPoint.BaseRight => SA.AlignmentHorizontal.Right,
-      _ => SA.AlignmentHorizontal.Left,
-    };
-  }
-
-  /// <summary>
-  /// Simplify vertical text alignment to 3 options: Top, Middle, Bottom
-  /// </summary>
-  private SA.AlignmentVertical GetVerticalAlignment(ADB.AttachmentPoint attachmentPt)
-  {
-    return attachmentPt switch
-    {
-      ADB.AttachmentPoint.TopLeft
-      or ADB.AttachmentPoint.TopCenter
-      or ADB.AttachmentPoint.TopRight
-      or ADB.AttachmentPoint.TopMid
-      or ADB.AttachmentPoint.TopAlign
-      or ADB.AttachmentPoint.TopFit => SA.AlignmentVertical.Top,
-      ADB.AttachmentPoint.MiddleLeft
-      or ADB.AttachmentPoint.MiddleCenter
-      or ADB.AttachmentPoint.MiddleRight
-      or ADB.AttachmentPoint.MiddleAlign
-      or ADB.AttachmentPoint.MiddleFit
-      or ADB.AttachmentPoint.MiddleMid => SA.AlignmentVertical.Center,
-      ADB.AttachmentPoint.BottomLeft
-      or ADB.AttachmentPoint.BottomCenter
-      or ADB.AttachmentPoint.BottomRight
-      or ADB.AttachmentPoint.BottomAlign
-      or ADB.AttachmentPoint.BottomFit
-      or ADB.AttachmentPoint.BottomMid => SA.AlignmentVertical.Bottom,
-      _ => SA.AlignmentVertical.Top,
     };
   }
 }

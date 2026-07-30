@@ -9,18 +9,21 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
   private readonly PartDataExtractor _partDataExtractor;
   private readonly PropertySetExtractor _propertySetExtractor;
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor _textPropertiesExtractor;
 
   public PropertiesExtractor(
     ClassPropertiesExtractor classPropertiesExtractor,
     PartDataExtractor partDataExtractor,
     PropertySetExtractor propertySetExtractor,
-    ExtensionDictionaryExtractor extensionDictionaryExtractor
+    ExtensionDictionaryExtractor extensionDictionaryExtractor,
+    Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor textPropertiesExtractor
   )
   {
     _classPropertiesExtractor = classPropertiesExtractor;
     _partDataExtractor = partDataExtractor;
     _propertySetExtractor = propertySetExtractor;
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _textPropertiesExtractor = textPropertiesExtractor;
   }
 
   public Dictionary<string, object?> GetProperties(ADB.Entity entity)
@@ -36,6 +39,9 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
       "Extension Dictionary",
       properties
     );
+    // A Civil drawing still holds plain AutoCAD annotation (street labels, notes) — keep its content queryable
+    // alongside the SGEO Text geometry [ENG-8827].
+    AddDictionaryToPropertyDictionary(_textPropertiesExtractor.GetTextProperties(entity), "Text", properties);
 
     return Speckle.Converters.AutocadShared.ToSpeckle.PropertyValueSanitizer.Sanitize(properties);
   }
