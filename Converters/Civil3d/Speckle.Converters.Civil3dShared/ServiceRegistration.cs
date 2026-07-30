@@ -47,6 +47,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<PropertySetDefinitionHandler>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
+    serviceCollection.AddScoped<Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor>(); // plain acad text in a civil drawing
     serviceCollection.AddScoped<CorridorHandler>();
     serviceCollection.AddScoped<CorridorDisplayValueExtractor>();
     serviceCollection.AddScoped<EntityUnitConverter>();

@@ -8,14 +8,17 @@ namespace Speckle.Converters.Plant3dShared.ToSpeckle;
 public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IPropertiesExtractor
 {
   private readonly ExtensionDictionaryExtractor _extensionDictionaryExtractor;
+  private readonly Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor _textPropertiesExtractor;
   private readonly string _drawingName;
 
   public PropertiesExtractor(
     ExtensionDictionaryExtractor extensionDictionaryExtractor,
+    Speckle.Converters.AutocadShared.ToSpeckle.TextPropertiesExtractor textPropertiesExtractor,
     IConverterSettingsStore<Plant3dConversionSettings> settingsStore
   )
   {
     _extensionDictionaryExtractor = extensionDictionaryExtractor;
+    _textPropertiesExtractor = textPropertiesExtractor;
     _drawingName = Path.GetFileName(settingsStore.Current.Document.Name);
   }
 
@@ -33,6 +36,9 @@ public class PropertiesExtractor : Speckle.Converters.AutocadShared.ToSpeckle.IP
       "Extension Dictionary",
       properties
     );
+    // Plain AutoCAD annotation in a Plant drawing — keep its content queryable alongside the SGEO Text
+    // geometry [ENG-8827].
+    AddDictionaryToPropertyDictionary(_textPropertiesExtractor.GetTextProperties(entity), "Text", properties);
 
     return properties;
   }

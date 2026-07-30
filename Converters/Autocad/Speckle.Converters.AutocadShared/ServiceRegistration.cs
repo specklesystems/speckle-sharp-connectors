@@ -33,6 +33,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<IPropertiesExtractor, PropertiesExtractor>();
     serviceCollection.AddScoped<ExtensionDictionaryExtractor>();
     serviceCollection.AddScoped<XDataExtractor>();
+    serviceCollection.AddScoped<TextPropertiesExtractor>();
     serviceCollection.AddScoped<EntityUnitConverter>();
   }
 }

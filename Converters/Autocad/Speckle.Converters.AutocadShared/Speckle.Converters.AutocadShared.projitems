@@ -54,6 +54,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Raw\PointToHostRawConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\PointToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToHost\Geometry\TextToHostConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Helpers\TextAlignmentMap.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Properties\TextPropertiesExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\DataObjectDisplayValueExtractor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\ArcToSpeckleConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ToSpeckle\Geometry\AttributeDefinitionToSpeckleConverter.cs" />

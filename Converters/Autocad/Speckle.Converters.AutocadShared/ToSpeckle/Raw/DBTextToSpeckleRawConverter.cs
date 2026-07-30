@@ -43,17 +43,22 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
       }
     }
 
-    // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling
-    // AlignmentPoint can be ignored, as, if used for positioning, it will be already reflected in Rotation and Height
+    // target.WidthFactor is ignored, because we don't support 1-dimensional text scaling.
+    // Justification decides WHICH point anchors the text: left-justified (the AutoCAD default) text is anchored
+    // by Position, every other justification by AlignmentPoint — Position is then stale and publishing it put
+    // justified text in the wrong place [ENG-8827].
+    bool isLeftJustified = target.Justify == ADB.AttachmentPoint.BaseLeft;
+    AG.Point3d anchor = isLeftJustified ? target.Position : target.AlignmentPoint;
+
     return new()
     {
       value = target.TextString ?? string.Empty,
       height = target.Height,
       maxWidth = null, // always 1 line
-      plane = GetTextPlane(target),
+      plane = GetTextPlane(target, anchor),
       screenOriented = false,
-      alignmentH = AlignmentHorizontal.Left, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
-      alignmentV = AlignmentVertical.Bottom, // constant relevant to Position (.Justify & .Alignment Point can be ignored)
+      alignmentH = TextAlignmentMap.GetHorizontalAlignment(target.Justify),
+      alignmentV = TextAlignmentMap.GetVerticalAlignment(target.Justify),
       units = _settingsStore.Current.SpeckleUnits,
     };
   }
@@ -75,10 +80,10 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
   }
 
   // For DBText, the following properties are stored in:
-  // - Position: WCS
+  // - Position / AlignmentPoint: WCS
   // - Normal: WCS
   // - Rotation: OCS -> WCS https://help.autodesk.com/view/OARX/2020/ENU/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_DBText_Rotation
-  private SOG.Plane GetTextPlane(ADB.DBText target)
+  private SOG.Plane GetTextPlane(ADB.DBText target, AG.Point3d origin)
   {
     // Rotation prop is in OCS: calculate the x and y axis based in WCS
     AG.Matrix3d transform = TransformHelper.GetTransformFromOCSToWCS(target.Normal).Inverse();
@@ -87,7 +92,7 @@ public class DBTextToSpeckleRawConverter : ITypedConverter<ADB.DBText, Text>
 
     return new()
     {
-      origin = _pointConverter.Convert(target.Position),
+      origin = _pointConverter.Convert(origin),
       normal = _vectorConverter.Convert(target.Normal),
       xdir = _vectorConverter.Convert(xDir),
       ydir = _vectorConverter.Convert(yDir),
