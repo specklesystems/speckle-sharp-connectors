@@ -426,15 +426,16 @@ public class AutocadArtifactRootObjectBuilder(
     // ── geometry object ───────────────────────────────────────────────────────────────────────────────
     // The DataObject carrier (AutocadObject / Civil3dObject) already split display meshes from the lossless raw
     // encoding (a Solid3d carries both; a plain mesh/curve/point is its own display). AutoCAD solids carry an
-    // ACIS-SAT rawEncoding; Civil3D objects carry their base curve(s) which are also renderable geometry.
+    // ACIS-SAT rawEncoding; Civil3D objects carry their base curve(s) as a display FALLBACK (see
+    // WithCivilBaseCurveFallback).
     List<Base> displayGeometry;
     RawEncoding? rawEncoding = null;
     if (co.Converted is DataObject dataObject)
     {
       displayGeometry = new List<Base>(dataObject.displayValue);
-      if (co.Converted is Civil3dObject civil && civil.baseCurves is { Count: > 0 } baseCurves)
+      if (co.Converted is Civil3dObject civil)
       {
-        displayGeometry.AddRange(baseCurves.Cast<Base>());
+        displayGeometry = WithCivilBaseCurveFallback(displayGeometry, civil);
       }
       rawEncoding = (co.Converted as AutocadObject)?.rawEncoding;
     }
@@ -532,6 +533,21 @@ public class AutocadArtifactRootObjectBuilder(
     return dropReason;
   }
 
+  // A Civil3dObject's baseCurves are a display FALLBACK, never extra geometry on top of displayValue.
+  // CivilEntityToSpeckleTopLevelConverter already fills displayValue FROM the base curves for every entity with no
+  // display of its own (alignments, parcels, parcel segments — via ProcessICurvesForDisplay), so appending them
+  // wholesale emitted each of those curves TWICE: the viewer hid it, but receive baked two coincident entities per
+  // curve, and every alignment/parcel arrived doubled [ENG-8835]. Emitting displayValue alone is also what the v1
+  // path bakes (DataObjectConverter reads displayValue only, never baseCurves), so this restores parity.
+  //
+  // The fallback still matters for the one case displayValue cannot cover: ProcessICurvesForDisplay only passes
+  // Line/Polyline/Arc (and recurses Polycurve), so a base curve of any other type — a circular or spline parcel
+  // boundary — leaves displayValue empty, and the raw base curve is then the object's only geometry.
+  private static List<Base> WithCivilBaseCurveFallback(List<Base> displayGeometry, Civil3dObject civil) =>
+    displayGeometry.Count == 0 && civil.baseCurves is { Count: > 0 } baseCurves
+      ? baseCurves.Cast<Base>().ToList()
+      : displayGeometry;
+
   // ByLayer member: pin its resolved layer colour onto its geometry so it doesn't inherit the instance's
   // colour override — the fallback stays reserved for ByBlock members [ENG-8825].
   private static void EmitMemberLayerColor(
@@ -577,11 +593,9 @@ public class AutocadArtifactRootObjectBuilder(
       string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
       pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
 
-      var display = child is Civil3dObject cc ? new List<Base>(cc.displayValue) : new List<Base> { child };
-      if (child is Civil3dObject cb && cb.baseCurves is { Count: > 0 } baseCurves)
-      {
-        display.AddRange(baseCurves.Cast<Base>());
-      }
+      var display = child is Civil3dObject cc
+        ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
+        : new List<Base> { child };
       var gKs = new List<int>();
       int ord = 0;
       foreach (Base fragment in display)
