@@ -96,25 +96,18 @@ public class RhinoArtifactRootObjectBuilder(
     // Per-session diagnostics (per-object timing/failures, phase timings, bundle stats) → %TEMP%\Speckle\sessions\.
     using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, versionId, logger);
 
-    // Phase 1 — convert + unpack on the Rhino UI thread (RhinoCommon is main-thread-affine) → pure-Speckle snapshot.
-    CollectedModel collected;
-    using (session.Phase("Collect"))
-    {
-      collected = await threadContext.RunOnMainAsync(() =>
-        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
-      );
-    }
+    ArtifactBundleResult built = await BuildCore(
+      objects,
+      session,
+      versionId,
+      outputDir,
+      onOperationProgressed,
+      cancellationToken
+    );
 
-    // Phase 2 — build the parquet bundle + upload on a WORKER thread (no UI SynchronizationContext/TaskScheduler,
-    // so the pipeline's sync-over-async parquet IO doesn't deadlock — see the class <remarks>).
+    // Upload on a WORKER thread too — same reasoning as the write phase (see the class <remarks>).
     return await threadContext.RunOnWorkerAsync(async () =>
     {
-      BundleResult built;
-      using (session.Phase("Write"))
-      {
-        built = WriteBundle(collected, session, versionId, outputDir, onOperationProgressed, cancellationToken);
-      }
-
       using var pipeline = artifactPipelineFactory.CreateInstance(
         projectId,
         ingestionId,
@@ -133,7 +126,55 @@ public class RhinoArtifactRootObjectBuilder(
           .ConfigureAwait(false);
       }
 
-      return new ArtifactBuildResult(finalVersionId, built.RootId, built.Results);
+      return new ArtifactBuildResult(finalVersionId, built.RootId, built.ConversionResults);
+    });
+  }
+
+  /// <summary>
+  /// Build-only entry point: converts <paramref name="objects"/> and writes the artefact bundle into
+  /// <paramref name="outputDir"/> — no auth, storage, or server API involved. For hosts that upload out of
+  /// process (the headless converter legs); <see cref="BuildAndUpload"/> is the in-process path.
+  /// </summary>
+  public async Task<ArtifactBundleResult> Build(
+    IReadOnlyList<RhinoObject> objects,
+    string? projectId,
+    string versionId,
+    string outputDir,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    Directory.CreateDirectory(outputDir);
+    using var session = ArtefactSessionLog.Start("Rhino", ArtefactDirection.Send, projectId, null, versionId, logger);
+    return await BuildCore(objects, session, versionId, outputDir, onOperationProgressed, cancellationToken);
+  }
+
+  // Collect must run on the Rhino UI thread and the bundle write on a worker — see the class <remarks>.
+  private async Task<ArtifactBundleResult> BuildCore(
+    IReadOnlyList<RhinoObject> objects,
+    ArtefactSessionLog session,
+    string versionId,
+    string outputDir,
+    IProgress<CardProgress> onOperationProgressed,
+    CancellationToken cancellationToken
+  )
+  {
+    CollectedModel collected;
+    using (session.Phase("Collect"))
+    {
+      collected = await threadContext.RunOnMainAsync(() =>
+        Task.FromResult(CollectOnMain(objects, session, onOperationProgressed, cancellationToken))
+      );
+    }
+
+    return await threadContext.RunOnWorkerAsync(() =>
+    {
+      using (session.Phase("Write"))
+      {
+        return Task.FromResult(
+          WriteBundle(collected, session, versionId, outputDir, onOperationProgressed, cancellationToken)
+        );
+      }
     });
   }
 
@@ -405,7 +446,7 @@ public class RhinoArtifactRootObjectBuilder(
 
   // ── Phase 2 (worker thread): pure-Speckle snapshot → parquet bundle ──────────────────────────────────
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  private BundleResult WriteBundle(
+  private ArtifactBundleResult WriteBundle(
     CollectedModel model,
     ArtefactSessionLog session,
     string versionId,
@@ -498,7 +539,7 @@ public class RhinoArtifactRootObjectBuilder(
     session.SetStat("groups", model.Groups.Count);
 
     logger.LogInformation("Built artefact bundle: {fileCount} files, {objectCount} objects", bundle.Count, objectCount);
-    return new BundleResult(bundle, rootId, objectCount, results);
+    return new ArtifactBundleResult(bundle, rootId, objectCount, results);
   }
 
   // Emits one object: eav labels + IN_COLLECTION, then a block placement (DISPLAY_INSTANCE → INSTANCE node) or
@@ -832,13 +873,6 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
     IReadOnlyList<CameraView> CameraViews,
-    IReadOnlyList<SendConversionResult> Results
-  );
-
-  private sealed record BundleResult(
-    IReadOnlyDictionary<string, string> Bundle,
-    string RootId,
-    int ObjectCount,
     IReadOnlyList<SendConversionResult> Results
   );
 }
