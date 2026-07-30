@@ -268,7 +268,14 @@ public class AutocadArtifactRootObjectBuilder(
     {
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-      return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy, entity.Color.IsByLayer);
+      return new CollectedObject(
+        applicationId,
+        sourceType,
+        entity.Layer,
+        instanceProps,
+        instanceProxy,
+        entity.Color.IsByLayer
+      );
     }
 
     Base converted = converter.Convert(entity);
@@ -400,7 +407,7 @@ public class AutocadArtifactRootObjectBuilder(
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
-      RootScalars(co.Converted.speckle_type, co.SourceType, units, co.SourceType)
+      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType)
     );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
@@ -696,10 +703,13 @@ public class AutocadArtifactRootObjectBuilder(
       var value = materialProxy.value;
       int matK = pipeline.AddMaterial(
         materialProxy.applicationId.NotNull(),
+        value.name,
         value.diffuse,
         value.opacity,
         value.metalness,
-        value.roughness
+        value.roughness,
+        value.emissive,
+        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
       );
       foreach (var objectId in materialProxy.objects)
       {
@@ -792,6 +802,13 @@ public class AutocadArtifactRootObjectBuilder(
     cache[layerName] = collK;
     return collK;
   }
+
+  // The object's authored name lives on the DataObject carrier the converter produced — a Civil3D entity name
+  // ("Alignment - (1)", "Corridor - (1)"), a Plant3D tag, a Civil3D subassembly name. Labelling every object with its
+  // .NET type name instead lost all of them [ENG-8831]. AutoCAD's own carrier sets name = type name anyway, so plain
+  // AutoCAD entities are unchanged; an InstanceProxy (block placement) carries no name and keeps the type.
+  private static string ObjectName(CollectedObject co) =>
+    co.Converted is DataObject { name.Length: > 0 } dataObject ? dataObject.name : co.SourceType;
 
   private static KeyValuePair<string, object?>[] RootScalars(
     string speckleType,

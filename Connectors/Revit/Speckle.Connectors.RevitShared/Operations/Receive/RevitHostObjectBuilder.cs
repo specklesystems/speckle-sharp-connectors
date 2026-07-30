@@ -248,7 +248,6 @@ public sealed class RevitHostObjectBuilder(
     );
   }
 
-
   private (
     HostObjectBuilderResult builderResult,
     List<(DirectShape res, string applicationId)> postBakePaintTargets
