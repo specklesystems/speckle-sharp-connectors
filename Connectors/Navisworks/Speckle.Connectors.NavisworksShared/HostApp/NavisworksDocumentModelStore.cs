@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.Extensions.Logging;
+using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bridge;
 using Speckle.Connectors.DUI.Models;
 using Speckle.Connectors.DUI.Utils;
@@ -17,16 +18,19 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
   private const string KEY_NAME = "Speckle_DUI3";
 
   private readonly ITopLevelExceptionHandler _topLevelExceptionHandler;
+  private readonly IThreadContext _threadContext;
   private string _lastSavedState = string.Empty;
 
   public NavisworksDocumentModelStore(
     ILogger<DocumentModelStore> logger,
     IJsonSerializer jsonSerializer,
-    ITopLevelExceptionHandler topLevelExceptionHandler
+    ITopLevelExceptionHandler topLevelExceptionHandler,
+    IThreadContext threadContext
   )
     : base(logger, jsonSerializer)
   {
     _topLevelExceptionHandler = topLevelExceptionHandler;
+    _threadContext = threadContext;
     LoadState();
   }
 
@@ -45,7 +49,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
 
     try
     {
-      SaveStateToDatabase(modelCardState);
+      _threadContext.RunOnMain(() => SaveStateToDatabase(modelCardState)).GetAwaiter().GetResult();
       _lastSavedState = modelCardState; // Update last saved state after successful save
     }
     catch (NAV.Data.DatabaseException ex)
@@ -71,7 +75,7 @@ public sealed class NavisworksDocumentModelStore : DocumentModelStore
 
     try
     {
-      string serializedState = RetrieveStateFromDatabase();
+      var serializedState = _threadContext.RunOnMain(RetrieveStateFromDatabase).GetAwaiter().GetResult();
       LoadFromString(serializedState);
       _lastSavedState = serializedState; // Store initial state after loading
     }
