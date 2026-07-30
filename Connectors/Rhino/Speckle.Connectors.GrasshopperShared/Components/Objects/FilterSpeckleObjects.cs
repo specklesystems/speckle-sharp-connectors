@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
@@ -373,6 +374,8 @@ public class FilterSpeckleObjects : GH_Component, IGH_VariableParameterComponent
       Params.Input[i].Optional = true;
     }
   }
+
+  public override bool Read(GH_IReader reader) => this.ReadRepairingFixedParams(reader, base.Read);
 
   #endregion
 }
