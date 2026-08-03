@@ -261,8 +261,9 @@ public sealed class SendOperation<T>(
         buildResult.ConversionResults
       );
 
-      // The artefact pipeline's `complete` call already created the version; no separate Ingestion.Complete.
-      return (result, buildResult.VersionId, null);
+      // The pipeline's `complete` only signals "upload done" — the server creates the version after datgen.
+      // Returning the ingestion id makes the DUI subscribe and show "version created" only when it truly exists.
+      return (result, buildResult.VersionId, ingestion.id);
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
