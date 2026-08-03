@@ -52,6 +52,7 @@ public class CsiArtifactRootObjectBuilder(
   AnalysisResultsExtractor analysisResultsExtractor,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
+  ISpeckleApplication speckleApplication,
   ILogger<CsiArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<ICsiWrapper>
 {
@@ -412,7 +413,7 @@ public class CsiArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
