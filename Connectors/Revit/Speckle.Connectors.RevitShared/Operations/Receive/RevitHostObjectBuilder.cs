@@ -359,6 +359,33 @@ public sealed class RevitHostObjectBuilder(
     revitToHostCacheSingleton.Clear(); // "Massive hack!" - Anonymous. Ogu and Björn: it looks legit
     groupManager.PurgeGroups(baseGroupName);
     materialBaker.PurgeMaterials(baseGroupName);
+    PurgePriorArtefactDirectBake(baseGroupName);
+  }
+
+  // A previous receive of this model may have gone through the artefact direct-bake path (RevitHostObjectArtefactBuilder,
+  // used when ReceiveInstancesAsFamilies was off) and left Comments-marker-stamped DirectShapes behind — those aren't
+  // members of a Revit Group, so PurgeGroups above won't find them. Clean them up here too.
+  private void PurgePriorArtefactDirectBake(string marker)
+  {
+    var doc = converterSettings.Current.Document;
+    var toDelete = new List<ElementId>();
+    using (var collector = new FilteredElementCollector(doc))
+    {
+      foreach (var element in collector.OfClass(typeof(DirectShape)))
+      {
+        if (
+          element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
+          && string.Equals(c, marker, StringComparison.Ordinal)
+        )
+        {
+          toDelete.Add(element.Id);
+        }
+      }
+    }
+    if (toDelete.Count > 0)
+    {
+      doc.Delete(toDelete);
+    }
   }
 
   public void Dispose() => transactionManager.Dispose();
