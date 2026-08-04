@@ -22,17 +22,19 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
+// aliased, not imported: Speckle.Objects.Other.Transform would collide with DB.Transform used throughout this file
+using RawEncodingFormats = Speckle.Objects.Other.RawEncodingFormats;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
 /// <summary>
 /// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Revit document as native
 /// <see cref="DirectShape"/>s — talking only to the neutral dense-int graph + raw Revit API, skipping the v1
-/// <c>RootObjectUnpacker</c> / traversal / per-type converter dispatch. SGEO meshes are tessellated straight into
-/// DirectShape geometry (mirroring <c>MeshConverterToHost</c>), materials are created directly from MATERIAL nodes,
-/// and instances are placed per <c>DISPLAY_INSTANCE</c> edge via the <see cref="DirectShapeLibrary"/>. The
-/// receive-side twin of the send-side <c>RevitArtifactRootObjectBuilder</c> — except when
-/// <c>ReceiveInstancesAsFamilies</c> is on (see remarks).
+/// <c>RootObjectUnpacker</c> / traversal / per-type converter dispatch. A raw <c>SOLID</c> 3dm blob is imported as real
+/// Revit solids (<see cref="ShapeImporter"/>) and SGEO meshes are tessellated straight into DirectShape geometry
+/// (mirroring <c>MeshConverterToHost</c>), materials are created directly from MATERIAL nodes, and instances are placed
+/// per <c>DISPLAY_INSTANCE</c> edge via the <see cref="DirectShapeLibrary"/>. The receive-side twin of the send-side
+/// <c>RevitArtifactRootObjectBuilder</c> — except when <c>ReceiveInstancesAsFamilies</c> is on (see remarks).
 /// </summary>
 /// <remarks>
 /// <para><b>Grouping.</b> Revit has no layers; each baked element is stamped with its model marker in the Comments
@@ -58,6 +60,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly IArtifactReceiver _artifactReceiver;
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly RevitGroupBaker _groupBaker;
+  private readonly RevitArtefactSolidImporter _solidImporter;
 
   public RevitHostObjectArtefactBuilder(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -70,7 +73,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ILogger<RevitHostObjectArtefactBuilder> logger,
     IArtifactReceiver artifactReceiver,
     IHostObjectBuilder hostObjectBuilder,
-    RevitGroupBaker groupBaker
+    RevitGroupBaker groupBaker,
+    RevitArtefactSolidImporter solidImporter
   )
   {
     _converterSettings = converterSettings;
@@ -84,6 +88,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _artifactReceiver = artifactReceiver;
     _hostObjectBuilder = hostObjectBuilder;
     _groupBaker = groupBaker;
+    _solidImporter = solidImporter;
   }
 
   public async Task<HostObjectBuilderResult> Build(
@@ -157,6 +162,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     var bakedObjectIds = new List<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
+    // Solids imported from a raw 3dm carry no material of their own (a tessellated mesh bakes it into every
+    // TessellatedFace), so they are painted with the object's material — but only once the bake transaction has
+    // committed, since an element's faces aren't queryable before then. Same ordering as v1 RevitHostObjectBuilder.
+    var paintTargets = new List<(ElementId Element, ElementId Material)>();
 
     // 0 — clean a previous receive of this model (delete marked DirectShapes; reset the geometry-instance library).
     _transactionManager.StartTransaction(true, "Pre receive clean");
@@ -205,6 +214,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           marker,
           bakedObjectIds,
           conversionResults,
+          paintTargets,
           session,
           onOperationProgressed,
           cancellationToken
@@ -227,6 +237,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             marker,
             bakedObjectIds,
             conversionResults,
+            paintTargets,
             session,
             cancellationToken
           );
@@ -239,6 +250,26 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       _transactionManager.RollbackTransaction();
       throw;
+    }
+
+    // 4 — paint the imported solids (own transaction: their faces only exist now that the bake is committed).
+    if (paintTargets.Count > 0)
+    {
+      using (session.Phase("Painting"))
+      {
+        _transactionManager.StartTransaction(true, "Painting solids");
+        try
+        {
+          _solidImporter.PaintSolids(doc, paintTargets, session);
+          _transactionManager.CommitTransaction();
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          // painting is cosmetic — a failure must not cost the user the geometry they just received
+          _transactionManager.RollbackTransaction();
+          _logger.LogError(ex, "Artefact receive solid painting failed for '{Marker}'", marker);
+        }
+      }
     }
 
     return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
@@ -256,6 +287,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
+    List<(ElementId Element, ElementId Material)> paintTargets,
     ArtefactSessionLog session,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
@@ -270,7 +302,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       int objK = kv.Key;
       string appId = kv.Value;
 
-      if (rels.DisplayByObject(objK) is not { Count: > 0 } displayEdges)
+      var displayEdges = rels.DisplayByObject(objK);
+      rels.SolidByObject.TryGetValue(objK, out var solidKs);
+      if (displayEdges is not { Count: > 0 } && solidKs is not { Count: > 0 })
       {
         // an instance placement (step 3) or a non-geometric element (room/level/area) → skip, don't error.
         if (!rels.DisplayInstanceByObject.ContainsKey(objK))
@@ -286,12 +320,18 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var sw = Stopwatch.StartNew();
       try
       {
-        var geometry = new List<GeometryObject>();
-        foreach (var edge in displayEdges.OrderBy(e => e.Ord))
-        {
-          materialIdByGeometry.TryGetValue(edge.Dst, out var matId);
-          geometry.AddRange(DecodeGeometry(bundle, edge.Dst, matId ?? ElementId.InvalidElementId));
-        }
+        var displayKs = displayEdges is { } edges
+          ? edges.OrderBy(e => e.Ord).Select(e => e.Dst).ToList()
+          : new List<int>();
+        var geometry = DecodeMemberGeometry(
+          doc,
+          bundle,
+          solidKs,
+          displayKs,
+          materialIdByGeometry,
+          session,
+          out bool fromSolid
+        );
         if (geometry.Count == 0)
         {
           session.RecordObject(
@@ -319,6 +359,15 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         ds.SetShape(geometry);
         StampMarker(ds, marker);
 
+        if (fromSolid)
+        {
+          var materialId = ResolveMaterial(displayKs, solidKs, materialIdByGeometry);
+          if (materialId != ElementId.InvalidElementId)
+          {
+            paintTargets.Add((ds.Id, materialId));
+          }
+        }
+
         bakedObjectIds.Add(ds.UniqueId);
         conversionResults.Add(new(Status.SUCCESS, source, ds.UniqueId, "Direct Shape", null, srcType));
         session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -343,6 +392,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string marker,
     List<string> bakedObjectIds,
     HashSet<ReceiveConversionResult> conversionResults,
+    List<(ElementId Element, ElementId Material)> paintTargets,
     ArtefactSessionLog session,
     CancellationToken cancellationToken
   )
@@ -357,6 +407,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // (GeometryInstance derives from GeometryObject, so it slots into the parent's geometry list like any solid/mesh).
     var defKeyByNode = new Dictionary<int, string>();
     var defBuilding = new HashSet<int>();
+    // Definitions whose geometry came from imported 3dm solids, and the single material to paint onto each placement
+    // (solids carry none of their own). Ambiguous definitions — several materials across members — stay unpainted.
+    var defPaintMaterialByNode = new Dictionary<int, ElementId>();
 
     string? BuildDefinition(int defNodeK)
     {
@@ -374,17 +427,16 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       session.Increment("definitionsSeen");
 
-      var geometry = new List<GeometryObject>();
-
       // direct geometry members (DEFINES → geometry blobs).
-      if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
-      {
-        foreach (var geomK in geomKs)
-        {
-          materialIdByGeometry.TryGetValue(geomK, out var matId);
-          geometry.AddRange(DecodeGeometry(bundle, geomK, matId ?? ElementId.InvalidElementId));
-        }
-      }
+      var geometry = DecodeDefinitionMembers(
+        doc,
+        bundle,
+        rels,
+        defNodeK,
+        materialIdByGeometry,
+        session,
+        out var solidPaintMaterial
+      );
 
       // nested block/family members (DEFINES_INSTANCE → INSTANCE node): build the child definition first
       // (depth-first) and add a geometry-instance reference to it with the nested placement's own transform.
@@ -422,6 +474,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var defKey = $"spk-def-{defNodeK.ToString(CultureInfo.InvariantCulture)}";
       library.AddDefinition(defKey, geometry);
       defKeyByNode[defNodeK] = defKey;
+      if (solidPaintMaterial is { } paint)
+      {
+        defPaintMaterialByNode[defNodeK] = paint;
+      }
       return defKey;
     }
 
@@ -482,6 +538,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         ds.SetShape(geometry);
         StampMarker(ds, marker);
 
+        if (defPaintMaterialByNode.TryGetValue(defNodeK, out var paintMaterial))
+        {
+          paintTargets.Add((ds.Id, paintMaterial));
+        }
+
         bakedObjectIds.Add(ds.UniqueId);
         conversionResults.Add(new(Status.SUCCESS, source, ds.UniqueId, "Instance (Direct Shape)", null, srcType));
         session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -495,8 +556,153 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
+  // A definition's direct geometry members (DEFINES → geometry blobs), grouped by member ordinal so a member's
+  // authoritative 3dm solid wins over its own display mesh(es) without shadowing a sibling member — mirrors
+  // RhinoHostObjectArtefactBuilder.GroupDefinesByMember. solidPaintMaterial is the single material shared by the members
+  // that came from imported solids (which carry none of their own); null when there is none, or when members disagree —
+  // one material can't stand in for several, and painting the wrong one is worse than leaving the definition unpainted.
+  private List<GeometryObject> DecodeDefinitionMembers(
+    Document doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    int defNodeK,
+    Dictionary<int, ElementId> materialIdByGeometry,
+    ArtefactSessionLog session,
+    out ElementId? solidPaintMaterial
+  )
+  {
+    solidPaintMaterial = null;
+    var geometry = new List<GeometryObject>();
+    if (!rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+    {
+      return geometry;
+    }
+
+    rels.DefinesOrdByDefinition.TryGetValue(defNodeK, out var ords);
+    var solidMaterials = new HashSet<ElementId>();
+    foreach (var (memberSolidKs, memberDisplayKs) in GroupDefinesByMember(geomKs, ords, bundle))
+    {
+      geometry.AddRange(
+        DecodeMemberGeometry(
+          doc,
+          bundle,
+          memberSolidKs,
+          memberDisplayKs,
+          materialIdByGeometry,
+          session,
+          out bool memberFromSolid
+        )
+      );
+      var memberMaterial = memberFromSolid
+        ? ResolveMaterial(memberDisplayKs, memberSolidKs, materialIdByGeometry)
+        : ElementId.InvalidElementId;
+      if (memberMaterial != ElementId.InvalidElementId)
+      {
+        solidMaterials.Add(memberMaterial);
+      }
+    }
+    if (solidMaterials.Count == 1)
+    {
+      solidPaintMaterial = solidMaterials.First();
+    }
+    return geometry;
+  }
+
+  // Geometry for one atomic object or one definition member: the lossless raw 3dm SOLID blob (→ real Revit solids) is
+  // PREFERRED over the DISPLAY meshes, but not committed to [ENG-8800, mirroring AutoCAD's ENG-8820] — the display
+  // meshes exist precisely as the shadow for when the import can't deliver (see RevitArtefactSolidImporter). Either
+  // list may be empty.
+  private List<GeometryObject> DecodeMemberGeometry(
+    Document doc,
+    ArtefactBundle bundle,
+    IReadOnlyList<int>? solidKs,
+    IReadOnlyList<int> displayKs,
+    Dictionary<int, ElementId> materialIdByGeometry,
+    ArtefactSessionLog session,
+    out bool fromSolid
+  )
+  {
+    if (solidKs is { Count: > 0 })
+    {
+      var solids = _solidImporter.ImportSolids(doc, bundle, solidKs, session);
+      if (solids.Count > 0)
+      {
+        fromSolid = true;
+        return solids;
+      }
+    }
+
+    fromSolid = false;
+    var geometry = new List<GeometryObject>();
+    foreach (var geomK in displayKs)
+    {
+      materialIdByGeometry.TryGetValue(geomK, out var matId);
+      geometry.AddRange(DecodeGeometry(bundle, geomK, matId ?? ElementId.InvalidElementId));
+    }
+    return geometry;
+  }
+
+  // Groups a definition's DEFINES geometry Ks by member ordinal (index-aligned with ords), splitting each member into
+  // its raw 3dm solid blob(s) and its display mesh(es) so the caller can prefer the former. Member order is preserved.
+  // When ords are absent (older bundle) every geometry is its own member — i.e. no grouping, the prior behaviour.
+  private static IEnumerable<(List<int> Solids, List<int> Display)> GroupDefinesByMember(
+    List<int> geomKs,
+    List<int>? ords,
+    ArtefactBundle bundle
+  )
+  {
+    var members = new List<List<int>>();
+    var indexByOrd = new Dictionary<int, int>();
+    for (int i = 0; i < geomKs.Count; i++)
+    {
+      int ord = ords is not null && i < ords.Count ? ords[i] : -(i + 1); // absent ords → unique key per geometry
+      if (!indexByOrd.TryGetValue(ord, out int idx))
+      {
+        idx = members.Count;
+        indexByOrd[ord] = idx;
+        members.Add(new List<int>());
+      }
+      members[idx].Add(geomKs[i]);
+    }
+    foreach (var geoms in members)
+    {
+      var solids = new List<int>();
+      var display = new List<int>();
+      foreach (var k in geoms)
+      {
+        if (bundle.Geometries.TryGetValue(k, out var g) && g.Type == RawEncodingFormats.RHINO_3DM)
+        {
+          solids.Add(k);
+        }
+        else
+        {
+          display.Add(k);
+        }
+      }
+      yield return (solids, display);
+    }
+  }
+
+  // The material to paint imported solids with: HAS_MATERIAL hangs off the display meshes for a standalone object and
+  // off every member geometry (solid included) for a definition member, so check the display keys first, then the solids.
+  private static ElementId ResolveMaterial(
+    IReadOnlyList<int> displayKs,
+    IReadOnlyList<int>? solidKs,
+    Dictionary<int, ElementId> materialIdByGeometry
+  )
+  {
+    foreach (var k in solidKs is null ? displayKs : displayKs.Concat(solidKs))
+    {
+      if (materialIdByGeometry.TryGetValue(k, out var id) && id != ElementId.InvalidElementId)
+      {
+        return id;
+      }
+    }
+    return ElementId.InvalidElementId;
+  }
+
   // Decodes one SGEO mesh geometry index → Revit GeometryObjects (TessellatedShapeBuilder), material baked per face.
-  // Revit receives meshes only (no raw 3dm); non-SGEO / undecodable blobs yield nothing.
+  // Raw (non-SGEO) blobs are handled by RevitArtefactSolidImporter; undecodable blobs yield nothing.
   private List<GeometryObject> DecodeGeometry(ArtefactBundle bundle, int geomK, ElementId materialId)
   {
     if (
