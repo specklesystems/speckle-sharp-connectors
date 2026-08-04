@@ -57,6 +57,7 @@ public class RevitArtifactRootObjectBuilder(
   IArtifactPipelineFactory artifactPipelineFactory,
   IScalingServiceToSpeckle scalingService,
   IReferencePointConverter referencePointConverter,
+  ISpeckleApplication speckleApplication,
   ILogger<RevitArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<DocumentToConvert>
 {
@@ -193,7 +194,7 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
 
     // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
     // yields N interned objects (disambiguated by transform hash), so the value is a list. Used to resolve

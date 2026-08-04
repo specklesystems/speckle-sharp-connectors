@@ -8,6 +8,7 @@ using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
 using Speckle.Converters.Common;
 using Speckle.Objects.Utils;
+using Speckle.Sdk;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
 
 namespace Speckle.Connectors.Civil3dShared.Operations.Send;
@@ -24,6 +25,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
     AutocadColorUnpacker colorUnpacker,
     IThreadContext threadContext,
     IArtifactPipelineFactory artifactPipelineFactory,
+    ISpeckleApplication speckleApplication,
     ILogger<AutocadArtifactRootObjectBuilder> logger,
     PropertySetDefinitionHandler propertySetDefinitionHandler
   )
@@ -35,6 +37,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       colorUnpacker,
       threadContext,
       artifactPipelineFactory,
+      speckleApplication,
       logger
     )
   {

@@ -33,6 +33,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
   private readonly TsdConversionSettings _conversionSettings;
   private readonly IThreadContext _threadContext;
   private readonly IArtifactPipelineFactory _artifactPipelineFactory;
+  private readonly ISpeckleApplication _speckleApplication;
   private readonly ILogger<TsdArtifactRootObjectBuilder> _logger;
 
   public TsdArtifactRootObjectBuilder(
@@ -42,6 +43,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     TsdConversionSettings conversionSettings,
     IThreadContext threadContext,
     IArtifactPipelineFactory artifactPipelineFactory,
+    ISpeckleApplication speckleApplication,
     ILogger<TsdArtifactRootObjectBuilder> logger
   )
   {
@@ -51,6 +53,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     _conversionSettings = conversionSettings;
     _threadContext = threadContext;
     _artifactPipelineFactory = artifactPipelineFactory;
+    _speckleApplication = speckleApplication;
     _logger = logger;
   }
 
@@ -313,7 +316,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     CancellationToken cancellationToken
   )
   {
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: _speckleApplication.Slug);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;

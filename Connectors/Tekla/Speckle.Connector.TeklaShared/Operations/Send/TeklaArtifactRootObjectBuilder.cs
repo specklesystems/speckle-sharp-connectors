@@ -50,6 +50,7 @@ public class TeklaArtifactRootObjectBuilder(
   TeklaMaterialUnpacker materialUnpacker,
   IThreadContext threadContext,
   IArtifactPipelineFactory artifactPipelineFactory,
+  ISpeckleApplication speckleApplication,
   ILogger<TeklaArtifactRootObjectBuilder> logger
 ) : IArtifactRootObjectBuilder<TSM.ModelObject>
 {
@@ -167,7 +168,7 @@ public class TeklaArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
     var geometryKsByAppId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 

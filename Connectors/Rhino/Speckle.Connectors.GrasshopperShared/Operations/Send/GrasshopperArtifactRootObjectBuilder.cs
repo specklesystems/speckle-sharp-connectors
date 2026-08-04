@@ -52,7 +52,8 @@ public class GrasshopperArtifactRootObjectBuilder(
   IInstanceObjectsManager<SpeckleGeometryWrapper, List<string>> instanceObjectsManager,
   IConverterSettingsStore<RhinoConversionSettings> converterSettings,
   IThreadContext threadContext,
-  IArtifactPipelineFactory artifactPipelineFactory
+  IArtifactPipelineFactory artifactPipelineFactory,
+  ISpeckleApplication speckleApplication
 ) : IArtifactRootObjectBuilder<SpeckleCollectionWrapperGoo>
 {
   public async Task<ArtifactBuildResult> BuildAndUpload(
@@ -111,7 +112,7 @@ public class GrasshopperArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
     var units = converterSettings.Current.SpeckleUnits;
 
     // Reused as-is from the v1 send path — they derive the color/material/instance proxies whose `.objects` arrays are
