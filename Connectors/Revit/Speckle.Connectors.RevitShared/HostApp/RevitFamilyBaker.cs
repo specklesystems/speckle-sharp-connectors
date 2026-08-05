@@ -63,11 +63,19 @@ public sealed class RevitFamilyBaker : IDisposable
     Directory.CreateDirectory(_tempDirectory);
   }
 
+  // referencePointTransform [ENG-9099]: the composed (receiver setting ∘ sender's recorded) reference-point
+  // transform, or null when neither is set. Applied ONLY to the outermost placement of a top-level InstanceProxy
+  // (via PlaceFamilyInstance below) — every instance's own placement transform is sent already expressed in
+  // world/shared-coordinate space (same as atomic geometry), so it needs this correction to land back in the
+  // receiving document's internal coordinates. Nested placements baked while AUTHORING a family template
+  // (PlaceNestedInstance, inside a temporary famDoc) stay purely local/relative to that family and must NOT get
+  // this correction — passing null there is deliberate, not an oversight.
   public (List<ReceiveConversionResult> results, List<string> createdElementIds) BakeInstances(
     ICollection<(Collection[] collectionPath, IInstanceComponent component)> instanceComponents,
     IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup,
     IReadOnlyCollection<RenderMaterialProxy> materialProxies,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    Transform? referencePointTransform
   )
   {
     var document = _converterSettings.Current.Document;
@@ -119,7 +127,7 @@ public sealed class RevitFamilyBaker : IDisposable
             continue;
           }
 
-          var instance = PlaceFamilyInstance(document, instanceProxy);
+          var instance = PlaceFamilyInstance(document, instanceProxy, referencePointTransform);
 
           if (instance != null)
           {
@@ -398,7 +406,7 @@ public sealed class RevitFamilyBaker : IDisposable
       symbol.Activate();
     }
 
-    var instance = CreateAndPlaceFamilyInstance(famDoc, instanceProxy, symbol);
+    var instance = CreateAndPlaceFamilyInstance(famDoc, instanceProxy, symbol, referencePointTransform: null);
 
     if (instance != null && materialManager != null)
     {
@@ -439,7 +447,12 @@ public sealed class RevitFamilyBaker : IDisposable
     return family;
   }
 
-  private FamilyInstance? CreateAndPlaceFamilyInstance(Document doc, InstanceProxy instanceProxy, FamilySymbol symbol)
+  private FamilyInstance? CreateAndPlaceFamilyInstance(
+    Document doc,
+    InstanceProxy instanceProxy,
+    FamilySymbol symbol,
+    Transform? referencePointTransform
+  )
   {
     var isMirrored = _familyTransformUtils.GetMirrorState(instanceProxy.transform).X;
     var hasScaleOrSkew = _familyTransformUtils.HasScaleOrSkew(instanceProxy.transform);
@@ -450,6 +463,13 @@ public sealed class RevitFamilyBaker : IDisposable
         : instanceProxy.transform;
 
     var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
+    if (referencePointTransform is not null)
+    {
+      // instanceProxy.transform is sent in world/shared-coordinate space (same frame as atomic geometry) — compose
+      // the reference-point transform onto this OUTERMOST placement to land back in the document's internal
+      // coordinates, mirroring RevitHostObjectArtefactBuilder.BuildInstanceTransform [ENG-9099].
+      revitTransform = referencePointTransform.Multiply(revitTransform);
+    }
 
     XYZ origin = revitTransform.Origin;
     XYZ basisX = revitTransform.BasisX.Normalize();
@@ -482,13 +502,17 @@ public sealed class RevitFamilyBaker : IDisposable
     return instance;
   }
 
-  private FamilyInstance? PlaceFamilyInstance(Document document, InstanceProxy instanceProxy)
+  private FamilyInstance? PlaceFamilyInstance(
+    Document document,
+    InstanceProxy instanceProxy,
+    Transform? referencePointTransform
+  )
   {
     var definitionId = instanceProxy.definitionId;
 
     if (_cache.SymbolsByDefinitionId.TryGetValue(definitionId, out var symbol))
     {
-      return CreateAndPlaceFamilyInstance(document, instanceProxy, symbol);
+      return CreateAndPlaceFamilyInstance(document, instanceProxy, symbol, referencePointTransform);
     }
 
     _logger.LogWarning("No family symbol found for definition {DefinitionId}", definitionId);
