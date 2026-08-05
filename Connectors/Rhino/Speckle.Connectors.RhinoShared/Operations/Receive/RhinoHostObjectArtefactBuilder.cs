@@ -195,7 +195,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             bakedGuidsByObjK[objK] = ids;
           }
-          conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Speckle.Object"));
+
+          // One source object that decoded into several Rhino geometries (a Revit wall's display meshes, say) becomes
+          // one native group, so the element stays selectable and movable as a unit [ENG-9113]. The report entry then
+          // points at the GROUP id — the selection binding resolves a group id as well as an object id — while
+          // bakedObjectIds keeps only the members: a group id in there would make whole-model highlighting walk every
+          // object of every group (the same reason the v1 builder kept group ids out of it).
+          string reportId = ids[0].ToString();
+          if (ids.Count > 1 && GroupElement(doc, ids, name, ObjectType(bundle, objK), appId, baseLayerName) is Guid gid)
+          {
+            reportId = gid.ToString();
+            session.Increment("elementGroupsBaked");
+          }
+          conversionResults.Add(new(Status.SUCCESS, source, reportId, "Speckle.Object"));
           session.RecordObject(appId, "Speckle.Object", Status.SUCCESS, null, sw.ElapsedMilliseconds);
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -457,6 +469,27 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       atts.ColorSource = ObjectColorSource.ColorFromObject; // by-object display colour (HAS_COLOR)
     }
     return doc.Objects.Add(geom, atts);
+  }
+
+  // Binds the several Rhino geometries decoded from ONE source object into a native group [ENG-9113]. The name carries
+  // the baseLayerName suffix — like BakeGroups and the v1 fallback grouping — so DeepClean purges it on re-receive.
+  // The source appId is in the name to keep it unique between two same-named elements. Returns null when Rhino
+  // refused the group, so the caller falls back to reporting the first member.
+  private static Guid? GroupElement(
+    RhinoDoc doc,
+    List<Guid> ids,
+    string? name,
+    string? type,
+    string appId,
+    string baseLayerName
+  )
+  {
+    var label =
+      name is { Length: > 0 } n ? n
+      : type is { Length: > 0 } t ? t
+      : "Element";
+    int index = doc.Groups.Add($"{label} - {appId} ({baseLayerName})", ids);
+    return index < 0 ? null : doc.Groups.FindIndex(index)?.Id;
   }
 
   // ── instances ─────────────────────────────────────────────────────────────────────────────────────────
@@ -951,6 +984,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     && s.Length > 0
       ? s
       : bundle.Units;
+
+  // The object's source type ("type" scalar, e.g. the Rhino ObjectType or the Revit category), or null when absent.
+  private static string? ObjectType(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("type", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : null;
 
   // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
   // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
