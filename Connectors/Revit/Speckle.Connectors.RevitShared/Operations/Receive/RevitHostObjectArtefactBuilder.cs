@@ -42,8 +42,15 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// needs <c>IInstanceComponent</c>s and a <c>TraversalContext</c> lookup built from a <c>Base</c> graph, so it
 /// can't consume bundle data directly. When the setting is on, this builder instead reconstructs a <c>Base</c> graph
 /// (<see cref="IArtifactReceiver.Reconstruct"/>) and delegates the whole receive to the v1
-/// <see cref="RevitHostObjectBuilder"/>, which already honours it — slower than the direct bake, but the only way to
-/// get real families across all Revit versions.</para>
+/// <see cref="RevitHostObjectBuilder"/> — slower than the direct bake, but the only way to get real families across
+/// all Revit versions.</para>
+/// <para><b>Known limitation (tracked separately, "Revit: Make family receive artifact-native"):</b> the
+/// reconstruction bridge above resolves each object's placement via a last-wins <c>objectK → instanceNodeK</c> map,
+/// not the full edge list, so an object that places <i>several</i> instances (e.g. a Railing → many balusters) only
+/// keeps the last one — the rest are silently dropped from the reconstructed graph, not merely mis-transformed.
+/// Fixing this properly means reworking the bridge (and a matching last-wins lookup in
+/// <see cref="RevitHostObjectBuilder"/> itself) to synthesize a unique id per placement — out of scope here; the
+/// planned fix is to remove this bridge entirely in favour of bundle-native family baking.</para>
 /// </remarks>
 public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {

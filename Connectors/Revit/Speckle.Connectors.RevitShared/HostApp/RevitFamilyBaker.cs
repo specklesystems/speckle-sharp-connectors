@@ -75,7 +75,7 @@ public sealed class RevitFamilyBaker : IDisposable
     IReadOnlyDictionary<string, TraversalContext> speckleObjectLookup,
     IReadOnlyCollection<RenderMaterialProxy> materialProxies,
     IProgress<CardProgress> onOperationProgressed,
-    Transform? referencePointTransform
+    DB.Transform? referencePointTransform
   )
   {
     var document = _converterSettings.Current.Document;
@@ -451,7 +451,7 @@ public sealed class RevitFamilyBaker : IDisposable
     Document doc,
     InstanceProxy instanceProxy,
     FamilySymbol symbol,
-    Transform? referencePointTransform
+    DB.Transform? referencePointTransform
   )
   {
     var isMirrored = _familyTransformUtils.GetMirrorState(instanceProxy.transform).X;
@@ -505,7 +505,7 @@ public sealed class RevitFamilyBaker : IDisposable
   private FamilyInstance? PlaceFamilyInstance(
     Document document,
     InstanceProxy instanceProxy,
-    Transform? referencePointTransform
+    DB.Transform? referencePointTransform
   )
   {
     var definitionId = instanceProxy.definitionId;
