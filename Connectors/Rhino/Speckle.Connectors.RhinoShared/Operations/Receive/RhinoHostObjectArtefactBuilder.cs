@@ -229,6 +229,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           bundle,
           rels,
           baseLayerIndex,
+          baseLayerName,
           layerCache,
           materialByObject,
           materialByGeometry,
@@ -501,6 +502,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     int baseLayerIndex,
+    string baseLayerName,
     Dictionary<string, int> layerCache,
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
@@ -514,7 +516,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var docUnits = _converterSettings.Current.SpeckleUnits;
 
     // definitions (incl. nested blocks): a DEFINITION node owns its geometry directly and may contain nested placements.
-    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, session);
+    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, baseLayerName, session);
 
     // placements: one instance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
     foreach (var edge in rels.DisplayInstanceEdges)
@@ -640,6 +642,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactRelations rels,
     Dictionary<int, Guid> materialByGeometry,
     string docUnits,
+    string baseLayerName,
     ArtefactSessionLog session
   )
   {
@@ -737,7 +740,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         session.Increment("definitionsEmpty");
         return -1;
       }
-      var defName = RhinoUtils.CleanBlockDefinitionName($"{defNode.Name ?? "Definition"}-(def-{defNodeK})");
+      // The baseLayerName suffix scopes the generated name to this model card, so DeepClean can purge exactly the
+      // definitions the previous receive of THIS card created and leave other cards' and user-authored blocks alone
+      // [ENG-9115]. Same convention as the group names in BakeGroups.
+      var defName = RhinoUtils.CleanBlockDefinitionName(
+        $"{defNode.Name ?? "Definition"}-(def-{defNodeK}) ({baseLayerName})"
+      );
       int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
       if (defIndex < 0)
       {
@@ -1046,6 +1054,22 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         if (group is { Name: not null } && group.Name.Contains(baseLayerName))
         {
           doc.Groups.Delete(i);
+        }
+      }
+
+      // then this model's generated block definitions — they carry the same baseLayerName suffix (BuildDefinitions).
+      // Without this every receive added a fresh "…-(def-K)" set and the block table grew without bound [ENG-9115].
+      // Match on the CLEANED suffix: BuildDefinitions runs the whole name through CleanBlockDefinitionName, which
+      // rewrites / and \, so a project or model name containing either would not match the raw baseLayerName.
+      // deleteReferences: true because the placements are still in the doc at this point (their layers are purged
+      // just below); with false, Delete refuses while any reference is alive and the definition would survive.
+      var definitionSuffix = RhinoUtils.CleanBlockDefinitionName(baseLayerName);
+      for (int i = doc.InstanceDefinitions.Count - 1; i >= 0; i--)
+      {
+        var definition = doc.InstanceDefinitions[i];
+        if (definition is { IsDeleted: false, Name: not null } && definition.Name.Contains(definitionSuffix))
+        {
+          doc.InstanceDefinitions.Delete(i, true, true);
         }
       }
 
