@@ -131,7 +131,7 @@ graph LR
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-A placement points at an INSTANCE (transform) that references a DEFINITION; the definition owns its geometry and can nest another block placement. Members get no top-level edges (ENG-8782).
+A placement points at an INSTANCE (transform) that references a DEFINITION; the definition owns its geometry and can nest another block placement. Members get no top-level **render** edges (ENG-8782), but keep a carrier object row — ordinary `IN_COLLECTION` for their layer, plus an `@speckle.geometry_k` / `@speckle.instance_k` eav stamp joining it back to the K the definition reaches them by (ENG-9110, mirroring SketchUp's ENG-8851).
 
 **Groups overlap layers** — `IN_COLLECTION` · `IN_GROUP`
 
@@ -508,7 +508,8 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 **Known gaps.**
 - **Civil3D topology is send-only** — SUBELEMENT/IN_SYSTEM/CONNECTS_TO survive in the graph but aren't rebuilt as native Civil relationships on receive.
 - **TSD SUBELEMENT is dead code** (elements always empty); **TSD results don't object-join** (location-keyed).
-- The member-layer gap (definition members carry no layer) is still open — a proposed geometry-sourced `ON_LAYER` edge would close it.
+- **Member layers are Rhino + SketchUp only.** Both carry a definition member's layer/tag on a carrier object row joined back to its geometry by an `@speckle.geometry_k` / `@speckle.instance_k` eav stamp (SketchUp ENG-8851, Rhino ENG-9110). AutoCAD blocks have the identical gap and pin only the resolved member _colour_ (ENG-8825).
+- **Carriers depend on an unenforced invariant.** A carrier object row has no render edge, so any consumer walking objects must skip render-less ones or a member bakes twice and lands in the scene explorer. Every current reader does; nothing checks it.
 
 ---
 

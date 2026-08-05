@@ -146,7 +146,7 @@ graph LR
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-Members have **no `DISPLAY` and no `IN_COLLECTION`** — deliberate suppression, otherwise they'd draw untransformed at the origin (ENG-8782). A placement's transform composes onto the definition's geometry at receive. `DEFINES_INSTANCE` (node → node) handles a block nested inside another block.
+Members have **no `DISPLAY` / `DISPLAY_INSTANCE`** — deliberate suppression, otherwise they'd draw untransformed at the origin (ENG-8782). A placement's transform composes onto the definition's geometry at receive. `DEFINES_INSTANCE` (node → node) handles a block nested inside another block. A member does keep its ordinary object row and `IN_COLLECTION`; see [member layers](#member-layers--a-carrier-row-and-a-stamp).
 
 ## Groups — a second, overlapping axis
 
@@ -210,11 +210,37 @@ Rooms are _objects_, not nodes — so `IN_ROOM` and `BOUNDS` point at an object 
 
 ---
 
-## The member-layer gap
+## Member layers — a carrier row and a stamp
 
-A definition member reaches the bundle _only_ as a **geometry** K, via `DEFINES`. It has no `DISPLAY` edge — so there is no path from its geometry K back to its object K — and no `IN_COLLECTION`, so it carries no layer at all.
+A definition member is _reachable from its definition_ only as a **geometry** K (`DEFINES`) or, if it is itself a nested placement, as an **INSTANCE node** K (`DEFINES_INSTANCE`). It has no `DISPLAY` edge, so `ObjectByGeometry()` — built from `DISPLAY` alone — cannot invert either one. That was the gap: whatever the member's object row held, nothing could find it.
 
-`IN_COLLECTION` can't reach it: that rel is _object_-sourced, and the member is only addressable as geometry. Adding it would also wrongly place the member in the scene tree (a phantom node). The shape that fits is a proposed **`ON_LAYER` · geometry → node** — the geometry-sourced sibling of `ON_LEVEL`. It would say only "this geometry's host layer is X" without asserting scene-tree membership, letting a receiver set the member's layer + `ByLayer` colour by inheritance. The limit: it fixes layer-shaped attributes only; per-member _properties_ still need member-object identity carried through `DEFINES`.
+The fix needs no new relation. The member keeps a **carrier object row** with the same object-sourced `IN_COLLECTION` every top-level object emits, and an **eav stamp** supplies the missing direction back to it — `@speckle.geometry_k` (or `@speckle.instance_k` for a nested member). SketchUp did this first for tags (ENG-8851); Rhino reuses the same keys (ENG-9110).
+
+```mermaid
+graph LR
+  R([obj·0 · placement]):::obj
+  INST{{node·2 · INSTANCE}}:::nd
+  DEF{{node·3 · DEFINITION}}:::nd
+  GA[geo·0 · member mesh]:::geo
+  M([obj·1 · member carrier]):::obj
+  LA{{node·0 · CONTAINER Layer A}}:::nd
+  LB{{node·1 · CONTAINER Layer B}}:::nd
+  R -->|DISPLAY_INSTANCE| INST
+  INST -.->|def_ref| DEF
+  DEF -->|DEFINES| GA
+  R -->|IN_COLLECTION| LA
+  M -->|IN_COLLECTION| LB
+  M -.->|"eav @speckle.geometry_k"| GA
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
+  classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
+```
+
+The placement sits on Layer A; the member drawn through it belongs to Layer B. Receive walks `DEFINES` to `geo·0`, the stamp back to `obj·1`, then that carrier's ordinary `IN_COLLECTION` — no special-case projection anywhere.
+
+**The invariant this rests on:** a carrier has no render edge, so every consumer that walks objects must skip render-less ones. Both C# receive paths already do (the Rhino native builder gates on `DISPLAY`/`SOLID`/`DISPLAY_INSTANCE`; `ObjectsArtifactReader` drops an object whose geometry build returns null). Break that and members bake twice — and show up in the scene explorer.
+
+Two wrinkles worth knowing. A Rhino member owns **several** geometry Ks (a lossless 3dm solid _and_ its display mesh, chosen between per member), so the stamp is a comma-joined list where SketchUp writes a bare integer — and eav coerces a numeric-looking single value, so a one-K stamp reads back as a `double`. Any reader accepts both. And because the carrier is a real object row, member **properties** are now reachable by the same route — the piece that used to be listed as a separate gap.
 
 ---
 

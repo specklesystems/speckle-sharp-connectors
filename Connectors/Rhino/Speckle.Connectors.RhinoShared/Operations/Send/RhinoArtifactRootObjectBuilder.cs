@@ -6,6 +6,7 @@ using Rhino.DocObjects;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.HostApp;
@@ -50,7 +51,9 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
 ///   display meshes which link via the <c>DISPLAY</c> rel (for the viewer).</item>
 ///   <item><b>Layers are the default scene view.</b> The Rhino layer tree becomes <c>COLLECTION</c> nodes
 ///   (nested via <c>ParentLayerId</c>) with an <c>IN_COLLECTION</c> rel per object, and the default scene view
-///   projects on <c>IN_COLLECTION</c> — so the viewer explorer reproduces the layer hierarchy.</item>
+///   projects on <c>IN_COLLECTION</c> — so the viewer explorer reproduces the layer hierarchy. Block-definition
+///   members carry the same edge (that is how their layer survives, ENG-9110) and are kept out of the tree by
+///   having no render edge at all, plus a <see cref="DefinitionMemberStamps"/> join back from their geometry.</item>
 /// </list>
 /// <para><b>Threading.</b> Two phases. Phase 1 (<see cref="CollectOnMain"/>) runs on the Rhino UI thread —
 /// RhinoCommon (convert, unpack, layer/attribute reads) is main-thread-affine — and produces a pure-Speckle
@@ -198,6 +201,12 @@ public class RhinoArtifactRootObjectBuilder(
     var collectedObjects = new List<CollectedObject>(atomicObjects.Count);
     var results = new List<SendConversionResult>(atomicObjects.Count);
 
+    // An object whose material source is MaterialFromLayer gets NO object-level material proxy (the unpacker skips it);
+    // the material rides the proxy its LAYER stage builds, which lists the layer id — and a layer id resolves to no
+    // geometry in phase 2, so the inherited material was dropped entirely. Record object → the id of the layer whose
+    // material it inherits so phase 2 can land HAS_MATERIAL on the object's own display geometry [ENG-9108].
+    var layerMaterialInheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+
     int count = 0;
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
@@ -209,6 +218,15 @@ public class RhinoArtifactRootObjectBuilder(
       {
         int layerIndex = rhinoObject.Attributes.LayerIndex;
         CollectLayerChain(doc, layerIndex, layers, usedLayers);
+
+        if (
+          rhinoObject.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromLayer
+          && layerIndex >= 0
+          && LayerHasRenderMaterial(doc.Layers[layerIndex])
+        )
+        {
+          layerMaterialInheritors[applicationId] = doc.Layers[layerIndex].Id.ToString();
+        }
 
         CollectedObject collected = CollectObject(
           rhinoObject,
@@ -259,9 +277,16 @@ public class RhinoArtifactRootObjectBuilder(
       instanceDefinitionProxies,
       groups,
       cameraViews,
+      layerMaterialInheritors,
       results
     );
   }
+
+  // True when the layer itself carries a render material. Mirrors the condition the material unpacker's layer stage
+  // uses to build a proxy for that layer, so every object recorded against it in <c>layerMaterialInheritors</c> is
+  // guaranteed to resolve to a MATERIAL node in phase 2. RhinoCommon-bound → phase 1 only [ENG-9108].
+  private static bool LayerHasRenderMaterial(RhinoLayer layer) =>
+    layer.RenderMaterial is not null || layer.RenderMaterialIndex != -1;
 
   // Rhino groups → plain snapshot records. An object's GetGroupList carries ALL its groups (nesting in Rhino is
   // implicit via overlapping membership — there is no group parent chain), so each entry becomes one IN_GROUP edge.
@@ -558,15 +583,15 @@ public class RhinoArtifactRootObjectBuilder(
   )
   {
     // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
-    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE) and NO scene-tree membership (IN_COLLECTION).
-    // Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE) — that is what drew it untransformed at the
+    // model origin [ENG-8782]. It DOES keep the ordinary object-sourced IN_COLLECTION below, which is how its layer
+    // travels; a DefinitionMemberStamps stamp joins its geometry/instance K back to this object row so receive can
+    // find it again [ENG-9110]. Render-less objects are skipped by every consumer that walks objects, so carrying
+    // the membership costs nothing in the scene tree.
     bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
 
     int objK = pipeline.InternObject(co.ApplicationId);
-    if (!isDefinitionMember)
-    {
-      pipeline.InCollection(objK, collK, 0);
-    }
+    pipeline.InCollection(objK, collK, 0);
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
@@ -579,9 +604,19 @@ public class RhinoArtifactRootObjectBuilder(
       int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
       int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
       instanceKByObjectId[co.ApplicationId] = instK;
-      if (!isDefinitionMember)
+      if (isDefinitionMember)
       {
-        pipeline.DisplayInstance(objK, instK, 0); // a nested-block member places only via DEFINES_INSTANCE
+        // A nested-block member places only via DEFINES_INSTANCE, so its INSTANCE node K is the only handle its
+        // definition has on it — stamp it so receive can join back to this object row for the member's layer.
+        pipeline.AddProperties(
+          co.ApplicationId,
+          DefinitionMemberStamps.NoProperties,
+          DefinitionMemberStamps.InstanceStamp(instK)
+        );
+      }
+      else
+      {
+        pipeline.DisplayInstance(objK, instK, 0);
       }
       return null;
     }
@@ -668,6 +703,19 @@ public class RhinoArtifactRootObjectBuilder(
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
 
+    // Stamp the member's geometry K(s) onto its object row — the join receive needs to get from a definition's
+    // DEFINES geometry back to the object holding the member's layer. ALL of them, not just the first: receive
+    // picks the authoritative 3dm solid OR its display mesh(es) per member (see GroupDefinesByMember), and
+    // whichever it picks has to resolve [ENG-9110].
+    if (isDefinitionMember)
+    {
+      pipeline.AddProperties(
+        co.ApplicationId,
+        DefinitionMemberStamps.NoProperties,
+        DefinitionMemberStamps.GeometryStamp(gKs)
+      );
+    }
+
     // Every display fragment was dropped and neither a standalone SOLID nor a member solid landed (gKs would
     // carry the member solid) → nothing renderable made the bundle; report it instead of standing on the
     // Collect-phase SUCCESS. An object with no display geometry at all is NOT a drop.
@@ -711,6 +759,18 @@ public class RhinoArtifactRootObjectBuilder(
 
     // 2) render materials → HAS_MATERIAL (geometry → material node). Rhino material proxies list OBJECT ids,
     // so resolve each object to its display-mesh geometry K(s).
+    // Layer-sourced proxies list a LAYER id instead, which owns no geometry — invert the object → layer map so those
+    // land on the display geometry of every object inheriting that layer's material (MaterialFromLayer) [ENG-9108].
+    var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerMaterialInheritors)
+    {
+      if (!inheritorsByLayerId.TryGetValue(kv.Value, out var inheritors))
+      {
+        inheritorsByLayerId[kv.Value] = inheritors = new List<string>();
+      }
+      inheritors.Add(kv.Key);
+    }
+
     foreach (var materialProxy in model.Materials)
     {
       var value = materialProxy.value;
@@ -731,6 +791,21 @@ public class RhinoArtifactRootObjectBuilder(
           foreach (var gK in gKs)
           {
             pipeline.HasMaterial(gK, matK);
+          }
+        }
+        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        {
+          // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
+          // draws with it. An inheritor with no geometry (a block instance) is skipped — nothing to attach to.
+          foreach (var inheritorId in inheritors)
+          {
+            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            {
+              foreach (var gK in inheritorGKs)
+              {
+                pipeline.HasMaterial(gK, matK);
+              }
+            }
           }
         }
       }
@@ -874,6 +949,8 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
     IReadOnlyList<CameraView> CameraViews,
+    // object id → the id of the layer whose render material it inherits (MaterialFromLayer only) [ENG-9108]
+    IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     IReadOnlyList<SendConversionResult> Results
   );
 }
