@@ -10,6 +10,7 @@ using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
+using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
@@ -29,10 +30,11 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Revit document as native
 /// <see cref="DirectShape"/>s — talking only to the neutral dense-int graph + raw Revit API, skipping the v1
 /// <c>RootObjectUnpacker</c> / traversal / per-type converter dispatch. SGEO meshes are tessellated straight into
-/// DirectShape geometry (mirroring <c>MeshConverterToHost</c>), materials are created directly from MATERIAL nodes,
-/// and instances are placed per <c>DISPLAY_INSTANCE</c> edge via the <see cref="DirectShapeLibrary"/>. The
-/// receive-side twin of the send-side <c>RevitArtifactRootObjectBuilder</c> — except when
-/// <c>ReceiveInstancesAsFamilies</c> is on (see remarks).
+/// DirectShape geometry (mirroring <c>MeshConverterToHost</c>); non-mesh SGEO primitives (points, curves, regions,
+/// …) decode to a Speckle geometry object and convert via the shared Revit ToHost geometry converter. Materials are
+/// created directly from MATERIAL nodes, and instances are placed per <c>DISPLAY_INSTANCE</c> edge via the
+/// <see cref="DirectShapeLibrary"/>. The receive-side twin of the send-side <c>RevitArtifactRootObjectBuilder</c> —
+/// except when <c>ReceiveInstancesAsFamilies</c> is on (see remarks).
 /// </summary>
 /// <remarks>
 /// <para><b>Grouping.</b> Revit has no layers; each baked element is stamped with its model marker in the Comments
@@ -58,6 +60,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly IArtifactReceiver _artifactReceiver;
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly RevitGroupBaker _groupBaker;
+  private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
+
+  // Set by DecodeGeometry when the non-mesh SGEO fallback fails; surfaced by callers as the ERROR reason for an
+  // empty geometry result instead of the generic "did not convert to any native geometry" message.
+  private string? _lastDecodeFailure;
 
   public RevitHostObjectArtefactBuilder(
     IConverterSettingsStore<RevitConversionSettings> converterSettings,
@@ -70,7 +77,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ILogger<RevitHostObjectArtefactBuilder> logger,
     IArtifactReceiver artifactReceiver,
     IHostObjectBuilder hostObjectBuilder,
-    RevitGroupBaker groupBaker
+    RevitGroupBaker groupBaker,
+    ITypedConverter<Base, List<GeometryObject>> geometryConverter
   )
   {
     _converterSettings = converterSettings;
@@ -84,6 +92,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _artifactReceiver = artifactReceiver;
     _hostObjectBuilder = hostObjectBuilder;
     _groupBaker = groupBaker;
+    _geometryConverter = geometryConverter;
   }
 
   public async Task<HostObjectBuilderResult> Build(
@@ -286,6 +295,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var sw = Stopwatch.StartNew();
       try
       {
+        _lastDecodeFailure = null;
         var geometry = new List<GeometryObject>();
         foreach (var edge in displayEdges.OrderBy(e => e.Ord))
         {
@@ -294,23 +304,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         }
         if (geometry.Count == 0)
         {
-          session.RecordObject(
-            appId,
-            srcType,
-            Status.ERROR,
-            "did not convert to any native geometry",
-            sw.ElapsedMilliseconds
-          );
-          conversionResults.Add(
-            new(
-              Status.ERROR,
-              source,
-              null,
-              null,
-              new ConversionException("Object did not convert to any native geometry"),
-              srcType
-            )
-          );
+          var reason = _lastDecodeFailure ?? "object did not convert to any native geometry";
+          session.RecordObject(appId, srcType, Status.ERROR, reason, sw.ElapsedMilliseconds);
+          conversionResults.Add(new(Status.ERROR, source, null, null, new ConversionException(reason), srcType));
           continue;
         }
 
@@ -375,6 +371,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       session.Increment("definitionsSeen");
 
       var geometry = new List<GeometryObject>();
+      _lastDecodeFailure = null;
 
       // direct geometry members (DEFINES → geometry blobs).
       if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
@@ -385,6 +382,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           geometry.AddRange(DecodeGeometry(bundle, geomK, matId ?? ElementId.InvalidElementId));
         }
       }
+      // captured now — a recursive BuildDefinition call below resets _lastDecodeFailure for the child definition.
+      var directGeometryFailure = _lastDecodeFailure;
 
       // nested block/family members (DEFINES_INSTANCE → INSTANCE node): build the child definition first
       // (depth-first) and add a geometry-instance reference to it with the nested placement's own transform.
@@ -416,6 +415,14 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       if (geometry.Count == 0)
       {
         session.Increment("definitionsEmpty");
+        if (directGeometryFailure is not null)
+        {
+          _logger.LogWarning(
+            "Definition {DefNodeK} built with no geometry: {Reason}",
+            defNodeK,
+            directGeometryFailure
+          );
+        }
         return null;
       }
 
@@ -495,19 +502,42 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
-  // Decodes one SGEO mesh geometry index → Revit GeometryObjects (TessellatedShapeBuilder), material baked per face.
-  // Revit receives meshes only (no raw 3dm); non-SGEO / undecodable blobs yield nothing.
+  // Decodes one SGEO geometry index → Revit GeometryObjects. Meshes take the fast hand-rolled path
+  // (TessellatedShapeBuilder, material baked per face). Points, curves, regions and other non-mesh primitives decode
+  // to a Speckle geometry object and convert via the shared Revit ToHost geometry converter (mirrors
+  // Rhino/AutoCAD's SGEO fallback — see RhinoHostObjectArtefactBuilder.DecodeGeometryIndex). An unsupported
+  // primitive degrades to nothing (with a recorded reason, see _lastDecodeFailure) rather than aborting the receive.
   private List<GeometryObject> DecodeGeometry(ArtefactBundle bundle, int geomK, ElementId materialId)
   {
-    if (
-      !bundle.Geometries.TryGetValue(geomK, out var g)
-      || !g.IsSgeo
-      || !SgeoDecoder.TryDecodeMesh(g.Content, out var sm)
-    )
+    if (!bundle.Geometries.TryGetValue(geomK, out var g) || !g.IsSgeo)
     {
       return new List<GeometryObject>();
     }
-    return BuildMesh(sm, materialId);
+    if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    {
+      return BuildMesh(sm, materialId);
+    }
+
+    Base? decoded = null;
+    try
+    {
+      decoded = SgeoDecoder.Decode(g.Content);
+      return _geometryConverter.Convert(decoded);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+      _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
+      _logger.LogWarning(
+        ex,
+        "Skipped SGEO geometry {GeomK} ({Bytes} bytes) at {Stage}: {Error}",
+        geomK,
+        g.Content.Length,
+        stage,
+        ex.Message
+      );
+      return new List<GeometryObject>();
+    }
   }
 
   // Flat SGEO mesh (verts/faces, Speckle count-prefixed) → Revit GeometryObjects. Mirrors MeshConverterToHost: scale
