@@ -198,6 +198,12 @@ public class RhinoArtifactRootObjectBuilder(
     var collectedObjects = new List<CollectedObject>(atomicObjects.Count);
     var results = new List<SendConversionResult>(atomicObjects.Count);
 
+    // An object whose material source is MaterialFromLayer gets NO object-level material proxy (the unpacker skips it);
+    // the material rides the proxy its LAYER stage builds, which lists the layer id — and a layer id resolves to no
+    // geometry in phase 2, so the inherited material was dropped entirely. Record object → the id of the layer whose
+    // material it inherits so phase 2 can land HAS_MATERIAL on the object's own display geometry [ENG-9108].
+    var layerMaterialInheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+
     int count = 0;
     foreach (RhinoObject rhinoObject in atomicObjects)
     {
@@ -209,6 +215,15 @@ public class RhinoArtifactRootObjectBuilder(
       {
         int layerIndex = rhinoObject.Attributes.LayerIndex;
         CollectLayerChain(doc, layerIndex, layers, usedLayers);
+
+        if (
+          rhinoObject.Attributes.MaterialSource == ObjectMaterialSource.MaterialFromLayer
+          && layerIndex >= 0
+          && LayerHasRenderMaterial(doc.Layers[layerIndex])
+        )
+        {
+          layerMaterialInheritors[applicationId] = doc.Layers[layerIndex].Id.ToString();
+        }
 
         CollectedObject collected = CollectObject(
           rhinoObject,
@@ -259,9 +274,16 @@ public class RhinoArtifactRootObjectBuilder(
       instanceDefinitionProxies,
       groups,
       cameraViews,
+      layerMaterialInheritors,
       results
     );
   }
+
+  // True when the layer itself carries a render material. Mirrors the condition the material unpacker's layer stage
+  // uses to build a proxy for that layer, so every object recorded against it in <c>layerMaterialInheritors</c> is
+  // guaranteed to resolve to a MATERIAL node in phase 2. RhinoCommon-bound → phase 1 only [ENG-9108].
+  private static bool LayerHasRenderMaterial(RhinoLayer layer) =>
+    layer.RenderMaterial is not null || layer.RenderMaterialIndex != -1;
 
   // Rhino groups → plain snapshot records. An object's GetGroupList carries ALL its groups (nesting in Rhino is
   // implicit via overlapping membership — there is no group parent chain), so each entry becomes one IN_GROUP edge.
@@ -711,6 +733,18 @@ public class RhinoArtifactRootObjectBuilder(
 
     // 2) render materials → HAS_MATERIAL (geometry → material node). Rhino material proxies list OBJECT ids,
     // so resolve each object to its display-mesh geometry K(s).
+    // Layer-sourced proxies list a LAYER id instead, which owns no geometry — invert the object → layer map so those
+    // land on the display geometry of every object inheriting that layer's material (MaterialFromLayer) [ENG-9108].
+    var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerMaterialInheritors)
+    {
+      if (!inheritorsByLayerId.TryGetValue(kv.Value, out var inheritors))
+      {
+        inheritorsByLayerId[kv.Value] = inheritors = new List<string>();
+      }
+      inheritors.Add(kv.Key);
+    }
+
     foreach (var materialProxy in model.Materials)
     {
       var value = materialProxy.value;
@@ -731,6 +765,21 @@ public class RhinoArtifactRootObjectBuilder(
           foreach (var gK in gKs)
           {
             pipeline.HasMaterial(gK, matK);
+          }
+        }
+        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        {
+          // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
+          // draws with it. An inheritor with no geometry (a block instance) is skipped — nothing to attach to.
+          foreach (var inheritorId in inheritors)
+          {
+            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            {
+              foreach (var gK in inheritorGKs)
+              {
+                pipeline.HasMaterial(gK, matK);
+              }
+            }
           }
         }
       }
@@ -874,6 +923,8 @@ public class RhinoArtifactRootObjectBuilder(
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
     IReadOnlyList<CameraView> CameraViews,
+    // object id → the id of the layer whose render material it inherits (MaterialFromLayer only) [ENG-9108]
+    IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     IReadOnlyList<SendConversionResult> Results
   );
 }
