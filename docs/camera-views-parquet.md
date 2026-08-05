@@ -4,11 +4,12 @@
 > implemented, the **canonical format spec** lives in the bundle-spec repo:
 > `speckle-bundle-spec/spec/bundle-spec.sql` (`camera_views` table). Keep this doc in sync with that one.
 >
-> Status: **IMPLEMENTED (send + viewer consume), 2026-07.** Decisions: forward is primary (target optional),
-> `fov` is vertical degrees, Revit **linked-model views are included**, server Saved Views are **out of scope**.
-> Branches: bundle-spec `camera-views-purpose-file`, SDK + connectors + sketchup `camera-views-artifact`,
-> server-internal `oguzhan/camera-views-viewer`. Producers live: Rhino, Revit (host + linked), SketchUp.
-> Native receive-side baking (recreating host named views from `bundle.CameraViews`) is the open follow-up.
+> Status: **IMPLEMENTED (send + viewer consume + Revit native receive), 2026-08.** Decisions: forward is primary
+> (target optional), `fov` is vertical degrees, Revit **linked-model views are included**, server Saved Views are
+> **out of scope**. Branches: bundle-spec `camera-views-purpose-file`, SDK + connectors + sketchup
+> `camera-views-artifact`, server-internal `oguzhan/camera-views-viewer`. Producers live: Rhino, Revit (host +
+> linked), SketchUp. Revit native receive-side baking is done (position/direction/up/projection; no FOV/lens/crop —
+> Revit's `View3D` has no setter for those). Rhino receive-side baking remains an open follow-up.
 
 ## What it is (and isn't)
 
@@ -117,9 +118,12 @@ Upload is filename-glob driven and count-agnostic — **no upload/manifest chang
   `setOrthoCameraOn()`/`setPerspectiveCameraOn()` call driven by `is_ortho`.
 - **frontend-3 / non-tree consumers** (Power BI visual, dashboards): read the typed `getCameraViews()` helper
   directly, like `scene_views` pivots do.
-- **SDK receive:** `ArtefactBundle.cs` gets a `CameraView` record + optional `TryReadTableAsync` read;
-  connector bakers (`RhinoViewBaker`, `RevitViewBaker`) can then restore lens/projection instead of
-  hardcoding 50 mm perspective.
+- **SDK receive:** `ArtefactBundle.CameraViews` is read by `RevitHostObjectArtefactBuilder`, which scales +
+  reference-point-converts each row's eye/forward/up and hands them to `RevitViewBaker.BakeArtefactView` to create
+  a perspective or orthographic `View3D`. Re-receive purges the model's previously-baked views first
+  (`RevitViewBaker.PurgeArtefactViews`, same Comments-marker convention as the DirectShape bake). Not restored:
+  `fov`/`lens_mm`/`ortho_height`/`aspect`/`near`/`far`/`target` — `View3D` has no setter for FOV/lens, only a crop
+  box, which needs a target distance the bundle doesn't carry. Rhino receive-side baking remains an open follow-up.
 
 ## Resolved decisions (2026-07)
 

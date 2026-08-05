@@ -67,6 +67,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly IArtifactReceiver _artifactReceiver;
   private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly RevitGroupBaker _groupBaker;
+  private readonly RevitViewBaker _viewBaker;
   private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
 
   // Set by DecodeGeometry when the non-mesh SGEO fallback fails; surfaced by callers as the ERROR reason for an
@@ -85,6 +86,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     IArtifactReceiver artifactReceiver,
     IHostObjectBuilder hostObjectBuilder,
     RevitGroupBaker groupBaker,
+    RevitViewBaker viewBaker,
     ITypedConverter<Base, List<GeometryObject>> geometryConverter
   )
   {
@@ -99,6 +101,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _artifactReceiver = artifactReceiver;
     _hostObjectBuilder = hostObjectBuilder;
     _groupBaker = groupBaker;
+    _viewBaker = viewBaker;
     _geometryConverter = geometryConverter;
   }
 
@@ -151,6 +154,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     session.SetStat("geometryBlobs", bundle.Geometries.Count);
     session.SetStat("definitions", bundle.Nodes.Values.Count(n => n.Kind == NodeKind.Definition));
     session.SetStat("instanceNodes", bundle.Nodes.Values.Count(n => n.Kind == NodeKind.Instance));
+    session.SetStat("cameraViews", bundle.CameraViews.Count);
 
     var doc = _converterSettings.Current.Document;
     var rels = bundle.Relations;
@@ -248,6 +252,16 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             session,
             cancellationToken
           );
+        }
+      }
+
+      // 4 — named camera viewpoints (envelope.camera_views.parquet) → View3D per row.
+      if (bundle.CameraViews.Count > 0)
+      {
+        onOperationProgressed.Report(new("Converting camera views", null));
+        using (session.Phase("Views"))
+        {
+          BakeCameraViews(bundle, marker, bakedObjectIds, conversionResults, session);
         }
       }
 
@@ -515,6 +529,64 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
         conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
+      }
+    }
+  }
+
+  // ── camera views ──────────────────────────────────────────────────────────────────────────────────────
+  // One View3D per envelope.camera_views.parquet row. A bad camera reports a per-row error (mirrors BakeAtomic)
+  // without affecting the rest of the receive.
+  private void BakeCameraViews(
+    ArtefactBundle bundle,
+    string marker,
+    List<string> bakedObjectIds,
+    HashSet<ReceiveConversionResult> conversionResults,
+    ArtefactSessionLog session
+  )
+  {
+    foreach (var cameraView in bundle.CameraViews)
+    {
+      var appId = $"camera-view-{cameraView.View.ToString(CultureInfo.InvariantCulture)}";
+      var source = Source(appId);
+      var sw = Stopwatch.StartNew();
+      try
+      {
+        var name = cameraView.Name?.Trim();
+        if (name is not { Length: > 0 })
+        {
+          throw new ConversionException("Camera view has no name");
+        }
+
+        var forward = new XYZ(cameraView.ForwardX, cameraView.ForwardY, cameraView.ForwardZ);
+        var up = new XYZ(cameraView.UpX, cameraView.UpY, cameraView.UpZ);
+        if (forward.IsZeroLength() || up.IsZeroLength())
+        {
+          throw new ConversionException("Camera view has a zero-length forward or up direction");
+        }
+
+        var units = cameraView.Units is { Length: > 0 } u ? u : bundle.Units;
+        var fTypeId = ResolveForge(units);
+        var eye = _referencePointConverter.ConvertToInternalCoordinates(
+          new XYZ(
+            _scalingService.ScaleToNative(cameraView.PosX, fTypeId),
+            _scalingService.ScaleToNative(cameraView.PosY, fTypeId),
+            _scalingService.ScaleToNative(cameraView.PosZ, fTypeId)
+          ),
+          true
+        );
+        forward = _referencePointConverter.ConvertToInternalCoordinates(forward, false).Normalize();
+        up = _referencePointConverter.ConvertToInternalCoordinates(up, false).Normalize();
+
+        var uniqueId = _viewBaker.BakeArtefactView(name, cameraView.IsOrtho, eye, forward, up, marker);
+
+        bakedObjectIds.Add(uniqueId);
+        conversionResults.Add(new(Status.SUCCESS, source, uniqueId, "View3D", null, "Camera View"));
+        session.RecordObject(appId, "Camera View", Status.SUCCESS, null, sw.ElapsedMilliseconds);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        session.RecordObject(appId, "Camera View", Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
+        conversionResults.Add(new(Status.ERROR, source, null, null, ex, "Camera View"));
       }
     }
   }
@@ -948,6 +1020,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // A previous receive of this model may have gone through the family-baking fallback (setting was on) and left a
     // pinned top-level Group of real families — not tracked by the Comments marker below, so purge it here too.
     _groupBaker.PurgeGroups(marker);
+    // Same marker convention, but View3D isn't a DirectShape, so it's not covered by the collector loop below either.
+    _viewBaker.PurgeArtefactViews(marker);
     var toDelete = new List<ElementId>();
     using (var collector = new FilteredElementCollector(doc))
     {
