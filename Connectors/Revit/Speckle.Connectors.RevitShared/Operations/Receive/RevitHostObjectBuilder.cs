@@ -80,6 +80,14 @@ public sealed class RevitHostObjectBuilder(
       referencePointTransformFromRootObject = ReferencePointHelper.GetTransformFromRootObject(transformValue);
     }
 
+    // ENG-9099: computed once so BakeObjects (via the settings push below) and BakeInstancesAsFamilies (which runs
+    // OUTSIDE that push, after it's disposed — see step 5/"Bakes instances as families" below) apply the SAME
+    // effective reference-point transform to their respective outermost placements.
+    var effectiveReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
+      converterSettings.Current.ReferencePointTransform,
+      referencePointTransformFromRootObject
+    );
+
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
     onOperationProgressed.Report(new("Converting", null));
@@ -127,10 +135,7 @@ public sealed class RevitHostObjectBuilder(
         converterSettings.Push(currentSettings =>
           currentSettings with
           {
-            ReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
-              currentSettings.ReferencePointTransform,
-              referencePointTransformFromRootObject
-            ),
+            ReferencePointTransform = effectiveReferencePointTransform,
           }
         )
       )
@@ -176,7 +181,8 @@ public sealed class RevitHostObjectBuilder(
         conversionResults,
         speckleObjectLookup,
         materialProxies,
-        onOperationProgressed
+        onOperationProgressed,
+        effectiveReferencePointTransform
       );
     }
 
@@ -210,7 +216,8 @@ public sealed class RevitHostObjectBuilder(
     ) currentResults,
     Dictionary<string, TraversalContext> speckleObjectLookup,
     IReadOnlyCollection<RenderMaterialProxy> materialProxies,
-    IProgress<CardProgress> onOperationProgressed
+    IProgress<CardProgress> onOperationProgressed,
+    Autodesk.Revit.DB.Transform? referencePointTransform
   )
   {
     using var _ = activityFactory.Start("Creating families");
@@ -220,7 +227,8 @@ public sealed class RevitHostObjectBuilder(
       instanceComponents,
       speckleObjectLookup,
       materialProxies,
-      onOperationProgressed
+      onOperationProgressed,
+      referencePointTransform
     );
 
     // Merge results

@@ -44,8 +44,15 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// needs <c>IInstanceComponent</c>s and a <c>TraversalContext</c> lookup built from a <c>Base</c> graph, so it
 /// can't consume bundle data directly. When the setting is on, this builder instead reconstructs a <c>Base</c> graph
 /// (<see cref="IArtifactReceiver.Reconstruct"/>) and delegates the whole receive to the v1
-/// <see cref="RevitHostObjectBuilder"/>, which already honours it — slower than the direct bake, but the only way to
-/// get real families across all Revit versions.</para>
+/// <see cref="RevitHostObjectBuilder"/> — slower than the direct bake, but the only way to get real families across
+/// all Revit versions.</para>
+/// <para><b>Known limitation (tracked separately, "Revit: Make family receive artifact-native"):</b> the
+/// reconstruction bridge above resolves each object's placement via a last-wins <c>objectK → instanceNodeK</c> map,
+/// not the full edge list, so an object that places <i>several</i> instances (e.g. a Railing → many balusters) only
+/// keeps the last one — the rest are silently dropped from the reconstructed graph, not merely mis-transformed.
+/// Fixing this properly means reworking the bridge (and a matching last-wins lookup in
+/// <see cref="RevitHostObjectBuilder"/> itself) to synthesize a unique id per placement — out of scope here; the
+/// planned fix is to remove this bridge entirely in favour of bundle-native family baking.</para>
 /// </remarks>
 public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
@@ -148,11 +155,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var doc = _converterSettings.Current.Document;
     var rels = bundle.Relations;
 
-    // ENG-8808: undo/redo the sender's reference-point re-basing. The send pipeline baked its main-model
-    // reference-point transform into geometry and recorded it in the bundle; compose it with the receiver's own
-    // reference-point setting (Source = no local transform → apply the sender's as-is, restoring the source
-    // model's internal coordinates) and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every
-    // vertex. Mirrors v1 RevitHostObjectBuilder's composition. No recorded transform + no local setting = no-op.
+    // ENG-8808 / ENG-9099: undo/redo the sender's reference-point re-basing (translation + rotation, e.g. Shared
+    // Coordinates' true-north angle). The send pipeline baked its main-model reference-point transform into
+    // geometry and recorded it in the bundle; compose it with the receiver's own reference-point setting
+    // (Source = no local transform → apply the sender's as-is, restoring the source model's internal coordinates)
+    // and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every atomic vertex, and
+    // BuildInstanceTransform re-bases every instance placement. Mirrors v1 RevitHostObjectBuilder's composition.
+    // No recorded transform + no local setting = no-op.
     var sourceReferencePoint = ReadSourceReferencePointTransform(bundle);
     using var referencePointScope = _converterSettings.Push(s =>
       s with
@@ -300,7 +309,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         foreach (var edge in displayEdges.OrderBy(e => e.Ord))
         {
           materialIdByGeometry.TryGetValue(edge.Dst, out var matId);
-          geometry.AddRange(DecodeGeometry(bundle, edge.Dst, matId ?? ElementId.InvalidElementId));
+          geometry.AddRange(
+            DecodeGeometry(bundle, edge.Dst, matId ?? ElementId.InvalidElementId, applyReferencePoint: true)
+          );
         }
         if (geometry.Count == 0)
         {
@@ -373,13 +384,17 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var geometry = new List<GeometryObject>();
       _lastDecodeFailure = null;
 
-      // direct geometry members (DEFINES → geometry blobs).
+      // direct geometry members (DEFINES → geometry blobs). Definition/local-space vertices — no reference-point
+      // re-basing here; it's applied once, to the outer instance placement, in the top-level BakeInstances loop
+      // below [ENG-9099].
       if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
       {
         foreach (var geomK in geomKs)
         {
           materialIdByGeometry.TryGetValue(geomK, out var matId);
-          geometry.AddRange(DecodeGeometry(bundle, geomK, matId ?? ElementId.InvalidElementId));
+          geometry.AddRange(
+            DecodeGeometry(bundle, geomK, matId ?? ElementId.InvalidElementId, applyReferencePoint: false)
+          );
         }
       }
       // captured now — a recursive BuildDefinition call below resets _lastDecodeFailure for the child definition.
@@ -387,6 +402,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
       // nested block/family members (DEFINES_INSTANCE → INSTANCE node): build the child definition first
       // (depth-first) and add a geometry-instance reference to it with the nested placement's own transform.
+      // Still local/definition space (relative to the parent definition, not world space) — no reference-point
+      // correction here either; only the outermost placement crosses into world/document space.
       if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
       {
         foreach (var instNodeK in nestedInstNodeKs)
@@ -403,7 +420,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
           var nestedTransform = BuildInstanceTransform(
             nestedInst.Transform,
-            nestedInst.Units is { Length: > 0 } u ? u : docUnits
+            nestedInst.Units is { Length: > 0 } u ? u : docUnits,
+            applyReferencePoint: false
           );
           geometry.AddRange(DirectShape.CreateGeometryInstance(doc, childDefKey, nestedTransform));
           session.Increment("nestedInstancesPlaced");
@@ -477,7 +495,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
       try
       {
-        var transform = BuildInstanceTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : docUnits);
+        var transform = BuildInstanceTransform(
+          instNode.Transform,
+          instNode.Units is { Length: > 0 } u ? u : docUnits,
+          applyReferencePoint: true
+        );
         var geometry = DirectShape.CreateGeometryInstance(doc, defKey, transform);
 
         var ds = DirectShape.CreateElement(doc, ResolveCategory(doc, props, validCategories, categoryCache));
@@ -503,7 +525,19 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // to a Speckle geometry object and convert via the shared Revit ToHost geometry converter (mirrors
   // Rhino/AutoCAD's SGEO fallback — see RhinoHostObjectArtefactBuilder.DecodeGeometryIndex). An unsupported
   // primitive degrades to nothing (with a recorded reason, see _lastDecodeFailure) rather than aborting the receive.
-  private List<GeometryObject> DecodeGeometry(ArtefactBundle bundle, int geomK, ElementId materialId)
+  //
+  // applyReferencePoint distinguishes WORLD-space vertices (atomic DISPLAY geometry — true, needs re-basing) from
+  // LOCAL/definition-space vertices (an instance/family's own shape — false); see FormatReferencePointTransform on
+  // the send side and BuildInstanceTransform below [ENG-9099]. The mesh path takes this explicitly (ToInternalPoints);
+  // the shared ToHost geometry converter used for the non-mesh fallback has no such parameter and always reads the
+  // AMBIENT reference-point transform, so it's suppressed via a temporary settings push when applyReferencePoint is
+  // false, to keep both paths consistent — otherwise a non-mesh definition shape would get double-corrected.
+  private List<GeometryObject> DecodeGeometry(
+    ArtefactBundle bundle,
+    int geomK,
+    ElementId materialId,
+    bool applyReferencePoint
+  )
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g) || !g.IsSgeo)
     {
@@ -511,13 +545,18 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
     {
-      return BuildMesh(sm, materialId);
+      return BuildMesh(sm, materialId, applyReferencePoint);
     }
 
     Base? decoded = null;
     try
     {
       decoded = SgeoDecoder.Decode(g.Content);
+      if (applyReferencePoint)
+      {
+        return _geometryConverter.Convert(decoded);
+      }
+      using var referencePointSuppression = _converterSettings.Push(s => s with { ReferencePointTransform = null });
       return _geometryConverter.Convert(decoded);
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -538,7 +577,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // Flat SGEO mesh (verts/faces, Speckle count-prefixed) → Revit GeometryObjects. Mirrors MeshConverterToHost: scale
   // to internal units + apply the reference-point transform, fan/triangulate, salvage fallback.
-  private List<GeometryObject> BuildMesh(SgeoMesh sm, ElementId materialId)
+  private List<GeometryObject> BuildMesh(SgeoMesh sm, ElementId materialId, bool applyReferencePoint)
   {
     using var tsb = new TessellatedShapeBuilder();
     tsb.Fallback = TessellatedShapeBuilderFallback.Salvage;
@@ -546,7 +585,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     tsb.GraphicsStyleId = ElementId.InvalidElementId;
     tsb.OpenConnectedFaceSet(false);
 
-    var verts = ToInternalPoints(sm.Vertices, sm.Units);
+    var verts = ToInternalPoints(sm.Vertices, sm.Units, applyReferencePoint);
     var f = sm.Faces;
     int p = 0;
     while (p < f.Length)
@@ -595,8 +634,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return tsb.GetBuildResult().GetGeometricalObjects().ToList();
   }
 
-  // SGEO flat verts (double[] xyz) → Revit internal-unit XYZ[], reference-point transform applied (no-op when unset).
-  private XYZ[] ToInternalPoints(double[] verts, string units)
+  // SGEO flat verts (double[] xyz) → Revit internal-unit XYZ[]. Reference-point transform applied only for
+  // world-space (atomic) vertices — see DecodeGeometry's applyReferencePoint doc.
+  private XYZ[] ToInternalPoints(double[] verts, string units, bool applyReferencePoint)
   {
     var fTypeId = ResolveForge(units);
     var points = new XYZ[verts.Length / 3];
@@ -605,7 +645,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var x = _scalingService.ScaleToNative(verts[i], fTypeId);
       var y = _scalingService.ScaleToNative(verts[i + 1], fTypeId);
       var z = _scalingService.ScaleToNative(verts[i + 2], fTypeId);
-      points[k++] = _referencePointConverter.ConvertToInternalCoordinates(new XYZ(x, y, z), true);
+      points[k++] = applyReferencePoint
+        ? _referencePointConverter.ConvertToInternalCoordinates(new XYZ(x, y, z), true)
+        : new XYZ(x, y, z);
     }
     return points;
   }
@@ -789,10 +831,12 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return resolved;
   }
 
-  // ENG-8947: rebuild the sender's reference-point transform from the bundle meta offset (translation kinds only).
-  // The offset is in the bundle's display units; scale to internal feet so it composes with the receive setting and
-  // applies through ConvertToInternalCoordinates. Null (internal origin / fallback / Shared Coordinates) → no source
-  // re-basing.
+  // ENG-8947 / ENG-9099: rebuild the sender's reference-point transform from the bundle meta offset. Two formats
+  // share the one field: a 3-value "x,y,z" CSV (projectBasePoint / surveyPoint — translation only, no rotation to
+  // lose) or a 16-value row-major CSV (sharedCoordinates — full rotation + translation, same layout ParseMatrix
+  // already uses for InstanceProxy transforms). Both are in the bundle's display units; scale to internal feet so
+  // the result composes with the receive setting and applies through ConvertToInternalCoordinates. Null (internal
+  // origin / fallback) → no source re-basing.
   private Transform? ReadSourceReferencePointTransform(ArtefactBundle bundle)
   {
     if (bundle.ReferencePointOffset is not { Length: > 0 } offsetCsv)
@@ -800,6 +844,30 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       return null;
     }
     var parts = offsetCsv.Split(',');
+    var fTypeId = ResolveForge(bundle.Units);
+
+    if (parts.Length == 16)
+    {
+      var d = new double[16];
+      for (int i = 0; i < 16; i++)
+      {
+        if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out d[i]))
+        {
+          return null;
+        }
+      }
+      var full = Transform.Identity;
+      full.BasisX = new XYZ(d[0], d[4], d[8]);
+      full.BasisY = new XYZ(d[1], d[5], d[9]);
+      full.BasisZ = new XYZ(d[2], d[6], d[10]);
+      full.Origin = new XYZ(
+        _scalingService.ScaleToNative(d[3], fTypeId),
+        _scalingService.ScaleToNative(d[7], fTypeId),
+        _scalingService.ScaleToNative(d[11], fTypeId)
+      );
+      return full;
+    }
+
     if (parts.Length != 3)
     {
       return null;
@@ -812,7 +880,6 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         return null;
       }
     }
-    var fTypeId = ResolveForge(bundle.Units);
     // Identity + Origin (not Transform.CreateTranslation) to match ReferencePointHelper.GetTransformFromRootObject and
     // keep the analyzer's disposable-ownership tracking happy — the result is pushed into converter settings.
     var t = Transform.Identity;
@@ -826,9 +893,16 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // ── transforms ────────────────────────────────────────────────────────────────────────────────────────
   // Instance transform CSV (row-major 16) → Revit Transform: basis columns carry rotation/scale (unscaled), only the
-  // translation column is converted to internal units. Note: when a reference point is set, instance placement is
-  // approximate (the definition geometry already carries it); the common no-reference-point case is exact.
-  private Transform BuildInstanceTransform(string? csv, string units)
+  // translation column is converted to internal units.
+  //
+  // applyReferencePoint [ENG-9099]: the sender bakes (reference point)⁻¹ into every instance's placement transform
+  // (definition geometry itself stays in local/family space, see DecodeGeometry). To land back in the receiver's
+  // internal coordinates, the CURRENT effective reference-point transform (receiver setting ∘ sender's recorded
+  // transform, pushed onto _converterSettings before this runs — see BakeAll) must be composed onto the OUTERMOST
+  // placement only: newTransform.OfPoint(p) = referencePoint.OfPoint(rawTransform.OfPoint(p)), i.e.
+  // referencePoint.Multiply(rawTransform). Nested placements inside a definition (BuildDefinition's
+  // DEFINES_INSTANCE loop) stay purely local/relative and must NOT get this correction — pass false there.
+  private Transform BuildInstanceTransform(string? csv, string units, bool applyReferencePoint)
   {
     var d = ParseMatrix(csv);
     double w = Math.Abs(d[15]) < 1e-12 ? 1.0 : d[15];
@@ -841,6 +915,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       _scalingService.ScaleToNative(d[7] / w, units),
       _scalingService.ScaleToNative(d[11] / w, units)
     );
+
+    if (applyReferencePoint && _converterSettings.Current.ReferencePointTransform is { } referencePoint)
+    {
+      return referencePoint.Multiply(t);
+    }
     return t;
   }
 
