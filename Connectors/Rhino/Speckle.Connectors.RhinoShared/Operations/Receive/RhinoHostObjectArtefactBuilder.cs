@@ -179,16 +179,16 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
 
           var name = ObjectName(bundle, objK);
+          bundle.Properties.TryGetValue(objK, out var objProps);
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
             if (geom is RG.Hatch hatch)
             {
               // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
-              bundle.Properties.TryGetValue(objK, out var hatchProps);
-              RhinoHatchStyler.Apply(doc, hatch, hatchProps, _converterSettings.Current.SpeckleUnits);
+              RhinoHatchStyler.Apply(doc, hatch, objProps, _converterSettings.Current.SpeckleUnits);
             }
-            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name));
+            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name, objProps));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           if (rels.GroupsByObject.ContainsKey(objK))
@@ -420,7 +420,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, Guid> materialByObject,
     Dictionary<string, int> colorByObject,
     string appId,
-    string? name
+    string? name,
+    Dictionary<string, object?>? properties
   )
   {
     var atts = new ObjectAttributes { LayerIndex = layerIndex };
@@ -428,6 +429,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       atts.Name = name;
     }
+    // source properties (Rhino user text / user dictionaries, Revit + IFC parameters) → user strings [ENG-9111]
+    RhinoArtefactUserStrings.Apply(atts, properties);
     if (materialByObject.TryGetValue(appId, out Guid materialGuid))
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
@@ -505,6 +508,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         atts.Name = instName;
       }
+      // the placement's own properties → user strings, same as an atomic object [ENG-9111]
+      bundle.Properties.TryGetValue(objK, out var instProps);
+      RhinoArtefactUserStrings.Apply(atts, instProps);
       if (materialByObject.TryGetValue(appId, out Guid materialGuid))
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
