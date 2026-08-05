@@ -237,6 +237,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
 
+    // 6 - named camera viewpoints (envelope.camera_views) → Rhino named views, replacing same-named ones [ENG-9112].
+    if (bundle.CameraViews.Count > 0)
+    {
+      using (session.Phase("Views"))
+      {
+        RhinoArtefactViewBaker.BakeViews(
+          doc,
+          bundle.CameraViews,
+          _converterSettings.Current.SpeckleUnits,
+          session,
+          _logger
+        );
+      }
+    }
+
     doc.Views.Redraw();
     return new HostObjectBuilderResult(bakedObjectIds, conversionResults);
   }
