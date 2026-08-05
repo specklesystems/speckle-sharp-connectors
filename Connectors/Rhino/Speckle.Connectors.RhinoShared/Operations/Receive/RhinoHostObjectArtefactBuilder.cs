@@ -179,23 +179,35 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
 
           var name = ObjectName(bundle, objK);
+          bundle.Properties.TryGetValue(objK, out var objProps);
           var ids = new List<Guid>();
           foreach (var geom in geometries)
           {
             if (geom is RG.Hatch hatch)
             {
               // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
-              bundle.Properties.TryGetValue(objK, out var hatchProps);
-              RhinoHatchStyler.Apply(doc, hatch, hatchProps, _converterSettings.Current.SpeckleUnits);
+              RhinoHatchStyler.Apply(doc, hatch, objProps, _converterSettings.Current.SpeckleUnits);
             }
-            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name));
+            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name, objProps));
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           if (rels.GroupsByObject.ContainsKey(objK))
           {
             bakedGuidsByObjK[objK] = ids;
           }
-          conversionResults.Add(new(Status.SUCCESS, source, ids[0].ToString(), "Speckle.Object"));
+
+          // One source object that decoded into several Rhino geometries (a Revit wall's display meshes, say) becomes
+          // one native group, so the element stays selectable and movable as a unit [ENG-9113]. The report entry then
+          // points at the GROUP id — the selection binding resolves a group id as well as an object id — while
+          // bakedObjectIds keeps only the members: a group id in there would make whole-model highlighting walk every
+          // object of every group (the same reason the v1 builder kept group ids out of it).
+          string reportId = ids[0].ToString();
+          if (ids.Count > 1 && GroupElement(doc, ids, name, ObjectType(bundle, objK), appId, baseLayerName) is Guid gid)
+          {
+            reportId = gid.ToString();
+            session.Increment("elementGroupsBaked");
+          }
+          conversionResults.Add(new(Status.SUCCESS, source, reportId, "Speckle.Object"));
           session.RecordObject(appId, "Speckle.Object", Status.SUCCESS, null, sw.ElapsedMilliseconds);
         }
         catch (Exception ex) when (!ex.IsFatal())
@@ -217,9 +229,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           bundle,
           rels,
           baseLayerIndex,
+          baseLayerName,
           layerCache,
           materialByObject,
           materialByGeometry,
+          colorByObject,
           bakedObjectIds,
           bakedGuidsByObjK,
           conversionResults,
@@ -234,6 +248,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       using (session.Phase("Groups"))
       {
         BakeGroups(doc, bundle, rels, bakedGuidsByObjK, baseLayerName, session);
+      }
+    }
+
+    // 6 - named camera viewpoints (envelope.camera_views) → Rhino named views, replacing same-named ones [ENG-9112].
+    if (bundle.CameraViews.Count > 0)
+    {
+      using (session.Phase("Views"))
+      {
+        RhinoArtefactViewBaker.BakeViews(
+          doc,
+          bundle.CameraViews,
+          _converterSettings.Current.SpeckleUnits,
+          session,
+          _logger
+        );
       }
     }
 
@@ -420,7 +449,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, Guid> materialByObject,
     Dictionary<string, int> colorByObject,
     string appId,
-    string? name
+    string? name,
+    Dictionary<string, object?>? properties
   )
   {
     var atts = new ObjectAttributes { LayerIndex = layerIndex };
@@ -428,6 +458,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       atts.Name = name;
     }
+    // source properties (Rhino user text / user dictionaries, Revit + IFC parameters) → user strings [ENG-9111]
+    RhinoArtefactUserStrings.Apply(atts, properties);
     if (materialByObject.TryGetValue(appId, out Guid materialGuid))
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
@@ -441,6 +473,27 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return doc.Objects.Add(geom, atts);
   }
 
+  // Binds the several Rhino geometries decoded from ONE source object into a native group [ENG-9113]. The name carries
+  // the baseLayerName suffix — like BakeGroups and the v1 fallback grouping — so DeepClean purges it on re-receive.
+  // The source appId is in the name to keep it unique between two same-named elements. Returns null when Rhino
+  // refused the group, so the caller falls back to reporting the first member.
+  private static Guid? GroupElement(
+    RhinoDoc doc,
+    List<Guid> ids,
+    string? name,
+    string? type,
+    string appId,
+    string baseLayerName
+  )
+  {
+    var label =
+      name is { Length: > 0 } n ? n
+      : type is { Length: > 0 } t ? t
+      : "Element";
+    int index = doc.Groups.Add($"{label} - {appId} ({baseLayerName})", ids);
+    return index < 0 ? null : doc.Groups.FindIndex(index)?.Id;
+  }
+
   // ── instances ─────────────────────────────────────────────────────────────────────────────────────────
 #pragma warning disable CA1506
   private void BakeInstances(
@@ -449,9 +502,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     int baseLayerIndex,
+    string baseLayerName,
     Dictionary<string, int> layerCache,
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
+    Dictionary<string, int> colorByObject,
     HashSet<string> bakedObjectIds,
     Dictionary<int, List<Guid>> bakedGuidsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
@@ -461,7 +516,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var docUnits = _converterSettings.Current.SpeckleUnits;
 
     // definitions (incl. nested blocks): a DEFINITION node owns its geometry directly and may contain nested placements.
-    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, session);
+    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, baseLayerName, session);
 
     // placements: one instance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
     foreach (var edge in rels.DisplayInstanceEdges)
@@ -505,10 +560,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         atts.Name = instName;
       }
+      // the placement's own properties → user strings, same as an atomic object [ENG-9111]
+      bundle.Properties.TryGetValue(objK, out var instProps);
+      RhinoArtefactUserStrings.Apply(atts, instProps);
       if (materialByObject.TryGetValue(appId, out Guid materialGuid))
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+      // the placement's own colour (object-sourced HAS_COLOR), so a per-instance override survives [ENG-9114]
+      if (colorByObject.TryGetValue(appId, out int instArgb))
+      {
+        atts.ObjectColor = Color.FromArgb(instArgb);
+        atts.ColorSource = ObjectColorSource.ColorFromObject;
       }
 
       var id = doc.Objects.AddInstanceObject(defIndex, transform, atts);
@@ -578,6 +642,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactRelations rels,
     Dictionary<int, Guid> materialByGeometry,
     string docUnits,
+    string baseLayerName,
     ArtefactSessionLog session
   )
   {
@@ -675,7 +740,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         session.Increment("definitionsEmpty");
         return -1;
       }
-      var defName = RhinoUtils.CleanBlockDefinitionName($"{defNode.Name ?? "Definition"}-(def-{defNodeK})");
+      // The baseLayerName suffix scopes the generated name to this model card, so DeepClean can purge exactly the
+      // definitions the previous receive of THIS card created and leave other cards' and user-authored blocks alone
+      // [ENG-9115]. Same convention as the group names in BakeGroups.
+      var defName = RhinoUtils.CleanBlockDefinitionName(
+        $"{defNode.Name ?? "Definition"}-(def-{defNodeK}) ({baseLayerName})"
+      );
       int defIndex = doc.InstanceDefinitions.Add(defName, "", RG.Point3d.Origin, geometryList, attributeList);
       if (defIndex < 0)
       {
@@ -870,7 +940,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.
   private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
-    var byObject = new Dictionary<string, int>();
+    var byObject = new Dictionary<string, int>(StringComparer.Ordinal);
     foreach (var kv in bundle.Relations.ColorByGeometry)
     {
       if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
@@ -878,6 +948,22 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         continue;
       }
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+
+    // Object-sourced edges (ord=1): a block placement's own colour. A placement owns no geometry, so it never appears
+    // in objByGeom — resolve it straight through the object dictionary [ENG-8822, ENG-9114]. Same shape as the Autocad
+    // artefact builder's MapColors.
+    foreach (var kv in bundle.Relations.ColorByObject)
+    {
+      if (
+        bundle.Nodes.TryGetValue(kv.Value, out var n)
+        && n.Kind == NodeKind.Color
+        && n.Argb is int argb
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = argb;
       }
@@ -931,6 +1017,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ? s
       : bundle.Units;
 
+  // The object's source type ("type" scalar, e.g. the Rhino ObjectType or the Revit category), or null when absent.
+  private static string? ObjectType(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("type", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : null;
+
   // The send side stores "name" as (Attributes.Name || sourceType) alongside the "type" scalar (== sourceType), so an
   // unnamed object has name == type. Returns the real name only when it's present and differs from type; null otherwise
   // (missing, empty, or the sourceType fallback) so unnamed objects stay unnamed on receive.
@@ -959,6 +1054,22 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         if (group is { Name: not null } && group.Name.Contains(baseLayerName))
         {
           doc.Groups.Delete(i);
+        }
+      }
+
+      // then this model's generated block definitions — they carry the same baseLayerName suffix (BuildDefinitions).
+      // Without this every receive added a fresh "…-(def-K)" set and the block table grew without bound [ENG-9115].
+      // Match on the CLEANED suffix: BuildDefinitions runs the whole name through CleanBlockDefinitionName, which
+      // rewrites / and \, so a project or model name containing either would not match the raw baseLayerName.
+      // deleteReferences: true because the placements are still in the doc at this point (their layers are purged
+      // just below); with false, Delete refuses while any reference is alive and the definition would survive.
+      var definitionSuffix = RhinoUtils.CleanBlockDefinitionName(baseLayerName);
+      for (int i = doc.InstanceDefinitions.Count - 1; i >= 0; i--)
+      {
+        var definition = doc.InstanceDefinitions[i];
+        if (definition is { IsDeleted: false, Name: not null } && definition.Name.Contains(definitionSuffix))
+        {
+          doc.InstanceDefinitions.Delete(i, true, true);
         }
       }
 
