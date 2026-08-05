@@ -89,16 +89,19 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ITransactionManager, TransactionManager>();
 
     // Speckle 4.0 artefact receive: download the parquet bundle + reconstruct the Base graph (DataObjects with
-    // displayValue meshes → DirectShapes). Revit can't import 3dm, so PreferSolids = false (meshes only).
+    // displayValue meshes → DirectShapes). PreferSolids = true: reconstruction only runs when receive-as-families is on
+    // (RevitHostObjectArtefactBuilder.Build delegates to the v1 builder), and Revit DOES import 3dm — the rebuilt
+    // RhinoObject.rawEncoding goes through IRawEncodedObjectConverter → DB.ShapeImporter → real solids [ENG-8800].
     serviceCollection.AddScoped<
       Speckle.Sdk.Pipelines.Receive.Artifacts.IArtifactDownloader,
       Speckle.Sdk.Pipelines.Receive.Artifacts.ArtifactDownloader
     >();
-    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: false));
+    serviceCollection.AddSingleton(new Speckle.Objects.Utils.ArtifactReceiveOptions(PreferSolids: true));
     serviceCollection.AddScoped<IArtifactReceiver, ArtifactReceiver>();
-    // Native artefact receive (DirectShape from SGEO meshes, Base-free). Registering this activates the direct-bake
+    // Native artefact receive (DirectShape from raw 3dm solids / SGEO meshes, Base-free). Registering this activates the direct-bake
     // branch in ReceiveOperation;
     serviceCollection.AddScoped<IArtifactHostObjectBuilder, RevitHostObjectArtefactBuilder>();
+    serviceCollection.AddScoped<RevitArtefactSolidImporter>();
     serviceCollection.AddScoped<RevitFamilyBaker>();
     serviceCollection.AddScoped<FamilyGeometryBaker>();
     serviceCollection.AddScoped<RevitGroupBaker>();
