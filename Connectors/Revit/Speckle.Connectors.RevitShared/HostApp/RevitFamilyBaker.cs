@@ -404,7 +404,10 @@ public sealed class RevitFamilyBaker : IDisposable
         t.Start();
 
         var materialManager = new FamilyMaterialManager(_materialBaker, _logger);
-        var usedMaterialNodeKeys = members.Where(m => m.materialNodeKey is not null).Select(m => m.materialNodeKey!.Value).Distinct();
+        var usedMaterialNodeKeys = members
+          .Where(m => m.materialNodeKey is not null)
+          .Select(m => m.materialNodeKey!.Value)
+          .Distinct();
         materialManager.SetupFamilyMaterialsFromArtifact(famDoc, usedMaterialNodeKeys, familyMaterialsByNode);
 
         _familyGeometryBaker.BakeFamilyGeometryFromArtifact(famDoc, members, materialManager);
@@ -449,7 +452,12 @@ public sealed class RevitFamilyBaker : IDisposable
   // reference a symbol living in a different document. Doesn't propagate the child's material params onto the
   // parent (a secondary nicety for swapping a nested block's materials from the parent) — the child still renders
   // with whatever materials it baked internally.
-  private void PlaceNestedInstanceFromArtifact(Document famDoc, string childDefinitionKey, Matrix4x4 transform, string units)
+  private void PlaceNestedInstanceFromArtifact(
+    Document famDoc,
+    string childDefinitionKey,
+    Matrix4x4 transform,
+    string units
+  )
   {
     if (!_bakedFamilyPaths.TryGetValue(childDefinitionKey, out var rfaPath) || !File.Exists(rfaPath))
     {
@@ -630,8 +638,7 @@ public sealed class RevitFamilyBaker : IDisposable
     var isMirrored = _familyTransformUtils.GetMirrorState(transform).X;
     var hasScaleOrSkew = _familyTransformUtils.HasScaleOrSkew(transform);
 
-    var cleanMatrix =
-      (hasScaleOrSkew || isMirrored) ? _familyTransformUtils.RemoveScaleAndSkew(transform) : transform;
+    var cleanMatrix = (hasScaleOrSkew || isMirrored) ? _familyTransformUtils.RemoveScaleAndSkew(transform) : transform;
 
     var revitTransform = _transformConverter.Convert((cleanMatrix, units));
     if (referencePointTransform is not null)

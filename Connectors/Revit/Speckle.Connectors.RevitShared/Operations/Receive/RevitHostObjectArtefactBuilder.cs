@@ -556,11 +556,31 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       if (kv.Value.Kind == NodeKind.Definition)
       {
-        BuildFamilyDefinition(doc, bundle, rels, materialIdByNode, familyMaterialsByNode, kv.Key, symbolByDefNode, defBuilding, session);
+        BuildFamilyDefinition(
+          doc,
+          bundle,
+          rels,
+          materialIdByNode,
+          familyMaterialsByNode,
+          kv.Key,
+          symbolByDefNode,
+          defBuilding,
+          session
+        );
       }
     }
 
-    PlaceFamilyInstances(doc, bundle, rels, symbolByDefNode, marker, bakedObjectIds, conversionResults, session, cancellationToken);
+    PlaceFamilyInstances(
+      doc,
+      bundle,
+      rels,
+      symbolByDefNode,
+      marker,
+      bakedObjectIds,
+      conversionResults,
+      session,
+      cancellationToken
+    );
   }
 
   // One DEFINITION node → one real Revit family, built depth-first (a nested block/family's definition must exist
@@ -624,7 +644,17 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           continue;
         }
         if (
-          BuildFamilyDefinition(doc, bundle, rels, materialIdByNode, familyMaterialsByNode, childDefNodeK, symbolByDefNode, defBuilding, session)
+          BuildFamilyDefinition(
+            doc,
+            bundle,
+            rels,
+            materialIdByNode,
+            familyMaterialsByNode,
+            childDefNodeK,
+            symbolByDefNode,
+            defBuilding,
+            session
+          )
           is null
         )
         {
@@ -810,7 +840,12 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       try
       {
-        var mesh = new SMesh { vertices = sm.Vertices.ToList(), faces = sm.Faces.ToList(), units = sm.Units };
+        var mesh = new SMesh
+        {
+          vertices = sm.Vertices.ToList(),
+          faces = sm.Faces.ToList(),
+          units = sm.Units,
+        };
         return [_freeformMeshConverter.Convert(mesh)];
       }
       catch (Exception ex) when (!ex.IsFatal())
