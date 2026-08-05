@@ -25,6 +25,9 @@ public class BaseToHostGeometryObjectConverter(
         var xyz = pointConverter.Convert(point);
         result.Add(DB.Point.Create(xyz));
         break;
+      case SOG.Pointcloud pointcloud:
+        result.AddRange(ConvertPointcloud(pointcloud));
+        break;
       case ICurve curve:
         var curves = curveConverter.Convert(curve).Cast<DB.GeometryObject>();
         result.AddRange(curves);
@@ -61,5 +64,19 @@ public class BaseToHostGeometryObjectConverter(
     }
 
     return result;
+  }
+
+  // Revit has no way to build an in-memory point cloud (DB.PointCloudInstance is backed by an external point cloud
+  // engine/file, not constructible from raw points) — bake one DB.Point per point instead, reusing the point
+  // converter so units + the project base point are honoured (mirrors CurveConverterToHost's flat-array handling).
+  // Per-point colour is dropped: DB.Point carries no colour of its own.
+  private IEnumerable<DB.GeometryObject> ConvertPointcloud(SOG.Pointcloud pointcloud)
+  {
+    var pts = pointcloud.points;
+    for (int i = 0; i + 2 < pts.Count; i += 3)
+    {
+      var point = new SOG.Point(pts[i], pts[i + 1], pts[i + 2], pointcloud.units);
+      yield return DB.Point.Create(pointConverter.Convert(point));
+    }
   }
 }
