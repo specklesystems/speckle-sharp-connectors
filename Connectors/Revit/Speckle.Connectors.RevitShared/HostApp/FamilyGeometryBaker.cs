@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.DB;
+﻿using System.Globalization;
+using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common.Objects;
 using Speckle.Objects.Other;
@@ -261,6 +262,60 @@ public class FamilyGeometryBaker
       foreach (var item in displayValues)
       {
         BakeGeometry(famDoc, item, subcategory, materialManager, materialMap, placeNestedInstanceAction);
+      }
+    }
+  }
+
+  // ENG-9101: bundle-native counterpart of BakeFamilyGeometry above — bakes already-decoded GeometryObjects (the
+  // caller resolved these from the artifact bundle via the same DecodeGeometry path DirectShape receive uses)
+  // instead of walking a Base/TraversalContext graph. No subcategory grouping (that's cosmetic, tied to the v1
+  // Collection tree, which the bundle's DEFINES members don't carry) — materials still apply via family parameters.
+  public void BakeFamilyGeometryFromArtifact(
+    Document famDoc,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    FamilyMaterialManager materialManager
+  )
+  {
+    foreach (var (geometry, materialNodeKey) in members)
+    {
+      try
+      {
+        if (geometry is Solid solid && !solid.Faces.IsEmpty)
+        {
+          using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+          if (
+            materialNodeKey is int mk
+            && materialManager.FamilyParameters.TryGetValue(mk.ToString(CultureInfo.InvariantCulture), out var famParam)
+          )
+          {
+            Parameter ffeMatParam = freeFormElement.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM);
+            if (ffeMatParam != null && famDoc.FamilyManager.CanElementParameterBeAssociated(ffeMatParam))
+            {
+              famDoc.FamilyManager.AssociateElementParameterToFamilyParameter(ffeMatParam, famParam);
+            }
+          }
+          continue;
+        }
+
+        ElementId categoryId = famDoc.OwnerFamily.FamilyCategory?.Id ?? new ElementId(BuiltInCategory.OST_GenericModel);
+        if (!DirectShape.IsValidCategoryId(categoryId, famDoc))
+        {
+          categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
+        }
+        try
+        {
+          using var ds = DirectShape.CreateElement(famDoc, categoryId);
+          ds.SetShape([geometry]);
+        }
+        catch (Autodesk.Revit.Exceptions.ArgumentException)
+        {
+          using var fallbackDs = DirectShape.CreateElement(famDoc, new ElementId(BuiltInCategory.OST_GenericModel));
+          fallbackDs.SetShape([geometry]);
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+      {
+        _logger.LogWarning(ex, "Revit API error baking artifact geometry into family");
       }
     }
   }

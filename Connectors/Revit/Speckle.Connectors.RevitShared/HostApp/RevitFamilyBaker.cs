@@ -315,6 +315,178 @@ public sealed class RevitFamilyBaker : IDisposable
     return (family, symbol);
   }
 
+  /// <summary>
+  /// Bundle-native counterpart of <see cref="CreateFamilyFromDefinition"/> (ENG-9101): builds/reuses a real Revit
+  /// family straight from already-decoded artifact geometry — no Base graph, no <see cref="TraversalContext"/>.
+  /// </summary>
+  /// <remarks>Deliberately does NOT use <see cref="_cache"/> (a DI singleton, so it outlives one receive): its keys
+  /// are stable source applicationIds in the v1 pipeline, but <paramref name="definitionKey"/> here is a bundle
+  /// position index that can be reassigned to a different definition on the next send. <see cref="FindFamilyByName"/>
+  /// (stable — Revit family identity) is what makes reuse across receives safe; the caller's own per-receive
+  /// dictionary already memoizes within one receive.</remarks>
+  public (Family family, FamilySymbol symbol)? BakeDefinitionFromArtifact(
+    Document document,
+    string definitionKey,
+    string? definitionName,
+    string? categoryString,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    IReadOnlyDictionary<int, RenderMaterial> familyMaterialsByNode,
+    IReadOnlyDictionary<int, ElementId> projectMaterialIdByNode,
+    IReadOnlyList<(string childDefinitionKey, Matrix4x4 transform, string units)> nestedPlacements
+  )
+  {
+    var familyName = GetFamilyName(definitionName, definitionKey);
+
+    var family = FindFamilyByName(document, familyName);
+    bool isNewFamily = family == null;
+    if (family == null)
+    {
+      family = CreateFamilyFromArtifact(
+        document,
+        familyName,
+        definitionKey,
+        categoryString,
+        members,
+        familyMaterialsByNode,
+        nestedPlacements
+      );
+    }
+
+    if (family == null)
+    {
+      _logger.LogWarning("Failed to create family for artifact definition {DefinitionKey}", definitionKey);
+      return null;
+    }
+
+    var symbolId = family.GetFamilySymbolIds().FirstOrDefault();
+    if (symbolId == null || symbolId == ElementId.InvalidElementId)
+    {
+      return null;
+    }
+
+    if (document.GetElement(symbolId) is not FamilySymbol symbol)
+    {
+      return null;
+    }
+
+    if (!symbol.IsActive)
+    {
+      symbol.Activate();
+      document.Regenerate();
+    }
+
+    if (isNewFamily)
+    {
+      FamilyMaterialManager.AssignProjectMaterialsToFamilyFromArtifact(symbol, projectMaterialIdByNode);
+    }
+
+    return (family, symbol);
+  }
+
+  private Family? CreateFamilyFromArtifact(
+    Document document,
+    string familyName,
+    string definitionKey,
+    string? categoryString,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    IReadOnlyDictionary<int, RenderMaterial> familyMaterialsByNode,
+    IReadOnlyList<(string childDefinitionKey, Matrix4x4 transform, string units)> nestedPlacements
+  )
+  {
+    var templatePath = GetFamilyTemplatePath(document);
+    var famDoc = document.Application.NewFamilyDocument(templatePath);
+    var tempPath = Path.Combine(_tempDirectory, $"{familyName}.rfa");
+
+    try
+    {
+      using (var t = new Transaction(famDoc, "Populate Family"))
+      {
+        t.Start();
+
+        var materialManager = new FamilyMaterialManager(_materialBaker, _logger);
+        var usedMaterialNodeKeys = members
+          .Where(m => m.materialNodeKey is not null)
+          .Select(m => m.materialNodeKey!.Value)
+          .Distinct();
+        materialManager.SetupFamilyMaterialsFromArtifact(famDoc, usedMaterialNodeKeys, familyMaterialsByNode);
+
+        _familyGeometryBaker.BakeFamilyGeometryFromArtifact(famDoc, members, materialManager);
+
+        foreach (var (childDefinitionKey, transform, units) in nestedPlacements)
+        {
+          PlaceNestedInstanceFromArtifact(famDoc, childDefinitionKey, transform, units);
+        }
+
+        SetFamilyWorkPlaneBased(famDoc, true);
+        _familyCategoryUtils.SetFamilyCategory(famDoc, categoryString);
+        t.Commit();
+      }
+
+      var saveOptions = new SaveAsOptions { OverwriteExistingFile = true };
+      famDoc.SaveAs(tempPath, saveOptions);
+      famDoc.Close(false);
+
+      _bakedFamilyPaths[definitionKey] = tempPath;
+
+      document.LoadFamily(tempPath, new FamilyLoadOptions(), out var loadedFamily);
+      return loadedFamily;
+    }
+    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+    {
+      _logger.LogError(ex, "Revit API error creating artifact family {FamilyName}", familyName);
+      famDoc.Close(false);
+      SafeDelete(tempPath);
+      throw;
+    }
+    catch (IOException ex)
+    {
+      _logger.LogError(ex, "IO error creating artifact family {FamilyName}", familyName);
+      famDoc.Close(false);
+      SafeDelete(tempPath);
+      throw;
+    }
+  }
+
+  // Bundle-native counterpart of PlaceNestedInstance: the child definition was already baked (depth-first) by the
+  // caller, so we only need its saved .rfa path — loaded a second time here because a family document can't
+  // reference a symbol living in a different document. Doesn't propagate the child's material params onto the
+  // parent (a secondary nicety for swapping a nested block's materials from the parent) — the child still renders
+  // with whatever materials it baked internally.
+  private void PlaceNestedInstanceFromArtifact(
+    Document famDoc,
+    string childDefinitionKey,
+    Matrix4x4 transform,
+    string units
+  )
+  {
+    if (!_bakedFamilyPaths.TryGetValue(childDefinitionKey, out var rfaPath) || !File.Exists(rfaPath))
+    {
+      return;
+    }
+
+    var familyName = Path.GetFileNameWithoutExtension(rfaPath);
+    Family? childFamily = FindFamilyByName(famDoc, familyName) ?? LoadFamilyWrapper(famDoc, rfaPath);
+
+    using var _ = childFamily;
+    if (childFamily == null)
+    {
+      return;
+    }
+
+    var symbolId = childFamily.GetFamilySymbolIds().FirstOrDefault();
+    if (symbolId == null || famDoc.GetElement(symbolId) is not FamilySymbol symbol)
+    {
+      return;
+    }
+
+    if (!symbol.IsActive)
+    {
+      symbol.Activate();
+    }
+
+    CreateAndPlaceFamilyInstance(famDoc, transform, units, symbol, referencePointTransform: null);
+  }
+
   private Family? CreateFamily(
     Document document,
     string familyName,
@@ -452,20 +624,26 @@ public sealed class RevitFamilyBaker : IDisposable
     InstanceProxy instanceProxy,
     FamilySymbol symbol,
     DB.Transform? referencePointTransform
+  ) => CreateAndPlaceFamilyInstance(doc, instanceProxy.transform, instanceProxy.units, symbol, referencePointTransform);
+
+  // Matrix/units core shared by the Base-graph (InstanceProxy) and bundle-native placement call sites.
+  private FamilyInstance? CreateAndPlaceFamilyInstance(
+    Document doc,
+    Matrix4x4 transform,
+    string units,
+    FamilySymbol symbol,
+    DB.Transform? referencePointTransform
   )
   {
-    var isMirrored = _familyTransformUtils.GetMirrorState(instanceProxy.transform).X;
-    var hasScaleOrSkew = _familyTransformUtils.HasScaleOrSkew(instanceProxy.transform);
+    var isMirrored = _familyTransformUtils.GetMirrorState(transform).X;
+    var hasScaleOrSkew = _familyTransformUtils.HasScaleOrSkew(transform);
 
-    var cleanMatrix =
-      (hasScaleOrSkew || isMirrored)
-        ? _familyTransformUtils.RemoveScaleAndSkew(instanceProxy.transform)
-        : instanceProxy.transform;
+    var cleanMatrix = (hasScaleOrSkew || isMirrored) ? _familyTransformUtils.RemoveScaleAndSkew(transform) : transform;
 
-    var revitTransform = _transformConverter.Convert((cleanMatrix, instanceProxy.units));
+    var revitTransform = _transformConverter.Convert((cleanMatrix, units));
     if (referencePointTransform is not null)
     {
-      // instanceProxy.transform is sent in world/shared-coordinate space (same frame as atomic geometry) — compose
+      // the placement transform is sent in world/shared-coordinate space (same frame as atomic geometry) — compose
       // the reference-point transform onto this OUTERMOST placement to land back in the document's internal
       // coordinates, mirroring RevitHostObjectArtefactBuilder.BuildInstanceTransform [ENG-9099].
       revitTransform = referencePointTransform.Multiply(revitTransform);
@@ -496,7 +674,7 @@ public sealed class RevitFamilyBaker : IDisposable
     }
 
     doc.Regenerate();
-    var mirrorState = _familyTransformUtils.GetMirrorState(instanceProxy.transform);
+    var mirrorState = _familyTransformUtils.GetMirrorState(transform);
     _familyTransformUtils.ApplyMirroring(doc, instance.Id, plane, mirrorState);
 
     return instance;
@@ -518,6 +696,15 @@ public sealed class RevitFamilyBaker : IDisposable
     _logger.LogWarning("No family symbol found for definition {DefinitionId}", definitionId);
     return null;
   }
+
+  /// <summary>Places one instance of an already-baked artifact-native family symbol (ENG-9101; no InstanceProxy).</summary>
+  public FamilyInstance? PlaceInstanceFromArtifact(
+    Document document,
+    FamilySymbol symbol,
+    Matrix4x4 transform,
+    string units,
+    DB.Transform? referencePointTransform
+  ) => CreateAndPlaceFamilyInstance(document, transform, units, symbol, referencePointTransform);
 
   private static void SetFamilyWorkPlaneBased(Document famDoc, bool enabled)
   {
@@ -554,12 +741,19 @@ public sealed class RevitFamilyBaker : IDisposable
     return templatePath;
   }
 
-  private static string GetFamilyName(InstanceDefinitionProxy definitionProxy)
+  // useFallbackIdWhenUnnamed: false here, preserving the original v1 behavior verbatim (every unnamed definition
+  // collapses to the literal "Unnamed_Block", a pre-existing limitation left untouched). The bundle-native overload
+  // below defaults to true — it has a cheap, always-unique fallbackId (the bundle definition key) available, so an
+  // unnamed artifact definition doesn't need to share that literal with every other unnamed one in the same bundle.
+  private static string GetFamilyName(InstanceDefinitionProxy definitionProxy) =>
+    GetFamilyName(definitionProxy.name, definitionProxy.id, useFallbackIdWhenUnnamed: false);
+
+  private static string GetFamilyName(string? name, string? fallbackId, bool useFallbackIdWhenUnnamed = true)
   {
-    var baseName = definitionProxy.name;
+    var baseName = name;
     if (string.IsNullOrWhiteSpace(baseName))
     {
-      return "Unnamed_Block";
+      return useFallbackIdWhenUnnamed && fallbackId is { Length: > 0 } id ? $"Unnamed_Block_{id}" : "Unnamed_Block";
     }
 
     char[] buffer = baseName.ToCharArray();
@@ -580,7 +774,7 @@ public sealed class RevitFamilyBaker : IDisposable
     if (safeName.Length > 100)
     {
       // Append a short hash of the definition ID to guarantee uniqueness after truncation
-      var shortId = definitionProxy.id?[..8] ?? Guid.NewGuid().ToString("N")[..8];
+      var shortId = fallbackId?[..8] ?? Guid.NewGuid().ToString("N")[..8];
       return $"{safeName[..90]}_{shortId}";
     }
 

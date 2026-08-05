@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
-using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -15,6 +14,7 @@ using Speckle.Converters.RevitShared;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
+using Speckle.DoubleNumerics;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Common.Exceptions;
@@ -23,36 +23,30 @@ using Speckle.Sdk.Models;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
+using RenderMaterial = Speckle.Objects.Other.RenderMaterial;
+using SMesh = Speckle.Objects.Geometry.Mesh;
 
 namespace Speckle.Connectors.Revit.Operations.Receive;
 
 /// <summary>
-/// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Revit document as native
-/// <see cref="DirectShape"/>s — talking only to the neutral dense-int graph + raw Revit API, skipping the v1
-/// <c>RootObjectUnpacker</c> / traversal / per-type converter dispatch. SGEO meshes are tessellated straight into
-/// DirectShape geometry (mirroring <c>MeshConverterToHost</c>); non-mesh SGEO primitives (points, curves, regions,
-/// …) decode to a Speckle geometry object and convert via the shared Revit ToHost geometry converter. Materials are
-/// created directly from MATERIAL nodes, and instances are placed per <c>DISPLAY_INSTANCE</c> edge via the
-/// <see cref="DirectShapeLibrary"/>. The receive-side twin of the send-side <c>RevitArtifactRootObjectBuilder</c> —
-/// except when <c>ReceiveInstancesAsFamilies</c> is on (see remarks).
+/// Bakes a Speckle 4.0 artefact <see cref="ArtefactBundle"/> <b>directly</b> into the Revit document — talking only
+/// to the neutral dense-int graph + raw Revit API, skipping the v1 <c>RootObjectUnpacker</c> / traversal / per-type
+/// converter dispatch. SGEO meshes are tessellated straight into geometry (mirroring <c>MeshConverterToHost</c>);
+/// non-mesh SGEO primitives (points, curves, regions, …) decode to a Speckle geometry object and convert via the
+/// shared Revit ToHost geometry converter. Materials are created directly from MATERIAL nodes. The receive-side
+/// twin of the send-side <c>RevitArtifactRootObjectBuilder</c>.
 /// </summary>
 /// <remarks>
 /// <para><b>Grouping.</b> Revit has no layers; each baked element is stamped with its model marker in the Comments
 /// parameter so a re-receive can collect-and-delete the prior bake cheaply (a deliberate choice to avoid the slow v1
 /// Revit-Group baking). Element category comes from the object's <c>category</c>/<c>builtInCategory</c> property.</para>
-/// <para><b>ReceiveInstancesAsFamilies.</b> The dense-int graph has no notion of families — <see cref="RevitFamilyBaker"/>
-/// needs <c>IInstanceComponent</c>s and a <c>TraversalContext</c> lookup built from a <c>Base</c> graph, so it
-/// can't consume bundle data directly. When the setting is on, this builder instead reconstructs a <c>Base</c> graph
-/// (<see cref="IArtifactReceiver.Reconstruct"/>) and delegates the whole receive to the v1
-/// <see cref="RevitHostObjectBuilder"/> — slower than the direct bake, but the only way to get real families across
-/// all Revit versions.</para>
-/// <para><b>Known limitation (tracked separately, "Revit: Make family receive artifact-native"):</b> the
-/// reconstruction bridge above resolves each object's placement via a last-wins <c>objectK → instanceNodeK</c> map,
-/// not the full edge list, so an object that places <i>several</i> instances (e.g. a Railing → many balusters) only
-/// keeps the last one — the rest are silently dropped from the reconstructed graph, not merely mis-transformed.
-/// Fixing this properly means reworking the bridge (and a matching last-wins lookup in
-/// <see cref="RevitHostObjectBuilder"/> itself) to synthesize a unique id per placement — out of scope here; the
-/// planned fix is to remove this bridge entirely in favour of bundle-native family baking.</para>
+/// <para><b>ReceiveInstancesAsFamilies (ENG-9101).</b> Atomic objects always bake as <see cref="DirectShape"/>s,
+/// regardless of the setting. Only instance/definition handling branches: off bakes <see cref="DirectShape"/>
+/// instances via the <see cref="DirectShapeLibrary"/> (<see cref="BakeInstances"/>); on bakes real Revit families
+/// via <see cref="RevitFamilyBaker"/> (<see cref="BakeInstancesAsFamilies"/>), reading the same
+/// DEFINES/DEFINES_INSTANCE/DISPLAY_INSTANCE edges and the same <see cref="DecodeGeometry"/>-derived geometry
+/// selection. Neither branch reconstructs a <c>Base</c> graph or delegates to the v1
+/// <see cref="RevitHostObjectBuilder"/>.</para>
 /// </remarks>
 public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 {
@@ -64,11 +58,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly RevitUtils _revitUtils;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<RevitHostObjectArtefactBuilder> _logger;
-  private readonly IArtifactReceiver _artifactReceiver;
-  private readonly IHostObjectBuilder _hostObjectBuilder;
   private readonly RevitGroupBaker _groupBaker;
   private readonly RevitViewBaker _viewBaker;
   private readonly ITypedConverter<Base, List<GeometryObject>> _geometryConverter;
+  private readonly RevitFamilyBaker _familyBaker;
+  private readonly ITypedConverter<SMesh, GeometryObject> _freeformMeshConverter;
 
   // Set by DecodeGeometry when the non-mesh SGEO fallback fails; surfaced by callers as the ERROR reason for an
   // empty geometry result instead of the generic "did not convert to any native geometry" message.
@@ -83,11 +77,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     RevitUtils revitUtils,
     ISdkActivityFactory activityFactory,
     ILogger<RevitHostObjectArtefactBuilder> logger,
-    IArtifactReceiver artifactReceiver,
-    IHostObjectBuilder hostObjectBuilder,
     RevitGroupBaker groupBaker,
     RevitViewBaker viewBaker,
-    ITypedConverter<Base, List<GeometryObject>> geometryConverter
+    ITypedConverter<Base, List<GeometryObject>> geometryConverter,
+    RevitFamilyBaker familyBaker,
+    ITypedConverter<SMesh, GeometryObject> freeformMeshConverter
   )
   {
     _converterSettings = converterSettings;
@@ -98,38 +92,22 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _revitUtils = revitUtils;
     _activityFactory = activityFactory;
     _logger = logger;
-    _artifactReceiver = artifactReceiver;
-    _hostObjectBuilder = hostObjectBuilder;
     _groupBaker = groupBaker;
     _viewBaker = viewBaker;
     _geometryConverter = geometryConverter;
+    _familyBaker = familyBaker;
+    _freeformMeshConverter = freeformMeshConverter;
   }
 
-  public async Task<HostObjectBuilderResult> Build(
+  public Task<HostObjectBuilderResult> Build(
     ArtefactBundle bundle,
     string projectName,
     string modelName,
     IProgress<CardProgress> onOperationProgressed,
     CancellationToken cancellationToken
-  )
-  {
-    if (_converterSettings.Current.ReceiveInstancesAsFamilies)
-    {
-      // No bundle-native family baking yet (see remarks) — reconstruct a Base graph off the main thread (mirrors
-      // ReceiveOperation's own reconstruction branch) and hand the whole receive to the v1 builder.
-      var rootObject = await _threadContext
-        .RunOnWorkerAsync(() => Task.FromResult(_artifactReceiver.Reconstruct(bundle, cancellationToken)))
-        .ConfigureAwait(false);
-      return await _hostObjectBuilder
-        .Build(rootObject, projectName, modelName, onOperationProgressed, cancellationToken)
-        .ConfigureAwait(false);
-    }
-
+  ) =>
     // Revit API is main-thread-affine and mutations require a transaction → everything runs on the main thread.
-    return await _threadContext
-      .RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken))
-      .ConfigureAwait(false);
-  }
+    _threadContext.RunOnMain(() => BakeAll(bundle, projectName, modelName, onOperationProgressed, cancellationToken));
 
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
   private HostObjectBuilderResult BakeAll(
@@ -233,25 +211,43 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         );
       }
 
-      // 3 — instances: build definitions from DEFINES → geometry, place one per DISPLAY_INSTANCE edge.
+      // 3 — instances: build definitions from DEFINES → geometry, place one per DISPLAY_INSTANCE edge. Only this
+      // step branches on ReceiveInstancesAsFamilies — atomic objects above are unaffected by the setting.
       if (rels.DisplayInstanceEdges.Count > 0)
       {
         onOperationProgressed.Report(new("Converting instances", null));
         using (session.Phase("Instances"))
         {
-          BakeInstances(
-            doc,
-            bundle,
-            rels,
-            materialIdByGeometry,
-            validCategories,
-            categoryCache,
-            marker,
-            bakedObjectIds,
-            conversionResults,
-            session,
-            cancellationToken
-          );
+          if (_converterSettings.Current.ReceiveInstancesAsFamilies)
+          {
+            BakeInstancesAsFamilies(
+              doc,
+              bundle,
+              rels,
+              materialIdByNode,
+              marker,
+              bakedObjectIds,
+              conversionResults,
+              session,
+              cancellationToken
+            );
+          }
+          else
+          {
+            BakeInstances(
+              doc,
+              bundle,
+              rels,
+              materialIdByGeometry,
+              validCategories,
+              categoryCache,
+              marker,
+              bakedObjectIds,
+              conversionResults,
+              session,
+              cancellationToken
+            );
+          }
         }
       }
 
@@ -531,6 +527,370 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
       }
     }
+  }
+
+  // ── instances (as families) ──────────────────────────────────────────────────────────────────────────
+  // ENG-9101: bundle-native counterpart of BakeInstances — same DEFINES/DEFINES_INSTANCE/DISPLAY_INSTANCE
+  // traversal and the same DecodeGeometry-derived geometry selection, but bakes real Revit families via
+  // RevitFamilyBaker instead of DirectShapeLibrary geometry instances. No Base graph, no v1 delegation.
+  // Split into BuildFamilyDefinitions + PlaceFamilyInstances (below) to keep each under the complexity budget.
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  private void BakeInstancesAsFamilies(
+    Document doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, ElementId> materialIdByNode,
+    string marker,
+    List<string> bakedObjectIds,
+    HashSet<ReceiveConversionResult> conversionResults,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var familyMaterialsByNode = BuildFamilyMaterialsByNode(bundle);
+    // definitions built depth-first (memoized here) so a parent can nest an already-baked child.
+    var symbolByDefNode = new Dictionary<int, FamilySymbol>();
+    var defBuilding = new HashSet<int>();
+
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind == NodeKind.Definition)
+      {
+        BuildFamilyDefinition(
+          doc,
+          bundle,
+          rels,
+          materialIdByNode,
+          familyMaterialsByNode,
+          kv.Key,
+          symbolByDefNode,
+          defBuilding,
+          session
+        );
+      }
+    }
+
+    PlaceFamilyInstances(
+      doc,
+      bundle,
+      rels,
+      symbolByDefNode,
+      marker,
+      bakedObjectIds,
+      conversionResults,
+      session,
+      cancellationToken
+    );
+  }
+
+  // One DEFINITION node → one real Revit family, built depth-first (a nested block/family's definition must exist
+  // before its parent can place it). Mirrors BakeInstances' local BuildDefinition, extracted to its own method
+  // (rather than a local closure) to keep BakeInstancesAsFamilies' complexity down.
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  private FamilySymbol? BuildFamilyDefinition(
+    Document doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, ElementId> materialIdByNode,
+    Dictionary<int, RenderMaterial> familyMaterialsByNode,
+    int defNodeK,
+    Dictionary<int, FamilySymbol> symbolByDefNode,
+    HashSet<int> defBuilding,
+    ArtefactSessionLog session
+  )
+  {
+    if (symbolByDefNode.TryGetValue(defNodeK, out var already))
+    {
+      return already;
+    }
+    if (!bundle.Nodes.TryGetValue(defNodeK, out var defNode) || defNode.Kind != NodeKind.Definition)
+    {
+      return null;
+    }
+    if (!defBuilding.Add(defNodeK))
+    {
+      return null; // cycle guard — never stack-overflow on a bad bundle
+    }
+    session.Increment("definitionsSeen");
+
+    var docUnits = _converterSettings.Current.SpeckleUnits;
+
+    // direct geometry members (DEFINES → geometry). Definition/local-space — no reference-point re-basing here;
+    // it's applied once, to the outer instance placement, in PlaceFamilyInstances [ENG-9099].
+    var members = new List<(GeometryObject geometry, int? materialNodeKey)>();
+    _lastDecodeFailure = null;
+    if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
+    {
+      foreach (var geomK in geomKs)
+      {
+        int? matNodeK = rels.MaterialByGeometry.TryGetValue(geomK, out var mk) ? mk : null;
+        foreach (var geom in DecodeFamilyGeometry(bundle, geomK))
+        {
+          members.Add((geom, matNodeK));
+        }
+      }
+    }
+    var directGeometryFailure = _lastDecodeFailure;
+
+    // nested block/family members (DEFINES_INSTANCE → INSTANCE node): build the child definition first
+    // (depth-first), then place it as a nested family instance inside this definition's family document.
+    var nestedPlacements = new List<(string childDefinitionKey, Matrix4x4 transform, string units)>();
+    if (rels.DefinesInstanceByDefinition.TryGetValue(defNodeK, out var nestedInstNodeKs))
+    {
+      foreach (var instNodeK in nestedInstNodeKs)
+      {
+        if (!bundle.Nodes.TryGetValue(instNodeK, out var nestedInst) || nestedInst.DefRef is not int childDefNodeK)
+        {
+          continue;
+        }
+        if (
+          BuildFamilyDefinition(
+            doc,
+            bundle,
+            rels,
+            materialIdByNode,
+            familyMaterialsByNode,
+            childDefNodeK,
+            symbolByDefNode,
+            defBuilding,
+            session
+          )
+          is null
+        )
+        {
+          session.Increment("nestedInstancesUnresolved");
+          continue;
+        }
+        nestedPlacements.Add(
+          (
+            DefinitionKey(childDefNodeK),
+            ParseInstanceMatrix(nestedInst.Transform),
+            nestedInst.Units is { Length: > 0 } u ? u : docUnits
+          )
+        );
+        session.Increment("nestedInstancesPlaced");
+      }
+    }
+
+    defBuilding.Remove(defNodeK);
+
+    if (members.Count == 0 && nestedPlacements.Count == 0)
+    {
+      session.Increment("definitionsEmpty");
+      if (directGeometryFailure is not null)
+      {
+        _logger.LogWarning("Definition {DefNodeK} built with no geometry: {Reason}", defNodeK, directGeometryFailure);
+      }
+      return null;
+    }
+
+    var result = _familyBaker.BakeDefinitionFromArtifact(
+      doc,
+      DefinitionKey(defNodeK),
+      defNode.Name,
+      ResolveDefinitionCategory(bundle, rels, defNodeK),
+      members,
+      familyMaterialsByNode,
+      materialIdByNode,
+      nestedPlacements
+    );
+    if (result is null)
+    {
+      return null;
+    }
+    symbolByDefNode[defNodeK] = result.Value.symbol;
+    return result.Value.symbol;
+  }
+
+  // One FamilyInstance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
+  [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
+  private void PlaceFamilyInstances(
+    Document doc,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    Dictionary<int, FamilySymbol> symbolByDefNode,
+    string marker,
+    List<string> bakedObjectIds,
+    HashSet<ReceiveConversionResult> conversionResults,
+    ArtefactSessionLog session,
+    CancellationToken cancellationToken
+  )
+  {
+    var docUnits = _converterSettings.Current.SpeckleUnits;
+    foreach (var edge in rels.DisplayInstanceEdges)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      session.Increment("placementsAttempted");
+      int objK = edge.Src;
+      int instNodeK = edge.Dst;
+      if (
+        !bundle.Nodes.TryGetValue(instNodeK, out var instNode) || !bundle.ObjectAppIds.TryGetValue(objK, out var appId)
+      )
+      {
+        continue;
+      }
+      bundle.Properties.TryGetValue(objK, out var props);
+      var source = Source(appId);
+      var srcType = SrcType(props);
+      var sw = Stopwatch.StartNew();
+      if (instNode.DefRef is not int defNodeK || !symbolByDefNode.TryGetValue(defNodeK, out var symbol))
+      {
+        session.RecordObject(
+          appId,
+          srcType,
+          Status.ERROR,
+          "references a definition with no geometry",
+          sw.ElapsedMilliseconds
+        );
+        conversionResults.Add(
+          new(
+            Status.ERROR,
+            source,
+            null,
+            null,
+            new ConversionException("Instance references a definition with no geometry"),
+            srcType
+          )
+        );
+        continue;
+      }
+
+      try
+      {
+        var transform = ParseInstanceMatrix(instNode.Transform);
+        var units = instNode.Units is { Length: > 0 } u ? u : docUnits;
+        var instance =
+          _familyBaker.PlaceInstanceFromArtifact(
+            doc,
+            symbol,
+            transform,
+            units,
+            _converterSettings.Current.ReferencePointTransform
+          ) ?? throw new ConversionException("Failed to place family instance");
+        StampMarker(instance, marker);
+
+        bakedObjectIds.Add(instance.UniqueId);
+        conversionResults.Add(new(Status.SUCCESS, source, instance.UniqueId, "FamilyInstance", null, srcType));
+        session.RecordObject(appId, srcType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        session.RecordObject(appId, srcType, Status.ERROR, ex.Message, sw.ElapsedMilliseconds);
+        conversionResults.Add(new(Status.ERROR, source, null, null, ex, srcType));
+      }
+    }
+  }
+
+  private static string DefinitionKey(int defNodeK) =>
+    $"artifact-def-{defNodeK.ToString(CultureInfo.InvariantCulture)}";
+
+  // Family-local placeholder materials, one per MATERIAL node — baked into each temp family document during
+  // authoring, then overwritten with the real project material (materialIdByNode) once the family is loaded.
+  private static Dictionary<int, RenderMaterial> BuildFamilyMaterialsByNode(ArtefactBundle bundle)
+  {
+    var map = new Dictionary<int, RenderMaterial>();
+    foreach (var kv in bundle.Nodes)
+    {
+      if (kv.Value.Kind != NodeKind.Material)
+      {
+        continue;
+      }
+      var n = kv.Value;
+      var key = kv.Key.ToString(CultureInfo.InvariantCulture);
+      map[kv.Key] = new RenderMaterial
+      {
+        name = n.Name ?? $"material-{key}",
+        diffuse = n.Argb ?? unchecked((int)0xFFFFFFFF),
+        opacity = n.Opacity ?? 1.0,
+        metalness = n.Metalness ?? 0.0,
+        roughness = n.Roughness ?? 1.0,
+        applicationId = $"mat-{key}",
+      };
+    }
+    return map;
+  }
+
+  // The first object that places this definition determines its Revit category — mirrors ResolveCategory's
+  // prop-reading convention. Kept separate because FamilyCategoryUtils needs the raw builtInCategory string up
+  // front (before the family document exists), not a resolved ElementId.
+  private static string? ResolveDefinitionCategory(ArtefactBundle bundle, ArtefactRelations rels, int defNodeK)
+  {
+    foreach (var edge in rels.DisplayInstanceEdges)
+    {
+      if (!bundle.Nodes.TryGetValue(edge.Dst, out var instNode) || instNode.DefRef != defNodeK)
+      {
+        continue;
+      }
+      bundle.Properties.TryGetValue(edge.Src, out var props);
+      return PropString(props, "builtInCategory") ?? PropString(props, "category");
+    }
+    return null;
+  }
+
+  // Family geometry needs a Solid for FreeFormElement, unlike BakeAtomic/BakeInstances' Mesh-targeted BuildMesh —
+  // reuses the same freeform mesh converter the v1 family pipeline already relies on for that. Always local space
+  // (no applyReferencePoint — a definition's own shape never gets the outer reference-point correction).
+  private List<GeometryObject> DecodeFamilyGeometry(ArtefactBundle bundle, int geomK)
+  {
+    if (!bundle.Geometries.TryGetValue(geomK, out var g) || !g.IsSgeo)
+    {
+      return [];
+    }
+    if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+    {
+      try
+      {
+        var mesh = new SMesh
+        {
+          vertices = sm.Vertices.ToList(),
+          faces = sm.Faces.ToList(),
+          units = sm.Units,
+        };
+        return [_freeformMeshConverter.Convert(mesh)];
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _lastDecodeFailure = $"geom {geomK} (SGEO mesh) freeform convert failed — {ex.GetType().Name}: {ex.Message}";
+        return [];
+      }
+    }
+
+    Base? decoded = null;
+    try
+    {
+      decoded = SgeoDecoder.Decode(g.Content);
+      using var referencePointSuppression = _converterSettings.Push(s => s with { ReferencePointTransform = null });
+      return _geometryConverter.Convert(decoded);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      string stage = decoded is null ? "decode" : $"convert of {decoded.speckle_type}";
+      _lastDecodeFailure = $"geom {geomK} ({g.Type}) {stage} failed — {ex.GetType().Name}: {ex.Message}";
+      return [];
+    }
+  }
+
+  private static Matrix4x4 ParseInstanceMatrix(string? csv)
+  {
+    var d = ParseMatrix(csv);
+    return new Matrix4x4(
+      d[0],
+      d[1],
+      d[2],
+      d[3],
+      d[4],
+      d[5],
+      d[6],
+      d[7],
+      d[8],
+      d[9],
+      d[10],
+      d[11],
+      d[12],
+      d[13],
+      d[14],
+      d[15]
+    );
   }
 
   // ── camera views ──────────────────────────────────────────────────────────────────────────────────────
@@ -1017,34 +1377,41 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private void PreClean(Document doc, string marker)
   {
     DirectShapeLibrary.GetDirectShapeLibrary(doc).Reset();
-    // A previous receive of this model may have gone through the family-baking fallback (setting was on) and left a
-    // pinned top-level Group of real families — not tracked by the Comments marker below, so purge it here too.
+    // A previous receive of this model may predate ENG-9101, when the family setting delegated the whole receive to
+    // the v1 builder and left a pinned top-level Group of real families — not tracked by the Comments marker below.
     _groupBaker.PurgeGroups(marker);
     // Same marker convention, but View3D isn't a DirectShape, so it's not covered by the collector loop below either.
     _viewBaker.PurgeArtefactViews(marker);
     var toDelete = new List<ElementId>();
-    using (var collector = new FilteredElementCollector(doc))
-    {
-      foreach (var element in collector.OfClass(typeof(DirectShape)))
-      {
-        if (
-          element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
-          && string.Equals(c, marker, StringComparison.Ordinal)
-        )
-        {
-          toDelete.Add(element.Id);
-        }
-      }
-    }
+    // DirectShape (BakeAtomic/BakeInstances) and FamilyInstance (BakeInstancesAsFamilies) both stamp the same
+    // Comments marker, so cleaning up both covers whichever setting the prior receive used.
+    CollectMarked(doc, typeof(DirectShape), marker, toDelete);
+    CollectMarked(doc, typeof(FamilyInstance), marker, toDelete);
     if (toDelete.Count > 0)
     {
       doc.Delete(toDelete);
     }
   }
 
+  private static void CollectMarked(Document doc, Type elementClass, string marker, List<ElementId> toDelete)
+  {
+    using var collector = new FilteredElementCollector(doc);
+    foreach (var element in collector.OfClass(elementClass))
+    {
+      if (
+        element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString() is string c
+        && string.Equals(c, marker, StringComparison.Ordinal)
+      )
+      {
+        toDelete.Add(element.Id);
+      }
+    }
+  }
+
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
-  private static void StampMarker(DirectShape ds, string marker) =>
-    ds.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.Set(marker);
+  // Element, not DirectShape, so the same stamp works for FamilyInstances baked by BakeInstancesAsFamilies.
+  private static void StampMarker(Element element, string marker) =>
+    element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.Set(marker);
 
   private void SetNameSafe(DirectShape ds, string? name)
   {
