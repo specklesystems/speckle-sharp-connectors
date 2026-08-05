@@ -417,11 +417,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         session.Increment("definitionsEmpty");
         if (directGeometryFailure is not null)
         {
-          _logger.LogWarning(
-            "Definition {DefNodeK} built with no geometry: {Reason}",
-            defNodeK,
-            directGeometryFailure
-          );
+          _logger.LogWarning("Definition {DefNodeK} built with no geometry: {Reason}", defNodeK, directGeometryFailure);
         }
         return null;
       }
