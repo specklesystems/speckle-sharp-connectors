@@ -8,6 +8,7 @@ using Rhino.Render;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.Rhino.Extensions;
 using Speckle.Connectors.Rhino.HostApp;
@@ -116,6 +117,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var doc = _converterSettings.Current.Document;
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
+    // ObjectByGeometry only covers DISPLAY edges, so it can't reach a block-definition member (a member has no
+    // render edge by design). The member stamps invert that missing direction — geometry / INSTANCE K → the member's
+    // object row — which is what BuildDefinitions needs to recover each member's layer [ENG-9110].
+    var memberIndex = DefinitionMemberStamps.Read(bundle.Properties);
+    session.SetStat("memberStamps", memberIndex.ObjectByGeometry.Count + memberIndex.ObjectByInstance.Count);
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
     // objK → its baked Rhino guids, tracked only for grouped objects (IN_GROUP) so step 5 can rebuild native groups.
@@ -237,6 +243,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           bakedObjectIds,
           bakedGuidsByObjK,
           conversionResults,
+          memberIndex,
           session
         );
       }
@@ -510,13 +517,25 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     HashSet<string> bakedObjectIds,
     Dictionary<int, List<Guid>> bakedGuidsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
+    DefinitionMemberIndex memberIndex,
     ArtefactSessionLog session
   )
   {
     var docUnits = _converterSettings.Current.SpeckleUnits;
 
     // definitions (incl. nested blocks): a DEFINITION node owns its geometry directly and may contain nested placements.
-    var defIndexByNode = BuildDefinitions(doc, bundle, rels, materialByGeometry, docUnits, baseLayerName, session);
+    var defIndexByNode = BuildDefinitions(
+      doc,
+      bundle,
+      rels,
+      materialByGeometry,
+      docUnits,
+      baseLayerName,
+      baseLayerIndex,
+      layerCache,
+      memberIndex,
+      session
+    );
 
     // placements: one instance per DISPLAY_INSTANCE edge (object → INSTANCE node); an object may place several.
     foreach (var edge in rels.DisplayInstanceEdges)
@@ -635,7 +654,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // its geometry directly (DEFINES → geometry blobs) and may also contain nested block placements (DEFINES_INSTANCE →
   // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
   // child definition's Rhino Guid via an InstanceReferenceGeometry member carrying the nested placement's own transform.
-  // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey.
+  // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey,
+  // and each member's own LAYER is recovered through its stamp → object row → IN_COLLECTION [ENG-9110].
   private Dictionary<int, int> BuildDefinitions(
     RhinoDoc doc,
     ArtefactBundle bundle,
@@ -643,6 +663,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, Guid> materialByGeometry,
     string docUnits,
     string baseLayerName,
+    int baseLayerIndex,
+    Dictionary<string, int> layerCache,
+    DefinitionMemberIndex memberIndex,
     ArtefactSessionLog session
   )
   {
@@ -683,13 +706,24 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
             var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
             materialByGeometry.TryGetValue(geomK, out Guid mg);
+            // The member's source layer, via its stamp → member object row → the ordinary IN_COLLECTION projection.
+            // Unstamped (pre-ENG-9110 bundle, or a member whose geometry didn't encode) → the base layer, exactly
+            // what members got before.
+            int memberLayerIndex = ResolveMemberLayer(
+              doc,
+              bundle,
+              memberIndex.ObjectByGeometry,
+              geomK,
+              baseLayerIndex,
+              layerCache
+            );
             foreach (var geom in decoded)
             {
               geometryList.Add(geom);
               // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would
               // corrupt the definition; the doc owns them for the document lifetime.
 #pragma warning disable CA2000
-              var a = new ObjectAttributes();
+              var a = new ObjectAttributes { LayerIndex = memberLayerIndex };
 #pragma warning restore CA2000
               if (mg != Guid.Empty)
               {
@@ -724,8 +758,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             nestedInst.Units is { Length: > 0 } u ? u : docUnits,
             docUnits
           );
+          // a nested-block member owns no geometry K, so its layer is stamped onto its INSTANCE node K instead
 #pragma warning disable CA2000
-          var nestedAtts = new ObjectAttributes();
+          var nestedAtts = new ObjectAttributes
+          {
+            LayerIndex = ResolveMemberLayer(
+              doc,
+              bundle,
+              memberIndex.ObjectByInstance,
+              instNodeK,
+              baseLayerIndex,
+              layerCache
+            ),
+          };
 #pragma warning restore CA2000
           geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
           attributeList.Add(nestedAtts);
@@ -829,6 +874,23 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
     return segments.Count == 0 ? baseLayerIndex : GetOrCreateLayer(doc, segments, baseLayerIndex, layerCache);
   }
+
+  // A block-definition member's layer. The member has its own object row carrying the ordinary object-sourced
+  // IN_COLLECTION, but nothing reaches that row from the definition side — a member has no DISPLAY edge, so
+  // ObjectByGeometry() can't invert it. The DefinitionMemberStamps eav join supplies the missing direction:
+  // geometry K (or nested INSTANCE node K) → member object K → the SAME ResolveLayer every top-level object uses,
+  // so a layer shared by a member and a scene object is created once (shared layerCache). Unstamped → base layer.
+  private static int ResolveMemberLayer(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    IReadOnlyDictionary<int, int> memberObjectByK,
+    int k,
+    int baseLayerIndex,
+    Dictionary<string, int> layerCache
+  ) =>
+    memberObjectByK.TryGetValue(k, out int memberObjK)
+      ? ResolveLayer(doc, bundle, memberObjK, baseLayerIndex, layerCache)
+      : baseLayerIndex;
 
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
   private static int GetOrCreateLayer(
