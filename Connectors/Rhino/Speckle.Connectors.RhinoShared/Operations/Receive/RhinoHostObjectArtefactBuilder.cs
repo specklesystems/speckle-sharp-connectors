@@ -232,6 +232,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           layerCache,
           materialByObject,
           materialByGeometry,
+          colorByObject,
           bakedObjectIds,
           bakedGuidsByObjK,
           conversionResults,
@@ -503,6 +504,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, int> layerCache,
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
+    Dictionary<string, int> colorByObject,
     HashSet<string> bakedObjectIds,
     Dictionary<int, List<Guid>> bakedGuidsByObjK,
     HashSet<ReceiveConversionResult> conversionResults,
@@ -563,6 +565,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
+      // the placement's own colour (object-sourced HAS_COLOR), so a per-instance override survives [ENG-9114]
+      if (colorByObject.TryGetValue(appId, out int instArgb))
+      {
+        atts.ObjectColor = Color.FromArgb(instArgb);
+        atts.ColorSource = ObjectColorSource.ColorFromObject;
       }
 
       var id = doc.Objects.AddInstanceObject(defIndex, transform, atts);
@@ -924,7 +932,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.
   private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
-    var byObject = new Dictionary<string, int>();
+    var byObject = new Dictionary<string, int>(StringComparer.Ordinal);
     foreach (var kv in bundle.Relations.ColorByGeometry)
     {
       if (!bundle.Nodes.TryGetValue(kv.Value, out var n) || n.Kind != NodeKind.Color || n.Argb is not int argb)
@@ -932,6 +940,22 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         continue;
       }
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+
+    // Object-sourced edges (ord=1): a block placement's own colour. A placement owns no geometry, so it never appears
+    // in objByGeom — resolve it straight through the object dictionary [ENG-8822, ENG-9114]. Same shape as the Autocad
+    // artefact builder's MapColors.
+    foreach (var kv in bundle.Relations.ColorByObject)
+    {
+      if (
+        bundle.Nodes.TryGetValue(kv.Value, out var n)
+        && n.Kind == NodeKind.Color
+        && n.Argb is int argb
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = argb;
       }
