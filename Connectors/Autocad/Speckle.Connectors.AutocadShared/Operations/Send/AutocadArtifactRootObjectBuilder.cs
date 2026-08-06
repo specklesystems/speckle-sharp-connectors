@@ -184,10 +184,12 @@ public class AutocadArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Only explicit
-    // object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer COLLECTION nodes'
-    // argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on receive with no edge.
-    var materials = materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>());
+    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Colours: only
+    // explicit object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer
+    // COLLECTION nodes' argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on
+    // receive with no edge. Materials have no such container channel, so the layer stage IS unpacked and its
+    // proxies are resolved onto the inheriting objects' geometry in phase 2 [ENG-9118].
+    var (materials, layerMaterialInheritors) = UnpackMaterialsWithLayers(atomicObjects);
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
     var layerArgbByName = CollectLayerColors(atomicObjects);
 
@@ -202,9 +204,75 @@ public class AutocadArtifactRootObjectBuilder(
       layerArgbByName,
       instanceDefinitionProxies,
       groups,
+      layerMaterialInheritors,
       results
     );
   }
+
+  // Unpacks render materials INCLUDING the layer stage, and records which objects inherit a layer's material.
+  //
+  // An entity whose material is ByLayer gets no object-level proxy (the unpacker's object stage skips it by design);
+  // its material rides the proxy the LAYER stage builds, which lists the LAYER id — and a layer id resolves to no
+  // geometry in phase 2, so the inherited material was dropped from the bundle entirely and the object drew with the
+  // default material [ENG-9118]. Recording object → the id of the layer whose material it inherits lets phase 2 land
+  // HAS_MATERIAL on the object's own geometry instead. The inheritance is only recorded when the layer actually
+  // carries a (non-default) material — the same condition the unpacker's layer stage uses to build the proxy — so
+  // every recorded object is guaranteed to resolve to a MATERIAL node.
+  //
+  // AutoCAD-API-bound (transaction) → phase 1 only. The layer records must stay OPEN across the UnpackMaterials call,
+  // hence the single transaction wrapping both.
+  private (
+    List<RenderMaterialProxy> Materials,
+    Dictionary<string, string> LayerMaterialInheritors
+  ) UnpackMaterialsWithLayers(List<AutocadRootObject> atomicObjects)
+  {
+    var inheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+    var usedLayers = new List<LayerTableRecord>();
+    try
+    {
+      var db = converterSettings.Current.Document.Database;
+      using var tr = db.TransactionManager.StartTransaction();
+      var layerTable = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+      var recordsByName = new Dictionary<string, LayerTableRecord>(StringComparer.Ordinal);
+
+      foreach (var (entity, applicationId) in atomicObjects)
+      {
+        string layerName = entity.Layer;
+        if (!recordsByName.TryGetValue(layerName, out LayerTableRecord? record))
+        {
+          if (!layerTable.Has(layerName))
+          {
+            continue;
+          }
+          record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+          recordsByName[layerName] = record;
+          usedLayers.Add(record);
+        }
+
+        if (entity.Material == "ByLayer" && LayerHasRenderMaterial(record, tr))
+        {
+          inheritors[applicationId] = record.GetSpeckleApplicationId();
+        }
+      }
+
+      var unpacked = materialUnpacker.UnpackMaterials(atomicObjects, usedLayers);
+      tr.Commit();
+      return (unpacked, inheritors);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(ex, "Failed to unpack layer render materials for the artefact bundle");
+      // Object-level materials must still make it into the bundle even if the layer pass fell over.
+      return (materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>()), inheritors);
+    }
+  }
+
+  // True when the layer itself carries a render material worth sending — mirrors the skip the material unpacker's
+  // layer stage applies ("Global" is AutoCAD's default material, present on every layer) [ENG-9118].
+  private static bool LayerHasRenderMaterial(LayerTableRecord layer, Transaction tr) =>
+    !layer.MaterialId.IsNull
+    && tr.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material
+    && material.Name != "Global";
 
   // AutoCAD groups → plain snapshot records. Membership rides persistent reactors on each entity (a Group is a
   // reactor on its members); AutoCAD groups don't nest, so each membership is one flat IN_GROUP edge.
@@ -721,7 +789,7 @@ public class AutocadArtifactRootObjectBuilder(
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL) → object colors (HAS_COLOR).
   // Order matters: all referenced meshes/instances must exist (added in the object loop) before the edges resolve them.
-  private static void EmitValueNodes(
+  private void EmitValueNodes(
     ObjectsArtifactPipeline pipeline,
     CollectedModel model,
     Dictionary<string, List<int>> geometryKsByObjectId,
@@ -753,6 +821,18 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     // 2) render materials → HAS_MATERIAL (geometry → material node). Material proxies list OBJECT ids.
+    // A LAYER-sourced proxy lists a LAYER id instead, which owns no geometry — invert the object → layer map so
+    // those land on the geometry of every object inheriting that layer's material (ByLayer) [ENG-9118].
+    var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerMaterialInheritors)
+    {
+      if (!inheritorsByLayerId.TryGetValue(kv.Value, out var forLayer))
+      {
+        inheritorsByLayerId[kv.Value] = forLayer = new List<string>();
+      }
+      forLayer.Add(kv.Key);
+    }
+
     foreach (var materialProxy in model.Materials)
     {
       var value = materialProxy.value;
@@ -774,6 +854,39 @@ public class AutocadArtifactRootObjectBuilder(
           {
             pipeline.HasMaterial(gK, matK);
           }
+        }
+        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        {
+          // layer-sourced: the layer owns no geometry, so the inherited material lands on each object that draws
+          // with it — block-definition members included, since their geometry Ks are registered too.
+          foreach (var inheritorId in inheritors)
+          {
+            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            {
+              foreach (var gK in inheritorGKs)
+              {
+                pipeline.HasMaterial(gK, matK);
+              }
+            }
+            else
+            {
+              // A block INSTANCE inheriting from its layer: it owns no geometry, and an object-sourced
+              // HAS_MATERIAL needs the namespace tag HAS_COLOR got in ENG-8822 — tracked as ENG-9119.
+              logger.LogWarning(
+                "Layer material '{Material}' not applied to {AppId}: the object owns no geometry to carry it",
+                materialProxy.value.name,
+                inheritorId
+              );
+            }
+          }
+        }
+        else
+        {
+          logger.LogWarning(
+            "Render material '{Material}' lists {AppId}, which resolved to no geometry — the material is not in the bundle for it",
+            materialProxy.value.name,
+            objectId
+          );
         }
       }
     }
@@ -921,6 +1034,8 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyDictionary<string, int> LayerArgbByName,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
+    // object id → the id of the layer whose render material it inherits (ByLayer material only) [ENG-9118]
+    IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     IReadOnlyList<SendConversionResult> Results
   );
 
