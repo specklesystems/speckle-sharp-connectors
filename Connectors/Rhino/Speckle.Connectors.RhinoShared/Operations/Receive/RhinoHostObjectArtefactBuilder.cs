@@ -139,9 +139,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     onOperationProgressed.Report(new("Converting materials", null));
     Dictionary<string, Guid> materialByObject;
     Dictionary<int, Guid> materialByGeometry;
+    Dictionary<int, Guid> materialByInstance;
     using (session.Phase("Materials"))
     {
-      (materialByObject, materialByGeometry) = CreateMaterials(doc, bundle, objByGeom);
+      (materialByObject, materialByGeometry, materialByInstance) = CreateMaterials(doc, bundle, objByGeom);
     }
 
     // By-object display colours (HAS_COLOR → COLOR node), resolved to owning object like materials. appId → argb.
@@ -186,15 +187,32 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
           var name = ObjectName(bundle, objK);
           bundle.Properties.TryGetValue(objK, out var objProps);
+          // Type Parameters / System Type Parameters, deduped once per type on send (ENG-9136) — resolved here
+          // alongside the instance-scoped properties above.
+          bundle.TypePropertiesByObject.TryGetValue(objK, out var objTypeProps);
           var ids = new List<Guid>();
-          foreach (var geom in geometries)
+          foreach (var (geomK, geom) in geometries)
           {
             if (geom is RG.Hatch hatch)
             {
               // restore pattern/rotation/scale carried as EAV onto the Hatch rebuilt from the SGEO Region
               RhinoHatchStyler.Apply(doc, hatch, objProps, _converterSettings.Current.SpeckleUnits);
             }
-            ids.Add(BakeObject(doc, geom, layerIndex, materialByObject, colorByObject, appId, name, objProps));
+            ids.Add(
+              BakeObject(
+                doc,
+                geom,
+                geomK,
+                layerIndex,
+                materialByObject,
+                materialByGeometry,
+                colorByObject,
+                appId,
+                name,
+                objProps,
+                objTypeProps
+              )
+            );
           }
           bakedObjectIds.UnionWith(ids.Select(g => g.ToString()));
           if (rels.GroupsByObject.ContainsKey(objK))
@@ -239,6 +257,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           layerCache,
           materialByObject,
           materialByGeometry,
+          materialByInstance,
           colorByObject,
           bakedObjectIds,
           bakedGuidsByObjK,
@@ -278,7 +297,13 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── geometry ──────────────────────────────────────────────────────────────────────────────────────────
-  private List<RG.GeometryBase> DecodeObjectGeometry(
+  // One decoded Rhino geometry plus the geometry K it came from — carried through so BakeObject can prefer a
+  // per-mesh HAS_MATERIAL over the object-level fallback [ENG-9153]. A geomK that decodes to several Rhino
+  // geometries (rare one-to-many SGEO conversions) tags every one of them with the SAME geomK, so its material
+  // still applies to each result.
+  private readonly record struct DecodedGeometry(int GeomK, RG.GeometryBase Geometry);
+
+  private List<DecodedGeometry> DecodeObjectGeometry(
     int objK,
     ArtefactBundle bundle,
     ArtefactRelations rels,
@@ -286,19 +311,25 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   )
   {
     _lastDecodeFailure = null;
-    var result = new List<RG.GeometryBase>();
+    var result = new List<DecodedGeometry>();
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
       {
-        result.AddRange(DecodeGeometryIndex(solidK, bundle, fallbackUnits));
+        foreach (var geom in DecodeGeometryIndex(solidK, bundle, fallbackUnits))
+        {
+          result.Add(new(solidK, geom));
+        }
       }
     }
     if (result.Count == 0 && rels.DisplayByObject(objK) is { } displayEdges)
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        result.AddRange(DecodeGeometryIndex(e.Dst, bundle, fallbackUnits));
+        foreach (var geom in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits))
+        {
+          result.Add(new(e.Dst, geom));
+        }
       }
     }
     return result;
@@ -452,12 +483,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private Guid BakeObject(
     RhinoDoc doc,
     RG.GeometryBase geom,
+    int geomK,
     int layerIndex,
     Dictionary<string, Guid> materialByObject,
+    Dictionary<int, Guid> materialByGeometry,
     Dictionary<string, int> colorByObject,
     string appId,
     string? name,
-    Dictionary<string, object?>? properties
+    Dictionary<string, object?>? properties,
+    Dictionary<string, object?>? typeProperties
   )
   {
     var atts = new ObjectAttributes { LayerIndex = layerIndex };
@@ -465,9 +499,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       atts.Name = name;
     }
-    // source properties (Rhino user text / user dictionaries, Revit + IFC parameters) → user strings [ENG-9111]
+    // source properties (Rhino user text / user dictionaries, Revit + IFC parameters) → user strings [ENG-9111].
+    // Type-scoped first, instance-scoped second, so a colliding key is won by the instance value — matching
+    // Revit's own precedence [ENG-9136].
+    RhinoArtefactUserStrings.Apply(atts, typeProperties);
     RhinoArtefactUserStrings.Apply(atts, properties);
-    if (materialByObject.TryGetValue(appId, out Guid materialGuid))
+    // Prefer this mesh's own HAS_MATERIAL over the object-level fallback, so an object with several differently
+    // materialled display meshes (e.g. a multi-material Revit wall) keeps each mesh's own material instead of
+    // collapsing them all to whichever relation was resolved last [ENG-9153].
+    if (materialByGeometry.TryGetValue(geomK, out Guid materialGuid) || materialByObject.TryGetValue(appId, out materialGuid))
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
@@ -513,6 +553,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, int> layerCache,
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
+    Dictionary<int, Guid> materialByInstance,
     Dictionary<string, int> colorByObject,
     HashSet<string> bakedObjectIds,
     Dictionary<int, List<Guid>> bakedGuidsByObjK,
@@ -579,10 +620,16 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         atts.Name = instName;
       }
-      // the placement's own properties → user strings, same as an atomic object [ENG-9111]
+      // the placement's own properties → user strings, same as an atomic object [ENG-9111]. Type-scoped first,
+      // instance-scoped second, so a colliding key is won by the instance value [ENG-9136].
       bundle.Properties.TryGetValue(objK, out var instProps);
+      bundle.TypePropertiesByObject.TryGetValue(objK, out var instTypeProps);
+      RhinoArtefactUserStrings.Apply(atts, instTypeProps);
       RhinoArtefactUserStrings.Apply(atts, instProps);
-      if (materialByObject.TryGetValue(appId, out Guid materialGuid))
+      // Prefer a material painted directly on THIS placement (instance-sourced HAS_MATERIAL) over the object-level
+      // fallback, so a per-instance override survives instead of always rendering the definition's own material
+      // [ENG-9109].
+      if (materialByInstance.TryGetValue(instNodeK, out Guid materialGuid) || materialByObject.TryGetValue(appId, out materialGuid))
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
@@ -925,7 +972,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
-  private (Dictionary<string, Guid> byObject, Dictionary<int, Guid> byGeometry) CreateMaterials(
+  private (Dictionary<string, Guid> byObject, Dictionary<int, Guid> byGeometry, Dictionary<int, Guid> byInstance) CreateMaterials(
     RhinoDoc doc,
     ArtefactBundle bundle,
     Dictionary<int, int> objByGeom
@@ -995,7 +1042,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         byObject[appId] = guid; // object → material (atomic display objects)
       }
     }
-    return (byObject, byGeometry);
+
+    // Instance-sourced (ord=1): a material painted directly on a block placement (Rhino MaterialFromObject on
+    // the instance itself), keyed by the placement's INSTANCE node K rather than any geometry it owns — a
+    // placement owns no geometry of its own, so it's invisible to the geometry loop above [ENG-9109].
+    var byInstance = new Dictionary<int, Guid>();
+    foreach (var kv in bundle.Relations.MaterialByInstance)
+    {
+      if (guidByMaterialNode.TryGetValue(kv.Value, out Guid guid))
+      {
+        byInstance[kv.Key] = guid;
+      }
+    }
+    return (byObject, byGeometry, byInstance);
   }
 
   // By-object display colours: HAS_COLOR (geometry → COLOR node) resolved to the owning object's appId → argb, mirroring

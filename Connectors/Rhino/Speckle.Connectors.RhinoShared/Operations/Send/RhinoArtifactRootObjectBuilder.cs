@@ -482,7 +482,7 @@ public class RhinoArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, speckleApplication);
 
     // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
     foreach (var defProxy in model.Definitions)
@@ -792,6 +792,13 @@ public class RhinoArtifactRootObjectBuilder(
           {
             pipeline.HasMaterial(gK, matK);
           }
+        }
+        else if (instanceKByObjectId.TryGetValue(objectId, out var instK))
+        {
+          // instance-sourced: a material painted directly on a block placement (MaterialFromObject set on the
+          // instance itself) owns no geometry of its own to hang the edge on — it rides the placement's own
+          // INSTANCE node K instead [ENG-9109].
+          pipeline.HasMaterial(instK, matK, srcIsInstance: true);
         }
         else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
         {
