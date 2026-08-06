@@ -422,6 +422,9 @@ public class AutocadArtifactRootObjectBuilder(
     // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
+    // AutoCAD colour SEMANTICS the ARGB-only COLOR node cannot carry [ENG-9117] — see CollectColorSemantics.
+    var colorSemantics = CollectColorSemantics(model.Colors);
+
     // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
     // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
     var results = model.Results.ToList();
@@ -449,7 +452,8 @@ public class AutocadArtifactRootObjectBuilder(
         geometryKsByObjectId,
         instanceKByObjectId,
         definitionMemberIds,
-        memberLayerArgb
+        memberLayerArgb,
+        colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
       );
       if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
       {
@@ -500,7 +504,8 @@ public class AutocadArtifactRootObjectBuilder(
     Dictionary<string, List<int>> geometryKsByObjectId,
     Dictionary<string, int> instanceKByObjectId,
     HashSet<string> definitionMemberIds,
-    int? memberLayerArgb
+    int? memberLayerArgb,
+    ColorSemantics? colorSemantics
   )
   {
     // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
@@ -516,7 +521,7 @@ public class AutocadArtifactRootObjectBuilder(
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
-      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType)
+      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType, colorSemantics)
     );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
@@ -982,15 +987,58 @@ public class AutocadArtifactRootObjectBuilder(
     string speckleType,
     string name,
     string units,
-    string sourceType
-  ) =>
-    new KeyValuePair<string, object?>[]
+    string sourceType,
+    ColorSemantics? colorSemantics = null
+  )
+  {
+    var scalars = new List<KeyValuePair<string, object?>>(6)
     {
       new("speckle_type", speckleType),
       new("name", name),
       new("units", units),
       new("type", sourceType),
     };
+    if (colorSemantics is { } cs)
+    {
+      scalars.Add(new(AutocadColorSemanticKeys.SOURCE, cs.ByBlock ? "block" : "aci"));
+      if (cs.Aci is int aci)
+      {
+        scalars.Add(new(AutocadColorSemanticKeys.INDEX, aci));
+      }
+    }
+    return scalars.ToArray();
+  }
+
+  /// <summary>The AutoCAD colour facts an ARGB-only COLOR node cannot express: the ACI index behind a
+  /// <c>ColorMethod.ByAci</c> colour, and whether the entity was explicitly set to <c>ByBlock</c>.</summary>
+  private sealed record ColorSemantics(int? Aci, bool ByBlock);
+
+  // The bundle's COLOR node stores ARGB only, so an AutoCAD→AutoCAD round trip flattened every ACI colour to
+  // truecolor (same pixels, but the plot-style/standards-relevant index and method were gone) and every explicit
+  // ByBlock to a fixed value [ENG-9117]. The unpacker already recorded both on the proxy — carry them through as
+  // object properties, which every other consumer simply ignores while the ARGB edge keeps rendering unchanged.
+  //
+  // Only reaches objects that own the colour themselves (atomic entities + block references). A block-DEFINITION
+  // member is not addressable this way: its geometry carries no back-reference to an object in the bundle, so it
+  // still round-trips as truecolor.
+  private static Dictionary<string, ColorSemantics> CollectColorSemantics(IReadOnlyList<ColorProxy> colors)
+  {
+    var result = new Dictionary<string, ColorSemantics>(StringComparer.Ordinal);
+    foreach (ColorProxy proxy in colors)
+    {
+      bool byBlock = proxy["source"] is "block";
+      int? aci = proxy["autocadColorIndex"] as int?;
+      if (!byBlock && aci is null)
+      {
+        continue; // a plain truecolor (ByColor) object: the ARGB edge is already lossless
+      }
+      foreach (string objectId in proxy.objects)
+      {
+        result[objectId] = new ColorSemantics(aci, byBlock);
+      }
+    }
+    return result;
+  }
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>

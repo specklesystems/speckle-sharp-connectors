@@ -206,6 +206,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           }
           materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
           bool hasObjColor = colorArgbByObject.TryGetValue(appId, out int objArgb);
+          // ACI index / explicit ByBlock, when the sender recorded them — they outrank the flattened ARGB [ENG-9117].
+          AcadColor? nativeColor = NativeColorFromProperties(props);
 
           // (ObjectId, handle) per baked entity: the ObjectId drives native grouping below, while the model card and
           // the conversion report identify entities by their HANDLE — see the note on bakedObjectIds [ENG-8833].
@@ -239,7 +241,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   {
                     entity.MaterialId = materialId;
                   }
-                  if (argb is int a)
+                  if (nativeColor is AcadColor native)
+                  {
+                    entity.Color = native;
+                  }
+                  else if (argb is int a)
                   {
                     entity.Color = ToAcadColor(a);
                   }
@@ -1011,7 +1017,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         {
           blockRef.MaterialId = objMaterial;
         }
-        if (colorArgbByObject.TryGetValue(appId, out int objArgb))
+        if (NativeColorFromProperties(props) is AcadColor nativeColor)
+        {
+          blockRef.Color = nativeColor; // ACI / explicit ByBlock recorded by the sender [ENG-9117]
+        }
+        else if (colorArgbByObject.TryGetValue(appId, out int objArgb))
         {
           blockRef.Color = ToAcadColor(objArgb); // ByBlock members pick this up from the reference
         }
@@ -1332,6 +1342,64 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     var c = System.Drawing.Color.FromArgb(argb);
     return AcadColor.FromRgb(c.R, c.G, c.B);
+  }
+
+  /// <summary>The AutoCAD colour METHOD, when the sender recorded it as object properties — the ARGB-only COLOR
+  /// node cannot express either. An ACI colour comes back as <see cref="ColorMethod.ByAci"/> with its original
+  /// index (so CTB plot styles, standards checks and index-reading scripts keep working), and an explicitly
+  /// ByBlock entity comes back inheriting rather than pinned to a fixed RGB [ENG-9117]. A bundle from any other
+  /// host (or an older AutoCAD send) carries neither key, and the caller falls back to the ARGB edge.</summary>
+  private static AcadColor? NativeColorFromProperties(Dictionary<string, object?>? props)
+  {
+    if (
+      props is null
+      || !props.TryGetValue(AutocadColorSemanticKeys.SOURCE, out var source)
+      || source is not string src
+    )
+    {
+      return null;
+    }
+    if (src == "block")
+    {
+      return AcadColor.FromColorIndex(ColorMethod.ByBlock, 0);
+    }
+    // ACI is a 0..256 index (0 = ByBlock, 256 = ByLayer); anything else is not an index we can restore.
+    if (
+      src == "aci"
+      && props.TryGetValue(AutocadColorSemanticKeys.INDEX, out var raw)
+      && TryReadInt(raw, out int aci)
+      && aci is >= 0 and <= 256
+    )
+    {
+      return AcadColor.FromColorIndex(ColorMethod.ByAci, (short)aci);
+    }
+    return null;
+  }
+
+  // eav round-trips a numeric scalar as whichever width the parquet column landed on, so accept the lot.
+  private static bool TryReadInt(object? value, out int result)
+  {
+    switch (value)
+    {
+      case int i:
+        result = i;
+        return true;
+      case long l:
+        result = (int)l;
+        return true;
+      case short s:
+        result = s;
+        return true;
+      case double d:
+        result = (int)d;
+        return true;
+      case string text when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed):
+        result = parsed;
+        return true;
+      default:
+        result = 0;
+        return false;
+    }
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
