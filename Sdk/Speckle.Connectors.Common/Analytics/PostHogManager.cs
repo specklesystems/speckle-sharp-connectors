@@ -28,9 +28,26 @@ public interface IPostHogManager
 /// <summary>
 ///  Lightweight Telemetry to help us understand how to make a better Speckle.
 /// </summary>
-public class PostHogManager(ISpeckleApplication application, ISpeckleHttp speckleHttp, ILogger<PostHogManager> logger)
-  : IPostHogManager
+public class PostHogManager : IPostHogManager
 {
+  private readonly ISpeckleApplication _application;
+  private readonly ISpeckleHttp _speckleHttp;
+  private readonly ILogger<PostHogManager> _logger;
+  private readonly Version _sdkVersion;
+
+  /// <summary>
+  ///  Lightweight Telemetry to help us understand how to make a better Speckle.
+  /// </summary>
+  public PostHogManager(ISpeckleApplication application, ISpeckleHttp speckleHttp, ILogger<PostHogManager> logger)
+  {
+    _application = application;
+    _speckleHttp = speckleHttp;
+    _logger = logger;
+
+    string[] semverBrake = _application.SpeckleVersion.Split('-');
+    _sdkVersion = Version.Parse(semverBrake.First());
+  }
+
   private const string PRODUCT_TOKEN = "phc_7zaDwBgrBYb1yUe0Ff3Sn0DUibq0NoPNxYNC90M7cfg";
   private static readonly Uri s_posthogServer = new("https://eu.i.posthog.com");
   private static readonly Uri s_endpoint = new("/i/v0/e/", UriKind.Relative);
@@ -54,12 +71,6 @@ public class PostHogManager(ISpeckleApplication application, ISpeckleHttp speckl
     [CallerMemberName] string callerName = ""
   )
   {
-    if (!IsReleaseMode)
-    {
-      //only track in prod
-      return;
-    }
-
     // Right now, we're keeping posthog only for app.speckle.systems users
     if (new Uri(account.serverInfo.url) != new Uri("https://app.speckle.systems"))
     {
@@ -70,9 +81,6 @@ public class PostHogManager(ISpeckleApplication application, ISpeckleHttp speckl
     {
       throw new ArgumentException("Email cannot be empty.", nameof(account));
     }
-
-    string[] semverBrake = application.SpeckleVersion.Split('-');
-    Version version = Version.Parse(semverBrake.First());
 
     var hashedServer = account.GetHashedServer();
     string distinctId = account.userInfo.id;
@@ -88,12 +96,12 @@ public class PostHogManager(ISpeckleApplication application, ISpeckleHttp speckl
         { "$session_id", Consts.StaticSessionId },
         { "$host", new Uri(account.serverInfo.url).Host },
         { "serverId", hashedServer },
-        { "hostAppSlug", application.Slug },
-        { "hostAppVersion", application.HostApplicationVersion },
-        { "connectorVersion", application.SpeckleVersion },
-        { "connectorVersionMajor", version.Major },
-        { "connectorVersionMinor", version.Minor },
-        { "connectorVersionPatch", version.Build },
+        { "hostAppSlug", _application.Slug },
+        { "hostAppVersion", _application.HostApplicationVersion },
+        { "connectorVersion", _application.SpeckleVersion },
+        { "connectorVersionMajor", _sdkVersion.Major },
+        { "connectorVersionMinor", _sdkVersion.Minor },
+        { "connectorVersionPatch", _sdkVersion.Build },
         { "osDescription", RuntimeInformation.OSDescription },
         { "dotnetRuntime", RuntimeInformation.FrameworkDescription },
         { "callerName", callerName },
@@ -126,14 +134,20 @@ public class PostHogManager(ISpeckleApplication application, ISpeckleHttp speckl
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      logger.LogWarning(ex, "Analytics event {Event} failed {ExceptionMessage}", eventName.ToString(), ex.Message);
+      _logger.LogWarning(ex, "Analytics event {Event} failed {ExceptionMessage}", eventName.ToString(), ex.Message);
     }
   }
 
   private async Task SendAnalytics(string json)
   {
+    if (!IsReleaseMode)
+    {
+      //only track in prod, do this last to make it hard for bugs to creep into all other logic.
+      return;
+    }
+
     var query = new StringContent(json, Encoding.UTF8, "application/json");
-    using HttpClient client = speckleHttp.CreateHttpClient();
+    using HttpClient client = _speckleHttp.CreateHttpClient();
     client.BaseAddress = s_posthogServer;
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     var res = await client.PostAsync(s_endpoint, query).ConfigureAwait(false);
