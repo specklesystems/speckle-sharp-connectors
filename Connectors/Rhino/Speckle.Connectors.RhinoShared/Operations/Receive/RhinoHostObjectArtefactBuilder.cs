@@ -507,7 +507,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // Prefer this mesh's own HAS_MATERIAL over the object-level fallback, so an object with several differently
     // materialled display meshes (e.g. a multi-material Revit wall) keeps each mesh's own material instead of
     // collapsing them all to whichever relation was resolved last [ENG-9153].
-    if (materialByGeometry.TryGetValue(geomK, out Guid materialGuid) || materialByObject.TryGetValue(appId, out materialGuid))
+    if (
+      materialByGeometry.TryGetValue(geomK, out Guid materialGuid)
+      || materialByObject.TryGetValue(appId, out materialGuid)
+    )
     {
       atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
       atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
@@ -629,7 +632,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       // Prefer a material painted directly on THIS placement (instance-sourced HAS_MATERIAL) over the object-level
       // fallback, so a per-instance override survives instead of always rendering the definition's own material
       // [ENG-9109].
-      if (materialByInstance.TryGetValue(instNodeK, out Guid materialGuid) || materialByObject.TryGetValue(appId, out materialGuid))
+      if (
+        materialByInstance.TryGetValue(instNodeK, out Guid materialGuid)
+        || materialByObject.TryGetValue(appId, out materialGuid)
+      )
       {
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
@@ -972,11 +978,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
-  private (Dictionary<string, Guid> byObject, Dictionary<int, Guid> byGeometry, Dictionary<int, Guid> byInstance) CreateMaterials(
-    RhinoDoc doc,
-    ArtefactBundle bundle,
-    Dictionary<int, int> objByGeom
-  )
+  private (
+    Dictionary<string, Guid> byObject,
+    Dictionary<int, Guid> byGeometry,
+    Dictionary<int, Guid> byInstance
+  ) CreateMaterials(RhinoDoc doc, ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var guidByMaterialNode = new Dictionary<int, Guid>();
     foreach (var kv in bundle.Nodes)
