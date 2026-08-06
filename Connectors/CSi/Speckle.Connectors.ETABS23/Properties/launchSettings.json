@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ETABS 23": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Computers and Structures\\ETABS 23\\ETABS.exe"
+    }
+  }
+}

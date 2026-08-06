@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using GH_IO.Serialization;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
@@ -97,6 +98,9 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
   }
+
+  // "Properties" was added ahead of "Run", so files predating it need realigning
+  public override bool Read(GH_IReader reader) => this.ReadRealigningAddedInputs(reader, base.Read);
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {

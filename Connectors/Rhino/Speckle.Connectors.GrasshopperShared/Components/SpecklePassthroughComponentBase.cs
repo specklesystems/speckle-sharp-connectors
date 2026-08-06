@@ -222,7 +222,7 @@ public abstract class SpecklePassthroughComponentBase : SpeckleSolveInstance, IG
 
   public override bool Read(GH_IReader reader)
   {
-    var result = base.Read(reader);
+    var result = this.ReadRepairingFixedParams(reader, base.Read);
     // parameters are restored by GH serialization, this flag is for reference
     bool hasAppIdParam = false;
     reader.TryGetBoolean("HasApplicationIdParam", ref hasAppIdParam);
