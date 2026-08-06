@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -10,6 +11,7 @@ using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
@@ -137,7 +139,15 @@ public class AutocadArtifactRootObjectBuilder(
     var units = converterSettings.Current.SpeckleUnits;
 
     // Unpack instances → atomic objects (incl. block-definition members) + instance/definition proxies.
-    var (atomicObjects, _, instanceProxies, instanceDefinitionProxies) = instanceUnpacker.UnpackSelection(objects);
+    var (atomicObjects, atomicDefinitionObjectIds, instanceProxies, instanceDefinitionProxies) =
+      instanceUnpacker.UnpackSelection(objects);
+
+    // Publishing from a custom UCS: the converter rebases every point/vector it emits through
+    // ReferencePointConverter (the inverse of the settings' UCS matrix). Two compensations are needed on top of
+    // that, exactly as the v1 AutocadRootObjectBaseBuilder does them [ENG-9116] — see CollectObject.
+    Matrix3d? referencePointInverse = converterSettings.Current.ReferencePointTransform is Matrix3d ucs
+      ? ucs.Inverse()
+      : null;
 
     var collectedObjects = new List<CollectedObject>(atomicObjects.Count);
     var results = new List<SendConversionResult>(atomicObjects.Count);
@@ -150,7 +160,11 @@ public class AutocadArtifactRootObjectBuilder(
       var sw = Stopwatch.StartNew();
       try
       {
-        CollectedObject collected = CollectObject(entity, applicationId, sourceType, instanceProxies);
+        CollectedObject collected = atomicDefinitionObjectIds.Contains(applicationId)
+          // Definition members live in DEFINITION-LOCAL coordinates and are placed by their instance's transform.
+          // Rebasing them into the UCS too would transform them twice, so convert them with no reference point.
+          ? CollectWithoutReferencePoint(entity, applicationId, sourceType, instanceProxies)
+          : CollectObject(entity, applicationId, sourceType, instanceProxies, referencePointInverse);
         collectedObjects.Add(collected);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, collected.Converted));
         session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -255,6 +269,22 @@ public class AutocadArtifactRootObjectBuilder(
     return result;
   }
 
+  // A block-definition member, converted with the reference point switched off so it stays in definition-local
+  // coordinates. Mirrors the v1 builder's atomicDefinitionObjectIds branch [ENG-9116]. The push is scoped to this
+  // one conversion — the settings store is restored on dispose, so the next top-level object rebases as usual.
+  private CollectedObject CollectWithoutReferencePoint(
+    Entity entity,
+    string applicationId,
+    string sourceType,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies
+  )
+  {
+    using (converterSettings.Push(current => current with { ReferencePointTransform = null }))
+    {
+      return CollectObject(entity, applicationId, sourceType, instanceProxies, null);
+    }
+  }
+
   // Converts one AutoCAD entity to its Speckle representation (instance proxy or AutocadObject carrier). The
   // AutocadObject is a transient carrier — phase 2 reads its displayValue/rawEncoding/properties and never serializes
   // it (the same way Rhino transiently uses InstanceProxy/RenderMaterialProxy).
@@ -262,11 +292,21 @@ public class AutocadArtifactRootObjectBuilder(
     Entity entity,
     string applicationId,
     string sourceType,
-    IReadOnlyDictionary<string, InstanceProxy> instanceProxies
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    Matrix3d? referencePointInverse
   )
   {
     if (instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
     {
+      // A block placement's transform is authored in WORLD coordinates, while the definition members it places were
+      // converted into the (UCS-rebased) coordinates the rest of the send speaks. Pre-multiplying a TOP-LEVEL
+      // placement by the inverse UCS puts the two back in the same frame — without it the instance drifts away from
+      // the loose geometry it was drawn against [ENG-9116]. A nested placement is already definition-local.
+      if (instanceProxy.maxDepth == 0 && referencePointInverse is Matrix3d inverse && entity is BlockReference br)
+      {
+        instanceProxy.transform = TransformHelper.ConvertToInstanceMatrix4x4(br.BlockTransform.PreMultiplyBy(inverse));
+      }
+
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
       return new CollectedObject(
