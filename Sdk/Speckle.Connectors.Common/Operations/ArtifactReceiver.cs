@@ -74,10 +74,16 @@ public class ArtifactReceiver(
   }
 
   /// <summary>
-  /// Maps a parsed bundle into a <see cref="Base"/>/<c>Collection</c> graph for the v1 host-build path. Used by
-  /// connectors without a dedicated <c>IArtifactHostObjectBuilder</c> (e.g. Revit). Honours the
-  /// <c>ArtifactReceiveOptions.PreferSolids</c> flag.
+  /// Maps a parsed bundle into a <see cref="Base"/>/<c>Collection</c> graph for the v1 host-build path. Honours the
+  /// <c>ArtifactReceiveOptions.PreferSolids</c> flag. Obsolete: every connector that receives the new object model
+  /// bakes the bundle directly (<c>IArtifactHostObjectBuilder</c>); reconstruct-then-convert loses data and speed at
+  /// the seam and must not be the starting point for new connectors.
   /// </summary>
+  [Obsolete(
+    "Reconstruct-then-convert is not the way forward for new-object-model receives: register a dedicated "
+      + "IArtifactHostObjectBuilder (direct bundle bake) instead. This fallback remains only so a connector without "
+      + "a direct-bake builder still receives; no new callers."
+  )]
   public Base Reconstruct(ArtefactBundle bundle, CancellationToken cancellationToken) =>
     new ObjectsArtifactReader().Build(bundle, options, cancellationToken);
 }
