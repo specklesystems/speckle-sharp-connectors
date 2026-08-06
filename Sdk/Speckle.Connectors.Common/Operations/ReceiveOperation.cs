@@ -61,10 +61,13 @@ public sealed class ReceiveOperation(
         }
         else
         {
-          // reconstruction path: map the bundle to a Base graph + run the v1 host builder.
+          // OBSOLETE reconstruction path — kept only so a connector without a direct-bake builder still receives.
+          // New-object-model receives register an IArtifactHostObjectBuilder; do not lean on this branch for new work.
+#pragma warning disable CS0618
           var artefactRoot = await threadContext.RunOnWorkerAsync(() =>
             Task.FromResult(artifactReceiver.Reconstruct(bundle, cancellationToken))
           );
+#pragma warning restore CS0618
           artefactRes = await ConvertObjects(artefactRoot, receiveInfo, onOperationProgressed, cancellationToken)
             .ConfigureAwait(false);
         }
