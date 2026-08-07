@@ -24,13 +24,14 @@
 | IN_MODEL (11) | object → node | — | source/linked model | `InModel` |
 | IN_ROOM (12) | **object → object** | — | element → room object | `InRoom` |
 | IN_SYSTEM (14) | object → node | — | MEP System / Network | `InSystem` + `AddContainer(…,"MEP System"\|"Network")` |
+| IN_GROUP (17) | object → node | ordinal | authored / model group membership | `InGroup` + `AddContainer(…,"Group")` |
 | CONNECTS_TO (21) | object → object | **scope** | connectivity (ord = system-K / opening-K / 0) | `ConnectsTo(s,t[,scope])` |
 | HOSTED_ON (22) | object → object | — | hosted element → its host | `HostedOn(hosted, host)` |
 | BOUNDS (23) | object → object | — | bounding wall → room | `Bounds` |
 
-Node kinds: DEFINITION, INSTANCE, MATERIAL, COLOR, LEVEL, CONTAINER (subtype `Collection｜Model｜MEP System｜Network`).
-**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), **IN_GROUP(17)**, IN_ASSEMBLY(18),
-IN_SUBASSEMBLY(19), XREF(20), COLLECTION-node(6).
+Node kinds: DEFINITION, INSTANCE, MATERIAL, COLOR, LEVEL, CONTAINER (subtype `Collection｜Group｜Model｜MEP System｜Network`).
+**Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), IN_ASSEMBLY(18),
+IN_SUBASSEMBLY(19), XREF(20), COLLECTION-node(6). (`IN_GROUP(17)` was **un-retired** post-v5 — see decision 1.)
 
 **SUBELEMENT is ownership, HOSTED_ON is placement** — and they are not interchangeable. A curtain panel is a
 *component of* its curtain wall (SUBELEMENT); a door is *placed on* its wall (HOSTED_ON). Ownership takes
@@ -55,6 +56,10 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
   [ENG-9081]. An owner that exists but wasn't sent drops the edge rather than falling back to HOSTED_ON.
 - ✅ **IN_ROOM** — `FamilyInstance.Room ?? .Space` → room object.
 - ✅ **CONNECTS_TO (spatial)** — door/window `FromRoom → ToRoom`, scope = opening object K.
+- ✅ **IN_GROUP** — `Element.GroupId` → `CONTAINER("Group")` named after the group TYPE, one edge per element
+  (`ElementUnpacker` recursion means `GroupId` is always the innermost group), nesting via the container
+  `def_ref` chain, containers keyed per model container so linked placements stay distinct, attached detail
+  groups excluded [ENG-9079].
 - 🔶 **BOUNDS** — `Room.GetBoundarySegments → BoundarySegment.ElementId` (new API walk; the Areas pattern
   exists in `DisplayValueExtractor`). Rooms must be sent.
 - 🔶 **IN_SYSTEM** — `MEPCurve.MEPSystem` / `FamilyInstance.MEPModel.ConnectorManager…MEPSystem`
@@ -113,20 +118,20 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 | BOUNDS | `OdBmRoomElem::getBoundarySegments()` → segment `getElementId()` | — |
 | CONNECTS_TO | MEP: `getBaseConnectorManager→getConnectors→getRefs/getDirection`, ord=system-K; spatial: `getRoomId(From/To)`, ord=opening-K | IFC port reconstruction (coincident `IfcDistributionPort` + FlowDirection), ord=0 |
 | IN_SYSTEM | `getMEPSystem()` → CONTAINER subtype "MEP System" | network components → CONTAINER subtype "Network" |
+| IN_GROUP | `OdBmElement::getGroupId()` → `OdBmElementGroup` (≈ `Element.GroupId`), skipping `getIsAttached()` detail groups — 🔶 not emitted yet (ENG-9079) | — |
 | DISPLAY_INSTANCE / DEFINES / DEFINES_INSTANCE | `OdBmGElement` geometry-node walk | fragment grouping (no DEFINES_INSTANCE) |
 | IN_MODEL | — (single native model) | `OdNwPartition::getSourceFileName()` → CONTAINER subtype "Model" |
 
 ## Modeling decisions
 
-1. **Grouping needs a relation reintroduction (⛔ blocked).** The only live obj→CONTAINER "grouping"
+1. **Grouping got its own relation back (✅ resolved).** The only other live obj→CONTAINER "grouping"
    relation is `IN_COLLECTION`, and the receive side stores it **last-wins single-valued**
    (`ArtefactRelations.CollectionByObject[src]=dst`) — it *is* the scene tree. Reusing it for groups would
    make members land in the group **instead of** their layer/type collection, regressing the scene tree and
-   .NET round-trip receive. The clean home is the **retired `IN_GROUP` (17)** — reintroducing it is a
-   **shared bundle-format change** (spec + regenerate + façade + receive handling + viewer/server support),
-   so it is deferred to a team decision rather than shipped blind. Affects Rhino/AutoCAD scene groups and
-   the semantic-grouping variants (CSi groups). (CSi pier/spandrel and Civil networks use `IN_SYSTEM`, which
-   is a *distinct* rel/map and does not conflict.)
+   .NET round-trip receive. So `IN_GROUP` (17) was **un-retired** in the spec instead: a separate, overlapping
+   axis onto `CONTAINER(subtype "Group")`, nesting through the container parent chain (`def_ref`). Rhino and
+   AutoCAD emit authored scene groups; Revit emits **model groups** off `Element.GroupId` (ENG-9079). (CSi
+   pier/spandrel and Civil networks use `IN_SYSTEM`, which is a *distinct* rel/map and does not conflict.)
 2. **Ownership and hosting are separate rels.** `SUBELEMENT` carries ownership (`SuperComponent`, composite
    children); `HOSTED_ON(22)` — un-retired post-v5 — carries hosting (`Host`). Ownership wins when both exist.
    Folding them into one rel made a model's topology depend on whether it was published through the connector
@@ -138,10 +143,10 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 
 - **Phase 0** (SDK) — ✅ `Bounds` façade + scoped `ConnectsTo(…,scope)` overload + `InRoom` doc fix.
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
-- **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
+- **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO, model-group IN_GROUP. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
 - **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
-- **Phase 2** (grouping) — ⛔ blocked on the `IN_GROUP` decision above.
+- **Phase 2** (grouping) — ✅ Rhino / AutoCAD authored groups, Revit model groups (ENG-9079). 🔶 CSi groups; rvextract's `OdBmElement::getGroupId()` side of ENG-9079 is still open.
 
 The 🔶 items all require **new host-API walks in the collect phase** (main-thread Revit/Plant3D/Tekla API);
 they were left as a **tested** follow-up rather than shipped blind, and each is wrapped/guarded so it can

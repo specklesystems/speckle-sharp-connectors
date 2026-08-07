@@ -13,6 +13,7 @@ using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
@@ -239,6 +240,11 @@ public class RevitArtifactRootObjectBuilder(
         )
       )
       {
+        // (element, its object K) for every element of THIS document that actually made it into the bundle —
+        // the input to the group pass below, which needs the exact K per document placement (a linked element
+        // sent under N link instances is interned N times, once per transform).
+        var sentElements = new List<(Element Element, int ObjK)>();
+
         foreach (Element revitElement in documentContext.Elements)
         {
           cancellationToken.ThrowIfCancellationRequested();
@@ -282,7 +288,8 @@ public class RevitArtifactRootObjectBuilder(
             Base converted = converter.Convert(revitElement);
             converted.applicationId = applicationId;
 
-            EmitObject(pipeline, converted, modelK, revitElement, applicationId, objectKsByElementUniqueId);
+            int objK = EmitObject(pipeline, converted, modelK, revitElement, applicationId, objectKsByElementUniqueId);
+            sentElements.Add((revitElement, objK));
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
             session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
           }
@@ -295,6 +302,10 @@ public class RevitArtifactRootObjectBuilder(
 
           onOperationProgressed.Report(new("Converting", (double)++countProgress / atomicObjectCount));
         }
+
+        // Model-group topology for this document, keyed by its model container so a linked file placed twice
+        // yields one group tier per placement rather than one shared, cross-wired tier.
+        EmitGroups(pipeline, modelKey, sentElements);
 
         // Named 3D views (perspective AND orthographic) of this document → camera_views rows. Collected inside
         // this settings push so linked-model cameras ride the exact ReferencePointTransform + scaling path the
@@ -424,7 +435,8 @@ public class RevitArtifactRootObjectBuilder(
 
   // Emits one atomic object: its eav labels + IN_MODEL edge + per-fragment DISPLAY (→ geometry) /
   // DISPLAY_INSTANCE (→ INSTANCE node). Instance definitions + materials + levels are wired post-loop.
-  private void EmitObject(
+  // Returns the interned object K so the caller can wire per-document topology (groups) to this exact placement.
+  private int EmitObject(
     ObjectsArtifactPipeline pipeline,
     Base converted,
     int modelK,
@@ -448,7 +460,7 @@ public class RevitArtifactRootObjectBuilder(
       // Not a DataObject (no properties / displayValue to flatten) — keep the object in the eav set with
       // just its scalar labels, no geometry/topology.
       pipeline.AddProperties(applicationId, s_emptyProperties, RootScalars(converted, null));
-      return;
+      return objK;
     }
 
     var revitObject = converted as RevitObject;
@@ -474,6 +486,8 @@ public class RevitArtifactRootObjectBuilder(
         EmitChild(pipeline, child, modelK, objK, childOrd++);
       }
     }
+
+    return objK;
   }
 
   // ENG-8947 / ENG-9099: record the MAIN-model reference point in the bundle meta — the SINGLE source for both
@@ -799,6 +813,86 @@ public class RevitArtifactRootObjectBuilder(
       }
     }
   }
+
+  // Revit model groups → CONTAINER("Group") nodes + IN_GROUP membership [ENG-9079]. A SEPARATE axis from the
+  // scene tree (IN_MODEL / ON_LEVEL / category eav): an element keeps its model AND its group, exactly as in
+  // Rhino/AutoCAD. ElementUnpacker explodes every Group into its members before conversion, so the group
+  // INSTANCE is never itself an object in the bundle — the membership survives only on each member's
+  // Element.GroupId. Because that unpacking recurses, GroupId always names the INNERMOST group, which is
+  // precisely the "at most one IN_GROUP edge per element" contract; the nesting is reproduced as a CONTAINER
+  // parent chain (def_ref) walked from each group's own GroupId. The container name is the group TYPE name —
+  // the same string ClassPropertiesExtractor publishes as the `groupName` property.
+  // Guarded per element: group topology is best-effort and must never fail the geometry send.
+  private static void EmitGroups(
+    ObjectsArtifactPipeline pipeline,
+    string modelKey,
+    List<(Element Element, int ObjK)> sentElements
+  )
+  {
+    var containerKByGroupUniqueId = new Dictionary<string, int?>(StringComparer.Ordinal);
+    var ordByContainerK = new Dictionary<int, int>();
+
+    foreach (var (element, objK) in sentElements)
+    {
+      try
+      {
+        // An ungrouped element's GroupId is InvalidElementId, which resolves to null.
+        if (element.Document.GetElement(element.GroupId) is not Group group)
+        {
+          continue;
+        }
+
+        // null = attached detail group: annotation, not model-group membership.
+        if (ResolveGroupContainer(pipeline, modelKey, group, containerKByGroupUniqueId) is not int groupK)
+        {
+          continue;
+        }
+
+        int ord = ordByContainerK.TryGetValue(groupK, out int next) ? next : 0;
+        pipeline.InGroup(objK, groupK, ord);
+        ordByContainerK[groupK] = ord + 1;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: a group whose type or parent can't be read is skipped; the element still ships.
+      }
+    }
+  }
+
+  // Interns the CONTAINER("Group") for a placed group, minting its ancestor chain FIRST so a nested group hangs
+  // off its parent through def_ref. Keyed by model container as well as group, so a linked file placed twice
+  // gets one group tier per placement instead of one shared, cross-wired tier. Memoized per document pass:
+  // resolving is a Revit API round-trip and every member of a group asks the same question.
+  private static int? ResolveGroupContainer(
+    ObjectsArtifactPipeline pipeline,
+    string modelKey,
+    Group group,
+    Dictionary<string, int?> cache
+  )
+  {
+    if (cache.TryGetValue(group.UniqueId, out int? cached))
+    {
+      return cached;
+    }
+
+    int? containerK = null;
+    if (!IsAttachedDetailGroup(group))
+    {
+      int? parentK = group.Document.GetElement(group.GroupId) is Group parent
+        ? ResolveGroupContainer(pipeline, modelKey, parent, cache)
+        : null;
+      containerK = pipeline.AddContainer($"{modelKey}:{group.UniqueId}", group.GroupType.Name, parentK, "Group");
+    }
+
+    cache[group.UniqueId] = containerK;
+    return containerK;
+  }
+
+  // Attached detail groups name the model group they annotate in AttachedParentId; standalone detail groups are
+  // caught by category. Both are view-specific annotation and stay out of the model-group tier.
+  private static bool IsAttachedDetailGroup(Group group) =>
+    group.AttachedParentId != ElementId.InvalidElementId
+    || (group.Category is { } category && category.GetBuiltInCategory() == BuiltInCategory.OST_IOSDetailGroups);
 
   private static KeyValuePair<string, object?>[] RootScalars(Base converted, RevitObject? revitObject) =>
     new KeyValuePair<string, object?>[]
