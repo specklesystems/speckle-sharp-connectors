@@ -476,20 +476,22 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
-  // ENG-8947: record the MAIN-model reference point in the bundle meta — the SINGLE source for both federation and
-  // Revit→Revit round-trip (the receiver rebuilds the translation from the offset). Only the host (non-linked)
-  // document's Transform is the pure reference-point transform — a linked doc's is (referencePoint ∘ linkPlacement⁻¹)
-  // and must NOT be persisted. Only the translation kinds are recorded: projectBasePoint / surveyPoint (offset in
-  // display units — the vector subtracted) + the requested-but-missing internalOriginFallback. Internal origin and
-  // Shared Coordinates record nothing: internal origin has nothing to record, and Shared Coordinates is a
-  // connector-only kind outside the shared spec vocabulary whose true-north rotation a translation offset can't
-  // represent (so it does not round-trip — a deliberate scope call, see ENG-8808 discussion).
+  // ENG-8947 / ENG-9099: record the MAIN-model reference point in the bundle meta — the SINGLE source for both
+  // federation and Revit→Revit round-trip (the receiver rebuilds the transform from this value). Only the host
+  // (non-linked) document's Transform is the pure reference-point transform — a linked doc's is
+  // (referencePoint ∘ linkPlacement⁻¹) and must NOT be persisted.
+  // projectBasePoint / surveyPoint are translation-only in Revit (no rotation to lose), so they keep the original
+  // 3-value "x,y,z" offset format for back-compat with older bundles/readers. sharedCoordinates carries a
+  // true-north ROTATION on top of the translation (Document.ActiveProjectLocation.GetTotalTransform()), which a
+  // 3-value offset can't represent — it is recorded as the full 16-value row-major transform instead (same
+  // convention already used for InstanceProxy transforms below, see Flatten). internalOriginFallback records the
+  // requested-but-missing base point (not silent); internal origin itself has nothing to record.
   private void EmitMainModelReferencePoint(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
   {
     if (
       documentContext.Doc.IsLinked
       || converterSettings.Current.ReferencePointKind
-        is not (ReferencePointType.ProjectBase or ReferencePointType.Survey)
+        is not (ReferencePointType.ProjectBase or ReferencePointType.Survey or ReferencePointType.SharedCoordinates)
     )
     {
       return;
@@ -497,11 +499,18 @@ public class RevitArtifactRootObjectBuilder(
 
     if (documentContext.Transform is { } transform)
     {
-      var kind =
-        converterSettings.Current.ReferencePointKind == ReferencePointType.ProjectBase
-          ? "projectBasePoint"
-          : "surveyPoint";
-      pipeline.SetReferencePoint(kind, FormatReferencePointOffset(transform));
+      switch (converterSettings.Current.ReferencePointKind)
+      {
+        case ReferencePointType.ProjectBase:
+          pipeline.SetReferencePoint("projectBasePoint", FormatReferencePointOffset(transform));
+          break;
+        case ReferencePointType.Survey:
+          pipeline.SetReferencePoint("surveyPoint", FormatReferencePointOffset(transform));
+          break;
+        default:
+          pipeline.SetReferencePoint("sharedCoordinates", FormatReferencePointTransform(transform));
+          break;
+      }
     }
     else
     {
@@ -519,6 +528,26 @@ public class RevitArtifactRootObjectBuilder(
       scalingService.ScaleLength(transform.Origin.Y),
       scalingService.ScaleLength(transform.Origin.Z)
     );
+
+  // ENG-9099 reference_point_offset (rotation-carrying kinds): the full rigid transform subtracted from
+  // world-space output, as 16 row-major doubles — same layout Flatten/BuildInstanceTransform already use for
+  // InstanceProxy transforms (basis columns unscaled/unit vectors, translation column in display units).
+  private string FormatReferencePointTransform(Transform transform)
+  {
+    var scaled = Transform.Identity;
+    scaled.BasisX = transform.BasisX;
+    scaled.BasisY = transform.BasisY;
+    scaled.BasisZ = transform.BasisZ;
+    scaled.Origin = new XYZ(
+      scalingService.ScaleLength(transform.Origin.X),
+      scalingService.ScaleLength(transform.Origin.Y),
+      scalingService.ScaleLength(transform.Origin.Z)
+    );
+    return string.Join(
+      ",",
+      Flatten(ReferencePointHelper.TransformToMatrix(scaled)).Select(v => v.ToString(CultureInfo.InvariantCulture))
+    );
+  }
 
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
   // DISPLAY_INSTANCE, curves/points → DISPLAY (via the SGEO encoder, same as Rhino's artefact send).
