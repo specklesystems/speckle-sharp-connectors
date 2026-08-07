@@ -194,7 +194,7 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, speckleApplication);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
 
     // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
     // yields N interned objects (disambiguated by transform hash), so the value is a list. Used to resolve
@@ -720,8 +720,11 @@ public class RevitArtifactRootObjectBuilder(
   }
 
   // Host-API topology, guarded to sent objects via objectKsByElementUniqueId (only interned targets get an edge):
-  //   SUBELEMENT   host / super-component → element (a fixture hosted on a ceiling; a nested family → its super).
-  //                Complements the RevitObject.elements lift, which covers children folded INTO a parent object.
+  //   SUBELEMENT   super-component → element: OWNERSHIP (a nested shared family → its super-component).
+  //                Complements the RevitObject.elements lift, which covers children folded INTO a parent object
+  //                (curtain panels / mullions / stacked-wall members — ownership too, emitted by EmitChild).
+  //   HOSTED_ON    element → its host: PLACEMENT (a door/window → its wall, a fixture → its ceiling). A different
+  //                relationship from ownership — a door is placed ON a wall, not a component OF it [ENG-9081].
   //   IN_ROOM      element → its containing Room (or MEP Space) object.
   //   CONNECTS_TO  a door/window's FromRoom → ToRoom, scoped by the opening's object K (the room-adjacency graph).
   // Same accessors as ClassPropertiesExtractor; wrapped defensively — Room/ToRoom/FromRoom can throw without an
@@ -743,14 +746,30 @@ public class RevitArtifactRootObjectBuilder(
       }
       try
       {
-        Element? parent = fi.Host ?? fi.SuperComponent;
-        if (parent is not null && objectKsByElementUniqueId.TryGetValue(parent.UniqueId, out var parentKs))
+        // Ownership wins over hosting, matching rvextract's precedence (owningElemId first, getHostId as the
+        // fallback) so the same fixture gets the same relation whether it is published through the connector or
+        // extracted from an uploaded file. An owner that exists but was NOT sent suppresses HOSTED_ON rather than
+        // falling through to it — the element is owned, and the edge is simply dropped as dangling.
+        if (fi.SuperComponent is { } owner)
         {
-          foreach (var pK in parentKs)
+          if (objectKsByElementUniqueId.TryGetValue(owner.UniqueId, out var ownerKs))
+          {
+            foreach (var oK in ownerKs)
+            {
+              foreach (var eK in elementKs)
+              {
+                pipeline.Subelement(oK, eK, 0);
+              }
+            }
+          }
+        }
+        else if (fi.Host is { } host && objectKsByElementUniqueId.TryGetValue(host.UniqueId, out var hostKs))
+        {
+          foreach (var hK in hostKs)
           {
             foreach (var eK in elementKs)
             {
-              pipeline.Subelement(pK, eK, 0);
+              pipeline.HostedOn(eK, hK);
             }
           }
         }

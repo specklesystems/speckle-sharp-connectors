@@ -112,7 +112,7 @@ public class GrasshopperArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
     var units = converterSettings.Current.SpeckleUnits;
 
     // Reused as-is from the v1 send path — they derive the color/material/instance proxies whose `.objects` arrays are
