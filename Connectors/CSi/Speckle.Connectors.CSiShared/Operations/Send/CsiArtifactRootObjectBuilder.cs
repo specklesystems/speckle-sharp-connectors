@@ -413,7 +413,7 @@ public class CsiArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
