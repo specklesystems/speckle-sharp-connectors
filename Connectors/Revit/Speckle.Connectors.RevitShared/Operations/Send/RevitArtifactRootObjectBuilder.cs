@@ -194,7 +194,7 @@ public class RevitArtifactRootObjectBuilder(
     }
 
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
 
     // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
     // yields N interned objects (disambiguated by transform hash), so the value is a list. Used to resolve

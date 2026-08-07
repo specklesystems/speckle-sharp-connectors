@@ -316,7 +316,7 @@ internal sealed class TsdArtifactRootObjectBuilder : IArtifactRootObjectBuilder<
     CancellationToken cancellationToken
   )
   {
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: _speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: _speckleApplication);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;

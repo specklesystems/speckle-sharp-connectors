@@ -168,7 +168,7 @@ public class TeklaArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
     var collectionKByName = new Dictionary<string, int>(StringComparer.Ordinal);
     var geometryKsByAppId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 
