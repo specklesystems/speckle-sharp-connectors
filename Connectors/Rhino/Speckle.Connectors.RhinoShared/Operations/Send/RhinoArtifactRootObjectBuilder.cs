@@ -793,6 +793,13 @@ public class RhinoArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
+        else if (instanceKByObjectId.TryGetValue(objectId, out var instK))
+        {
+          // instance-sourced: a material painted directly on a block placement (MaterialFromObject set on the
+          // instance itself) owns no geometry of its own to hang the edge on — it rides the placement's own
+          // INSTANCE node K instead [ENG-9109].
+          pipeline.HasMaterial(instK, matK, srcIsInstance: true);
+        }
         else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
         {
           // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
