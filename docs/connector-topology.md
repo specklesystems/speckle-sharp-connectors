@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | DISPLAY (1) | object → geometry | ordinal | object's own mesh | `Display` |
 | SOLID (2) | object → geometry | ordinal | lossless solid blob | `Solid` |
-| SUBELEMENT (3) | object → object | ordinal | parent → child (host/nested) | `Subelement` |
+| SUBELEMENT (3) | object → object | ordinal | owner → owned child (nested/composite) | `Subelement` |
 | DEFINES (4) | node → geometry | — | DEFINITION → mesh | `Defines` |
 | HAS_MATERIAL (5) | geometry → node | — | mesh → MATERIAL | `HasMaterial` |
 | HAS_COLOR (6) | geo\|obj → node | — | colour override | `HasColor` |
@@ -25,11 +25,17 @@
 | IN_ROOM (12) | **object → object** | — | element → room object | `InRoom` |
 | IN_SYSTEM (14) | object → node | — | MEP System / Network | `InSystem` + `AddContainer(…,"MEP System"\|"Network")` |
 | CONNECTS_TO (21) | object → object | **scope** | connectivity (ord = system-K / opening-K / 0) | `ConnectsTo(s,t[,scope])` |
+| HOSTED_ON (22) | object → object | — | hosted element → its host | `HostedOn(hosted, host)` |
 | BOUNDS (23) | object → object | — | bounding wall → room | `Bounds` |
 
 Node kinds: DEFINITION, INSTANCE, MATERIAL, COLOR, LEVEL, CONTAINER (subtype `Collection｜Model｜MEP System｜Network`).
 **Retired — do NOT use:** IN_SPACE(13), IN_NETWORK(15), IN_LINE(16), **IN_GROUP(17)**, IN_ASSEMBLY(18),
-IN_SUBASSEMBLY(19), XREF(20), HOSTED_ON(22), COLLECTION-node(6).
+IN_SUBASSEMBLY(19), XREF(20), COLLECTION-node(6).
+
+**SUBELEMENT is ownership, HOSTED_ON is placement** — and they are not interchangeable. A curtain panel is a
+*component of* its curtain wall (SUBELEMENT); a door is *placed on* its wall (HOSTED_ON). Ownership takes
+precedence when an element has both. `HostedOn` takes the hosted element FIRST (child → parent), the opposite
+argument order from `Subelement(parent, child, ord)`.
 
 **`CONNECTS_TO.ord` is a scope, not an order** (`rel_types.ord_semantics='scope'`): system-K for MEP flow,
 opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` overload carries it.
@@ -38,10 +44,15 @@ opening-K for room adjacency, 0 unscoped. The façade `ConnectsTo(s,t,scope)` ov
 
 ### Revit — `RevitArtifactRootObjectBuilder`
 - ✅ IN_MODEL, DISPLAY, DISPLAY_INSTANCE, DEFINES, HAS_MATERIAL, ON_LEVEL (pre-existing).
-- ✅ **SUBELEMENT** — (a) `RevitObject.elements` nested children (curtain wall→mullions/panels, railing→top
-  rail, stacked wall→members) — these are stripped from the atomic list by
+- ✅ **SUBELEMENT** (ownership) — (a) `RevitObject.elements` nested children (curtain wall→mullions/panels,
+  railing→top rail, stacked wall→members) — these are stripped from the atomic list by
   `RemoveKnownChildElementsWhenParentPresent`, so the lift also **recovered dropped child geometry**;
-  (b) host/super-component → element (`FamilyInstance.Host ?? .SuperComponent`).
+  (b) super-component → element (`FamilyInstance.SuperComponent`) for nested shared families, which survive as
+  their own atomic elements.
+- ✅ **HOSTED_ON** (placement) — element → `FamilyInstance.Host` (door/window→wall, fixture→ceiling/floor),
+  emitted only when the element has **no** `SuperComponent`. Ownership wins; hosting is the fallback — the same
+  precedence as rvextract's `owningElemId` → `getHostId`, so connector and file-upload topology agree
+  [ENG-9081]. An owner that exists but wasn't sent drops the edge rather than falling back to HOSTED_ON.
 - ✅ **IN_ROOM** — `FamilyInstance.Room ?? .Space` → room object.
 - ✅ **CONNECTS_TO (spatial)** — door/window `FromRoom → ToRoom`, scope = opening object K.
 - 🔶 **BOUNDS** — `Room.GetBoundarySegments → BoundarySegment.ElementId` (new API walk; the Areas pattern
@@ -95,7 +106,8 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 
 | rel | rvextract (Revit / BimRv) | nwextract (Navis) |
 |---|---|---|
-| SUBELEMENT | `OdBmElement::owningElemId()` (≈ `Element.GetHostId`) | — |
+| SUBELEMENT | `OdBmElement::owningElemId()` (≈ `FamilyInstance.SuperComponent`) | — |
+| HOSTED_ON | `getHostId()` (≈ `FamilyInstance.Host`), only when `owningElemId()` is unset | — |
 | ON_LEVEL | `getAssocLevelId()` + level params → `addLevelNode` | "Level" property group |
 | IN_ROOM | `OdBmFamilyInstance::getRoomId(Room)` | — |
 | BOUNDS | `OdBmRoomElem::getBoundarySegments()` → segment `getElementId()` | — |
@@ -115,7 +127,10 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
    so it is deferred to a team decision rather than shipped blind. Affects Rhino/AutoCAD scene groups and
    the semantic-grouping variants (CSi groups). (CSi pier/spandrel and Civil networks use `IN_SYSTEM`, which
    is a *distinct* rel/map and does not conflict.)
-2. **Host / hosted uses SUBELEMENT** (object→object), not the retired `HOSTED_ON(22)`.
+2. **Ownership and hosting are separate rels.** `SUBELEMENT` carries ownership (`SuperComponent`, composite
+   children); `HOSTED_ON(22)` — un-retired post-v5 — carries hosting (`Host`). Ownership wins when both exist.
+   Folding them into one rel made a model's topology depend on whether it was published through the connector
+   or extracted from an uploaded file [ENG-9081].
 3. **Civil pipe networks use CONTAINER subtype `Network`**; Revit MEP systems use `MEP System`.
 4. **Assemblies (Tekla) use SUBELEMENT** (main → secondary), avoiding a new CONTAINER subtype.
 
@@ -123,7 +138,7 @@ The managed connectors have the same host-API affordances; the ODA extractors ar
 
 - **Phase 0** (SDK) — ✅ `Bounds` façade + scoped `ConnectsTo(…,scope)` overload + `InRoom` doc fix.
 - **Phase 1** (SUBELEMENT lift) — ✅ Tekla, Revit (recovers dropped child geometry), Civil3D.
-- **Phase 3** (Revit) — ✅ IN_ROOM, host SUBELEMENT, spatial CONNECTS_TO. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
+- **Phase 3** (Revit) — ✅ IN_ROOM, ownership SUBELEMENT, hosting HOSTED_ON, spatial CONNECTS_TO. 🔶 BOUNDS / MEP IN_SYSTEM+connectivity / assemblies.
 - **Phase 4** (Civil3D) — ✅ network IN_SYSTEM, pipe→structure CONNECTS_TO. 🔶 Plant3D IN_SYSTEM + ports.
 - **Phase 5** (CSi) — ✅ member↔joint CONNECTS_TO. 🔶 ON_LEVEL / pier-spandrel IN_SYSTEM / section HAS_MATERIAL; Tekla assemblies + welds.
 - **Phase 2** (grouping) — ⛔ blocked on the `IN_GROUP` decision above.
