@@ -62,7 +62,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **10 IN_COLLECTION** | ● | ● | ● | ● | ● | ● | · | ● | ● | ● |
 | **11 IN_MODEL** | · | · | · | · | · | · | ● | · | · | · |
 | **7 ON_LEVEL** | · | · | · | · | · | · | ● | · | · | · |
-| **17 IN_GROUP** | ● | · | ● | · | ● | · | · | · | · | · |
+| **17 IN_GROUP** | ● | · | ● | · | ● | · | ● | · | · | · |
 | **3 SUBELEMENT** | · | · | · | · | ● | · | ● | ● | · | ◐¹ |
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
@@ -317,9 +317,9 @@ A SketchUp group emits DISPLAY_INSTANCE like a component — so **IN_GROUP is ne
 
 ---
 
-### Revit — BIM · emits 10
+### Revit — BIM · emits 11
 
-The richest BIM producer: display geometry + instances/materials/levels, per-document model containers for federation, and a best-effort host-API topology layer (sub-elements, rooms, room-adjacency).
+The richest BIM producer: display geometry + instances/materials/levels, per-document model containers for federation, and a best-effort host-API topology layer (sub-elements, rooms, room-adjacency, model groups).
 
 **Wall on a level** — `DISPLAY` · `HAS_MATERIAL` · `ON_LEVEL` · `IN_MODEL`
 
@@ -381,7 +381,24 @@ graph LR
 
 Hosting and ownership are **separate rels** (ENG-9081): `FamilyInstance.Host` → `HOSTED_ON` (hosted→host), `SuperComponent` / composite `elements` children → `SUBELEMENT` (owner→child). Ownership wins when an element has both, matching rvextract's `owningElemId` → `getHostId` precedence, so connector and file-upload publishes of the same model agree. Occupancy is `IN_ROOM` (rooms are _objects_, not nodes); a door's FromRoom→ToRoom becomes `CONNECTS_TO` scoped by the opening. All best-effort in try/catch — topology never fails the geometry send.
 
-- **Nodes:** CONTAINER `"Model"` (per source doc) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
+**Model groups** — `IN_GROUP` (ENG-9079)
+
+```mermaid
+graph LR
+  A([obj · chair]):::obj
+  B([obj · desk]):::obj
+  INNER{{node · Group · "Workstation"}}:::nd
+  OUTER{{node · Group · "Office bay"}}:::nd
+  A -->|IN_GROUP| INNER
+  B -->|IN_GROUP| INNER
+  INNER -.->|def_ref| OUTER
+  classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
+  classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
+```
+
+`ElementUnpacker` explodes every placed group into its members before conversion, so the group instance is never an object — membership is recovered from each member's `Element.GroupId`, and because that unpacking recurses, `GroupId` always names the **innermost** group (one `IN_GROUP` edge per element). Nesting is the CONTAINER parent chain (`def_ref`), walked from each group's own `GroupId`. Containers are keyed per model container, so a linked file placed twice gets one group tier per placement. Attached detail groups are excluded (annotation, not model topology). The container name is the group TYPE name — the same string that ships as the `groupName` property.
+
+- **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
 - **Receive:** ● native — DirectShape + DirectShapeLibrary instances, reference-point reversal
 - **Watch out:** linked models intern per-placement; Shared Coordinates deliberately not recorded (can't be one offset)
@@ -499,7 +516,7 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 
 **Three families.**
 - _Free-form CAD_ (Rhino, GH, AutoCAD, Plant3D, SketchUp) shares one profile: DISPLAY + instancing + IN_COLLECTION + materials/colours, ± groups & solids.
-- _BIM_ (Revit) is the only user of ON_LEVEL, IN_MODEL and IN_ROOM — the storey/federation/spatial tier.
+- _BIM_ (Revit) is the only user of ON_LEVEL, IN_MODEL and IN_ROOM — the storey/federation/spatial tier. It shares the CAD family's `IN_GROUP` axis, sourced from model groups rather than authored scene groups (ENG-9079).
 - _Structural_ (Tekla, CSi, TSD) is lean geometry + one topology or results channel; CSi & TSD own `structural_results`.
 
 **Deliberate folds & substitutions.**
