@@ -24,7 +24,7 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 |---:|---|---|---|
 | 1 | `DISPLAY` | object → geometry | object's own display mesh |
 | 2 | `SOLID` | object → geometry | lossless raw body (3dm / SAT) |
-| 3 | `SUBELEMENT` | object → object | parent owns child (railing→baluster, corridor→region) |
+| 3 | `SUBELEMENT` | object → object | parent **owns** child (railing→baluster, corridor→region) |
 | 4 | `DEFINES` | node → geometry | DEFINITION owns shared geometry |
 | 5 | `HAS_MATERIAL` | geometry → node | mesh → MATERIAL (full PBR) |
 | 6 | `HAS_COLOR` | geometry \| object → node | display color · `ord` tags the src namespace |
@@ -37,7 +37,7 @@ A bundle is a graph of flat parquet rows across **three ID spaces**. A bare numb
 | 14 | `IN_SYSTEM` | object → node | object → CONTAINER (MEP system / network) |
 | 17 | `IN_GROUP` | object → node | object → CONTAINER (group) · overlapping axis |
 | 21 | `CONNECTS_TO` | object → object | directed connectivity (frame→joint, pipe→structure, room adjacency) |
-| 22 | `HOSTED_ON` | object → object | hosted element → host (managed Revit folds into SUBELEMENT) |
+| 22 | `HOSTED_ON` | object → object | hosted element **placed on** host (door→wall) · distinct from ownership |
 | 23 | `BOUNDS` | object → object | bounding wall → room |
 
 Plus four **value / sidecar files** outside the relation graph: `camera_views` (named viewpoints), `structural_results` (analysis rows), `reference_point` (meta columns), and the Civil3D **property-set definitions carrier**.
@@ -67,8 +67,8 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **14 IN_SYSTEM** | · | · | · | · | ● | · | · | · | · | · |
 | **12 IN_ROOM** | · | · | · | · | · | · | ● | · | · | · |
 | **21 CONNECTS_TO** | · | · | · | · | ● | · | ● | · | ● | · |
-| **22 HOSTED_ON** | · | · | · | · | · | · | ◐² | · | · | · |
-| **23 BOUNDS** | · | · | · | · | · | · | ◐³ | · | · | · |
+| **22 HOSTED_ON** | · | · | · | · | · | · | ● | · | · | · |
+| **23 BOUNDS** | · | · | · | · | · | · | ◐² | · | · | · |
 | _camera_views_ | ● | · | · | · | · | ● | ● | · | · | · |
 | _structural_results_ | · | · | · | · | · | · | · | · | ● | ● |
 | _reference_point (meta)_ | · | · | · | · | · | · | ● | · | · | · |
@@ -76,8 +76,7 @@ What each connector actually emits, verified in the send builders. `●` emitted
 | **native receive** | ● | · | ● | · | ● | ● | ● | · | · | · |
 
 ¹ TSD `SUBELEMENT` is wired but unreachable — `elements` is always empty.
-² Revit folds `HOSTED_ON` into `SUBELEMENT` (managed builder reuses the richer rel).
-³ Revit folds `BOUNDS` into `IN_ROOM`.
+² Revit folds `BOUNDS` into `IN_ROOM`.
 
 Civil3D's `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` emitters live in the shared AutoCAD builder but only fire for `Civil3dObject`s — so **AutoCAD & Plant3D never produce them**. Plant3D is send-only. SketchUp is a pure-Ruby producer.
 
@@ -318,7 +317,7 @@ A SketchUp group emits DISPLAY_INSTANCE like a component — so **IN_GROUP is ne
 
 ---
 
-### Revit — BIM · emits 9
+### Revit — BIM · emits 10
 
 The richest BIM producer: display geometry + instances/materials/levels, per-document model containers for federation, and a best-effort host-API topology layer (sub-elements, rooms, room-adjacency).
 
@@ -360,24 +359,27 @@ graph LR
 
 Repeated families place one DEFINITION many times; receive uses a DirectShapeLibrary geometry instance per DISPLAY_INSTANCE rather than re-tessellating.
 
-**Hosting & rooms** — `SUBELEMENT` (← folds `HOSTED_ON`) · `IN_ROOM` (← folds `BOUNDS`) · `CONNECTS_TO`
+**Hosting, ownership & rooms** — `HOSTED_ON` · `SUBELEMENT` · `IN_ROOM` (← folds `BOUNDS`) · `CONNECTS_TO`
 
 ```mermaid
 graph LR
   WIN([obj · window]):::obj
   WALL([obj · host wall]):::obj
+  CW([obj · curtain wall]):::obj
+  PNL([obj · curtain panel]):::obj
   F([obj · furniture]):::obj
   RA([obj · Room A]):::obj
   D([obj · door]):::obj
   RB([obj · Room B]):::obj
-  WIN -->|SUBELEMENT · hosting| WALL
+  WIN -->|HOSTED_ON · placement| WALL
+  CW -->|SUBELEMENT · ownership| PNL
   F -->|IN_ROOM| RA
   D -->|IN_ROOM| RA
   D -->|CONNECTS_TO · adjacency| RB
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
 ```
 
-The managed builder reuses `SUBELEMENT` for both ownership and hosting (window→wall) rather than emitting the rvextract-only `HOSTED_ON`. Occupancy is `IN_ROOM` (rooms are _objects_, not nodes); a door's FromRoom→ToRoom becomes `CONNECTS_TO` scoped by the opening. All best-effort in try/catch — topology never fails the geometry send.
+Hosting and ownership are **separate rels** (ENG-9081): `FamilyInstance.Host` → `HOSTED_ON` (hosted→host), `SuperComponent` / composite `elements` children → `SUBELEMENT` (owner→child). Ownership wins when an element has both, matching rvextract's `owningElemId` → `getHostId` precedence, so connector and file-upload publishes of the same model agree. Occupancy is `IN_ROOM` (rooms are _objects_, not nodes); a door's FromRoom→ToRoom becomes `CONNECTS_TO` scoped by the opening. All best-effort in try/catch — topology never fails the geometry send.
 
 - **Nodes:** CONTAINER `"Model"` (per source doc) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
@@ -501,7 +503,7 @@ Members group by member-type (Beam, Column, Slab…) into flat collections. Resu
 - _Structural_ (Tekla, CSi, TSD) is lean geometry + one topology or results channel; CSi & TSD own `structural_results`.
 
 **Deliberate folds & substitutions.**
-- Revit **folds HOSTED_ON into SUBELEMENT** and **BOUNDS into IN_ROOM** — reuses richer rels rather than emit the rvextract-only pair.
+- Revit **folds BOUNDS into IN_ROOM** — reuses the richer rel rather than emit the rvextract-only one. `HOSTED_ON` is **no longer folded** into `SUBELEMENT` (ENG-9081): hosting and ownership are distinct, and collapsing them made topology depend on the publish route.
 - SketchUp maps **groups to component instances**, so it never emits IN_GROUP. CSi maps **stories to Collections**, not LEVEL nodes.
 - The spec's `emitted_by` hint (`rvextract`/`nwextract`/`managed`) is coarse — this map is the precise managed-connector truth.
 

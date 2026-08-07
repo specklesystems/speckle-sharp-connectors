@@ -482,7 +482,7 @@ public class RhinoArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, speckleApplication);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
 
     // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
     foreach (var defProxy in model.Definitions)

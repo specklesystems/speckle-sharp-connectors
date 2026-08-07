@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -10,6 +11,7 @@ using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
+using Speckle.Converters.Autocad.Helpers;
 using Speckle.Converters.Common;
 using Speckle.DoubleNumerics;
 using Speckle.Objects.Data;
@@ -137,7 +139,15 @@ public class AutocadArtifactRootObjectBuilder(
     var units = converterSettings.Current.SpeckleUnits;
 
     // Unpack instances → atomic objects (incl. block-definition members) + instance/definition proxies.
-    var (atomicObjects, _, instanceProxies, instanceDefinitionProxies) = instanceUnpacker.UnpackSelection(objects);
+    var (atomicObjects, atomicDefinitionObjectIds, instanceProxies, instanceDefinitionProxies) =
+      instanceUnpacker.UnpackSelection(objects);
+
+    // Publishing from a custom UCS: the converter rebases every point/vector it emits through
+    // ReferencePointConverter (the inverse of the settings' UCS matrix). Two compensations are needed on top of
+    // that, exactly as the v1 AutocadRootObjectBaseBuilder does them [ENG-9116] — see CollectObject.
+    Matrix3d? referencePointInverse = converterSettings.Current.ReferencePointTransform is Matrix3d ucs
+      ? ucs.Inverse()
+      : null;
 
     var collectedObjects = new List<CollectedObject>(atomicObjects.Count);
     var results = new List<SendConversionResult>(atomicObjects.Count);
@@ -150,7 +160,11 @@ public class AutocadArtifactRootObjectBuilder(
       var sw = Stopwatch.StartNew();
       try
       {
-        CollectedObject collected = CollectObject(entity, applicationId, sourceType, instanceProxies);
+        CollectedObject collected = atomicDefinitionObjectIds.Contains(applicationId)
+          // Definition members live in DEFINITION-LOCAL coordinates and are placed by their instance's transform.
+          // Rebasing them into the UCS too would transform them twice, so convert them with no reference point.
+          ? CollectWithoutReferencePoint(entity, applicationId, sourceType, instanceProxies)
+          : CollectObject(entity, applicationId, sourceType, instanceProxies, referencePointInverse);
         collectedObjects.Add(collected);
         results.Add(new(Status.SUCCESS, applicationId, sourceType, collected.Converted));
         session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -170,10 +184,12 @@ public class AutocadArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Only explicit
-    // object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer COLLECTION nodes'
-    // argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on receive with no edge.
-    var materials = materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>());
+    // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Colours: only
+    // explicit object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer
+    // COLLECTION nodes' argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on
+    // receive with no edge. Materials have no such container channel, so the layer stage IS unpacked and its
+    // proxies are resolved onto the inheriting objects' geometry in phase 2 [ENG-9118].
+    var (materials, layerMaterialInheritors) = UnpackMaterialsWithLayers(atomicObjects);
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
     var layerArgbByName = CollectLayerColors(atomicObjects);
 
@@ -188,9 +204,75 @@ public class AutocadArtifactRootObjectBuilder(
       layerArgbByName,
       instanceDefinitionProxies,
       groups,
+      layerMaterialInheritors,
       results
     );
   }
+
+  // Unpacks render materials INCLUDING the layer stage, and records which objects inherit a layer's material.
+  //
+  // An entity whose material is ByLayer gets no object-level proxy (the unpacker's object stage skips it by design);
+  // its material rides the proxy the LAYER stage builds, which lists the LAYER id — and a layer id resolves to no
+  // geometry in phase 2, so the inherited material was dropped from the bundle entirely and the object drew with the
+  // default material [ENG-9118]. Recording object → the id of the layer whose material it inherits lets phase 2 land
+  // HAS_MATERIAL on the object's own geometry instead. The inheritance is only recorded when the layer actually
+  // carries a (non-default) material — the same condition the unpacker's layer stage uses to build the proxy — so
+  // every recorded object is guaranteed to resolve to a MATERIAL node.
+  //
+  // AutoCAD-API-bound (transaction) → phase 1 only. The layer records must stay OPEN across the UnpackMaterials call,
+  // hence the single transaction wrapping both.
+  private (
+    List<RenderMaterialProxy> Materials,
+    Dictionary<string, string> LayerMaterialInheritors
+  ) UnpackMaterialsWithLayers(List<AutocadRootObject> atomicObjects)
+  {
+    var inheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+    var usedLayers = new List<LayerTableRecord>();
+    try
+    {
+      var db = converterSettings.Current.Document.Database;
+      using var tr = db.TransactionManager.StartTransaction();
+      var layerTable = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+      var recordsByName = new Dictionary<string, LayerTableRecord>(StringComparer.Ordinal);
+
+      foreach (var (entity, applicationId) in atomicObjects)
+      {
+        string layerName = entity.Layer;
+        if (!recordsByName.TryGetValue(layerName, out LayerTableRecord? record))
+        {
+          if (!layerTable.Has(layerName))
+          {
+            continue;
+          }
+          record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+          recordsByName[layerName] = record;
+          usedLayers.Add(record);
+        }
+
+        if (entity.Material == "ByLayer" && LayerHasRenderMaterial(record, tr))
+        {
+          inheritors[applicationId] = record.GetSpeckleApplicationId();
+        }
+      }
+
+      var unpacked = materialUnpacker.UnpackMaterials(atomicObjects, usedLayers);
+      tr.Commit();
+      return (unpacked, inheritors);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      logger.LogError(ex, "Failed to unpack layer render materials for the artefact bundle");
+      // Object-level materials must still make it into the bundle even if the layer pass fell over.
+      return (materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>()), inheritors);
+    }
+  }
+
+  // True when the layer itself carries a render material worth sending — mirrors the skip the material unpacker's
+  // layer stage applies ("Global" is AutoCAD's default material, present on every layer) [ENG-9118].
+  private static bool LayerHasRenderMaterial(LayerTableRecord layer, Transaction tr) =>
+    !layer.MaterialId.IsNull
+    && tr.GetObject(layer.MaterialId, OpenMode.ForRead) is Material material
+    && material.Name != "Global";
 
   // AutoCAD groups → plain snapshot records. Membership rides persistent reactors on each entity (a Group is a
   // reactor on its members); AutoCAD groups don't nest, so each membership is one flat IN_GROUP edge.
@@ -255,6 +337,22 @@ public class AutocadArtifactRootObjectBuilder(
     return result;
   }
 
+  // A block-definition member, converted with the reference point switched off so it stays in definition-local
+  // coordinates. Mirrors the v1 builder's atomicDefinitionObjectIds branch [ENG-9116]. The push is scoped to this
+  // one conversion — the settings store is restored on dispose, so the next top-level object rebases as usual.
+  private CollectedObject CollectWithoutReferencePoint(
+    Entity entity,
+    string applicationId,
+    string sourceType,
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies
+  )
+  {
+    using (converterSettings.Push(current => current with { ReferencePointTransform = null }))
+    {
+      return CollectObject(entity, applicationId, sourceType, instanceProxies, null);
+    }
+  }
+
   // Converts one AutoCAD entity to its Speckle representation (instance proxy or AutocadObject carrier). The
   // AutocadObject is a transient carrier — phase 2 reads its displayValue/rawEncoding/properties and never serializes
   // it (the same way Rhino transiently uses InstanceProxy/RenderMaterialProxy).
@@ -262,11 +360,21 @@ public class AutocadArtifactRootObjectBuilder(
     Entity entity,
     string applicationId,
     string sourceType,
-    IReadOnlyDictionary<string, InstanceProxy> instanceProxies
+    IReadOnlyDictionary<string, InstanceProxy> instanceProxies,
+    Matrix3d? referencePointInverse
   )
   {
     if (instanceProxies.TryGetValue(applicationId, out InstanceProxy? instanceProxy))
     {
+      // A block placement's transform is authored in WORLD coordinates, while the definition members it places were
+      // converted into the (UCS-rebased) coordinates the rest of the send speaks. Pre-multiplying a TOP-LEVEL
+      // placement by the inverse UCS puts the two back in the same frame — without it the instance drifts away from
+      // the loose geometry it was drawn against [ENG-9116]. A nested placement is already definition-local.
+      if (instanceProxy.maxDepth == 0 && referencePointInverse is Matrix3d inverse && entity is BlockReference br)
+      {
+        instanceProxy.transform = TransformHelper.ConvertToInstanceMatrix4x4(br.BlockTransform.PreMultiplyBy(inverse));
+      }
+
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
       return new CollectedObject(
@@ -298,7 +406,7 @@ public class AutocadArtifactRootObjectBuilder(
   )
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
-    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producedBy: speckleApplication.Slug);
+    using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
 
     // Pre-create DEFINITION nodes so they carry their proper name (the per-object pass only has the definitionId).
     foreach (var defProxy in model.Definitions)
@@ -313,6 +421,9 @@ public class AutocadArtifactRootObjectBuilder(
     // Block-definition members are interned as atomic objects too, but they render ONLY through their definition
     // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+
+    // AutoCAD colour SEMANTICS the ARGB-only COLOR node cannot carry [ENG-9117] — see CollectColorSemantics.
+    var colorSemantics = CollectColorSemantics(model.Colors);
 
     // The Collect-phase results are provisional: the write phase can still drop an object's entire geometry
     // (SGEO-unencodable types). Amend those to ERROR so the report card matches the bundle contents [ENG-8826].
@@ -341,7 +452,8 @@ public class AutocadArtifactRootObjectBuilder(
         geometryKsByObjectId,
         instanceKByObjectId,
         definitionMemberIds,
-        memberLayerArgb
+        memberLayerArgb,
+        colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
       );
       if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
       {
@@ -392,7 +504,8 @@ public class AutocadArtifactRootObjectBuilder(
     Dictionary<string, List<int>> geometryKsByObjectId,
     Dictionary<string, int> instanceKByObjectId,
     HashSet<string> definitionMemberIds,
-    int? memberLayerArgb
+    int? memberLayerArgb,
+    ColorSemantics? colorSemantics
   )
   {
     // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
@@ -408,7 +521,7 @@ public class AutocadArtifactRootObjectBuilder(
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
-      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType)
+      RootScalars(co.Converted.speckle_type, ObjectName(co), units, co.SourceType, colorSemantics)
     );
 
     // ── block instance: object → INSTANCE node (transform + definition) via DISPLAY_INSTANCE ──────────
@@ -681,7 +794,7 @@ public class AutocadArtifactRootObjectBuilder(
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL) → object colors (HAS_COLOR).
   // Order matters: all referenced meshes/instances must exist (added in the object loop) before the edges resolve them.
-  private static void EmitValueNodes(
+  private void EmitValueNodes(
     ObjectsArtifactPipeline pipeline,
     CollectedModel model,
     Dictionary<string, List<int>> geometryKsByObjectId,
@@ -713,6 +826,18 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     // 2) render materials → HAS_MATERIAL (geometry → material node). Material proxies list OBJECT ids.
+    // A LAYER-sourced proxy lists a LAYER id instead, which owns no geometry — invert the object → layer map so
+    // those land on the geometry of every object inheriting that layer's material (ByLayer) [ENG-9118].
+    var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerMaterialInheritors)
+    {
+      if (!inheritorsByLayerId.TryGetValue(kv.Value, out var forLayer))
+      {
+        inheritorsByLayerId[kv.Value] = forLayer = new List<string>();
+      }
+      forLayer.Add(kv.Key);
+    }
+
     foreach (var materialProxy in model.Materials)
     {
       var value = materialProxy.value;
@@ -734,6 +859,39 @@ public class AutocadArtifactRootObjectBuilder(
           {
             pipeline.HasMaterial(gK, matK);
           }
+        }
+        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        {
+          // layer-sourced: the layer owns no geometry, so the inherited material lands on each object that draws
+          // with it — block-definition members included, since their geometry Ks are registered too.
+          foreach (var inheritorId in inheritors)
+          {
+            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            {
+              foreach (var gK in inheritorGKs)
+              {
+                pipeline.HasMaterial(gK, matK);
+              }
+            }
+            else
+            {
+              // A block INSTANCE inheriting from its layer: it owns no geometry, and an object-sourced
+              // HAS_MATERIAL needs the namespace tag HAS_COLOR got in ENG-8822 — tracked as ENG-9119.
+              logger.LogWarning(
+                "Layer material '{Material}' not applied to {AppId}: the object owns no geometry to carry it",
+                materialProxy.value.name,
+                inheritorId
+              );
+            }
+          }
+        }
+        else
+        {
+          logger.LogWarning(
+            "Render material '{Material}' lists {AppId}, which resolved to no geometry — the material is not in the bundle for it",
+            materialProxy.value.name,
+            objectId
+          );
         }
       }
     }
@@ -829,15 +987,58 @@ public class AutocadArtifactRootObjectBuilder(
     string speckleType,
     string name,
     string units,
-    string sourceType
-  ) =>
-    new KeyValuePair<string, object?>[]
+    string sourceType,
+    ColorSemantics? colorSemantics = null
+  )
+  {
+    var scalars = new List<KeyValuePair<string, object?>>(6)
     {
       new("speckle_type", speckleType),
       new("name", name),
       new("units", units),
       new("type", sourceType),
     };
+    if (colorSemantics is { } cs)
+    {
+      scalars.Add(new(AutocadColorSemanticKeys.SOURCE, cs.ByBlock ? "block" : "aci"));
+      if (cs.Aci is int aci)
+      {
+        scalars.Add(new(AutocadColorSemanticKeys.INDEX, aci));
+      }
+    }
+    return scalars.ToArray();
+  }
+
+  /// <summary>The AutoCAD colour facts an ARGB-only COLOR node cannot express: the ACI index behind a
+  /// <c>ColorMethod.ByAci</c> colour, and whether the entity was explicitly set to <c>ByBlock</c>.</summary>
+  private sealed record ColorSemantics(int? Aci, bool ByBlock);
+
+  // The bundle's COLOR node stores ARGB only, so an AutoCAD→AutoCAD round trip flattened every ACI colour to
+  // truecolor (same pixels, but the plot-style/standards-relevant index and method were gone) and every explicit
+  // ByBlock to a fixed value [ENG-9117]. The unpacker already recorded both on the proxy — carry them through as
+  // object properties, which every other consumer simply ignores while the ARGB edge keeps rendering unchanged.
+  //
+  // Only reaches objects that own the colour themselves (atomic entities + block references). A block-DEFINITION
+  // member is not addressable this way: its geometry carries no back-reference to an object in the bundle, so it
+  // still round-trips as truecolor.
+  private static Dictionary<string, ColorSemantics> CollectColorSemantics(IReadOnlyList<ColorProxy> colors)
+  {
+    var result = new Dictionary<string, ColorSemantics>(StringComparer.Ordinal);
+    foreach (ColorProxy proxy in colors)
+    {
+      bool byBlock = proxy["source"] is "block";
+      int? aci = proxy["autocadColorIndex"] as int?;
+      if (!byBlock && aci is null)
+      {
+        continue; // a plain truecolor (ByColor) object: the ARGB edge is already lossless
+      }
+      foreach (string objectId in proxy.objects)
+      {
+        result[objectId] = new ColorSemantics(aci, byBlock);
+      }
+    }
+    return result;
+  }
 
   // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
   private static double[] Flatten(Matrix4x4 m) =>
@@ -881,6 +1082,8 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyDictionary<string, int> LayerArgbByName,
     IReadOnlyList<InstanceDefinitionProxy> Definitions,
     IReadOnlyList<CollectedGroup> Groups,
+    // object id → the id of the layer whose render material it inherits (ByLayer material only) [ENG-9118]
+    IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     IReadOnlyList<SendConversionResult> Results
   );
 

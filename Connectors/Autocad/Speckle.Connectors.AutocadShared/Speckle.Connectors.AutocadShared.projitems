@@ -19,6 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)DependencyInjection\AutocadConnectorModule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Filters\AutocadSelectionFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorBaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorSemanticKeys.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadColorUnpacker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupBaker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)HostApp\AutocadGroupUnpacker.cs" />
