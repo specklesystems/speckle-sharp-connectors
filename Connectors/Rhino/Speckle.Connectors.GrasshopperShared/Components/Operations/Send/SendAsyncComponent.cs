@@ -44,7 +44,13 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
   public override Guid ComponentGuid => GetType().GUID;
 
   protected override Bitmap Icon => Resources.speckle_operations_publish;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
+
+  /// <remarks>
+  /// Marks this component as obsolete in the Grasshopper UI (hides it from the ribbon, adds the
+  /// "obsolete" overlay icon on canvas).
+  /// </remarks>
+  public override bool Obsolete => true;
 
   public ComponentState CurrentComponentState { get; set; } = ComponentState.NeedsInput;
   public bool AutoSend { get; set; }
@@ -151,6 +157,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_PUBLISH_MESSAGE);
+
     var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
 
     HasMultipleInputs = multipleResources;
@@ -433,6 +441,12 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     da.SetData(0, OutputParam);
     da.SetData(1, OutputVersionId);
 
+    // not added to RuntimeMessages - the success remarks below are gated on that list being empty
+    if (OutputVersionId != null)
+    {
+      Parent.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.PUBLISHED_LEGACY_VERSION_MESSAGE);
+    }
+
     Parent.CurrentComponentState = ComponentState.UpToDate;
     Parent.OutputParam = OutputParam; // ref the outputs in the parent too, so we can serialise them on write/read
     Parent.OverallProgress = 0;
@@ -524,7 +538,8 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
         Parent.VersionMessage,
         progress,
         true,
-        CancellationToken
+        CancellationToken,
+        useArtifacts: false // deprecated component: keep writing v3 so older connectors can still read it
       )
       .ConfigureAwait(false);
 

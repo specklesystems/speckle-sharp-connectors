@@ -52,6 +52,13 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
   public string? Url { get; private set; }
   public string? VersionMessage { get; private set; }
   protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
+
+  /// <remarks>
+  /// Marks this component as obsolete in the Grasshopper UI (hides it from the ribbon, adds the
+  /// "obsolete" overlay icon on canvas).
+  /// </remarks>
+  public override bool Obsolete => true;
 
   public SendComponent()
     : base(
@@ -96,6 +103,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
   {
     pManager.AddParameter(new SpeckleUrlModelResourceParam());
     pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
+  }
+
+  protected override void SolveInstance(IGH_DataAccess da)
+  {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_PUBLISH_MESSAGE);
+    base.SolveInstance(da);
   }
 
   protected override SendComponentInput GetInput(IGH_DataAccess da)
@@ -259,6 +272,8 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       return new(null);
     }
 
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.PUBLISHED_LEGACY_VERSION_MESSAGE);
+
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
     var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
     var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
@@ -284,7 +299,17 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     using var client = clientFactory.Create(account);
     var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
     var (result, versionId, ingestionId) = await sendOperation
-      .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, true, cancellationToken)
+      .Send(
+        [collectionToSend],
+        sendInfo,
+        fileName,
+        fileBytes,
+        VersionMessage,
+        progress,
+        true,
+        cancellationToken,
+        useArtifacts: false // deprecated component: keep writing v3 so older connectors can still read it
+      )
       .ConfigureAwait(false);
 
     if (ingestionId != null)
