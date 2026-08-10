@@ -105,6 +105,12 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
   }
 
+  protected override void SolveInstance(IGH_DataAccess da)
+  {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_PUBLISH_MESSAGE);
+    base.SolveInstance(da);
+  }
+
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
     if (da.Iteration != 0)
@@ -266,7 +272,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
       return new(null);
     }
 
-    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.DEPRECATED_PUBLISH_MESSAGE);
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.PUBLISHED_LEGACY_VERSION_MESSAGE);
 
     // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
     var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());

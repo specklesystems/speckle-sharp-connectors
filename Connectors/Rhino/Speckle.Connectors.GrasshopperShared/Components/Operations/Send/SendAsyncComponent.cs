@@ -157,6 +157,8 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_PUBLISH_MESSAGE);
+
     var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
 
     HasMultipleInputs = multipleResources;
@@ -442,7 +444,7 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
     // not added to RuntimeMessages - the success remarks below are gated on that list being empty
     if (OutputVersionId != null)
     {
-      Parent.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.DEPRECATED_PUBLISH_MESSAGE);
+      Parent.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.PUBLISHED_LEGACY_VERSION_MESSAGE);
     }
 
     Parent.CurrentComponentState = ComponentState.UpToDate;

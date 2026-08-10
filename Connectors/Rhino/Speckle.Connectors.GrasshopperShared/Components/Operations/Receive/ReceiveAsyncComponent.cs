@@ -93,6 +93,8 @@ public class ReceiveAsyncComponent : GH_AsyncComponent<ReceiveAsyncComponent>
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_LOAD_MESSAGE);
+
     MultipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
     if (MultipleResources)
     {

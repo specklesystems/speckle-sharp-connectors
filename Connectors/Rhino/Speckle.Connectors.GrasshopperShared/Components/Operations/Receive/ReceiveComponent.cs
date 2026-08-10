@@ -100,6 +100,12 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
     );
   }
 
+  protected override void SolveInstance(IGH_DataAccess da)
+  {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_LOAD_MESSAGE);
+    base.SolveInstance(da);
+  }
+
   protected override ReceiveComponentInput GetInput(IGH_DataAccess da)
   {
     SpeckleUrlModelResource? url = null;
