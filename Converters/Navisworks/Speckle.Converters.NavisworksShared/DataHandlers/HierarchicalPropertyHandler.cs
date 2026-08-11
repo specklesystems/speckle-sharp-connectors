@@ -57,7 +57,7 @@ public class HierarchicalPropertyHandler(
     }
 
     var hierarchy = GetObjectHierarchy(modelItem);
-    var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
+    var propertyCollection = new Dictionary<string, Dictionary<string, List<object?>>>();
 
     foreach (var item in hierarchy)
     {
@@ -99,7 +99,7 @@ public class HierarchicalPropertyHandler(
 
   private void CollectHierarchicalProperties(
     NAV.ModelItem item,
-    Dictionary<string, Dictionary<string, HashSet<object?>>> propertyCollection,
+    Dictionary<string, Dictionary<string, List<object?>>> propertyCollection,
     bool storeInCache
   )
   {
