@@ -57,11 +57,11 @@ public class HierarchicalPropertyHandler(
     }
 
     var hierarchy = GetObjectHierarchy(modelItem);
-    var propertyCollection = new Dictionary<string, Dictionary<string, HashSet<object?>>>();
+    var propertyCollection = new Dictionary<string, Dictionary<string, List<object?>>>();
 
     foreach (var item in hierarchy)
     {
-      CollectHierarchicalProperties(item, propertyCollection);
+      CollectHierarchicalProperties(item, propertyCollection, storeInCache: item != modelItem);
     }
 
     ApplyFilteredProperties(propertyDict, propertyCollection);
@@ -99,10 +99,11 @@ public class HierarchicalPropertyHandler(
 
   private void CollectHierarchicalProperties(
     NAV.ModelItem item,
-    Dictionary<string, Dictionary<string, HashSet<object?>>> propertyCollection
+    Dictionary<string, Dictionary<string, List<object?>>> propertyCollection,
+    bool storeInCache
   )
   {
-    var categoryDictionaries = ProcessPropertySets(item);
+    var categoryDictionaries = ProcessPropertySets(item, storeInCache);
     if (categoryDictionaries.Count == 0)
     {
       return;
@@ -110,44 +111,46 @@ public class HierarchicalPropertyHandler(
 
     foreach (var kvp in categoryDictionaries)
     {
-      if (!propertyCollection.TryGetValue(kvp.Key, out var categoryProperties))
-      {
-        categoryProperties = [];
-        propertyCollection.Add(kvp.Key, categoryProperties);
-      }
-
       if (kvp.Value is not Dictionary<string, object?> properties)
       {
-        if (!propertyCollection.TryGetValue(PseudoClassPropertiesKey, out var pseudoProperties))
-        {
-          pseudoProperties = [];
-          propertyCollection.Add(PseudoClassPropertiesKey, pseudoProperties);
-        }
-
-        if (!pseudoProperties.TryGetValue(kvp.Key, out var valueSet))
-        {
-          valueSet = [];
-          pseudoProperties.Add(kvp.Key, valueSet);
-        }
-
-        valueSet.Add(kvp.Value);
+        AppendValue(propertyCollection, PseudoClassPropertiesKey, kvp.Key, kvp.Value);
         continue;
       }
 
       foreach (var prop in properties.Where(prop => IsValidPropertyValue(prop.Value)))
       {
-        if (!categoryProperties.TryGetValue(prop.Key, out var valueSet))
-        {
-          valueSet = [];
-          categoryProperties.Add(prop.Key, valueSet);
-        }
-
-        valueSet.Add(prop.Value);
+        AppendValue(propertyCollection, kvp.Key, prop.Key, prop.Value);
       }
     }
   }
 
-  private void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
+  /// <summary>
+  /// Appends a value to the ordered value list for a category/property pair. Callers walk the hierarchy from
+  /// root to leaf, so the resulting list is in ancestor-first order.
+  /// </summary>
+  private static void AppendValue(
+    Dictionary<string, Dictionary<string, List<object?>>> propertyCollection,
+    string category,
+    string propertyName,
+    object? value
+  )
+  {
+    if (!propertyCollection.TryGetValue(category, out var categoryProperties))
+    {
+      categoryProperties = [];
+      propertyCollection.Add(category, categoryProperties);
+    }
+
+    if (!categoryProperties.TryGetValue(propertyName, out var values))
+    {
+      values = [];
+      categoryProperties.Add(propertyName, values);
+    }
+
+    values.Add(value);
+  }
+
+  private static void FlattenPseudoClassProperties(Dictionary<string, object?> propertyDict)
   {
     string[] bannedNamesForProps =
     [
