@@ -32,7 +32,11 @@ internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
   // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
-  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(ArtefactBundle bundle, string rootName)
+  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(
+    ArtefactBundle bundle,
+    string rootName,
+    SpeckleModelContext context
+  )
   {
     var warnings = new List<string>();
     var root = new SpeckleCollectionWrapper
@@ -111,6 +115,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
       int totalCount = geometries.Count + instCount;
       int ord = EmitGeometryWrappers(
+        objK,
         geometries,
         totalCount,
         appId,
@@ -125,6 +130,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       if (validInstEdges is not null)
       {
         EmitInstanceWrappers(
+          objK,
           validInstEdges,
           bundle,
           definitions,
@@ -137,6 +143,17 @@ internal sealed class GrasshopperArtefactObjectBuilder
           colorByObject,
           materialByObject
         );
+      }
+    }
+
+    // stamp last. definitions come from the map, not the tree - they hang off instances rather than Elements
+    root.SetModelContext(context);
+    foreach (var definition in definitions.Values)
+    {
+      definition.ModelContext = context;
+      foreach (var member in definition.Objects)
+      {
+        member.ModelContext = context;
       }
     }
 
@@ -181,6 +198,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // Converts and emits this object's own direct geometry as SpeckleGeometryWrappers. Returns the ordinal reached, so
   // any instance placements emitted afterward for the same object continue the same `:gN` numbering.
   private static int EmitGeometryWrappers(
+    int objK,
     List<(int GeomK, RG.GeometryBase Geom)> geometries,
     int totalCount,
     string appId,
@@ -216,6 +234,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
         GeometryBase = rg,
         Path = collection.Path,
         Parent = collection,
+        ObjectIndex = objK,
         Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
         Material =
           materialByObject.TryGetValue(appId, out var objMat) ? objMat
@@ -238,6 +257,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // Builds a SpeckleBlockInstanceWrapper per resolved DISPLAY_INSTANCE placement, referencing the shared
   // SpeckleBlockDefinitionWrapper (see BuildDefinitions) instead of duplicating its geometry.
   private static void EmitInstanceWrappers(
+    int objK,
     List<ArtefactEdge> validInstEdges,
     ArtefactBundle bundle,
     Dictionary<int, SpeckleBlockDefinitionWrapper> definitions,
@@ -273,6 +293,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
         GeometryBase = new RG.InstanceReferenceGeometry(Guid.Empty, xf),
         Path = collection.Path,
         Parent = collection,
+        ObjectIndex = objK,
         ApplicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}",
         Color = colorByObject.TryGetValue(appId, out var iArgb) ? System.Drawing.Color.FromArgb(iArgb) : null,
         Material = materialByObject.TryGetValue(appId, out var iMat) ? iMat : null,

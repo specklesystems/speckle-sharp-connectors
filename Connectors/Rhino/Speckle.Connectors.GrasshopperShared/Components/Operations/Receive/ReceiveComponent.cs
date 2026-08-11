@@ -282,6 +282,11 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       // process block instances (internally filters InstanceProxies belonging to registered DataObjects)
       mapHandler.ConvertBlockInstances(blockInstances);
 
+      // no bundle here, so no object index - project/version id still identify the model
+      collectionRebuilder.RootCollectionWrapper.SetModelContext(
+        new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
+      );
+
       var goo = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
       return new ReceiveComponentOutput
       {
@@ -328,7 +333,11 @@ public class ReceiveComponent : SpeckleTaskCapableComponent<ReceiveComponentInpu
       // PerformTask's finally disposes the conversion context
       SpeckleConversionContext.SetupCurrent(scope);
       (SpeckleCollectionWrapper rootWrapper, IReadOnlyList<string> buildWarnings) =
-        new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+        new GrasshopperArtefactObjectBuilder().Build(
+          bundle,
+          receiveInfo.ModelName,
+          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
+        );
 
       foreach (var warning in buildWarnings)
       {

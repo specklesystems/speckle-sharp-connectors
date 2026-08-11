@@ -232,5 +232,6 @@ public class SpeckleBlockDefinitionWrapper : SpeckleWrapper
       ApplicationId = ApplicationId,
       Name = Name,
       Objects = Objects.Select(o => o.DeepCopy()).ToList(),
+      ModelContext = ModelContext,
     };
 }
