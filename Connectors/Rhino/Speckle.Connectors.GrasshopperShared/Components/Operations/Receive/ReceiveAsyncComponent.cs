@@ -536,6 +536,11 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       // block processing needs converted objects, but object filtering needs block definitions.
       mapHandler.ConvertBlockInstances(blockInstances);
 
+      // no bundle here, so no object index - project/version id still identify the model
+      collectionRebuilder.RootCollectionWrapper.SetModelContext(
+        new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
+      );
+
       Result = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper);
       RootProperties = rootPropertiesGoo;
       ProxiesGoo = SpeckleCollectionWrapper.BuildProxiesGoo(Root);
@@ -601,7 +606,11 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       // Receive's finally disposes the conversion context
       SpeckleConversionContext.SetupCurrent(scope);
       (SpeckleCollectionWrapper rootWrapper, IReadOnlyList<string> buildWarnings) =
-        new GrasshopperArtefactObjectBuilder().Build(bundle, receiveInfo.ModelName);
+        new GrasshopperArtefactObjectBuilder().Build(
+          bundle,
+          receiveInfo.ModelName,
+          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
+        );
 
       foreach (var warning in buildWarnings)
       {

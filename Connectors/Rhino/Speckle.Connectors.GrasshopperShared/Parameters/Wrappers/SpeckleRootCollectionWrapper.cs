@@ -19,6 +19,7 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
     Path = wrapper.Path;
     Topology = wrapper.Topology;
     Elements = wrapper.Elements;
+    ModelContext = wrapper.ModelContext;
     Properties = properties;
   }
 
@@ -36,6 +37,7 @@ public class SpeckleRootCollectionWrapper : SpeckleCollectionWrapper
       Path = baseCopy.Path,
       Topology = baseCopy.Topology,
       Elements = baseCopy.Elements,
+      ModelContext = baseCopy.ModelContext,
       Properties = Properties != null ? new Dictionary<string, object?>(Properties) : null,
     };
   }
