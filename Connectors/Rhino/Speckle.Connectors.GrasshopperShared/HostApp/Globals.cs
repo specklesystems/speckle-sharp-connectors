@@ -8,6 +8,11 @@ public static class Constants
   public const string NAME_PROP = "name";
   public const string PROPERTIES_PROP = "properties";
 
+  /// <summary>Remark raised by the artefact-first Load components when a version has no 4.0 bundle to read.</summary>
+  public const string LEGACY_FALLBACK_MESSAGE =
+    "This version has no Speckle 4.0 bundle, so it was loaded from the 3.0 model. Object grouping and collection "
+    + "paths may differ from a 4.0 load.";
+
   /// <summary>Remark raised by the deprecated Load components on every solve.</summary>
   public const string DEPRECATED_LOAD_MESSAGE =
     "This Load component is deprecated. Switch to the new Load component for Speckle 4.0 support.";

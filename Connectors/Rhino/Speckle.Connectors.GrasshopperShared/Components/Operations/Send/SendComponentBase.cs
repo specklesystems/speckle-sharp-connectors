@@ -1,0 +1,378 @@
+using System.Diagnostics;
+using Grasshopper;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
+using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Common.Analytics;
+using Speckle.Connectors.Common.Operations;
+using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
+using Speckle.Connectors.GrasshopperShared.HostApp;
+using Speckle.Connectors.GrasshopperShared.Parameters;
+using Speckle.Connectors.GrasshopperShared.Registration;
+using Speckle.Sdk;
+using Speckle.Sdk.Api;
+using Speckle.Sdk.Common;
+using Speckle.Sdk.Credentials;
+using Speckle.Sdk.Models.Collections;
+using Speckle.Sdk.Pipelines.Progress;
+
+namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
+
+public class SendComponentInput
+{
+  public SpeckleUrlModelResource Resource { get; }
+  public SpeckleCollectionWrapperGoo Input { get; }
+  public bool Run { get; }
+  public SpecklePropertyGroupGoo? RootProperties { get; }
+
+  public SendComponentInput(
+    SpeckleUrlModelResource resource,
+    SpeckleCollectionWrapperGoo input,
+    bool run,
+    SpecklePropertyGroupGoo? rootProperties
+  )
+  {
+    Resource = resource;
+    Input = input;
+    Run = run;
+    RootProperties = rootProperties;
+  }
+}
+
+public class SendComponentOutput(SpeckleUrlModelResource? resource, string? versionId = null)
+{
+  public SpeckleUrlModelResource? Resource { get; } = resource;
+  public string? VersionId { get; } = versionId;
+}
+
+/// <summary>
+/// Shared machinery for the synchronous Publish components. Subclasses differ only in whether they write a 4.0
+/// bundle (<see cref="UseArtifacts"/>) and whether they take model-wide properties
+/// (<see cref="HasModelPropertiesInput"/>).
+/// </summary>
+public abstract class SendComponentBase(
+  string name,
+  string nickname,
+  string description,
+  string category,
+  string subCategory
+) : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>(
+  name,
+  nickname,
+  description,
+  category,
+  subCategory
+)
+{
+  public string? Url { get; private set; }
+  public string? VersionMessage { get; private set; }
+
+  /// <summary>False falls through to the v3 routes - see <c>SendOperation.Send</c>'s useArtifacts parameter.</summary>
+  protected abstract bool UseArtifacts { get; }
+
+  /// <summary>
+  /// Whether this variant exposes the model-wide properties input. Also decides the index of "Run", so it must match
+  /// what <see cref="RegisterInputParams"/> declares.
+  /// </summary>
+  protected abstract bool HasModelPropertiesInput { get; }
+
+  /// <summary>Hook for the deprecated variant to say what it's about to create. No-op otherwise.</summary>
+  protected virtual void OnPublishStarting() { }
+
+  protected override void RegisterInputParams(GH_InputParamManager pManager)
+  {
+    // speckle model
+    pManager.AddParameter(new SpeckleUrlModelResourceParam());
+
+    // collection / data (Refactored to accept lists of mixed data)
+    pManager.AddGenericParameter(
+      "Collection",
+      "collection",
+      "The collections, data objects, or geometries to publish",
+      GH_ParamAccess.list
+    );
+
+    // version message
+    pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
+    pManager[2].Optional = true;
+
+    if (HasModelPropertiesInput)
+    {
+      // model-wide props (see cnx-2722)
+      pManager.AddParameter(
+        new SpecklePropertyGroupParam(),
+        "Properties",
+        "properties",
+        "Optional model-wide properties to attach to the root collection",
+        GH_ParamAccess.item
+      );
+      pManager[3].Optional = true;
+    }
+
+    pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
+  }
+
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+  {
+    pManager.AddParameter(new SpeckleUrlModelResourceParam());
+    pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
+  }
+
+  protected override SendComponentInput GetInput(IGH_DataAccess da)
+  {
+    if (da.Iteration != 0)
+    {
+      throw new SpeckleException("No more than 1 resource allowed");
+    }
+
+    SpeckleUrlModelResource? resource = null;
+    if (!da.GetData(0, ref resource))
+    {
+      throw new SpeckleException("Failed to get resource");
+    }
+
+    // read as generic list of Goos
+    List<IGH_Goo> inputGoos = new();
+    da.GetDataList(1, inputGoos);
+
+    SpeckleCollectionWrapperGoo rootCollectionWrapper = new(BuildRootCollection(inputGoos));
+
+    string? versionMessage = null;
+    da.GetData(2, ref versionMessage);
+    VersionMessage = versionMessage;
+
+    // the properties input, when present, sits between the version message and Run
+    SpecklePropertyGroupGoo? rootPropsGoo = null;
+    int runIndex = 3;
+    if (HasModelPropertiesInput)
+    {
+      da.GetData(3, ref rootPropsGoo);
+
+      // validate single properties group
+      // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
+      if (Params.Input[3].VolatileData.DataCount > 1)
+      {
+        throw new SpeckleException("Only one Model Properties group is allowed");
+      }
+
+      runIndex = 4;
+    }
+
+    bool run = false;
+    da.GetData(runIndex, ref run);
+
+    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
+  }
+
+  private SpeckleCollectionWrapper BuildRootCollection(List<IGH_Goo> inputGoos)
+  {
+    // filter out nulls just to check if we can use the fast path
+    var nonNullGoos = inputGoos.Where(x => x != null).ToList();
+
+    // fast path: if there's exactly one valid item and it's a collection, use it directly
+    if (nonNullGoos.Count == 1 && nonNullGoos[0] is SpeckleCollectionWrapperGoo singleCollection)
+    {
+      return singleCollection.Value.DeepCopy();
+    }
+
+    // mixed inputs: construct a root collection using the document name  (CNX-3175)
+    var docName = GetGrasshopperFileInfo().fileName ?? "Unnamed Document";
+    if (
+      docName.EndsWith(".gh", StringComparison.OrdinalIgnoreCase)
+      || docName.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase)
+    )
+    {
+      docName = Path.GetFileNameWithoutExtension(docName);
+    }
+
+    var rootBase = new SpeckleCollectionWrapper
+    {
+      Base = new Collection { name = docName },
+      Name = docName,
+      Path = [docName],
+      Color = null,
+      Material = null,
+    };
+
+    int skippedCount = 0;
+    foreach (var obj in inputGoos)
+    {
+      if (obj is SpeckleCollectionWrapperGoo collectionGoo)
+      {
+        var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
+        colClone.Value.Path = rootBase.Path;
+        rootBase.Elements.AddRange(colClone.Value.Elements);
+      }
+      else if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
+      {
+        var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
+        dataObjectWrapper.Path = rootBase.Path;
+        dataObjectWrapper.Parent = rootBase;
+        rootBase.Elements.Add(dataObjectWrapper);
+      }
+      else if (obj?.ToSpeckleGeometryWrapper() is not null)
+      {
+        const string GEOMETRY_ERROR_MESSAGE =
+          "Speckle Geometry cannot be added directly to a Collection. "
+          + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection.";
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, GEOMETRY_ERROR_MESSAGE);
+        throw new SpeckleException(GEOMETRY_ERROR_MESSAGE);
+      }
+      else
+      {
+        rootBase.Elements.Add(null);
+        skippedCount++;
+      }
+    }
+
+    if (skippedCount > 0)
+    {
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Skipped {skippedCount} unsupported object(s).");
+    }
+
+    return rootBase;
+  }
+
+  protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
+  {
+    if (result.Resource is null)
+    {
+      Message = "Not Published";
+    }
+    else
+    {
+      da.SetData(0, result.Resource);
+      da.SetData(1, result.VersionId);
+      Message = "Done";
+    }
+  }
+
+  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+  {
+    base.AppendAdditionalMenuItems(menu);
+
+    Menu_AppendSeparator(menu);
+    if (Url != null)
+    {
+      Menu_AppendSeparator(menu);
+
+      Menu_AppendItem(menu, "View created model online ↗", (s, e) => Open(Url));
+    }
+
+    static void Open(string url)
+    {
+      var psi = new ProcessStartInfo { FileName = url, UseShellExecute = true };
+      Process.Start(psi);
+    }
+  }
+
+  protected override async Task<SendComponentOutput> PerformTask(
+    SendComponentInput input,
+    CancellationToken cancellationToken = default
+  )
+  {
+    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
+
+    if (multipleResources)
+    {
+      AddRuntimeMessage(
+        GH_RuntimeMessageLevel.Error,
+        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components."
+      );
+      return new(null);
+    }
+
+    if (!input.Run)
+    {
+      return new(null);
+    }
+
+    OnPublishStarting();
+
+    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
+    var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
+    var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
+
+    using var scope = PriorityLoader.CreateScopeForActiveDocument();
+    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
+    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
+
+    Account? account = input.Resource.Account.GetAccount(scope);
+    if (account is null)
+    {
+      throw new SpeckleAccountManagerException("No default account was found");
+    }
+
+    var (fileName, fileBytes) = GetGrasshopperFileInfo();
+
+    var progress = new Progress<CardProgress>(_ =>
+    {
+      // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
+    });
+
+    using var client = clientFactory.Create(account);
+    var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
+    var (result, versionId, ingestionId) = await sendOperation
+      .Send(
+        [collectionToSend],
+        sendInfo,
+        fileName,
+        fileBytes,
+        VersionMessage,
+        progress,
+        true,
+        cancellationToken,
+        UseArtifacts
+      )
+      .ConfigureAwait(false);
+
+    if (ingestionId != null)
+    {
+      Message = "Remote processing";
+      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
+      versionId = await ingestionTracker
+        .WaitForIngestionCompletion(
+          client,
+          sendInfo.ProjectId,
+          ingestionId,
+          reportProgress: null,
+          reportProgressId: null,
+          cancellationToken
+        )
+        .ConfigureAwait(false);
+    }
+
+    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
+    var customProperties = new Dictionary<string, object> { { "isAsync", false } };
+    if (sendInfo.WorkspaceId != null)
+    {
+      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
+    }
+
+    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
+    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+
+    SpeckleUrlModelVersionResource createdVersionResource = new(
+      new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
+      sendInfo.WorkspaceId,
+      sendInfo.ProjectId,
+      sendInfo.ModelId,
+      versionId
+    );
+    Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
+    return new SendComponentOutput(createdVersionResource, versionId);
+  }
+
+  public static (string? fileName, long? fileSizeBytes) GetGrasshopperFileInfo()
+  {
+    var doc = Instances.ActiveCanvas?.Document;
+
+    if (doc is null || !File.Exists(doc.FilePath))
+    {
+      return (null, null);
+    }
+    var fileInfo = new FileInfo(doc.FilePath);
+
+    return (fileInfo.Name, fileInfo.Length);
+  }
+}
