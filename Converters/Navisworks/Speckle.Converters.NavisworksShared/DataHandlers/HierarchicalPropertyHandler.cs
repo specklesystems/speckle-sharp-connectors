@@ -200,30 +200,86 @@ public class HierarchicalPropertyHandler(
     propertyDict.Remove(PseudoClassPropertiesKey);
   }
 
+  /// <summary>
+  /// Collapses the values gathered across the hierarchy into a single value per property. The most specific
+  /// (leaf-most) value wins; any differing ancestor values are preserved under <see cref="InheritedPropertiesKey"/>
+  /// rather than being discarded.
+  /// </summary>
   private static void ApplyFilteredProperties(
     Dictionary<string, object?> propertyDict,
-    Dictionary<string, Dictionary<string, HashSet<object?>>> propertyCollection
+    Dictionary<string, Dictionary<string, List<object?>>> propertyCollection
   )
   {
     foreach (var kvp in propertyCollection)
     {
       var categoryDict = new Dictionary<string, object?>();
-      bool hasProperties = false;
+      var inherited = new Dictionary<string, object?>();
 
       foreach (var kvS in kvp.Value)
       {
-        if ((kvS.Value).Count != 1)
+        var values = kvS.Value;
+        if (values.Count == 0)
         {
           continue;
         }
 
-        categoryDict[kvS.Key] = kvS.Value.First();
-        hasProperties = true;
+        // values are collected root -> leaf, so the last one is the item's own (or nearest ancestor's) value
+        var effective = values[^1];
+        categoryDict[kvS.Key] = effective;
+
+        var ancestorValues = GetDistinctAncestorValues(values, effective);
+        if (ancestorValues.Count > 0)
+        {
+          inherited[kvS.Key] = ancestorValues;
+        }
       }
 
-      if (hasProperties)
+      if (categoryDict.Count == 0)
       {
-        propertyDict[kvp.Key] = categoryDict;
+        continue;
+      }
+
+      if (inherited.Count > 0)
+      {
+        categoryDict[InheritedPropertiesKey] = inherited;
+      }
+
+      propertyDict[kvp.Key] = categoryDict;
+    }
+  }
+
+  /// <summary>
+  /// Returns the distinct ancestor values that differ from the effective value, in root-to-leaf order.
+  /// </summary>
+  private static List<object?> GetDistinctAncestorValues(List<object?> values, object? effective)
+  {
+    var ancestorValues = new List<object?>();
+
+    for (int i = 0; i < values.Count - 1; i++)
+    {
+      var value = values[i];
+      if (Equals(value, effective) || ancestorValues.Any(existing => Equals(existing, value)))
+      {
+        continue;
+      }
+
+      ancestorValues.Add(value);
+    }
+
+    return ancestorValues;
+  }
+
+  private static void OmitStandardExcludedClassProperties(
+    Dictionary<string, object?> propertyDict,
+    IReadOnlyList<QuickPropertyDefinition> quickPropertyDefinitions
+  )
+  {
+    string[] keys = propertyDict.Keys.ToArray();
+    foreach (string key in keys)
+    {
+      if (PropertyHelpers.ShouldSkipProperty(key, string.Empty, PropertyDetailLevel.Standard, quickPropertyDefinitions))
+      {
+        propertyDict.Remove(key);
       }
     }
   }
