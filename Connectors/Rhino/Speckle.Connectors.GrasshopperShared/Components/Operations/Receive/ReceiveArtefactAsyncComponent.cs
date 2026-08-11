@@ -30,8 +30,7 @@ public class ReceiveArtefactAsyncComponent : ReceiveAsyncComponentBase
       ComponentCategories.OPERATIONS
     ) { }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -40,17 +39,6 @@ public class ReceiveArtefactAsyncComponent : ReceiveAsyncComponentBase
       GH_ParamAccess.item
     );
 
-    pManager.AddTextParameter(
-      "Source",
-      "source",
-      "Which path produced this: '4.0' when read from an artefact bundle, 'legacy' when the version has none.",
-      GH_ParamAccess.item
-    );
-  }
-
-  public override void WriteOutputs(IGH_DataAccess da, ReceiveComponentOutput result)
-  {
+  public override void WriteOutputs(IGH_DataAccess da, ReceiveComponentOutput result) =>
     da.SetData(0, result.RootObject);
-    da.SetData(1, result.Source);
-  }
 }

@@ -539,7 +539,6 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
         RootObject = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper),
         RootProperties = rootPropertiesGoo,
         ProxiesGoo = SpeckleCollectionWrapper.BuildProxiesGoo(Root),
-        Source = Constants.SOURCE_LEGACY,
       };
 
       // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
@@ -634,7 +633,6 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
       Output = new ReceiveComponentOutput
       {
         RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
-        Source = Constants.SOURCE_ARTEFACT,
       };
       return true;
     }

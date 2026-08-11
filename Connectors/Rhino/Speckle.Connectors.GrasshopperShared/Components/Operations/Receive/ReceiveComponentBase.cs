@@ -41,9 +41,6 @@ public class ReceiveComponentOutput
   public SpeckleCollectionWrapperGoo? RootObject { get; set; }
   public SpecklePropertyGroupGoo? RootProperties { get; set; }
   public SpecklePropertyGroupGoo? ProxiesGoo { get; set; }
-
-  /// <summary>Which path produced this - <see cref="Constants.SOURCE_ARTEFACT"/> or <see cref="Constants.SOURCE_LEGACY"/>.</summary>
-  public string? Source { get; set; }
 }
 
 /// <summary>
@@ -276,7 +273,6 @@ public abstract class ReceiveComponentBase(
       RootObject = new SpeckleCollectionWrapperGoo(collectionRebuilder.RootCollectionWrapper),
       RootProperties = rootPropertiesGoo,
       ProxiesGoo = SpeckleCollectionWrapper.BuildProxiesGoo(root),
-      Source = Constants.SOURCE_LEGACY,
     };
   }
 
@@ -361,7 +357,6 @@ public abstract class ReceiveComponentBase(
       return new ReceiveComponentOutput
       {
         RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
-        Source = Constants.SOURCE_ARTEFACT,
       };
     }
     catch (Exception ex) when (!ex.IsFatal())
