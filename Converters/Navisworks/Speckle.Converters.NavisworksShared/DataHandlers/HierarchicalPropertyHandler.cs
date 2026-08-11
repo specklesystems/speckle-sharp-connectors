@@ -1,4 +1,5 @@
 ﻿using Speckle.Converter.Navisworks.Helpers;
+using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 
@@ -10,17 +11,40 @@ namespace Speckle.Converter.Navisworks.ToSpeckle.PropertyHandlers;
 public class HierarchicalPropertyHandler(
   PropertySetsExtractor propertySetsExtractor,
   ModelPropertiesExtractor modelPropertiesExtractor,
+  InternalPropertiesExtractor internalPropertiesExtractor,
   ClassPropertiesExtractor classPropertiesExtractor,
   IConverterSettingsStore<NavisworksConversionSettings> settingsStore,
-  IRevitBuiltInCategoryExtractor revitCategoryExtractor
-) : BasePropertyHandler(propertySetsExtractor, modelPropertiesExtractor)
+  IRevitBuiltInCategoryExtractor revitCategoryExtractor,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache
+)
+  : BasePropertyHandler(
+    propertySetsExtractor,
+    modelPropertiesExtractor,
+    internalPropertiesExtractor,
+    settingsStore,
+    quickPropertyDefinitionsCache,
+    modelItemPropertySetsCache
+  )
 {
   private static string PseudoClassPropertiesKey => "_pseudoClassProperties";
+  private static string InheritedPropertiesKey => "_inherited";
   private readonly bool _mapRevit = settingsStore.Current.User.RevitCategoryMapping;
+  private readonly IConverterSettingsStore<NavisworksConversionSettings> _settingsStore = settingsStore;
+  private IQuickPropertyDefinitionsCache _quickPropertyDefinitionsCache = quickPropertyDefinitionsCache;
 
   public override Dictionary<string, object?> GetProperties(NAV.ModelItem modelItem)
   {
+    if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
+    {
+      return ProcessPropertySets(modelItem);
+    }
+
     var propertyDict = classPropertiesExtractor.GetClassProperties(modelItem);
+    if (_settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.Standard)
+    {
+      OmitStandardExcludedClassProperties(propertyDict, _quickPropertyDefinitionsCache.Ensure());
+    }
 
     // Interop-lite mapping for Revit built-in categories
     if (_mapRevit && revitCategoryExtractor.TryGetBuiltInCategory(modelItem, out var builtInCategory))
