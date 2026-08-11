@@ -164,10 +164,27 @@ public class HierarchicalPropertyHandler(
 
     if (
       !propertyDict.TryGetValue(PseudoClassPropertiesKey, out var pseudoPropsObj)
-      || pseudoPropsObj is not Dictionary<string, object> pseudoProps
+      || pseudoPropsObj is not Dictionary<string, object?> pseudoProps
     )
     {
       return;
+    }
+
+    // the pseudo bucket flattens onto the root, so its inherited values must honour the same exclusions
+    if (
+      pseudoProps.TryGetValue(InheritedPropertiesKey, out var inheritedObj)
+      && inheritedObj is Dictionary<string, object?> inherited
+    )
+    {
+      foreach (var bannedName in bannedNamesForProps)
+      {
+        inherited.Remove(bannedName);
+      }
+
+      if (inherited.Count == 0)
+      {
+        pseudoProps.Remove(InheritedPropertiesKey);
+      }
     }
 
     foreach (var prop in pseudoProps.Where(prop => !bannedNamesForProps.Contains(prop.Key)))
