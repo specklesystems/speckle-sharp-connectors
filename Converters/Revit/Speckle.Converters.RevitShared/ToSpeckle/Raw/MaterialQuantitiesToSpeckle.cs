@@ -64,6 +64,13 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         ProcessMaterialsByElementTypes(railElementIds, quantities);
         break;
 
+      case DBA.Stairs stairs:
+        // stairs are container elements: GetMaterialVolume() on the stair itself returns 0
+        // because the solid geometry belongs to its components (runs, landings, supports).
+        // aggregate material quantities from the components instead (ENG-8733)
+        ProcessStairMaterials(stairs, quantities);
+        break;
+
       default:
         ProcessMaterialsByCategory(target, quantities);
         break;
@@ -115,6 +122,87 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
         {
           throw new ConversionException("Error in Material Quantities", ex);
         }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Extracts material quantities for stairs by aggregating over their components (runs, landings and supports),
+  /// since the stair element itself reports no material volumes.
+  /// </summary>
+  /// <remarks>
+  /// Areas and volumes of the same material are summed across components, matching what Revit shows in a
+  /// material takeoff schedule. Falls back to category-based extraction if no component yields any material.
+  /// </remarks>
+  private void ProcessStairMaterials(DBA.Stairs stairs, Dictionary<string, object> quantities)
+  {
+    List<DB.ElementId> componentIds =
+    [
+      .. stairs.GetStairsRuns(),
+      .. stairs.GetStairsLandings(),
+      .. stairs.GetStairsSupports(),
+    ];
+
+    // sum area and volume per material across all stair components
+    Dictionary<DB.ElementId, (double Area, double Volume)> materialTotals = new();
+    foreach (DB.ElementId componentId in componentIds)
+    {
+      if (_converterSettings.Current.Document.GetElement(componentId) is not DB.Element component)
+      {
+        continue;
+      }
+
+      foreach (DB.ElementId? matId in component.GetMaterialIds(false))
+      {
+        if (matId is null)
+        {
+          continue;
+        }
+
+        try
+        {
+          double area = component.GetMaterialArea(matId, false);
+          double volume = component.GetMaterialVolume(matId);
+          materialTotals[matId] = materialTotals.TryGetValue(matId, out (double Area, double Volume) totals)
+            ? (totals.Area + area, totals.Volume + volume)
+            : (area, volume);
+        }
+        catch (ApplicationException ex)
+        {
+          throw new ConversionException("Error in Material Quantities", ex);
+        }
+      }
+    }
+
+    if (materialTotals.Count == 0)
+    {
+      // e.g. stairs without accessible components - fall back to the default behaviour
+      ProcessMaterialsByCategory(stairs, quantities);
+      return;
+    }
+
+    var unitSettings = _converterSettings.Current.Document.GetUnits();
+    var areaUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Area).GetUnitTypeId();
+    var volumeUnitType = unitSettings.GetFormatOptions(DB.SpecTypeId.Volume).GetUnitTypeId();
+
+    foreach (var entry in materialTotals)
+    {
+      var materialQuantity = new Dictionary<string, object>();
+      if (TryAddMaterialPropertiesToQuantitiesDict(entry.Key, materialQuantity, out string matName))
+      {
+        quantities[matName] = materialQuantity;
+        AddMaterialProperty(
+          materialQuantity,
+          "area",
+          _scalingService.Scale(entry.Value.Area, areaUnitType),
+          areaUnitType
+        );
+        AddMaterialProperty(
+          materialQuantity,
+          "volume",
+          _scalingService.Scale(entry.Value.Volume, volumeUnitType),
+          volumeUnitType
+        );
       }
     }
   }
