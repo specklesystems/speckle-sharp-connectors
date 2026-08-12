@@ -1,23 +1,59 @@
-using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 
+/// <summary>One relation as the bundle itself declares it - id, spec name, and the dense-int namespace at each end.</summary>
+internal sealed record RelationType(byte Rel, string Name, string SourceNamespace, string TargetNamespace);
+
 /// <summary>
-/// The envelope graph of one received version - the parsed bundle plus the object-to-object relations the SDK's
-/// reader drops. Backs the Explore component.
+/// The envelope graph of one received version: the parsed bundle, the relation catalog it ships with, and every edge
+/// indexed in both directions. Backs the Explore component.
 /// </summary>
+/// <remarks>
+/// Nothing here knows what any relation means. The bundle carries its own catalog (<c>rel_types</c>), so a relation
+/// added to the spec shows up without a code change - which is the whole point of reading it rather than hardcoding
+/// a list.
+/// </remarks>
 internal sealed class ArtefactGraph
 {
   public required ArtefactBundle Bundle { get; init; }
 
-  /// <summary>rel kind -> source object -> target objects, for <see cref="ArtefactGraphCache.ExtraRelations"/>.</summary>
-  public required IReadOnlyDictionary<byte, Dictionary<int, List<int>>> ObjectRelations { get; init; }
+  /// <summary>Relations worth walking - see <see cref="ArtefactGraphCache.IsGeometryNamespace"/> for what's dropped.</summary>
+  public required IReadOnlyList<RelationType> RelationTypes { get; init; }
 
-  public IReadOnlyList<int> Targets(byte rel, int objK) =>
-    ObjectRelations.TryGetValue(rel, out var byObject) && byObject.TryGetValue(objK, out var targets)
-      ? targets
-      : Array.Empty<int>();
+  private readonly Dictionary<byte, Dictionary<int, List<int>>> _forward = new();
+  private readonly Dictionary<byte, Dictionary<int, List<int>>> _reverse = new();
+
+  /// <summary>Where this object points: edges it is the source of.</summary>
+  public IReadOnlyList<int> Targets(byte rel, int k) => Lookup(_forward, rel, k);
+
+  /// <summary>What points at this object: the same edges read backwards. A wall lists its windows, so a window only
+  /// finds its wall this way.</summary>
+  public IReadOnlyList<int> Sources(byte rel, int k) => Lookup(_reverse, rel, k);
+
+  internal void Index(byte rel, int src, int dst)
+  {
+    Index(_forward, rel, src, dst);
+    Index(_reverse, rel, dst, src);
+  }
+
+  private static IReadOnlyList<int> Lookup(Dictionary<byte, Dictionary<int, List<int>>> map, byte rel, int k) =>
+    map.TryGetValue(rel, out var byKey) && byKey.TryGetValue(k, out var found) ? found : [];
+
+  private static void Index(Dictionary<byte, Dictionary<int, List<int>>> map, byte rel, int from, int to)
+  {
+    if (!map.TryGetValue(rel, out var byKey))
+    {
+      byKey = new Dictionary<int, List<int>>();
+      map[rel] = byKey;
+    }
+    if (!byKey.TryGetValue(from, out var list))
+    {
+      list = new List<int>();
+      byKey[from] = list;
+    }
+    list.Add(to);
+  }
 }
 
 /// <summary>
@@ -29,19 +65,23 @@ internal sealed class ArtefactGraph
 /// </remarks>
 internal static class ArtefactGraphCache
 {
+  private const string NODE_NS = "node";
+  private const string OBJECT_NS = "object";
+  private const string GEOMETRY_NS = "geometry";
+
   /// <summary>
-  /// Object-to-object relations that <c>ArtefactBundle</c> parses and discards: its switch has no case for them, and
-  /// its object-to-node set stops at 20. Producers write them (Revit folds HOSTED_ON into SUBELEMENT, Civil3D emits
-  /// SUBELEMENT and CONNECTS_TO), so we read the relations table ourselves rather than change the SDK for one
-  /// connector. Delete this and use the bundle directly if the SDK ever retains them.
+  /// Relations touching the geometry namespace (DISPLAY, SOLID, HAS_MATERIAL, HAS_COLOR, DEFINES, …) are skipped.
+  /// They're already resolved onto the canvas wrappers during receive, so surfacing them again is noise - and this
+  /// stays a rule rather than a list, so it keeps holding if the spec adds more.
   /// </summary>
-  internal static readonly byte[] ExtraRelations =
-  [
-    RelKind.Subelement,
-    RelKind.ConnectsTo,
-    RelKind.HostedOn,
-    RelKind.Bounds,
-  ];
+  public static bool IsGeometryNamespace(string? ns) =>
+    ns is not null && ns.IndexOf(GEOMETRY_NS, StringComparison.OrdinalIgnoreCase) >= 0;
+
+  public static bool IsNodeNamespace(string? ns) =>
+    ns is not null && ns.IndexOf(NODE_NS, StringComparison.OrdinalIgnoreCase) >= 0;
+
+  public static bool IsObjectNamespace(string? ns) =>
+    ns is not null && ns.IndexOf(OBJECT_NS, StringComparison.OrdinalIgnoreCase) >= 0;
 
   // Parsing a bundle is not cheap, and a solve can ask for the same version many times. Bounded because bundles are
   // large and a long session can touch many versions; oldest-inserted is evicted.
@@ -87,37 +127,81 @@ internal static class ArtefactGraphCache
 
   private static ArtefactGraph Load(string dir, CancellationToken cancellationToken)
   {
-    // sync-over-async: Explore resolves inside SolveInstance, which is synchronous
-    var bundle = ArtefactBundleReader.ReadAsync(dir, cancellationToken).GetAwaiter().GetResult();
-    return new ArtefactGraph { Bundle = bundle, ObjectRelations = ReadExtraRelations(dir, cancellationToken) };
+    var bundle = RunSync(() => ArtefactBundleReader.ReadAsync(dir, cancellationToken));
+    var types = ReadRelationTypes(dir, cancellationToken);
+    var graph = new ArtefactGraph { Bundle = bundle, RelationTypes = types };
+    IndexRelations(dir, graph, types, cancellationToken);
+    return graph;
+  }
+
+  /// <summary>
+  /// Blocks on an async read from a synchronous caller. The Task.Run matters: callers run on Grasshopper's UI thread,
+  /// and blocking there on a continuation that wants the same thread deadlocks. Off the pool there is no captured
+  /// context to come back to. It still blocks the UI for the length of the parse - once per version, not per solve.
+  /// </summary>
+  private static T RunSync<T>(Func<Task<T>> work) => Task.Run(work).GetAwaiter().GetResult();
+
+  private static ParquetTable? TryReadTable(string dir, string suffix, CancellationToken cancellationToken)
+  {
+    var path = Directory
+      .EnumerateFiles(dir, "*.parquet")
+      .FirstOrDefault(p => p.EndsWith(suffix, StringComparison.Ordinal));
+    return path is null ? null : RunSync(() => ParquetTableReader.ReadAsync(path, cancellationToken));
   }
 
   /// <remarks>
-  /// Depends on the envelope relations column names (rel/src/dst) from the speckle-bundle-spec repo, so a spec change
-  /// there can break this independently of the SDK. Missing columns are treated as "no relations" rather than an
-  /// error, so an older bundle degrades to empty outputs.
+  /// Depends on the envelope column names from the speckle-bundle-spec repo, so a spec change there can break this
+  /// independently of the SDK. A bundle with no catalog yields no relations rather than an error.
   /// </remarks>
-  private static Dictionary<byte, Dictionary<int, List<int>>> ReadExtraRelations(
+  private static List<RelationType> ReadRelationTypes(string dir, CancellationToken cancellationToken)
+  {
+    var types = new List<RelationType>();
+    var table = TryReadTable(dir, ".envelope.rel_types.parquet", cancellationToken);
+    if (table is null || !table.Has("rel") || !table.Has("name"))
+    {
+      return types;
+    }
+
+    var rel = table.Ints("rel");
+    var name = table.Strings("name");
+    var srcNs = table.Has("src_ns") ? table.Strings("src_ns") : new string?[rel.Length];
+    var dstNs = table.Has("dst_ns") ? table.Strings("dst_ns") : new string?[rel.Length];
+
+    for (int i = 0; i < rel.Length; i++)
+    {
+      if (name[i] is not { Length: > 0 } relName)
+      {
+        continue;
+      }
+      if (IsGeometryNamespace(srcNs[i]) || IsGeometryNamespace(dstNs[i]))
+      {
+        continue;
+      }
+      types.Add(new RelationType((byte)rel[i], relName, srcNs[i] ?? "", dstNs[i] ?? ""));
+    }
+
+    return types;
+  }
+
+  private static void IndexRelations(
     string dir,
+    ArtefactGraph graph,
+    List<RelationType> types,
     CancellationToken cancellationToken
   )
   {
-    var result = new Dictionary<byte, Dictionary<int, List<int>>>();
-
-    var path = Directory
-      .EnumerateFiles(dir, "*.parquet")
-      .FirstOrDefault(p => p.EndsWith(".envelope.relations.parquet", StringComparison.Ordinal));
-    if (path is null)
+    if (types.Count == 0)
     {
-      return result;
+      return;
     }
 
-    var table = ParquetTableReader.ReadAsync(path, cancellationToken).GetAwaiter().GetResult();
-    if (!table.Has("rel") || !table.Has("src") || !table.Has("dst"))
+    var table = TryReadTable(dir, ".envelope.relations.parquet", cancellationToken);
+    if (table is null || !table.Has("rel") || !table.Has("src") || !table.Has("dst"))
     {
-      return result;
+      return;
     }
 
+    var wanted = new HashSet<byte>(types.Select(t => t.Rel));
     var rel = table.Ints("rel");
     var src = table.Ints("src");
     var dst = table.Ints("dst");
@@ -125,24 +209,10 @@ internal static class ArtefactGraphCache
     for (int i = 0; i < rel.Length; i++)
     {
       var kind = (byte)rel[i];
-      if (Array.IndexOf(ExtraRelations, kind) < 0)
+      if (wanted.Contains(kind))
       {
-        continue;
+        graph.Index(kind, src[i], dst[i]);
       }
-
-      if (!result.TryGetValue(kind, out var byObject))
-      {
-        byObject = new Dictionary<int, List<int>>();
-        result[kind] = byObject;
-      }
-      if (!byObject.TryGetValue(src[i], out var targets))
-      {
-        targets = new List<int>();
-        byObject[src[i]] = targets;
-      }
-      targets.Add(dst[i]);
     }
-
-    return result;
   }
 }

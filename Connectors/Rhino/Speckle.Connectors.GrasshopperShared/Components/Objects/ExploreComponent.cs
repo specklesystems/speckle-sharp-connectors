@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
 using Rhino;
 using Speckle.Connectors.GrasshopperShared.HostApp;
 using Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -60,15 +62,33 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     // applicable". Mirrors ExpandSpeckleProperties.
     if (da.Iteration == 0)
     {
-      var resolved = Params
-        .Input[0].VolatileData.AllData(true)
-        .Select(Resolve)
-        .Where(r => r is not null)
-        .Cast<Dictionary<string, object?>>()
-        .ToList();
-
-      if (resolved.Count > 0)
+      // Gate on there being input at all, not on it resolving. With no input the data simply hasn't arrived yet (file
+      // load) and dropping ports would break wires - but input that resolves to nothing SHOULD clear them, otherwise
+      // swapping to an object the graph doesn't know leaves the previous object's ports sitting there.
+      if (Params.Input[0].VolatileData.DataCount > 0)
       {
+        var resolved = Params
+          .Input[0].VolatileData.AllData(true)
+          .Select(Resolve)
+          .Where(r => r is not null)
+          .Cast<Dictionary<string, object?>>()
+          .ToList();
+
+        if (resolved.Count == 0)
+        {
+          // input arrived but none of it resolved - name what turned up, so an unhandled type is obvious rather
+          // than looking like the component is broken
+          var types = Params
+            .Input[0].VolatileData.AllData(true)
+            .Select(g => g.GetType().Name)
+            .Distinct()
+            .ToList();
+          AddRuntimeMessage(
+            GH_RuntimeMessageLevel.Remark,
+            $"Nothing resolved from: {string.Join(", ", types)}."
+          );
+        }
+
         var names = new List<string>();
         foreach (var name in resolved.SelectMany(r => r.Keys))
         {
@@ -86,9 +106,16 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       }
     }
 
-    object? item = null;
-    da.GetData(0, ref item);
-    var values = item is null ? null : Resolve(item);
+    // read as IGH_Goo, not object - GetData<object> can hand back a cast of the goo rather than the goo itself
+    IGH_Goo? item = null;
+    if (!da.GetData(0, ref item) || item is null)
+    {
+      // the last silent path: no message here means the component looks broken rather than empty
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Nothing arrived on the input to explore.");
+      return;
+    }
+
+    var values = Resolve(item);
     if (values is null)
     {
       return;
@@ -115,19 +142,31 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
   /// <summary>
   /// Everything the graph can say about one piped-in item, or null when it didn't come from a 4.0 receive.
   /// </summary>
-  private Dictionary<string, object?>? Resolve(object? item)
+  private Dictionary<string, object?>? Resolve(object item)
   {
+    // the Goo types are siblings, not a hierarchy - each is its own GH_Goo<T>, so a block instance does NOT match
+    // SpeckleGeometryWrapperGoo even though its wrapper derives from SpeckleGeometryWrapper. Unwrap each explicitly.
     var wrapper = item switch
     {
-      SpeckleCollectionWrapperGoo collection => (SpeckleWrapper?)collection.Value,
-      SpeckleGeometryWrapperGoo geometry => geometry.Value,
       SpeckleWrapper direct => direct,
+      SpeckleCollectionWrapperGoo g => g.Value,
+      SpeckleBlockInstanceWrapperGoo g => g.Value,
+      SpeckleGeometryWrapperGoo g => g.Value,
+      SpeckleDataObjectWrapperGoo g => g.Value,
+      SpeckleBlockDefinitionWrapperGoo g => g.Value,
       _ => null,
     };
 
-    if (wrapper?.ModelContext is not { } context)
+    if (wrapper is null)
     {
-      return null;
+      return Explain(
+        $"Can't explore a {item.GetType().Name}. Pipe in a Speckle Geometry, Block Instance or Collection."
+      );
+    }
+
+    if (wrapper.ModelContext is not { } context)
+    {
+      return Explain("This object wasn't loaded from Speckle, so there is no graph to explore.");
     }
 
     ArtefactGraph? graph;
@@ -152,9 +191,31 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       return null;
     }
 
-    return wrapper is SpeckleGeometryWrapper { ObjectIndex: { } objK }
-      ? ResolveObject(graph, objK)
-      : ResolveModel(graph);
+    var values = wrapper switch
+    {
+      SpeckleGeometryWrapper { ObjectIndex: { } objK } => ResolveObject(graph, objK),
+      // no object index means it didn't come out of a bundle - don't fall through to the model-scoped branch and
+      // hand back levels for an object the graph doesn't know
+      SpeckleGeometryWrapper => Explain(
+        "This object has no graph reference. It came from inside a block definition, or from a 3.0 load."
+      ),
+      SpeckleCollectionWrapper => ResolveModel(graph),
+      _ => Explain($"Nothing to explore for a {wrapper.GetType().Name}."),
+    };
+
+    if (values is { Count: 0 })
+    {
+      return Explain("The graph has nothing recorded against this object.");
+    }
+
+    return values;
+  }
+
+  /// <summary>Says why there is nothing to show. Grasshopper de-duplicates identical messages, so this is safe per item.</summary>
+  private Dictionary<string, object?>? Explain(string message)
+  {
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, message);
+    return null;
   }
 
   /// <summary>Relations hanging off one object.</summary>
@@ -163,29 +224,37 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     var bundle = graph.Bundle;
     var values = new Dictionary<string, object?>(StringComparer.Ordinal);
 
-    if (LevelNode(bundle, objK) is { } level)
+    // Every relation the bundle declares, both ways round. Nothing here knows what any of them mean - the catalog
+    // supplies the name and which namespace each end lives in, so a relation added to the spec appears by itself.
+    foreach (var type in graph.RelationTypes)
     {
-      Add(values, "Level", level.Name);
-      if (level.Elevation is { } elevation)
+      if (ArtefactGraphCache.IsObjectNamespace(type.SourceNamespace))
       {
-        Add(values, "Elevation", elevation * Units.GetConversionFactor(level.Units ?? bundle.Units, DocUnits()));
+        Add(values, Humanise(type.Name), Describe(graph.Targets(type.Rel, objK), type.TargetNamespace, bundle));
+      }
+
+      if (ArtefactGraphCache.IsObjectNamespace(type.TargetNamespace))
+      {
+        Add(
+          values,
+          $"{Humanise(type.Name)} (incoming)",
+          Describe(graph.Sources(type.Rel, objK), type.SourceNamespace, bundle)
+        );
       }
     }
 
-    Add(values, "Model", NodeName(bundle, RelKind.InModel, objK));
-    Add(values, "Room", NodeName(bundle, RelKind.InRoom, objK));
-    Add(values, "System", NodeName(bundle, RelKind.InSystem, objK));
-
-    if (bundle.Relations.GroupsByObject.TryGetValue(objK, out var groupKs))
+    // The exceptions, all things the catalog can't give us. Elevation is the one genuinely numeric datum in the
+    // graph; type parameters and sibling placements aren't relations at all.
+    if (LevelNode(bundle, objK) is { Elevation: { } elevation } level)
     {
-      Add(values, "Groups", groupKs.Select(k => NodeNameAt(bundle, k)).Where(n => n is not null).ToList());
+      Add(values, "Elevation", elevation * Units.GetConversionFactor(level.Units ?? bundle.Units, DocUnits()));
     }
 
-    // object-to-object relations resolve to application ids - see the class remarks
-    Add(values, "Host", AppIds(graph, RelKind.HostedOn, objK).FirstOrDefault());
-    Add(values, "Subelements", AppIds(graph, RelKind.Subelement, objK));
-    Add(values, "Connects To", AppIds(graph, RelKind.ConnectsTo, objK));
-    Add(values, "Bounds", AppIds(graph, RelKind.Bounds, objK));
+    if (bundle.TypePropertiesByObject.TryGetValue(objK, out var typeProps) && typeProps.Count > 0)
+    {
+      Add(values, "Type Properties", new SpecklePropertyGroupGoo(typeProps));
+    }
+
     Add(values, "Siblings", Siblings(bundle, objK));
 
     return values;
@@ -231,25 +300,41 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       ? node
       : null;
 
-  private static string? NodeName(ArtefactBundle bundle, byte rel, int objK) =>
-    bundle.Relations.ObjectNodeByRel.TryGetValue(rel, out var byObject) && byObject.TryGetValue(objK, out var nodeK)
-      ? NodeNameAt(bundle, nodeK)
-      : null;
-
-  // IN_ROOM and friends are object-to-object in the spec but the SDK files them with the object-to-node relations, so
-  // the target may be either. Try a node first, then fall back to an object's application id.
+  // Used by the model-scoped branch, which reads the bundle's own maps rather than the catalog.
   private static string? NodeNameAt(ArtefactBundle bundle, int k) =>
     bundle.Nodes.TryGetValue(k, out var node) && node.Name is { Length: > 0 } name ? name
     : bundle.ObjectAppIds.TryGetValue(k, out var appId) ? appId
     : null;
 
-  private static List<string> AppIds(ArtefactGraph graph, byte rel, int objK) =>
-    graph
-      .Targets(rel, objK)
-      .Select(k => graph.Bundle.ObjectAppIds.TryGetValue(k, out var appId) ? appId : null)
-      .Where(a => a is not null)
-      .Cast<string>()
-      .ToList();
+  /// <summary>
+  /// Turns dense ids into something readable, using the namespace the catalog declared for that end. Object and node
+  /// ids overlap numerically, so guessing without the namespace would silently mislabel targets.
+  /// </summary>
+  private static List<string> Describe(IReadOnlyList<int> ks, string ns, ArtefactBundle bundle) =>
+    ks.Select(k => Describe(k, ns, bundle)).Distinct().ToList();
+
+  private static string Describe(int k, string ns, ArtefactBundle bundle)
+  {
+    if (ArtefactGraphCache.IsNodeNamespace(ns) && bundle.Nodes.TryGetValue(k, out var node))
+    {
+      return node.Name is { Length: > 0 } name ? name : $"node {k}";
+    }
+    if (ArtefactGraphCache.IsObjectNamespace(ns) && bundle.ObjectAppIds.TryGetValue(k, out var appId))
+    {
+      return appId;
+    }
+    return k.ToString(CultureInfo.InvariantCulture);
+  }
+
+  /// <summary>IN_COLLECTION -> "In Collection". The catalog names are spec constants; these are port labels.</summary>
+  private static string Humanise(string specName) =>
+    string.Join(
+      " ",
+      specName
+        .Split('_')
+        .Where(part => part.Length > 0)
+        .Select(part => char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant())
+    );
 
   /// <summary>Other objects placing the same block definition as this one.</summary>
   private static List<string> Siblings(ArtefactBundle bundle, int objK)
@@ -294,6 +379,9 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     return names.Where((t, i) => Params.Output[i].Name != t).Any();
   }
 
+  // Only ever called when OutputMismatch said so, and that check is what stops the loop: once the ports match, the
+  // next solve won't schedule this again. Do NOT make the expire conditional on having changed something - if the
+  // caller returned early without writing data and this then declines to expire, the component sits there stale.
   private void CreateOutputs(List<string> names, List<Dictionary<string, object?>> resolved)
   {
     for (int i = Params.Output.Count - 1; i >= 0; i--)
@@ -328,6 +416,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       }
 
       existing.Access = access;
+
       int current = Params.Output.IndexOf(existing);
       if (current != i)
       {
