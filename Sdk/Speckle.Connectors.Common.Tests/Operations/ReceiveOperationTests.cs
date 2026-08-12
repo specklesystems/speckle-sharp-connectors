@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using Speckle.Connectors.Common.Analytics;
 using Speckle.Connectors.Common.Builders;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
@@ -89,7 +88,6 @@ public class ReceiveOperationTests : MoqTest
     var receiveVersionRetriever = Create<IReceiveVersionRetriever>();
     var activityFactory = Create<ISdkActivityFactory>(MockBehavior.Loose);
     var threadContext = Create<IThreadContext>();
-    var mixPanelManager = Create<IMixPanelManager>();
 
     var @base = new TestBase();
     var token = "token";

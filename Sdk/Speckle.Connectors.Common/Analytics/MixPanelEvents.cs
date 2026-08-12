@@ -3,7 +3,7 @@ namespace Speckle.Connectors.Common.Analytics;
 /// <summary>
 /// Default Mixpanel events
 /// </summary>
-public enum MixPanelEvents
+public enum AnalyticsEvent
 {
   /// <summary>
   /// Event triggered when data is sent to a Speckle Server
