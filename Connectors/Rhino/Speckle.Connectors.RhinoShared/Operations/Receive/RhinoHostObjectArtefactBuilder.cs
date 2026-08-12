@@ -573,6 +573,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       bundle,
       rels,
       materialByGeometry,
+      materialByInstance,
       docUnits,
       baseLayerName,
       baseLayerIndex,
@@ -708,12 +709,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
   // child definition's Rhino Guid via an InstanceReferenceGeometry member carrying the nested placement's own transform.
   // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey,
-  // and each member's own LAYER is recovered through its stamp → object row → IN_COLLECTION [ENG-9110].
+  // and each member's own LAYER is recovered through its stamp → object row → IN_COLLECTION [ENG-9110]; the rest of
+  // the member's attributes (name, user strings, colour) ride the same join [ENG-9213].
   private Dictionary<int, int> BuildDefinitions(
     RhinoDoc doc,
     ArtefactBundle bundle,
     ArtefactRelations rels,
     Dictionary<int, Guid> materialByGeometry,
+    Dictionary<int, Guid> materialByInstance,
     string docUnits,
     string baseLayerName,
     int baseLayerIndex,
@@ -759,31 +762,23 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
             var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
             materialByGeometry.TryGetValue(geomK, out Guid mg);
-            // The member's source layer, via its stamp → member object row → the ordinary IN_COLLECTION projection.
-            // Unstamped (pre-ENG-9110 bundle, or a member whose geometry didn't encode) → the base layer, exactly
-            // what members got before.
-            int memberLayerIndex = ResolveMemberLayer(
-              doc,
-              bundle,
-              memberIndex.ObjectByGeometry,
-              geomK,
-              baseLayerIndex,
-              layerCache
-            );
             foreach (var geom in decoded)
             {
               geometryList.Add(geom);
-              // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would
-              // corrupt the definition; the doc owns them for the document lifetime.
-#pragma warning disable CA2000
-              var a = new ObjectAttributes { LayerIndex = memberLayerIndex };
-#pragma warning restore CA2000
-              if (mg != Guid.Empty)
-              {
-                a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
-                a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-              }
-              attributeList.Add(a);
+              // The member's own layer, name, user strings and colour, all recovered through its geometry stamp →
+              // member object row. A direct member's colour is geometry-sourced, so its geometry K is the colour key.
+              attributeList.Add(
+                BuildMemberAttributes(
+                  doc,
+                  bundle,
+                  memberIndex.ObjectByGeometry,
+                  geomK,
+                  geomK,
+                  mg,
+                  baseLayerIndex,
+                  layerCache
+                )
+              );
             }
           }
         }
@@ -811,20 +806,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             nestedInst.Units is { Length: > 0 } u ? u : docUnits,
             docUnits
           );
-          // a nested-block member owns no geometry K, so its layer is stamped onto its INSTANCE node K instead
-#pragma warning disable CA2000
-          var nestedAtts = new ObjectAttributes
-          {
-            LayerIndex = ResolveMemberLayer(
-              doc,
-              bundle,
-              memberIndex.ObjectByInstance,
-              instNodeK,
-              baseLayerIndex,
-              layerCache
-            ),
-          };
-#pragma warning restore CA2000
+          // A nested-block member owns no geometry K, so its whole join — layer, name, user strings, colour — hangs
+          // off its INSTANCE node K instead. Its material is instance-sourced (HAS_MATERIAL ord=1) for the same
+          // reason, and its colour is object-sourced (HAS_COLOR ord=1), so no geometry K goes in [ENG-9213].
+          materialByInstance.TryGetValue(instNodeK, out Guid nestedMaterial);
+          var nestedAtts = BuildMemberAttributes(
+            doc,
+            bundle,
+            memberIndex.ObjectByInstance,
+            instNodeK,
+            null,
+            nestedMaterial,
+            baseLayerIndex,
+            layerCache
+          );
           geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
           attributeList.Add(nestedAtts);
           session.Increment("nestedInstancesPlaced");
@@ -944,6 +939,81 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     memberObjectByK.TryGetValue(k, out int memberObjK)
       ? ResolveLayer(doc, bundle, memberObjK, baseLayerIndex, layerCache)
       : baseLayerIndex;
+
+  // ── definition members ────────────────────────────────────────────────────────────────────────────────
+  /// <summary>
+  /// One definition member's Rhino attributes. The member's object row carries everything a top-level object's does —
+  /// layer [ENG-9110], name, user strings / EAV properties and by-object colour — and the same stamp join reaches all
+  /// of it, so a member is no longer rebuilt as a bare layer+material shell [ENG-9213].
+  /// </summary>
+  /// <param name="memberObjectByK">The stamp index for this member's K-space: geometry for a direct member,
+  /// INSTANCE node for a nested-block member.</param>
+  /// <param name="k">The member's key inside <paramref name="memberObjectByK"/>.</param>
+  /// <param name="geometryK">The member's geometry K when it has one, else null. Geometry and INSTANCE node Ks
+  /// overlap numerically, so this must stay null for a nested member or its colour would be looked up in the wrong
+  /// K-space and could hit an unrelated geometry's HAS_COLOR.</param>
+  /// <param name="materialGuid">Resolved by the caller — geometry-sourced (ord=0) for a direct member,
+  /// instance-sourced (ord=1) for a nested placement. <see cref="Guid.Empty"/> leaves the material by-layer.</param>
+  private static ObjectAttributes BuildMemberAttributes(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    IReadOnlyDictionary<int, int> memberObjectByK,
+    int k,
+    int? geometryK,
+    Guid materialGuid,
+    int baseLayerIndex,
+    Dictionary<string, int> layerCache
+  )
+  {
+    // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt the
+    // definition; the doc owns them for the document lifetime.
+#pragma warning disable CA2000
+    var atts = new ObjectAttributes
+    {
+      LayerIndex = ResolveMemberLayer(doc, bundle, memberObjectByK, k, baseLayerIndex, layerCache),
+    };
+#pragma warning restore CA2000
+    if (materialGuid != Guid.Empty)
+    {
+      atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    }
+    if (!memberObjectByK.TryGetValue(k, out int memberObjK))
+    {
+      return atts; // unstamped (pre-ENG-9110 bundle) → layer + material only, exactly what members got before
+    }
+
+    if (ObjectName(bundle, memberObjK) is { Length: > 0 } name)
+    {
+      atts.Name = name;
+    }
+    // Type-scoped first, instance-scoped second, so a colliding key is won by the instance value — the same
+    // precedence BakeObject applies to a top-level object [ENG-9136].
+    bundle.Properties.TryGetValue(memberObjK, out var props);
+    bundle.TypePropertiesByObject.TryGetValue(memberObjK, out var typeProps);
+    RhinoArtefactUserStrings.Apply(atts, typeProps);
+    RhinoArtefactUserStrings.Apply(atts, props);
+    if (MemberColor(bundle, memberObjK, geometryK) is int argb)
+    {
+      atts.ObjectColor = Color.FromArgb(argb);
+      atts.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+    return atts;
+  }
+
+  // A member's by-object colour: geometry-sourced (HAS_COLOR ord=0) for a direct member, object-sourced (ord=1) for a
+  // nested placement — the same two shapes CreateColors handles, except CreateColors resolves through
+  // ObjectByGeometry, which is built from the DISPLAY edges a member deliberately never has.
+  private static int? MemberColor(ArtefactBundle bundle, int memberObjK, int? geometryK)
+  {
+    var rels = bundle.Relations;
+    bool found =
+      (geometryK is int gk && rels.ColorByGeometry.TryGetValue(gk, out int colorNodeK))
+      || rels.ColorByObject.TryGetValue(memberObjK, out colorNodeK);
+    return found && bundle.Nodes.TryGetValue(colorNodeK, out var node) && node.Kind == NodeKind.Color
+      ? node.Argb
+      : null;
+  }
 
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
   private static int GetOrCreateLayer(
