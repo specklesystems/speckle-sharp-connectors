@@ -27,6 +27,7 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoRenderMaterial = Rhino.Render.RenderMaterial;
+using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -312,11 +313,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     _lastDecodeFailure = null;
     var result = new List<DecodedGeometry>();
+    var sourceType = ObjectType(bundle, objK); // discriminates a point from a one-point cloud, see AsSourceType
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
       {
-        foreach (var geom in DecodeGeometryIndex(solidK, bundle, fallbackUnits))
+        foreach (var geom in DecodeGeometryIndex(solidK, bundle, fallbackUnits, sourceType))
         {
           result.Add(new(solidK, geom));
         }
@@ -326,7 +328,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        foreach (var geom in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits))
+        foreach (var geom in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, sourceType))
         {
           result.Add(new(e.Dst, geom));
         }
@@ -336,7 +338,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Decodes one geometry index to Rhino geometry, scaled to doc units (SGEO carries its own units; 3dm uses fallback).
-  private List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
+  // <paramref name="sourceType"/> is the owning object's source type, where the primitive alone is ambiguous about the
+  // native type to rebuild (see AsSourceType).
+  private List<RG.GeometryBase> DecodeGeometryIndex(
+    int geomK,
+    ArtefactBundle bundle,
+    string fallbackUnits,
+    string? sourceType = null
+  )
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -371,7 +380,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       Base? decoded = null;
       try
       {
-        decoded = SgeoDecoder.Decode(g.Content);
+        decoded = AsSourceType(SgeoDecoder.Decode(g.Content), sourceType);
         var converted = ConvertSpeckleGeometry(decoded);
         if (converted.Count == 0)
         {
@@ -400,6 +409,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     return new List<RG.GeometryBase>();
   }
+
+  /// <summary>Rhino's <c>ObjectType</c> for a single point object, as the send side stamps it on the object row
+  /// (<c>rhinoObject.ObjectType.ToString()</c>). A point cloud reports <c>PointSet</c> instead.</summary>
+  private const string RHINO_POINT_TYPE = "Point";
+
+  // SGEO encodes a single point and a whole point cloud under the same Points primitive, so Decode can only ever hand
+  // back a Pointcloud — and a native Rhino point came back as a one-point PointCloud, a different object type to every
+  // command, filter and script downstream [ENG-9215]. The object's source type is the discriminator the blob lacks:
+  // Rhino stamps its ObjectType on each object row, so a one-point cloud whose object called itself a "Point" is
+  // handed to the converter as a Point. A genuine one-point PointSet says "PointSet" and stays a point cloud.
+  private static Base AsSourceType(Base decoded, string? sourceType) =>
+    string.Equals(sourceType, RHINO_POINT_TYPE, StringComparison.Ordinal)
+    && decoded is SOG.Pointcloud { points.Count: 3 } cloud
+      ? new SOG.Point(cloud.points[0], cloud.points[1], cloud.points[2], cloud.units)
+      : decoded;
 
   // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the ToHost converter. The top-level converter
   // returns a single GeometryBase for primitives (curve/point/…) or a list for one-to-many cases; both are unwrapped.
@@ -789,7 +813,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             // Definition geometry is in the model's source units; the raw-3dm path rescales from this fallback to the
             // doc units. Pass the bundle (source) units, NOT docUnits — otherwise a 3dm member isn't rescaled and a
             // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
-            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
+            // The member's own source type rides the same stamp join as its attributes, so a point inside a block
+            // rebuilds as a native point rather than a one-point cloud [ENG-9215].
+            var memberType = memberIndex.ObjectByGeometry.TryGetValue(geomK, out int memberObjK)
+              ? ObjectType(bundle, memberObjK)
+              : null;
+            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units, memberType);
             materialByGeometry.TryGetValue(geomK, out Guid mg);
             foreach (var geom in decoded)
             {
