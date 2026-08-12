@@ -13,6 +13,7 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
+using DataObject = Speckle.Objects.Data.DataObject;
 using RG = Rhino.Geometry;
 using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
@@ -32,10 +33,16 @@ internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
   // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
+  /// <param name="groupAsDataObjects">
+  /// Regroups an object's geometry into a single <see cref="SpeckleDataObjectWrapper"/> instead of emitting one
+  /// wrapper per geometry. The deprecated Load components pass true so a script that was written against v3 sees the
+  /// object counts and shapes it already expects; the 4.0 components pass false and get the flat geometry.
+  /// </param>
   public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(
     ArtefactBundle bundle,
     string rootName,
-    SpeckleModelContext context
+    SpeckleModelContext context,
+    bool groupAsDataObjects
   )
   {
     var warnings = new List<string>();
@@ -114,7 +121,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       );
 
       int totalCount = geometries.Count + instCount;
-      int ord = EmitGeometryWrappers(
+      var (ord, geometryWrappers) = EmitGeometryWrappers(
         objK,
         geometries,
         totalCount,
@@ -126,6 +133,18 @@ internal sealed class GrasshopperArtefactObjectBuilder
         materialByObject,
         materialByGeometry
       );
+
+      if (groupAsDataObjects && geometryWrappers.Count > 0 && WasDataObject(props, geometryWrappers.Count))
+      {
+        collection.Elements.Add(BuildDataObject(appId, name, props, geometryWrappers, collection));
+      }
+      else
+      {
+        foreach (var geometryWrapper in geometryWrappers)
+        {
+          collection.Elements.Add(geometryWrapper);
+        }
+      }
 
       if (validInstEdges is not null)
       {
@@ -197,7 +216,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
   // Converts and emits this object's own direct geometry as SpeckleGeometryWrappers. Returns the ordinal reached, so
   // any instance placements emitted afterward for the same object continue the same `:gN` numbering.
-  private static int EmitGeometryWrappers(
+  private static (int Ord, List<SpeckleGeometryWrapper> Wrappers) EmitGeometryWrappers(
     int objK,
     List<(int GeomK, RG.GeometryBase Geom)> geometries,
     int totalCount,
@@ -210,6 +229,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
     Dictionary<int, SpeckleMaterialWrapper> materialByGeometry
   )
   {
+    // returned rather than added to the collection - the caller decides whether these stand alone or get wrapped
+    var created = new List<SpeckleGeometryWrapper>();
     int ord = 0;
     foreach (var (geomK, rg) in geometries)
     {
@@ -249,9 +270,53 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         wrapper.Properties = new SpecklePropertyGroupGoo(props);
       }
-      collection.Elements.Add(wrapper);
+      created.Add(wrapper);
     }
-    return ord;
+    return (ord, created);
+  }
+
+  /// <summary>
+  /// Whether the v3 graph would have carried this object as a DataObject. Producers write <c>speckle_type</c> as a
+  /// root scalar, so this is read rather than guessed. A bundle without it falls back to the shape of the problem:
+  /// more than one geometry for one object is the many-to-one case the legacy path expressed as a DataObject.
+  /// </summary>
+  private static bool WasDataObject(Dictionary<string, object?>? props, int geometryCount) =>
+    props is not null && props.TryGetValue("speckle_type", out var raw) && raw is string speckleType
+      ? speckleType.StartsWith("Objects.Data.", StringComparison.Ordinal)
+      : geometryCount > 1;
+
+  /// <summary>
+  /// Rebuilds the DataObject the v3 graph would have had, keyed on the source object's application id so anything
+  /// downstream matching on ids still lines up. The geometry lives on the wrapper, so displayValue stays empty -
+  /// same as the v1 receive path does.
+  /// </summary>
+  private static SpeckleDataObjectWrapper BuildDataObject(
+    string appId,
+    string? name,
+    Dictionary<string, object?>? props,
+    List<SpeckleGeometryWrapper> geometries,
+    SpeckleCollectionWrapper collection
+  )
+  {
+    var properties = props is null ? new Dictionary<string, object?>() : new Dictionary<string, object?>(props);
+    var dataObject = new DataObject
+    {
+      name = name ?? "",
+      displayValue = [],
+      properties = properties,
+      applicationId = appId,
+    };
+
+    return new SpeckleDataObjectWrapper
+    {
+      Base = dataObject,
+      Geometries = geometries,
+      Path = collection.Path,
+      Parent = collection,
+      Name = dataObject.name,
+      Properties = new SpecklePropertyGroupGoo(properties),
+      ApplicationId = appId,
+    };
   }
 
   // Builds a SpeckleBlockInstanceWrapper per resolved DISPLAY_INSTANCE placement, referencing the shared
