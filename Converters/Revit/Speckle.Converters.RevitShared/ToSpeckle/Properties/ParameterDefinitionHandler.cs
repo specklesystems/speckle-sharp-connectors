@@ -1,3 +1,5 @@
+using Speckle.Converters.RevitShared.Extensions;
+
 namespace Speckle.Converters.RevitShared.ToSpeckle;
 
 /// <summary>
@@ -49,7 +51,9 @@ public class ParameterDefinitionHandler
     string? units = null;
     if (parameter.StorageType == DB.StorageType.Double)
     {
-      units = DB.LabelUtils.GetLabelForUnit(parameter.GetUnitTypeId());
+      // language-stable unit identifier (e.g. "squareMeters") instead of the localized display label
+      // (e.g. "Quadratmeter" in German Revit), so downstream tooling can resolve units. See ENG-8735.
+      units = parameter.GetUnitTypeId().GetStableUnitsId();
     }
 
     _parameterDefinitions[key] = new ParameterDefinition(GroupName: group, Units: units);

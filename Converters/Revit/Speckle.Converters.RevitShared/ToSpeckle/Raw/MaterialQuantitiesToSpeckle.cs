@@ -1,5 +1,6 @@
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
+using Speckle.Converters.RevitShared.Extensions;
 using Speckle.Converters.RevitShared.Services;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Converters.RevitShared.ToSpeckle.Properties;
@@ -271,11 +272,15 @@ public class MaterialQuantitiesToSpeckleLite : ITypedConverter<DB.Element, Dicti
     DB.ForgeTypeId unitId
   )
   {
-    materialQuantity[name] = new Dictionary<string, object>
+    var property = new Dictionary<string, object> { ["name"] = name, ["value"] = value };
+
+    // language-stable unit identifier (e.g. "squareMeters") instead of the localized display label
+    // (e.g. "Quadratmeter" in German Revit), so downstream tooling can resolve units. See ENG-8735.
+    if (unitId.GetStableUnitsId() is string units)
     {
-      ["name"] = name,
-      ["value"] = value,
-      ["units"] = DB.LabelUtils.GetLabelForUnit(unitId),
-    };
+      property["units"] = units;
+    }
+
+    materialQuantity[name] = property;
   }
 }
