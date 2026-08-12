@@ -27,6 +27,7 @@ using Speckle.Sdk.Pipelines.Progress;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using RG = Rhino.Geometry;
 using RhinoRenderMaterial = Rhino.Render.RenderMaterial;
+using SOG = Speckle.Objects.Geometry;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -312,11 +313,12 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     _lastDecodeFailure = null;
     var result = new List<DecodedGeometry>();
+    var sourceType = ObjectType(bundle, objK); // discriminates a point from a one-point cloud, see AsSourceType
     if (rels.SolidByObject.TryGetValue(objK, out var solidKs))
     {
       foreach (var solidK in solidKs)
       {
-        foreach (var geom in DecodeGeometryIndex(solidK, bundle, fallbackUnits))
+        foreach (var geom in DecodeGeometryIndex(solidK, bundle, fallbackUnits, sourceType))
         {
           result.Add(new(solidK, geom));
         }
@@ -326,7 +328,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        foreach (var geom in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits))
+        foreach (var geom in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, sourceType))
         {
           result.Add(new(e.Dst, geom));
         }
@@ -336,7 +338,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // Decodes one geometry index to Rhino geometry, scaled to doc units (SGEO carries its own units; 3dm uses fallback).
-  private List<RG.GeometryBase> DecodeGeometryIndex(int geomK, ArtefactBundle bundle, string fallbackUnits)
+  // <paramref name="sourceType"/> is the owning object's source type, where the primitive alone is ambiguous about the
+  // native type to rebuild (see AsSourceType).
+  private List<RG.GeometryBase> DecodeGeometryIndex(
+    int geomK,
+    ArtefactBundle bundle,
+    string fallbackUnits,
+    string? sourceType = null
+  )
   {
     if (!bundle.Geometries.TryGetValue(geomK, out var g))
     {
@@ -351,8 +360,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     if (g.IsSgeo)
     {
-      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
-      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      // The header routes the blob: it says whether this is a mesh at all, and whether that mesh carries per-vertex
+      // visualisation data. Read once up front rather than letting TryDecodeMesh read it again for a non-mesh.
+      var header = SgeoDecoder.ReadHeader(g.Content);
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here — but only when there are no authored
+      // normals or UVs to lose. SgeoMesh carries neither (TryDecodeMesh reads past them to reach the colours), so a
+      // mesh sent with "Add Mesh Visualization Properties" goes the long way round instead: the full decoder keeps
+      // them and MeshToHostConverter applies them to the Rhino mesh [ENG-9214].
+      if (IsFastPathMesh(header) && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
       {
         var mesh = BuildMesh(sm);
         var list = new List<RG.GeometryBase> { mesh };
@@ -365,7 +380,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       Base? decoded = null;
       try
       {
-        decoded = SgeoDecoder.Decode(g.Content);
+        decoded = AsSourceType(SgeoDecoder.Decode(g.Content), sourceType);
         var converted = ConvertSpeckleGeometry(decoded);
         if (converted.Count == 0)
         {
@@ -394,6 +409,21 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     return new List<RG.GeometryBase>();
   }
+
+  /// <summary>Rhino's <c>ObjectType</c> for a single point object, as the send side stamps it on the object row
+  /// (<c>rhinoObject.ObjectType.ToString()</c>). A point cloud reports <c>PointSet</c> instead.</summary>
+  private const string RHINO_POINT_TYPE = "Point";
+
+  // SGEO encodes a single point and a whole point cloud under the same Points primitive, so Decode can only ever hand
+  // back a Pointcloud — and a native Rhino point came back as a one-point PointCloud, a different object type to every
+  // command, filter and script downstream [ENG-9215]. The object's source type is the discriminator the blob lacks:
+  // Rhino stamps its ObjectType on each object row, so a one-point cloud whose object called itself a "Point" is
+  // handed to the converter as a Point. A genuine one-point PointSet says "PointSet" and stays a point cloud.
+  private static Base AsSourceType(Base decoded, string? sourceType) =>
+    string.Equals(sourceType, RHINO_POINT_TYPE, StringComparison.Ordinal)
+    && decoded is SOG.Pointcloud { points.Count: 3 } cloud
+      ? new SOG.Point(cloud.points[0], cloud.points[1], cloud.points[2], cloud.units)
+      : decoded;
 
   // Speckle geometry object (from SgeoDecoder.Decode) → Rhino geometry via the ToHost converter. The top-level converter
   // returns a single GeometryBase for primitives (curve/point/…) or a list for one-to-many cases; both are unwrapped.
@@ -427,6 +457,13 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
+  // True for a mesh blob the hand-rolled BuildMesh can rebuild losslessly: normals and UVs are the two things SgeoMesh
+  // doesn't carry, so a blob with either has to go through the full decoder instead [ENG-9214]. n-gons are safe here —
+  // they ride the face array, and BuildMesh rebuilds their MeshNgon records.
+  private static bool IsFastPathMesh(SgeoHeader header) =>
+    header.PrimitiveType == SgeoPrimitiveType.Mesh
+    && (header.Flags & (SgeoFlags.HasNormals | SgeoFlags.HasUvs)) == 0;
+
   // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; matches MeshToHostConverter).
   private static RG.Mesh BuildMesh(SgeoMesh sm)
   {
@@ -456,10 +493,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       else if (n > 4 && p + n < f.Length)
       {
-        for (int k = 1; k < n - 1; k++) // fan-triangulate n-gons
+        // n-gon: fan-triangulate into the face table, then record the MeshNgon over exactly those faces so the source
+        // polygon survives as one face to Rhino's eyes (Explode, _SelNgon, re-send) instead of loose triangles
+        // [ENG-9214]. Same reconstruction MeshToHostConverter does on the Base path.
+        var ngonFaces = new List<int>(n - 2);
+        for (int k = 1; k < n - 1; k++)
         {
-          mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]);
+          ngonFaces.Add(mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]));
         }
+        var ngonVertices = new int[n];
+        for (int k = 0; k < n; k++)
+        {
+          ngonVertices[k] = f[p + 1 + k];
+        }
+        mesh.Ngons.AddNgon(RG.MeshNgon.Create(ngonVertices, ngonFaces));
       }
       else
       {
@@ -476,7 +523,13 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
     mesh.Normals.ComputeNormals();
-    mesh.Compact();
+    // Compact() only trims capacity and culls unreferenced vertices — of which an SGEO mesh has none, its vertex array
+    // being exactly the source's. Skip it once n-gons are in play rather than run their fresh records through its
+    // reindex for no gain [ENG-9214].
+    if (mesh.Ngons.Count == 0)
+    {
+      mesh.Compact();
+    }
     return mesh;
   }
 
@@ -573,6 +626,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       bundle,
       rels,
       materialByGeometry,
+      materialByInstance,
       docUnits,
       baseLayerName,
       baseLayerIndex,
@@ -708,12 +762,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
   // child definition's Rhino Guid via an InstanceReferenceGeometry member carrying the nested placement's own transform.
   // The geometry's material (HAS_MATERIAL → geometry) is baked onto the members so placed instances aren't all grey,
-  // and each member's own LAYER is recovered through its stamp → object row → IN_COLLECTION [ENG-9110].
+  // and each member's own LAYER is recovered through its stamp → object row → IN_COLLECTION [ENG-9110]; the rest of
+  // the member's attributes (name, user strings, colour) ride the same join [ENG-9213].
   private Dictionary<int, int> BuildDefinitions(
     RhinoDoc doc,
     ArtefactBundle bundle,
     ArtefactRelations rels,
     Dictionary<int, Guid> materialByGeometry,
+    Dictionary<int, Guid> materialByInstance,
     string docUnits,
     string baseLayerName,
     int baseLayerIndex,
@@ -757,33 +813,30 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             // Definition geometry is in the model's source units; the raw-3dm path rescales from this fallback to the
             // doc units. Pass the bundle (source) units, NOT docUnits — otherwise a 3dm member isn't rescaled and a
             // block sent from a metre model lands 1000x too small / mispositioned in a millimetre doc.
-            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units);
+            // The member's own source type rides the same stamp join as its attributes, so a point inside a block
+            // rebuilds as a native point rather than a one-point cloud [ENG-9215].
+            var memberType = memberIndex.ObjectByGeometry.TryGetValue(geomK, out int memberObjK)
+              ? ObjectType(bundle, memberObjK)
+              : null;
+            var decoded = DecodeGeometryIndex(geomK, bundle, bundle.Units, memberType);
             materialByGeometry.TryGetValue(geomK, out Guid mg);
-            // The member's source layer, via its stamp → member object row → the ordinary IN_COLLECTION projection.
-            // Unstamped (pre-ENG-9110 bundle, or a member whose geometry didn't encode) → the base layer, exactly
-            // what members got before.
-            int memberLayerIndex = ResolveMemberLayer(
-              doc,
-              bundle,
-              memberIndex.ObjectByGeometry,
-              geomK,
-              baseLayerIndex,
-              layerCache
-            );
             foreach (var geom in decoded)
             {
               geometryList.Add(geom);
-              // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would
-              // corrupt the definition; the doc owns them for the document lifetime.
-#pragma warning disable CA2000
-              var a = new ObjectAttributes { LayerIndex = memberLayerIndex };
-#pragma warning restore CA2000
-              if (mg != Guid.Empty)
-              {
-                a.RenderMaterial = RenderContent.FromId(doc, mg) as RhinoRenderMaterial;
-                a.MaterialSource = ObjectMaterialSource.MaterialFromObject;
-              }
-              attributeList.Add(a);
+              // The member's own layer, name, user strings and colour, all recovered through its geometry stamp →
+              // member object row. A direct member's colour is geometry-sourced, so its geometry K is the colour key.
+              attributeList.Add(
+                BuildMemberAttributes(
+                  doc,
+                  bundle,
+                  memberIndex.ObjectByGeometry,
+                  geomK,
+                  geomK,
+                  mg,
+                  baseLayerIndex,
+                  layerCache
+                )
+              );
             }
           }
         }
@@ -811,20 +864,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             nestedInst.Units is { Length: > 0 } u ? u : docUnits,
             docUnits
           );
-          // a nested-block member owns no geometry K, so its layer is stamped onto its INSTANCE node K instead
-#pragma warning disable CA2000
-          var nestedAtts = new ObjectAttributes
-          {
-            LayerIndex = ResolveMemberLayer(
-              doc,
-              bundle,
-              memberIndex.ObjectByInstance,
-              instNodeK,
-              baseLayerIndex,
-              layerCache
-            ),
-          };
-#pragma warning restore CA2000
+          // A nested-block member owns no geometry K, so its whole join — layer, name, user strings, colour — hangs
+          // off its INSTANCE node K instead. Its material is instance-sourced (HAS_MATERIAL ord=1) for the same
+          // reason, and its colour is object-sourced (HAS_COLOR ord=1), so no geometry K goes in [ENG-9213].
+          materialByInstance.TryGetValue(instNodeK, out Guid nestedMaterial);
+          var nestedAtts = BuildMemberAttributes(
+            doc,
+            bundle,
+            memberIndex.ObjectByInstance,
+            instNodeK,
+            null,
+            nestedMaterial,
+            baseLayerIndex,
+            layerCache
+          );
           geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
           attributeList.Add(nestedAtts);
           session.Increment("nestedInstancesPlaced");
@@ -945,6 +998,81 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ? ResolveLayer(doc, bundle, memberObjK, baseLayerIndex, layerCache)
       : baseLayerIndex;
 
+  // ── definition members ────────────────────────────────────────────────────────────────────────────────
+  /// <summary>
+  /// One definition member's Rhino attributes. The member's object row carries everything a top-level object's does —
+  /// layer [ENG-9110], name, user strings / EAV properties and by-object colour — and the same stamp join reaches all
+  /// of it, so a member is no longer rebuilt as a bare layer+material shell [ENG-9213].
+  /// </summary>
+  /// <param name="memberObjectByK">The stamp index for this member's K-space: geometry for a direct member,
+  /// INSTANCE node for a nested-block member.</param>
+  /// <param name="k">The member's key inside <paramref name="memberObjectByK"/>.</param>
+  /// <param name="geometryK">The member's geometry K when it has one, else null. Geometry and INSTANCE node Ks
+  /// overlap numerically, so this must stay null for a nested member or its colour would be looked up in the wrong
+  /// K-space and could hit an unrelated geometry's HAS_COLOR.</param>
+  /// <param name="materialGuid">Resolved by the caller — geometry-sourced (ord=0) for a direct member,
+  /// instance-sourced (ord=1) for a nested placement. <see cref="Guid.Empty"/> leaves the material by-layer.</param>
+  private static ObjectAttributes BuildMemberAttributes(
+    RhinoDoc doc,
+    ArtefactBundle bundle,
+    IReadOnlyDictionary<int, int> memberObjectByK,
+    int k,
+    int? geometryK,
+    Guid materialGuid,
+    int baseLayerIndex,
+    Dictionary<string, int> layerCache
+  )
+  {
+    // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt the
+    // definition; the doc owns them for the document lifetime.
+#pragma warning disable CA2000
+    var atts = new ObjectAttributes
+    {
+      LayerIndex = ResolveMemberLayer(doc, bundle, memberObjectByK, k, baseLayerIndex, layerCache),
+    };
+#pragma warning restore CA2000
+    if (materialGuid != Guid.Empty)
+    {
+      atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
+      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+    }
+    if (!memberObjectByK.TryGetValue(k, out int memberObjK))
+    {
+      return atts; // unstamped (pre-ENG-9110 bundle) → layer + material only, exactly what members got before
+    }
+
+    if (ObjectName(bundle, memberObjK) is { Length: > 0 } name)
+    {
+      atts.Name = name;
+    }
+    // Type-scoped first, instance-scoped second, so a colliding key is won by the instance value — the same
+    // precedence BakeObject applies to a top-level object [ENG-9136].
+    bundle.Properties.TryGetValue(memberObjK, out var props);
+    bundle.TypePropertiesByObject.TryGetValue(memberObjK, out var typeProps);
+    RhinoArtefactUserStrings.Apply(atts, typeProps);
+    RhinoArtefactUserStrings.Apply(atts, props);
+    if (MemberColor(bundle, memberObjK, geometryK) is int argb)
+    {
+      atts.ObjectColor = Color.FromArgb(argb);
+      atts.ColorSource = ObjectColorSource.ColorFromObject;
+    }
+    return atts;
+  }
+
+  // A member's by-object colour: geometry-sourced (HAS_COLOR ord=0) for a direct member, object-sourced (ord=1) for a
+  // nested placement — the same two shapes CreateColors handles, except CreateColors resolves through
+  // ObjectByGeometry, which is built from the DISPLAY edges a member deliberately never has.
+  private static int? MemberColor(ArtefactBundle bundle, int memberObjK, int? geometryK)
+  {
+    var rels = bundle.Relations;
+    bool found =
+      (geometryK is int gk && rels.ColorByGeometry.TryGetValue(gk, out int colorNodeK))
+      || rels.ColorByObject.TryGetValue(memberObjK, out colorNodeK);
+    return found && bundle.Nodes.TryGetValue(colorNodeK, out var node) && node.Kind == NodeKind.Color
+      ? node.Argb
+      : null;
+  }
+
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
   private static int GetOrCreateLayer(
     RhinoDoc doc,
@@ -985,6 +1113,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   ) CreateMaterials(RhinoDoc doc, ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var guidByMaterialNode = new Dictionary<int, Guid>();
+    // Render materials this receive already created, by name. Nothing else in the receive is name-owned by accident:
+    // Speckle's material identity IS the name (the send side keys its proxies by it and the unpacker reads it back), so
+    // a name hit on re-receive is this operation's own material. Without this every run added a fresh copy of every
+    // material node and the table grew without bound, since DeepClean purges objects/layers/definitions but not
+    // materials [ENG-9217]. Indexed once — the table is walked per node otherwise.
+    var existingByName = new Dictionary<string, RhinoRenderMaterial>(StringComparer.Ordinal);
+    foreach (var existingMaterial in doc.RenderMaterials)
+    {
+      if (existingMaterial?.Name is { Length: > 0 } existingName && !existingByName.ContainsKey(existingName))
+      {
+        existingByName[existingName] = existingMaterial; // first wins, as the legacy baker's FirstOrDefault did
+      }
+    }
+
     foreach (var kv in bundle.Nodes)
     {
       var n = kv.Value;
@@ -1021,11 +1163,29 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           pbr.Roughness = n.Roughness ?? 1.0;
         }
 
+        if (existingByName.TryGetValue(matName, out var existing))
+        {
+          if (MaterialMatches(existing, rhinoMaterial))
+          {
+            // Unchanged version re-received: keep the material AND its id, so every object still pointing at it
+            // (another model card's, or one the user assigned by hand) keeps rendering.
+            guidByMaterialNode[kv.Key] = existing.Id;
+            continue;
+          }
+          // The version's material moved on. Drop the stale one so the refreshed material can take its name back
+          // instead of the two of them piling up.
+          doc.RenderMaterials.Remove(existing);
+          existingByName.Remove(matName);
+        }
+
         // FromMaterial returns null on headless docs (importer) — same fallback as RhinoMaterialUnpacker.
         var renderMaterial =
           RhinoRenderMaterial.FromMaterial(rhinoMaterial, doc)
           ?? RhinoRenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
         doc.RenderMaterials.Add(renderMaterial);
+        // Two MATERIAL nodes can carry the same name (identity is the name), so record it: the second reuses this
+        // material rather than adding its twin.
+        existingByName[matName] = renderMaterial;
         guidByMaterialNode[kv.Key] = renderMaterial.Id;
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -1062,6 +1222,41 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     return (byObject, byGeometry, byInstance);
   }
+
+  // True when an already-present render material still carries the values this bundle asks for, i.e. re-receiving hasn't
+  // changed it — the case worth keeping the existing id alive for. Compared against the material's simulated form, the
+  // only shape a RenderContent's values can be read back in; a mismatch it can't represent (a non-PBR simulation where
+  // a PBR channel is expected, say) reads as "changed", which costs a rebuild of the material but never a duplicate.
+  // SimulateMaterial(ref, …) rather than the tidier SimulatedMaterial/ToMaterial: it is the one overload that is
+  // current in both Rhino 7 and Rhino 8, and this file compiles for both.
+  private static bool MaterialMatches(RhinoRenderMaterial existing, Material desired)
+  {
+    var simulated = new Material();
+    try
+    {
+      existing.SimulateMaterial(ref simulated, RenderTexture.TextureGeneration.Disallow);
+      var simulatedPbr = simulated.PhysicallyBased;
+      var desiredPbr = desired.PhysicallyBased;
+      return simulated.DiffuseColor.ToArgb() == desired.DiffuseColor.ToArgb()
+        && simulated.EmissionColor.ToArgb() == desired.EmissionColor.ToArgb()
+        && Near(simulated.Transparency, desired.Transparency)
+        && Near(simulated.IndexOfRefraction, desired.IndexOfRefraction)
+        && (simulatedPbr is null) == (desiredPbr is null)
+        && (
+          simulatedPbr is null
+          || desiredPbr is null
+          || (Near(simulatedPbr.Metallic, desiredPbr.Metallic) && Near(simulatedPbr.Roughness, desiredPbr.Roughness))
+        );
+    }
+    finally
+    {
+      simulated.Dispose();
+    }
+  }
+
+  // Rhino stores these channels as floats and a simulation round-trips them through its own maths, so an exact
+  // comparison would report every material as changed.
+  private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-6;
 
   // By-object display colours: HAS_COLOR (geometry → COLOR node) resolved to the owning object's appId → argb, mirroring
   // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.

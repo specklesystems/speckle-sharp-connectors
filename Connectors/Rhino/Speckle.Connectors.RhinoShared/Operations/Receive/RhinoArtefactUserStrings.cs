@@ -1,5 +1,6 @@
 using System.Globalization;
 using Rhino.DocObjects;
+using Speckle.Connectors.Common.Instances;
 
 namespace Speckle.Connectors.Rhino.Operations.Receive;
 
@@ -30,6 +31,9 @@ internal static class RhinoArtefactUserStrings
     "name",
     "units",
     "type",
+    // the definition-member join stamps (@speckle.geometry_k / instance_k) — pure receive plumbing, and now that a
+    // member's properties DO reach its attributes they would otherwise surface as user text [ENG-9213].
+    DefinitionMemberStamps.STAMP_ROOT,
     "internalDefinitionName",
     "hatchPatternName",
     "hatchRotation",
