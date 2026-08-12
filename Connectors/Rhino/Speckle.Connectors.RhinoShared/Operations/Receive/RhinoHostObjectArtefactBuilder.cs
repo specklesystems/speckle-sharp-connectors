@@ -461,8 +461,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // doesn't carry, so a blob with either has to go through the full decoder instead [ENG-9214]. n-gons are safe here —
   // they ride the face array, and BuildMesh rebuilds their MeshNgon records.
   private static bool IsFastPathMesh(SgeoHeader header) =>
-    header.PrimitiveType == SgeoPrimitiveType.Mesh
-    && (header.Flags & (SgeoFlags.HasNormals | SgeoFlags.HasUvs)) == 0;
+    header.PrimitiveType == SgeoPrimitiveType.Mesh && (header.Flags & (SgeoFlags.HasNormals | SgeoFlags.HasUvs)) == 0;
 
   // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; matches MeshToHostConverter).
   private static RG.Mesh BuildMesh(SgeoMesh sm)
