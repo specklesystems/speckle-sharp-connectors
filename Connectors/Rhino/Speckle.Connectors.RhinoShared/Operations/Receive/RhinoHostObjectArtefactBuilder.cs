@@ -351,8 +351,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     if (g.IsSgeo)
     {
-      // Meshes take the fast hand-rolled path (no Base allocation), scaled here.
-      if (SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
+      // The header routes the blob: it says whether this is a mesh at all, and whether that mesh carries per-vertex
+      // visualisation data. Read once up front rather than letting TryDecodeMesh read it again for a non-mesh.
+      var header = SgeoDecoder.ReadHeader(g.Content);
+      // Meshes take the fast hand-rolled path (no Base allocation), scaled here — but only when there are no authored
+      // normals or UVs to lose. SgeoMesh carries neither (TryDecodeMesh reads past them to reach the colours), so a
+      // mesh sent with "Add Mesh Visualization Properties" goes the long way round instead: the full decoder keeps
+      // them and MeshToHostConverter applies them to the Rhino mesh [ENG-9214].
+      if (IsFastPathMesh(header) && SgeoDecoder.TryDecodeMesh(g.Content, out var sm))
       {
         var mesh = BuildMesh(sm);
         var list = new List<RG.GeometryBase> { mesh };
@@ -427,6 +433,13 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
+  // True for a mesh blob the hand-rolled BuildMesh can rebuild losslessly: normals and UVs are the two things SgeoMesh
+  // doesn't carry, so a blob with either has to go through the full decoder instead [ENG-9214]. n-gons are safe here —
+  // they ride the face array, and BuildMesh rebuilds their MeshNgon records.
+  private static bool IsFastPathMesh(SgeoHeader header) =>
+    header.PrimitiveType == SgeoPrimitiveType.Mesh
+    && (header.Flags & (SgeoFlags.HasNormals | SgeoFlags.HasUvs)) == 0;
+
   // SGEO neutral mesh → Rhino mesh (Speckle count-prefixed face format; matches MeshToHostConverter).
   private static RG.Mesh BuildMesh(SgeoMesh sm)
   {
@@ -456,10 +469,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       else if (n > 4 && p + n < f.Length)
       {
-        for (int k = 1; k < n - 1; k++) // fan-triangulate n-gons
+        // n-gon: fan-triangulate into the face table, then record the MeshNgon over exactly those faces so the source
+        // polygon survives as one face to Rhino's eyes (Explode, _SelNgon, re-send) instead of loose triangles
+        // [ENG-9214]. Same reconstruction MeshToHostConverter does on the Base path.
+        var ngonFaces = new List<int>(n - 2);
+        for (int k = 1; k < n - 1; k++)
         {
-          mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]);
+          ngonFaces.Add(mesh.Faces.AddFace(f[p + 1], f[p + 1 + k], f[p + 2 + k]));
         }
+        var ngonVertices = new int[n];
+        for (int k = 0; k < n; k++)
+        {
+          ngonVertices[k] = f[p + 1 + k];
+        }
+        mesh.Ngons.AddNgon(RG.MeshNgon.Create(ngonVertices, ngonFaces));
       }
       else
       {
@@ -476,7 +499,13 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
     mesh.Normals.ComputeNormals();
-    mesh.Compact();
+    // Compact() only trims capacity and culls unreferenced vertices — of which an SGEO mesh has none, its vertex array
+    // being exactly the source's. Skip it once n-gons are in play rather than run their fresh records through its
+    // reindex for no gain [ENG-9214].
+    if (mesh.Ngons.Count == 0)
+    {
+      mesh.Compact();
+    }
     return mesh;
   }
 
