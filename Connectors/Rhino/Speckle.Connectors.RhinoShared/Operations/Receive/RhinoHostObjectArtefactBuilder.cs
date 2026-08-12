@@ -1113,6 +1113,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   ) CreateMaterials(RhinoDoc doc, ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var guidByMaterialNode = new Dictionary<int, Guid>();
+    // Render materials this receive already created, by name. Nothing else in the receive is name-owned by accident:
+    // Speckle's material identity IS the name (the send side keys its proxies by it and the unpacker reads it back), so
+    // a name hit on re-receive is this operation's own material. Without this every run added a fresh copy of every
+    // material node and the table grew without bound, since DeepClean purges objects/layers/definitions but not
+    // materials [ENG-9217]. Indexed once — the table is walked per node otherwise.
+    var existingByName = new Dictionary<string, RhinoRenderMaterial>(StringComparer.Ordinal);
+    foreach (var existingMaterial in doc.RenderMaterials)
+    {
+      if (existingMaterial?.Name is { Length: > 0 } existingName && !existingByName.ContainsKey(existingName))
+      {
+        existingByName[existingName] = existingMaterial; // first wins, as the legacy baker's FirstOrDefault did
+      }
+    }
+
     foreach (var kv in bundle.Nodes)
     {
       var n = kv.Value;
@@ -1149,11 +1163,29 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           pbr.Roughness = n.Roughness ?? 1.0;
         }
 
+        if (existingByName.TryGetValue(matName, out var existing))
+        {
+          if (MaterialMatches(existing, rhinoMaterial))
+          {
+            // Unchanged version re-received: keep the material AND its id, so every object still pointing at it
+            // (another model card's, or one the user assigned by hand) keeps rendering.
+            guidByMaterialNode[kv.Key] = existing.Id;
+            continue;
+          }
+          // The version's material moved on. Drop the stale one so the refreshed material can take its name back
+          // instead of the two of them piling up.
+          doc.RenderMaterials.Remove(existing);
+          existingByName.Remove(matName);
+        }
+
         // FromMaterial returns null on headless docs (importer) — same fallback as RhinoMaterialUnpacker.
         var renderMaterial =
           RhinoRenderMaterial.FromMaterial(rhinoMaterial, doc)
           ?? RhinoRenderMaterial.CreateBasicMaterial(rhinoMaterial, doc);
         doc.RenderMaterials.Add(renderMaterial);
+        // Two MATERIAL nodes can carry the same name (identity is the name), so record it: the second reuses this
+        // material rather than adding its twin.
+        existingByName[matName] = renderMaterial;
         guidByMaterialNode[kv.Key] = renderMaterial.Id;
       }
       catch (Exception ex) when (!ex.IsFatal())
@@ -1190,6 +1222,41 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     return (byObject, byGeometry, byInstance);
   }
+
+  // True when an already-present render material still carries the values this bundle asks for, i.e. re-receiving hasn't
+  // changed it — the case worth keeping the existing id alive for. Compared against the material's simulated form, the
+  // only shape a RenderContent's values can be read back in; a mismatch it can't represent (a non-PBR simulation where
+  // a PBR channel is expected, say) reads as "changed", which costs a rebuild of the material but never a duplicate.
+  // SimulateMaterial(ref, …) rather than the tidier SimulatedMaterial/ToMaterial: it is the one overload that is
+  // current in both Rhino 7 and Rhino 8, and this file compiles for both.
+  private static bool MaterialMatches(RhinoRenderMaterial existing, Material desired)
+  {
+    var simulated = new Material();
+    try
+    {
+      existing.SimulateMaterial(ref simulated, RenderTexture.TextureGeneration.Disallow);
+      var simulatedPbr = simulated.PhysicallyBased;
+      var desiredPbr = desired.PhysicallyBased;
+      return simulated.DiffuseColor.ToArgb() == desired.DiffuseColor.ToArgb()
+        && simulated.EmissionColor.ToArgb() == desired.EmissionColor.ToArgb()
+        && Near(simulated.Transparency, desired.Transparency)
+        && Near(simulated.IndexOfRefraction, desired.IndexOfRefraction)
+        && (simulatedPbr is null) == (desiredPbr is null)
+        && (
+          simulatedPbr is null
+          || desiredPbr is null
+          || (Near(simulatedPbr.Metallic, desiredPbr.Metallic) && Near(simulatedPbr.Roughness, desiredPbr.Roughness))
+        );
+    }
+    finally
+    {
+      simulated.Dispose();
+    }
+  }
+
+  // Rhino stores these channels as floats and a simulation round-trips them through its own maths, so an exact
+  // comparison would report every material as changed.
+  private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-6;
 
   // By-object display colours: HAS_COLOR (geometry → COLOR node) resolved to the owning object's appId → argb, mirroring
   // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.
