@@ -197,10 +197,12 @@ public class RevitArtifactRootObjectBuilder(
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
 
-    // element.UniqueId -> the object K(s) it was interned as. A linked element placed by N link instances
-    // yields N interned objects (disambiguated by transform hash), so the value is a list. Used to resolve
-    // ON_LEVEL post-loop (LevelUnpacker keys by the plain UniqueId).
-    var objectKsByElementUniqueId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+    // placement (modelKey) -> element.UniqueId -> the object K it was interned as [ENG-9212]. A linked element
+    // placed by N link instances yields N interned objects, ONE per placement — so the identity of an occurrence
+    // is (placement, UniqueId), never UniqueId alone. Element topology resolves inside a single placement's map
+    // (a door's host is a wall in the same placement); only value-node edges (ON_LEVEL) deliberately span
+    // placements, and they flatten this post-loop.
+    var objectKsByPlacement = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
     var modelContainerKeys = new HashSet<string>(StringComparer.Ordinal);
     var cameraViews = new List<CameraView>();
     var countProgress = 0;
@@ -227,6 +229,15 @@ public class RevitArtifactRootObjectBuilder(
 
       int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
       modelContainerKeys.Add(modelKey);
+
+      // This placement's own identity map. Keyed per modelKey rather than freshly allocated so two contexts that
+      // DO share a placement key (coincident transforms — see ENG-9263) degrade to merging, exactly as their
+      // interned object Ks already merge, instead of silently splitting the topology of one merged model.
+      if (!objectKsByPlacement.TryGetValue(modelKey, out var placementIndex))
+      {
+        placementIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        objectKsByPlacement[modelKey] = placementIndex;
+      }
 
       EmitMainModelReferencePoint(pipeline, documentContext);
 
@@ -288,7 +299,7 @@ public class RevitArtifactRootObjectBuilder(
             Base converted = converter.Convert(revitElement);
             converted.applicationId = applicationId;
 
-            int objK = EmitObject(pipeline, converted, modelK, revitElement, applicationId, objectKsByElementUniqueId);
+            int objK = EmitObject(pipeline, converted, modelK, revitElement, applicationId, placementIndex);
             sentElements.Add((revitElement, objK));
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
             session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -307,6 +318,13 @@ public class RevitArtifactRootObjectBuilder(
         // yields one group tier per placement rather than one shared, cross-wired tier.
         EmitGroups(pipeline, modelKey, sentElements);
 
+        // Host-API element topology for this placement. MUST run after the element loop (a door can be converted
+        // before the wall it is hosted on) but needs nothing from any OTHER document: every endpoint Revit reports
+        // — SuperComponent, Host, Room, FromRoom/ToRoom — lives in the same document, hence the same placement. So
+        // resolving against this placement's map alone is both sufficient and the thing that keeps edges from
+        // crossing placements [ENG-9212].
+        EmitElementTopology(pipeline, sentElements, placementIndex);
+
         // Named 3D views (perspective AND orthographic) of this document → camera_views rows. Collected inside
         // this settings push so linked-model cameras ride the exact ReferencePointTransform + scaling path the
         // document's element geometry does; linked views get the model display name as a prefix.
@@ -323,7 +341,7 @@ public class RevitArtifactRootObjectBuilder(
       throw new SpeckleException("Failed to convert all objects.");
     }
 
-    EmitValueNodes(pipeline, atomicObjectsByDocument, objectKsByElementUniqueId);
+    EmitValueNodes(pipeline, atomicObjectsByDocument, objectKsByPlacement);
 
     // Default scene view: Level → Category → Family (the familiar Revit explorer). Prepend the Model tier
     // only when the send actually federates more than one document (linked models) — a single-model send
@@ -442,18 +460,15 @@ public class RevitArtifactRootObjectBuilder(
     int modelK,
     Element revitElement,
     string applicationId,
-    Dictionary<string, List<int>> objectKsByElementUniqueId
+    Dictionary<string, int> placementIndex
   )
   {
     int objK = pipeline.InternObject(applicationId);
     pipeline.InModel(objK, modelK, 0);
 
-    if (!objectKsByElementUniqueId.TryGetValue(revitElement.UniqueId, out var ks))
-    {
-      ks = new List<int>();
-      objectKsByElementUniqueId[revitElement.UniqueId] = ks;
-    }
-    ks.Add(objK);
+    // Indexer, not Add: ElementUnpacker already dedups by ElementId so one UniqueId maps to one K per placement,
+    // but a coincident-transform placement key (ENG-9263) must degrade quietly rather than throw mid-send.
+    placementIndex[revitElement.UniqueId] = objK;
 
     if (converted is not DataObject dataObject)
     {
@@ -663,7 +678,7 @@ public class RevitArtifactRootObjectBuilder(
   private void EmitValueNodes(
     ObjectsArtifactPipeline pipeline,
     List<DocumentToConvert> atomicObjectsByDocument,
-    Dictionary<string, List<int>> objectKsByElementUniqueId
+    Dictionary<string, Dictionary<string, int>> objectKsByPlacement
   )
   {
     var flatElements = atomicObjectsByDocument.SelectMany(t => t.Elements).ToList();
@@ -711,13 +726,19 @@ public class RevitArtifactRootObjectBuilder(
       }
     }
 
-    // 4) levels → ON_LEVEL. LevelUnpacker keys by the plain element UniqueId, so resolve through the
-    // interned-K map to cover linked instances (which were interned with a transform-hash suffix).
+    // 4) levels → ON_LEVEL. A VALUE-node edge, so this is the one place the fan-out across placements is
+    // intentional: a linked element placed N times puts all N occurrences on the (shared) level node. LevelUnpacker
+    // keys by the plain element UniqueId, so flatten the per-placement index to reach every occurrence's K
+    // (linked ones were interned with a transform-hash suffix).
+    var objectKsByElementUniqueId = FlattenPlacementIndexes(objectKsByPlacement);
     foreach (var levelProxy in levelUnpacker.Unpack(flatElements))
     {
       double elevation = levelProxy.value["elevation"] is double d ? d : 0.0;
       int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), levelProxy.value.name, elevation);
-      foreach (var elementUniqueId in levelProxy.objects)
+      // flatElements repeats a linked element once per link instance, so LevelUnpacker lists its UniqueId once per
+      // placement too. Dedup here or every occurrence's edge is written N times (relations.parquet is an append-only
+      // log — nothing downstream collapses duplicate rows) [ENG-9212].
+      foreach (var elementUniqueId in levelProxy.objects.Distinct(StringComparer.Ordinal))
       {
         if (objectKsByElementUniqueId.TryGetValue(elementUniqueId, out var objKs))
         {
@@ -728,12 +749,32 @@ public class RevitArtifactRootObjectBuilder(
         }
       }
     }
-
-    // 5) host-API topology from the Revit element graph (rooms / hosting / room-adjacency).
-    EmitElementTopology(pipeline, flatElements, objectKsByElementUniqueId);
   }
 
-  // Host-API topology, guarded to sent objects via objectKsByElementUniqueId (only interned targets get an edge):
+  // Per-placement identity maps → one element.UniqueId -> every occurrence's object K, across all placements. ONLY
+  // for value-node edges, where reaching every occurrence of a repeated linked element is the point; element→element
+  // topology must never resolve through this (that is what crossed placements before ENG-9212).
+  private static Dictionary<string, List<int>> FlattenPlacementIndexes(
+    Dictionary<string, Dictionary<string, int>> objectKsByPlacement
+  )
+  {
+    var objectKsByElementUniqueId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+    foreach (var placementIndex in objectKsByPlacement.Values)
+    {
+      foreach (var entry in placementIndex)
+      {
+        if (!objectKsByElementUniqueId.TryGetValue(entry.Key, out var ks))
+        {
+          ks = new List<int>();
+          objectKsByElementUniqueId[entry.Key] = ks;
+        }
+        ks.Add(entry.Value);
+      }
+    }
+    return objectKsByElementUniqueId;
+  }
+
+  // Host-API topology, guarded to sent objects via the placement index (only interned targets get an edge):
   //   SUBELEMENT   super-component → element: OWNERSHIP (a nested shared family → its super-component).
   //                Complements the RevitObject.elements lift, which covers children folded INTO a parent object
   //                (curtain panels / mullions / stacked-wall members — ownership too, emitted by EmitChild).
@@ -743,18 +784,21 @@ public class RevitArtifactRootObjectBuilder(
   //   CONNECTS_TO  a door/window's FromRoom → ToRoom, scoped by the opening's object K (the room-adjacency graph).
   // Same accessors as ClassPropertiesExtractor; wrapped defensively — Room/ToRoom/FromRoom can throw without an
   // active phase, and topology is best-effort (must never fail the geometry send).
+  //
+  // Scoped to ONE placement [ENG-9212]: <paramref name="sentElements"/> are the objects interned for this document
+  // context and <paramref name="placementIndex"/> resolves UniqueId → K within that same context, so every endpoint
+  // is unambiguous — exactly one K per element, no list to fan out over and no [0] to guess with. Resolving against
+  // a global UniqueId → K-list map instead produced a cartesian product of edges (placement A's door HOSTED_ON
+  // placement B's wall) and pinned every IN_ROOM / CONNECTS_TO to the first placement.
   private static void EmitElementTopology(
     ObjectsArtifactPipeline pipeline,
-    List<Element> flatElements,
-    Dictionary<string, List<int>> objectKsByElementUniqueId
+    List<(Element Element, int ObjK)> sentElements,
+    Dictionary<string, int> placementIndex
   )
   {
-    foreach (var element in flatElements)
+    foreach (var (element, elementK) in sentElements)
     {
-      if (
-        element is not FamilyInstance fi
-        || !objectKsByElementUniqueId.TryGetValue(element.UniqueId, out var elementKs)
-      )
+      if (element is not FamilyInstance fi)
       {
         continue;
       }
@@ -766,45 +810,30 @@ public class RevitArtifactRootObjectBuilder(
         // falling through to it — the element is owned, and the edge is simply dropped as dangling.
         if (fi.SuperComponent is { } owner)
         {
-          if (objectKsByElementUniqueId.TryGetValue(owner.UniqueId, out var ownerKs))
+          if (placementIndex.TryGetValue(owner.UniqueId, out int ownerK))
           {
-            foreach (var oK in ownerKs)
-            {
-              foreach (var eK in elementKs)
-              {
-                pipeline.Subelement(oK, eK, 0);
-              }
-            }
+            pipeline.Subelement(ownerK, elementK, 0);
           }
         }
-        else if (fi.Host is { } host && objectKsByElementUniqueId.TryGetValue(host.UniqueId, out var hostKs))
+        else if (fi.Host is { } host && placementIndex.TryGetValue(host.UniqueId, out int hostK))
         {
-          foreach (var hK in hostKs)
-          {
-            foreach (var eK in elementKs)
-            {
-              pipeline.HostedOn(eK, hK);
-            }
-          }
+          pipeline.HostedOn(elementK, hostK);
         }
 
         Element? room = fi.Room ?? (Element?)fi.Space;
-        if (room is not null && objectKsByElementUniqueId.TryGetValue(room.UniqueId, out var roomKs))
+        if (room is not null && placementIndex.TryGetValue(room.UniqueId, out int roomK))
         {
-          foreach (var eK in elementKs)
-          {
-            pipeline.InRoom(eK, roomKs[0], 0);
-          }
+          pipeline.InRoom(elementK, roomK, 0);
         }
 
         if (
           fi.FromRoom is { } fromRoom
           && fi.ToRoom is { } toRoom
-          && objectKsByElementUniqueId.TryGetValue(fromRoom.UniqueId, out var fromKs)
-          && objectKsByElementUniqueId.TryGetValue(toRoom.UniqueId, out var toKs)
+          && placementIndex.TryGetValue(fromRoom.UniqueId, out int fromK)
+          && placementIndex.TryGetValue(toRoom.UniqueId, out int toK)
         )
         {
-          pipeline.ConnectsTo(fromKs[0], toKs[0], elementKs[0]);
+          pipeline.ConnectsTo(fromK, toK, elementK);
         }
       }
       catch (Exception ex) when (!ex.IsFatal())
