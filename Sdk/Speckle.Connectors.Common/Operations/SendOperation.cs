@@ -317,10 +317,16 @@ public sealed class SendOperation<T>(
     {
       SendOperationResult result = await ConvertAndSend(objects, sendInfo, progress, saveToCache, cancellationToken);
 
+      // NOTE: Ingestion.Complete is obsolete (ENG-9221) - completeWithVersion bypasses the v2 REST uploads/complete
+      // seam, so the version it creates is not viewer-consumable in the bundle era. This is the legacy fallback path,
+      // only reached when the connector has neither an artefact builder nor packfile endpoints, so it keeps using it.
+      // ENG-9264 tracks migrating this path to the v2 REST flow (or deleting it) and dropping the suppression.
+#pragma warning disable CS0618
       string createdVersionId = await sendInfo.Client.Ingestion.Complete(
         new(ingestion.id, sendInfo.ProjectId, result.RootObjId, versionMessage),
         CancellationToken.None
       );
+#pragma warning restore CS0618
 
       // NOTE: it might seem weird to pass null for ingestion.id 'null' here but there is a reason.
       // Because we complete ingestion here in .NET which is safe to pass null ingestion id that we don't want DUI explicitly subscribe to ingestion changes.
