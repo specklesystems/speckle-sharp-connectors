@@ -56,13 +56,14 @@ public abstract class SendComponentBase(
   string description,
   string category,
   string subCategory
-) : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>(
-  name,
-  nickname,
-  description,
-  category,
-  subCategory
 )
+  : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>(
+    name,
+    nickname,
+    description,
+    category,
+    subCategory
+  )
 {
   public string? Url { get; private set; }
   public string? VersionMessage { get; private set; }
@@ -210,13 +211,13 @@ public abstract class SendComponentBase(
         dataObjectWrapper.Parent = rootBase;
         rootBase.Elements.Add(dataObjectWrapper);
       }
-      else if (obj?.ToSpeckleGeometryWrapper() is not null)
+      // handle bare geometry and block instances directly (deep copy to avoid mutations), same as Create Collection
+      else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geometryWrapper)
       {
-        const string GEOMETRY_ERROR_MESSAGE =
-          "Speckle Geometry cannot be added directly to a Collection. "
-          + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection.";
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, GEOMETRY_ERROR_MESSAGE);
-        throw new SpeckleException(GEOMETRY_ERROR_MESSAGE);
+        var geometryCopy = geometryWrapper.DeepCopy();
+        geometryCopy.Path = rootBase.Path;
+        geometryCopy.Parent = rootBase;
+        rootBase.Elements.Add(geometryCopy);
       }
       else
       {

@@ -16,6 +16,7 @@ public class ReceiveArtefactComponent : ReceiveComponentBase
 
   // TODO: needs its own icon - currently shares the deprecated component's, so the two are indistinguishable on canvas
   protected override Bitmap Icon => Resources.speckle_operations_syncload;
+
   // the deprecated component had no override, i.e. the default, before it was hidden
   public override GH_Exposure Exposure => GH_Exposure.primary;
 

@@ -16,19 +16,15 @@ public class ReceiveArtefactAsyncComponent : ReceiveAsyncComponentBase
 
   // TODO: needs its own icon - currently shares the deprecated component's, so the two look alike on canvas
   protected override Bitmap Icon => Resources.speckle_operations_load;
+
   // mirrors what the deprecated component had before it was hidden
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   public override bool PreferArtefacts => true;
 
   public ReceiveArtefactAsyncComponent()
-    : base(
-      "Load",
-      "L",
-      "Load a model from Speckle",
-      ComponentCategories.PRIMARY_RIBBON,
-      ComponentCategories.OPERATIONS
-    ) { }
+    : base("Load", "L", "Load a model from Speckle", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
+  { }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
     pManager.AddParameter(
