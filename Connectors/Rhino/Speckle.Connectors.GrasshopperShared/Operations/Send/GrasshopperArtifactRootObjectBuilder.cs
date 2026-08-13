@@ -123,6 +123,7 @@ public class GrasshopperArtifactRootObjectBuilder(
 
     var geometryKsByAppId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
     var instanceKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
+    var instanceObjectKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
     var results = new List<SendConversionResult>();
 
     // Deep-copy so the walk (which stamps applicationIds + drives the block packer) never mutates canvas objects.
@@ -138,6 +139,7 @@ public class GrasshopperArtifactRootObjectBuilder(
       blockPacker,
       geometryKsByAppId,
       instanceKByAppId,
+      instanceObjectKByAppId,
       results,
       session,
       onOperationProgressed,
@@ -145,7 +147,15 @@ public class GrasshopperArtifactRootObjectBuilder(
     );
     WalkCollection(ctx, root, null);
 
-    EmitValueNodes(pipeline, colorPacker, materialPacker, blockPacker, geometryKsByAppId, instanceKByAppId);
+    EmitValueNodes(
+      pipeline,
+      colorPacker,
+      materialPacker,
+      blockPacker,
+      geometryKsByAppId,
+      instanceKByAppId,
+      instanceObjectKByAppId
+    );
 
     // Default scene view: the GH collection tree (IN_COLLECTION); the CONTAINER parent chain carries the nesting.
     pipeline.AddSceneView(new SceneView(0, "Default", true, new[] { SceneViewKey.Rel(RelKind.InCollection) }));
@@ -322,7 +332,7 @@ public class GrasshopperArtifactRootObjectBuilder(
           // nested instances are already registered by ProcessInstance above → emit their node only.
           if (definitionObject is SpeckleBlockInstanceWrapper nested)
           {
-            EmitInstanceNode(ctx, nested, collK, ord);
+            EmitInstanceNode(ctx, nested, collK, ord, isNested: true);
           }
           else
           {
@@ -344,7 +354,20 @@ public class GrasshopperArtifactRootObjectBuilder(
   }
 
   // Emits pipeline calls for an already-registered instance (object → INSTANCE node via DISPLAY_INSTANCE).
-  private void EmitInstanceNode(WalkContext ctx, SpeckleBlockInstanceWrapper instance, int collK, int ord)
+  //
+  // A NESTED instance is a member of its parent definition and reaches the scene only through that definition's
+  // DEFINES_INSTANCE, applied under the parent placement's transform. Giving it IN_COLLECTION and its own
+  // DISPLAY_INSTANCE would place it a second time, at its definition-local transform: Grasshopper filters that
+  // duplicate out on receive, but the Viewer, Rhino and AutoCAD do not, so they draw it twice - once in place and
+  // once adrift near the origin [ENG-9161]. The INSTANCE node itself is still emitted, since DEFINES_INSTANCE
+  // needs something to point at.
+  private void EmitInstanceNode(
+    WalkContext ctx,
+    SpeckleBlockInstanceWrapper instance,
+    int collK,
+    int ord,
+    bool isNested = false
+  )
   {
     string appId = instance.ApplicationId.NotNull();
     if (ctx.InstanceKByAppId.ContainsKey(appId))
@@ -352,7 +375,10 @@ public class GrasshopperArtifactRootObjectBuilder(
       return; // a shared nested definition can be reached twice; place it once
     }
     int objK = ctx.Pipeline.InternObject(appId);
-    ctx.Pipeline.InCollection(objK, collK, ord);
+    if (!isNested)
+    {
+      ctx.Pipeline.InCollection(objK, collK, ord);
+    }
     ctx.Pipeline.AddProperties(
       appId,
       PropertiesOf(instance.InstanceProxy),
@@ -365,8 +391,18 @@ public class GrasshopperArtifactRootObjectBuilder(
       Flatten(instance.InstanceProxy.transform),
       instance.InstanceProxy.units
     );
-    ctx.Pipeline.DisplayInstance(objK, instK, 0);
+    if (!isNested)
+    {
+      ctx.Pipeline.DisplayInstance(objK, instK, 0);
+    }
+
+    // A placement's own colour and material are object-sourced, so they carry the ord=1 namespace tag the reader
+    // expects (HAS_COLOR / HAS_MATERIAL on the object, not on a geometry) [ENG-9163].
+    ctx.ColorPacker.ProcessColor(appId, instance.Color);
+    ctx.MaterialPacker.ProcessMaterial(appId, instance.Material);
+
     ctx.InstanceKByAppId[appId] = instK;
+    ctx.InstanceObjectKByAppId[appId] = objK;
   }
 
   // Splits a clean Speckle object into its lossless raw 3dm SOLID blob (if any) + DISPLAY geometry; records the display
@@ -397,17 +433,33 @@ public class GrasshopperArtifactRootObjectBuilder(
       displayGeometry = [clean];
     }
 
-    // A definition member is never a standalone solid; it renders only through its definition's display meshes (DEFINES).
-    if (!isDefinitionMember && rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
+    // The authoritative 3dm blob, kept verbatim so a closed Brep, Extrusion or SubD comes back as itself rather than
+    // as its display mesh. A standalone object links it with a SOLID edge; a definition member has no standalone
+    // placement, so its solid rides DEFINES instead - added to gKs below, alongside the display meshes, and the
+    // receiver prefers it per member [ENG-9160]. Mirrors RhinoArtifactRootObjectBuilder.
+    int? memberSolidK = null;
+    if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
       byte[] solidBytes = Convert.FromBase64String(rawEncoding.contents);
       int solidK = ctx.Pipeline.AddRawGeometry($"{geometryAppId}:solid", solidBytes, RawEncodingFormats.RHINO_3DM);
-      ctx.Pipeline.Solid(objK, solidK, solidOrd++);
+      if (isDefinitionMember)
+      {
+        memberSolidK = solidK;
+      }
+      else
+      {
+        ctx.Pipeline.Solid(objK, solidK, solidOrd++);
+      }
     }
 
     var gKs = ctx.GeometryKsByAppId.TryGetValue(geometryAppId, out var existing)
       ? existing
       : ctx.GeometryKsByAppId[geometryAppId] = new List<int>();
+
+    if (memberSolidK is int msk)
+    {
+      gKs.Add(msk);
+    }
 
     int fragOrd = 0;
     foreach (Base fragment in displayGeometry)
@@ -429,7 +481,8 @@ public class GrasshopperArtifactRootObjectBuilder(
     GrasshopperMaterialPacker materialPacker,
     GrasshopperBlockPacker blockPacker,
     Dictionary<string, List<int>> geometryKsByAppId,
-    Dictionary<string, int> instanceKByAppId
+    Dictionary<string, int> instanceKByAppId,
+    Dictionary<string, int> instanceObjectKByAppId
   )
   {
     foreach (var defProxy in blockPacker.InstanceDefinitionProxies.Values)
@@ -474,6 +527,11 @@ public class GrasshopperArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
+        else if (instanceKByAppId.TryGetValue(objectId, out var instK))
+        {
+          // a placement paints its own material: no geometry of its own, so the edge sources the INSTANCE node
+          pipeline.HasMaterial(instK, matK, srcIsInstance: true);
+        }
       }
     }
 
@@ -488,6 +546,11 @@ public class GrasshopperArtifactRootObjectBuilder(
           {
             pipeline.HasColor(gK, colorK);
           }
+        }
+        else if (instanceObjectKByAppId.TryGetValue(objectId, out var objK))
+        {
+          // by-object colour on a placement: the object and geometry namespaces overlap, hence the tag
+          pipeline.HasColor(objK, colorK, srcIsObject: true);
         }
       }
     }
@@ -546,6 +609,8 @@ public class GrasshopperArtifactRootObjectBuilder(
     GrasshopperBlockPacker BlockPacker,
     Dictionary<string, List<int>> GeometryKsByAppId,
     Dictionary<string, int> InstanceKByAppId,
+    // a placement's colour tags on its OBJECT and its material on its INSTANCE node, so both Ks are needed
+    Dictionary<string, int> InstanceObjectKByAppId,
     List<SendConversionResult> Results,
     ArtefactSessionLog Session,
     IProgress<CardProgress> Progress,

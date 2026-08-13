@@ -15,6 +15,7 @@ using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using DataObject = Speckle.Objects.Data.DataObject;
 using RG = Rhino.Geometry;
+using SOG = Speckle.Objects.Geometry;
 using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -95,20 +96,34 @@ internal sealed class GrasshopperArtefactObjectBuilder
       int objK = kv.Key;
       string appId = kv.Value;
 
-      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK), warnings);
+      var geometries = DecodeObjectGeometry(
+        objK,
+        bundle,
+        rels,
+        ObjectUnits(bundle, objK),
+        ObjectSourceType(bundle, objK),
+        warnings
+      );
 
       // An object placed as a block carries no direct SOLID/DISPLAY geometry — resolve its placement(s) to the shared
       // SpeckleBlockDefinitionWrapper built above instead. Without this, instance-only sub-models receive as empty.
       var validInstEdges = ResolveValidInstanceEdges(objK, instEdgesByObject, nestedInstanceNodes, bundle, definitions);
       int instCount = validInstEdges?.Count ?? 0;
 
-      if (geometries.Count == 0 && instCount == 0)
-      {
-        continue; // non-geometric element (room/level/area) or a definition with no decodable geometry
-      }
-
       bundle.Properties.TryGetValue(objK, out var props);
       var name = ObjectName(props);
+
+      if (geometries.Count == 0 && instCount == 0)
+      {
+        // A room, level or area carried properties and no geometry in v3, and still counts as an object [ENG-9159].
+        // Only re-emit one when the source really was a DataObject: WasDataObject reads speckle_type, so the
+        // property-carrying sidecars we intern ourselves (__collection_topology_, which have none) stay out.
+        if (!groupAsDataObjects || !WasDataObject(props, 0))
+        {
+          continue;
+        }
+      }
+
       var segments = SceneViewResolver.Segments(bundle, objK);
       var collection = GetOrCreateCollection(
         root,
@@ -134,7 +149,13 @@ internal sealed class GrasshopperArtefactObjectBuilder
         materialByGeometry
       );
 
-      if (groupAsDataObjects && geometryWrappers.Count > 0 && WasDataObject(props, geometryWrappers.Count))
+      // An empty DataObject is only right for a genuinely property-only object: one placed as a block already comes
+      // through as its instance wrapper, and adding an empty one beside it would double the count.
+      if (
+        groupAsDataObjects
+        && WasDataObject(props, geometryWrappers.Count)
+        && (geometryWrappers.Count > 0 || instCount == 0)
+      )
       {
         collection.Elements.Add(BuildDataObject(appId, name, props, geometryWrappers, collection));
       }
@@ -384,6 +405,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     string fallbackUnits,
+    string? sourceType,
     List<string> warnings
   )
   {
@@ -392,7 +414,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       foreach (var solidK in solidKs)
       {
-        foreach (var g in DecodeGeometryIndex(solidK, bundle, fallbackUnits, warnings))
+        foreach (var g in DecodeGeometryIndex(solidK, bundle, fallbackUnits, sourceType, warnings))
         {
           result.Add((solidK, g));
         }
@@ -402,7 +424,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        foreach (var g in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, warnings))
+        foreach (var g in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, sourceType, warnings))
         {
           result.Add((e.Dst, g));
         }
@@ -410,6 +432,26 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
     return result;
   }
+
+  /// <summary>The owning object's source type, where the SGEO primitive alone is ambiguous - see <see cref="AsSourceType"/>.</summary>
+  private static string? ObjectSourceType(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("type", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : null;
+
+  // SGEO encodes a single point and a whole point cloud under the same Points primitive, so Decode can only ever hand
+  // back a Pointcloud - and a Speckle Point came back as a one-point cloud, a different type to everything downstream
+  // [ENG-9162]. The object's source type is the discriminator the blob lacks. Mirrors RhinoHostObjectArtefactBuilder,
+  // which keys on Rhino's own ObjectType; here the send stamps the Speckle type instead.
+  private static Base AsSourceType(Base decoded, string? sourceType) =>
+    sourceType is not null
+    && sourceType.EndsWith(".Point", StringComparison.Ordinal)
+    && decoded is SOG.Pointcloud { points.Count: 3 } cloud
+      ? new SOG.Point(cloud.points[0], cloud.points[1], cloud.points[2], cloud.units)
+      : decoded;
 
   // The send side stores "units" per object as an EAV property, falling back to the bundle's overall units when absent
   // (mirrors RhinoHostObjectArtefactBuilder.ObjectUnits).
@@ -580,7 +622,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
             // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
             // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
             // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
-            foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, warnings))
+            // no owning object row for a definition member, so no source type to disambiguate points with
+            foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, null, warnings))
             {
               Base? converted;
               try
@@ -757,6 +800,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     int geomK,
     ArtefactBundle bundle,
     string fallbackUnits,
+    string? sourceType,
     List<string> warnings
   )
   {
@@ -786,7 +830,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       Base? decoded = null;
       try
       {
-        decoded = SgeoDecoder.Decode(g.Content);
+        decoded = AsSourceType(SgeoDecoder.Decode(g.Content), sourceType);
         var converted = ConvertSpeckleGeometry(decoded);
         if (converted.Count == 0)
         {
