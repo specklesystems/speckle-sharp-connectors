@@ -345,16 +345,13 @@ public abstract class SendAsyncComponentBase : GH_AsyncComponent<SendAsyncCompon
           dataObjectWrapper.Parent = rootBase;
           rootBase.Elements.Add(dataObjectWrapper);
         }
-        // reject bare geometry — collections may only contain Data Objects or sub-collections.
-        // SpeckleGeometry is easily wrapped: wire your geometry through a 'Speckle Data Object' component first.
-        else if (obj?.ToSpeckleGeometryWrapper() is not null)
+        // handle bare geometry and block instances directly (deep copy to avoid mutations), same as Create Collection
+        else if (obj?.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geometryWrapper)
         {
-          AddRuntimeMessage(
-            GH_RuntimeMessageLevel.Error,
-            "Speckle Geometry cannot be added directly to a Collection. "
-              + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection."
-          );
-          return false;
+          var geometryCopy = geometryWrapper.DeepCopy();
+          geometryCopy.Path = rootBase.Path;
+          geometryCopy.Parent = rootBase;
+          rootBase.Elements.Add(geometryCopy);
         }
         else
         {

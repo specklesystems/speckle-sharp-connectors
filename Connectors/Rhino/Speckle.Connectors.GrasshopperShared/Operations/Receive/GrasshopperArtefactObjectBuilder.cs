@@ -70,7 +70,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // solid/display happened to be decoded. materialByGeometry still covers DEFINITION/instance content, which has no
     // owning object reachable this way (mirrors Rhino's "standalone definition geometry" byGeometry fallback).
     var objByGeom = rels.ObjectByGeometry();
-    var (materialByObject, materialByGeometry) = CreateMaterials(bundle, objByGeom);
+    var (materialByObject, materialByGeometry, materialByInstance) = CreateMaterials(bundle, objByGeom);
     var colorByObject = CreateColors(bundle, objByGeom);
 
     // Instances (skip entirely if the bundle has none, mirrors RhinoHostObjectArtefactBuilder.BakeAll's gate): one
@@ -181,7 +181,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
           props,
           collection,
           colorByObject,
-          materialByObject
+          materialByObject,
+          materialByInstance
         );
       }
     }
@@ -354,7 +355,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
     Dictionary<string, object?>? props,
     SpeckleCollectionWrapper collection,
     Dictionary<string, int> colorByObject,
-    Dictionary<string, SpeckleMaterialWrapper> materialByObject
+    Dictionary<string, SpeckleMaterialWrapper> materialByObject,
+    Dictionary<int, SpeckleMaterialWrapper> materialByInstance
   )
   {
     foreach (var e in validInstEdges)
@@ -382,7 +384,11 @@ internal sealed class GrasshopperArtefactObjectBuilder
         ObjectIndex = objK,
         ApplicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}",
         Color = colorByObject.TryGetValue(appId, out var iArgb) ? System.Drawing.Color.FromArgb(iArgb) : null,
-        Material = materialByObject.TryGetValue(appId, out var iMat) ? iMat : null,
+        // the placement's own material sources the INSTANCE node, so try that before the object-keyed map [ENG-9163]
+        Material =
+          materialByInstance.TryGetValue(e.Dst, out var instMat) ? instMat
+          : materialByObject.TryGetValue(appId, out var iMat) ? iMat
+          : null,
       };
       if (name is not null)
       {
@@ -490,7 +496,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // construction path the v1 GH receive uses (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
   private static (
     Dictionary<string, SpeckleMaterialWrapper> ByObject,
-    Dictionary<int, SpeckleMaterialWrapper> ByGeometry
+    Dictionary<int, SpeckleMaterialWrapper> ByGeometry,
+    Dictionary<int, SpeckleMaterialWrapper> ByInstance
   ) CreateMaterials(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var wrapperByMaterialNode = new Dictionary<int, SpeckleMaterialWrapper>();
@@ -546,14 +553,24 @@ internal sealed class GrasshopperArtefactObjectBuilder
         byObject[appId] = wrapper; // object → material (atomic display objects)
       }
     }
-    return (byObject, byGeometry);
+
+    // Instance-sourced: a material painted on a block placement, keyed by its INSTANCE node K. A placement owns no
+    // geometry of its own, so it's invisible to the loop above [ENG-9163]. Mirrors RhinoHostObjectArtefactBuilder.
+    var byInstance = new Dictionary<int, SpeckleMaterialWrapper>();
+    foreach (var kv in bundle.Relations.MaterialByInstance)
+    {
+      if (wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper))
+      {
+        byInstance[kv.Key] = wrapper;
+      }
+    }
+    return (byObject, byGeometry, byInstance);
   }
 
   // Resolves HAS_COLOR (Relations.ColorByGeometry: display-mesh geometry K → COLOR node) to the owning object's
   // appId → argb — the object's by-object display colour, distinct from a render material. Resolved via the same
   // Display-edges reverse map as materials, for the same reason (HAS_COLOR only ever targets the display-mesh K, not
-  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors, which likewise only resolves to the owning
-  // object (definition/instance geometry doesn't get a colour in the Rhino reference either).
+  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors.
   private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var byObject = new Dictionary<string, int>();
@@ -564,6 +581,21 @@ internal sealed class GrasshopperArtefactObjectBuilder
         continue;
       }
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+
+    // Object-sourced: a block placement's own colour. A placement owns no geometry, so it never appears in objByGeom -
+    // resolve it straight through the object dictionary [ENG-9163]. Mirrors RhinoHostObjectArtefactBuilder.
+    foreach (var kv in bundle.Relations.ColorByObject)
+    {
+      if (
+        bundle.Nodes.TryGetValue(kv.Value, out var n)
+        && n.Kind == NodeKind.Color
+        && n.Argb is int argb
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = argb;
       }

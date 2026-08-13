@@ -488,20 +488,23 @@ public class GrasshopperArtifactRootObjectBuilder(
     foreach (var defProxy in blockPacker.InstanceDefinitionProxies.Values)
     {
       int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
-      int o = 0;
+      int memberOrd = 0;
       foreach (var memberId in defProxy.objects)
       {
         if (instanceKByAppId.TryGetValue(memberId, out var instK))
         {
-          pipeline.DefinesInstance(defK, instK, o++);
+          pipeline.DefinesInstance(defK, instK, memberOrd);
         }
         else if (geometryKsByAppId.TryGetValue(memberId, out var memberGKs))
         {
+          // All geometry of one member shares its member ordinal, so receive can group the member's authoritative solid
+          // + its display mesh(es) and pick the solid over its shadow (mirrors RhinoArtifactRootObjectBuilder).
           foreach (var gK in memberGKs)
           {
-            pipeline.Defines(defK, gK, o++);
+            pipeline.Defines(defK, gK, memberOrd);
           }
         }
+        memberOrd++;
       }
     }
 
