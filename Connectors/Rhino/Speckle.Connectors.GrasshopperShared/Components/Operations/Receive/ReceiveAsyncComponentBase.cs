@@ -632,10 +632,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
         );
       }
 
-      Output = new ReceiveComponentOutput
-      {
-        RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
-      };
+      Output = new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
       return true;
     }
     catch (Exception ex) when (!ex.IsFatal())

@@ -53,13 +53,14 @@ public abstract class ReceiveComponentBase(
   string description,
   string category,
   string subCategory
-) : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>(
-  name,
-  nickname,
-  description,
-  category,
-  subCategory
 )
+  : SpeckleTaskCapableComponent<ReceiveComponentInput, ReceiveComponentOutput>(
+    name,
+    nickname,
+    description,
+    category,
+    subCategory
+  )
 {
   private IClient? _apiClient;
   private string? _lastVersionId;
@@ -356,10 +357,7 @@ public abstract class ReceiveComponentBase(
         AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not mark the version as received ({ex.Message}).");
       }
 
-      return new ReceiveComponentOutput
-      {
-        RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
-      };
+      return new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

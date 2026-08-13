@@ -68,7 +68,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       if (Params.Input[0].VolatileData.DataCount > 0)
       {
         var resolved = Params
-          .Input[0].VolatileData.AllData(true)
+          .Input[0]
+          .VolatileData.AllData(true)
           .Select(Resolve)
           .Where(r => r is not null)
           .Cast<Dictionary<string, object?>>()
@@ -78,15 +79,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
         {
           // input arrived but none of it resolved - name what turned up, so an unhandled type is obvious rather
           // than looking like the component is broken
-          var types = Params
-            .Input[0].VolatileData.AllData(true)
-            .Select(g => g.GetType().Name)
-            .Distinct()
-            .ToList();
-          AddRuntimeMessage(
-            GH_RuntimeMessageLevel.Remark,
-            $"Nothing resolved from: {string.Join(", ", types)}."
-          );
+          var types = Params.Input[0].VolatileData.AllData(true).Select(g => g.GetType().Name).Distinct().ToList();
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Nothing resolved from: {string.Join(", ", types)}.");
         }
 
         var names = new List<string>();
@@ -284,8 +278,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       );
     }
 
-    var models = bundle
-      .Relations.ObjectNodeByRel.TryGetValue(RelKind.InModel, out var byObject)
+    var models = bundle.Relations.ObjectNodeByRel.TryGetValue(RelKind.InModel, out var byObject)
       ? byObject.Values.Distinct().Select(k => NodeNameAt(bundle, k)).Where(n => n is not null).ToList()
       : [];
     Add(values, "Models", models);

@@ -56,13 +56,14 @@ public abstract class SendComponentBase(
   string description,
   string category,
   string subCategory
-) : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>(
-  name,
-  nickname,
-  description,
-  category,
-  subCategory
 )
+  : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>(
+    name,
+    nickname,
+    description,
+    category,
+    subCategory
+  )
 {
   public string? Url { get; private set; }
   public string? VersionMessage { get; private set; }
