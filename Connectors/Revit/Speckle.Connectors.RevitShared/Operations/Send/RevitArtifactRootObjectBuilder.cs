@@ -9,6 +9,7 @@ using Speckle.Connectors.Common.Conversion;
 using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
+using Speckle.Connectors.Common.Topology;
 using Speckle.Connectors.DUI.Exceptions;
 using Speckle.Connectors.Revit.HostApp;
 using Speckle.Converters.Common;
@@ -820,59 +821,80 @@ public class RevitArtifactRootObjectBuilder(
   // active phase, and topology is best-effort (must never fail the geometry send).
   //
   // Scoped to ONE placement [ENG-9212]: <paramref name="sentElements"/> are the objects interned for this document
-  // context and <paramref name="placementIndex"/> resolves UniqueId → K within that same context, so every endpoint
-  // is unambiguous — exactly one K per element, no list to fan out over and no [0] to guess with. Resolving against
-  // a global UniqueId → K-list map instead produced a cartesian product of edges (placement A's door HOSTED_ON
-  // placement B's wall) and pinned every IN_ROOM / CONNECTS_TO to the first placement.
+  // context and <paramref name="placementIndex"/> resolves UniqueId → K within that same context. This half is the
+  // Revit read; PlacementTopology owns the resolution (precedence, dangling-endpoint drops, placement scoping) so
+  // that logic is testable without a live Revit document — which is what ENG-9212 needed and could not have.
   private static void EmitElementTopology(
     ObjectsArtifactPipeline pipeline,
     List<(Element Element, int ObjK)> sentElements,
     Dictionary<string, int> placementIndex
   )
   {
+    var placementElements = new List<PlacementElement>(sentElements.Count);
     foreach (var (element, elementK) in sentElements)
     {
       if (element is not FamilyInstance fi)
       {
         continue;
       }
+
+      string? ownerUniqueId = null;
+      string? hostUniqueId = null;
+      string? roomUniqueId = null;
+      string? fromRoomUniqueId = null;
+      string? toRoomUniqueId = null;
       try
       {
-        // Ownership wins over hosting, matching rvextract's precedence (owningElemId first, getHostId as the
-        // fallback) so the same fixture gets the same relation whether it is published through the connector or
-        // extracted from an uploaded file. An owner that exists but was NOT sent suppresses HOSTED_ON rather than
-        // falling through to it — the element is owned, and the edge is simply dropped as dangling.
-        if (fi.SuperComponent is { } owner)
-        {
-          if (placementIndex.TryGetValue(owner.UniqueId, out int ownerK))
-          {
-            pipeline.Subelement(ownerK, elementK, 0);
-          }
-        }
-        else if (fi.Host is { } host && placementIndex.TryGetValue(host.UniqueId, out int hostK))
-        {
-          pipeline.HostedOn(elementK, hostK);
-        }
-
-        Element? room = fi.Room ?? (Element?)fi.Space;
-        if (room is not null && placementIndex.TryGetValue(room.UniqueId, out int roomK))
-        {
-          pipeline.InRoom(elementK, roomK, 0);
-        }
-
-        if (
-          fi.FromRoom is { } fromRoom
-          && fi.ToRoom is { } toRoom
-          && placementIndex.TryGetValue(fromRoom.UniqueId, out int fromK)
-          && placementIndex.TryGetValue(toRoom.UniqueId, out int toK)
-        )
-        {
-          pipeline.ConnectsTo(fromK, toK, elementK);
-        }
+        ownerUniqueId = fi.SuperComponent?.UniqueId;
+        hostUniqueId = fi.Host?.UniqueId;
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        // best-effort: Room/ToRoom/FromRoom can throw without an active phase — skip this element's topology.
+        // best-effort: topology must never fail the geometry send.
+      }
+      try
+      {
+        // Read SEPARATELY from ownership/hosting above: Room/Space/FromRoom/ToRoom throw without an active phase,
+        // and a phase-less model should still get its SUBELEMENT / HOSTED_ON edges.
+        roomUniqueId = (fi.Room ?? (Element?)fi.Space)?.UniqueId;
+        fromRoomUniqueId = fi.FromRoom?.UniqueId;
+        toRoomUniqueId = fi.ToRoom?.UniqueId;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: no active phase → this element ships without room topology.
+      }
+
+      placementElements.Add(
+        new PlacementElement(
+          element.UniqueId,
+          elementK,
+          ownerUniqueId,
+          hostUniqueId,
+          roomUniqueId,
+          fromRoomUniqueId,
+          toRoomUniqueId
+        )
+      );
+    }
+
+    foreach (var edge in PlacementTopology.Resolve(placementElements, placementIndex))
+    {
+      switch (edge.Kind)
+      {
+        case PlacementEdgeKind.Subelement:
+          pipeline.Subelement(edge.Src, edge.Dst, edge.Ord);
+          break;
+        case PlacementEdgeKind.HostedOn:
+          pipeline.HostedOn(edge.Src, edge.Dst);
+          break;
+        case PlacementEdgeKind.InRoom:
+          pipeline.InRoom(edge.Src, edge.Dst, edge.Ord);
+          break;
+        default:
+          // ConnectsTo — Ord is the opening's K (a scope, not an ordinal).
+          pipeline.ConnectsTo(edge.Src, edge.Dst, edge.Ord);
+          break;
       }
     }
   }
