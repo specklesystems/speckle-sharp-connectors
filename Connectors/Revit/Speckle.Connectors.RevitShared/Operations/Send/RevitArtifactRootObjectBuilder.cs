@@ -239,6 +239,17 @@ public class RevitArtifactRootObjectBuilder(
         objectKsByPlacement[modelKey] = placementIndex;
       }
 
+      // Transformed (linked) elements get a transform hash appended so occurrences of the same linked file under
+      // different placements stay distinct — same convention as the v1 builder. Constant per placement, so hash
+      // once here instead of per element, and apply it to children as well as atomic objects [ENG-9212].
+      var placement = new PlacementContext(
+        documentContext.Transform is { } placementTransform
+          ? $"_t{linkedModelHandler.GetTransformHash(placementTransform)}"
+          : string.Empty,
+        placementIndex,
+        new HashSet<string>(documentContext.Elements.Select(e => e.UniqueId), StringComparer.Ordinal)
+      );
+
       EmitMainModelReferencePoint(pipeline, documentContext);
 
       using (
@@ -259,7 +270,7 @@ public class RevitArtifactRootObjectBuilder(
         foreach (Element revitElement in documentContext.Elements)
         {
           cancellationToken.ThrowIfCancellationRequested();
-          string applicationId = revitElement.UniqueId;
+          string applicationId = revitElement.UniqueId + placement.Suffix;
           string sourceType = revitElement.GetType().Name;
           var sw = Stopwatch.StartNew();
           try
@@ -287,19 +298,10 @@ public class RevitArtifactRootObjectBuilder(
               continue;
             }
 
-            // Transformed (linked) elements get a transform hash appended so instances of the same linked
-            // file under different placements stay distinct — same convention as the v1 builder.
-            bool hasTransform = documentContext.Transform != null;
-            if (hasTransform)
-            {
-              string transformHash = linkedModelHandler.GetTransformHash(documentContext.Transform.NotNull());
-              applicationId = $"{applicationId}_t{transformHash}";
-            }
-
             Base converted = converter.Convert(revitElement);
             converted.applicationId = applicationId;
 
-            int objK = EmitObject(pipeline, converted, modelK, revitElement, applicationId, placementIndex);
+            int objK = EmitObject(pipeline, converted, modelK, revitElement, applicationId, placement);
             sentElements.Add((revitElement, objK));
             results.Add(new(Status.SUCCESS, applicationId, sourceType, converted));
             session.RecordObject(applicationId, sourceType, Status.SUCCESS, null, sw.ElapsedMilliseconds);
@@ -323,7 +325,7 @@ public class RevitArtifactRootObjectBuilder(
         // — SuperComponent, Host, Room, FromRoom/ToRoom — lives in the same document, hence the same placement. So
         // resolving against this placement's map alone is both sufficient and the thing that keeps edges from
         // crossing placements [ENG-9212].
-        EmitElementTopology(pipeline, sentElements, placementIndex);
+        EmitElementTopology(pipeline, sentElements, placement.ObjectKsByUniqueId);
 
         // Named 3D views (perspective AND orthographic) of this document → camera_views rows. Collected inside
         // this settings push so linked-model cameras ride the exact ReferencePointTransform + scaling path the
@@ -460,7 +462,7 @@ public class RevitArtifactRootObjectBuilder(
     int modelK,
     Element revitElement,
     string applicationId,
-    Dictionary<string, int> placementIndex
+    PlacementContext placement
   )
   {
     int objK = pipeline.InternObject(applicationId);
@@ -468,7 +470,7 @@ public class RevitArtifactRootObjectBuilder(
 
     // Indexer, not Add: ElementUnpacker already dedups by ElementId so one UniqueId maps to one K per placement,
     // but a coincident-transform placement key (ENG-9263) must degrade quietly rather than throw mid-send.
-    placementIndex[revitElement.UniqueId] = objK;
+    placement.ObjectKsByUniqueId[revitElement.UniqueId] = objK;
 
     if (converted is not DataObject dataObject)
     {
@@ -498,7 +500,7 @@ public class RevitArtifactRootObjectBuilder(
       int childOrd = 0;
       foreach (RevitObject child in revitObject.elements)
       {
-        EmitChild(pipeline, child, modelK, objK, childOrd++);
+        EmitChild(pipeline, child, modelK, objK, childOrd++, placement);
       }
     }
 
@@ -656,12 +658,44 @@ public class RevitArtifactRootObjectBuilder(
   // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
   // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
   // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
-  private void EmitChild(ObjectsArtifactPipeline pipeline, RevitObject child, int modelK, int parentObjK, int subOrd)
+  //
+  // Identity is the child's Revit UniqueId (stamped by the converter) qualified by the SAME placement suffix its
+  // parent got, so two placements of one linked file keep distinct child identities, a re-send reproduces them, and
+  // the child can be the endpoint of a hosting/ownership relation [ENG-9212]. The Guid fallback survives only for a
+  // converter that emits an unidentified child — such an object is unreferenceable, but still ships its geometry.
+  private void EmitChild(
+    ObjectsArtifactPipeline pipeline,
+    RevitObject child,
+    int modelK,
+    int parentObjK,
+    int subOrd,
+    PlacementContext placement
+  )
   {
-    string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
+    string? childUniqueId = child.applicationId;
+    string childAppId = childUniqueId is null ? Guid.NewGuid().ToString() : childUniqueId + placement.Suffix;
     int childK = pipeline.InternObject(childAppId);
-    pipeline.InModel(childK, modelK, 0);
     pipeline.Subelement(parentObjK, childK, subOrd);
+
+    if (childUniqueId is not null)
+    {
+      // Reachable as a relation endpoint now that the id is the source UniqueId: a fixture hosted on a curtain
+      // panel, or owned by a nested shared family, resolves here instead of being dropped as dangling.
+      placement.ObjectKsByUniqueId[childUniqueId] = childK;
+
+      // A composite child can ALSO be atomic in this placement — a basic wall used as a curtain panel is both, and
+      // RemoveKnownChildElementsWhenParentPresent only strips Mullion / Panel / curtain-hosted FamilyInstance /
+      // stacked-wall member / TopRail. Both emissions now intern to the same deterministic id, so re-emitting the
+      // payload here would write its properties twice and hang a second DISPLAY edge (pointing at a second copy of
+      // the same mesh) off one object. Keep the ownership edge, let the atomic pass own the payload — it carries
+      // ON_LEVEL and the type key on top.
+      if (placement.AtomicUniqueIds.Contains(childUniqueId))
+      {
+        return;
+      }
+    }
+
+    pipeline.InModel(childK, modelK, 0);
     pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
 
     EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
@@ -669,7 +703,7 @@ public class RevitArtifactRootObjectBuilder(
     int grandOrd = 0;
     foreach (RevitObject grandChild in child.elements)
     {
-      EmitChild(pipeline, grandChild, modelK, childK, grandOrd++);
+      EmitChild(pipeline, grandChild, modelK, childK, grandOrd++, placement);
     }
   }
 
@@ -968,6 +1002,23 @@ public class RevitArtifactRootObjectBuilder(
     };
 
   private static readonly IReadOnlyDictionary<string, object?> s_emptyProperties = new Dictionary<string, object?>();
+
+  /// <summary>
+  /// Everything an object — or a child emitted recursively beneath it — needs to be identified and indexed within
+  /// ONE linked-model placement [ENG-9212]. A linked file placed N times produces N of these over the same source
+  /// document, and nothing may leak between them.
+  /// </summary>
+  /// <param name="Suffix">Appended to every source UniqueId in this placement: <c>_t{transformHash}</c> for a linked
+  /// document, empty for the host document.</param>
+  /// <param name="ObjectKsByUniqueId">Source UniqueId → interned object K, for THIS placement only. Element→element
+  /// relations resolve here, which is what keeps them from crossing placements.</param>
+  /// <param name="AtomicUniqueIds">The UniqueIds converted as atomic objects in this placement — a composite child
+  /// that also appears here must not re-emit its payload (see <see cref="EmitChild"/>).</param>
+  private sealed record PlacementContext(
+    string Suffix,
+    Dictionary<string, int> ObjectKsByUniqueId,
+    HashSet<string> AtomicUniqueIds
+  );
 
   private sealed record BundleResult(
     IReadOnlyDictionary<string, string> Bundle,
