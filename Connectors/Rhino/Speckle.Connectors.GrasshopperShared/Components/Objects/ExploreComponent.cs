@@ -42,7 +42,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     ) { }
 
   public override Guid ComponentGuid => GetType().GUID;
-  protected override Bitmap Icon => Resources.speckle_objects_query;
+  protected override Bitmap Icon => Resources.speckle_explore;
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager) =>
