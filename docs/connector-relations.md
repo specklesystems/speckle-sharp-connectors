@@ -401,7 +401,7 @@ graph LR
 - **Nodes:** CONTAINER `"Model"` (per source doc) · CONTAINER `"Group"` (per placed model group) · LEVEL (name+elev) · DEFINITION/INSTANCE · MATERIAL
 - **Sidecar:** `camera_views` ← 3D views (ENG-8802) · `reference_point` meta (ENG-8808)
 - **Receive:** ● native — DirectShape + DirectShapeLibrary instances, reference-point reversal
-- **Watch out:** linked models intern per-placement; Shared Coordinates deliberately not recorded (can't be one offset)
+- **Watch out:** linked models intern per-placement — atomic objects, recursive children, and element→element relations alike (ENG-9212); a placement's element topology resolves only within its own placement index. Shared Coordinates deliberately not recorded (can't be one offset)
 
 ---
 
