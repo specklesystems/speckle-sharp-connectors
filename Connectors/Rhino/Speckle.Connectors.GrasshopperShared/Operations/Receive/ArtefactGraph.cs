@@ -5,6 +5,29 @@ namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
 /// <summary>One relation as the bundle itself declares it - id, spec name, and the dense-int namespace at each end.</summary>
 internal sealed record RelationType(byte Rel, string Name, string SourceNamespace, string TargetNamespace);
 
+/// <summary>One column of <c>eav.structural_results</c>, read per row rather than boxed up front - a time-history
+/// model runs to millions of rows and only the piped-in object's are ever projected.</summary>
+internal sealed record ResultColumn(string Name, Func<int, object?> ValueAt);
+
+/// <summary>
+/// One version's analysis results, in the long/tidy shape the bundle stores them: one scalar per row, with the axes
+/// (load case, component, station, step) as columns instead of baked into a property path.
+/// </summary>
+/// <remarks>
+/// Indexed by identity, never by result type - nothing here knows what a <c>frameForce</c> is, so a type the producer
+/// wires up later flows through untouched.
+/// </remarks>
+internal sealed class StructuralResults
+{
+  public required IReadOnlyList<ResultColumn> Columns { get; init; }
+
+  /// <summary>Object-level rows (<c>object_index</c> set), by the dense K the object was interned with.</summary>
+  public required IReadOnlyDictionary<int, List<int>> RowsByObject { get; init; }
+
+  /// <summary>Model-level rows (<c>object_index</c> null) - base reactions, modal periods, per-story results.</summary>
+  public required IReadOnlyList<int> ModelRows { get; init; }
+}
+
 /// <summary>
 /// The envelope graph of one received version: the parsed bundle, the relation catalog it ships with, and every edge
 /// indexed in both directions. Backs the Explore component.
@@ -20,6 +43,9 @@ internal sealed class ArtefactGraph
 
   /// <summary>Relations worth walking - see <see cref="ArtefactGraphCache.IsGeometryNamespace"/> for what's dropped.</summary>
   public required IReadOnlyList<RelationType> RelationTypes { get; init; }
+
+  /// <summary>Analysis results, or null when this version carries none - most bundles have no results file at all.</summary>
+  public StructuralResults? Results { get; init; }
 
   private readonly Dictionary<byte, Dictionary<int, List<int>>> _forward = new();
   private readonly Dictionary<byte, Dictionary<int, List<int>>> _reverse = new();
@@ -129,7 +155,12 @@ internal static class ArtefactGraphCache
   {
     var bundle = RunSync(() => ArtefactBundleReader.ReadAsync(dir, cancellationToken));
     var types = ReadRelationTypes(dir, cancellationToken);
-    var graph = new ArtefactGraph { Bundle = bundle, RelationTypes = types };
+    var graph = new ArtefactGraph
+    {
+      Bundle = bundle,
+      RelationTypes = types,
+      Results = ReadStructuralResults(dir, cancellationToken),
+    };
     IndexRelations(dir, graph, types, cancellationToken);
     return graph;
   }
@@ -181,6 +212,109 @@ internal static class ArtefactGraphCache
     }
 
     return types;
+  }
+
+  // The three columns with a role other than "an axis to surface": the join key, and the two that coalesce.
+  private const string OBJECT_COLUMN = "object_index";
+  private const string VALUE_COLUMN = "value";
+  private const string VALUE_TEXT_COLUMN = "value_text";
+
+  /// <remarks>
+  /// A version with no results file - nearly all of them - reads as null and Explore emits nothing extra.
+  /// </remarks>
+  private static StructuralResults? ReadStructuralResults(string dir, CancellationToken cancellationToken)
+  {
+    var table = TryReadTable(dir, ".eav.structural_results.parquet", cancellationToken);
+    if (table is null || table.RowCount == 0)
+    {
+      return null;
+    }
+
+    // Whatever axes the file turns out to have, in its own order, typed from the data rather than from a list here.
+    // The spec only ever adds nullable columns, so a new axis becomes an output on its own.
+    var columns = new List<ResultColumn>();
+    foreach (var name in table.ColumnNames)
+    {
+      if (name is OBJECT_COLUMN or VALUE_COLUMN or VALUE_TEXT_COLUMN)
+      {
+        continue;
+      }
+      if (Accessor(table, name) is { } accessor)
+      {
+        columns.Add(new ResultColumn(name, accessor));
+      }
+    }
+
+    // Exactly one of value / value_text is set per row - a numeric result or a design verdict - so they coalesce
+    // into one output rather than two mostly-empty ones, which is what the spec tells consumers to do.
+    var numeric = table.Has(VALUE_COLUMN) ? table.NullableDoubles(VALUE_COLUMN) : null;
+    var text = table.Has(VALUE_TEXT_COLUMN) ? table.Strings(VALUE_TEXT_COLUMN) : null;
+    if (numeric is not null || text is not null)
+    {
+      columns.Add(new ResultColumn(VALUE_COLUMN, i => (object?)numeric?[i] ?? text?[i]));
+    }
+
+    // object_index set = object-level, null = model-level (identity is location and/or step). Both shapes share the
+    // file, so split them once here rather than scanning per solve.
+    var objectIndex = table.Has(OBJECT_COLUMN) ? table.NullableInts(OBJECT_COLUMN) : new int?[table.RowCount];
+    var rowsByObject = new Dictionary<int, List<int>>();
+    var modelRows = new List<int>();
+    for (int i = 0; i < objectIndex.Length; i++)
+    {
+      if (objectIndex[i] is not int objK)
+      {
+        modelRows.Add(i);
+        continue;
+      }
+      if (!rowsByObject.TryGetValue(objK, out var rows))
+      {
+        rows = new List<int>();
+        rowsByObject[objK] = rows;
+      }
+      rows.Add(i);
+    }
+
+    return new StructuralResults
+    {
+      Columns = columns,
+      RowsByObject = rowsByObject,
+      ModelRows = modelRows,
+    };
+  }
+
+  /// <summary>
+  /// Reads one column by its own element type, converting once at load rather than on every solve. Null for a type
+  /// with no sensible port (blobs), so it's skipped instead of guessed at.
+  /// </summary>
+  private static Func<int, object?>? Accessor(ParquetTable table, string name)
+  {
+    if (table.ColumnType(name) is not { } declared)
+    {
+      return null;
+    }
+    var type = Nullable.GetUnderlyingType(declared) ?? declared;
+
+    if (type == typeof(double))
+    {
+      var numbers = table.NullableDoubles(name);
+      return i => numbers[i];
+    }
+    if (type == typeof(int) || type == typeof(long))
+    {
+      var integers = table.NullableInts(name);
+      return i => integers[i];
+    }
+    if (type == typeof(bool))
+    {
+      var flags = table.NullableBools(name);
+      return i => flags[i];
+    }
+    if (type == typeof(string))
+    {
+      var texts = table.Strings(name);
+      return i => texts[i];
+    }
+    return null;
   }
 
   private static void IndexRelations(
