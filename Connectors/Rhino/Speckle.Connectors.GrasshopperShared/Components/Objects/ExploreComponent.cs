@@ -26,6 +26,8 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 /// <para>Object-to-object relations (host, subelements, connects-to, bounds, siblings) come out as application ids
 /// rather than geometry: the graph knows the ids, but Explore only sees the item piped into it, not the rest of the
 /// loaded tree. Pair with a lookup component to turn those back into objects.</para>
+/// <para>Structural analysis results come out alongside the relations when the version has them, as row-aligned
+/// lists - one output per axis, so a load case or component can be grouped with the usual list tools.</para>
 /// <para>Reads only the bundle a receive already cached. A legacy-loaded model, or one whose temp folder has been
 /// cleared, reports no graph and asks for a reload.</para>
 /// </remarks>
@@ -251,6 +253,8 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     Add(values, "Siblings", Siblings(bundle, objK));
 
+    AddResults(values, graph.Results, ObjectResultRows(graph.Results, objK));
+
     return values;
   }
 
@@ -283,8 +287,41 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       : [];
     Add(values, "Models", models);
 
+    // whole-model and per-story results (base reactions, modal periods, story drift) hang off no object, so the
+    // collection is the only thing they can be reached from
+    AddResults(values, graph.Results, graph.Results?.ModelRows ?? []);
+
     return values;
   }
+
+  /// <summary>
+  /// Analysis results for one identity, as row-aligned parallel lists. The axes stay as separate outputs rather than
+  /// collapsing into a label, so Sift and Partition group them like any other list.
+  /// </summary>
+  private static void AddResults(
+    Dictionary<string, object?> values,
+    StructuralResults? results,
+    IReadOnlyList<int> rows
+  )
+  {
+    if (results is null || rows.Count == 0)
+    {
+      return;
+    }
+
+    foreach (var column in results.Columns)
+    {
+      var projected = rows.Select(r => column.ValueAt(r)).ToList();
+      // an axis this result type doesn't use is null the whole way down - no port beats a list of nulls
+      if (projected.Any(v => v is not null))
+      {
+        Add(values, Humanise(column.Name), projected);
+      }
+    }
+  }
+
+  private static IReadOnlyList<int> ObjectResultRows(StructuralResults? results, int objK) =>
+    results is not null && results.RowsByObject.TryGetValue(objK, out var rows) ? rows : [];
 
   private static ArtefactNode? LevelNode(ArtefactBundle bundle, int objK) =>
     bundle.Relations.ObjectNodeByRel.TryGetValue(RelKind.OnLevel, out var byObject)
