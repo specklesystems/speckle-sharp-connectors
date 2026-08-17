@@ -41,6 +41,12 @@ public sealed class SendOperation<T>(
   IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null
 ) : ISendOperation<T>
 {
+  /// <param name="useArtifacts">
+  /// Grasshopper-only escape hatch, don't use elsewhere. False skips the 4.0 artefact path and falls through to the
+  /// v3 routes below. GH's deprecated Publish components pass false because a saved .gh file outlives the connector
+  /// upgrade - an upgraded author shouldn't silently create versions their teammates can't read. Remove this
+  /// parameter when those components go.
+  /// </param>
   public async Task<(SendOperationResult sendResult, string versionId, string? ingestionId)> Send(
     IReadOnlyList<T> objects,
     SendInfo sendInfo,
@@ -49,7 +55,8 @@ public sealed class SendOperation<T>(
     string? versionMessage,
     IProgress<CardProgress> uiProgress,
     bool saveToCache,
-    CancellationToken cancellationToken
+    CancellationToken cancellationToken,
+    bool useArtifacts = true
   )
   {
     bool useModelIngestionSend = await CheckUseModelIngestionSend(sendInfo);
@@ -59,7 +66,8 @@ public sealed class SendOperation<T>(
       // connector registers IArtifactRootObjectBuilder<T> — today Revit + Rhino; the SDK producer now builds on
       // netstandard2.0 too, so it runs on the net48 plugins as well as net8), it owns the whole write+upload and
       // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
-      if (artifactRootObjectBuilder != null)
+      // useArtifacts is a Grasshopper-only opt-out - see the param docs.
+      if (artifactRootObjectBuilder != null && useArtifacts)
       {
         return await SendViaArtifacts(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
       }

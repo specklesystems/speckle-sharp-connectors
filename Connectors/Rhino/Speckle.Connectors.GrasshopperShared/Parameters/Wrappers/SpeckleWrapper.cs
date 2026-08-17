@@ -35,6 +35,13 @@ public abstract class SpeckleWrapper
     set => Base.applicationId = value;
   }
 
+  /// <summary>Where this wrapper was loaded from, or null when authored on canvas.</summary>
+  /// <remarks>
+  /// On the shared base because geometry wrappers derive from here directly. Every DeepCopy must carry it - they
+  /// enumerate fields explicitly, so anything omitted vanishes on the first duplicate.
+  /// </remarks>
+  public SpeckleModelContext? ModelContext { get; set; }
+
   /// <summary>
   /// Creates an <see cref="IGH_Goo"/> from this wrapper
   /// </summary>

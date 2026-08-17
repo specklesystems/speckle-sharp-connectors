@@ -58,6 +58,12 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
   /// </summary>
   public SpeckleMaterialWrapper? Material { get; set; }
 
+  /// <summary>
+  /// Dense index in the source bundle's <c>eav.objects</c>, or null when it didn't come from one (canvas-authored, or
+  /// legacy receive). With <see cref="SpeckleWrapper.ModelContext"/>, enough to resolve this object in the graph.
+  /// </summary>
+  public int? ObjectIndex { get; set; }
+
   public override string ToString() =>
     $"Speckle Geometry : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
 
@@ -176,6 +182,8 @@ public class SpeckleGeometryWrapper : SpeckleWrapper, ISpeckleCollectionObject
       Properties = Properties,
       Name = Name,
       Path = Path,
+      ModelContext = ModelContext,
+      ObjectIndex = ObjectIndex,
     };
 
   public virtual ObjectAttributes CreateObjectAttributes(int layerIndex = -1, bool bakeMaterial = false)

@@ -13,7 +13,9 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines;
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
+using DataObject = Speckle.Objects.Data.DataObject;
 using RG = Rhino.Geometry;
+using SOG = Speckle.Objects.Geometry;
 using SpeckleRenderMaterial = Speckle.Objects.Other.RenderMaterial;
 
 namespace Speckle.Connectors.GrasshopperShared.Operations.Receive;
@@ -32,7 +34,17 @@ internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
   // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
-  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(ArtefactBundle bundle, string rootName)
+  /// <param name="groupAsDataObjects">
+  /// Regroups an object's geometry into a single <see cref="SpeckleDataObjectWrapper"/> instead of emitting one
+  /// wrapper per geometry. The deprecated Load components pass true so a script that was written against v3 sees the
+  /// object counts and shapes it already expects; the 4.0 components pass false and get the flat geometry.
+  /// </param>
+  public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(
+    ArtefactBundle bundle,
+    string rootName,
+    SpeckleModelContext context,
+    bool groupAsDataObjects
+  )
   {
     var warnings = new List<string>();
     var root = new SpeckleCollectionWrapper
@@ -58,7 +70,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // solid/display happened to be decoded. materialByGeometry still covers DEFINITION/instance content, which has no
     // owning object reachable this way (mirrors Rhino's "standalone definition geometry" byGeometry fallback).
     var objByGeom = rels.ObjectByGeometry();
-    var (materialByObject, materialByGeometry) = CreateMaterials(bundle, objByGeom);
+    var (materialByObject, materialByGeometry, materialByInstance) = CreateMaterials(bundle, objByGeom);
     var colorByObject = CreateColors(bundle, objByGeom);
 
     // Instances (skip entirely if the bundle has none, mirrors RhinoHostObjectArtefactBuilder.BakeAll's gate): one
@@ -84,20 +96,34 @@ internal sealed class GrasshopperArtefactObjectBuilder
       int objK = kv.Key;
       string appId = kv.Value;
 
-      var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK), warnings);
+      var geometries = DecodeObjectGeometry(
+        objK,
+        bundle,
+        rels,
+        ObjectUnits(bundle, objK),
+        ObjectSourceType(bundle, objK),
+        warnings
+      );
 
       // An object placed as a block carries no direct SOLID/DISPLAY geometry — resolve its placement(s) to the shared
       // SpeckleBlockDefinitionWrapper built above instead. Without this, instance-only sub-models receive as empty.
       var validInstEdges = ResolveValidInstanceEdges(objK, instEdgesByObject, nestedInstanceNodes, bundle, definitions);
       int instCount = validInstEdges?.Count ?? 0;
 
-      if (geometries.Count == 0 && instCount == 0)
-      {
-        continue; // non-geometric element (room/level/area) or a definition with no decodable geometry
-      }
-
       bundle.Properties.TryGetValue(objK, out var props);
       var name = ObjectName(props);
+
+      if (geometries.Count == 0 && instCount == 0)
+      {
+        // A room, level or area carried properties and no geometry in v3, and still counts as an object [ENG-9159].
+        // Only re-emit one when the source really was a DataObject: WasDataObject reads speckle_type, so the
+        // property-carrying sidecars we intern ourselves (__collection_topology_, which have none) stay out.
+        if (!groupAsDataObjects || !WasDataObject(props, 0))
+        {
+          continue;
+        }
+      }
+
       var segments = SceneViewResolver.Segments(bundle, objK);
       var collection = GetOrCreateCollection(
         root,
@@ -110,7 +136,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
       );
 
       int totalCount = geometries.Count + instCount;
-      int ord = EmitGeometryWrappers(
+      var (ord, geometryWrappers) = EmitGeometryWrappers(
+        objK,
         geometries,
         totalCount,
         appId,
@@ -122,9 +149,28 @@ internal sealed class GrasshopperArtefactObjectBuilder
         materialByGeometry
       );
 
+      // An empty DataObject is only right for a genuinely property-only object: one placed as a block already comes
+      // through as its instance wrapper, and adding an empty one beside it would double the count.
+      if (
+        groupAsDataObjects
+        && WasDataObject(props, geometryWrappers.Count)
+        && (geometryWrappers.Count > 0 || instCount == 0)
+      )
+      {
+        collection.Elements.Add(BuildDataObject(appId, name, props, geometryWrappers, collection));
+      }
+      else
+      {
+        foreach (var geometryWrapper in geometryWrappers)
+        {
+          collection.Elements.Add(geometryWrapper);
+        }
+      }
+
       if (validInstEdges is not null)
       {
         EmitInstanceWrappers(
+          objK,
           validInstEdges,
           bundle,
           definitions,
@@ -135,8 +181,20 @@ internal sealed class GrasshopperArtefactObjectBuilder
           props,
           collection,
           colorByObject,
-          materialByObject
+          materialByObject,
+          materialByInstance
         );
+      }
+    }
+
+    // stamp last. definitions come from the map, not the tree - they hang off instances rather than Elements
+    root.SetModelContext(context);
+    foreach (var definition in definitions.Values)
+    {
+      definition.ModelContext = context;
+      foreach (var member in definition.Objects)
+      {
+        member.ModelContext = context;
       }
     }
 
@@ -180,7 +238,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
 
   // Converts and emits this object's own direct geometry as SpeckleGeometryWrappers. Returns the ordinal reached, so
   // any instance placements emitted afterward for the same object continue the same `:gN` numbering.
-  private static int EmitGeometryWrappers(
+  private static (int Ord, List<SpeckleGeometryWrapper> Wrappers) EmitGeometryWrappers(
+    int objK,
     List<(int GeomK, RG.GeometryBase Geom)> geometries,
     int totalCount,
     string appId,
@@ -192,6 +251,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
     Dictionary<int, SpeckleMaterialWrapper> materialByGeometry
   )
   {
+    // returned rather than added to the collection - the caller decides whether these stand alone or get wrapped
+    var created = new List<SpeckleGeometryWrapper>();
     int ord = 0;
     foreach (var (geomK, rg) in geometries)
     {
@@ -216,6 +277,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
         GeometryBase = rg,
         Path = collection.Path,
         Parent = collection,
+        ObjectIndex = objK,
         Color = colorByObject.TryGetValue(appId, out var argb) ? System.Drawing.Color.FromArgb(argb) : null,
         Material =
           materialByObject.TryGetValue(appId, out var objMat) ? objMat
@@ -230,14 +292,59 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         wrapper.Properties = new SpecklePropertyGroupGoo(props);
       }
-      collection.Elements.Add(wrapper);
+      created.Add(wrapper);
     }
-    return ord;
+    return (ord, created);
+  }
+
+  /// <summary>
+  /// Whether the v3 graph would have carried this object as a DataObject. Producers write <c>speckle_type</c> as a
+  /// root scalar, so this is read rather than guessed. A bundle without it falls back to the shape of the problem:
+  /// more than one geometry for one object is the many-to-one case the legacy path expressed as a DataObject.
+  /// </summary>
+  private static bool WasDataObject(Dictionary<string, object?>? props, int geometryCount) =>
+    props is not null && props.TryGetValue("speckle_type", out var raw) && raw is string speckleType
+      ? speckleType.StartsWith("Objects.Data.", StringComparison.Ordinal)
+      : geometryCount > 1;
+
+  /// <summary>
+  /// Rebuilds the DataObject the v3 graph would have had, keyed on the source object's application id so anything
+  /// downstream matching on ids still lines up. The geometry lives on the wrapper, so displayValue stays empty -
+  /// same as the v1 receive path does.
+  /// </summary>
+  private static SpeckleDataObjectWrapper BuildDataObject(
+    string appId,
+    string? name,
+    Dictionary<string, object?>? props,
+    List<SpeckleGeometryWrapper> geometries,
+    SpeckleCollectionWrapper collection
+  )
+  {
+    var properties = props is null ? new Dictionary<string, object?>() : new Dictionary<string, object?>(props);
+    var dataObject = new DataObject
+    {
+      name = name ?? "",
+      displayValue = [],
+      properties = properties,
+      applicationId = appId,
+    };
+
+    return new SpeckleDataObjectWrapper
+    {
+      Base = dataObject,
+      Geometries = geometries,
+      Path = collection.Path,
+      Parent = collection,
+      Name = dataObject.name,
+      Properties = new SpecklePropertyGroupGoo(properties),
+      ApplicationId = appId,
+    };
   }
 
   // Builds a SpeckleBlockInstanceWrapper per resolved DISPLAY_INSTANCE placement, referencing the shared
   // SpeckleBlockDefinitionWrapper (see BuildDefinitions) instead of duplicating its geometry.
   private static void EmitInstanceWrappers(
+    int objK,
     List<ArtefactEdge> validInstEdges,
     ArtefactBundle bundle,
     Dictionary<int, SpeckleBlockDefinitionWrapper> definitions,
@@ -248,7 +355,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
     Dictionary<string, object?>? props,
     SpeckleCollectionWrapper collection,
     Dictionary<string, int> colorByObject,
-    Dictionary<string, SpeckleMaterialWrapper> materialByObject
+    Dictionary<string, SpeckleMaterialWrapper> materialByObject,
+    Dictionary<int, SpeckleMaterialWrapper> materialByInstance
   )
   {
     foreach (var e in validInstEdges)
@@ -273,9 +381,14 @@ internal sealed class GrasshopperArtefactObjectBuilder
         GeometryBase = new RG.InstanceReferenceGeometry(Guid.Empty, xf),
         Path = collection.Path,
         Parent = collection,
+        ObjectIndex = objK,
         ApplicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}",
         Color = colorByObject.TryGetValue(appId, out var iArgb) ? System.Drawing.Color.FromArgb(iArgb) : null,
-        Material = materialByObject.TryGetValue(appId, out var iMat) ? iMat : null,
+        // the placement's own material sources the INSTANCE node, so try that before the object-keyed map [ENG-9163]
+        Material =
+          materialByInstance.TryGetValue(e.Dst, out var instMat) ? instMat
+          : materialByObject.TryGetValue(appId, out var iMat) ? iMat
+          : null,
       };
       if (name is not null)
       {
@@ -298,6 +411,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     ArtefactBundle bundle,
     ArtefactRelations rels,
     string fallbackUnits,
+    string? sourceType,
     List<string> warnings
   )
   {
@@ -306,7 +420,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       foreach (var solidK in solidKs)
       {
-        foreach (var g in DecodeGeometryIndex(solidK, bundle, fallbackUnits, warnings))
+        foreach (var g in DecodeGeometryIndex(solidK, bundle, fallbackUnits, sourceType, warnings))
         {
           result.Add((solidK, g));
         }
@@ -316,7 +430,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       foreach (var e in displayEdges.OrderBy(x => x.Ord))
       {
-        foreach (var g in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, warnings))
+        foreach (var g in DecodeGeometryIndex(e.Dst, bundle, fallbackUnits, sourceType, warnings))
         {
           result.Add((e.Dst, g));
         }
@@ -324,6 +438,26 @@ internal sealed class GrasshopperArtefactObjectBuilder
     }
     return result;
   }
+
+  /// <summary>The owning object's source type, where the SGEO primitive alone is ambiguous - see <see cref="AsSourceType"/>.</summary>
+  private static string? ObjectSourceType(ArtefactBundle bundle, int objK) =>
+    bundle.Properties.TryGetValue(objK, out var props)
+    && props.TryGetValue("type", out var v)
+    && v is string s
+    && s.Length > 0
+      ? s
+      : null;
+
+  // SGEO encodes a single point and a whole point cloud under the same Points primitive, so Decode can only ever hand
+  // back a Pointcloud - and a Speckle Point came back as a one-point cloud, a different type to everything downstream
+  // [ENG-9162]. The object's source type is the discriminator the blob lacks. Mirrors RhinoHostObjectArtefactBuilder,
+  // which keys on Rhino's own ObjectType; here the send stamps the Speckle type instead.
+  private static Base AsSourceType(Base decoded, string? sourceType) =>
+    sourceType is not null
+    && sourceType.EndsWith(".Point", StringComparison.Ordinal)
+    && decoded is SOG.Pointcloud { points.Count: 3 } cloud
+      ? new SOG.Point(cloud.points[0], cloud.points[1], cloud.points[2], cloud.units)
+      : decoded;
 
   // The send side stores "units" per object as an EAV property, falling back to the bundle's overall units when absent
   // (mirrors RhinoHostObjectArtefactBuilder.ObjectUnits).
@@ -362,7 +496,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // construction path the v1 GH receive uses (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
   private static (
     Dictionary<string, SpeckleMaterialWrapper> ByObject,
-    Dictionary<int, SpeckleMaterialWrapper> ByGeometry
+    Dictionary<int, SpeckleMaterialWrapper> ByGeometry,
+    Dictionary<int, SpeckleMaterialWrapper> ByInstance
   ) CreateMaterials(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var wrapperByMaterialNode = new Dictionary<int, SpeckleMaterialWrapper>();
@@ -418,14 +553,24 @@ internal sealed class GrasshopperArtefactObjectBuilder
         byObject[appId] = wrapper; // object → material (atomic display objects)
       }
     }
-    return (byObject, byGeometry);
+
+    // Instance-sourced: a material painted on a block placement, keyed by its INSTANCE node K. A placement owns no
+    // geometry of its own, so it's invisible to the loop above [ENG-9163]. Mirrors RhinoHostObjectArtefactBuilder.
+    var byInstance = new Dictionary<int, SpeckleMaterialWrapper>();
+    foreach (var kv in bundle.Relations.MaterialByInstance)
+    {
+      if (wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper))
+      {
+        byInstance[kv.Key] = wrapper;
+      }
+    }
+    return (byObject, byGeometry, byInstance);
   }
 
   // Resolves HAS_COLOR (Relations.ColorByGeometry: display-mesh geometry K → COLOR node) to the owning object's
   // appId → argb — the object's by-object display colour, distinct from a render material. Resolved via the same
   // Display-edges reverse map as materials, for the same reason (HAS_COLOR only ever targets the display-mesh K, not
-  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors, which likewise only resolves to the owning
-  // object (definition/instance geometry doesn't get a colour in the Rhino reference either).
+  // a SOLID blob's). Mirrors RhinoHostObjectArtefactBuilder.CreateColors.
   private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var byObject = new Dictionary<string, int>();
@@ -436,6 +581,21 @@ internal sealed class GrasshopperArtefactObjectBuilder
         continue;
       }
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = argb;
+      }
+    }
+
+    // Object-sourced: a block placement's own colour. A placement owns no geometry, so it never appears in objByGeom -
+    // resolve it straight through the object dictionary [ENG-9163]. Mirrors RhinoHostObjectArtefactBuilder.
+    foreach (var kv in bundle.Relations.ColorByObject)
+    {
+      if (
+        bundle.Nodes.TryGetValue(kv.Value, out var n)
+        && n.Kind == NodeKind.Color
+        && n.Argb is int argb
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = argb;
       }
@@ -494,7 +654,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
             // Definition geometry is in the model's source units; pass the bundle (source) units as the fallback, NOT
             // DocUnits — otherwise a 3dm member isn't rescaled and a block sent from a metre model lands 1000x too
             // small in a millimetre GH doc (mirrors RhinoHostObjectArtefactBuilder.BuildDefinitions).
-            foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, warnings))
+            // no owning object row for a definition member, so no source type to disambiguate points with
+            foreach (var g in DecodeGeometryIndex(geomK, bundle, bundle.Units, null, warnings))
             {
               Base? converted;
               try
@@ -671,6 +832,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     int geomK,
     ArtefactBundle bundle,
     string fallbackUnits,
+    string? sourceType,
     List<string> warnings
   )
   {
@@ -700,7 +862,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       Base? decoded = null;
       try
       {
-        decoded = SgeoDecoder.Decode(g.Content);
+        decoded = AsSourceType(SgeoDecoder.Decode(g.Content), sourceType);
         var converted = ConvertSpeckleGeometry(decoded);
         if (converted.Count == 0)
         {

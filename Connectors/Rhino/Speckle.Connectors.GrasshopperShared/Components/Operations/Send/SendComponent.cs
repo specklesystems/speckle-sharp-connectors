@@ -1,339 +1,44 @@
-using System.Diagnostics;
-using Grasshopper;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
-using Microsoft.Extensions.DependencyInjection;
-using Speckle.Connectors.Common.Analytics;
-using Speckle.Connectors.Common.Operations;
-using Speckle.Connectors.GrasshopperShared.Components.BaseComponents;
 using Speckle.Connectors.GrasshopperShared.HostApp;
-using Speckle.Connectors.GrasshopperShared.Parameters;
 using Speckle.Connectors.GrasshopperShared.Properties;
-using Speckle.Connectors.GrasshopperShared.Registration;
-using Speckle.Sdk;
-using Speckle.Sdk.Api;
-using Speckle.Sdk.Common;
-using Speckle.Sdk.Credentials;
-using Speckle.Sdk.Models.Collections;
-using Speckle.Sdk.Pipelines.Progress;
 
 namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 
-public class SendComponentInput
-{
-  public SpeckleUrlModelResource Resource { get; }
-  public SpeckleCollectionWrapperGoo Input { get; }
-  public bool Run { get; }
-  public SpecklePropertyGroupGoo? RootProperties { get; }
-
-  public SendComponentInput(
-    SpeckleUrlModelResource resource,
-    SpeckleCollectionWrapperGoo input,
-    bool run,
-    SpecklePropertyGroupGoo? rootProperties
-  )
-  {
-    Resource = resource;
-    Input = input;
-    Run = run;
-    RootProperties = rootProperties;
-  }
-}
-
-public class SendComponentOutput(SpeckleUrlModelResource? resource, string? versionId = null)
-{
-  public SpeckleUrlModelResource? Resource { get; } = resource;
-  public string? VersionId { get; } = versionId;
-}
-
-public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, SendComponentOutput>
+/// <summary>
+/// Deprecated synchronous Publish. Still writes a v3 version so teammates on older connectors can read it - see
+/// <see cref="SendComponentBase.UseArtifacts"/>.
+/// </summary>
+public class SendComponent : SendComponentBase
 {
   public override Guid ComponentGuid => new("0CF0D173-BDF0-4AC2-9157-02822B90E9FB");
-  public string? Url { get; private set; }
-  public string? VersionMessage { get; private set; }
   protected override Bitmap Icon => Resources.speckle_operations_syncpublish;
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
+
+  /// <remarks>
+  /// Marks this component as obsolete in the Grasshopper UI (hides it from the ribbon, adds the
+  /// "obsolete" overlay icon on canvas).
+  /// </remarks>
+  public override bool Obsolete => true;
+
+  protected override bool UseArtifacts => false;
+  protected override bool HasModelPropertiesInput => true;
 
   public SendComponent()
     : base(
-      "(Sync) Publish",
+      // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
+      "(Sync) Publish (legacy)",
       "sP",
-      "Publish a collection to Speckle, synchronously",
+      "Publish a collection to Speckle, synchronously. Deprecated - use the new (Sync) Publish component.",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.DEVELOPER
     ) { }
 
-  protected override void RegisterInputParams(GH_InputParamManager pManager)
+  protected override void SolveInstance(IGH_DataAccess da)
   {
-    // speckle model
-    pManager.AddParameter(new SpeckleUrlModelResourceParam());
-
-    // collection / data (Refactored to accept lists of mixed data)
-    pManager.AddGenericParameter(
-      "Collection",
-      "collection",
-      "The collections, data objects, or geometries to publish",
-      GH_ParamAccess.list
-    );
-
-    // version message
-    pManager.AddTextParameter("Version Message", "versionMessage", "The version message", GH_ParamAccess.item);
-    pManager[2].Optional = true;
-
-    // model-wide props (see cnx-2722)
-    pManager.AddParameter(
-      new SpecklePropertyGroupParam(),
-      "Properties",
-      "properties",
-      "Optional model-wide properties to attach to the root collection",
-      GH_ParamAccess.item
-    );
-    pManager[3].Optional = true;
-
-    pManager.AddBooleanParameter("Run", "r", "Run the publish operation", GH_ParamAccess.item);
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.DEPRECATED_PUBLISH_MESSAGE);
+    base.SolveInstance(da);
   }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
-  {
-    pManager.AddParameter(new SpeckleUrlModelResourceParam());
-    pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
-  }
-
-  protected override SendComponentInput GetInput(IGH_DataAccess da)
-  {
-    if (da.Iteration != 0)
-    {
-      throw new SpeckleException("No more than 1 resource allowed");
-    }
-
-    SpeckleUrlModelResource? resource = null;
-    if (!da.GetData(0, ref resource))
-    {
-      throw new SpeckleException("Failed to get resource");
-    }
-
-    // read as generic list of Goos
-    List<IGH_Goo> inputGoos = new();
-    da.GetDataList(1, inputGoos);
-
-    SpeckleCollectionWrapper? rootBase;
-
-    // filter out nulls just to check if we can use the fast path
-    var nonNullGoos = inputGoos.Where(x => x != null).ToList();
-
-    // fast path: if there's exactly one valid item and it's a collection, use it directly
-    if (nonNullGoos.Count == 1 && nonNullGoos[0] is SpeckleCollectionWrapperGoo singleCollection)
-    {
-      rootBase = singleCollection.Value.DeepCopy();
-    }
-    else
-    {
-      // mixed inputs: construct a root collection using the document name  (CNX-3175)
-      var docName = GetGrasshopperFileInfo().fileName ?? "Unnamed Document";
-      if (
-        docName.EndsWith(".gh", StringComparison.OrdinalIgnoreCase)
-        || docName.EndsWith(".ghx", StringComparison.OrdinalIgnoreCase)
-      )
-      {
-        docName = Path.GetFileNameWithoutExtension(docName);
-      }
-
-      rootBase = new SpeckleCollectionWrapper
-      {
-        Base = new Collection { name = docName },
-        Name = docName,
-        Path = [docName],
-        Color = null,
-        Material = null,
-      };
-
-      int skippedCount = 0;
-      foreach (var obj in inputGoos)
-      {
-        if (obj is SpeckleCollectionWrapperGoo collectionGoo)
-        {
-          var colClone = (SpeckleCollectionWrapperGoo)collectionGoo.Duplicate();
-          colClone.Value.Path = rootBase.Path;
-          rootBase.Elements.AddRange(colClone.Value.Elements);
-        }
-        else if (obj is SpeckleDataObjectWrapperGoo dataObjectWrapperGoo)
-        {
-          var dataObjectWrapper = dataObjectWrapperGoo.Value.DeepCopy();
-          dataObjectWrapper.Path = rootBase.Path;
-          dataObjectWrapper.Parent = rootBase;
-          rootBase.Elements.Add(dataObjectWrapper);
-        }
-        else if (obj?.ToSpeckleGeometryWrapper() is not null)
-        {
-          const string GEOMETRY_ERROR_MESSAGE =
-            "Speckle Geometry cannot be added directly to a Collection. "
-            + "Use a 'Speckle Data Object' component to wrap your geometry first, then pipe it into the Collection.";
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, GEOMETRY_ERROR_MESSAGE);
-          throw new SpeckleException(GEOMETRY_ERROR_MESSAGE);
-        }
-        else
-        {
-          rootBase.Elements.Add(null);
-          skippedCount++;
-        }
-      }
-
-      if (skippedCount > 0)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Skipped {skippedCount} unsupported object(s).");
-      }
-    }
-
-    SpeckleCollectionWrapperGoo rootCollectionWrapper = new(rootBase);
-
-    string? versionMessage = null;
-    da.GetData(2, ref versionMessage);
-    VersionMessage = versionMessage;
-
-    SpecklePropertyGroupGoo? rootPropsGoo = null;
-    da.GetData(3, ref rootPropsGoo);
-
-    // validate single properties group
-    // we can't support a list input here, what does that even mean? grafting the collection to each props entry?? scary.
-    if (Params.Input[3].VolatileData.DataCount > 1)
-    {
-      throw new SpeckleException("Only one Model Properties group is allowed");
-    }
-
-    bool run = false;
-    da.GetData(4, ref run);
-
-    return new SendComponentInput(resource.NotNull(), rootCollectionWrapper, run, rootPropsGoo);
-  }
-
-  protected override void SetOutput(IGH_DataAccess da, SendComponentOutput result)
-  {
-    if (result.Resource is null)
-    {
-      Message = "Not Published";
-    }
-    else
-    {
-      da.SetData(0, result.Resource);
-      da.SetData(1, result.VersionId);
-      Message = "Done";
-    }
-  }
-
-  public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
-  {
-    base.AppendAdditionalMenuItems(menu);
-
-    Menu_AppendSeparator(menu);
-    if (Url != null)
-    {
-      Menu_AppendSeparator(menu);
-
-      Menu_AppendItem(menu, "View created model online ↗", (s, e) => Open(Url));
-    }
-
-    static void Open(string url)
-    {
-      var psi = new ProcessStartInfo { FileName = url, UseShellExecute = true };
-      Process.Start(psi);
-    }
-  }
-
-  protected override async Task<SendComponentOutput> PerformTask(
-    SendComponentInput input,
-    CancellationToken cancellationToken = default
-  )
-  {
-    var multipleResources = Params.Input[0].VolatileData.HasInputCountGreaterThan(1);
-
-    if (multipleResources)
-    {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Error,
-        "Only one single model can be published to from this node. To send to multiple models, please use multiple publish components."
-      );
-      return new(null);
-    }
-
-    if (!input.Run)
-    {
-      return new(null);
-    }
-
-    // safe to always create new wrapper since users cannot create SpeckleRootCollectionWrapper directly
-    var rootWrapper = new SpeckleRootCollectionWrapper(input.Input.Value, input.RootProperties?.Unwrap());
-    var collectionToSend = new SpeckleRootCollectionWrapperGoo(rootWrapper);
-
-    using var scope = PriorityLoader.CreateScopeForActiveDocument();
-    var clientFactory = scope.ServiceProvider.GetRequiredService<IClientFactory>();
-    var sendOperation = scope.ServiceProvider.GetRequiredService<SendOperation<SpeckleCollectionWrapperGoo>>();
-
-    Account? account = input.Resource.Account.GetAccount(scope);
-    if (account is null)
-    {
-      throw new SpeckleAccountManagerException("No default account was found");
-    }
-
-    var (fileName, fileBytes) = GetGrasshopperFileInfo();
-
-    var progress = new Progress<CardProgress>(_ =>
-    {
-      // TODO: Progress only makes sense in non-blocking async receive, which is not supported yet.
-      // Message = $"{progress.Status}: {progress.Progress}";
-    });
-
-    using var client = clientFactory.Create(account);
-    var sendInfo = await input.Resource.GetSendInfo(client, cancellationToken).ConfigureAwait(false);
-    var (result, versionId, ingestionId) = await sendOperation
-      .Send([collectionToSend], sendInfo, fileName, fileBytes, VersionMessage, progress, true, cancellationToken)
-      .ConfigureAwait(false);
-
-    if (ingestionId != null)
-    {
-      Message = "Remote processing";
-      var ingestionTracker = scope.ServiceProvider.GetRequiredService<IngestionTracker>();
-      versionId = await ingestionTracker
-        .WaitForIngestionCompletion(
-          client,
-          sendInfo.ProjectId,
-          ingestionId,
-          reportProgress: null,
-          reportProgressId: null,
-          cancellationToken
-        )
-        .ConfigureAwait(false);
-    }
-
-    // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
-    var customProperties = new Dictionary<string, object> { { "isAsync", false } };
-    if (sendInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-    }
-
-    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
-
-    SpeckleUrlModelVersionResource createdVersionResource = new(
-      new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),
-      sendInfo.WorkspaceId,
-      sendInfo.ProjectId,
-      sendInfo.ModelId,
-      versionId
-    );
-    Url = $"{sendInfo.Account.serverInfo.url}/projects/{sendInfo.ProjectId}/models/{sendInfo.ModelId}";
-    return new SendComponentOutput(createdVersionResource, versionId);
-  }
-
-  public static (string? fileName, long? fileSizeBytes) GetGrasshopperFileInfo()
-  {
-    var doc = Instances.ActiveCanvas?.Document;
-
-    if (doc is null || !File.Exists(doc.FilePath))
-    {
-      return (null, null);
-    }
-    var fileInfo = new FileInfo(doc.FilePath);
-
-    return (fileInfo.Name, fileInfo.Length);
-  }
+  protected override void OnPublishStarting() =>
+    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, Constants.PUBLISHED_LEGACY_VERSION_MESSAGE);
 }
