@@ -119,9 +119,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
     // ObjectByGeometry only covers DISPLAY edges, so it can't reach a block-definition member (a member has no
-    // render edge by design). The member stamps invert that missing direction — geometry / INSTANCE K → the member's
-    // object row — which is what BuildDefinitions needs to recover each member's layer [ENG-9110].
-    var memberIndex = DefinitionMemberStamps.Read(bundle.Properties);
+    // render edge by design). The graph-native join (DEFINES_MEMBER 25 / PLACES 24) inverts that missing direction
+    // on the object plane — member↔geometry joins on (definition, member ordinal), immune to the content-hash-dedup
+    // collision a geometry-K-keyed inversion cannot distinguish. Bundles predating the vocab (no rel 25) fall back
+    // to the @speckle.* member stamps [ENG-9110].
+    var memberIndex = TryBuildMemberIndexFromRels(rels) ?? DefinitionMemberStamps.Read(bundle.Properties);
     session.SetStat("memberStamps", memberIndex.ObjectByGeometry.Count + memberIndex.ObjectByInstance.Count);
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
@@ -754,6 +756,59 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         .ToList();
       yield return solids.Count > 0 ? solids : geoms;
     }
+  }
+
+  // The rel-built member index: DEFINES_MEMBER (25, def → member object, ord = member ordinal) joined against the
+  // definition's DEFINES ords recovers geometry K → member object K; PLACES (24, member object → INSTANCE node)
+  // inverts to INSTANCE K → member object K. Returns null when the bundle predates the vocabulary (no rel 25 rows)
+  // so the caller falls back to the legacy @speckle.* stamps.
+  private static DefinitionMemberIndex? TryBuildMemberIndexFromRels(ArtefactRelations rels)
+  {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions:
+    //   rels.DefinesMemberByDefinition : Dictionary<int, List<ArtefactEdge>>  (def K → member edges, Ord = member ordinal)
+    //   rels.PlacesByObject            : Dictionary<int, int>                 (member object K → INSTANCE node K)
+    if (rels.DefinesMemberByDefinition.Count == 0)
+    {
+      return null;
+    }
+    var byGeometry = new Dictionary<int, int>();
+    var byInstance = new Dictionary<int, int>();
+    foreach (var kv in rels.DefinesMemberByDefinition)
+    {
+      // member ordinal → member object K for this definition
+      var objByOrd = new Dictionary<int, int>();
+      foreach (var e in kv.Value)
+      {
+        objByOrd[e.Ord] = e.Dst;
+      }
+      if (
+        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
+        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
+      )
+      {
+        continue;
+      }
+      for (int i = 0; i < geomKs.Count; i++)
+      {
+        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
+        {
+          byGeometry[geomKs[i]] = memberObjK;
+        }
+      }
+    }
+    foreach (var kv in rels.PlacesByObject)
+    {
+      byInstance[kv.Value] = kv.Key;
+    }
+    return new DefinitionMemberIndex(byGeometry, byInstance);
+#else
+    // No-op until the SDK vocab pin bump — the pinned ArtefactBundle reader drops unknown rels, so rel 25/24
+    // rows are not even surfaced yet. Define SDK_BUNDLE_VOCAB_ADDITIONS after bumping Speckle.Objects to a build
+    // of speckle-sharp-sdk@oguzhan/bundle-vocab-additions.
+    _ = rels;
+    return null;
+#endif
   }
 
   // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns

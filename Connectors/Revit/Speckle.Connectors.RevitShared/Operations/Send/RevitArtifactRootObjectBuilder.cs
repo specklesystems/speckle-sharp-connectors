@@ -535,12 +535,15 @@ public class RevitArtifactRootObjectBuilder(
       {
         case ReferencePointType.ProjectBase:
           pipeline.SetReferencePoint("projectBasePoint", FormatReferencePointOffset(transform));
+          EmitReferencePointModelRows(pipeline, "projectBasePoint", transform);
           break;
         case ReferencePointType.Survey:
           pipeline.SetReferencePoint("surveyPoint", FormatReferencePointOffset(transform));
+          EmitReferencePointModelRows(pipeline, "surveyPoint", transform);
           break;
         default:
           pipeline.SetReferencePoint("sharedCoordinates", FormatReferencePointTransform(transform));
+          EmitReferencePointModelRows(pipeline, "sharedCoordinates", transform);
           break;
       }
     }
@@ -548,7 +551,30 @@ public class RevitArtifactRootObjectBuilder(
     {
       // requested a base point the model doesn't have → converted at internal origin, recorded (not silent).
       pipeline.SetReferencePoint("internalOriginFallback", null);
+      EmitReferencePointModelRows(pipeline, "internalOriginFallback", null);
     }
+  }
+
+  // eav.model is the authoritative reference-point record going forward [bundle-spec `model` table]: kind + the
+  // FULL rigid transform (16 row-major doubles, display units — same layout as InstanceProxy transforms) + units.
+  // meta.reference_point_* (xyz-only for point kinds) keeps being written until the fleet reads model.parquet.
+  private void EmitReferencePointModelRows(ObjectsArtifactPipeline pipeline, string kind, Transform? transform)
+  {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddModelProperty API).
+    pipeline.AddModelProperty("referencePoint.kind", kind);
+    if (transform is { } t)
+    {
+      pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
+      pipeline.AddModelProperty("referencePoint.units", converterSettings.Current.SpeckleUnits);
+    }
+#else
+    // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships
+    // AddModelProperty (branch oguzhan/bundle-vocab-additions).
+    _ = pipeline;
+    _ = kind;
+    _ = transform;
+#endif
   }
 
   // ENG-8947 reference_point_offset: the translation subtracted from world-space output, in display units.

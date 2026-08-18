@@ -724,6 +724,39 @@ public class RhinoArtifactRootObjectBuilder(
       : null;
   }
 
+  // Graph-native member join [bundle-spec rels 24 PLACES / 25 DEFINES_MEMBER], the object-plane replacement for
+  // the @speckle.* member stamps: DEFINES_MEMBER def → member OBJECT with ord = the same member ordinal the
+  // member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) — immune to content-hash dedup,
+  // which can hand two members in different definitions the same geometry K); PLACES member object → its nested
+  // INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's job). Stamps keep being
+  // written this release so pre-vocab consumers still resolve members.
+  private static void EmitMemberGraphJoin(
+    ObjectsArtifactPipeline pipeline,
+    int defK,
+    string memberId,
+    int memberOrd,
+    int? instK
+  )
+  {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (DefinesMember/Places APIs).
+    int memberObjK = pipeline.InternObject(memberId);
+    pipeline.DefinesMember(defK, memberObjK, memberOrd);
+    if (instK is { } placementK)
+    {
+      pipeline.Places(memberObjK, placementK);
+    }
+#else
+    // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships the
+    // DefinesMember/Places pipeline APIs (branch oguzhan/bundle-vocab-additions).
+    _ = pipeline;
+    _ = defK;
+    _ = memberId;
+    _ = memberOrd;
+    _ = instK;
+#endif
+  }
+
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL). Order matters: all
   // referenced meshes/instances must exist (added in the object loop) before the edges that resolve them.
   private static void EmitValueNodes(
@@ -743,6 +776,7 @@ public class RhinoArtifactRootObjectBuilder(
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
           pipeline.DefinesInstance(defK, instK, memberOrd);
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
@@ -752,6 +786,7 @@ public class RhinoArtifactRootObjectBuilder(
           {
             pipeline.Defines(defK, gK, memberOrd);
           }
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK: null);
         }
         memberOrd++;
       }
