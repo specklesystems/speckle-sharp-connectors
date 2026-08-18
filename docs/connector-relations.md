@@ -225,7 +225,7 @@ No builder of its own — reuses AutoCAD's send path verbatim. Same 9 relations,
 
 ### Civil3D — CAD · infrastructure · emits 12
 
-The AutoCAD base plus three infrastructure layers: a SUBELEMENT sub-object tree, pipe-network topology, and a property-set-definitions carrier for native round-trip.
+The AutoCAD base plus three infrastructure layers: a SUBELEMENT sub-object tree, pipe-network topology, and property-set definitions for native round-trip (the `eav.property_set_definitions` file; pre-vocab builds ship a synthetic carrier object instead).
 
 **Composite sub-object tree** — `SUBELEMENT`
 
@@ -276,9 +276,9 @@ graph LR
   classDef file fill:#d7dce6,stroke:#6b7488,color:#1b2130;
 ```
 
-**Definitions** (schemas) ride one synthetic carrier object `speckle:civil3d:property-set-definitions`; per-object **values** ride normal eav. Receive recreates native sets and coerces values to each definition's data type (ENG-8834).
+**Definitions** (schemas) ride the `eav.property_set_definitions` file — one row per (set, field), no synthetic object in the objects table. Pre-vocab builds (pinned Speckle.Objects without `AddPropertySetDefinition`) instead ship the legacy carrier object `speckle:civil3d:property-set-definitions`, which receive still understands (tier 2 of the definition ladder). Per-object **values** ride normal eav either way. Receive recreates native sets and coerces values to each definition's data type (ENG-8834).
 
-- **Nodes:** = AutoCAD + CONTAINER `"Network"` + property-set carrier object
+- **Nodes:** = AutoCAD + CONTAINER `"Network"` (+ property-set carrier object on pre-vocab builds only)
 - **Receive:** ● native — AutoCAD bake + recreates property sets (PostBakeEntity)
 - **Watch out:** `SUBELEMENT`/`IN_SYSTEM`/`CONNECTS_TO` are **send-only** — children re-bake as flat layered entities; network topology survives in the graph, not the DWG
 

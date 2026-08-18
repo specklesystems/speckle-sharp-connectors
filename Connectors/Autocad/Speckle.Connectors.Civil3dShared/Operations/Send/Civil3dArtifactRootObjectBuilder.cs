@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.HostApp;
-using Speckle.Connectors.Common.Operations;
+#if !SDK_BUNDLE_VOCAB_ADDITIONS
+using Speckle.Connectors.Common.Operations; // ProxyKeys — only the legacy carrier branch needs it
+#endif
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -51,6 +53,15 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       return;
     }
 
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // eav.property_set_definitions is the schema catalog [bundle-spec `property_set_definitions`]: one row per
+    // (set, field), values stay per-object in eav, attachment derived from the value paths. The legacy carrier
+    // pseudo-object is NOT written — it would pollute the objects table with a synthetic row.
+    EmitPropertySetDefinitionRows(pipeline);
+#else
+    // Pre-vocab build: the definitions file can't be written (pinned Speckle.Objects predates
+    // AddPropertySetDefinition), so ship the legacy carrier pseudo-object — receivers rebuild
+    // definitions from it (tier 2 of the definition ladder).
     var definitions = new Dictionary<string, object?>();
     foreach (var kvp in _propertySetDefinitionHandler.Definitions)
     {
@@ -60,16 +71,12 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
     var properties = new Dictionary<string, object?> { [ProxyKeys.PROPERTYSET_DEFINITIONS] = definitions };
     pipeline.InternObject(PropertySetBaker.DEFINITIONS_CARRIER_APP_ID);
     pipeline.AddProperties(PropertySetBaker.DEFINITIONS_CARRIER_APP_ID, properties);
-
-    EmitPropertySetDefinitionRows(pipeline);
+#endif
   }
 
-  // eav.property_set_definitions is the schema catalog going forward [bundle-spec `property_set_definitions`]:
-  // one row per (set, field), values stay per-object in eav, attachment derived from the value paths. The carrier
-  // pseudo-object above keeps being written this release so pre-vocab receivers still rebuild definitions.
+#if SDK_BUNDLE_VOCAB_ADDITIONS
   private void EmitPropertySetDefinitionRows(ObjectsArtifactPipeline pipeline)
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddPropertySetDefinition API).
     // Rows are emitted in AUTHORED field order (the file's row-order-is-field-order contract).
     foreach (var setEntry in _propertySetDefinitionHandler.Definitions)
@@ -141,14 +148,8 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
         );
       }
     }
-#else
-    // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships
-    // AddPropertySetDefinition (branch oguzhan/bundle-vocab-additions).
-    _ = pipeline;
-#endif
   }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
   // netstandard2.0/net48-safe Dictionary lookup (no CollectionExtensions.GetValueOrDefault there).
   private static object? Field(Dictionary<string, object?> dict, string key) =>
     dict.TryGetValue(key, out object? v) ? v : null;
