@@ -177,31 +177,103 @@ public class PropertySetBaker
         _logger.LogWarning("Duplicate property set name {SetName}; keeping the first definition", schema.SetName);
         continue;
       }
-      ADB.ObjectId defId = CreatePropertySetDefinitionFromSchema(schema, namePrefix, tr);
+
+      // Naming/collision policy [user feedback: no blanket project-name prefixing]:
+      //   (a) an existing def with the ORIGINAL name that is schema-identical (same set_key recipe over its
+      //       live fields) is REUSED — no create, no prefix; re-receives of unchanged schemas converge here,
+      //       which is also why plain-named defs never need purging;
+      //   (b) an existing def that differs gets a disambiguated '{name}-{prefix}' create + warning
+      //       (the prefixed name is also what PurgePropertySets can safely reclaim next receive);
+      //   (c) no existing def → create under the plain authored name.
+      ADB.ObjectId defId;
+      if (TryFindExistingDefinition(schema.SetName, tr, out ADB.ObjectId existingId))
+      {
+        string incomingKey = PropertySetDefinitionLadder.EffectiveSetKey(schema);
+        string existingKey = ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
+        if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
+        {
+          _propertySetDefinitionMap[schema.SetName] = existingId;
+          AddBucketMap(schema);
+          continue;
+        }
+        _logger.LogWarning(
+          "Existing property set definition {SetName} differs from the received schema; creating {SetName}-{Prefix}",
+          schema.SetName,
+          namePrefix
+        );
+        defId = CreatePropertySetDefinitionFromSchema(schema, $"{schema.SetName}-{namePrefix}", tr);
+      }
+      else
+      {
+        defId = CreatePropertySetDefinitionFromSchema(schema, schema.SetName, tr);
+      }
       if (defId.IsNull)
       {
         continue;
       }
       _propertySetDefinitionMap[schema.SetName] = defId;
-      var bucketMap = new Dictionary<string, string>();
-      foreach (var field in schema.Fields)
-      {
-        if (field.BucketId is not null)
-        {
-          bucketMap[field.BucketId] = field.Name;
-        }
-      }
-      if (bucketMap.Count > 0)
-      {
-        _bucketToFieldNameBySet[schema.SetName] = bucketMap;
-      }
+      AddBucketMap(schema);
     }
     tr.Commit();
   }
 
+  private void AddBucketMap(PropertySetSchema schema)
+  {
+    var bucketMap = new Dictionary<string, string>();
+    foreach (var field in schema.Fields)
+    {
+      if (field.BucketId is not null)
+      {
+        bucketMap[field.BucketId] = field.Name;
+      }
+    }
+    if (bucketMap.Count > 0)
+    {
+      _bucketToFieldNameBySet[schema.SetName] = bucketMap;
+    }
+  }
+
+  /// <summary>Exact-name lookup in the drawing's AecPropertySetDefs dictionary (the same NOD walk
+  /// PurgePropertySets uses — the only repo-evidenced way at this API surface).</summary>
+  private bool TryFindExistingDefinition(string setName, ADB.Transaction tr, out ADB.ObjectId defId)
+  {
+    defId = ADB.ObjectId.Null;
+    var db = _settingsStore.Current.Document.Database;
+    var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
+    if (!nod.Contains(PROP_SET_DEF_DICT_NAME))
+    {
+      return false;
+    }
+    var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(nod.GetAt(PROP_SET_DEF_DICT_NAME), ADB.OpenMode.ForRead);
+    foreach (ADB.DBDictionaryEntry entry in propSetDefsDict)
+    {
+      if (entry.Key == setName)
+      {
+        defId = entry.Value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// <summary>The set_key recipe computed over a LIVE definition's fields, for reuse-if-identical. Mirrors
+  /// the send-side capture exactly: DataType.ToString(), unit = UnitType display text (throw → absent, and
+  /// deliberately NOT "(none)"-filtered — the send handler doesn't filter it either).</summary>
+  private string ComputeExistingDefinitionKey(string setName, ADB.ObjectId defId, ADB.Transaction tr)
+  {
+    var setDefinition = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForRead);
+    var fields = new List<(string Name, string? DataType, string? Unit)>();
+    foreach (AAECPDB.PropertyDefinition propDef in setDefinition.Definitions)
+    {
+      _propertyHandler.TryGetValue(() => propDef.UnitType.GetTypeDisplayName(true), out string? unit);
+      fields.Add((propDef.Name, propDef.DataType.ToString(), unit));
+    }
+    return PropertySetDefinitionLadder.ComputeSetKey(setName, fields);
+  }
+
   private ADB.ObjectId CreatePropertySetDefinitionFromSchema(
     PropertySetSchema schema,
-    string namePrefix,
+    string recordName,
     ADB.Transaction tr
   )
   {
@@ -254,7 +326,7 @@ public class PropertySetBaker
       propSetDef.Definitions.Add(propDef);
     }
 
-    propSetDefs.AddNewRecord($"{schema.SetName}-{namePrefix}", propSetDef);
+    propSetDefs.AddNewRecord(recordName, propSetDef);
     tr.AddNewlyCreatedDBObject(propSetDef, true);
     return propSetDef.ObjectId;
   }

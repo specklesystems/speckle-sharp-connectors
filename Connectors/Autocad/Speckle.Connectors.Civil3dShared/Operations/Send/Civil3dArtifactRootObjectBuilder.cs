@@ -84,25 +84,23 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
         continue;
       }
 
-      // set_key recipe (cross-producer, byte-exact — keep in sync with dwgextract):
-      //   sha256_hex_uppercase( utf8( set_name + "\n"
-      //     + join("\n", for each field in AUTHORED order: field_name + "|" + data_type + "|" + (unit ?? "")) ) )
-      var keyParts = new List<string> { setName };
+      // set_key: the shared recipe in PropertySetDefinitionLadder.ComputeSetKey — receive compares
+      // existing in-document definitions with the same code, so reuse-if-identical cannot drift.
+      var keyFields = new List<(string Name, string? DataType, string? Unit)>();
       foreach (var fieldName in fieldOrder)
       {
         if (Field(fieldDefs, fieldName) is Dictionary<string, object?> fdk)
         {
-          keyParts.Add(
-            $"{fieldName}|{Field(fdk, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY)}|{Field(fdk, "units")}"
+          keyFields.Add(
+            (
+              fieldName,
+              Field(fdk, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
+              Field(fdk, "units") as string
+            )
           );
         }
       }
-      string setKey;
-      using (var sha = System.Security.Cryptography.SHA256.Create())
-      {
-        byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", keyParts)));
-        setKey = BitConverter.ToString(hash).Replace("-", ""); // net48-safe hex (no Convert.ToHexString)
-      }
+      string setKey = PropertySetDefinitionLadder.ComputeSetKey(setName, keyFields);
 
       _propertySetDefinitionHandler.SetDescriptions.TryGetValue(setName, out string? setDescription);
       _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByField);

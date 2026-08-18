@@ -151,6 +151,40 @@ public static class PropertySetDefinitionLadder
     return sets.Count == 0 ? null : sets;
   }
 
+  /// <summary>THE set_key recipe — the single implementation both send (emission) and receive (existing-def
+  /// comparison) use, so the two sides can never drift. Cross-producer, byte-exact (keep in sync with
+  /// dwgextract): sha256_hex_uppercase( utf8( set_name + "\n" + join("\n", for each field in AUTHORED
+  /// order: field_name + "|" + data_type + "|" + (unit ?? "")) ) ). Unit is the raw captured display text —
+  /// deliberately NOT "(none)"-filtered, mirroring PropertySetDefinitionHandler's capture.</summary>
+  public static string ComputeSetKey(string setName, IEnumerable<(string Name, string? DataType, string? Unit)> fields)
+  {
+    var parts = new List<string> { setName };
+    foreach (var f in fields)
+    {
+      parts.Add($"{f.Name}|{f.DataType}|{f.Unit}");
+    }
+    using var sha = System.Security.Cryptography.SHA256.Create();
+    byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
+    return BitConverter.ToString(hash).Replace("-", ""); // net48-safe hex
+  }
+
+  /// <summary>The schema's identity: the shipped set_key when present (tier 1 — sender-computed with the
+  /// same recipe), else computed locally (tier 3 — types are inferred there, so a mismatch against a real
+  /// existing definition is expected and safely degrades to a disambiguated create).</summary>
+  public static string EffectiveSetKey(PropertySetSchema schema)
+  {
+    if (!string.IsNullOrEmpty(schema.SetKey))
+    {
+      return schema.SetKey!;
+    }
+    var fields = new List<(string Name, string? DataType, string? Unit)>();
+    foreach (var f in schema.Fields)
+    {
+      fields.Add((f.Name, f.DataType, f.Unit));
+    }
+    return ComputeSetKey(schema.SetName, fields);
+  }
+
   /// <summary>Resolves which authored field a received value row belongs to: bucket id first (the join key
   /// the producer shipped in <c>internalDefinitionName</c>), display/field name as the fallback.</summary>
   public static string ResolveFieldName(
