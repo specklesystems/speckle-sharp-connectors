@@ -210,11 +210,11 @@ Rooms are _objects_, not nodes — so `IN_ROOM` and `BOUNDS` point at an object 
 
 ---
 
-## Member layers — a carrier row and a stamp
+## Member layers — a carrier row and a graph join
 
 A definition member is _reachable from its definition_ only as a **geometry** K (`DEFINES`) or, if it is itself a nested placement, as an **INSTANCE node** K (`DEFINES_INSTANCE`). It has no `DISPLAY` edge, so `ObjectByGeometry()` — built from `DISPLAY` alone — cannot invert either one. That was the gap: whatever the member's object row held, nothing could find it.
 
-The fix needs no new relation. The member keeps a **carrier object row** with the same object-sourced `IN_COLLECTION` every top-level object emits, and an **eav stamp** supplies the missing direction back to it — `@speckle.geometry_k` (or `@speckle.instance_k` for a nested member). SketchUp did this first for tags (ENG-8851); Rhino reuses the same keys (ENG-9110).
+The member keeps a **carrier object row** with the same object-sourced `IN_COLLECTION` every top-level object emits, and the missing direction back to it is graph-native [bundle-spec rels 24/25]: `DEFINES_MEMBER` definition → member object on the `(definition, ord)` key, plus `PLACES` member object → its nested INSTANCE node (association only, never a render root). Pre-vocab producers instead shipped the join as an **eav stamp** — `@speckle.geometry_k` (or `@speckle.instance_k` for a nested member; SketchUp first for tags ENG-8851, Rhino ENG-9110) — and receive still reads the stamps from those older bundles as a fallback.
 
 ```mermaid
 graph LR
@@ -230,13 +230,13 @@ graph LR
   DEF -->|DEFINES| GA
   R -->|IN_COLLECTION| LA
   M -->|IN_COLLECTION| LB
-  M -.->|"eav @speckle.geometry_k"| GA
+  DEF -->|DEFINES_MEMBER| M
   classDef obj fill:#eac36a,stroke:#9a5f0c,color:#2a1c04;
   classDef geo fill:#5fc7b8,stroke:#0a7369,color:#052723;
   classDef nd fill:#b3a8f0,stroke:#5647bd,color:#211648;
 ```
 
-The placement sits on Layer A; the member drawn through it belongs to Layer B. Receive walks `DEFINES` to `geo·0`, the stamp back to `obj·1`, then that carrier's ordinary `IN_COLLECTION` — no special-case projection anywhere.
+The placement sits on Layer A; the member drawn through it belongs to Layer B. Receive walks `DEFINES` to `geo·0`, joins `DEFINES_MEMBER` on the shared `(definition, ord)` key back to `obj·1`, then that carrier's ordinary `IN_COLLECTION` — no special-case projection anywhere. (Older bundles: the `@speckle.geometry_k` stamp on `obj·1` supplies the same join.)
 
 **The invariant this rests on:** a carrier has no render edge, so every consumer that walks objects must skip render-less ones. Both C# receive paths already do (the Rhino native builder gates on `DISPLAY`/`SOLID`/`DISPLAY_INSTANCE`; `ObjectsArtifactReader` drops an object whose geometry build returns null). Break that and members bake twice — and show up in the scene explorer.
 

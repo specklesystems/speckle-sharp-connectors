@@ -606,13 +606,16 @@ public class RhinoArtifactRootObjectBuilder(
       instanceKByObjectId[co.ApplicationId] = instK;
       if (isDefinitionMember)
       {
-        // A nested-block member places only via DEFINES_INSTANCE, so its INSTANCE node K is the only handle its
-        // definition has on it — stamp it so receive can join back to this object row for the member's layer.
+#if !SDK_BUNDLE_VOCAB_ADDITIONS
+        // Pre-vocab build only: no PLACES rel possible, so stamp the member's INSTANCE node K onto its object
+        // row — the only handle its definition has on it — so receive can join back for the member's layer.
+        // Vocab builds carry this join as PLACES (EmitMemberGraphJoin); the stamp would be duplication.
         pipeline.AddProperties(
           co.ApplicationId,
           DefinitionMemberStamps.NoProperties,
           DefinitionMemberStamps.InstanceStamp(instK)
         );
+#endif
       }
       else
       {
@@ -703,10 +706,12 @@ public class RhinoArtifactRootObjectBuilder(
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
 
-    // Stamp the member's geometry K(s) onto its object row — the join receive needs to get from a definition's
-    // DEFINES geometry back to the object holding the member's layer. ALL of them, not just the first: receive
-    // picks the authoritative 3dm solid OR its display mesh(es) per member (see GroupDefinesByMember), and
-    // whichever it picks has to resolve [ENG-9110].
+#if !SDK_BUNDLE_VOCAB_ADDITIONS
+    // Pre-vocab build only: stamp the member's geometry K(s) onto its object row — the join receive needs to
+    // get from a definition's DEFINES geometry back to the object holding the member's layer. ALL of them, not
+    // just the first: receive picks the authoritative 3dm solid OR its display mesh(es) per member (see
+    // GroupDefinesByMember), and whichever it picks has to resolve [ENG-9110]. Vocab builds carry this join as
+    // DEFINES_MEMBER on the (definition, ord) key instead (EmitMemberGraphJoin) — no stamp needed.
     if (isDefinitionMember)
     {
       pipeline.AddProperties(
@@ -715,6 +720,7 @@ public class RhinoArtifactRootObjectBuilder(
         DefinitionMemberStamps.GeometryStamp(gKs)
       );
     }
+#endif
 
     // Every display fragment was dropped and neither a standalone SOLID nor a member solid landed (gKs would
     // carry the member solid) → nothing renderable made the bundle; report it instead of standing on the
@@ -728,8 +734,8 @@ public class RhinoArtifactRootObjectBuilder(
   // the @speckle.* member stamps: DEFINES_MEMBER def → member OBJECT with ord = the same member ordinal the
   // member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) — immune to content-hash dedup,
   // which can hand two members in different definitions the same geometry K); PLACES member object → its nested
-  // INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's job). Stamps keep being
-  // written this release so pre-vocab consumers still resolve members.
+  // INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's job). Vocab builds emit
+  // ONLY these rels; the @speckle.* stamps are written solely by pre-vocab builds, which cannot emit them.
   private static void EmitMemberGraphJoin(
     ObjectsArtifactPipeline pipeline,
     int defK,
