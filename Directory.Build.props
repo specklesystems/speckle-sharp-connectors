@@ -12,6 +12,13 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
+  <!-- Local.slnx builds the SDK as project references, so the source-level APIs are always current there —
+       activate the SDK-gated bundle-vocab features automatically. Package-pinned builds (CI, per-host slnx)
+       keep the symbol off until the Speckle.Objects pin ships these APIs. -->
+  <PropertyGroup Condition="'$(SolutionName)' == 'Local' or '$(SolutionName)' == 'Speckle.Revit.Local'">
+    <DefineConstants>$(DefineConstants);SDK_BUNDLE_VOCAB_ADDITIONS</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Label="Analyers">
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
     <AnalysisLevel>latest-AllEnabledByDefault</AnalysisLevel>
