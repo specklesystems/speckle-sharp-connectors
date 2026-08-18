@@ -766,21 +766,23 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
 #if SDK_BUNDLE_VOCAB_ADDITIONS
     // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions:
-    //   rels.DefinesMemberByDefinition : Dictionary<int, List<ArtefactEdge>>  (def K → member edges, Ord = member ordinal)
-    //   rels.PlacesByObject            : Dictionary<int, int>                 (member object K → INSTANCE node K)
-    if (rels.DefinesMemberByDefinition.Count == 0)
+    //   rels.MemberObjectsByDefinition / rels.MemberOrdByDefinition : def K → member object Ks + MEMBER ordinals,
+    //                                                                index-aligned (DEFINES_MEMBER, rel 25)
+    //   rels.PlacesByObject            : member object K → INSTANCE node K (PLACES, rel 24)
+    if (rels.MemberObjectsByDefinition.Count == 0)
     {
       return null;
     }
     var byGeometry = new Dictionary<int, int>();
     var byInstance = new Dictionary<int, int>();
-    foreach (var kv in rels.DefinesMemberByDefinition)
+    foreach (var kv in rels.MemberObjectsByDefinition)
     {
       // member ordinal → member object K for this definition
       var objByOrd = new Dictionary<int, int>();
-      foreach (var e in kv.Value)
+      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
+      for (int m = 0; m < kv.Value.Count; m++)
       {
-        objByOrd[e.Ord] = e.Dst;
+        objByOrd[memberOrds[m]] = kv.Value[m];
       }
       if (
         !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
