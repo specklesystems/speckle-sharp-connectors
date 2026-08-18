@@ -8,6 +8,10 @@ public class ClassPropertyExtractor
   {
     Dictionary<string, object?> properties = new();
 
+    // the api class is coarser than the type we publish (a column and a pad footing are both Beam), so we
+    // keep it here rather than lose it
+    properties["apiClass"] = modelObject.GetType().Name;
+
     switch (modelObject)
     {
       // includes beams and contour plates
