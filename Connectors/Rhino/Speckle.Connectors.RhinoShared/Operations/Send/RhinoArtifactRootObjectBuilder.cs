@@ -532,7 +532,14 @@ public class RhinoArtifactRootObjectBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
+    // Layer id → its interned COLLECTION K, for the layer-sourced appearance edges (NODE_HAS_MATERIAL).
+    var collKByLayerId = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var kv in layerCollectionKByIndex)
+    {
+      collKByLayerId[model.Layers[kv.Key].Id] = kv.Value;
+    }
+
+    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, collKByLayerId);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
 
     // Default scene view: the Rhino layer tree (IN_COLLECTION). The COLLECTION nodes' parent chain carries the
@@ -769,7 +776,8 @@ public class RhinoArtifactRootObjectBuilder(
     ObjectsArtifactPipeline pipeline,
     CollectedModel model,
     Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId
+    Dictionary<string, int> instanceKByObjectId,
+    IReadOnlyDictionary<string, int> collKByLayerId
   )
   {
     // 1) instance definitions → DEFINES (member meshes) / DEFINES_INSTANCE (nested block placements).
@@ -841,17 +849,25 @@ public class RhinoArtifactRootObjectBuilder(
           // INSTANCE node K instead [ENG-9109].
           pipeline.HasMaterial(instK, matK, srcIsInstance: true);
         }
-        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
         {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+          // The authored layer→material assignment itself [bundle-spec rel 28 NODE_HAS_MATERIAL] — receive
+          // restores it on the rebuilt layer. Weakest ladder tier; the flatten below stays the render carrier.
+          pipeline.NodeHasMaterial(layerCollK, matK);
+#endif
           // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
           // draws with it. An inheritor with no geometry (a block instance) is skipped — nothing to attach to.
-          foreach (var inheritorId in inheritors)
+          if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
           {
-            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            foreach (var inheritorId in inheritors)
             {
-              foreach (var gK in inheritorGKs)
+              if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
               {
-                pipeline.HasMaterial(gK, matK);
+                foreach (var gK in inheritorGKs)
+                {
+                  pipeline.HasMaterial(gK, matK);
+                }
               }
             }
           }
@@ -932,7 +948,14 @@ public class RhinoArtifactRootObjectBuilder(
       parentK = GetOrAddLayerCollection(pipeline, layers, parentIndex, cache);
     }
 
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
+    // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
+    int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer");
+    pipeline.NodeHasColor(collK, pipeline.AddColor(layer.Argb));
+#else
     int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer", layer.Argb);
+#endif
     cache[layerIndex] = collK;
     return collK;
   }
