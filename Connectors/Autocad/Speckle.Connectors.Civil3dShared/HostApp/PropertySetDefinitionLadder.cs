@@ -127,11 +127,11 @@ public static class PropertySetDefinitionLadder
           }
           string dataType = value switch
           {
-            bool _ => "TrueFalse",
-            double _ => "Real",
-            float _ => "Real",
-            int _ => "Real", // eav numbers round-trip as double; Real is the safe recreate
-            long _ => "Real",
+            bool => "TrueFalse",
+            double => "Real",
+            float => "Real",
+            int => "Real", // eav numbers round-trip as double; Real is the safe recreate
+            long => "Real",
             _ => "Text",
           };
           if (!fieldIndex[si].TryGetValue(fieldEntry.Key, out int fi))
@@ -163,9 +163,11 @@ public static class PropertySetDefinitionLadder
     {
       parts.Add($"{f.Name}|{f.DataType}|{f.Unit}");
     }
+#pragma warning disable CA1850, CA1872 // one net48-compatible path keeps the set_key recipe byte-identical across all TFMs
     using var sha = System.Security.Cryptography.SHA256.Create();
     byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", parts)));
     return BitConverter.ToString(hash).Replace("-", ""); // net48-safe hex
+#pragma warning restore CA1850, CA1872
   }
 
   /// <summary>The schema's identity: the shipped set_key when present (tier 1 — sender-computed with the

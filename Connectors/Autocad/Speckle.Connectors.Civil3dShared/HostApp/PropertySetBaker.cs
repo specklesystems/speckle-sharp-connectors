@@ -197,9 +197,9 @@ public class PropertySetBaker
           continue;
         }
         _logger.LogWarning(
-          "Existing property set definition {SetName} differs from the received schema; creating {SetName}-{Prefix}",
+          "Existing property set definition {SetName} differs from the received schema; creating {NewName}",
           schema.SetName,
-          namePrefix
+          $"{schema.SetName}-{namePrefix}"
         );
         defId = CreatePropertySetDefinitionFromSchema(schema, $"{schema.SetName}-{namePrefix}", tr);
       }
@@ -306,7 +306,10 @@ public class PropertySetBaker
       {
         propDef.Description = field.Description;
       }
-      object? defaultValue = field.DefaultBoolean ?? (object?)field.DefaultDouble ?? field.DefaultString;
+      object? defaultValue = field.DefaultBoolean.HasValue
+        ? field.DefaultBoolean.Value
+        : field.DefaultDouble.HasValue ? field.DefaultDouble.Value
+        : field.DefaultString;
       if (defaultValue is not null)
       {
         try
