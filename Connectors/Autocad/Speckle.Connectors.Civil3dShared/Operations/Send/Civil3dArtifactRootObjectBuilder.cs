@@ -71,56 +71,76 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
   {
 #if SDK_BUNDLE_VOCAB_ADDITIONS
     // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddPropertySetDefinition API).
+    // Rows are emitted in AUTHORED field order (the file's row-order-is-field-order contract).
     foreach (var setEntry in _propertySetDefinitionHandler.Definitions)
     {
       string setName = setEntry.Key;
       if (
-        setEntry.Value.TryGetValue(PropertySetDefinitionHandler.PROP_SET_PROP_DEFS_KEY, out object? defsObj)
-        && defsObj is Dictionary<string, object?> fieldDefs
+        !setEntry.Value.TryGetValue(PropertySetDefinitionHandler.PROP_SET_PROP_DEFS_KEY, out object? defsObj)
+        || defsObj is not Dictionary<string, object?> fieldDefs
+        || !_propertySetDefinitionHandler.FieldOrders.TryGetValue(setName, out var fieldOrder)
       )
       {
-        // set_key: SHA256 hex of the set name + every field's identity tuple, fields ordered by name — stable
-        // across sends, distinguishes same-named definitions with different shapes.
-        var keyParts = new List<string> { setName };
-        foreach (var fieldName in fieldDefs.Keys.OrderBy(k => k, StringComparer.Ordinal))
-        {
-          if (fieldDefs[fieldName] is Dictionary<string, object?> fd)
-          {
-            keyParts.Add(
-              $"{fieldName}|{Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY)}|{Field(fd, "units")}|{Field(fd, PropertySetDefinitionHandler.PROP_DEF_DEFAULT_VALUE_KEY)}"
-            );
-          }
-        }
-        string setKey;
-        using (var sha = System.Security.Cryptography.SHA256.Create())
-        {
-          byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", keyParts)));
-          setKey = BitConverter.ToString(hash).Replace("-", ""); // net48-safe hex (no Convert.ToHexString)
-        }
+        continue;
+      }
 
-        foreach (var fieldEntry in fieldDefs)
+      // set_key recipe (cross-producer, byte-exact — keep in sync with dwgextract):
+      //   sha256_hex_uppercase( utf8( set_name + "\n"
+      //     + join("\n", for each field in AUTHORED order: field_name + "|" + data_type + "|" + (unit ?? "")) ) )
+      var keyParts = new List<string> { setName };
+      foreach (var fieldName in fieldOrder)
+      {
+        if (Field(fieldDefs, fieldName) is Dictionary<string, object?> fdk)
         {
-          if (fieldEntry.Value is not Dictionary<string, object?> fd)
-          {
-            continue;
-          }
-          object? defaultValue = Field(fd, PropertySetDefinitionHandler.PROP_DEF_DEFAULT_VALUE_KEY);
-          double? defaultDouble = defaultValue is IConvertible c and not string and not bool
-            ? Convert.ToDouble(c, System.Globalization.CultureInfo.InvariantCulture)
-            : null;
-          pipeline.AddPropertySetDefinition(
-            setName,
-            setKey,
-            fieldEntry.Key,
-            Field(fd, PropertySetDefinitionHandler.PROP_DEF_ID_KEY) as int?,
-            Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
-            defaultDouble is null ? defaultValue?.ToString() : null,
-            defaultDouble,
-            Field(fd, "units") as string,
-            Field(fd, PropertySetDefinitionHandler.PROP_DEF_DESCRIPTION_KEY) as string,
-            appliesTo: null // the handler does not capture applies-to yet; faithful recreate falls back to apply-to-all
+          keyParts.Add(
+            $"{fieldName}|{Field(fdk, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY)}|{Field(fdk, "units")}"
           );
         }
+      }
+      string setKey;
+      using (var sha = System.Security.Cryptography.SHA256.Create())
+      {
+        byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", keyParts)));
+        setKey = BitConverter.ToString(hash).Replace("-", ""); // net48-safe hex (no Convert.ToHexString)
+      }
+
+      _propertySetDefinitionHandler.SetDescriptions.TryGetValue(setName, out string? setDescription);
+      _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByField);
+
+      foreach (var fieldName in fieldOrder)
+      {
+        if (Field(fieldDefs, fieldName) is not Dictionary<string, object?> fd)
+        {
+          continue;
+        }
+        // Defaults split per the file's exactly-one-of rule: bool → default_boolean, numeric non-bool →
+        // default_double, anything else with content → default_string.
+        object? defaultValue = Field(fd, PropertySetDefinitionHandler.PROP_DEF_DEFAULT_VALUE_KEY);
+        bool? defaultBoolean = defaultValue is bool b ? b : null;
+        double? defaultDouble =
+          defaultBoolean is null && defaultValue is IConvertible c and not string
+            ? Convert.ToDouble(c, System.Globalization.CultureInfo.InvariantCulture)
+            : null;
+        string? defaultString =
+          defaultBoolean is null && defaultDouble is null && defaultValue?.ToString() is { Length: > 0 } dv
+            ? dv
+            : null;
+        string? bucketId = null;
+        bucketByField?.TryGetValue(fieldName, out bucketId);
+        pipeline.AddPropertySetDefinition(
+          setName,
+          setKey,
+          fieldName,
+          bucketId, // null when the definition was never attached to a sent object — receive matches by name
+          Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
+          defaultString,
+          defaultDouble,
+          defaultBoolean,
+          Field(fd, "units") as string,
+          Field(fd, PropertySetDefinitionHandler.PROP_DEF_DESCRIPTION_KEY) as string,
+          setDescription,
+          appliesTo: null // only AppliesToAll is repo-confirmed; expected member: PropertySetDefinition.AppliesToFilter
+        );
       }
     }
 #else

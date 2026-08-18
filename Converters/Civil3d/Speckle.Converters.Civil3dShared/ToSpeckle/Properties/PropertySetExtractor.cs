@@ -100,6 +100,9 @@ public class PropertySetExtractor
           ["name"] = dataName,
           ["internalDefinitionName"] = data.FieldBucketId,
         };
+        // Definition-level API exposes no bucket id — observe it here so the property_set_definitions
+        // file can ship field_bucket_id (the eav.internal_definition_name join key).
+        _propertySetDefinitionHandler.RecordFieldBucketId(name, dataName, data.FieldBucketId);
         PropertyHandler propHandler = new();
         // Units aren't always applicable to a def (the getter throws — swallowed by TryGetValue), and a unitless
         // def reports Autodesk's literal display name "(none)" — UI text, not a unit. The eav `unit` column
