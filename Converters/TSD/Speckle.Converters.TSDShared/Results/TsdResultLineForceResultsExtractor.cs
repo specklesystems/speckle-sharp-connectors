@@ -16,7 +16,7 @@ public sealed class TsdResultLineForceResultsExtractor : TsdLoadingResultsExtrac
       .GetResultLineForcesAsync(loadingId, LoadingResultType.Base, null, cancellationToken)
       .ConfigureAwait(false);
 
-  protected override Dictionary<string, object?> Build(IEnumerable<IResultLineForces> items)
+  protected override Dictionary<string, object?> Build(IEnumerable<IResultLineForces> items, TsdResultsContext context)
   {
     var perLine = new Dictionary<string, object?>();
     foreach (var line in items)
