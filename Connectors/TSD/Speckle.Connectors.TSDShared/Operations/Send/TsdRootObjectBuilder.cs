@@ -38,6 +38,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
   private readonly TsdSlabPropertyExtractor _slabPropertyExtractor;
   private readonly TsdWallPropertyExtractor _wallPropertyExtractor;
   private readonly TsdAnalysisResultsExtractor _analysisResultsExtractor;
+  private readonly TsdSendCollectionManager _sendCollectionManager;
   private readonly TsdConversionSettings _conversionSettings;
   private readonly ILogger<TsdRootObjectBuilder> _logger;
 
@@ -48,6 +49,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     TsdSlabPropertyExtractor slabPropertyExtractor,
     TsdWallPropertyExtractor wallPropertyExtractor,
     TsdAnalysisResultsExtractor analysisResultsExtractor,
+    TsdSendCollectionManager sendCollectionManager,
     TsdConversionSettings conversionSettings,
     ILogger<TsdRootObjectBuilder> logger
   )
@@ -58,6 +60,7 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
     _slabPropertyExtractor = slabPropertyExtractor;
     _wallPropertyExtractor = wallPropertyExtractor;
     _analysisResultsExtractor = analysisResultsExtractor;
+    _sendCollectionManager = sendCollectionManager;
     _conversionSettings = conversionSettings;
     _logger = logger;
   }
@@ -98,7 +101,8 @@ internal sealed class TsdRootObjectBuilder : IRootObjectBuilder<IEntity>
       results.Add(result);
       if (converted is not null)
       {
-        rootObjectCollection.elements.Add(converted);
+        var collection = _sendCollectionManager.AddObjectCollectionToRoot(converted, rootObjectCollection);
+        collection.elements.Add(converted);
         if (converted is TsdObject tsdObject)
         {
           propertyTrees.Add(tsdObject.properties);
