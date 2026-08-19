@@ -62,6 +62,7 @@ internal static class ServiceRegistration
     services.AddScoped<TsdWallLineForceResultsExtractor>();
     services.AddScoped<TsdResultsExtractorFactory>();
     services.AddScoped<TsdAnalysisResultsExtractor>();
+    services.AddScoped<TsdSendCollectionManager>();
     services.AddScoped<IRootObjectBuilder<IEntity>, TsdRootObjectBuilder>();
     services.AddScoped<SendOperation<IEntity>>();
 
