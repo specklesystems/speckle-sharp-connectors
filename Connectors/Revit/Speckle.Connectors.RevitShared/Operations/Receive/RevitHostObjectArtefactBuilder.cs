@@ -1486,64 +1486,48 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return resolved;
   }
 
-  // ENG-8947 / ENG-9099: rebuild the sender's reference-point transform from the bundle meta offset. Two formats
-  // share the one field: a 3-value "x,y,z" CSV (projectBasePoint / surveyPoint — translation only, no rotation to
-  // lose) or a 16-value row-major CSV (sharedCoordinates — full rotation + translation, same layout ParseMatrix
-  // already uses for InstanceProxy transforms). Both are in the bundle's display units; scale to internal feet so
-  // the result composes with the receive setting and applies through ConvertToInternalCoordinates. Null (internal
-  // origin / fallback) → no source re-basing.
+  // ENG-8947 / ENG-9099: rebuild the sender's reference-point transform from the eav.model record
+  // (referencePoint.transform — the FULL rigid transform as a 16-value row-major CSV, same layout ParseMatrix
+  // already uses for InstanceProxy transforms; referencePoint.units, falling back to the bundle's display
+  // units). Scale the translation to internal feet so the result composes with the receive setting and applies
+  // through ConvertToInternalCoordinates. No record / internalOriginFallback (kind row without a transform) →
+  // no source re-basing. The former meta.reference_point_* columns are removed from the spec and NOT read.
   private Transform? ReadSourceReferencePointTransform(ArtefactBundle bundle)
   {
-    if (bundle.ReferencePointOffset is not { Length: > 0 } offsetCsv)
+    if (
+      !bundle.ModelProperties.TryGetValue("referencePoint", out var rpObj)
+      || rpObj is not Dictionary<string, object?> rp
+      || !rp.TryGetValue("transform", out var tObj)
+      || tObj is not string transformCsv
+    )
     {
       return null;
     }
-    var parts = offsetCsv.Split(',');
-    var fTypeId = ResolveForge(bundle.Units);
-
-    if (parts.Length == 16)
-    {
-      var d = new double[16];
-      for (int i = 0; i < 16; i++)
-      {
-        if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out d[i]))
-        {
-          return null;
-        }
-      }
-      var full = Transform.Identity;
-      full.BasisX = new XYZ(d[0], d[4], d[8]);
-      full.BasisY = new XYZ(d[1], d[5], d[9]);
-      full.BasisZ = new XYZ(d[2], d[6], d[10]);
-      full.Origin = new XYZ(
-        _scalingService.ScaleToNative(d[3], fTypeId),
-        _scalingService.ScaleToNative(d[7], fTypeId),
-        _scalingService.ScaleToNative(d[11], fTypeId)
-      );
-      return full;
-    }
-
-    if (parts.Length != 3)
+    var parts = transformCsv.Split(',');
+    if (parts.Length != 16)
     {
       return null;
     }
-    var o = new double[3];
-    for (int i = 0; i < 3; i++)
+    var d = new double[16];
+    for (int i = 0; i < 16; i++)
     {
-      if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out o[i]))
+      if (!double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out d[i]))
       {
         return null;
       }
     }
-    // Identity + Origin (not Transform.CreateTranslation) to match ReferencePointHelper.GetTransformFromRootObject and
-    // keep the analyzer's disposable-ownership tracking happy — the result is pushed into converter settings.
-    var t = Transform.Identity;
-    t.Origin = new XYZ(
-      _scalingService.ScaleToNative(o[0], fTypeId),
-      _scalingService.ScaleToNative(o[1], fTypeId),
-      _scalingService.ScaleToNative(o[2], fTypeId)
+    string units = rp.TryGetValue("units", out var uObj) && uObj is string u && u.Length > 0 ? u : bundle.Units;
+    var fTypeId = ResolveForge(units);
+    var full = Transform.Identity;
+    full.BasisX = new XYZ(d[0], d[4], d[8]);
+    full.BasisY = new XYZ(d[1], d[5], d[9]);
+    full.BasisZ = new XYZ(d[2], d[6], d[10]);
+    full.Origin = new XYZ(
+      _scalingService.ScaleToNative(d[3], fTypeId),
+      _scalingService.ScaleToNative(d[7], fTypeId),
+      _scalingService.ScaleToNative(d[11], fTypeId)
     );
-    return t;
+    return full;
   }
 
   // ── transforms ────────────────────────────────────────────────────────────────────────────────────────

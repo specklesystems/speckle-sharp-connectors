@@ -508,16 +508,14 @@ public class RevitArtifactRootObjectBuilder(
     return objK;
   }
 
-  // ENG-8947 / ENG-9099: record the MAIN-model reference point in the bundle meta — the SINGLE source for both
-  // federation and Revit→Revit round-trip (the receiver rebuilds the transform from this value). Only the host
-  // (non-linked) document's Transform is the pure reference-point transform — a linked doc's is
+  // ENG-8947 / ENG-9099: record the MAIN-model reference point — the SINGLE source for both federation and
+  // Revit→Revit round-trip (the receiver rebuilds the transform from this value). Only the host (non-linked)
+  // document's Transform is the pure reference-point transform — a linked doc's is
   // (referencePoint ∘ linkPlacement⁻¹) and must NOT be persisted.
-  // projectBasePoint / surveyPoint are translation-only in Revit (no rotation to lose), so they keep the original
-  // 3-value "x,y,z" offset format for back-compat with older bundles/readers. sharedCoordinates carries a
-  // true-north ROTATION on top of the translation (Document.ActiveProjectLocation.GetTotalTransform()), which a
-  // 3-value offset can't represent — it is recorded as the full 16-value row-major transform instead (same
-  // convention already used for InstanceProxy transforms below, see Flatten). internalOriginFallback records the
-  // requested-but-missing base point (not silent); internal origin itself has nothing to record.
+  // The record rides eav.model (referencePoint.kind/.transform/.units — the former meta.reference_point_*
+  // columns are removed from the spec; xyz-only offsets lost sharedCoordinates' true-north rotation and meta is
+  // the wrong home for model data). internalOriginFallback records the requested-but-missing base point (not
+  // silent); internal origin itself has nothing to record.
   private void EmitMainModelReferencePoint(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
   {
     if (
@@ -531,33 +529,23 @@ public class RevitArtifactRootObjectBuilder(
 
     if (documentContext.Transform is { } transform)
     {
-      switch (converterSettings.Current.ReferencePointKind)
+      string kind = converterSettings.Current.ReferencePointKind switch
       {
-        case ReferencePointType.ProjectBase:
-          pipeline.SetReferencePoint("projectBasePoint", FormatReferencePointOffset(transform));
-          EmitReferencePointModelRows(pipeline, "projectBasePoint", transform);
-          break;
-        case ReferencePointType.Survey:
-          pipeline.SetReferencePoint("surveyPoint", FormatReferencePointOffset(transform));
-          EmitReferencePointModelRows(pipeline, "surveyPoint", transform);
-          break;
-        default:
-          pipeline.SetReferencePoint("sharedCoordinates", FormatReferencePointTransform(transform));
-          EmitReferencePointModelRows(pipeline, "sharedCoordinates", transform);
-          break;
-      }
+        ReferencePointType.ProjectBase => "projectBasePoint",
+        ReferencePointType.Survey => "surveyPoint",
+        _ => "sharedCoordinates",
+      };
+      EmitReferencePointModelRows(pipeline, kind, transform);
     }
     else
     {
       // requested a base point the model doesn't have → converted at internal origin, recorded (not silent).
-      pipeline.SetReferencePoint("internalOriginFallback", null);
       EmitReferencePointModelRows(pipeline, "internalOriginFallback", null);
     }
   }
 
-  // eav.model is the authoritative reference-point record going forward [bundle-spec `model` table]: kind + the
-  // FULL rigid transform (16 row-major doubles, display units — same layout as InstanceProxy transforms) + units.
-  // meta.reference_point_* (xyz-only for point kinds) keeps being written until the fleet reads model.parquet.
+  // eav.model is the authoritative reference-point record [bundle-spec `model` table]: kind + the FULL rigid
+  // transform (16 row-major doubles, display units — same layout as InstanceProxy transforms) + units.
   private void EmitReferencePointModelRows(ObjectsArtifactPipeline pipeline, string kind, Transform? transform)
   {
 #if SDK_BUNDLE_VOCAB_ADDITIONS
@@ -577,17 +565,7 @@ public class RevitArtifactRootObjectBuilder(
 #endif
   }
 
-  // ENG-8947 reference_point_offset: the translation subtracted from world-space output, in display units.
-  private string FormatReferencePointOffset(Transform transform) =>
-    string.Format(
-      CultureInfo.InvariantCulture,
-      "{0},{1},{2}",
-      scalingService.ScaleLength(transform.Origin.X),
-      scalingService.ScaleLength(transform.Origin.Y),
-      scalingService.ScaleLength(transform.Origin.Z)
-    );
-
-  // ENG-9099 reference_point_offset (rotation-carrying kinds): the full rigid transform subtracted from
+  // ENG-9099 referencePoint.transform: the full rigid transform subtracted from
   // world-space output, as 16 row-major doubles — same layout Flatten/BuildInstanceTransform already use for
   // InstanceProxy transforms (basis columns unscaled/unit vectors, translation column in display units).
   private string FormatReferencePointTransform(Transform transform)
