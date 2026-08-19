@@ -29,7 +29,7 @@ internal sealed class TsdSendCollectionManager
       return existing;
     }
 
-    var collection = new Collection(categoryName);
+    var collection = new Collection { name = categoryName };
     rootObject.elements.Add(collection);
     _collectionCache[categoryName] = collection;
     return collection;
