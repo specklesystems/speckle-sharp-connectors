@@ -95,7 +95,9 @@ public static class PropertySetDefinitionLadder
 
     foreach (var tree in propertyTrees)
     {
-      if (!tree.TryGetValue("Property Sets", out var setsObj) || setsObj is not Dictionary<string, object?> propertySets)
+      if (
+        !tree.TryGetValue("Property Sets", out var setsObj) || setsObj is not Dictionary<string, object?> propertySets
+      )
       {
         continue;
       }
@@ -143,7 +145,10 @@ public static class PropertySetDefinitionLadder
           else if (fieldLists[si][fi].BucketId is null && bucketId is not null)
           {
             // A later object supplied the bucket id an earlier one lacked — upgrade in place.
-            fieldLists[si][fi] = fieldLists[si][fi] with { BucketId = bucketId };
+            fieldLists[si][fi] = fieldLists[si][fi] with
+            {
+              BucketId = bucketId,
+            };
           }
         }
       }

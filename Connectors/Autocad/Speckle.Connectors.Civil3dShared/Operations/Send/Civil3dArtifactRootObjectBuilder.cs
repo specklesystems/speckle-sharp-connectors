@@ -2,9 +2,6 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.HostApp;
-#if !SDK_BUNDLE_VOCAB_ADDITIONS
-using Speckle.Connectors.Common.Operations; // ProxyKeys — only the legacy carrier branch needs it
-#endif
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
 using Speckle.Converters.Civil3dShared.ToSpeckle;
@@ -12,6 +9,9 @@ using Speckle.Converters.Common;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
+#if !SDK_BUNDLE_VOCAB_ADDITIONS
+using Speckle.Connectors.Common.Operations; // ProxyKeys — only the legacy carrier branch needs it
+#endif
 
 namespace Speckle.Connectors.Civil3dShared.Operations.Send;
 
@@ -127,9 +127,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
             ? Convert.ToDouble(c, System.Globalization.CultureInfo.InvariantCulture)
             : null;
         string? defaultString =
-          defaultBoolean is null && defaultDouble is null && defaultValue?.ToString() is { Length: > 0 } dv
-            ? dv
-            : null;
+          defaultBoolean is null && defaultDouble is null && defaultValue?.ToString() is { Length: > 0 } dv ? dv : null;
         string? bucketId = null;
         bucketByField?.TryGetValue(fieldName, out bucketId);
         pipeline.AddPropertySetDefinition(

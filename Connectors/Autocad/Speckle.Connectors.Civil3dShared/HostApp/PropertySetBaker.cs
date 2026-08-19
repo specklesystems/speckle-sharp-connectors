@@ -306,8 +306,8 @@ public class PropertySetBaker
       {
         propDef.Description = field.Description;
       }
-      object? defaultValue = field.DefaultBoolean.HasValue
-        ? field.DefaultBoolean.Value
+      object? defaultValue =
+        field.DefaultBoolean.HasValue ? field.DefaultBoolean.Value
         : field.DefaultDouble.HasValue ? field.DefaultDouble.Value
         : field.DefaultString;
       if (defaultValue is not null)

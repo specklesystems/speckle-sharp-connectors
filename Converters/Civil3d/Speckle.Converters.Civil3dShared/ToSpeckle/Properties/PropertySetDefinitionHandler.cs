@@ -102,8 +102,10 @@ public class PropertySetDefinitionHandler
     // applies_to is NOT captured: only AppliesToAll has repo evidence; the expected filter member is
     // AAECPDB.PropertySetDefinition.AppliesToFilter — wire it here once confirmed on the real API.
     PropertyHandler setPropHandler = new();
-    if (setPropHandler.TryGetValue(() => setDefinition.Description, out string? setDescription)
-        && !string.IsNullOrEmpty(setDescription))
+    if (
+      setPropHandler.TryGetValue(() => setDefinition.Description, out string? setDescription)
+      && !string.IsNullOrEmpty(setDescription)
+    )
     {
       SetDescriptions[name] = setDescription!;
     }
