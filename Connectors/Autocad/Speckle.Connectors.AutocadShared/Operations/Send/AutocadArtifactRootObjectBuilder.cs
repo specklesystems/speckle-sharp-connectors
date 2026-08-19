@@ -971,7 +971,17 @@ public class AutocadArtifactRootObjectBuilder(
       return existing;
     }
     int? argb = layerArgbByName.TryGetValue(layerName, out int a) ? a : null;
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
+    // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
+    int collK = pipeline.AddCollection(layerName, layerName, null, "Layer");
+    if (argb is int layerArgb)
+    {
+      pipeline.NodeHasColor(collK, pipeline.AddColor(layerArgb));
+    }
+#else
     int collK = pipeline.AddCollection(layerName, layerName, null, "Layer", argb);
+#endif
     cache[layerName] = collK;
     return collK;
   }

@@ -31,6 +31,12 @@ public class PropertySetBaker
   /// </summary>
   private readonly Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
 
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+  /// <summary>set name → (FieldBucketId → field name), from tier-1/3 schemas — the rebind's join index.
+  /// Empty for carrier-built definitions (tier 2), which never shipped bucket ids.</summary>
+  private readonly Dictionary<string, Dictionary<string, string>> _bucketToFieldNameBySet = new();
+#endif
+
   public PropertySetBaker(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
     ILogger<PropertySetBaker> logger
@@ -104,6 +110,9 @@ public class PropertySetBaker
   public void ParseAndBakePropertySetDefinitions(Dictionary<string, object?> definitions, string namePrefix)
   {
     _propertySetDefinitionMap.Clear();
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    _bucketToFieldNameBySet.Clear();
+#endif
 
     if (definitions.Count == 0)
     {
@@ -144,6 +153,187 @@ public class PropertySetBaker
 
     tr.Commit();
   }
+
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+  /// <summary>Tier 1/3 of the definition ladder: recreate defs from host-API-free schemas (the
+  /// <c>eav.property_set_definitions</c> file, or synthesis from value rows). The carrier path
+  /// (<see cref="ParseAndBakePropertySetDefinitions(Dictionary{string, object?}, string)"/>) stays tier 2.</summary>
+  public void BakeSchemas(IReadOnlyList<PropertySetSchema> schemas, string namePrefix)
+  {
+    _propertySetDefinitionMap.Clear();
+    _bucketToFieldNameBySet.Clear();
+    if (schemas.Count == 0)
+    {
+      return;
+    }
+
+    using var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction();
+    foreach (var schema in schemas)
+    {
+      if (_propertySetDefinitionMap.ContainsKey(schema.SetName))
+      {
+        // Two same-named sets (distinct set_key). The name-keyed map — and the value paths, which only
+        // carry the name — cannot address both: first wins, matching send's first-wins Definitions dict.
+        _logger.LogWarning("Duplicate property set name {SetName}; keeping the first definition", schema.SetName);
+        continue;
+      }
+
+      // Naming/collision policy [user feedback: no blanket project-name prefixing]:
+      //   (a) an existing def with the ORIGINAL name that is schema-identical (same set_key recipe over its
+      //       live fields) is REUSED — no create, no prefix; re-receives of unchanged schemas converge here,
+      //       which is also why plain-named defs never need purging;
+      //   (b) an existing def that differs gets a disambiguated '{name}-{prefix}' create + warning
+      //       (the prefixed name is also what PurgePropertySets can safely reclaim next receive);
+      //   (c) no existing def → create under the plain authored name.
+      ADB.ObjectId defId;
+      if (TryFindExistingDefinition(schema.SetName, tr, out ADB.ObjectId existingId))
+      {
+        string incomingKey = PropertySetDefinitionLadder.EffectiveSetKey(schema);
+        string existingKey = ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
+        if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
+        {
+          _propertySetDefinitionMap[schema.SetName] = existingId;
+          AddBucketMap(schema);
+          continue;
+        }
+        _logger.LogWarning(
+          "Existing property set definition {SetName} differs from the received schema; creating {NewName}",
+          schema.SetName,
+          $"{schema.SetName}-{namePrefix}"
+        );
+        defId = CreatePropertySetDefinitionFromSchema(schema, $"{schema.SetName}-{namePrefix}", tr);
+      }
+      else
+      {
+        defId = CreatePropertySetDefinitionFromSchema(schema, schema.SetName, tr);
+      }
+      if (defId.IsNull)
+      {
+        continue;
+      }
+      _propertySetDefinitionMap[schema.SetName] = defId;
+      AddBucketMap(schema);
+    }
+    tr.Commit();
+  }
+
+  private void AddBucketMap(PropertySetSchema schema)
+  {
+    var bucketMap = new Dictionary<string, string>();
+    foreach (var field in schema.Fields)
+    {
+      if (field.BucketId is not null)
+      {
+        bucketMap[field.BucketId] = field.Name;
+      }
+    }
+    if (bucketMap.Count > 0)
+    {
+      _bucketToFieldNameBySet[schema.SetName] = bucketMap;
+    }
+  }
+
+  /// <summary>Exact-name lookup in the drawing's AecPropertySetDefs dictionary (the same NOD walk
+  /// PurgePropertySets uses — the only repo-evidenced way at this API surface).</summary>
+  private bool TryFindExistingDefinition(string setName, ADB.Transaction tr, out ADB.ObjectId defId)
+  {
+    defId = ADB.ObjectId.Null;
+    var db = _settingsStore.Current.Document.Database;
+    var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
+    if (!nod.Contains(PROP_SET_DEF_DICT_NAME))
+    {
+      return false;
+    }
+    var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(nod.GetAt(PROP_SET_DEF_DICT_NAME), ADB.OpenMode.ForRead);
+    foreach (ADB.DBDictionaryEntry entry in propSetDefsDict)
+    {
+      if (entry.Key == setName)
+      {
+        defId = entry.Value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// <summary>The set_key recipe computed over a LIVE definition's fields, for reuse-if-identical. Mirrors
+  /// the send-side capture exactly: DataType.ToString(), unit = UnitType display text (throw → absent, and
+  /// deliberately NOT "(none)"-filtered — the send handler doesn't filter it either).</summary>
+  private string ComputeExistingDefinitionKey(string setName, ADB.ObjectId defId, ADB.Transaction tr)
+  {
+    var setDefinition = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForRead);
+    var fields = new List<(string Name, string? DataType, string? Unit)>();
+    foreach (AAECPDB.PropertyDefinition propDef in setDefinition.Definitions)
+    {
+      _propertyHandler.TryGetValue(() => propDef.UnitType.GetTypeDisplayName(true), out string? unit);
+      fields.Add((propDef.Name, propDef.DataType.ToString(), unit));
+    }
+    return PropertySetDefinitionLadder.ComputeSetKey(setName, fields);
+  }
+
+  private ADB.ObjectId CreatePropertySetDefinitionFromSchema(
+    PropertySetSchema schema,
+    string recordName,
+    ADB.Transaction tr
+  )
+  {
+    var db = _settingsStore.Current.Document.Database;
+    using AAECPDB.DictionaryPropertySetDefinitions propSetDefs = new(db);
+
+    AAECPDB.PropertySetDefinition propSetDef = new();
+    propSetDef.SetToStandard(db);
+    propSetDef.SubSetDatabaseDefaults(db);
+    if (!string.IsNullOrEmpty(schema.SetDescription))
+    {
+      propSetDef.Description = schema.SetDescription;
+    }
+    // schema.AppliesTo is shipped but not applied: only AppliesToAll has repo-confirmed API surface
+    // (expected filter member: PropertySetDefinition.AppliesToFilter — wire when confirmed on Windows).
+    propSetDef.AppliesToAll = true;
+
+    foreach (var field in schema.Fields)
+    {
+      // Tier-3 schemas always carry a type; a null (malformed file row) degrades to Text rather than
+      // failing the whole set — the value coercion path re-checks per value anyway.
+      if (!Enum.TryParse(field.DataType, out AAEC.PropertyData.DataType dataType))
+      {
+        dataType = AAEC.PropertyData.DataType.Text;
+      }
+      AAECPDB.PropertyDefinition propDef = new() { DataType = dataType, Name = field.Name };
+      propDef.SetToStandard(db);
+      propDef.SubSetDatabaseDefaults(db);
+      if (!string.IsNullOrEmpty(field.Description))
+      {
+        propDef.Description = field.Description;
+      }
+      object? defaultValue =
+        field.DefaultBoolean.HasValue ? field.DefaultBoolean.Value
+        : field.DefaultDouble.HasValue ? field.DefaultDouble.Value
+        : field.DefaultString;
+      if (defaultValue is not null)
+      {
+        try
+        {
+          propDef.DefaultData = dataType switch
+          {
+            AAEC.PropertyData.DataType.Integer => Convert.ToInt32(defaultValue, CultureInfo.InvariantCulture),
+            AAEC.PropertyData.DataType.AutoIncrement => Convert.ToInt32(defaultValue, CultureInfo.InvariantCulture),
+            _ => defaultValue,
+          };
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(ex, "Failed to set default for property {PropertyName}", field.Name);
+        }
+      }
+      propSetDef.Definitions.Add(propDef);
+    }
+
+    propSetDefs.AddNewRecord(recordName, propSetDef);
+    tr.AddNewlyCreatedDBObject(propSetDef, true);
+    return propSetDef.ObjectId;
+  }
+#endif
 
   /// <summary>
   /// Try to bake property sets from a Speckle object to a Civil3D entity.
@@ -222,7 +412,7 @@ public class PropertySetBaker
         throw new SpeckleException($"Property set '{setName}' already exists on entity.");
       }
 
-      return AddPropertySetToEntity(entity, propertySetDefId, setData, tr);
+      return AddPropertySetToEntity(entity, setName, propertySetDefId, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -339,6 +529,7 @@ public class PropertySetBaker
 
   private bool AddPropertySetToEntity(
     ADB.Entity entity,
+    string setName,
     ADB.ObjectId propertySetDefId,
     Dictionary<string, object?> setData,
     ADB.Transaction tr
@@ -353,7 +544,7 @@ public class PropertySetBaker
 
       AAECPDB.PropertyDataServices.AddPropertySet(entity, propertySetDefId);
 
-      return TrySetPropertyValues(entity, propertySetDefId, setData, tr);
+      return TrySetPropertyValues(entity, setName, propertySetDefId, setData, tr);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
@@ -364,6 +555,7 @@ public class PropertySetBaker
 
   private bool TrySetPropertyValues(
     ADB.Entity entity,
+    string setName,
     ADB.ObjectId propertySetDefId,
     Dictionary<string, object?> setData,
     ADB.Transaction tr
@@ -382,9 +574,27 @@ public class PropertySetBaker
         propertyNameToDef[propDef.Name] = (propDef.Id, propDef.DataType);
       }
 
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+      _bucketToFieldNameBySet.TryGetValue(setName, out var bucketMap);
+#else
+      _ = setName;
+#endif
       foreach (var propertyEntry in setData)
       {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+        // Bucket-id-first field matching: internalDefinitionName is the FieldBucketId the producer shipped;
+        // the display key is only the fallback (it can drift from the authored field name).
+        string propertyName = PropertySetDefinitionLadder.ResolveFieldName(
+          propertyEntry.Key,
+          propertyEntry.Value is Dictionary<string, object?> idnDict
+          && idnDict.TryGetValue("internalDefinitionName", out var idnObj)
+            ? idnObj as string
+            : null,
+          bucketMap
+        );
+#else
         string propertyName = propertyEntry.Key;
+#endif
 
         object? value = propertyEntry.Value is Dictionary<string, object?> propertyDataDict
           ? propertyDataDict.TryGetValue("value", out var nested)

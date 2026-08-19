@@ -119,9 +119,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
     // ObjectByGeometry only covers DISPLAY edges, so it can't reach a block-definition member (a member has no
-    // render edge by design). The member stamps invert that missing direction — geometry / INSTANCE K → the member's
-    // object row — which is what BuildDefinitions needs to recover each member's layer [ENG-9110].
-    var memberIndex = DefinitionMemberStamps.Read(bundle.Properties);
+    // render edge by design). The graph-native join (DEFINES_MEMBER 25 / PLACES 24) inverts that missing direction
+    // on the object plane — member↔geometry joins on (definition, member ordinal), immune to the content-hash-dedup
+    // collision a geometry-K-keyed inversion cannot distinguish. Bundles predating the vocab (no rel 25) fall back
+    // to the @speckle.* member stamps [ENG-9110].
+    var memberIndex = TryBuildMemberIndexFromRels(rels) ?? DefinitionMemberStamps.Read(bundle.Properties);
     session.SetStat("memberStamps", memberIndex.ObjectByGeometry.Count + memberIndex.ObjectByInstance.Count);
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
@@ -141,9 +143,14 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, Guid> materialByObject;
     Dictionary<int, Guid> materialByGeometry;
     Dictionary<int, Guid> materialByInstance;
+    Dictionary<int, Guid> materialByNode;
     using (session.Phase("Materials"))
     {
-      (materialByObject, materialByGeometry, materialByInstance) = CreateMaterials(doc, bundle, objByGeom);
+      (materialByObject, materialByGeometry, materialByInstance, materialByNode) = CreateMaterials(
+        doc,
+        bundle,
+        objByGeom
+      );
     }
 
     // By-object display colours (HAS_COLOR → COLOR node), resolved to owning object like materials. appId → argb.
@@ -176,7 +183,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         var sw = Stopwatch.StartNew();
         try
         {
-          int layerIndex = ResolveLayer(doc, bundle, objK, baseLayerIndex, layerCache);
+          int layerIndex = ResolveLayer(doc, bundle, objK, baseLayerIndex, layerCache, materialByNode);
           var geometries = DecodeObjectGeometry(objK, bundle, rels, ObjectUnits(bundle, objK));
           if (geometries.Count == 0)
           {
@@ -259,6 +266,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           materialByObject,
           materialByGeometry,
           materialByInstance,
+          materialByNode,
           colorByObject,
           bakedObjectIds,
           bakedGuidsByObjK,
@@ -564,8 +572,18 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       || materialByObject.TryGetValue(appId, out materialGuid)
     )
     {
-      atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
-      atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      if (doc.Layers[layerIndex].RenderMaterial is { } layerMaterial && layerMaterial.Id == materialGuid)
+      {
+        // The material matches the object's layer's — this is the send-side flatten of a layer-inherited material
+        // (ENG-9108). Restore the authored ByLayer source instead of pinning an explicit copy, so re-assigning the
+        // layer's material keeps driving the object.
+        atts.MaterialSource = ObjectMaterialSource.MaterialFromLayer;
+      }
+      else
+      {
+        atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
+        atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
+      }
     }
     if (colorByObject.TryGetValue(appId, out int argb))
     {
@@ -609,6 +627,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, Guid> materialByObject,
     Dictionary<int, Guid> materialByGeometry,
     Dictionary<int, Guid> materialByInstance,
+    Dictionary<int, Guid> materialByNode,
     Dictionary<string, int> colorByObject,
     HashSet<string> bakedObjectIds,
     Dictionary<int, List<Guid>> bakedGuidsByObjK,
@@ -626,6 +645,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       rels,
       materialByGeometry,
       materialByInstance,
+      materialByNode,
       docUnits,
       baseLayerName,
       baseLayerIndex,
@@ -670,7 +690,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
 
       var transform = BuildTransform(instNode.Transform, instNode.Units is { Length: > 0 } u ? u : docUnits, docUnits);
-      int layerIndex = ResolveLayer(doc, bundle, objK, baseLayerIndex, layerCache);
+      int layerIndex = ResolveLayer(doc, bundle, objK, baseLayerIndex, layerCache, materialByNode);
       var atts = new ObjectAttributes { LayerIndex = layerIndex };
       if (ObjectName(bundle, objK) is { Length: > 0 } instName)
       {
@@ -756,6 +776,61 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
+  // The rel-built member index: DEFINES_MEMBER (25, def → member object, ord = member ordinal) joined against the
+  // definition's DEFINES ords recovers geometry K → member object K; PLACES (24, member object → INSTANCE node)
+  // inverts to INSTANCE K → member object K. Returns null when the bundle predates the vocabulary (no rel 25 rows)
+  // so the caller falls back to the legacy @speckle.* stamps.
+  private static DefinitionMemberIndex? TryBuildMemberIndexFromRels(ArtefactRelations rels)
+  {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions:
+    //   rels.MemberObjectsByDefinition / rels.MemberOrdByDefinition : def K → member object Ks + MEMBER ordinals,
+    //                                                                index-aligned (DEFINES_MEMBER, rel 25)
+    //   rels.PlacesByObject            : member object K → INSTANCE node K (PLACES, rel 24)
+    if (rels.MemberObjectsByDefinition.Count == 0)
+    {
+      return null;
+    }
+    var byGeometry = new Dictionary<int, int>();
+    var byInstance = new Dictionary<int, int>();
+    foreach (var kv in rels.MemberObjectsByDefinition)
+    {
+      // member ordinal → member object K for this definition
+      var objByOrd = new Dictionary<int, int>();
+      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
+      for (int m = 0; m < kv.Value.Count; m++)
+      {
+        objByOrd[memberOrds[m]] = kv.Value[m];
+      }
+      if (
+        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
+        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
+      )
+      {
+        continue;
+      }
+      for (int i = 0; i < geomKs.Count; i++)
+      {
+        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
+        {
+          byGeometry[geomKs[i]] = memberObjK;
+        }
+      }
+    }
+    foreach (var kv in rels.PlacesByObject)
+    {
+      byInstance[kv.Value] = kv.Key;
+    }
+    return new DefinitionMemberIndex(byGeometry, byInstance);
+#else
+    // No-op until the SDK vocab pin bump — the pinned ArtefactBundle reader drops unknown rels, so rel 25/24
+    // rows are not even surfaced yet. Define SDK_BUNDLE_VOCAB_ADDITIONS after bumping Speckle.Objects to a build
+    // of speckle-sharp-sdk@oguzhan/bundle-vocab-additions.
+    _ = rels;
+    return null;
+#endif
+  }
+
   // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns
   // its geometry directly (DEFINES → geometry blobs) and may also contain nested block placements (DEFINES_INSTANCE →
   // INSTANCE node). Nested definitions are built depth-first (memoized in defIndexByNode) so a parent can reference the
@@ -769,6 +844,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactRelations rels,
     Dictionary<int, Guid> materialByGeometry,
     Dictionary<int, Guid> materialByInstance,
+    Dictionary<int, Guid> materialByNode,
     string docUnits,
     string baseLayerName,
     int baseLayerIndex,
@@ -833,7 +909,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   geomK,
                   mg,
                   baseLayerIndex,
-                  layerCache
+                  layerCache,
+                  materialByNode
                 )
               );
             }
@@ -875,7 +952,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             null,
             nestedMaterial,
             baseLayerIndex,
-            layerCache
+            layerCache,
+            materialByNode
           );
           geometryList.Add(new RG.InstanceReferenceGeometry(childDefId, nestedTransform));
           attributeList.Add(nestedAtts);
@@ -972,12 +1050,17 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactBundle bundle,
     int objK,
     int baseLayerIndex,
-    Dictionary<string, int> layerCache
+    Dictionary<string, int> layerCache,
+    IReadOnlyDictionary<int, Guid> materialByNode
   )
   {
-    // Host-agnostic scene-view → grouping segments lives in the SDK (SceneViewResolver) so every connector reuses it.
-    var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
-    return segments.Count == 0 ? baseLayerIndex : GetOrCreateLayer(doc, segments, baseLayerIndex, layerCache);
+    // Host-agnostic scene-view → grouping segments lives in the SDK (SceneViewResolver). Appearance-resolved:
+    // colour prefers the NODE_HAS_COLOR edge (container argb is the pre-vocab fallback), and each segment's node K
+    // keys the layer's own render material (NODE_HAS_MATERIAL) via materialByNode.
+    var segments = SceneViewResolver.SegmentsWithAppearance(bundle, objK);
+    return segments.Count == 0
+      ? baseLayerIndex
+      : GetOrCreateLayer(doc, segments, baseLayerIndex, layerCache, materialByNode);
   }
 
   // A block-definition member's layer. The member has its own object row carrying the ordinary object-sourced
@@ -991,10 +1074,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     IReadOnlyDictionary<int, int> memberObjectByK,
     int k,
     int baseLayerIndex,
-    Dictionary<string, int> layerCache
+    Dictionary<string, int> layerCache,
+    IReadOnlyDictionary<int, Guid> materialByNode
   ) =>
     memberObjectByK.TryGetValue(k, out int memberObjK)
-      ? ResolveLayer(doc, bundle, memberObjK, baseLayerIndex, layerCache)
+      ? ResolveLayer(doc, bundle, memberObjK, baseLayerIndex, layerCache, materialByNode)
       : baseLayerIndex;
 
   // ── definition members ────────────────────────────────────────────────────────────────────────────────
@@ -1019,7 +1103,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     int? geometryK,
     Guid materialGuid,
     int baseLayerIndex,
-    Dictionary<string, int> layerCache
+    Dictionary<string, int> layerCache,
+    IReadOnlyDictionary<int, Guid> materialByNode
   )
   {
     // ObjectAttributes is IDisposable but InstanceDefinitions.Add takes ownership — disposing here would corrupt the
@@ -1027,7 +1112,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 #pragma warning disable CA2000
     var atts = new ObjectAttributes
     {
-      LayerIndex = ResolveMemberLayer(doc, bundle, memberObjectByK, k, baseLayerIndex, layerCache),
+      LayerIndex = ResolveMemberLayer(doc, bundle, memberObjectByK, k, baseLayerIndex, layerCache, materialByNode),
     };
 #pragma warning restore CA2000
     if (materialGuid != Guid.Empty)
@@ -1075,14 +1160,15 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // Creates (or reuses) the nested layer chain for the given segments under the base layer; returns the leaf index.
   private static int GetOrCreateLayer(
     RhinoDoc doc,
-    IReadOnlyList<(string Name, int? Argb)> segments,
+    IReadOnlyList<(string Name, int? Argb, int? NodeK)> segments,
     int baseLayerIndex,
-    Dictionary<string, int> cache
+    Dictionary<string, int> cache,
+    IReadOnlyDictionary<int, Guid> materialByNode
   )
   {
     int parentIndex = baseLayerIndex;
     var soFar = new List<string>();
-    foreach (var (raw, argb) in segments)
+    foreach (var (raw, argb, nodeK) in segments)
     {
       var name = RhinoUtils.CleanLayerName(string.IsNullOrWhiteSpace(raw) ? "unnamed" : raw);
       soFar.Add(name);
@@ -1095,9 +1181,19 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var layer = new Layer { Name = name, ParentLayerId = doc.Layers[parentIndex].Id };
       if (argb is int a)
       {
-        layer.Color = Color.FromArgb(a); // the layer's source colour, carried on its CONTAINER node's argb
+        layer.Color = Color.FromArgb(a); // the layer's source colour (NODE_HAS_COLOR edge, container argb fallback)
       }
       int idx = doc.Layers.Add(layer);
+      // The layer's authored render material [NODE_HAS_MATERIAL] — set on the doc-attached layer so the
+      // assignment commits; objects that inherited it come back as MaterialFromLayer (see BakeObject).
+      if (
+        nodeK is int nk
+        && materialByNode.TryGetValue(nk, out Guid layerMaterialGuid)
+        && RenderContent.FromId(doc, layerMaterialGuid) is RhinoRenderMaterial layerMaterial
+      )
+      {
+        doc.Layers[idx].RenderMaterial = layerMaterial;
+      }
       cache[key] = idx;
       parentIndex = idx;
     }
@@ -1108,7 +1204,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private (
     Dictionary<string, Guid> byObject,
     Dictionary<int, Guid> byGeometry,
-    Dictionary<int, Guid> byInstance
+    Dictionary<int, Guid> byInstance,
+    Dictionary<int, Guid> byNode
   ) CreateMaterials(RhinoDoc doc, ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var guidByMaterialNode = new Dictionary<int, Guid>();
@@ -1211,15 +1308,29 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // Instance-sourced (ord=1): a material painted directly on a block placement (Rhino MaterialFromObject on
     // the instance itself), keyed by the placement's INSTANCE node K rather than any geometry it owns — a
     // placement owns no geometry of its own, so it's invisible to the geometry loop above [ENG-9109].
-    var byInstance = new Dictionary<int, Guid>();
-    foreach (var kv in bundle.Relations.MaterialByInstance)
+    var byInstance = ProjectMaterialGuids(bundle.Relations.MaterialByInstance, guidByMaterialNode);
+
+    // Node-sourced (NODE_HAS_MATERIAL): a container's authored render material — e.g. a Rhino layer material —
+    // keyed by the container node K; GetOrCreateLayer assigns it to the rebuilt layer.
+    var byNode = ProjectMaterialGuids(bundle.Relations.MaterialByNode, guidByMaterialNode);
+    return (byObject, byGeometry, byInstance, byNode);
+  }
+
+  // K → material-node-K rel map, projected onto the render-material guids this receive created.
+  private static Dictionary<int, Guid> ProjectMaterialGuids(
+    IReadOnlyDictionary<int, int> materialNodeByK,
+    Dictionary<int, Guid> guidByMaterialNode
+  )
+  {
+    var result = new Dictionary<int, Guid>();
+    foreach (var kv in materialNodeByK)
     {
       if (guidByMaterialNode.TryGetValue(kv.Value, out Guid guid))
       {
-        byInstance[kv.Key] = guid;
+        result[kv.Key] = guid;
       }
     }
-    return (byObject, byGeometry, byInstance);
+    return result;
   }
 
   // True when an already-present render material still carries the values this bundle asks for, i.e. re-receiving hasn't

@@ -750,11 +750,12 @@ public sealed class RevitFamilyBaker : IDisposable
 
   private static string GetFamilyName(string? name, string? fallbackId, bool useFallbackIdWhenUnnamed = true)
   {
-    var baseName = name;
-    if (string.IsNullOrWhiteSpace(baseName))
+    if (string.IsNullOrWhiteSpace(name))
     {
       return useFallbackIdWhenUnnamed && fallbackId is { Length: > 0 } id ? $"Unnamed_Block_{id}" : "Unnamed_Block";
     }
+    // net48 reference assemblies lack [NotNullWhen(false)] on IsNullOrWhiteSpace, so assert what the guard proved.
+    string baseName = name!;
 
     char[] buffer = baseName.ToCharArray();
     bool changed = false;
