@@ -34,6 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--Better compatiblity with BimCAT plugin-->
+    <PackageReference Include="Microsoft.Data.Sqlite" VersionOverride="8.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Plugin\Speckle.Connectors.Revit2023.addin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

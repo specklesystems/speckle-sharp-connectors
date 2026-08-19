@@ -165,7 +165,12 @@ public class SpeckleCollectionWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public SpeckleCollectionWrapper DeepCopy() =>
     new()
     {
-      Base = new Collection(Collection.name) { applicationId = Collection.applicationId, id = Collection.id },
+      Base = new Collection
+      {
+        name = Collection.name,
+        applicationId = Collection.applicationId,
+        id = Collection.id,
+      },
       Color = Color,
       Material = Material,
       ApplicationId = ApplicationId,

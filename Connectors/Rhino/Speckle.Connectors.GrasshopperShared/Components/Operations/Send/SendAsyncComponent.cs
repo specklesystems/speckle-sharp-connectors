@@ -313,7 +313,7 @@ public class SendAsyncComponent : GH_AsyncComponent<SendAsyncComponent>
 
       rootBase = new SpeckleCollectionWrapper
       {
-        Base = new Speckle.Sdk.Models.Collections.Collection(),
+        Base = new Speckle.Sdk.Models.Collections.Collection() { name = docName },
         Path = [docName],
         Color = null,
         Material = null,
@@ -546,14 +546,10 @@ public class SendComponentWorker : WorkerInstance<SendAsyncComponent>
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object>() { { "isAsync", true }, { "auto", Parent.AutoSend } };
-    if (sendInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-    }
 
-    var mixPanelManager = scope.ServiceProvider.GetRequiredService<IMixPanelManager>();
-    await mixPanelManager
-      .TrackEvent(MixPanelEvents.Send, Parent.ApiClient.Account, customProperties)
+    var analyticsManager = scope.ServiceProvider.GetRequiredService<IPostHogManager>();
+    await analyticsManager
+      .TrackEvent(AnalyticsEvent.Send, Parent.ApiClient.Account, sendInfo.WorkspaceId, customProperties)
       .ConfigureAwait(false);
 
     SpeckleUrlModelVersionResource createdVersion = new(

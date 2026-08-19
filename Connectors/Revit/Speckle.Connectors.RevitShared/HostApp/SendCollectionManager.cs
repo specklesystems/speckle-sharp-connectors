@@ -59,7 +59,7 @@ public class SendCollectionManager
         // create main model collection if it doesn't exist yet
         if (_mainModelCollection == null)
         {
-          _mainModelCollection = new Collection(rootObject.name);
+          _mainModelCollection = new Collection { name = rootObject.name };
           rootObject.elements.Add(_mainModelCollection);
         }
 
@@ -75,7 +75,7 @@ public class SendCollectionManager
         if (!_linkedModelCollections.TryGetValue(displayName, out Collection? linkedModelCollection))
         {
           // First time seeing this model with this display name
-          linkedModelCollection = new Collection(displayName);
+          linkedModelCollection = new Collection() { name = displayName };
           rootObject.elements.Add(linkedModelCollection);
           _linkedModelCollections[displayName] = linkedModelCollection;
         }
@@ -152,7 +152,7 @@ public class SendCollectionManager
       }
       else
       {
-        childCollection = new Collection(pathItem);
+        childCollection = new Collection { name = pathItem };
         previousCollection.elements.Add(childCollection);
         _collectionCache[flatPathName] = childCollection;
       }

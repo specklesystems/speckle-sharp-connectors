@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using GH_IO.Serialization;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
@@ -98,6 +99,9 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
     pManager.AddTextParameter("Version ID", "V", "ID of the created version", GH_ParamAccess.item);
   }
 
+  // "Properties" was added ahead of "Run", so files predating it need realigning
+  public override bool Read(GH_IReader reader) => this.ReadRealigningAddedInputs(reader, base.Read);
+
   protected override SendComponentInput GetInput(IGH_DataAccess da)
   {
     if (da.Iteration != 0)
@@ -139,7 +143,7 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
       rootBase = new SpeckleCollectionWrapper
       {
-        Base = new Collection(),
+        Base = new Collection { name = docName },
         Name = docName,
         Path = [docName],
         Color = null,
@@ -305,13 +309,9 @@ public class SendComponent : SpeckleTaskCapableComponent<SendComponentInput, Sen
 
     // TODO: If we have NodeRun events later, better to have `ComponentTracker` to use across components
     var customProperties = new Dictionary<string, object> { { "isAsync", false } };
-    if (sendInfo.WorkspaceId != null)
-    {
-      customProperties.Add("workspace_id", sendInfo.WorkspaceId);
-    }
 
-    var mixpanel = PriorityLoader.Container.GetRequiredService<IMixPanelManager>();
-    await mixpanel.TrackEvent(MixPanelEvents.Send, account, customProperties);
+    var analytics = PriorityLoader.Container.GetRequiredService<IPostHogManager>();
+    await analytics.TrackEvent(AnalyticsEvent.Send, account, sendInfo.WorkspaceId, customProperties);
 
     SpeckleUrlModelVersionResource createdVersionResource = new(
       new(sendInfo.Account.id, null, sendInfo.Account.serverInfo.url),

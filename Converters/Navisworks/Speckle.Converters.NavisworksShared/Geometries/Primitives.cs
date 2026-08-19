@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Speckle.Converter.Navisworks.Geometry;
 
@@ -122,13 +122,42 @@ public readonly struct SafePoint
   }
 }
 
+public readonly struct SafeUv
+{
+  public double U { get; }
+  public double V { get; }
+
+  public SafeUv(double u, double v)
+  {
+    U = u;
+    V = v;
+  }
+}
+
 public readonly struct SafeTriangle
 {
   public SafeVertex Vertex1 { get; }
   public SafeVertex Vertex2 { get; }
   public SafeVertex Vertex3 { get; }
+  public string MaterialKey { get; }
+  public SafeVector? FaceNormal { get; }
+  public SafeUv? Uv1 { get; }
+  public SafeUv? Uv2 { get; }
+  public SafeUv? Uv3 { get; }
 
   public SafeTriangle(NAV.Vector3D v1, NAV.Vector3D v2, NAV.Vector3D v3)
+    : this(v1, v2, v3, string.Empty, null, null, null, null) { }
+
+  public SafeTriangle(
+    NAV.Vector3D v1,
+    NAV.Vector3D v2,
+    NAV.Vector3D v3,
+    string materialKey,
+    SafeVector? faceNormal,
+    SafeUv? uv1,
+    SafeUv? uv2,
+    SafeUv? uv3
+  )
   {
     if (v1 == null || v2 == null || v3 == null)
     {
@@ -138,6 +167,11 @@ public readonly struct SafeTriangle
     Vertex1 = new SafeVertex(v1);
     Vertex2 = new SafeVertex(v2);
     Vertex3 = new SafeVertex(v3);
+    MaterialKey = materialKey ?? string.Empty;
+    FaceNormal = faceNormal;
+    Uv1 = uv1;
+    Uv2 = uv2;
+    Uv3 = uv3;
   }
 }
 

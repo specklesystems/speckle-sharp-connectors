@@ -14,8 +14,7 @@ concurrency:
 
 jobs:
   test-deploy-pipeline:
-    uses: './.github/workflows/release.yml'
+    uses: './.github/workflows/release.yml' # zizmor: ignore[secrets-inherit] zizmor's suggested fix here doesn't work
     permissions:
       contents: read
-    secrets:
-      CONNECTORS_GH_TOKEN: ${{ secrets.CONNECTORS_GH_TOKEN }}
+    secrets: inherit

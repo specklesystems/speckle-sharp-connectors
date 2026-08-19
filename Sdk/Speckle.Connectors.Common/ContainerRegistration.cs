@@ -20,7 +20,7 @@ public static class ContainerRegistration
     serviceCollection.AddScoped<RootObjectUnpacker>();
     serviceCollection.AddScoped<ReceiveOperation>();
     serviceCollection.AddSingleton<IAccountService, AccountService>();
-    serviceCollection.AddSingleton<IMixPanelManager, MixPanelManager>();
+    serviceCollection.AddSingleton<IPostHogManager, PostHogManager>();
     serviceCollection.AddSingleton<ISerializationOptions, SerializationOptions>();
     serviceCollection.AddTransient(typeof(ILogger<>), typeof(Logger<>));
   }

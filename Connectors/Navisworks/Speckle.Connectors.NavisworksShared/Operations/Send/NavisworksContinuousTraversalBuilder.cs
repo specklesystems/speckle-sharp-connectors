@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Speckle.Connector.Navisworks.HostApp;
 using Speckle.Connectors.Common.Builders;
@@ -7,6 +8,7 @@ using Speckle.Converter.Navisworks.Services;
 using Speckle.Converter.Navisworks.Settings;
 using Speckle.Converters.Common;
 using Speckle.Objects.Data;
+using Speckle.Objects.Geometry;
 using Speckle.Sdk;
 using Speckle.Sdk.Logging;
 using Speckle.Sdk.Models;
@@ -34,11 +36,18 @@ public class NavisworksContinuousTraversalBuilder(
   NavisworksColorUnpacker colorUnpacker,
   Speckle.Converter.Navisworks.Constants.Registers.IInstanceFragmentRegistry instanceRegistry,
   IElementSelectionService elementSelectionService,
-  IUiUnitsCache uiUnitsCache
+  GeometryConversionContext geometryConversionContext,
+  IUiUnitsCache uiUnitsCache,
+  IQuickPropertyDefinitionsCache quickPropertyDefinitionsCache,
+  IModelItemPropertySetsCache modelItemPropertySetsCache,
+  NavisworksSendBenchmarkLogger benchmarkLogger
 ) : IRootContinuousTraversalBuilder<NAV.ModelItem>
 {
   private bool SkipNodeMerging { get; set; }
   private bool DisableGroupingForInstanceTesting { get; set; }
+  private readonly Dictionary<string, (string Name, string Path)> _elementNameAndPathCache = new(
+    StringComparer.Ordinal
+  );
 
   public async Task<RootObjectBuilderResult> Build(
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
@@ -52,27 +61,38 @@ public class NavisworksContinuousTraversalBuilder(
     SkipNodeMerging = false;
     DisableGroupingForInstanceTesting = false;
 #endif
+    PropertyExtractionMetricsTracker.Reset();
+    quickPropertyDefinitionsCache.Reset();
+    modelItemPropertySetsCache.Reset();
+    GeometryConversionMetricsTracker.Reset();
+    MeshOptimizationMetricsTracker.Reset();
+    _elementNameAndPathCache.Clear();
+    NavisworksGcSnapshot gcSnapshot = NavisworksGcSnapshot.Capture();
     using var activity = activityFactory.Start("Build");
 
     ValidateInputs(navisworksModelItems, projectId, onOperationProgressed);
 
     var rootCollection = InitializeRootCollection();
+    long conversionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     (Dictionary<string, Base?> convertedElements, List<SendConversionResult> conversionResults) =
       await ConvertModelItemsAsync(navisworksModelItems, onOperationProgressed, cancellationToken);
+    long conversionEndMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     ValidateConversionResults(conversionResults);
 
     var groupedNodes = SkipNodeMerging ? [] : GroupSiblingGeometryNodes(navisworksModelItems);
     var finalElements = BuildFinalElements(convertedElements, groupedNodes);
+    var twoDElementPaths = Build2DElementPathSet(convertedElements);
 
-    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes);
+    await AddProxiesToCollection(rootCollection, navisworksModelItems, groupedNodes, twoDElementPaths);
 
     AddInstanceDefinitionsToCollection(rootCollection, ref finalElements);
 
-    // Process each final element through the send pipeline
+    // Process each final element through the Send pipeline
     int processedCount = 0;
     int total = finalElements.Count;
     var processedElements = new List<Base>(finalElements.Count);
+    var serializationStopwatch = Stopwatch.StartNew();
     foreach (var element in finalElements)
     {
       cancellationToken.ThrowIfCancellationRequested();
@@ -85,12 +105,36 @@ public class NavisworksContinuousTraversalBuilder(
         new CardProgress($"Serializing objects {processedCount:N0}/{total:N0}", (double)processedCount / total)
       );
     }
+    serializationStopwatch.Stop();
 
     rootCollection.elements = processedElements;
+    logger.LogInformation(
+      "Serialization complete; handoff to upload phase. serializedObjects={SerializedObjectCount}",
+      processedCount
+    );
 
     // Process the root collection and wait for all uploads to complete
+    var uploadStopwatch = Stopwatch.StartNew();
     await sendPipeline.Process(rootCollection);
     await sendPipeline.WaitForUpload();
+    uploadStopwatch.Stop();
+    benchmarkLogger.LogConversionMetrics();
+    benchmarkLogger.LogSendPhaseTimingMetrics(
+      conversionStartMs,
+      conversionEndMs,
+      serializationStopwatch.Elapsed.TotalMilliseconds,
+      uploadStopwatch.Elapsed.TotalMilliseconds,
+      processedCount,
+      gcSnapshot
+    );
+    benchmarkLogger.LogSendBenchmarkSummary(
+      conversionStartMs,
+      conversionEndMs,
+      serializationStopwatch.Elapsed.TotalMilliseconds,
+      uploadStopwatch.Elapsed.TotalMilliseconds,
+      finalElements.Count,
+      processedCount
+    );
 
     return new RootObjectBuilderResult(rootCollection, conversionResults);
   }
@@ -137,14 +181,44 @@ public class NavisworksContinuousTraversalBuilder(
     int processedCount = 0;
     int totalCount = navisworksModelItems.Count;
 
-    foreach (var item in navisworksModelItems)
-    {
-      cancellationToken.ThrowIfCancellationRequested();
-      var converted = ConvertNavisworksItem(item, convertedBases);
-      results.Add(converted);
+    onOperationProgressed.Report(new CardProgress("Converting", 0));
 
-      processedCount++;
-      onOperationProgressed.Report(new CardProgress("Converting", (double)processedCount / totalCount));
+    int visibleGeometryCount = CountVisibleGeometryItems(navisworksModelItems);
+    double geometryWeight =
+      visibleGeometryCount == 0
+        ? 0
+        : Clamp(Math.Max(visibleGeometryCount / (double)Math.Max(totalCount, 1), 0.75), 0.75, 0.95);
+
+    geometryConversionContext.PrimeBatch(
+      navisworksModelItems,
+      geometryWeight > 0
+        ? (fraction, pathsProcessed) =>
+          onOperationProgressed.Report(
+            new CardProgress($"Converting (Path {pathsProcessed:N0})", fraction * geometryWeight)
+          )
+        : null
+    );
+    try
+    {
+      const int ITEM_PROGRESS_REPORT_INTERVAL = 1000;
+
+      foreach (var item in navisworksModelItems)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        var converted = ConvertNavisworksItem(item, convertedBases);
+        results.Add(converted);
+
+        processedCount++;
+        if (processedCount % ITEM_PROGRESS_REPORT_INTERVAL == 0 || processedCount == totalCount)
+        {
+          double itemProgress = geometryWeight + (1 - geometryWeight) * processedCount / totalCount;
+          onOperationProgressed.Report(new CardProgress("Converting", itemProgress));
+        }
+      }
+    }
+    finally
+    {
+      geometryConversionContext.Clear();
     }
 
     return Task.FromResult((convertedBases, results));
@@ -152,10 +226,22 @@ public class NavisworksContinuousTraversalBuilder(
 
   private static void ValidateConversionResults(List<SendConversionResult> results)
   {
-    if (results.All(x => x.Status == Status.ERROR))
+    var allErrored = results.All(t => t.Status == Status.ERROR);
+
+    if (allErrored)
     {
       throw new SpeckleException("Failed to convert all objects.");
     }
+  }
+
+  private static double Clamp(double value, double min, double max)
+  {
+    if (value < min)
+    {
+      return min;
+    }
+
+    return value > max ? max : value;
   }
 
   private List<Base> BuildFinalElements(
@@ -163,8 +249,8 @@ public class NavisworksContinuousTraversalBuilder(
     Dictionary<string, List<NAV.ModelItem>> groupedNodes
   )
   {
-    var finalElements = new List<Base>();
-    var processedPaths = new HashSet<string>();
+    var finalElements = new List<Base>(convertedBases.Count);
+    var processedPaths = new HashSet<string>(convertedBases.Count, StringComparer.Ordinal);
 
     if (!DisableGroupingForInstanceTesting)
     {
@@ -209,8 +295,9 @@ public class NavisworksContinuousTraversalBuilder(
     foreach (var group in groupedNodes)
     {
       var siblingBases = new List<Base>(group.Value.Count);
-      foreach (var itemPath in group.Value.Select(elementSelectionService.GetModelItemPath))
+      foreach (var t in group.Value)
       {
+        var itemPath = elementSelectionService.GetModelItemPath(t);
         processedPaths.Add(itemPath);
         if (convertedBases.TryGetValue(itemPath, out var convertedBase) && convertedBase != null)
         {
@@ -231,8 +318,13 @@ public class NavisworksContinuousTraversalBuilder(
     HashSet<string> processedPaths
   )
   {
-    foreach (var kvp in convertedBases.Where(kvp => !processedPaths.Contains(kvp.Key)))
+    foreach (var kvp in convertedBases)
     {
+      if (processedPaths.Contains(kvp.Key))
+      {
+        continue;
+      }
+
       switch (kvp.Value)
       {
         case null:
@@ -253,8 +345,14 @@ public class NavisworksContinuousTraversalBuilder(
 
   private (string name, string path) GetElementNameAndPath(string applicationId)
   {
+    if (_elementNameAndPathCache.TryGetValue(applicationId, out var cached))
+    {
+      return (cached.Name, cached.Path);
+    }
+
     var modelItem = elementSelectionService.GetModelItemFromPath(applicationId);
     var context = HierarchyHelper.ExtractContext(modelItem);
+    _elementNameAndPathCache[applicationId] = (context.Name, context.Path);
     return (context.Name, context.Path);
   }
 
@@ -263,19 +361,31 @@ public class NavisworksContinuousTraversalBuilder(
     string cleanParentPath = ElementSelectionHelper.GetCleanPath(groupKey);
     (string name, string path) = GetElementNameAndPath(cleanParentPath);
 
-    int estimatedCapacity = siblingBases.Sum(b => (b["displayValue"] as List<Base>)?.Count ?? 0);
+    var estimatedCapacity = 0;
+    foreach (var t in siblingBases)
+    {
+      if (t["displayValue"] is List<Base> siblingDisplayValues)
+      {
+        estimatedCapacity += siblingDisplayValues.Count;
+      }
+    }
+
     var displayValues = new List<Base>(estimatedCapacity);
-    displayValues.AddRange(
-      siblingBases
-        .Where(sibling => sibling["displayValue"] is List<Base>)
-        .SelectMany(sibling => (List<Base>)sibling["displayValue"]!)
-    );
+    foreach (var t in siblingBases)
+    {
+      if (t["displayValue"] is not List<Base> siblingDisplayValues)
+      {
+        continue;
+      }
+
+      displayValues.AddRange(siblingDisplayValues);
+    }
 
     return new NavisworksObject
     {
       name = name,
       displayValue = displayValues,
-      properties = siblingBases.First()["properties"] as Dictionary<string, object?> ?? [],
+      properties = siblingBases[0]["properties"] as Dictionary<string, object?> ?? [],
       units = converterSettings.Current.Derived.SpeckleUnits,
       applicationId = groupKey,
       ["path"] = path,
@@ -307,7 +417,8 @@ public class NavisworksContinuousTraversalBuilder(
   private Task AddProxiesToCollection(
     Collection rootCollection,
     IReadOnlyList<NAV.ModelItem> navisworksModelItems,
-    Dictionary<string, List<NAV.ModelItem>> groupedNodes
+    Dictionary<string, List<NAV.ModelItem>> groupedNodes,
+    ISet<string> twoDElementPaths
   )
   {
     using var _ = activityFactory.Start("UnpackProxies");
@@ -318,13 +429,39 @@ public class NavisworksContinuousTraversalBuilder(
       rootCollection[RENDER_MATERIAL] = renderMaterials;
     }
 
-    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes);
+    var colors = colorUnpacker.UnpackColor(navisworksModelItems, groupedNodes, twoDElementPaths);
     if (colors.Count > 0)
     {
       rootCollection[COLOR] = colors;
     }
 
     return Task.CompletedTask;
+  }
+
+  private static HashSet<string> Build2DElementPathSet(Dictionary<string, Base?> convertedBases)
+  {
+    var twoDElementPaths = new HashSet<string>();
+
+    foreach (var kvp in convertedBases)
+    {
+      var path = kvp.Key;
+      var convertedBase = kvp.Value;
+      if (convertedBase?["displayValue"] is not List<Base> displayValues || displayValues.Count == 0)
+      {
+        continue;
+      }
+
+      bool hasMesh = displayValues.Any(x => x is Mesh);
+      bool hasLine = displayValues.Any(x => x is Line);
+      bool hasInstanceProxy = displayValues.Any(x => x is InstanceProxy);
+
+      if (!hasMesh && hasLine && !hasInstanceProxy)
+      {
+        twoDElementPaths.Add(path);
+      }
+    }
+
+    return twoDElementPaths;
   }
 
   private void AddInstanceDefinitionsToCollection(Collection rootCollection, ref List<Base> finalElements)
@@ -380,6 +517,20 @@ public class NavisworksContinuousTraversalBuilder(
       instanceDefinitionProxies.Count,
       allDefinitionGeometries.Count
     );
+  }
+
+  private int CountVisibleGeometryItems(IReadOnlyList<NAV.ModelItem> items)
+  {
+    int count = 0;
+    foreach (var item in items)
+    {
+      if (item.HasGeometry && elementSelectionService.IsVisible(item))
+      {
+        count++;
+      }
+    }
+
+    return count;
   }
 
   private SendConversionResult ConvertNavisworksItem(

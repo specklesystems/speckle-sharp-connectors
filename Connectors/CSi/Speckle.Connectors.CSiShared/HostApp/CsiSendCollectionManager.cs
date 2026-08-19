@@ -39,5 +39,6 @@ public class CsiSendCollectionManager
 
   protected virtual string GetCollectionPath(Base convertedObject) => convertedObject["type"]?.ToString() ?? "Unknown";
 
-  protected virtual Collection CreateCollection(Base convertedObject) => new(GetCollectionPath(convertedObject));
+  protected virtual Collection CreateCollection(Base convertedObject) =>
+    new() { name = GetCollectionPath(convertedObject) };
 }

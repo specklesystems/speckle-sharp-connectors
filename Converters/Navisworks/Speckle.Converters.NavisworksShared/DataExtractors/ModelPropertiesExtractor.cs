@@ -7,7 +7,7 @@ public class ModelPropertiesExtractor(IConverterSettingsStore<NavisworksConversi
 {
   internal Dictionary<string, object?>? GetModelProperties(NAV.Model model)
   {
-    if (settingsStore.Current.User.ExcludeProperties)
+    if (settingsStore.Current.User.PropertyDetailLevel == PropertyDetailLevel.None)
     {
       return null;
     }
