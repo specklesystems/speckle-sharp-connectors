@@ -395,8 +395,7 @@
       "speckle.objects": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Sdk": "[1.0.0, )",
-          "System.Memory": "[4.5.5, )"
+          "Speckle.Sdk": "[1.0.0, )"
         }
       },
       "speckle.sdk": {
