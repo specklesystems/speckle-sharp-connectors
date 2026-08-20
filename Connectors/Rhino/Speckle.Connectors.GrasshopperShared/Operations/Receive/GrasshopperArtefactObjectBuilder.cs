@@ -116,8 +116,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       if (geometries.Count == 0 && instCount == 0)
       {
         // A room, level or area carried properties and no geometry in v3, and still counts as an object [ENG-9159].
-        // Only re-emit one when the source really was a DataObject: WasDataObject reads speckle_type, so the
-        // property-carrying sidecars we intern ourselves (__collection_topology_, which have none) stay out.
+        // Only re-emit one when the source really was a DataObject - WasDataObject reads speckle_type.
         if (!groupAsDataObjects || !WasDataObject(props, 0))
         {
           continue;
@@ -1014,37 +1013,17 @@ internal sealed class GrasshopperArtefactObjectBuilder
     return previous;
   }
 
-  // Resolves each CONTAINER node's topology (R4) from its send-side sidecar object (WalkCollection /
-  // CollectionTopologyAppId), via a one-off reverse of ObjectAppIds.
+  // Each CONTAINER node's topology (R4), from nodes.gh_topology.
   private static Dictionary<int, string> CreateCollectionTopologies(ArtefactBundle bundle)
   {
-    var objKByAppId = new Dictionary<string, int>(StringComparer.Ordinal);
-    foreach (var kv in bundle.ObjectAppIds)
-    {
-      objKByAppId[kv.Value] = kv.Key;
-    }
-
     var result = new Dictionary<int, string>();
     foreach (var kv in bundle.Nodes)
     {
-      if (kv.Value.Kind != NodeKind.Container)
+      if (kv.Value.Kind == NodeKind.Container && kv.Value.GhTopology is { Length: > 0 } topology)
       {
-        continue;
-      }
-      if (
-        objKByAppId.TryGetValue(CollectionTopologyAppId(kv.Key), out int topologyObjK)
-        && bundle.Properties.TryGetValue(topologyObjK, out var topologyProps)
-        && topologyProps.TryGetValue("topology", out var topologyVal)
-        && topologyVal is string topologyStr
-      )
-      {
-        result[kv.Key] = topologyStr;
+        result[kv.Key] = topology;
       }
     }
     return result;
   }
-
-  // Mirrors GrasshopperArtifactRootObjectBuilder.CollectionTopologyAppId — must stay byte-identical so the deterministic
-  // key round-trips.
-  private static string CollectionTopologyAppId(int collectionNodeK) => $"__collection_topology_{collectionNodeK}";
 }

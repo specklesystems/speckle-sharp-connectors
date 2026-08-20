@@ -188,20 +188,15 @@ public class GrasshopperArtifactRootObjectBuilder(
   {
     ctx.CancellationToken.ThrowIfCancellationRequested();
     collWrapper.ApplicationId ??= collWrapper.GetSpeckleApplicationId();
-    int collK = ctx.Pipeline.AddCollection(collWrapper.ApplicationId, collWrapper.Name, parentCollK, "Collection");
-
-    // GH data-tree topology (R4) has no home on AddCollection's columns, so it rides on a sidecar object keyed off
-    // the collection's own node K (CollectionTopologyAppId) instead of an SDK signature change.
-    if (collWrapper.Topology is { Length: > 0 } topology)
-    {
-      string topologyAppId = CollectionTopologyAppId(collK);
-      ctx.Pipeline.InternObject(topologyAppId);
-      ctx.Pipeline.AddProperties(
-        topologyAppId,
-        s_emptyProps,
-        [new KeyValuePair<string, object?>("topology", topology)]
-      );
-    }
+    // GH data-tree topology rides nodes.gh_topology, the column the spec carves out for it. It used to need a
+    // synthetic object; the objects table is for real objects [ENG-9291].
+    int collK = ctx.Pipeline.AddCollection(
+      collWrapper.ApplicationId,
+      collWrapper.Name,
+      parentCollK,
+      "Collection",
+      ghTopology: collWrapper.Topology is { Length: > 0 } topology ? topology : null
+    );
 
     // collection-level color/material are collected for parity with the v1 walk; they resolve to no geometry K and are
     // therefore not emitted as HAS_* edges (same as Rhino's layer-level materials).
@@ -596,10 +591,6 @@ public class GrasshopperArtifactRootObjectBuilder(
   }
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
-
-  // Deterministic key for a collection's topology sidecar object (see WalkCollection).
-  // Mirrored in GrasshopperArtefactObjectBuilder.CollectionTopologyAppId — must stay byte-identical.
-  private static string CollectionTopologyAppId(int collectionNodeK) => $"__collection_topology_{collectionNodeK}";
 
   private static IReadOnlyDictionary<string, object?> PropertiesOf(Base @base) =>
     @base["properties"] is IReadOnlyDictionary<string, object?> props ? props : s_emptyProps;
