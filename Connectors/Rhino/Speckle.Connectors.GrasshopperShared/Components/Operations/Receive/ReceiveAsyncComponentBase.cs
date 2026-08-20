@@ -632,7 +632,15 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
         );
       }
 
-      Output = new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
+      Output = new ReceiveComponentOutput
+      {
+        RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
+        // eav.model - an absent file reads as empty, so nothing rather than an empty group
+        RootProperties =
+          bundle.ModelProperties.Count > 0
+            ? new SpecklePropertyGroupGoo(bundle.ModelProperties.ToDictionary(kv => kv.Key, kv => kv.Value))
+            : null,
+      };
       return true;
     }
     catch (Exception ex) when (!ex.IsFatal())

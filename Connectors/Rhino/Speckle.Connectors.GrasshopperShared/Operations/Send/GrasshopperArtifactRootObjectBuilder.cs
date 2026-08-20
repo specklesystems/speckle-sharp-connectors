@@ -145,6 +145,12 @@ public class GrasshopperArtifactRootObjectBuilder(
       onOperationProgressed,
       cancellationToken
     );
+    // Model-wide properties ride eav.model - object-less rows, so no synthetic object needed.
+    if (root is SpeckleRootCollectionWrapper { Properties: { Count: > 0 } modelProps })
+    {
+      EmitModelProperties(pipeline, session, modelProps, null);
+    }
+
     WalkCollection(ctx, root, null);
 
     EmitValueNodes(
@@ -555,6 +561,36 @@ public class GrasshopperArtifactRootObjectBuilder(
           // by-object colour on a placement: the object and geometry namespaces overlap, hence the tag
           pipeline.HasColor(objK, colorK, srcIsObject: true);
         }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Flattens the nested dict into the dotted paths eav.model expects, one row per leaf. Same delimiter as
+  /// SpecklePropertyGroupGoo, so the reader nests it straight back.
+  /// </summary>
+  private static void EmitModelProperties(
+    ObjectsArtifactPipeline pipeline,
+    ArtefactSessionLog session,
+    IReadOnlyDictionary<string, object?> props,
+    string? prefix
+  )
+  {
+    foreach (var kv in props)
+    {
+      string path = prefix is null ? kv.Key : $"{prefix}{Constants.PROPERTY_PATH_DELIMITER}{kv.Key}";
+      switch (kv.Value)
+      {
+        case IReadOnlyDictionary<string, object?> nested:
+          EmitModelProperties(pipeline, session, nested, path);
+          break;
+        // a converted Plane or Vector is the one leaf eav.model can't hold - stringifying it stores a type name
+        case Base:
+          session.Increment("modelPropertiesSkipped");
+          break;
+        default:
+          pipeline.AddModelProperty(path, kv.Value); // drops nulls and non-finite numerics itself
+          break;
       }
     }
   }

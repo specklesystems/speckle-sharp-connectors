@@ -23,7 +23,7 @@ public class SendArtefactComponent : SendComponentBase
   public override GH_Exposure Exposure => GH_Exposure.primary;
 
   protected override bool UseArtifacts => true;
-  protected override bool HasModelPropertiesInput => false;
+  protected override bool HasModelPropertiesInput => true;
 
   public SendArtefactComponent()
     : base(
