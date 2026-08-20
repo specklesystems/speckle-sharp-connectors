@@ -11,6 +11,7 @@ namespace Speckle.Converters.Autocad.Geometry;
 /// The return type is (Entity,Base) instead of the specific type (PolyfaceMesh, Mesh) so this result can be picked up by a generic list case in the SpeckleToHost connector object baking. This is essentially one-to-many fallback conversion.
 /// </remarks>
 [NameAndRankValue(typeof(SOG.Brep), NameAndRankValueAttribute.SPECKLE_DEFAULT_RANK)]
+[Obsolete("Brep is obsolete")]
 public class BrepToHostConverter : IToHostTopLevelConverter, ITypedConverter<SOG.Brep, List<(ADB.Entity a, Base b)>>
 {
   private readonly ITypedConverter<SOG.Mesh, ADB.Entity> _meshConverter;
