@@ -7,10 +7,7 @@ namespace Speckle.Connectors.GrasshopperShared.Components.Operations.Send;
 /// <summary>
 /// Asynchronous Publish for Speckle 4.0. Writes an artefact bundle only.
 /// </summary>
-/// <remarks>
-/// No model-wide properties input: the bundle has nowhere to put them, and the sidecar that would have carried them
-/// was rejected. Revisit if a root-properties design lands in the bundle spec.
-/// </remarks>
+/// <remarks>Model-wide properties ride eav.model [ENG-9290].</remarks>
 [Guid("5D0069FF-827E-4D43-8087-6F7F5C70812F")]
 public class SendArtefactAsyncComponent : SendAsyncComponentBase
 {
