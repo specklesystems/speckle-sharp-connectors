@@ -26,7 +26,8 @@ public class ReceiveArtefactAsyncComponent : ReceiveAsyncComponentBase
     : base("Load", "L", "Load a model from Speckle", ComponentCategories.PRIMARY_RIBBON, ComponentCategories.OPERATIONS)
   { }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+  {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -35,6 +36,18 @@ public class ReceiveArtefactAsyncComponent : ReceiveAsyncComponentBase
       GH_ParamAccess.item
     );
 
-  public override void WriteOutputs(IGH_DataAccess da, ReceiveComponentOutput result) =>
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Model-wide properties of the loaded version",
+      GH_ParamAccess.item
+    );
+  }
+
+  public override void WriteOutputs(IGH_DataAccess da, ReceiveComponentOutput result)
+  {
     da.SetData(0, result.RootObject);
+    da.SetData(1, result.RootProperties);
+  }
 }

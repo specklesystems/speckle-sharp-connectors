@@ -357,7 +357,15 @@ public abstract class ReceiveComponentBase(
         AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not mark the version as received ({ex.Message}).");
       }
 
-      return new ReceiveComponentOutput { RootObject = new SpeckleCollectionWrapperGoo(rootWrapper) };
+      return new ReceiveComponentOutput
+      {
+        RootObject = new SpeckleCollectionWrapperGoo(rootWrapper),
+        // eav.model - an absent file reads as empty, so nothing rather than an empty group
+        RootProperties =
+          bundle.ModelProperties.Count > 0
+            ? new SpecklePropertyGroupGoo(bundle.ModelProperties.ToDictionary(kv => kv.Key, kv => kv.Value))
+            : null,
+      };
     }
     catch (Exception ex) when (!ex.IsFatal())
     {

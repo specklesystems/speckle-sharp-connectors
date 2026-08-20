@@ -23,7 +23,7 @@ public class SendArtefactAsyncComponent : SendAsyncComponentBase
   public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   public override bool UseArtifacts => true;
-  protected override bool HasModelPropertiesInput => false;
+  protected override bool HasModelPropertiesInput => true;
 
   public SendArtefactAsyncComponent()
     : base(

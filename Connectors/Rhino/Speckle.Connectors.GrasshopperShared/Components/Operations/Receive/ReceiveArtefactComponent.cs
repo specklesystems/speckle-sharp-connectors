@@ -31,7 +31,8 @@ public class ReceiveArtefactComponent : ReceiveComponentBase
       ComponentCategories.DEVELOPER
     ) { }
 
-  protected override void RegisterOutputParams(GH_OutputParamManager pManager) =>
+  protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+  {
     pManager.AddParameter(
       new SpeckleCollectionParam(GH_ParamAccess.item),
       "Collection",
@@ -39,6 +40,15 @@ public class ReceiveArtefactComponent : ReceiveComponentBase
       "The model collection of the loaded version",
       GH_ParamAccess.item
     );
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "properties",
+      "Model-wide properties of the loaded version",
+      GH_ParamAccess.item
+    );
+  }
 
   protected override void SetOutput(IGH_DataAccess da, ReceiveComponentOutput result)
   {
@@ -49,6 +59,7 @@ public class ReceiveArtefactComponent : ReceiveComponentBase
     }
 
     da.SetData(0, result.RootObject);
+    da.SetData(1, result.RootProperties);
     SetStatusMessage(true);
   }
 }
