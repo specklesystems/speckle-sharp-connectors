@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
@@ -207,6 +208,10 @@ public class AutocadArtifactRootObjectBuilder(
       groups,
       layerMaterialInheritors,
       layerNameByAppId,
+      converterSettings.Current.ApplyTransform,
+      converterSettings.Current.ModelPlacementSource,
+      converterSettings.Current.ModelPlacementOptions,
+      converterSettings.Current.CoordinateMetadata,
       results
     );
   }
@@ -471,6 +476,7 @@ public class AutocadArtifactRootObjectBuilder(
     EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, layerCollectionKByName);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
+    EmitModelPlacement(pipeline, model);
     EmitAdditionalNodes(pipeline);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
@@ -1008,6 +1014,71 @@ public class AutocadArtifactRootObjectBuilder(
 
   protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
 
+  private static void EmitModelPlacement(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  {
+#if SDK_BUNDLE_VOCAB_ADDITIONS
+    var options = model.ModelPlacementOptions ?? new Dictionary<string, Matrix3d>();
+    Matrix3d bakedWcsToStored = Matrix3d.Identity;
+    if (model.ApplyTransform && options.TryGetValue(model.ModelPlacementSource, out Matrix3d selectedWcsToStored))
+    {
+      bakedWcsToStored = selectedWcsToStored;
+    }
+    Matrix3d storedToWcs = bakedWcsToStored.Inverse();
+    Matrix3d defaultPlacement = Matrix3d.Identity;
+
+    foreach (var option in options)
+    {
+      Matrix3d storedToOption = option.Value.PostMultiplyBy(storedToWcs);
+      pipeline.AddModelProperty($"modelPlacement.options.{option.Key}.transform", MatrixToCsv(storedToOption));
+      if (option.Key == model.ModelPlacementSource)
+      {
+        defaultPlacement = storedToOption;
+      }
+    }
+
+    pipeline.AddModelProperty("modelPlacement.default", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.source", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.transform", MatrixToCsv(defaultPlacement));
+    pipeline.AddModelProperty("modelPlacement.units", model.Units);
+    pipeline.AddModelProperty("modelPlacement.appliedToGeometry", model.ApplyTransform);
+
+    if (model.CoordinateMetadata is not null)
+    {
+      foreach (var property in model.CoordinateMetadata)
+      {
+        pipeline.AddModelProperty(property.Key, property.Value.Value, property.Value.Units);
+      }
+    }
+#else
+    _ = pipeline;
+    _ = model;
+#endif
+  }
+
+  private static string MatrixToCsv(Matrix3d matrix) =>
+    string.Join(
+      ",",
+      new[]
+      {
+        matrix[0, 0],
+        matrix[0, 1],
+        matrix[0, 2],
+        matrix[0, 3],
+        matrix[1, 0],
+        matrix[1, 1],
+        matrix[1, 2],
+        matrix[1, 3],
+        matrix[2, 0],
+        matrix[2, 1],
+        matrix[2, 2],
+        matrix[2, 3],
+        matrix[3, 0],
+        matrix[3, 1],
+        matrix[3, 2],
+        matrix[3, 3],
+      }.Select(x => x.ToString("R", CultureInfo.InvariantCulture))
+    );
+
   // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
   // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
   // edges. Definition members get no scene edges (same suppression as IN_COLLECTION), so a group emptied by
@@ -1168,6 +1239,10 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyDictionary<string, string> LayerMaterialInheritors,
     // layer application id → layer name, keying the layer-stage material proxies to the COLLECTION nodes [ENG-9346]
     IReadOnlyDictionary<string, string> LayerNameByAppId,
+    bool ApplyTransform,
+    string ModelPlacementSource,
+    IReadOnlyDictionary<string, Matrix3d>? ModelPlacementOptions,
+    IReadOnlyDictionary<string, AutocadModelProperty>? CoordinateMetadata,
     IReadOnlyList<SendConversionResult> Results
   );
 
