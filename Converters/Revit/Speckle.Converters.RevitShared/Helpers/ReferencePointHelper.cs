@@ -1,3 +1,4 @@
+using System.Globalization;
 using Autodesk.Revit.DB;
 using Speckle.DoubleNumerics;
 
@@ -9,6 +10,30 @@ namespace Speckle.Converters.RevitShared.Helpers;
 /// </summary>
 public static class ReferencePointHelper
 {
+  public static RevitModelPlacementData GetModelPlacementData(Document document)
+  {
+    using var collector = new FilteredElementCollector(document);
+    var basePoints = collector.OfClass(typeof(BasePoint)).Cast<BasePoint>().ToList();
+    BasePoint? projectBasePoint = basePoints.FirstOrDefault(point => !point.IsShared);
+    BasePoint? surveyPoint = basePoints.FirstOrDefault(point => point.IsShared);
+
+    var sourceTransforms = new Dictionary<string, Transform> { ["internalOrigin"] = Transform.Identity };
+    if (projectBasePoint is not null)
+    {
+      sourceTransforms["projectBasePoint"] = Transform.CreateTranslation(projectBasePoint.Position);
+    }
+    if (surveyPoint is not null)
+    {
+      sourceTransforms["surveyPoint"] = Transform.CreateTranslation(surveyPoint.Position);
+    }
+    if (document.ActiveProjectLocation?.GetTotalTransform() is { } sharedCoordinatesTransform)
+    {
+      sourceTransforms["sharedCoordinates"] = sharedCoordinatesTransform;
+    }
+
+    return new RevitModelPlacementData(sourceTransforms, projectBasePoint?.Position, surveyPoint?.Position);
+  }
+
   /// <summary>
   /// Flattens a Revit <see cref="Transform"/> to the 16-element matrix Speckle stores (basis vectors in the first
   /// three "columns", translation in the last), used by <see cref="CreateTransformDataForRootObject"/> — the same
@@ -91,6 +116,33 @@ public static class ReferencePointHelper
       M44 = 1,
     };
 
+  public static string TransformToCsv(Transform transform)
+  {
+    Matrix4x4 m = TransformToMatrix(transform);
+    return string.Join(
+      ",",
+      new[]
+      {
+        m.M11,
+        m.M12,
+        m.M13,
+        m.M14,
+        m.M21,
+        m.M22,
+        m.M23,
+        m.M24,
+        m.M31,
+        m.M32,
+        m.M33,
+        m.M34,
+        m.M41,
+        m.M42,
+        m.M43,
+        m.M44,
+      }.Select(value => value.ToString(CultureInfo.InvariantCulture))
+    );
+  }
+
   /// <summary>
   /// Extracts and reconstructs a transform from the matrix data stored on root object
   /// </summary>
@@ -126,5 +178,29 @@ public static class ReferencePointHelper
     transform.BasisZ = basisZ;
 
     return transform;
+  }
+}
+
+public sealed class RevitModelPlacementData(
+  Dictionary<string, Transform> sourceTransforms,
+  XYZ? projectBasePointPosition,
+  XYZ? surveyPointPosition
+)
+{
+  public XYZ? ProjectBasePointPosition { get; } = projectBasePointPosition;
+  public XYZ? SurveyPointPosition { get; } = surveyPointPosition;
+
+  public void SetSourceTransform(string kind, Transform transform) => sourceTransforms[kind] = transform;
+
+  public Transform? GetStoredToOptionTransform(string kind, bool appliedToGeometry, Transform? selectedSourceTransform)
+  {
+    if (!sourceTransforms.TryGetValue(kind, out Transform? sourceTransform))
+    {
+      return null;
+    }
+
+    Transform storedToInternal =
+      appliedToGeometry && selectedSourceTransform is not null ? selectedSourceTransform : Transform.Identity;
+    return sourceTransform.Inverse.Multiply(storedToInternal);
   }
 }

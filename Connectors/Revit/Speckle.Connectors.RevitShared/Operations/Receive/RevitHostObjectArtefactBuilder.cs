@@ -1499,15 +1499,36 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     if (
       !bundle.ModelProperties.TryGetValue("referencePoint", out var rpObj)
       || rpObj is not Dictionary<string, object?> rp
-      // New raw-coordinate sends retain the source datum for information/placement, but there is nothing to
-      // undo on receive. Absence means a legacy bundle, whose recorded transform was baked by definition.
-      || (rp.TryGetValue("appliedToGeometry", out var appliedObj) && appliedObj is false)
       || !rp.TryGetValue("transform", out var tObj)
       || tObj is not string transformCsv
     )
     {
       return null;
     }
+
+    // New bundles store this source-independent state under modelPlacement. Fall back to the temporary
+    // referencePoint location emitted by earlier builds of this branch; absence means a legacy baked bundle.
+    bool? appliedToGeometry = null;
+    if (
+      bundle.ModelProperties.TryGetValue("modelPlacement", out var placementObj)
+      && placementObj is Dictionary<string, object?> placement
+      && placement.TryGetValue("appliedToGeometry", out var placementAppliedObj)
+      && placementAppliedObj is bool placementApplied
+    )
+    {
+      appliedToGeometry = placementApplied;
+    }
+    else if (
+      rp.TryGetValue("appliedToGeometry", out var referenceAppliedObj) && referenceAppliedObj is bool referenceApplied
+    )
+    {
+      appliedToGeometry = referenceApplied;
+    }
+    if (appliedToGeometry is false)
+    {
+      return null;
+    }
+
     var parts = transformCsv.Split(',');
     if (parts.Length != 16)
     {
