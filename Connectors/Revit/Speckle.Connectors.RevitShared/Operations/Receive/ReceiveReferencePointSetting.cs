@@ -17,7 +17,8 @@ public class ReceiveReferencePointSetting(ReceiveReferencePointType value = Rece
 
   public string? Id { get; set; } = SETTING_ID;
   public string? Title { get; set; } = "Reference Point";
-  public string? Description { get; set; } = "Sets the datum used to place received geometry.";
+  public string? Description { get; set; } =
+    "Selects the placement datum. Survey Point uses its origin only; use Shared Coordinates for shared-coordinate orientation and True North.";
   public string? Type { get; set; } = "string";
   public List<string>? Enum { get; set; } = System.Enum.GetNames(typeof(ReceiveReferencePointType)).ToList();
   public object? Value { get; set; } = value.ToString();

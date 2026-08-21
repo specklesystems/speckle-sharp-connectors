@@ -69,6 +69,24 @@ public class ToHostSettingsManager : IToHostSettingsManager
     return ReceiveInstancesAsFamiliesSetting.DEFAULT_VALUE;
   }
 
+  public bool GetApplyTransformSetting(ModelCard modelCard)
+  {
+    var settingValue =
+      modelCard.Settings?.FirstOrDefault(s => s.Id == ReceiveApplyTransformSetting.SETTING_ID)?.Value as bool?;
+
+    if (settingValue is not null)
+    {
+      return settingValue.Value;
+    }
+
+    _logger.LogWarning(
+      "Apply transform setting was null for model {ModelCardId}, using default: {DefaultValue}",
+      modelCard.ModelCardId,
+      ReceiveApplyTransformSetting.DEFAULT_VALUE
+    );
+    return ReceiveApplyTransformSetting.DEFAULT_VALUE;
+  }
+
   private Transform? GetTransform(ReceiveReferencePointType referencePointType)
   {
     Transform? referencePointTransform = null;

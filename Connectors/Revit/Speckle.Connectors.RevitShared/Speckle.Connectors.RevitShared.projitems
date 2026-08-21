@@ -52,6 +52,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\IRevitUnpackingStrategy.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ITransactionManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveInstancesAsFamiliesSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveApplyTransformSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\ReceiveReferencePointSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitArtefactSolidImporter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\RevitHostObjectArtefactBuilder.cs" />
@@ -71,6 +72,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\LinkedModelsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendParameterNullOrEmptyStringsSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendAreasAsMeshSetting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendApplyTransformSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendRebarsAsVolumetricSetting.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\ToSpeckleSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\Settings\SendReferencePointSetting.cs" />

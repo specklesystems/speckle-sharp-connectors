@@ -26,7 +26,11 @@ public sealed class RevitReceiveBinding(
 
 #pragma warning disable CA1024
   public List<ICardSetting> GetReceiveSettings() =>
-    [new Operations.Receive.Settings.ReceiveReferencePointSetting(), new ReceiveInstancesAsFamiliesSetting()];
+    [
+      new Operations.Receive.Settings.ReceiveReferencePointSetting(),
+      new ReceiveApplyTransformSetting(),
+      new ReceiveInstancesAsFamiliesSetting(),
+    ];
 #pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
@@ -44,6 +48,7 @@ public sealed class RevitReceiveBinding(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
               toHostSettingsManager.GetReferencePointSetting(card),
+              toHostSettingsManager.GetApplyTransformSetting(card),
               false,
               true,
               false,
