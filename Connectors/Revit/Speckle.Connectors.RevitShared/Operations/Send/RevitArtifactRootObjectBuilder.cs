@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
 using Autodesk.Revit.DB;
 using Microsoft.Extensions.Logging;
@@ -517,7 +516,7 @@ public class RevitArtifactRootObjectBuilder(
       return;
     }
 
-    string kind = converterSettings.Current.ReferencePointKind switch
+    string requestedKind = converterSettings.Current.ReferencePointKind switch
     {
       ReferencePointType.ProjectBase => "projectBasePoint",
       ReferencePointType.Survey => "surveyPoint",
@@ -525,38 +524,110 @@ public class RevitArtifactRootObjectBuilder(
       _ => "internalOrigin",
     };
     Transform? referencePointTransform = converterSettings.Current.ModelReferencePointTransform;
-    if (kind != "internalOrigin" && referencePointTransform is null)
+    string referencePointKind = requestedKind;
+    if (requestedKind != "internalOrigin" && referencePointTransform is null)
     {
-      kind = "internalOriginFallback";
+      referencePointKind = "internalOriginFallback";
     }
-    double trueNorthAngle = documentContext.Doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero).Angle;
-    EmitReferencePointModelRows(pipeline, kind, referencePointTransform, trueNorthAngle);
+
+    var placementData = ReferencePointHelper.GetModelPlacementData(documentContext.Doc);
+
+    // Use the exact transform selected for conversion for the selected option. This keeps the published default
+    // and converter output in lockstep even if the source API returns a slightly different Transform instance.
+    if (referencePointTransform is not null)
+    {
+      placementData.SetSourceTransform(requestedKind, referencePointTransform);
+    }
+
+    double trueNorthAngle = documentContext.Doc.ActiveProjectLocation!.GetProjectPosition(XYZ.Zero).Angle;
+    EmitReferencePointModelRows(
+      pipeline,
+      referencePointKind,
+      requestedKind,
+      referencePointTransform,
+      placementData,
+      trueNorthAngle
+    );
   }
 
-  // referencePoint.transform retains Revit's source datum transform for round-tripping. modelPlacement.transform
-  // is viewer-ready and can always be applied: identity when geometry was already transformed, otherwise the
-  // inverse datum transform that maps raw Revit-internal geometry into the selected model coordinate system.
+  // referencePoint.transform retains Revit's selected source datum for round-tripping. Every
+  // modelPlacement.options.*.transform is viewer-ready and maps STORED geometry into that option's coordinate
+  // space. This remains true for legacy baked sends: the selected source transform first restores internal
+  // coordinates, then the option's inverse datum transform places them in the requested space.
   private void EmitReferencePointModelRows(
     ObjectsArtifactPipeline pipeline,
-    string kind,
-    Transform? transform,
+    string referencePointKind,
+    string requestedKind,
+    Transform? selectedSourceTransform,
+    RevitModelPlacementData placementData,
     double trueNorthAngle
   )
   {
-    pipeline.AddModelProperty("referencePoint.kind", kind);
-    pipeline.AddModelProperty("referencePoint.appliedToGeometry", converterSettings.Current.ApplyTransform);
-    pipeline.AddModelProperty("referencePoint.trueNorthAngle", trueNorthAngle, "rad");
-    if (transform is { } t)
+    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddModelProperty API).
+    pipeline.AddModelProperty("referencePoint.kind", referencePointKind);
+    if (selectedSourceTransform is { } t)
     {
       pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
       pipeline.AddModelProperty("referencePoint.units", converterSettings.Current.SpeckleUnits);
     }
-    Transform modelPlacement = converterSettings.Current.ApplyTransform
-      ? Transform.Identity
-      : transform?.Inverse ?? Transform.Identity;
-    pipeline.AddModelProperty("modelPlacement.transform", FormatReferencePointTransform(modelPlacement));
+
+    string effectiveDefault = referencePointKind == "internalOriginFallback" ? "internalOrigin" : requestedKind;
+    Transform defaultPlacement = Transform.Identity;
+    foreach (string optionKind in new[] { "internalOrigin", "projectBasePoint", "surveyPoint", "sharedCoordinates" })
+    {
+      Transform? storedToOption = placementData.GetStoredToOptionTransform(
+        optionKind,
+        converterSettings.Current.ApplyTransform,
+        selectedSourceTransform
+      );
+      if (storedToOption is null)
+      {
+        continue;
+      }
+      pipeline.AddModelProperty(
+        $"modelPlacement.options.{optionKind}.transform",
+        FormatReferencePointTransform(storedToOption)
+      );
+      if (optionKind == effectiveDefault)
+      {
+        defaultPlacement = storedToOption;
+      }
+    }
+
+    pipeline.AddModelProperty("modelPlacement.default", effectiveDefault);
+    pipeline.AddModelProperty("modelPlacement.transform", FormatReferencePointTransform(defaultPlacement));
     pipeline.AddModelProperty("modelPlacement.units", converterSettings.Current.SpeckleUnits);
-    pipeline.AddModelProperty("modelPlacement.source", kind);
+    pipeline.AddModelProperty("modelPlacement.source", referencePointKind);
+    pipeline.AddModelProperty("modelPlacement.appliedToGeometry", converterSettings.Current.ApplyTransform);
+
+    EmitReferencePointPosition(pipeline, "projectBasePoint", placementData.ProjectBasePointPosition);
+    EmitReferencePointPosition(pipeline, "surveyPoint", placementData.SurveyPointPosition);
+    pipeline.AddModelProperty("projectLocation.trueNorthAngle", trueNorthAngle, "rad");
+  }
+
+  private void EmitReferencePointPosition(ObjectsArtifactPipeline pipeline, string kind, XYZ? position)
+  {
+    if (position is null)
+    {
+      return;
+    }
+
+    string prefix = $"referencePoints.{kind}.position";
+    pipeline.AddModelProperty(
+      $"{prefix}.x",
+      scalingService.ScaleLength(position.X),
+      converterSettings.Current.SpeckleUnits
+    );
+    pipeline.AddModelProperty(
+      $"{prefix}.y",
+      scalingService.ScaleLength(position.Y),
+      converterSettings.Current.SpeckleUnits
+    );
+    pipeline.AddModelProperty(
+      $"{prefix}.z",
+      scalingService.ScaleLength(position.Z),
+      converterSettings.Current.SpeckleUnits
+    );
   }
 
   // ENG-9099 referencePoint.transform: the full rigid transform subtracted from
@@ -573,10 +644,7 @@ public class RevitArtifactRootObjectBuilder(
       scalingService.ScaleLength(transform.Origin.Y),
       scalingService.ScaleLength(transform.Origin.Z)
     );
-    return string.Join(
-      ",",
-      Flatten(ReferencePointHelper.TransformToMatrix(scaled)).Select(v => v.ToString(CultureInfo.InvariantCulture))
-    );
+    return ReferencePointHelper.TransformToCsv(scaled);
   }
 
   // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
