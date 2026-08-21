@@ -368,7 +368,7 @@
       "speckle.converters.common": {
         "type": "Project",
         "dependencies": {
-          "Speckle.Sdk": "[2026.9.0-alpha.1, )"
+          "Speckle.Sdk": "[2026.9.0-alpha.2, )"
         }
       },
       "speckle.converters.rhino7": {
@@ -401,7 +401,7 @@
       },
       "Speckle.Sdk": {
         "type": "CentralTransitive",
-        "requested": "[2026.9.0-alpha.1, )",
+        "requested": "[2026.9.0-alpha.2, )",
         "resolved": "2026.9.0-alpha.2",
         "contentHash": "agIhQ/tqtWDpw1HSHzvu/EhhoIeRqay6z2SBY+6kgsVOOuQmVaEdRWvujMZrjBI9hTsb+fqv4SrifAbbxraBOw==",
         "dependencies": {

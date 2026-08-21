@@ -216,19 +216,9 @@ public class CsiArtifactRootObjectBuilder(
 
         foreach (var descriptor in s_resultDescriptors)
         {
-          if (analysisResults[descriptor.ResultsKey] is not IDictionary<string, object> node)
+          if (analysisResults[descriptor.ResultsKey] is IDictionary<string, object> node)
           {
-            continue;
-          }
-          try
-          {
-            FlattenResultType(node, descriptor, nameToAppId, session, rows);
-          }
-          catch (Exception ex) when (!ex.IsFatal())
-          {
-            // One malformed result type must not discard the rows every other type already produced.
-            logger.LogWarning(ex, "Structural result type {ResultType} skipped", descriptor.ResultType);
-            session.RecordObject("analysis-results", descriptor.ResultType, Status.WARNING, ex.Message, 0);
+            FlattenResultType(node, descriptor, nameToAppId, rows);
           }
         }
         session.SetStat("resultRows", rows.Count);
@@ -280,7 +270,6 @@ public class CsiArtifactRootObjectBuilder(
     IDictionary<string, object> node,
     ResultDescriptor descriptor,
     Dictionary<string, string> nameToAppId,
-    ArtefactSessionLog session,
     List<StructuralResultRow> rows
   )
   {
@@ -333,42 +322,27 @@ public class CsiArtifactRootObjectBuilder(
         {
           // The extractor leaves Direction/Drift/Label/X/Y/Z as sibling leaf values; the spec keeps Drift per
           // Direction and drops the rest (locked decision, speckle-bundle-spec structural-results rationale).
-          if (
-            leaf.TryGetValue("Direction", out var dirObj)
-            && dirObj is string direction
-            && leaf.TryGetValue("Drift", out var driftObj)
-            && driftObj is double drift
-          )
-          {
-            rows.Add(
-              new StructuralResultRow(
-                null,
-                location,
-                descriptor.ResultType,
-                loadCase ?? "",
-                "drift",
-                null,
-                step,
-                drift,
-                null,
-                direction
-              )
-            );
-          }
-          else
-          {
-            session.Increment("resultValuesSkipped");
-          }
+          rows.Add(
+            new StructuralResultRow(
+              null,
+              location,
+              descriptor.ResultType,
+              loadCase ?? "",
+              "drift",
+              null,
+              step,
+              (double)leaf["Drift"],
+              null,
+              (string)leaf["Direction"]
+            )
+          );
           return;
         }
 
         foreach (var kv in leaf)
         {
-          if (kv.Value is not double value)
-          {
-            session.Increment("resultValuesSkipped"); // non-numeric leaf — skipped, never thrown on
-            continue;
-          }
+          // The CSi API types every result quantity as double[] — anything else here is ResultsConfiguration drift.
+          var value = (double)kv.Value;
           var component =
             descriptor.ComponentRenames != null && descriptor.ComponentRenames.TryGetValue(kv.Key, out var renamed)
               ? renamed
