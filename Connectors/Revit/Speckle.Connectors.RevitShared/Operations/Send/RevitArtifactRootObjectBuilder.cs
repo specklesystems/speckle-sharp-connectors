@@ -508,54 +508,50 @@ public class RevitArtifactRootObjectBuilder(
     return objK;
   }
 
-  // ENG-8947 / ENG-9099: record the MAIN-model reference point — the SINGLE source for both federation and
-  // Revit→Revit round-trip (the receiver rebuilds the transform from this value). Only the host (non-linked)
-  // document's Transform is the pure reference-point transform — a linked doc's is
-  // (referencePoint ∘ linkPlacement⁻¹) and must NOT be persisted.
-  // The record rides eav.model (referencePoint.kind/.transform/.units — the former meta.reference_point_*
-  // columns are removed from the spec; xyz-only offsets lost sharedCoordinates' true-north rotation and meta is
-  // the wrong home for model data). internalOriginFallback records the requested-but-missing base point (not
-  // silent); internal origin itself has nothing to record.
+  // Record the MAIN-model datum independently from the transform used by conversion. Linked-document transforms
+  // also contain occurrence placement and must never be persisted as the model's reference point.
   private void EmitMainModelReferencePoint(ObjectsArtifactPipeline pipeline, DocumentToConvert documentContext)
   {
-    if (
-      documentContext.Doc.IsLinked
-      || converterSettings.Current.ReferencePointKind
-        is not (ReferencePointType.ProjectBase or ReferencePointType.Survey or ReferencePointType.SharedCoordinates)
-    )
+    if (documentContext.Doc.IsLinked)
     {
       return;
     }
 
-    if (documentContext.Transform is { } transform)
+    string kind = converterSettings.Current.ReferencePointKind switch
     {
-      string kind = converterSettings.Current.ReferencePointKind switch
-      {
-        ReferencePointType.ProjectBase => "projectBasePoint",
-        ReferencePointType.Survey => "surveyPoint",
-        _ => "sharedCoordinates",
-      };
-      EmitReferencePointModelRows(pipeline, kind, transform);
-    }
-    else
+      ReferencePointType.ProjectBase => "projectBasePoint",
+      ReferencePointType.Survey => "surveyPoint",
+      ReferencePointType.SharedCoordinates => "sharedCoordinates",
+      _ => "internalOrigin",
+    };
+    Transform? referencePointTransform = converterSettings.Current.ModelReferencePointTransform;
+    if (kind != "internalOrigin" && referencePointTransform is null)
     {
-      // requested a base point the model doesn't have → converted at internal origin, recorded (not silent).
-      EmitReferencePointModelRows(pipeline, "internalOriginFallback", null);
+      kind = "internalOriginFallback";
     }
+    EmitReferencePointModelRows(pipeline, kind, referencePointTransform);
   }
 
-  // eav.model is the authoritative reference-point record [bundle-spec `model` table]: kind + the FULL rigid
-  // transform (16 row-major doubles, display units — same layout as InstanceProxy transforms) + units.
+  // referencePoint.transform retains Revit's source datum transform for round-tripping. modelPlacement.transform
+  // is viewer-ready and can always be applied: identity when geometry was already transformed, otherwise the
+  // inverse datum transform that maps raw Revit-internal geometry into the selected model coordinate system.
   private void EmitReferencePointModelRows(ObjectsArtifactPipeline pipeline, string kind, Transform? transform)
   {
 #if SDK_BUNDLE_VOCAB_ADDITIONS
     // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddModelProperty API).
     pipeline.AddModelProperty("referencePoint.kind", kind);
+    pipeline.AddModelProperty("referencePoint.appliedToGeometry", converterSettings.Current.ApplyTransform);
     if (transform is { } t)
     {
       pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
       pipeline.AddModelProperty("referencePoint.units", converterSettings.Current.SpeckleUnits);
     }
+    Transform modelPlacement = converterSettings.Current.ApplyTransform
+      ? Transform.Identity
+      : transform?.Inverse ?? Transform.Identity;
+    pipeline.AddModelProperty("modelPlacement.transform", FormatReferencePointTransform(modelPlacement));
+    pipeline.AddModelProperty("modelPlacement.units", converterSettings.Current.SpeckleUnits);
+    pipeline.AddModelProperty("modelPlacement.source", kind);
 #else
     // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships
     // AddModelProperty (branch oguzhan/bundle-vocab-additions).

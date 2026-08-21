@@ -83,10 +83,12 @@ public sealed class RevitHostObjectBuilder(
     // ENG-9099: computed once so BakeObjects (via the settings push below) and BakeInstancesAsFamilies (which runs
     // OUTSIDE that push, after it's disposed — see step 5/"Bakes instances as families" below) apply the SAME
     // effective reference-point transform to their respective outermost placements.
-    var effectiveReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
-      converterSettings.Current.ReferencePointTransform,
-      referencePointTransformFromRootObject
-    );
+    var effectiveReferencePointTransform = converterSettings.Current.ApplyTransform
+      ? ReferencePointHelper.CalculateNewTransform(
+        converterSettings.Current.ReferencePointTransform,
+        referencePointTransformFromRootObject
+      )
+      : null;
 
     var baseGroupName = $"Project {projectName}: Model {modelName}"; // TODO: unify this across connectors!
 
