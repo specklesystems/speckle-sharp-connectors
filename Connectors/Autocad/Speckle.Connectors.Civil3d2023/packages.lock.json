@@ -211,16 +211,16 @@
       },
       "Speckle.Sdk.Dependencies": {
         "type": "Transitive",
-        "resolved": "2026.9.0-alpha.1",
-        "contentHash": "PD8XekFz9xzUiwVnM0RuaTMvylyaRA2gnNrQZtIlSO7fPniPGaGXubAZs5RNydW+STMPrZABoM/g1bSiOPiCKg==",
+        "resolved": "2026.9.0-alpha.2",
+        "contentHash": "uLLVpEgPV/J1n2DKZVd9Yf6HzKDKsOHsdChdEbNqqY3sidIk6qKPH8Jw8jvCiDCe6H6R82+azkFxusHcQ7+Y7Q==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "9.0.10"
         }
       },
       "Speckle.Sdk.Parquet": {
         "type": "Transitive",
-        "resolved": "2026.9.0-alpha.1",
-        "contentHash": "AOnt6t+qvNi3tdT8qTSubEoEoro9QCn6N/7SUjafX4q+7T7gfBaGuDLPwRPEa3HJquz6MnS7fkCDBlzFi3/MMw=="
+        "resolved": "2026.9.0-alpha.2",
+        "contentHash": "zmae3tL4g4sOqmKQyMR6aFMLQb4np62OspIOzhZB3ZmiiCr1zECK7UZWY7BTyBcfjql0yiRR0ddcpIq2e9rT2g=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
@@ -335,7 +335,7 @@
         "dependencies": {
           "Speckle.Connectors.Logging": "[1.0.0, )",
           "Speckle.Converters.Common": "[1.0.0, )",
-          "Speckle.Sdk": "[2026.9.0-alpha.1, )"
+          "Speckle.Sdk": "[2026.9.0-alpha.2, )"
         }
       },
       "speckle.connectors.dui": {
@@ -383,8 +383,8 @@
       "Speckle.Sdk": {
         "type": "CentralTransitive",
         "requested": "[2026.9.0-alpha.1, )",
-        "resolved": "2026.9.0-alpha.1",
-        "contentHash": "g1HTHypda0Al1QRg1HOIojKjuOfljCxLQdkFyc77FA/AkgX9T1joBSdTALp/+/0FKJD+SEhBsUnzVHSWFJg1tQ==",
+        "resolved": "2026.9.0-alpha.2",
+        "contentHash": "agIhQ/tqtWDpw1HSHzvu/EhhoIeRqay6z2SBY+6kgsVOOuQmVaEdRWvujMZrjBI9hTsb+fqv4SrifAbbxraBOw==",
         "dependencies": {
           "GraphQL.Client": "6.0.0",
           "Microsoft.CSharp": "4.7.0",
@@ -394,8 +394,8 @@
           "Microsoft.Extensions.ObjectPool": "6.0.0",
           "Speckle.DoubleNumerics": "4.1.0",
           "Speckle.Newtonsoft.Json": "13.0.2",
-          "Speckle.Sdk.Dependencies": "2026.9.0-alpha.1",
-          "Speckle.Sdk.Parquet": "2026.9.0-alpha.1",
+          "Speckle.Sdk.Dependencies": "2026.9.0-alpha.2",
+          "Speckle.Sdk.Parquet": "2026.9.0-alpha.2",
           "System.Memory": "4.5.5",
           "System.Text.Json": "5.0.2"
         }

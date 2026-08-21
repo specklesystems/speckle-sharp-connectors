@@ -37,9 +37,10 @@ namespace Speckle.Connectors.CSiShared.Builders;
 /// <para>CSi elements have no lossless raw encoding — the display geometry (Point/Line/Mesh from
 /// <c>DisplayValueExtractor</c>) IS the geometry, and it's SGEO-encodable, so this only emits <c>DISPLAY</c> geometry.
 /// Grouping reuses <see cref="CsiSendCollectionManager.GetCollectionSegments"/> (base: by type; ETABS: level→category)
-/// as nested CONTAINER nodes + IN_COLLECTION. **Deferred this pass:** section/material <c>GroupProxy</c>s (CSi has no
-/// render materials/colors) and analysis results (a gated, deeply-nested <c>root[analysisResults]</c> blob keyed by
-/// element→case→station→step — not eav-shaped; needs its own artefact home).</para>
+/// as nested CONTAINER nodes + IN_COLLECTION. Analysis results flatten into <c>structural_results</c> rows (all 8
+/// CSi result types, three identity shapes — see <c>s_resultDescriptors</c>) and the model's database unit set rides
+/// <c>eav.model</c> as <c>units.*</c> rows, since result rows themselves are unitless. **Deferred this pass:**
+/// section/material <c>GroupProxy</c>s (CSi has no render materials/colors).</para>
 /// <para><b>Threading.</b> Two-phase like Rhino: the CSi COM <c>SapModel</c> API is main-thread-affine, so phase 1
 /// (<see cref="CollectOnMain"/>) converts on the host thread → a pure-Speckle snapshot; phase 2
 /// (<see cref="WriteBundle"/>) builds the parquet bundle on a worker (the pipeline's sync-over-async IO deadlocks on a
@@ -120,6 +121,8 @@ public class CsiArtifactRootObjectBuilder(
   )
   {
     var units = converterSettings.Current.SpeckleUnits;
+    // Database units are what the result magnitudes are expressed in — captured here (COM is main-thread-affine).
+    var (forceUnits, temperatureUnits) = CsiDatabaseUnits.GetForceAndTemperature(converterSettings.Current.SapModel);
     var collected = new List<CollectedObject>(objects.Count);
     var results = new List<SendConversionResult>(objects.Count);
     // CSi analysis results key back to objects by the element NAME; interned objects key by applicationId — so map.
@@ -163,14 +166,14 @@ public class CsiArtifactRootObjectBuilder(
     }
 
     var resultRows = ExtractResultRows(objects, nameToAppId, session);
-    return new CollectedModel(units, collected, resultRows, results, nameToAppId);
+    return new CollectedModel(units, forceUnits, temperatureUnits, collected, resultRows, results, nameToAppId);
   }
 
   // Runs the (gated) analysis-results extraction on the host thread and flattens the extractor's nested dicts into
-  // structural_results rows. Covers the object/model-level result types that map cleanly to the results schema:
-  // frame forces, joint reactions, base reactions, modal periods. Pier/spandrel/story results (string position
-  // dimensions, dual identity) are not emitted yet — a schema/mapping decision is pending. A results failure (model
-  // unlocked / analysis not run) is logged and skipped so the geometry+properties send still succeeds.
+  // structural_results rows — all 8 CSi result types, across the schema's three identity shapes: object-level
+  // (frame/joint → object_index), group-level (pier/spandrel → element_name + story), model/story-level (base
+  // reactions, modal periods, story drifts/forces → location/step). A results failure (model unlocked / analysis
+  // not run) is logged and skipped so the geometry+properties send still succeeds.
   private List<StructuralResultRow> ExtractResultRows(
     IReadOnlyList<ICsiWrapper> objects,
     Dictionary<string, string> nameToAppId,
@@ -213,9 +216,19 @@ public class CsiArtifactRootObjectBuilder(
 
         foreach (var descriptor in s_resultDescriptors)
         {
-          if (analysisResults[descriptor.ResultsKey] is IDictionary<string, object> node)
+          if (analysisResults[descriptor.ResultsKey] is not IDictionary<string, object> node)
           {
-            FlattenResultType(node, descriptor, nameToAppId, rows);
+            continue;
+          }
+          try
+          {
+            FlattenResultType(node, descriptor, nameToAppId, session, rows);
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            // One malformed result type must not discard the rows every other type already produced.
+            logger.LogWarning(ex, "Structural result type {ResultType} skipped", descriptor.ResultType);
+            session.RecordObject("analysis-results", descriptor.ResultType, Status.WARNING, ex.Message, 0);
           }
         }
         session.SetStat("resultRows", rows.Count);
@@ -267,6 +280,7 @@ public class CsiArtifactRootObjectBuilder(
     IDictionary<string, object> node,
     ResultDescriptor descriptor,
     Dictionary<string, string> nameToAppId,
+    ArtefactSessionLog session,
     List<StructuralResultRow> rows
   )
   {
@@ -277,8 +291,10 @@ public class CsiArtifactRootObjectBuilder(
       new Dictionary<string, string>(StringComparer.Ordinal),
       (axes, leaf) =>
       {
+        string? Axis(string? key) => key != null && axes.TryGetValue(key, out var v) ? v : null;
+
         string? objectAppId = null;
-        string? location = null;
+        string? location = Axis(descriptor.LocationKey);
         if (descriptor.ElementKey != null && axes.TryGetValue(descriptor.ElementKey, out var elementName))
         {
           if (nameToAppId.TryGetValue(elementName, out var appId))
@@ -313,19 +329,62 @@ public class CsiArtifactRootObjectBuilder(
           step = mi;
         }
 
+        if (descriptor.DriftPivot)
+        {
+          // The extractor leaves Direction/Drift/Label/X/Y/Z as sibling leaf values; the spec keeps Drift per
+          // Direction and drops the rest (locked decision, speckle-bundle-spec structural-results rationale).
+          if (
+            leaf.TryGetValue("Direction", out var dirObj)
+            && dirObj is string direction
+            && leaf.TryGetValue("Drift", out var driftObj)
+            && driftObj is double drift
+          )
+          {
+            rows.Add(
+              new StructuralResultRow(
+                null,
+                location,
+                descriptor.ResultType,
+                loadCase ?? "",
+                "drift",
+                null,
+                step,
+                drift,
+                null,
+                direction
+              )
+            );
+          }
+          else
+          {
+            session.Increment("resultValuesSkipped");
+          }
+          return;
+        }
+
         foreach (var kv in leaf)
         {
-          double? value = kv.Value is null ? null : Convert.ToDouble(kv.Value, CultureInfo.InvariantCulture);
+          if (kv.Value is not double value)
+          {
+            session.Increment("resultValuesSkipped"); // non-numeric leaf — skipped, never thrown on
+            continue;
+          }
+          var component =
+            descriptor.ComponentRenames != null && descriptor.ComponentRenames.TryGetValue(kv.Key, out var renamed)
+              ? renamed
+              : kv.Key;
           rows.Add(
             new StructuralResultRow(
               objectAppId,
               location,
               descriptor.ResultType,
               loadCase ?? "",
-              kv.Key,
+              component,
               station,
               step,
-              value
+              value,
+              Axis(descriptor.ElementNameKey),
+              Axis(descriptor.PositionKey)
             )
           );
         }
@@ -374,20 +433,85 @@ public class CsiArtifactRootObjectBuilder(
     }
   }
 
-  // The result types whose axes map cleanly onto the structural_results schema (all-numeric leaves, single identity).
+  // storyForces leaf keys are the ETABS database-table codes; the spec catalog names them semantically.
+  private static readonly Dictionary<string, string> s_storyForceComponents = new(StringComparer.Ordinal)
+  {
+    ["P"] = "axial",
+    ["VX"] = "majorShear",
+    ["VY"] = "minorShear",
+    ["T"] = "torsion",
+    ["MX"] = "majorMoment",
+    ["MY"] = "minorMoment",
+  };
+
+  // One entry per result type: the extractor's grouping axes, and which identity column each feeds.
   private static readonly ResultDescriptor[] s_resultDescriptors =
   {
-    new("frameForces", "frameForce", "Elm", new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" }),
-    new("jointReact", "jointReaction", "Elm", new[] { "Elm", "LoadCase", "Wrap:StepNum" }),
-    new("baseReact", "baseReaction", null, new[] { "LoadCase", "Wrap:StepNum" }),
-    new("modalPeriodsAndFrequencies", "modalPeriod", null, new[] { "LoadCase", "Wrap:Mode" }),
+    new(
+      "frameForces",
+      "frameForce",
+      "Elm",
+      null,
+      null,
+      null,
+      new[] { "Elm", "LoadCase", "Wrap:ElmSta", "Wrap:StepNum" }
+    ),
+    new("jointReact", "jointReaction", "Elm", null, null, null, new[] { "Elm", "LoadCase", "Wrap:StepNum" }),
+    new("baseReact", "baseReaction", null, null, null, null, new[] { "LoadCase", "Wrap:StepNum" }),
+    new("modalPeriodsAndFrequencies", "modalPeriod", null, null, null, null, new[] { "LoadCase", "Wrap:Mode" }),
+    new(
+      "pierForces",
+      "pierForce",
+      null,
+      "PierName",
+      "StoryName",
+      "Location",
+      new[] { "PierName", "StoryName", "LoadCase", "Wrap:Location" }
+    ),
+    new(
+      "spandrelForces",
+      "spandrelForce",
+      null,
+      "SpandrelName",
+      "StoryName",
+      "Location",
+      new[] { "SpandrelName", "StoryName", "LoadCase", "Wrap:Location" }
+    ),
+    // Direction is a leaf value, and the extractor keeps only the first row per (Story, LoadCase, StepNum) group —
+    // so one direction per group survives, same as the v3 send path. Fixing that means promoting Direction to a
+    // grouping key in CsiStoryDriftsResultsExtractor, which changes the legacy commit shape — deliberately deferred.
+    new(
+      "storyDrifts",
+      "storyDrift",
+      null,
+      null,
+      "Story",
+      null,
+      new[] { "Story", "LoadCase", "Wrap:StepNum" },
+      DriftPivot: true
+    ),
+    new(
+      "storyForces",
+      "storyForce",
+      null,
+      null,
+      "Story",
+      "Location",
+      new[] { "Story", "LoadCase", "Location" },
+      s_storyForceComponents
+    ),
   };
 
   private sealed record ResultDescriptor(
     string ResultsKey,
     string ResultType,
-    string? ElementKey,
-    IReadOnlyList<string> GroupingKeys
+    string? ElementKey, // axis resolved via name→appId (object-level identity)
+    string? ElementNameKey, // axis → element_name (group-level identity: pier/spandrel name)
+    string? LocationKey, // axis → location (story)
+    string? PositionKey, // axis → position_label (Top/Bottom)
+    IReadOnlyList<string> GroupingKeys,
+    IReadOnlyDictionary<string, string>? ComponentRenames = null,
+    bool DriftPivot = false
   );
 
   private sealed record StructuralResultRow(
@@ -398,7 +522,9 @@ public class CsiArtifactRootObjectBuilder(
     string Component,
     double? Station,
     int? Step,
-    double? Value
+    double? Value,
+    string? ElementName = null,
+    string? PositionLabel = null
   );
 
   // ── Phase 2 (worker thread): snapshot → parquet bundle ────────────────────────────────────────────────
@@ -414,6 +540,13 @@ public class CsiArtifactRootObjectBuilder(
   {
     ZstdNativeLoader.Ensure(logger); // net48: ensure the parquet Zstd native is loaded (no-op on net8+)
     using var pipeline = new ObjectsArtifactPipeline(outputDir, versionId, producer: speckleApplication);
+
+    // Model-wide unit set → eav.model (same units.* vocabulary the migration harness writes): the
+    // structural_results rows are unitless, so these are the only record of what the magnitudes mean.
+    AddUnitModelProperty(pipeline, "units.distance", model.Units);
+    AddUnitModelProperty(pipeline, "units.force", model.ForceUnits);
+    AddUnitModelProperty(pipeline, "units.temperature", model.TemperatureUnits);
+
     var collectionKByPath = new Dictionary<string, int>(StringComparer.Ordinal);
 
     int count = 0;
@@ -466,7 +599,8 @@ public class CsiArtifactRootObjectBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    // Analysis results → {v}.eav.structural_results.parquet (object-level rows join back via object_index).
+    // Analysis results → {v}.eav.structural_results.parquet (object-level rows join back via object_index;
+    // group-level pier/spandrel rows via element_name; story-level rows via location).
     foreach (var r in model.ResultRows)
     {
       pipeline.AddStructuralResult(
@@ -477,7 +611,9 @@ public class CsiArtifactRootObjectBuilder(
         r.Component,
         r.Station,
         r.Step,
-        r.Value
+        r.Value,
+        elementName: r.ElementName,
+        positionLabel: r.PositionLabel
       );
     }
 
@@ -529,6 +665,15 @@ public class CsiArtifactRootObjectBuilder(
   }
 
   private static readonly Dictionary<string, object?> s_emptyProps = new();
+
+  // "NotApplicable" is a silently failed GetDatabaseUnits_2 call; "none" is Units.None — neither informs.
+  private static void AddUnitModelProperty(ObjectsArtifactPipeline pipeline, string path, string? value)
+  {
+    if (!string.IsNullOrEmpty(value) && value != "NotApplicable" && value != "none")
+    {
+      pipeline.AddModelProperty(path, value);
+    }
+  }
 
   private static KeyValuePair<string, object?>[] RootScalars(
     string speckleType,
@@ -588,6 +733,8 @@ public class CsiArtifactRootObjectBuilder(
 
   private sealed record CollectedModel(
     string Units,
+    string ForceUnits,
+    string TemperatureUnits,
     IReadOnlyList<CollectedObject> Objects,
     IReadOnlyList<StructuralResultRow> ResultRows,
     IReadOnlyList<SendConversionResult> Results,
