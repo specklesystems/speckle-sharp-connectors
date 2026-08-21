@@ -12,14 +12,6 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
-  <!-- The Local configuration consumes the SDK as sibling project references, so the source-level
-       bundle-vocab APIs are always present there — activate the gated call sites automatically.
-       Package-pinned configurations (Debug/Release, CI) keep the symbol off until the
-       Speckle.Objects pin ships these APIs. -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Local'">
-    <DefineConstants>$(DefineConstants);SDK_BUNDLE_VOCAB_ADDITIONS</DefineConstants>
-  </PropertyGroup>
-
   <PropertyGroup Label="Analyers">
     <EnableNetAnalyzers>true</EnableNetAnalyzers>
     <AnalysisLevel>latest-AllEnabledByDefault</AnalysisLevel>
