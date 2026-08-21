@@ -179,11 +179,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (graph is null)
     {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Remark,
-        "No 4.0 graph is cached for this model - it was loaded from a 3.0 version, or the cache has been cleared. "
-          + "Reload the model to explore it."
-      );
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.EXPLORE_NO_GRAPH_MESSAGE);
       return null;
     }
 
@@ -192,9 +188,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       SpeckleGeometryWrapper { ObjectIndex: { } objK } => ResolveObject(graph, objK),
       // no object index means it didn't come out of a bundle - don't fall through to the model-scoped branch and
       // hand back levels for an object the graph doesn't know
-      SpeckleGeometryWrapper => Explain(
-        "This object has no graph reference. It came from inside a block definition, or from a 3.0 load."
-      ),
+      SpeckleGeometryWrapper => Explain(Constants.EXPLORE_NO_REFERENCE_MESSAGE),
       SpeckleCollectionWrapper => ResolveModel(graph),
       _ => Explain($"Nothing to explore for a {wrapper.GetType().Name}."),
     };

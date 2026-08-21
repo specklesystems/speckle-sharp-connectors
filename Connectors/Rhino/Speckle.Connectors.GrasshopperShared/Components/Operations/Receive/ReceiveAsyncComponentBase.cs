@@ -645,7 +645,9 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      RuntimeMessages.Add((GH_RuntimeMessageLevel.Warning, $"4.0 artefact load also failed ({ex.Message})."));
+      RuntimeMessages.Add(
+        (GH_RuntimeMessageLevel.Warning, $"{Constants.ARTEFACT_LOAD_FAILED_MESSAGE} ({ex.Message}).")
+      );
       return false;
     }
   }
