@@ -369,10 +369,7 @@ public abstract class ReceiveComponentBase(
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Warning,
-        $"{Constants.ARTEFACT_LOAD_FAILED_MESSAGE} ({ex.Message})."
-      );
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{Constants.ARTEFACT_LOAD_FAILED_MESSAGE} ({ex.Message}).");
       return null;
     }
   }
