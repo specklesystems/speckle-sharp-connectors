@@ -369,7 +369,7 @@ public abstract class ReceiveComponentBase(
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"4.0 artefact load also failed ({ex.Message}).");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{Constants.ARTEFACT_LOAD_FAILED_MESSAGE} ({ex.Message}).");
       return null;
     }
   }

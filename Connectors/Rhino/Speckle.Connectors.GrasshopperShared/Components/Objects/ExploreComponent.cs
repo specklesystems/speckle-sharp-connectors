@@ -162,7 +162,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (wrapper.ModelContext is not { } context)
     {
-      return Explain("This object wasn't loaded from Speckle, so there is no graph to explore.");
+      return Explain("This object wasn't loaded from Speckle, so there is nothing to explore.");
     }
 
     ArtefactGraph? graph;
@@ -173,17 +173,13 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not read the model graph ({ex.Message}).");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not read this model ({ex.Message}).");
       return null;
     }
 
     if (graph is null)
     {
-      AddRuntimeMessage(
-        GH_RuntimeMessageLevel.Remark,
-        "No 4.0 graph is cached for this model - it was loaded from a 3.0 version, or the cache has been cleared. "
-          + "Reload the model to explore it."
-      );
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, Constants.EXPLORE_NO_GRAPH_MESSAGE);
       return null;
     }
 
@@ -192,16 +188,14 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
       SpeckleGeometryWrapper { ObjectIndex: { } objK } => ResolveObject(graph, objK),
       // no object index means it didn't come out of a bundle - don't fall through to the model-scoped branch and
       // hand back levels for an object the graph doesn't know
-      SpeckleGeometryWrapper => Explain(
-        "This object has no graph reference. It came from inside a block definition, or from a 3.0 load."
-      ),
+      SpeckleGeometryWrapper => Explain(Constants.EXPLORE_NO_REFERENCE_MESSAGE),
       SpeckleCollectionWrapper => ResolveModel(graph),
       _ => Explain($"Nothing to explore for a {wrapper.GetType().Name}."),
     };
 
     if (values is { Count: 0 })
     {
-      return Explain("The graph has nothing recorded against this object.");
+      return Explain("Nothing is recorded against this object.");
     }
 
     return values;
