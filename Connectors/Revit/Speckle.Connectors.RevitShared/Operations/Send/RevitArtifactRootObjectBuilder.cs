@@ -529,16 +529,23 @@ public class RevitArtifactRootObjectBuilder(
     {
       kind = "internalOriginFallback";
     }
-    EmitReferencePointModelRows(pipeline, kind, referencePointTransform);
+    double trueNorthAngle = documentContext.Doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero).Angle;
+    EmitReferencePointModelRows(pipeline, kind, referencePointTransform, trueNorthAngle);
   }
 
   // referencePoint.transform retains Revit's source datum transform for round-tripping. modelPlacement.transform
   // is viewer-ready and can always be applied: identity when geometry was already transformed, otherwise the
   // inverse datum transform that maps raw Revit-internal geometry into the selected model coordinate system.
-  private void EmitReferencePointModelRows(ObjectsArtifactPipeline pipeline, string kind, Transform? transform)
+  private void EmitReferencePointModelRows(
+    ObjectsArtifactPipeline pipeline,
+    string kind,
+    Transform? transform,
+    double trueNorthAngle
+  )
   {
     pipeline.AddModelProperty("referencePoint.kind", kind);
     pipeline.AddModelProperty("referencePoint.appliedToGeometry", converterSettings.Current.ApplyTransform);
+    pipeline.AddModelProperty("referencePoint.trueNorthAngle", trueNorthAngle, "rad");
     if (transform is { } t)
     {
       pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
