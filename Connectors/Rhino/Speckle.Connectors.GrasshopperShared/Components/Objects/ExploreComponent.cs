@@ -162,7 +162,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (wrapper.ModelContext is not { } context)
     {
-      return Explain("This object wasn't loaded from Speckle, so there is no graph to explore.");
+      return Explain("This object wasn't loaded from Speckle, so there is nothing to explore.");
     }
 
     ArtefactGraph? graph;
@@ -173,7 +173,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
-      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not read the model graph ({ex.Message}).");
+      AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not read this model ({ex.Message}).");
       return null;
     }
 
@@ -195,7 +195,7 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     if (values is { Count: 0 })
     {
-      return Explain("The graph has nothing recorded against this object.");
+      return Explain("Nothing is recorded against this object.");
     }
 
     return values;
