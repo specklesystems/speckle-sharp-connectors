@@ -782,8 +782,6 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // so the caller falls back to the legacy @speckle.* stamps.
   private static DefinitionMemberIndex? TryBuildMemberIndexFromRels(ArtefactRelations rels)
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
-    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions:
     //   rels.MemberObjectsByDefinition / rels.MemberOrdByDefinition : def K → member object Ks + MEMBER ordinals,
     //                                                                index-aligned (DEFINES_MEMBER, rel 25)
     //   rels.PlacesByObject            : member object K → INSTANCE node K (PLACES, rel 24)
@@ -822,13 +820,6 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       byInstance[kv.Value] = kv.Key;
     }
     return new DefinitionMemberIndex(byGeometry, byInstance);
-#else
-    // No-op until the SDK vocab pin bump — the pinned ArtefactBundle reader drops unknown rels, so rel 25/24
-    // rows are not even surfaced yet. Define SDK_BUNDLE_VOCAB_ADDITIONS after bumping Speckle.Objects to a build
-    // of speckle-sharp-sdk@oguzhan/bundle-vocab-additions.
-    _ = rels;
-    return null;
-#endif
   }
 
   // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns

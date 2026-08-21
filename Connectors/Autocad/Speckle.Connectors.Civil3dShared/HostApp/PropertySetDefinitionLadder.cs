@@ -1,7 +1,3 @@
-#if SDK_BUNDLE_VOCAB_ADDITIONS
-// Whole file is gated: it references the SDK's ArtefactPropertySetField, which the pinned Speckle.Objects
-// package predates. Define SDK_BUNDLE_VOCAB_ADDITIONS after the pin bump (speckle-sharp-sdk@oguzhan/
-// bundle-vocab-additions); until then the file compiles to nothing and the branch builds as big-truck.
 using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.Civil3dShared.HostApp;
@@ -205,4 +201,3 @@ public static class PropertySetDefinitionLadder
       ? mapped
       : entryKey;
 }
-#endif

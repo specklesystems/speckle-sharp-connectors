@@ -548,21 +548,12 @@ public class RevitArtifactRootObjectBuilder(
   // transform (16 row-major doubles, display units — same layout as InstanceProxy transforms) + units.
   private void EmitReferencePointModelRows(ObjectsArtifactPipeline pipeline, string kind, Transform? transform)
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
-    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddModelProperty API).
     pipeline.AddModelProperty("referencePoint.kind", kind);
     if (transform is { } t)
     {
       pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
       pipeline.AddModelProperty("referencePoint.units", converterSettings.Current.SpeckleUnits);
     }
-#else
-    // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships
-    // AddModelProperty (branch oguzhan/bundle-vocab-additions).
-    _ = pipeline;
-    _ = kind;
-    _ = transform;
-#endif
   }
 
   // ENG-9099 referencePoint.transform: the full rigid transform subtracted from

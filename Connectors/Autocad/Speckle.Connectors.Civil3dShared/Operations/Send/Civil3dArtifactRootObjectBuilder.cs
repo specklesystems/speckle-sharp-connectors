@@ -9,9 +9,6 @@ using Speckle.Converters.Common;
 using Speckle.Objects.Utils;
 using Speckle.Sdk;
 using Speckle.Sdk.Pipelines.Send.Artifacts;
-#if !SDK_BUNDLE_VOCAB_ADDITIONS
-using Speckle.Connectors.Common.Operations; // ProxyKeys — only the legacy carrier branch needs it
-#endif
 
 namespace Speckle.Connectors.Civil3dShared.Operations.Send;
 
@@ -53,28 +50,12 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       return;
     }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     // eav.property_set_definitions is the schema catalog [bundle-spec `property_set_definitions`]: one row per
     // (set, field), values stay per-object in eav, attachment derived from the value paths. The legacy carrier
     // pseudo-object is NOT written — it would pollute the objects table with a synthetic row.
     EmitPropertySetDefinitionRows(pipeline);
-#else
-    // Pre-vocab build: the definitions file can't be written (pinned Speckle.Objects predates
-    // AddPropertySetDefinition), so ship the legacy carrier pseudo-object — receivers rebuild
-    // definitions from it (tier 2 of the definition ladder).
-    var definitions = new Dictionary<string, object?>();
-    foreach (var kvp in _propertySetDefinitionHandler.Definitions)
-    {
-      definitions[kvp.Key] = kvp.Value;
-    }
-
-    var properties = new Dictionary<string, object?> { [ProxyKeys.PROPERTYSET_DEFINITIONS] = definitions };
-    pipeline.InternObject(PropertySetBaker.DEFINITIONS_CARRIER_APP_ID);
-    pipeline.AddProperties(PropertySetBaker.DEFINITIONS_CARRIER_APP_ID, properties);
-#endif
   }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
   private void EmitPropertySetDefinitionRows(ObjectsArtifactPipeline pipeline)
   {
     // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddPropertySetDefinition API).
@@ -151,5 +132,4 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
   // netstandard2.0/net48-safe Dictionary lookup (no CollectionExtensions.GetValueOrDefault there).
   private static object? Field(Dictionary<string, object?> dict, string key) =>
     dict.TryGetValue(key, out object? v) ? v : null;
-#endif
 }

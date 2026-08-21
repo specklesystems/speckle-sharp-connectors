@@ -35,7 +35,6 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
 
   protected override void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName)
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     // The definition ladder, most- to least-faithful. Tier 1: the eav.property_set_definitions file.
     if (PropertySetDefinitionLadder.FromSpecRows(bundle.PropertySetDefinitions) is { } fromFile)
     {
@@ -54,17 +53,8 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     {
       _propertySetBaker.BakeSchemas(synthesized, baseLayerName);
     }
-#else
-    // Pre-vocab behavior: carrier object only. The ladder (file → carrier → synthesis) activates with the
-    // SDK_BUNDLE_VOCAB_ADDITIONS pin bump.
-    if (FindDefinitions(bundle) is { } definitions)
-    {
-      _propertySetBaker.ParseAndBakePropertySetDefinitions(definitions, baseLayerName);
-    }
-#endif
   }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
   private static IEnumerable<Dictionary<string, object?>> EnumeratePropertyTrees(ArtefactBundle bundle)
   {
     foreach (var props in bundle.Properties.Values)
@@ -75,7 +65,6 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
       }
     }
   }
-#endif
 
   protected override void PostBakeEntity(Entity entity, Dictionary<string, object?>? properties, Transaction tr)
   {
