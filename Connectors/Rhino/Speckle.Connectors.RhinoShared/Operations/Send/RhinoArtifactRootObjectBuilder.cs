@@ -611,20 +611,7 @@ public class RhinoArtifactRootObjectBuilder(
       int defK = pipeline.AddDefinition(instanceProxy.definitionId, null);
       int instK = pipeline.AddInstance(co.ApplicationId, defK, Flatten(instanceProxy.transform), instanceProxy.units);
       instanceKByObjectId[co.ApplicationId] = instK;
-      if (isDefinitionMember)
-      {
-#if !SDK_BUNDLE_VOCAB_ADDITIONS
-        // Pre-vocab build only: no PLACES rel possible, so stamp the member's INSTANCE node K onto its object
-        // row — the only handle its definition has on it — so receive can join back for the member's layer.
-        // Vocab builds carry this join as PLACES (EmitMemberGraphJoin); the stamp would be duplication.
-        pipeline.AddProperties(
-          co.ApplicationId,
-          DefinitionMemberStamps.NoProperties,
-          DefinitionMemberStamps.InstanceStamp(instK)
-        );
-#endif
-      }
-      else
+      if (!isDefinitionMember)
       {
         pipeline.DisplayInstance(objK, instK, 0);
       }
@@ -713,22 +700,6 @@ public class RhinoArtifactRootObjectBuilder(
 
     geometryKsByObjectId[co.ApplicationId] = gKs;
 
-#if !SDK_BUNDLE_VOCAB_ADDITIONS
-    // Pre-vocab build only: stamp the member's geometry K(s) onto its object row — the join receive needs to
-    // get from a definition's DEFINES geometry back to the object holding the member's layer. ALL of them, not
-    // just the first: receive picks the authoritative 3dm solid OR its display mesh(es) per member (see
-    // GroupDefinesByMember), and whichever it picks has to resolve [ENG-9110]. Vocab builds carry this join as
-    // DEFINES_MEMBER on the (definition, ord) key instead (EmitMemberGraphJoin) — no stamp needed.
-    if (isDefinitionMember)
-    {
-      pipeline.AddProperties(
-        co.ApplicationId,
-        DefinitionMemberStamps.NoProperties,
-        DefinitionMemberStamps.GeometryStamp(gKs)
-      );
-    }
-#endif
-
     // Every display fragment was dropped and neither a standalone SOLID nor a member solid landed (gKs would
     // carry the member solid) → nothing renderable made the bundle; report it instead of standing on the
     // Collect-phase SUCCESS. An object with no display geometry at all is NOT a drop.
@@ -751,23 +722,12 @@ public class RhinoArtifactRootObjectBuilder(
     int? instK
   )
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
-    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (DefinesMember/Places APIs).
     int memberObjK = pipeline.InternObject(memberId);
     pipeline.DefinesMember(defK, memberObjK, memberOrd);
     if (instK is { } placementK)
     {
       pipeline.Places(memberObjK, placementK);
     }
-#else
-    // No-op until the SDK vocab pin bump — define SDK_BUNDLE_VOCAB_ADDITIONS once Speckle.Objects ships the
-    // DefinesMember/Places pipeline APIs (branch oguzhan/bundle-vocab-additions).
-    _ = pipeline;
-    _ = defK;
-    _ = memberId;
-    _ = memberOrd;
-    _ = instK;
-#endif
   }
 
   // Definition members (DEFINES / DEFINES_INSTANCE) → render materials (HAS_MATERIAL). Order matters: all
@@ -851,11 +811,9 @@ public class RhinoArtifactRootObjectBuilder(
         }
         else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
         {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
           // The authored layer→material assignment itself [bundle-spec rel 28 NODE_HAS_MATERIAL] — receive
           // restores it on the rebuilt layer. Weakest ladder tier; the flatten below stays the render carrier.
           pipeline.NodeHasMaterial(layerCollK, matK);
-#endif
           // layer-sourced: the layer has no geometry of its own, so the inherited material lands on each object that
           // draws with it. An inheritor with no geometry (a block instance) is skipped — nothing to attach to.
           if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
@@ -948,14 +906,10 @@ public class RhinoArtifactRootObjectBuilder(
       parentK = GetOrAddLayerCollection(pipeline, layers, parentIndex, cache);
     }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     // Layer colour as a first-class edge [bundle-spec rel 29 NODE_HAS_COLOR]; the argb-on-CONTAINER column
     // stamp it replaces stays a read fallback on consumers for pre-vocab bundles.
     int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer");
     pipeline.NodeHasColor(collK, pipeline.AddColor(layer.Argb));
-#else
-    int collK = pipeline.AddCollection(layer.Id, layer.Name, parentK, "Layer", layer.Argb);
-#endif
     cache[layerIndex] = collK;
     return collK;
   }

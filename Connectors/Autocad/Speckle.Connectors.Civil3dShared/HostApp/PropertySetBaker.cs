@@ -31,11 +31,9 @@ public class PropertySetBaker
   /// </summary>
   private readonly Dictionary<string, ADB.ObjectId> _propertySetDefinitionMap = new();
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
   /// <summary>set name → (FieldBucketId → field name), from tier-1/3 schemas — the rebind's join index.
   /// Empty for carrier-built definitions (tier 2), which never shipped bucket ids.</summary>
   private readonly Dictionary<string, Dictionary<string, string>> _bucketToFieldNameBySet = new();
-#endif
 
   public PropertySetBaker(
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore,
@@ -110,9 +108,7 @@ public class PropertySetBaker
   public void ParseAndBakePropertySetDefinitions(Dictionary<string, object?> definitions, string namePrefix)
   {
     _propertySetDefinitionMap.Clear();
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     _bucketToFieldNameBySet.Clear();
-#endif
 
     if (definitions.Count == 0)
     {
@@ -154,7 +150,6 @@ public class PropertySetBaker
     tr.Commit();
   }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
   /// <summary>Tier 1/3 of the definition ladder: recreate defs from host-API-free schemas (the
   /// <c>eav.property_set_definitions</c> file, or synthesis from value rows). The carrier path
   /// (<see cref="ParseAndBakePropertySetDefinitions(Dictionary{string, object?}, string)"/>) stays tier 2.</summary>
@@ -333,7 +328,6 @@ public class PropertySetBaker
     tr.AddNewlyCreatedDBObject(propSetDef, true);
     return propSetDef.ObjectId;
   }
-#endif
 
   /// <summary>
   /// Try to bake property sets from a Speckle object to a Civil3D entity.
@@ -574,14 +568,9 @@ public class PropertySetBaker
         propertyNameToDef[propDef.Name] = (propDef.Id, propDef.DataType);
       }
 
-#if SDK_BUNDLE_VOCAB_ADDITIONS
       _bucketToFieldNameBySet.TryGetValue(setName, out var bucketMap);
-#else
-      _ = setName;
-#endif
       foreach (var propertyEntry in setData)
       {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
         // Bucket-id-first field matching: internalDefinitionName is the FieldBucketId the producer shipped;
         // the display key is only the fallback (it can drift from the authored field name).
         string propertyName = PropertySetDefinitionLadder.ResolveFieldName(
@@ -592,9 +581,6 @@ public class PropertySetBaker
             : null,
           bucketMap
         );
-#else
-        string propertyName = propertyEntry.Key;
-#endif
 
         object? value = propertyEntry.Value is Dictionary<string, object?> propertyDataDict
           ? propertyDataDict.TryGetValue("value", out var nested)
