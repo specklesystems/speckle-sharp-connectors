@@ -1224,6 +1224,19 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       layerTable.Add(record);
       tr.AddNewlyCreatedDBObject(record, true);
     }
+    else if (argb is int a)
+    {
+      // PreClean keeps emptied layers for reuse, so a re-receive must push the sender's CURRENT colour onto the
+      // existing record — most baked entities are ByLayer, so this is the colour the user sees. Sender wins over a
+      // receiver-side manual recolour, as the v1 delete-and-recreate did [ENG-9330]. No sender colour → untouched.
+      var record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+      AcadColor color = ToAcadColor(a);
+      if (!record.Color.Equals(color))
+      {
+        record.UpgradeOpen();
+        record.Color = color;
+      }
+    }
     cache.Add(layerName);
     return layerName;
   }
@@ -1523,6 +1536,30 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             _logger.LogWarning(ex, "Could not erase prior block definition {Name}", btr.Name);
           }
+        }
+      }
+
+      // purge this model's render materials — CreateMaterials names them with the material's node index, which
+      // shifts between versions, so without this every re-receive left the previous set orphaned [ENG-9329].
+      // Entities referencing them were erased above; the stamp suffix keeps user/other-model materials out.
+      var materialDict = (DBDictionary)tr.GetObject(db.MaterialDictionaryId, OpenMode.ForRead);
+      var staleMaterialIds = new List<ObjectId>();
+      foreach (DBDictionaryEntry entry in materialDict)
+      {
+        if (entry.Key.Contains(baseLayerName))
+        {
+          staleMaterialIds.Add(entry.Value);
+        }
+      }
+      foreach (var materialId in staleMaterialIds)
+      {
+        try
+        {
+          tr.GetObject(materialId, OpenMode.ForWrite).Erase();
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(ex, "Could not erase prior render material {Handle}", materialId.Handle);
         }
       }
 
