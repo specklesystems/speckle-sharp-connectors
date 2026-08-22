@@ -422,6 +422,10 @@ public class AutocadArtifactRootObjectBuilder(
     // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
+    // Every selected object, known up-front so a Civil3D child that is ALSO a top-level object (a subassembly under a
+    // corridor) defers its properties/geometry to its own EmitObject regardless of which is visited first [ENG-9333].
+    var topLevelIds = model.Objects.Select(o => o.ApplicationId).ToHashSet(StringComparer.Ordinal);
+
     // AutoCAD colour SEMANTICS the ARGB-only COLOR node cannot carry [ENG-9117] — see CollectColorSemantics.
     var colorSemantics = CollectColorSemantics(model.Colors);
 
@@ -452,6 +456,7 @@ public class AutocadArtifactRootObjectBuilder(
         geometryKsByObjectId,
         instanceKByObjectId,
         definitionMemberIds,
+        topLevelIds,
         memberLayerArgb,
         colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
       );
@@ -504,6 +509,7 @@ public class AutocadArtifactRootObjectBuilder(
     Dictionary<string, List<int>> geometryKsByObjectId,
     Dictionary<string, int> instanceKByObjectId,
     HashSet<string> definitionMemberIds,
+    HashSet<string> topLevelIds,
     int? memberLayerArgb,
     ColorSemantics? colorSemantics
   )
@@ -591,7 +597,10 @@ public class AutocadArtifactRootObjectBuilder(
     {
       gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the SAT per member
     }
-    int ord = 0;
+    // A Civil3D entity already reached through a corridor's .elements tree (EmitCivilChild) has that copy's corridor
+    // solids registered under its id; this object's own display is appended after them, not in their place [ENG-9333].
+    geometryKsByObjectId.TryGetValue(co.ApplicationId, out List<int>? priorGKs);
+    int ord = priorGKs?.Count ?? 0;
     foreach (Base fragment in displayGeometry)
     {
       try
@@ -617,7 +626,14 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
 
-    geometryKsByObjectId[co.ApplicationId] = gKs;
+    if (priorGKs is not null)
+    {
+      priorGKs.AddRange(gKs);
+    }
+    else
+    {
+      geometryKsByObjectId[co.ApplicationId] = gKs;
+    }
 
     EmitMemberLayerColor(pipeline, isDefinitionMember, memberLayerArgb, gKs);
 
@@ -638,7 +654,7 @@ public class AutocadArtifactRootObjectBuilder(
       int childOrd = 0;
       foreach (Base child in civilParent.elements)
       {
-        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId);
+        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId, topLevelIds);
       }
       if (childOrd > 0)
       {
@@ -684,9 +700,15 @@ public class AutocadArtifactRootObjectBuilder(
     }
   }
 
-  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always; interns + emits the child's own
-  // geometry/properties only once (a child may also be a top-level object — geometryKsByObjectId is the guard);
-  // recurses into its own .elements.
+  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always, then:
+  //  - properties + IN_COLLECTION once per child id — and NEVER for a child that is also a top-level object (a
+  //    subassembly entity under its corridor): the corridor copy carries an EMPTY properties bag, and emitting it here
+  //    too wrote the root scalars (name/type/units/speckle_type) twice whenever the corridor was visited before the
+  //    entity, or replaced the real properties with the empty bag in the other order [ENG-9333];
+  //  - display geometry for EVERY copy: the same subassembly entity appears under each region that applies its
+  //    assembly and each copy carries THAT region's corridor solids, which are distinct from the entity's own
+  //    (2D shape) display that EmitObject emits.
+  // Recurses into its own .elements.
   private void EmitCivilChild(
     ObjectsArtifactPipeline pipeline,
     Base child,
@@ -694,45 +716,49 @@ public class AutocadArtifactRootObjectBuilder(
     string units,
     int parentObjK,
     int subOrd,
-    Dictionary<string, List<int>> geometryKsByObjectId
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    HashSet<string> topLevelIds
   )
   {
     string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
     int childK = pipeline.InternObject(childAppId);
     pipeline.Subelement(parentObjK, childK, subOrd);
 
-    if (!geometryKsByObjectId.ContainsKey(childAppId))
+    if (!geometryKsByObjectId.TryGetValue(childAppId, out List<int>? gKs))
     {
-      pipeline.InCollection(childK, collK, 0);
-      var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
-      string childName = child is DataObject dn ? dn.name : child.speckle_type;
-      string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
-      pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
-
-      var display = child is Civil3dObject cc
-        ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
-        : new List<Base> { child };
-      var gKs = new List<int>();
-      int ord = 0;
-      foreach (Base fragment in display)
-      {
-        try
-        {
-          int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
-          pipeline.Display(childK, gK, ord++);
-          gKs.Add(gK);
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          logger.LogWarning(
-            ex,
-            "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
-            fragment.speckle_type,
-            childAppId
-          );
-        }
-      }
+      gKs = new List<int>();
       geometryKsByObjectId[childAppId] = gKs;
+      if (!topLevelIds.Contains(childAppId))
+      {
+        pipeline.InCollection(childK, collK, 0);
+        var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
+        string childName = child is DataObject dn ? dn.name : child.speckle_type;
+        string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
+        pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
+      }
+    }
+
+    var display = child is Civil3dObject cc
+      ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
+      : new List<Base> { child };
+    foreach (Base fragment in display)
+    {
+      try
+      {
+        int ord = gKs.Count;
+        int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
+        pipeline.Display(childK, gK, ord);
+        gKs.Add(gK);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          childAppId
+        );
+      }
     }
 
     if (child is Civil3dObject civilChild)
@@ -740,7 +766,7 @@ public class AutocadArtifactRootObjectBuilder(
       int grandOrd = 0;
       foreach (Base grandChild in civilChild.elements)
       {
-        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId);
+        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId, topLevelIds);
       }
     }
   }
