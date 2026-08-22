@@ -551,7 +551,9 @@ public class AutocadArtifactRootObjectBuilder(
       {
         displayGeometry = WithCivilBaseCurveFallback(displayGeometry, civil);
       }
-      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding;
+      // Civil3D's Solid3d converter (Civil3dObject, not AutocadObject) parks the SAT under "encodedValue", which is
+      // also what the v1 receive accepted; without this fallback a Civil solid shipped no SOLID rel [ENG-9325].
+      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding ?? dataObject["encodedValue"] as RawEncoding;
     }
     else
     {
