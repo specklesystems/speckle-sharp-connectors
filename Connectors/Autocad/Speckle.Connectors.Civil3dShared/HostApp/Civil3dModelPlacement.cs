@@ -1,3 +1,4 @@
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.Civil.ApplicationServices;
 using Autodesk.Civil.Settings;
@@ -32,10 +33,14 @@ internal static class Civil3dModelPlacement
 
     if (coordinateSystemCode is not null)
     {
-      metadata["crs.horizontal.code"] = new(coordinateSystemCode);
-      metadata["crs.horizontal.authority"] = new(
-        coordinateSystemCode.StartsWith("EPSG", StringComparison.OrdinalIgnoreCase) ? "EPSG" : "Autodesk"
-      );
+      int? epsgCode = TryGetEpsgCode(coordinateSystemCode);
+      bool hasExplicitEpsg = coordinateSystemCode.StartsWith("EPSG", StringComparison.OrdinalIgnoreCase);
+      metadata["crs.horizontal.code"] = new(epsgCode is int epsg ? $"EPSG:{epsg}" : coordinateSystemCode);
+      metadata["crs.horizontal.authority"] = new(epsgCode is not null || hasExplicitEpsg ? "EPSG" : "Autodesk");
+      if (epsgCode is not null)
+      {
+        metadata["crs.horizontal.nativeCode"] = new(coordinateSystemCode);
+      }
       metadata["crs.axisOrder"] = new("easting,northing");
       metadata["crs.units"] = new(coordinateUnits);
     }
@@ -117,6 +122,24 @@ internal static class Civil3dModelPlacement
       return null;
     }
     return code!.Trim();
+  }
+
+  private static int? TryGetEpsgCode(string coordinateSystemCode)
+  {
+    try
+    {
+      using GeoCoordinateSystem coordinateSystem = GeoCoordinateSystem.Create(coordinateSystemCode);
+      return coordinateSystem.EPSGcode > 0 ? coordinateSystem.EPSGcode : null;
+    }
+    catch (Autodesk.AutoCAD.Runtime.Exception)
+    {
+      // Custom and non-earth Autodesk coordinate systems do not necessarily have an EPSG equivalent.
+      return null;
+    }
+    catch (ArgumentException)
+    {
+      return null;
+    }
   }
 
   private static string ToMethod(GridScaleFactorType method) =>
