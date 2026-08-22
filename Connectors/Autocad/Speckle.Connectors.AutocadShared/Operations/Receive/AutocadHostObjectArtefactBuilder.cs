@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.GraphicsInterface;
+using Autodesk.AutoCAD.LayerManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -138,6 +139,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
     PreCleanAdditional(baseLayerName);
+    EnsureLayerFilter(db, projectName, modelName, baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
     // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
@@ -1239,6 +1241,79 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     cache.Add(layerName);
     return layerName;
+  }
+
+  // ── layer filter ──────────────────────────────────────────────────────────────────────────────────────
+  // Layer Properties Manager filter tree: "Speckle" → "{project}-{model}", the nested one selecting exactly this
+  // model's layers. Ports the v1 AutocadLayerBaker.CreateLayerFilter onto the artefact stamp ("Project X Model Y-…")
+  // and is idempotent — a re-receive refreshes the nested filter's expression instead of adding a duplicate
+  // [ENG-9331]. Best-effort: a filter failure must not block the receive. (AutoCAD only repaints the tree after the
+  // palette is closed and reopened.)
+  private void EnsureLayerFilter(Database db, string projectName, string modelName, string baseLayerName)
+  {
+    const string ROOT_FILTER_NAME = "Speckle";
+    try
+    {
+      LayerFilterTree tree = db.LayerFilters;
+      LayerFilterCollection rootFilters = tree.Root.NestedFilters;
+      LayerFilter? group = null;
+      foreach (LayerFilter existing in rootFilters)
+      {
+        if (existing.Name == ROOT_FILTER_NAME)
+        {
+          group = existing;
+          break;
+        }
+      }
+      if (group is null)
+      {
+        group = new LayerFilter { Name = ROOT_FILTER_NAME, FilterExpression = "NAME==\"Project * Model *\"" };
+        rootFilters.Add(group);
+      }
+
+      string filterName = _autocadContext.RemoveInvalidChars($"{projectName}-{modelName}");
+      string expression = $"NAME==\"{EscapeWildcards(baseLayerName)}*\"";
+      LayerFilter? modelFilter = null;
+      foreach (LayerFilter nested in group.NestedFilters)
+      {
+        if (nested.Name == filterName)
+        {
+          modelFilter = nested;
+          break;
+        }
+      }
+      if (modelFilter is null)
+      {
+        group.NestedFilters.Add(new LayerFilter { Name = filterName, FilterExpression = expression });
+      }
+      else
+      {
+        modelFilter.FilterExpression = expression;
+      }
+      db.LayerFilters = tree;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Could not create the Speckle layer filter for '{BaseLayer}'", baseLayerName);
+    }
+  }
+
+  // AutoCAD wildcard specials inside a NAME== pattern must be escaped with a reverse quote, or a model named
+  // "v1.2" / "a,b" matches the wrong layers.
+  private static readonly char[] s_wildcardSpecials = "`#@.*?~[],".ToCharArray();
+
+  private static string EscapeWildcards(string s)
+  {
+    var sb = new System.Text.StringBuilder(s.Length);
+    foreach (char c in s)
+    {
+      if (Array.IndexOf(s_wildcardSpecials, c) >= 0)
+      {
+        sb.Append('`');
+      }
+      sb.Append(c);
+    }
+    return sb.ToString();
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
