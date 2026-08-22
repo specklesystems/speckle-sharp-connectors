@@ -416,37 +416,6 @@ public class ClassPropertiesExtractor
     return partAssignments;
   }
 
-  private void ProcessCorridorFeaturelinePoints(
-    CDB.CorridorFeatureLine featureline,
-    Dictionary<string, Dictionary<string, object?>> featureLinesDict
-  )
-  {
-    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?>? value))
-    {
-      Dictionary<string, object?> pointsDict = new(featureline.FeatureLinePoints.Count);
-      int pointCount = 0;
-      foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
-      {
-        Dictionary<string, object?> pointPropertiesDict = new()
-        {
-          ["station"] = point.Station,
-          ["x"] = point.XYZ.X,
-          ["y"] = point.XYZ.Y,
-          ["z"] = point.XYZ.Z,
-          ["isBreak"] = point.IsBreak,
-        };
-
-        PropertyHandler propHandler = new();
-        propHandler.TryAddToDictionary(pointPropertiesDict, "offset", () => point.Offset); // not all points have offsets, will throw
-
-        pointsDict[pointCount.ToString()] = pointPropertiesDict;
-        pointCount++;
-      }
-
-      value["featureLinePoints"] = pointsDict;
-    }
-  }
-
   private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
   {
     static void AddArrayToDict(string[] array, Dictionary<string, object?> dict, string key)
@@ -467,56 +436,8 @@ public class ClassPropertiesExtractor
     AddArrayToDict(corridor.GetPointCodes(), codesDict, POINTS_PROP);
     AddDictionaryToDictionary(codesDict, properties, CODES_PROP);
 
-    // get feature lines props
-    // this is pretty complicated: need to extract featureline points as dicts, but can only do this by iterating through baselines. Need to match the iterated featurelines with the featureline code info.
-    Dictionary<string, Dictionary<string, object?>> featureLinesDict = new();
-    // first build dict from the code info
-    foreach (CDB.FeatureLineCodeInfo featureLineCode in corridor.FeatureLineCodeInfos)
-    {
-      featureLinesDict[featureLineCode.CodeName] = new Dictionary<string, object?>()
-      {
-        ["codeName"] = featureLineCode.CodeName,
-        ["isConnected"] = featureLineCode.IsConnected,
-        ["payItems"] = featureLineCode.PayItems,
-      };
-    }
-
-    // then iterate through baseline featurelines to populate point info
-    foreach (CDB.Baseline baseline in corridor.Baselines)
-    {
-      // main featurelines
-      foreach (
-        CDB.FeatureLineCollection mainFeaturelineCollection in baseline
-          .MainBaselineFeatureLines
-          .FeatureLineCollectionMap
-      )
-      {
-        foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
-        {
-          ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
-        }
-      }
-
-      // offset featurelines
-      foreach (CDB.BaselineFeatureLines offsetFeaturelineCollection in baseline.OffsetBaselineFeatureLinesCol)
-      {
-        foreach (
-          CDB.FeatureLineCollection featurelineCollection in offsetFeaturelineCollection.FeatureLineCollectionMap
-        )
-        {
-          foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
-          {
-            ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
-          }
-        }
-      }
-    }
-
-    if (featureLinesDict.Count > 0)
-    {
-      properties["Feature Lines"] = featureLinesDict;
-    }
-
+    // Feature line points are NOT dumped here: each corridor feature line is already a child object with polyline
+    // display geometry (CorridorHandler.FeatureLineToSpeckle), which also carries the code info [ENG-9334].
     return properties;
   }
 
