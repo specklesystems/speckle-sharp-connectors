@@ -83,7 +83,8 @@ public class PropertySetBaker
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
-        _logger.LogWarning(ex, "Failed to purge property set definition");
+        // The bake tolerates a survivor (see AddDefinitionRecord), so this is diagnostic, not fatal [ENG-9328].
+        _logger.LogWarning(ex, "Failed to purge property set definition {Handle}", defId.Handle);
       }
     }
 
@@ -140,10 +141,19 @@ public class PropertySetBaker
         continue;
       }
 
-      ADB.ObjectId defId = CreatePropertySetDefinition(setName, propertyDefinitions, namePrefix, tr);
-      if (!defId.IsNull)
+      // Per-definition isolation: one bad set (a name collision, an AEC validation error) must not take the whole
+      // receive down with a raw "eDuplicateKey" on the model card [ENG-9328].
+      try
       {
-        _propertySetDefinitionMap[setName] = defId;
+        ADB.ObjectId defId = CreatePropertySetDefinition(setName, propertyDefinitions, namePrefix, tr);
+        if (!defId.IsNull)
+        {
+          _propertySetDefinitionMap[setName] = defId;
+        }
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Failed to create property set definition {SetName}; its values will not bake", setName);
       }
     }
 
@@ -180,36 +190,88 @@ public class PropertySetBaker
       //   (b) an existing def that differs gets a disambiguated '{name}-{prefix}' create + warning
       //       (the prefixed name is also what PurgePropertySets can safely reclaim next receive);
       //   (c) no existing def → create under the plain authored name.
-      ADB.ObjectId defId;
-      if (TryFindExistingDefinition(schema.SetName, tr, out ADB.ObjectId existingId))
+      try
       {
-        string incomingKey = PropertySetDefinitionLadder.EffectiveSetKey(schema);
-        string existingKey = ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
-        if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
+        ADB.ObjectId defId;
+        if (TryFindExistingDefinition(schema.SetName, tr, out ADB.ObjectId existingId))
         {
-          _propertySetDefinitionMap[schema.SetName] = existingId;
-          AddBucketMap(schema);
+          string incomingKey = PropertySetDefinitionLadder.EffectiveSetKey(schema);
+          string existingKey = ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
+          if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
+          {
+            _propertySetDefinitionMap[schema.SetName] = existingId;
+            AddBucketMap(schema);
+            continue;
+          }
+          _logger.LogWarning(
+            "Existing property set definition {SetName} differs from the received schema; creating {NewName}",
+            schema.SetName,
+            $"{schema.SetName}-{namePrefix}"
+          );
+          defId = CreatePropertySetDefinitionFromSchema(schema, $"{schema.SetName}-{namePrefix}", tr);
+        }
+        else
+        {
+          defId = CreatePropertySetDefinitionFromSchema(schema, schema.SetName, tr);
+        }
+        if (defId.IsNull)
+        {
           continue;
         }
+        _propertySetDefinitionMap[schema.SetName] = defId;
+        AddBucketMap(schema);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // Per-definition isolation — see ParseAndBakePropertySetDefinitions [ENG-9328].
         _logger.LogWarning(
-          "Existing property set definition {SetName} differs from the received schema; creating {NewName}",
-          schema.SetName,
-          $"{schema.SetName}-{namePrefix}"
+          ex,
+          "Failed to create property set definition {SetName}; its values will not bake",
+          schema.SetName
         );
-        defId = CreatePropertySetDefinitionFromSchema(schema, $"{schema.SetName}-{namePrefix}", tr);
       }
-      else
-      {
-        defId = CreatePropertySetDefinitionFromSchema(schema, schema.SetName, tr);
-      }
-      if (defId.IsNull)
-      {
-        continue;
-      }
-      _propertySetDefinitionMap[schema.SetName] = defId;
-      AddBucketMap(schema);
     }
     tr.Commit();
+  }
+
+  /// <summary>Adds <paramref name="propSetDef"/> to the drawing under <paramref name="recordName"/>. A same-named
+  /// record is the previous receive's definition that <see cref="PurgePropertySets"/> could not erase (AEC refuses
+  /// while the erased entities' property sets still reference it): erase it here, and if that fails too, reuse it —
+  /// the record name is connector-stamped, so it IS the same set. Either way "eDuplicateKey" never escapes to
+  /// the model card [ENG-9328].</summary>
+  private ADB.ObjectId AddDefinitionRecord(
+    AAECPDB.DictionaryPropertySetDefinitions propSetDefs,
+    string recordName,
+    AAECPDB.PropertySetDefinition propSetDef,
+    ADB.Transaction tr
+  )
+  {
+    if (TryFindExistingDefinition(recordName, tr, out ADB.ObjectId existingId))
+    {
+      try
+      {
+        var existing = (AAECPDB.PropertySetDefinition)tr.GetObject(existingId, ADB.OpenMode.ForWrite);
+        existing.Erase();
+        _logger.LogWarning(
+          "Erased property set definition {RecordName} that survived the pre-receive purge",
+          recordName
+        );
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(
+          ex,
+          "Reusing existing property set definition {RecordName}: it could not be erased",
+          recordName
+        );
+        propSetDef.Dispose();
+        return existingId;
+      }
+    }
+
+    propSetDefs.AddNewRecord(recordName, propSetDef);
+    tr.AddNewlyCreatedDBObject(propSetDef, true);
+    return propSetDef.ObjectId;
   }
 
   private void AddBucketMap(PropertySetSchema schema)
@@ -324,9 +386,7 @@ public class PropertySetBaker
       propSetDef.Definitions.Add(propDef);
     }
 
-    propSetDefs.AddNewRecord(recordName, propSetDef);
-    tr.AddNewlyCreatedDBObject(propSetDef, true);
-    return propSetDef.ObjectId;
+    return AddDefinitionRecord(propSetDefs, recordName, propSetDef, tr);
   }
 
   /// <summary>
@@ -502,10 +562,7 @@ public class PropertySetBaker
       propSetDef.Definitions.Add(propDef);
     }
 
-    propSetDefs.AddNewRecord(prefixedName, propSetDef);
-    tr.AddNewlyCreatedDBObject(propSetDef, true);
-
-    return propSetDef.ObjectId;
+    return AddDefinitionRecord(propSetDefs, prefixedName, propSetDef, tr);
   }
 
   private bool ObjectHasPropertySet(ADB.DBObject obj, ADB.ObjectId propertySetId)
