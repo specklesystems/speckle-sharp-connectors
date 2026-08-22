@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Reflection;
 using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -540,6 +542,40 @@ public class ClassPropertiesExtractor
     };
   }
 
+  // Stock (.NET catalog) subassemblies hand back the UNRESOLVED string-resource id of the label as DisplayName
+  // ("803"); the palette resolves it against the subassembly's resource DLL, which is not reachable here. The
+  // parameter's logical Key ("CutSlope") is the readable stand-in, and the bare id stays as the last resort so no
+  // parameter is dropped. Each param is isolated: one unreadable param must not take out the group [ENG-9332].
+  private static void AddSubassemblyParam(
+    Dictionary<string, object?> dict,
+    Func<string> displayName,
+    Func<string> key,
+    Func<object?> value
+  )
+  {
+    string? name = null;
+    try
+    {
+      name = displayName();
+      if (int.TryParse(name, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+      {
+        string logicalKey = key();
+        if (!string.IsNullOrWhiteSpace(logicalKey))
+        {
+          name = logicalKey;
+        }
+      }
+      dict[name] = value();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      if (name is not null && !dict.ContainsKey(name))
+      {
+        dict[name] = null;
+      }
+    }
+  }
+
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
     static void AddCodesToDict(CDB.CodeCollection codes, Dictionary<string, object?> dict)
@@ -569,19 +605,19 @@ public class ClassPropertiesExtractor
     Dictionary<string, object?> parametersDict = new();
     foreach (ParamBool p in subassembly.ParamsBool)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamDouble p in subassembly.ParamsDouble)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamString p in subassembly.ParamsString)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamLong p in subassembly.ParamsLong)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     AddDictionaryToDictionary(parametersDict, properties, "Parameters");
 
