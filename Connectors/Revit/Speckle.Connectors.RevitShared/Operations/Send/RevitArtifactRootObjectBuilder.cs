@@ -563,7 +563,6 @@ public class RevitArtifactRootObjectBuilder(
     double trueNorthAngle
   )
   {
-    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddModelProperty API).
     pipeline.AddModelProperty("referencePoint.kind", referencePointKind);
     if (selectedSourceTransform is { } t)
     {
@@ -605,3 +604,545 @@ public class RevitArtifactRootObjectBuilder(
     EmitModelPosition(pipeline, "referencePoints.surveyPoint.sharedPosition", placementData.SurveyPointSharedPosition);
     pipeline.AddModelProperty("projectLocation.trueNorthAngle", trueNorthAngle, "rad");
     EmitSiteLocation(pipeline, placementData);
+  }
+
+  private void EmitReferencePointPosition(ObjectsArtifactPipeline pipeline, string kind, XYZ? position)
+  {
+    EmitModelPosition(pipeline, $"referencePoints.{kind}.position", position);
+  }
+
+  private void EmitModelPosition(ObjectsArtifactPipeline pipeline, string prefix, XYZ? position)
+  {
+    if (position is null)
+    {
+      return;
+    }
+
+    string units = converterSettings.Current.SpeckleUnits;
+    pipeline.AddModelProperty($"{prefix}.x", scalingService.ScaleLength(position.X), units);
+    pipeline.AddModelProperty($"{prefix}.y", scalingService.ScaleLength(position.Y), units);
+    pipeline.AddModelProperty($"{prefix}.z", scalingService.ScaleLength(position.Z), units);
+  }
+
+  private void EmitSiteLocation(ObjectsArtifactPipeline pipeline, RevitModelPlacementData placementData)
+  {
+    pipeline.AddModelProperty("geolocation.anchor.latitude", placementData.SiteLatitudeDegrees, "deg");
+    pipeline.AddModelProperty("geolocation.anchor.longitude", placementData.SiteLongitudeDegrees, "deg");
+    pipeline.AddModelProperty(
+      "geolocation.anchor.elevation",
+      scalingService.ScaleLength(placementData.SiteElevation),
+      converterSettings.Current.SpeckleUnits
+    );
+    pipeline.AddModelProperty("geolocation.anchor.source", "siteLocation");
+    if (placementData.SurveyPointSharedPosition is not null)
+    {
+      pipeline.AddModelProperty("geolocation.anchor.referencePoint", "surveyPoint");
+      pipeline.AddModelProperty("geolocation.anchor.coordinateSpace", "sharedCoordinates");
+    }
+
+    if (placementData.CrsNativeCode.Length == 0)
+    {
+      if (placementData.CrsDefinition.Length > 0)
+      {
+        pipeline.AddModelProperty("crs.horizontal.definition", placementData.CrsDefinition);
+      }
+      return;
+    }
+
+    pipeline.AddModelProperty("crs.horizontal.authority", placementData.CrsAuthority);
+    pipeline.AddModelProperty("crs.horizontal.code", placementData.CrsCode);
+    pipeline.AddModelProperty("crs.horizontal.nativeCode", placementData.CrsNativeCode);
+    // Revit shared-coordinate values are emitted in the connector's model units;
+    // the definition preserves the CRS-native unit for consumers that need it.
+    pipeline.AddModelProperty("crs.units", converterSettings.Current.SpeckleUnits);
+    if (placementData.CrsDefinition.Length > 0)
+    {
+      pipeline.AddModelProperty("crs.horizontal.definition", placementData.CrsDefinition);
+    }
+  }
+
+  // ENG-9099 referencePoint.transform: the full rigid transform subtracted from
+  // world-space output, as 16 row-major doubles — same layout Flatten/BuildInstanceTransform already use for
+  // InstanceProxy transforms (basis columns unscaled/unit vectors, translation column in display units).
+  private string FormatReferencePointTransform(Transform transform)
+  {
+    var scaled = Transform.Identity;
+    scaled.BasisX = transform.BasisX;
+    scaled.BasisY = transform.BasisY;
+    scaled.BasisZ = transform.BasisZ;
+    scaled.Origin = new XYZ(
+      scalingService.ScaleLength(transform.Origin.X),
+      scalingService.ScaleLength(transform.Origin.Y),
+      scalingService.ScaleLength(transform.Origin.Z)
+    );
+    return ReferencePointHelper.TransformToCsv(scaled);
+  }
+
+  // Emits an object's displayValue as renderable geometry: meshes → DISPLAY, instance proxies → INSTANCE +
+  // DISPLAY_INSTANCE, curves/points → DISPLAY (via the SGEO encoder, same as Rhino's artefact send).
+  //
+  // Curves are role-filtered [ENG-8801]: on an element that ALSO has mesh/instance geometry, curve display values are
+  // symbolic 2D (door/window swing arcs) that render as spurious arcs (matches ODA's mesh-only extraction), so they
+  // stay suppressed. On an element whose ENTIRE display value is curves/points (model lines, grids, curve-based
+  // generic annotations) the curves ARE the geometry — dropping them made the element publish invisible, so we emit
+  // them.
+  private void EmitDisplayValue(
+    ObjectsArtifactPipeline pipeline,
+    int objK,
+    string appId,
+    IReadOnlyList<Base> displayValue
+  )
+  {
+    // Does this element carry real 3D geometry (mesh/instance)? If so, any accompanying curves are symbolic 2D.
+    bool hasSolidGeometry = false;
+    foreach (var item in displayValue)
+    {
+      if (item is InstanceProxy or SOG.Mesh)
+      {
+        hasSolidGeometry = true;
+        break;
+      }
+    }
+
+    int ord = 0;
+    foreach (var item in displayValue)
+    {
+      switch (item)
+      {
+        case InstanceProxy instanceProxy:
+          int defK = pipeline.AddDefinition(instanceProxy.definitionId, instanceProxy.definitionId);
+          int instK = pipeline.AddInstance(
+            instanceProxy.applicationId ?? $"{appId}:i{ord}",
+            defK,
+            Flatten(instanceProxy.transform),
+            instanceProxy.units
+          );
+          pipeline.DisplayInstance(objK, instK, ord++);
+          break;
+
+        case SOG.Mesh mesh:
+          int gK = pipeline.AddGeometry(mesh.applicationId ?? $"{appId}:g{ord}", mesh);
+          pipeline.Display(objK, gK, ord++);
+          break;
+
+        default:
+          // Curves / polylines / points. Emit only on curve/point-only elements (see role-filter note above); on
+          // mesh/instance-bearing elements these are swing arcs and stay suppressed.
+          if (hasSolidGeometry)
+          {
+            break;
+          }
+          try
+          {
+            int curveK = pipeline.AddGeometry(item.applicationId ?? $"{appId}:g{ord}", item);
+            pipeline.Display(objK, curveK, ord++);
+          }
+          catch (Exception ex) when (!ex.IsFatal())
+          {
+            // A display fragment the SGEO encoder doesn't support is skipped without failing the whole object —
+            // its properties + topology still land (same tolerance as Rhino's artefact send).
+            logger.LogWarning(
+              ex,
+              "Skipped unsupported curve display geometry {Type} on {AppId}",
+              item.speckle_type,
+              appId
+            );
+          }
+          break;
+      }
+    }
+  }
+
+  // A hosted/nested child RevitObject: its own interned object (geometry + properties), a SUBELEMENT edge to its
+  // owner, and recursion into its own children. Children are NOT in the atomic loop (stripped when the parent is
+  // present), so they get no separate ON_LEVEL/type-key resolution here — geometry + hierarchy + materials suffice.
+  //
+  // Identity is the child's Revit UniqueId (stamped by the converter) qualified by the SAME placement suffix its
+  // parent got, so two placements of one linked file keep distinct child identities, a re-send reproduces them, and
+  // the child can be the endpoint of a hosting/ownership relation [ENG-9212]. The Guid fallback survives only for a
+  // converter that emits an unidentified child — such an object is unreferenceable, but still ships its geometry.
+  private void EmitChild(
+    ObjectsArtifactPipeline pipeline,
+    RevitObject child,
+    int modelK,
+    int parentObjK,
+    int subOrd,
+    PlacementContext placement
+  )
+  {
+    string? childUniqueId = child.applicationId;
+    string childAppId = childUniqueId is null ? Guid.NewGuid().ToString() : childUniqueId + placement.Suffix;
+    int childK = pipeline.InternObject(childAppId);
+    pipeline.Subelement(parentObjK, childK, subOrd);
+
+    if (childUniqueId is not null)
+    {
+      // Reachable as a relation endpoint now that the id is the source UniqueId: a fixture hosted on a curtain
+      // panel, or owned by a nested shared family, resolves here instead of being dropped as dangling.
+      placement.ObjectKsByUniqueId[childUniqueId] = childK;
+
+      // A composite child can ALSO be atomic in this placement — a basic wall used as a curtain panel is both, and
+      // RemoveKnownChildElementsWhenParentPresent only strips Mullion / Panel / curtain-hosted FamilyInstance /
+      // stacked-wall member / TopRail. Both emissions now intern to the same deterministic id, so re-emitting the
+      // payload here would write its properties twice and hang a second DISPLAY edge (pointing at a second copy of
+      // the same mesh) off one object. Keep the ownership edge, let the atomic pass own the payload — it carries
+      // ON_LEVEL and the type key on top.
+      if (placement.AtomicUniqueIds.Contains(childUniqueId))
+      {
+        return;
+      }
+    }
+
+    pipeline.InModel(childK, modelK, 0);
+    pipeline.AddProperties(childAppId, child.properties, RootScalars(child, child));
+
+    EmitDisplayValue(pipeline, childK, childAppId, child.displayValue);
+
+    int grandOrd = 0;
+    foreach (RevitObject grandChild in child.elements)
+    {
+      EmitChild(pipeline, grandChild, modelK, childK, grandOrd++, placement);
+    }
+  }
+
+  // Definition geometries → InstanceDefinition (DEFINES) → materials (HAS_MATERIAL) → levels (ON_LEVEL).
+  // Order matters: all referenced meshes must be added BEFORE the edges that resolve them by applicationId.
+  private void EmitValueNodes(
+    ObjectsArtifactPipeline pipeline,
+    List<DocumentToConvert> atomicObjectsByDocument,
+    Dictionary<string, Dictionary<string, int>> objectKsByPlacement
+  )
+  {
+    var flatElements = atomicObjectsByDocument.SelectMany(t => t.Elements).ToList();
+    var idsAndSubElementIds = elementUnpacker.GetElementsAndSubelementIdsFromAtomicObjects(flatElements);
+
+    // 1) shared instance-definition meshes (live outside displayValue, in the cache singleton).
+    foreach (var baseObj in revitToSpeckleCacheSingleton.GetBaseObjectsForObjects(idsAndSubElementIds))
+    {
+      if (baseObj is SOG.Mesh && baseObj.applicationId != null)
+      {
+        pipeline.AddGeometry(baseObj.applicationId, baseObj);
+      }
+    }
+
+    // 2) instance definitions → DEFINES edges to their member meshes.
+    foreach (var defProxy in revitToSpeckleCacheSingleton.GetInstanceDefinitionProxiesForObjects(idsAndSubElementIds))
+    {
+      int defK = pipeline.AddDefinition(defProxy.applicationId.NotNull(), defProxy.name);
+      int o = 0;
+      foreach (var memberAppId in defProxy.objects)
+      {
+        pipeline.Defines(defK, pipeline.InternGeometryId(memberAppId), o++);
+      }
+    }
+
+    // 3) render materials → HAS_MATERIAL (geometry → material node).
+    foreach (
+      var materialProxy in revitToSpeckleCacheSingleton.GetRenderMaterialProxyListForObjects(idsAndSubElementIds)
+    )
+    {
+      var value = materialProxy.value;
+      int matK = pipeline.AddMaterial(
+        materialProxy.applicationId.NotNull(),
+        value.name,
+        value.diffuse,
+        value.opacity,
+        value.metalness,
+        value.roughness,
+        value.emissive,
+        value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
+      );
+      foreach (var meshAppId in materialProxy.objects)
+      {
+        pipeline.HasMaterial(pipeline.InternGeometryId(meshAppId), matK);
+      }
+    }
+
+    // 4) levels → ON_LEVEL. A VALUE-node edge, so this is the one place the fan-out across placements is
+    // intentional: a linked element placed N times puts all N occurrences on the (shared) level node. LevelUnpacker
+    // keys by the plain element UniqueId, so flatten the per-placement index to reach every occurrence's K
+    // (linked ones were interned with a transform-hash suffix).
+    var objectKsByElementUniqueId = FlattenPlacementIndexes(objectKsByPlacement);
+    foreach (var levelProxy in levelUnpacker.Unpack(flatElements))
+    {
+      double elevation = levelProxy.value["elevation"] is double d ? d : 0.0;
+      int lvlK = pipeline.AddLevel(levelProxy.applicationId.NotNull(), levelProxy.value.name, elevation);
+      // flatElements repeats a linked element once per link instance, so LevelUnpacker lists its UniqueId once per
+      // placement too. Dedup here or every occurrence's edge is written N times (relations.parquet is an append-only
+      // log — nothing downstream collapses duplicate rows) [ENG-9212].
+      foreach (var elementUniqueId in levelProxy.objects.Distinct(StringComparer.Ordinal))
+      {
+        if (objectKsByElementUniqueId.TryGetValue(elementUniqueId, out var objKs))
+        {
+          foreach (var objK in objKs)
+          {
+            pipeline.OnLevel(objK, lvlK);
+          }
+        }
+      }
+    }
+  }
+
+  // Per-placement identity maps → one element.UniqueId -> every occurrence's object K, across all placements. ONLY
+  // for value-node edges, where reaching every occurrence of a repeated linked element is the point; element→element
+  // topology must never resolve through this (that is what crossed placements before ENG-9212).
+  private static Dictionary<string, List<int>> FlattenPlacementIndexes(
+    Dictionary<string, Dictionary<string, int>> objectKsByPlacement
+  )
+  {
+    var objectKsByElementUniqueId = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+    foreach (var placementIndex in objectKsByPlacement.Values)
+    {
+      foreach (var entry in placementIndex)
+      {
+        if (!objectKsByElementUniqueId.TryGetValue(entry.Key, out var ks))
+        {
+          ks = new List<int>();
+          objectKsByElementUniqueId[entry.Key] = ks;
+        }
+        ks.Add(entry.Value);
+      }
+    }
+    return objectKsByElementUniqueId;
+  }
+
+  // Host-API topology, guarded to sent objects via the placement index (only interned targets get an edge):
+  //   SUBELEMENT   super-component → element: OWNERSHIP (a nested shared family → its super-component).
+  //                Complements the RevitObject.elements lift, which covers children folded INTO a parent object
+  //                (curtain panels / mullions / stacked-wall members — ownership too, emitted by EmitChild).
+  //   HOSTED_ON    element → its host: PLACEMENT (a door/window → its wall, a fixture → its ceiling). A different
+  //                relationship from ownership — a door is placed ON a wall, not a component OF it [ENG-9081].
+  //   IN_ROOM      element → its containing Room (or MEP Space) object.
+  //   CONNECTS_TO  a door/window's FromRoom → ToRoom, scoped by the opening's object K (the room-adjacency graph).
+  // Same accessors as ClassPropertiesExtractor; wrapped defensively — Room/ToRoom/FromRoom can throw without an
+  // active phase, and topology is best-effort (must never fail the geometry send).
+  //
+  // Scoped to ONE placement [ENG-9212]: <paramref name="sentElements"/> are the objects interned for this document
+  // context and <paramref name="placementIndex"/> resolves UniqueId → K within that same context. This half is the
+  // Revit read; PlacementTopology owns the resolution (precedence, dangling-endpoint drops, placement scoping) so
+  // that logic is testable without a live Revit document — which is what ENG-9212 needed and could not have.
+  private static void EmitElementTopology(
+    ObjectsArtifactPipeline pipeline,
+    List<(Element Element, int ObjK)> sentElements,
+    Dictionary<string, int> placementIndex
+  )
+  {
+    var placementElements = new List<PlacementElement>(sentElements.Count);
+    foreach (var (element, elementK) in sentElements)
+    {
+      if (element is not FamilyInstance fi)
+      {
+        continue;
+      }
+
+      string? ownerUniqueId = null;
+      string? hostUniqueId = null;
+      string? roomUniqueId = null;
+      string? fromRoomUniqueId = null;
+      string? toRoomUniqueId = null;
+      try
+      {
+        ownerUniqueId = fi.SuperComponent?.UniqueId;
+        hostUniqueId = fi.Host?.UniqueId;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: topology must never fail the geometry send.
+      }
+      try
+      {
+        // Read SEPARATELY from ownership/hosting above: Room/Space/FromRoom/ToRoom throw without an active phase,
+        // and a phase-less model should still get its SUBELEMENT / HOSTED_ON edges.
+        roomUniqueId = (fi.Room ?? (Element?)fi.Space)?.UniqueId;
+        fromRoomUniqueId = fi.FromRoom?.UniqueId;
+        toRoomUniqueId = fi.ToRoom?.UniqueId;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: no active phase → this element ships without room topology.
+      }
+
+      placementElements.Add(
+        new PlacementElement(
+          element.UniqueId,
+          elementK,
+          ownerUniqueId,
+          hostUniqueId,
+          roomUniqueId,
+          fromRoomUniqueId,
+          toRoomUniqueId
+        )
+      );
+    }
+
+    foreach (var edge in PlacementTopology.Resolve(placementElements, placementIndex))
+    {
+      switch (edge.Kind)
+      {
+        case PlacementEdgeKind.Subelement:
+          pipeline.Subelement(edge.Src, edge.Dst, edge.Ord);
+          break;
+        case PlacementEdgeKind.HostedOn:
+          pipeline.HostedOn(edge.Src, edge.Dst);
+          break;
+        case PlacementEdgeKind.InRoom:
+          pipeline.InRoom(edge.Src, edge.Dst, edge.Ord);
+          break;
+        default:
+          // ConnectsTo — Ord is the opening's K (a scope, not an ordinal).
+          pipeline.ConnectsTo(edge.Src, edge.Dst, edge.Ord);
+          break;
+      }
+    }
+  }
+
+  // Revit model groups → CONTAINER("Group") nodes + IN_GROUP membership [ENG-9079]. A SEPARATE axis from the
+  // scene tree (IN_MODEL / ON_LEVEL / category eav): an element keeps its model AND its group, exactly as in
+  // Rhino/AutoCAD. ElementUnpacker explodes every Group into its members before conversion, so the group
+  // INSTANCE is never itself an object in the bundle — the membership survives only on each member's
+  // Element.GroupId. Because that unpacking recurses, GroupId always names the INNERMOST group, which is
+  // precisely the "at most one IN_GROUP edge per element" contract; the nesting is reproduced as a CONTAINER
+  // parent chain (def_ref) walked from each group's own GroupId. The container name is the group TYPE name —
+  // the same string ClassPropertiesExtractor publishes as the `groupName` property.
+  // Guarded per element: group topology is best-effort and must never fail the geometry send.
+  private static void EmitGroups(
+    ObjectsArtifactPipeline pipeline,
+    string modelKey,
+    List<(Element Element, int ObjK)> sentElements
+  )
+  {
+    var containerKByGroupUniqueId = new Dictionary<string, int?>(StringComparer.Ordinal);
+    var ordByContainerK = new Dictionary<int, int>();
+
+    foreach (var (element, objK) in sentElements)
+    {
+      try
+      {
+        // An ungrouped element's GroupId is InvalidElementId, which resolves to null.
+        if (element.Document.GetElement(element.GroupId) is not Group group)
+        {
+          continue;
+        }
+
+        // null = attached detail group: annotation, not model-group membership.
+        if (ResolveGroupContainer(pipeline, modelKey, group, containerKByGroupUniqueId) is not int groupK)
+        {
+          continue;
+        }
+
+        int ord = ordByContainerK.TryGetValue(groupK, out int next) ? next : 0;
+        pipeline.InGroup(objK, groupK, ord);
+        ordByContainerK[groupK] = ord + 1;
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        // best-effort: a group whose type or parent can't be read is skipped; the element still ships.
+      }
+    }
+  }
+
+  // Interns the CONTAINER("Group") for a placed group, minting its ancestor chain FIRST so a nested group hangs
+  // off its parent through def_ref. Keyed by model container as well as group, so a linked file placed twice
+  // gets one group tier per placement instead of one shared, cross-wired tier. Memoized per document pass:
+  // resolving is a Revit API round-trip and every member of a group asks the same question.
+  private static int? ResolveGroupContainer(
+    ObjectsArtifactPipeline pipeline,
+    string modelKey,
+    Group group,
+    Dictionary<string, int?> cache
+  )
+  {
+    if (cache.TryGetValue(group.UniqueId, out int? cached))
+    {
+      return cached;
+    }
+
+    int? containerK = null;
+    if (!IsAttachedDetailGroup(group))
+    {
+      int? parentK = group.Document.GetElement(group.GroupId) is Group parent
+        ? ResolveGroupContainer(pipeline, modelKey, parent, cache)
+        : null;
+      containerK = pipeline.AddContainer($"{modelKey}:{group.UniqueId}", group.GroupType.Name, parentK, "Group");
+    }
+
+    cache[group.UniqueId] = containerK;
+    return containerK;
+  }
+
+  // Attached detail groups name the model group they annotate in AttachedParentId; standalone detail groups are
+  // caught by category. Both are view-specific annotation and stay out of the model-group tier.
+  private static bool IsAttachedDetailGroup(Group group) =>
+    group.AttachedParentId != ElementId.InvalidElementId
+    || (group.Category is { } category && category.GetBuiltInCategory() == BuiltInCategory.OST_IOSDetailGroups);
+
+  private static KeyValuePair<string, object?>[] RootScalars(Base converted, RevitObject? revitObject) =>
+    new KeyValuePair<string, object?>[]
+    {
+      new("speckle_type", converted.speckle_type),
+      new("name", (converted as DataObject)?.name),
+      new("units", revitObject?.units),
+      new("category", revitObject?.category),
+      new("family", revitObject?.family),
+      new("type", revitObject?.type),
+    };
+
+  // Stable per-type identity (the type element's UniqueId) so type/system parameters dedup into type_eav.
+  private string? TryGetTypeKey(Element element)
+  {
+    var typeId = element.GetTypeId();
+    if (typeId == ElementId.InvalidElementId)
+    {
+      return null;
+    }
+    return element.Document.GetElement(typeId)?.UniqueId;
+  }
+
+  // Matrix4x4 (row-major) → 16 doubles, matching SerializerV2 / Transform.ToArray order.
+  private static double[] Flatten(Matrix4x4 m) =>
+    new[]
+    {
+      m.M11,
+      m.M12,
+      m.M13,
+      m.M14,
+      m.M21,
+      m.M22,
+      m.M23,
+      m.M24,
+      m.M31,
+      m.M32,
+      m.M33,
+      m.M34,
+      m.M41,
+      m.M42,
+      m.M43,
+      m.M44,
+    };
+
+  private static readonly IReadOnlyDictionary<string, object?> s_emptyProperties = new Dictionary<string, object?>();
+
+  /// <summary>
+  /// Everything an object — or a child emitted recursively beneath it — needs to be identified and indexed within
+  /// ONE linked-model placement [ENG-9212]. A linked file placed N times produces N of these over the same source
+  /// document, and nothing may leak between them.
+  /// </summary>
+  /// <param name="Suffix">Appended to every source UniqueId in this placement: <c>_t{transformHash}</c> for a linked
+  /// document, empty for the host document.</param>
+  /// <param name="ObjectKsByUniqueId">Source UniqueId → interned object K, for THIS placement only. Element→element
+  /// relations resolve here, which is what keeps them from crossing placements.</param>
+  /// <param name="AtomicUniqueIds">The UniqueIds converted as atomic objects in this placement — a composite child
+  /// that also appears here must not re-emit its payload (see <see cref="EmitChild"/>).</param>
+  private sealed record PlacementContext(
+    string Suffix,
+    Dictionary<string, int> ObjectKsByUniqueId,
+    HashSet<string> AtomicUniqueIds
+  );
+
+  private sealed record BundleResult(
+    IReadOnlyDictionary<string, string> Bundle,
+    string RootId,
+    int ObjectCount,
+    IReadOnlyList<SendConversionResult> Results
+  );
+}

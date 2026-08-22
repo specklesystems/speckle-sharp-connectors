@@ -1016,7 +1016,6 @@ public class AutocadArtifactRootObjectBuilder(
 
   private static void EmitModelPlacement(ObjectsArtifactPipeline pipeline, CollectedModel model)
   {
-#if SDK_BUNDLE_VOCAB_ADDITIONS
     var options = model.ModelPlacementOptions ?? new Dictionary<string, Matrix3d>();
     Matrix3d bakedWcsToStored = Matrix3d.Identity;
     if (model.ApplyTransform && options.TryGetValue(model.ModelPlacementSource, out Matrix3d selectedWcsToStored))
@@ -1049,10 +1048,6 @@ public class AutocadArtifactRootObjectBuilder(
         pipeline.AddModelProperty(property.Key, property.Value.Value, property.Value.Units);
       }
     }
-#else
-    _ = pipeline;
-    _ = model;
-#endif
   }
 
   private static string MatrixToCsv(Matrix3d matrix) =>
