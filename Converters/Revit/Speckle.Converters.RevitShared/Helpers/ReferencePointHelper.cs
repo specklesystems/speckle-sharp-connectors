@@ -31,7 +31,42 @@ public static class ReferencePointHelper
       sourceTransforms["sharedCoordinates"] = sharedCoordinatesTransform;
     }
 
-    return new RevitModelPlacementData(sourceTransforms, projectBasePoint?.Position, surveyPoint?.Position);
+    SiteLocation siteLocation = document.SiteLocation;
+    string nativeCrsCode = siteLocation.GeoCoordinateSystemId?.Trim() ?? string.Empty;
+    (string crsAuthority, string crsCode) = NormalizeRevitCrsCode(nativeCrsCode);
+
+    return new RevitModelPlacementData(
+      sourceTransforms,
+      projectBasePoint?.Position,
+      surveyPoint?.Position,
+      surveyPoint?.SharedPosition,
+      siteLocation.Latitude * (180d / Math.PI),
+      siteLocation.Longitude * (180d / Math.PI),
+      siteLocation.Elevation,
+      crsAuthority,
+      crsCode,
+      nativeCrsCode,
+      siteLocation.GeoCoordinateSystemDefinition?.Trim() ?? string.Empty
+    );
+  }
+
+  private static (string Authority, string Code) NormalizeRevitCrsCode(string nativeCode)
+  {
+    const string EPSG_PREFIX = "EPSG:";
+    const string ADSK_PREFIX = "ADSK:";
+    if (nativeCode.StartsWith(EPSG_PREFIX, StringComparison.OrdinalIgnoreCase))
+    {
+      return ("EPSG", $"EPSG:{nativeCode[EPSG_PREFIX.Length..]}");
+    }
+    if (int.TryParse(nativeCode, out int epsg))
+    {
+      return ("EPSG", $"EPSG:{epsg}");
+    }
+    if (nativeCode.StartsWith(ADSK_PREFIX, StringComparison.OrdinalIgnoreCase))
+    {
+      return ("Autodesk", nativeCode[ADSK_PREFIX.Length..]);
+    }
+    return nativeCode.Length == 0 ? (string.Empty, string.Empty) : ("Autodesk", nativeCode);
   }
 
   /// <summary>
@@ -184,11 +219,27 @@ public static class ReferencePointHelper
 public sealed class RevitModelPlacementData(
   Dictionary<string, Transform> sourceTransforms,
   XYZ? projectBasePointPosition,
-  XYZ? surveyPointPosition
+  XYZ? surveyPointPosition,
+  XYZ? surveyPointSharedPosition,
+  double siteLatitudeDegrees,
+  double siteLongitudeDegrees,
+  double siteElevation,
+  string crsAuthority,
+  string crsCode,
+  string crsNativeCode,
+  string crsDefinition
 )
 {
   public XYZ? ProjectBasePointPosition { get; } = projectBasePointPosition;
   public XYZ? SurveyPointPosition { get; } = surveyPointPosition;
+  public XYZ? SurveyPointSharedPosition { get; } = surveyPointSharedPosition;
+  public double SiteLatitudeDegrees { get; } = siteLatitudeDegrees;
+  public double SiteLongitudeDegrees { get; } = siteLongitudeDegrees;
+  public double SiteElevation { get; } = siteElevation;
+  public string CrsAuthority { get; } = crsAuthority;
+  public string CrsCode { get; } = crsCode;
+  public string CrsNativeCode { get; } = crsNativeCode;
+  public string CrsDefinition { get; } = crsDefinition;
 
   public void SetSourceTransform(string kind, Transform transform) => sourceTransforms[kind] = transform;
 
