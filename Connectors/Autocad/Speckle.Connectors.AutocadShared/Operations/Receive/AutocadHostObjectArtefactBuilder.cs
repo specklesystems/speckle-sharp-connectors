@@ -163,6 +163,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     var (materialIdByGeometry, materialIdByObject) = MapMaterials(bundle, rels, objByGeom, materialIdByNode);
 
+    // Layer materials (NODE_HAS_MATERIAL → container node): projected onto the created materials so ResolveLayer can
+    // write each rebuilt layer record's MaterialId — the authored assignment, not just the flattened render carrier
+    // [ENG-9346].
+    var layerMaterialByNode = new Dictionary<int, ObjectId>();
+    foreach (var kv in rels.MaterialByNode)
+    {
+      if (materialIdByNode.TryGetValue(kv.Value, out ObjectId layerMatId))
+      {
+        layerMaterialByNode[kv.Key] = layerMatId;
+      }
+    }
+
     // 1b - by-object display colours (HAS_COLOR → COLOR nodes). Applied as explicit entity colour on bake; objects
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
@@ -203,7 +215,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           string layerName;
           using (var ltr = doc.TransactionManager.StartTransaction())
           {
-            layerName = ResolveLayer(bundle, objK, baseLayerName, db, ltr, layerCache);
+            layerName = ResolveLayer(bundle, objK, baseLayerName, db, ltr, layerCache, layerMaterialByNode);
             ltr.Commit();
           }
           materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
@@ -299,6 +311,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           itr,
           baseLayerName,
           layerCache,
+          layerMaterialByNode,
           materialIdByGeometry,
           materialIdByObject,
           colorArgbByGeometry,
@@ -759,6 +772,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Transaction tr,
     string baseLayerName,
     HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
     Dictionary<int, ObjectId> materialIdByGeometry,
     Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<int, int> colorArgbByGeometry,
@@ -791,6 +805,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       tr,
       baseLayerName,
       layerCache,
+      layerMaterialByNode,
       materialIdByObject,
       colorArgbByObject,
       defIdByNode,
@@ -957,6 +972,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Transaction tr,
     string baseLayerName,
     HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
     Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<string, int> colorArgbByObject,
     Dictionary<int, ObjectId> defIdByNode,
@@ -1013,7 +1029,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           docUnits
         );
         Point3d insertion = Point3d.Origin.TransformBy(matrix);
-        string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache);
+        string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
         var blockRef = new BlockReference(insertion, defId) { BlockTransform = matrix, Layer = layerName };
         if (materialIdByObject.TryGetValue(appId, out ObjectId objMaterial) && objMaterial != ObjectId.Null)
         {
@@ -1180,10 +1196,13 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string baseLayerName,
     Database db,
     Transaction tr,
-    HashSet<string> cache
+    HashSet<string> cache,
+    Dictionary<int, ObjectId> layerMaterialByNode
   )
   {
-    var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
+    // (name, argb, nodeK) — colour + the segment's node K, so the flattened layer also recovers the source layer's
+    // authored render material (NODE_HAS_MATERIAL) [ENG-9346].
+    var segments = SceneViewResolver.SegmentsWithAppearance(bundle, objK);
     string name =
       segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments.Select(s => s.Name))}";
     name = _autocadContext.RemoveInvalidChars(name);
@@ -1199,7 +1218,17 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         break;
       }
     }
-    return GetOrCreateLayer(name, db, tr, cache, argb);
+    // Same innermost-wins rule for the layer's authored material.
+    ObjectId materialId = ObjectId.Null;
+    for (int i = segments.Count - 1; i >= 0; i--)
+    {
+      if (segments[i].NodeK is int nodeK && layerMaterialByNode.TryGetValue(nodeK, out ObjectId m))
+      {
+        materialId = m;
+        break;
+      }
+    }
+    return GetOrCreateLayer(name, db, tr, cache, argb, materialId);
   }
 
   private static string GetOrCreateLayer(
@@ -1207,7 +1236,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Database db,
     Transaction tr,
     HashSet<string> cache,
-    int? argb
+    int? argb,
+    ObjectId materialId
   )
   {
     if (cache.Contains(layerName))
@@ -1222,6 +1252,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       if (argb is int a)
       {
         record.Color = ToAcadColor(a);
+      }
+      if (materialId != ObjectId.Null)
+      {
+        // The source layer's authored render material — restored on the record itself so ByLayer objects keep
+        // inheriting it after the round trip, not just drawing with a flattened copy [ENG-9346].
+        record.MaterialId = materialId;
       }
       layerTable.Add(record);
       tr.AddNewlyCreatedDBObject(record, true);
