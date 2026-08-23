@@ -11,19 +11,16 @@ namespace Speckle.Converters.Civil3dShared.Helpers;
 /// </summary>
 public sealed class CorridorHandler
 {
-  private readonly ITypedConverter<AG.Point3d, SOG.Point> _pointConverter;
   private readonly ITypedConverter<AG.Point3dCollection, SOG.Polyline> _pointCollectionConverter;
   private readonly CorridorDisplayValueExtractor _displayValueExtractor;
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
 
   public CorridorHandler(
-    ITypedConverter<AG.Point3d, SOG.Point> pointConverter,
     ITypedConverter<AG.Point3dCollection, SOG.Polyline> pointCollectionConverter,
     CorridorDisplayValueExtractor displayValueExtractor,
     IConverterSettingsStore<Civil3dConversionSettings> settingsStore
   )
   {
-    _pointConverter = pointConverter;
     _pointCollectionConverter = pointCollectionConverter;
     _displayValueExtractor = displayValueExtractor;
     _settingsStore = settingsStore;
@@ -34,7 +31,6 @@ public sealed class CorridorHandler
   // Each node is a Civil3dObject carrying typed elements (its children) and typed displayValue (its geometry, if any),
   // so the artefact send builder's typed walk reaches every node: subassembly corridor solids and featureline
   // polylines both surface as DISPLAY geometry, and the parent chain surfaces as the SUBELEMENT tree.
-  // Corridors will also have a dict of applied assemblies -> applied subassemblies attached to the region.
   // This handler is in place because none of the corridor children inherit from CDB.Entity
   public List<Base> GetCorridorChildren(CDB.Corridor corridor)
   {
@@ -43,6 +39,13 @@ public sealed class CorridorHandler
 
     // track children hierarchy ids:
     string corridorHandle = corridor.Handle.ToString();
+
+    // Per-code feature line metadata rides the feature line child objects (keyed by code name) [ENG-9334].
+    Dictionary<string, CDB.FeatureLineCodeInfo> codeInfoByName = new();
+    foreach (CDB.FeatureLineCodeInfo codeInfo in corridor.FeatureLineCodeInfos)
+    {
+      codeInfoByName[codeInfo.CodeName] = codeInfo;
+    }
 
     // process baselines and any featurelines found
     List<Base> baselines = new(corridor.Baselines.Count);
@@ -86,7 +89,7 @@ public sealed class CorridorHandler
       {
         foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
         {
-          baselineChildren.Add(FeatureLineToSpeckle(featureline));
+          baselineChildren.Add(FeatureLineToSpeckle(featureline, codeInfoByName));
         }
       }
 
@@ -98,7 +101,7 @@ public sealed class CorridorHandler
         {
           foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
           {
-            baselineChildren.Add(FeatureLineToSpeckle(featureline));
+            baselineChildren.Add(FeatureLineToSpeckle(featureline, codeInfoByName));
           }
         }
       }
@@ -131,7 +134,6 @@ public sealed class CorridorHandler
     // traverse region assembly for subassemblies and codes
     // display values (corridor solids) will be dumped here, by their code
     Civil3dObject convertedAssembly;
-    Dictionary<ADB.ObjectId, string> subassemblyNameCache = new();
     using (var tr = _settingsStore.Current.Document.Database.TransactionManager.StartTransaction())
     {
       var assembly = (CDB.Assembly)tr.GetObject(region.AssemblyId, ADB.OpenMode.ForRead);
@@ -145,9 +147,6 @@ public sealed class CorridorHandler
         {
           var subassembly = (CDB.Subassembly)tr.GetObject(subassemblyId, ADB.OpenMode.ForRead);
           string subassemblyHandle = subassemblyId.Handle.ToString();
-
-          // store name in cache for later use by applied subassemblies
-          subassemblyNameCache[subassemblyId] = subassembly.Name;
 
           // try to get the display value mesh from the corridor display value extractor by subassembly key
           SubassemblyCorridorKey subassemblyKey = new(
@@ -190,50 +189,13 @@ public sealed class CorridorHandler
       tr.Commit();
     }
 
-    // now get all region applied assemblies, applied subassemblies, and calculated shapes, links, and points as dicts
-    Dictionary<string, object?> appliedAssemblies = new();
-    double[] sortedStations = region.SortedStations();
-    for (int i = 0; i < sortedStations.Length; i++)
-    {
-      double station = sortedStations[i];
-
-      CDB.AppliedAssembly appliedAssembly = region.AppliedAssemblies[i];
-
-      Dictionary<string, object?> appliedAssemblyDict = new()
-      {
-        ["assemblyId"] = appliedAssembly.AssemblyId.GetSpeckleApplicationId(),
-        ["station"] = station,
-      };
-      PropertyHandler propHandler = new();
-      propHandler.TryAddToDictionary(appliedAssemblyDict, "adjustedElevation", () => appliedAssembly.AdjustedElevation); // can throw
-
-      // get the applied assembly's applied subassemblies
-      Dictionary<string, object?> appliedSubassemblies = new();
-      foreach (CDB.AppliedSubassembly appliedSubassembly in appliedAssembly.GetAppliedSubassemblies())
-      {
-        string subassemblyId = appliedSubassembly.SubassemblyId.GetSpeckleApplicationId();
-        string name = subassemblyNameCache.TryGetValue(appliedSubassembly.SubassemblyId, out string? cachedName)
-          ? cachedName!
-          : subassemblyId;
-
-        Dictionary<string, object?> appliedSubassemblyDict = new()
-        {
-          ["subassemblyId"] = subassemblyId,
-          ["calculatedShapes"] = GetCalculatedShapes(appliedSubassembly),
-        };
-
-        appliedSubassemblies[name] = appliedSubassemblyDict;
-      }
-      appliedAssemblyDict["appliedSubassemblies"] = appliedSubassemblies;
-
-      appliedAssemblies[station.ToString()] = appliedAssemblyDict;
-    }
-
+    // No per-station applied-assembly dump (calculated shapes → links → points): it scaled with stations ×
+    // subassemblies × points and had no consumer — the corridor solids on the subassembly children ARE the
+    // region's geometry [ENG-9335].
     Dictionary<string, object?> regionProperties = new()
     {
       ["startStation"] = region.StartStation,
       ["endStation"] = region.EndStation,
-      ["appliedAssemblies"] = appliedAssemblies,
     };
 
     return CreateCorridorObject(
@@ -266,50 +228,10 @@ public sealed class CorridorHandler
       applicationId = applicationId,
     };
 
-  // Gets the calculated shapes > calculated links > calculated points of an applied subassembly
-  private Dictionary<string, object?> GetCalculatedShapes(CDB.AppliedSubassembly appliedSubassembly)
-  {
-    Dictionary<string, object?> calculatedShapes = new();
-    int shapeCount = 0;
-    foreach (CDB.CalculatedShape shape in appliedSubassembly.Shapes)
-    {
-      Dictionary<string, object?> calculatedLinks = new();
-      int linkCount = 0;
-      foreach (CDB.CalculatedLink link in shape.CalculatedLinks)
-      {
-        Dictionary<string, object?> calculatedPoints = new();
-        int pointCount = 0;
-        foreach (CDB.CalculatedPoint point in link.CalculatedPoints)
-        {
-          calculatedPoints[pointCount.ToString()] = new Dictionary<string, object?>()
-          {
-            ["xyz"] = _pointConverter.Convert(point.XYZ),
-            ["corridorCodes"] = point.CorridorCodes.ToList(),
-            ["stationOffsetElevationToBaseline"] = point.StationOffsetElevationToBaseline.ToArray(),
-          };
-          pointCount++;
-        }
-
-        calculatedLinks[linkCount.ToString()] = new Dictionary<string, object?>()
-        {
-          ["corridorCodes"] = link.CorridorCodes.ToList(),
-          ["calculatedPoints"] = calculatedPoints,
-        };
-
-        linkCount++;
-      }
-
-      calculatedShapes[shapeCount.ToString()] = new Dictionary<string, object?>()
-      {
-        ["corridorCodes"] = shape.CorridorCodes.ToList(),
-        ["area"] = shape.Area,
-        ["calculatedLinks"] = calculatedLinks,
-      };
-    }
-    return calculatedShapes;
-  }
-
-  private Civil3dObject FeatureLineToSpeckle(CDB.CorridorFeatureLine featureline)
+  private Civil3dObject FeatureLineToSpeckle(
+    CDB.CorridorFeatureLine featureline,
+    Dictionary<string, CDB.FeatureLineCodeInfo> codeInfoByName
+  )
   {
     // get the display polylines
     var polylines = new List<Base>();
@@ -329,13 +251,20 @@ public sealed class CorridorHandler
       }
     }
 
+    Dictionary<string, object?> properties = new() { ["codeName"] = featureline.CodeName };
+    if (codeInfoByName.TryGetValue(featureline.CodeName, out CDB.FeatureLineCodeInfo? codeInfo))
+    {
+      properties["isConnected"] = codeInfo.IsConnected;
+      properties["payItems"] = codeInfo.PayItems;
+    }
+
     return CreateCorridorObject(
       featureline.CodeName,
       featureline.GetType().ToString().Split('.').Last(),
       null,
       new List<Base>(),
       polylines,
-      new Dictionary<string, object?> { ["codeName"] = featureline.CodeName }
+      properties
     );
   }
 }

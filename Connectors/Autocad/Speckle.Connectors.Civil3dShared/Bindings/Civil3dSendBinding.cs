@@ -51,12 +51,20 @@ public sealed class Civil3dSendBinding : AutocadSendBaseBinding
   // POC: We need a separate send binding for civil3d due to using a different unit converter (needed for conversion settings construction)
   protected override void InitializeSettings(IServiceProvider serviceProvider)
   {
-    serviceProvider
-      .GetRequiredService<IConverterSettingsStore<Civil3dConversionSettings>>()
-      .Initialize(_civil3dConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+    var document = Application.DocumentManager.CurrentDocument;
+    Civil3dConversionSettings civilSettings = _civil3dConversionSettingsFactory.Create(document);
+    serviceProvider.GetRequiredService<IConverterSettingsStore<Civil3dConversionSettings>>().Initialize(civilSettings);
 
+    // Civil 3D geometry is authored in the Civil drawing unit (DrawingSetupVariables.LinearUnit); INSUNITS can
+    // disagree with it or be Unitless. The AutoCAD typed converters and the artifact builder read THIS store for
+    // object/bundle units, so it must carry the Civil unit too [ENG-9326].
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
-      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+      .Initialize(
+        _autocadConversionSettingsFactory.Create(document) with
+        {
+          SpeckleUnits = civilSettings.SpeckleUnits,
+        }
+      );
   }
 }

@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.GraphicsInterface;
+using Autodesk.AutoCAD.LayerManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -138,6 +139,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
     PreCleanAdditional(baseLayerName);
+    EnsureLayerFilter(db, projectName, modelName, baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
     // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
@@ -165,7 +167,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
 
-    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName);
+    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName, session);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
@@ -251,7 +253,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   }
                   // The handle is read while the entity is still open in this transaction (it is assigned on append).
                   baked.Add((entity.ObjectId, entity.GetSpeckleApplicationId()));
-                  PostBakeEntity(entity, props, tr); // Civil3D hook (property sets) — fires for fallback bakes too
+                  PostBakeEntity(entity, props, tr, session); // Civil3D hook (property sets) — fires for fallback bakes too
                 }
               }
             }
@@ -1224,8 +1226,94 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       layerTable.Add(record);
       tr.AddNewlyCreatedDBObject(record, true);
     }
+    else if (argb is int a)
+    {
+      // PreClean keeps emptied layers for reuse, so a re-receive must push the sender's CURRENT colour onto the
+      // existing record — most baked entities are ByLayer, so this is the colour the user sees. Sender wins over a
+      // receiver-side manual recolour, as the v1 delete-and-recreate did [ENG-9330]. No sender colour → untouched.
+      var record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+      AcadColor color = ToAcadColor(a);
+      if (!record.Color.Equals(color))
+      {
+        record.UpgradeOpen();
+        record.Color = color;
+      }
+    }
     cache.Add(layerName);
     return layerName;
+  }
+
+  // ── layer filter ──────────────────────────────────────────────────────────────────────────────────────
+  // Layer Properties Manager filter tree: "Speckle" → "{project}-{model}", the nested one selecting exactly this
+  // model's layers. Ports the v1 AutocadLayerBaker.CreateLayerFilter onto the artefact stamp ("Project X Model Y-…")
+  // and is idempotent — a re-receive refreshes the nested filter's expression instead of adding a duplicate
+  // [ENG-9331]. Best-effort: a filter failure must not block the receive. (AutoCAD only repaints the tree after the
+  // palette is closed and reopened.)
+  private void EnsureLayerFilter(Database db, string projectName, string modelName, string baseLayerName)
+  {
+    const string ROOT_FILTER_NAME = "Speckle";
+    try
+    {
+      LayerFilterTree tree = db.LayerFilters;
+      LayerFilterCollection rootFilters = tree.Root.NestedFilters;
+      LayerFilter? group = null;
+      foreach (LayerFilter existing in rootFilters)
+      {
+        if (existing.Name == ROOT_FILTER_NAME)
+        {
+          group = existing;
+          break;
+        }
+      }
+      if (group is null)
+      {
+        group = new LayerFilter { Name = ROOT_FILTER_NAME, FilterExpression = "NAME==\"Project * Model *\"" };
+        rootFilters.Add(group);
+      }
+
+      string filterName = _autocadContext.RemoveInvalidChars($"{projectName}-{modelName}");
+      string expression = $"NAME==\"{EscapeWildcards(baseLayerName)}*\"";
+      LayerFilter? modelFilter = null;
+      foreach (LayerFilter nested in group.NestedFilters)
+      {
+        if (nested.Name == filterName)
+        {
+          modelFilter = nested;
+          break;
+        }
+      }
+      if (modelFilter is null)
+      {
+        group.NestedFilters.Add(new LayerFilter { Name = filterName, FilterExpression = expression });
+      }
+      else
+      {
+        modelFilter.FilterExpression = expression;
+      }
+      db.LayerFilters = tree;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Could not create the Speckle layer filter for '{BaseLayer}'", baseLayerName);
+    }
+  }
+
+  // AutoCAD wildcard specials inside a NAME== pattern must be escaped with a reverse quote, or a model named
+  // "v1.2" / "a,b" matches the wrong layers.
+  private static readonly char[] s_wildcardSpecials = "`#@.*?~[],".ToCharArray();
+
+  private static string EscapeWildcards(string s)
+  {
+    var sb = new System.Text.StringBuilder(s.Length);
+    foreach (char c in s)
+    {
+      if (Array.IndexOf(s_wildcardSpecials, c) >= 0)
+      {
+        sb.Append('`');
+      }
+      sb.Append(c);
+    }
+    return sb.ToString();
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
@@ -1526,6 +1614,30 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         }
       }
 
+      // purge this model's render materials — CreateMaterials names them with the material's node index, which
+      // shifts between versions, so without this every re-receive left the previous set orphaned [ENG-9329].
+      // Entities referencing them were erased above; the stamp suffix keeps user/other-model materials out.
+      var materialDict = (DBDictionary)tr.GetObject(db.MaterialDictionaryId, OpenMode.ForRead);
+      var staleMaterialIds = new List<ObjectId>();
+      foreach (DBDictionaryEntry entry in materialDict)
+      {
+        if (entry.Key.Contains(baseLayerName))
+        {
+          staleMaterialIds.Add(entry.Value);
+        }
+      }
+      foreach (var materialId in staleMaterialIds)
+      {
+        try
+        {
+          tr.GetObject(materialId, OpenMode.ForWrite).Erase();
+        }
+        catch (Exception ex) when (!ex.IsFatal())
+        {
+          _logger.LogWarning(ex, "Could not erase prior render material {Handle}", materialId.Handle);
+        }
+      }
+
       tr.Commit();
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -1536,9 +1648,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   protected virtual void PreCleanAdditional(string baseLayerName) { }
 
-  protected virtual void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName) { }
+  protected virtual void ParseAndBakeAdditionalDefinitions(
+    ArtefactBundle bundle,
+    string baseLayerName,
+    ArtefactSessionLog session
+  ) { }
 
-  protected virtual void PostBakeEntity(AcadEntity entity, Dictionary<string, object?>? properties, Transaction tr) { }
+  protected virtual void PostBakeEntity(
+    AcadEntity entity,
+    Dictionary<string, object?>? properties,
+    Transaction tr,
+    ArtefactSessionLog session
+  ) { }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
     props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0
