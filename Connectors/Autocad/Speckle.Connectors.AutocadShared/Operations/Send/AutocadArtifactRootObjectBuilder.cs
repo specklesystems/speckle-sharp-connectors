@@ -925,9 +925,9 @@ public class AutocadArtifactRootObjectBuilder(
     }
 
     // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids. A block INSTANCE has
-    // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour edge is
-    // emitted OBJECT-sourced instead — spec HAS_COLOR src is geometry|object, and the viewer looks up both
-    // namespaces — so per-placement colour overrides survive [ENG-8825].
+    // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour rides the
+    // object plane instead [bundle-spec rel 27 OBJECT_HAS_COLOR] — OVERRIDE semantics: object > geometry >
+    // container — so per-placement colour overrides survive [ENG-8825] [ENG-9369].
     foreach (var colorProxy in model.Colors)
     {
       // A "block"-sourced proxy is INHERITANCE, not an explicit colour: a ByBlock member must take its placing
@@ -949,9 +949,9 @@ public class AutocadArtifactRootObjectBuilder(
         }
         else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          // srcIsObject: the object and geometry K-spaces overlap numerically, so the edge carries a namespace
-          // tag (ord=1) — without it receive can't tell this from a geometry-sourced colour [ENG-8822].
-          pipeline.HasColor(pipeline.InternObject(objectId), colorK, srcIsObject: true);
+          // Successor of the tagged HAS_COLOR (rel 6, ord=1) stopgap from ENG-8822: rel 27 is object-sourced by
+          // definition, so no namespace tag is needed. Receive folds both vintages into ColorByObject [ENG-9369].
+          pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
         }
       }
     }
