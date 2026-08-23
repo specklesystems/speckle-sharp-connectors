@@ -1381,6 +1381,20 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         byObject[appId] = id;
       }
     }
+
+    // Object-plane edges (OBJECT_HAS_MATERIAL, rel 26): a material assigned to a block REFERENCE, which owns no
+    // geometry and so never appears in objByGeom — resolve it straight through the object dictionary, mirroring
+    // MapColors' ColorByObject pass [ENG-9119].
+    foreach (var kv in rels.MaterialByObject)
+    {
+      if (
+        materialIdByNode.TryGetValue(kv.Value, out ObjectId id)
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
+      {
+        byObject[appId] = id;
+      }
+    }
     return (byGeometry, byObject);
   }
 

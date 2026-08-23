@@ -888,6 +888,13 @@ public class AutocadArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
+        else if (instanceKByObjectId.ContainsKey(objectId))
+        {
+          // A material assigned directly to a block REFERENCE: it owns no geometry to hang a HAS_MATERIAL edge on,
+          // so it rides the object plane instead [bundle-spec rel 26 OBJECT_HAS_MATERIAL] — FILL semantics: members
+          // with their own geometry-level material keep it, ByBlock members inherit this one [ENG-9119].
+          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
+        }
         else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
         {
           // layer-sourced: the layer owns no geometry, so the inherited material lands on each object that draws
@@ -901,15 +908,11 @@ public class AutocadArtifactRootObjectBuilder(
                 pipeline.HasMaterial(gK, matK);
               }
             }
-            else
+            else if (instanceKByObjectId.ContainsKey(inheritorId))
             {
-              // A block INSTANCE inheriting from its layer: it owns no geometry, and an object-sourced
-              // HAS_MATERIAL needs the namespace tag HAS_COLOR got in ENG-8822 — tracked as ENG-9119.
-              logger.LogWarning(
-                "Layer material '{Material}' not applied to {AppId}: the object owns no geometry to carry it",
-                materialProxy.value.name,
-                inheritorId
-              );
+              // A block REFERENCE inheriting from its layer: no geometry of its own, so its effective material
+              // rides the object plane — ByBlock members fill from it, exactly as in AutoCAD [ENG-9119].
+              pipeline.ObjectHasMaterial(pipeline.InternObject(inheritorId), matK);
             }
           }
         }
