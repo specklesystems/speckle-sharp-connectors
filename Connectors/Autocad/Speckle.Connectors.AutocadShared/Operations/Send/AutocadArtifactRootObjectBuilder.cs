@@ -430,7 +430,9 @@ public class AutocadArtifactRootObjectBuilder(
     var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
 
     // Block-definition members are interned as atomic objects too, but they render ONLY through their definition
-    // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
+    // (via a placed instance's transform). They get NO standalone top-level RENDER edges — suppressed in EmitObject —
+    // while keeping their scene membership (IN_COLLECTION) and joining the definition graph via DEFINES_MEMBER /
+    // PLACES (see EmitValueNodes), so their layer, properties and colour source stay reachable [ENG-9344].
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
 
     // Every selected object, known up-front so a Civil3D child that is ALSO a top-level object (a subassembly under a
@@ -526,15 +528,15 @@ public class AutocadArtifactRootObjectBuilder(
   )
   {
     // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
-    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) and NO scene-tree membership
-    // (IN_COLLECTION). Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) — that would draw it untransformed at
+    // the model origin. It DOES keep the ordinary object-sourced IN_COLLECTION, which is how its layer travels
+    // [ENG-9344]; render-less objects are skipped by every consumer that walks objects, so carrying the membership
+    // costs nothing in the scene tree. Its geometry/instance K is still registered below so DEFINES /
+    // DEFINES_INSTANCE resolve, and DEFINES_MEMBER / PLACES join it back to this object row (EmitValueNodes).
     bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
 
     int objK = pipeline.InternObject(co.ApplicationId);
-    if (!isDefinitionMember)
-    {
-      pipeline.InCollection(objK, collK, 0);
-    }
+    pipeline.InCollection(objK, collK, 0);
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
@@ -851,6 +853,7 @@ public class AutocadArtifactRootObjectBuilder(
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
           pipeline.DefinesInstance(defK, instK, memberOrd);
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
@@ -860,6 +863,7 @@ public class AutocadArtifactRootObjectBuilder(
           {
             pipeline.Defines(defK, gK, memberOrd);
           }
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK: null);
         }
         memberOrd++;
       }
@@ -1008,6 +1012,28 @@ public class AutocadArtifactRootObjectBuilder(
           pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
         }
       }
+    }
+  }
+
+  // Graph-native member join [bundle-spec rels 24 PLACES / 25 DEFINES_MEMBER]: DEFINES_MEMBER def → member OBJECT
+  // with ord = the same member ordinal the member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) —
+  // immune to content-hash dedup, which can hand two members in different definitions the same geometry K); PLACES
+  // member object → its nested INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's
+  // job). This is what keeps a member's identity — its layer, eav properties and colour source — reachable from the
+  // definition graph [ENG-9344]. Mirrors RhinoArtifactRootObjectBuilder.
+  private static void EmitMemberGraphJoin(
+    ObjectsArtifactPipeline pipeline,
+    int defK,
+    string memberId,
+    int memberOrd,
+    int? instK
+  )
+  {
+    int memberObjK = pipeline.InternObject(memberId);
+    pipeline.DefinesMember(defK, memberObjK, memberOrd);
+    if (instK is { } placementK)
+    {
+      pipeline.Places(memberObjK, placementK);
     }
   }
 

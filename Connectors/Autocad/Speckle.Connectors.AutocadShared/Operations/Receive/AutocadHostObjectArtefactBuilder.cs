@@ -179,6 +179,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
 
+    // The rel-built member index (DEFINES_MEMBER/PLACES): geometry K / INSTANCE node K → member object K, restoring
+    // each block-definition member's identity — its layer, colour source and properties [ENG-9344]. Empty on a
+    // pre-vocab bundle (AutoCAD never wrote the Rhino-style @speckle.* stamps, so there is no stamp fallback).
+    var memberIndex = BuildMemberIndexFromRels(rels);
+
     ParseAndBakeAdditionalDefinitions(bundle, baseLayerName, session);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
@@ -312,6 +317,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           baseLayerName,
           layerCache,
           layerMaterialByNode,
+          memberIndex,
           materialIdByGeometry,
           materialIdByObject,
           colorArgbByGeometry,
@@ -773,6 +779,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string baseLayerName,
     HashSet<string> layerCache,
     Dictionary<int, ObjectId> layerMaterialByNode,
+    DefinitionMemberIndex memberIndex,
     Dictionary<int, ObjectId> materialIdByGeometry,
     Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<int, int> colorArgbByGeometry,
@@ -788,10 +795,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var defIdByNode = BuildDefinitions(
       bundle,
       rels,
+      db,
       blockTable,
       tr,
       baseLayerName,
+      layerCache,
+      layerMaterialByNode,
+      memberIndex,
       materialIdByGeometry,
+      materialIdByObject,
       colorArgbByGeometry,
       session
     );
@@ -821,13 +833,21 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // geometry directly (DEFINES → geometry, grouped by member ordinal with the authoritative SAT solid preferred over
   // its display-mesh shadow) and may contain nested block placements (DEFINES_INSTANCE → INSTANCE node), built
   // depth-first (memoized, cycle-guarded) as nested BlockReferences — mirrors RhinoHostObjectArtefactBuilder.
+  // Each member's identity rides the memberIndex join (geometry/INSTANCE K → member object K): its own LAYER (the
+  // same ResolveLayer every top-level object uses, shared layerCache) and its native colour source (ACI / explicit
+  // ByBlock from its eav row) [ENG-9344]. An unindexed member (pre-vocab bundle) bakes exactly as before.
   private Dictionary<int, ObjectId> BuildDefinitions(
     ArtefactBundle bundle,
     ArtefactRelations rels,
+    Database db,
     BlockTable blockTable,
     Transaction tr,
     string baseLayerName,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
+    DefinitionMemberIndex memberIndex,
     Dictionary<int, ObjectId> materialIdByGeometry,
+    Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<int, int> colorArgbByGeometry,
     ArtefactSessionLog session
   )
@@ -887,16 +907,36 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
             bool hasGeomColor = colorArgbByGeometry.TryGetValue(geomK, out int geomArgb);
+            // The member's own identity, joined through DEFINES_MEMBER (geometry K → member object K): its LAYER and
+            // its native colour semantics (ACI index / explicit ByBlock) restore from its object row exactly as a
+            // top-level object's would [ENG-9344]. Unindexed (pre-vocab bundle) → the pre-join behaviour below.
+            var (memberLayer, memberNativeColor) = ResolveMemberIdentity(
+              bundle,
+              geomK,
+              memberIndex,
+              baseLayerName,
+              db,
+              tr,
+              layerCache,
+              layerMaterialByNode
+            );
             foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, bundle.Units))
             {
+              if (memberLayer is not null)
+              {
+                entity.Layer = memberLayer;
+              }
               if (geomMaterial != ObjectId.Null)
               {
                 entity.MaterialId = geomMaterial;
               }
-              // A member with an explicit colour edge keeps it (an explicit override, or the resolved layer colour
-              // a ByLayer member carries). A member with NO edge was ByBlock on send — bake it ByBlock so it
-              // inherits the placing BlockReference's colour instead of the block table record's default [ENG-8822].
-              entity.Color = hasGeomColor ? ToAcadColor(geomArgb) : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0);
+              // Native colour semantics outrank the flattened ARGB [ENG-9117]. Otherwise: a member with an explicit
+              // colour edge keeps it (an explicit override, or the resolved layer colour a ByLayer member carries),
+              // and a member with NO edge was ByBlock on send — bake it ByBlock so it inherits the placing
+              // BlockReference's colour instead of the block table record's default [ENG-8822].
+              entity.Color =
+                memberNativeColor
+                ?? (hasGeomColor ? ToAcadColor(geomArgb) : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0));
               memberCount++;
             }
           }
@@ -928,6 +968,21 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             BlockTransform = nestedMatrix,
           };
+          // A nested-block member owns no geometry K, so its whole identity join — layer, colour source, material —
+          // hangs off its INSTANCE node K instead (PLACES, inverted into ObjectByInstance) [ENG-9344].
+          ApplyNestedMemberIdentity(
+            nestedRef,
+            bundle,
+            rels,
+            instNodeK,
+            memberIndex,
+            materialIdByObject,
+            baseLayerName,
+            db,
+            tr,
+            layerCache,
+            layerMaterialByNode
+          );
           btr.AppendEntity(nestedRef);
           tr.AddNewlyCreatedDBObject(nestedRef, true);
           memberCount++;
@@ -1173,6 +1228,123 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         yield return (geoms, new List<int>());
       }
+    }
+  }
+
+  // The rel-built member index [ENG-9344]: DEFINES_MEMBER (25, def → member object, ord = member ordinal) joined
+  // against the definition's DEFINES ords recovers geometry K → member object K; PLACES (24, member object →
+  // INSTANCE node) inverts to INSTANCE K → member object K. Both maps are empty on a pre-vocab bundle (no rel 25
+  // rows), and every consumer of the index degrades to the pre-join behaviour. Mirrors
+  // RhinoHostObjectArtefactBuilder.TryBuildMemberIndexFromRels, minus the @speckle.* stamp fallback AutoCAD never wrote.
+  private static DefinitionMemberIndex BuildMemberIndexFromRels(ArtefactRelations rels)
+  {
+    var byGeometry = new Dictionary<int, int>();
+    var byInstance = new Dictionary<int, int>();
+    foreach (var kv in rels.MemberObjectsByDefinition)
+    {
+      // member ordinal → member object K for this definition
+      var objByOrd = new Dictionary<int, int>();
+      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
+      for (int m = 0; m < kv.Value.Count; m++)
+      {
+        objByOrd[memberOrds[m]] = kv.Value[m];
+      }
+      if (
+        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
+        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
+      )
+      {
+        continue;
+      }
+      for (int i = 0; i < geomKs.Count; i++)
+      {
+        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
+        {
+          byGeometry[geomKs[i]] = memberObjK;
+        }
+      }
+    }
+    foreach (var kv in rels.PlacesByObject)
+    {
+      byInstance[kv.Value] = kv.Key;
+    }
+    return new DefinitionMemberIndex(byGeometry, byInstance);
+  }
+
+  /// <summary>Geometry K / INSTANCE node K → the definition member OBJECT K that owns it (DEFINES_MEMBER + PLACES),
+  /// restoring member identity — layer, colour source, properties — inside rebuilt block definitions [ENG-9344].</summary>
+  private sealed record DefinitionMemberIndex(
+    Dictionary<int, int> ObjectByGeometry,
+    Dictionary<int, int> ObjectByInstance
+  );
+
+  // A direct member's identity join (geometry K → member object K): the member's own LAYER — resolved through the
+  // SAME ResolveLayer every top-level object uses, shared layerCache — and its native colour semantics (ACI index /
+  // explicit ByBlock) from its eav row [ENG-9344]. Unindexed (pre-vocab bundle) → (null, null), the pre-join bake.
+  private (string? Layer, AcadColor? NativeColor) ResolveMemberIdentity(
+    ArtefactBundle bundle,
+    int geomK,
+    DefinitionMemberIndex memberIndex,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    if (!memberIndex.ObjectByGeometry.TryGetValue(geomK, out int memberObjK))
+    {
+      return (null, null);
+    }
+    string layer = ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    bundle.Properties.TryGetValue(memberObjK, out var memberProps);
+    return (layer, NativeColorFromProperties(memberProps));
+  }
+
+  // A nested-block member's identity join: it owns no geometry K, so layer, material and colour source all hang off
+  // its INSTANCE node K (PLACES, inverted into ObjectByInstance) [ENG-9344]. Its material is object-plane
+  // (OBJECT_HAS_MATERIAL → materialIdByObject via its appId) and its colour is object-sourced (OBJECT_HAS_COLOR /
+  // the legacy tagged HAS_COLOR), mirroring what PlaceInstances applies to a top-level placement.
+  private void ApplyNestedMemberIdentity(
+    BlockReference nestedRef,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    int instNodeK,
+    DefinitionMemberIndex memberIndex,
+    Dictionary<string, ObjectId> materialIdByObject,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    if (!memberIndex.ObjectByInstance.TryGetValue(instNodeK, out int memberObjK))
+    {
+      return;
+    }
+    nestedRef.Layer = ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    if (
+      bundle.ObjectAppIds.TryGetValue(memberObjK, out var appId)
+      && materialIdByObject.TryGetValue(appId, out ObjectId material)
+      && material != ObjectId.Null
+    )
+    {
+      nestedRef.MaterialId = material;
+    }
+    bundle.Properties.TryGetValue(memberObjK, out var props);
+    if (NativeColorFromProperties(props) is AcadColor native)
+    {
+      nestedRef.Color = native; // ACI / explicit ByBlock recorded by the sender [ENG-9117]
+    }
+    else if (
+      rels.ColorByObject.TryGetValue(memberObjK, out int colorK)
+      && bundle.Nodes.TryGetValue(colorK, out var colorNode)
+      && colorNode.Kind == NodeKind.Color
+      && colorNode.Argb is int argb
+    )
+    {
+      nestedRef.Color = ToAcadColor(argb); // the placement's own colour (OBJECT_HAS_COLOR)
     }
   }
 
