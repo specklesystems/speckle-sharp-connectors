@@ -18,8 +18,6 @@ namespace Speckle.Connectors.Civil3dShared.HostApp;
 /// </summary>
 public class PropertySetBaker
 {
-  private const string PROP_SET_DEF_DICT_NAME = "AecPropertySetDefs";
-
   public const string DEFINITIONS_CARRIER_APP_ID = "speckle:civil3d:property-set-definitions";
 
   private readonly IConverterSettingsStore<Civil3dConversionSettings> _settingsStore;
@@ -53,38 +51,25 @@ public class PropertySetBaker
     ADB.Database db = _settingsStore.Current.Document.Database;
     using var tr = db.TransactionManager.StartTransaction();
 
-    List<ADB.ObjectId> definitionsToDelete = new();
-
-    // Access the property set definition dictionary from the named object dictionary
-    var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
-
-    if (nod.Contains(PROP_SET_DEF_DICT_NAME))
+    // The AEC dictionary API, NOT a raw NOD walk: the defs dictionary is not keyed "AecPropertySetDefs" in the
+    // NOD, so the old walk enumerated nothing — the purge was a silent no-op on every drawing, which is what let
+    // stale definitions survive into eDuplicateKey / duplicate-set territory [ENG-9328].
+    using AAECPDB.DictionaryPropertySetDefinitions propSetDefs = new(db);
+    foreach (string? name in propSetDefs.NamesInUse)
     {
-      ADB.ObjectId propSetDefsDictId = nod.GetAt(PROP_SET_DEF_DICT_NAME);
-      var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(propSetDefsDictId, ADB.OpenMode.ForRead);
-
-      // Iterate through all property set definitions in the dictionary
-      foreach (ADB.DBDictionaryEntry entry in propSetDefsDict)
+      if (name is null || !name.Contains(namePrefix))
       {
-        if (entry.Key.Contains(namePrefix))
-        {
-          definitionsToDelete.Add(entry.Value);
-        }
+        continue;
       }
-    }
-
-    // Delete the matching definitions
-    foreach (ADB.ObjectId defId in definitionsToDelete)
-    {
       try
       {
-        var propSetDef = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForWrite);
+        var propSetDef = (AAECPDB.PropertySetDefinition)tr.GetObject(propSetDefs.GetAt(name), ADB.OpenMode.ForWrite);
         propSetDef.Erase();
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
         // The bake tolerates a survivor (see AddDefinitionRecord), so this is diagnostic, not fatal [ENG-9328].
-        _logger.LogWarning(ex, "Failed to purge property set definition {Handle}", defId.Handle);
+        _logger.LogWarning(ex, "Failed to purge property set definition {Name}", name);
       }
     }
 
@@ -208,6 +193,7 @@ public class PropertySetBaker
             _propertySetDefinitionMap[schema.SetName] = existingId;
             AddBucketMap(schema);
             DefinitionsReused++;
+            CleanupRetryCopies(schema.SetName, incomingKey, existingId, tr);
             continue;
           }
           _logger.LogWarning(
@@ -227,6 +213,7 @@ public class PropertySetBaker
         }
         _propertySetDefinitionMap[schema.SetName] = defId;
         AddBucketMap(schema);
+        CleanupRetryCopies(schema.SetName, PropertySetDefinitionLadder.EffectiveSetKey(schema), defId, tr);
       }
       catch (Exception ex) when (!ex.IsFatal())
       {
@@ -398,27 +385,49 @@ public class PropertySetBaker
     }
   }
 
-  /// <summary>Exact-name lookup in the drawing's AecPropertySetDefs dictionary (the same NOD walk
-  /// PurgePropertySets uses — the only repo-evidenced way at this API surface).</summary>
+  /// <summary>Exact-name lookup via the AEC dictionary API. The previous raw NOD walk keyed on a dictionary name
+  /// that does not exist, so this NEVER found anything — every receive then "created" the same plain name, and the
+  /// collision retry minted a fresh -rN copy per receive [ENG-9328].</summary>
   private bool TryFindExistingDefinition(string setName, ADB.Transaction tr, out ADB.ObjectId defId)
   {
     defId = ADB.ObjectId.Null;
-    var db = _settingsStore.Current.Document.Database;
-    var nod = (ADB.DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, ADB.OpenMode.ForRead);
-    if (!nod.Contains(PROP_SET_DEF_DICT_NAME))
+    using AAECPDB.DictionaryPropertySetDefinitions propSetDefs = new(_settingsStore.Current.Document.Database);
+    if (!propSetDefs.Has(setName, tr))
     {
       return false;
     }
-    var propSetDefsDict = (ADB.DBDictionary)tr.GetObject(nod.GetAt(PROP_SET_DEF_DICT_NAME), ADB.OpenMode.ForRead);
-    foreach (ADB.DBDictionaryEntry entry in propSetDefsDict)
+    defId = propSetDefs.GetAt(setName);
+    return !defId.IsNull;
+  }
+
+  /// <summary>Erases the collision-retry copies ({setName}-rN) earlier builds minted when the broken lookup made
+  /// every receive re-create the same set. Only records stamped with the SAME set_key are touched — a user-authored
+  /// def that merely looks like a retry name carries no stamp and survives.</summary>
+  private void CleanupRetryCopies(string setName, string setKey, ADB.ObjectId keepId, ADB.Transaction tr)
+  {
+    using AAECPDB.DictionaryPropertySetDefinitions propSetDefs = new(_settingsStore.Current.Document.Database);
+    for (int i = 2; i <= 9; i++)
     {
-      if (entry.Key == setName)
+      string name = $"{setName}-r{i}";
+      if (!propSetDefs.Has(name, tr))
       {
-        defId = entry.Value;
-        return true;
+        continue;
+      }
+      ADB.ObjectId id = propSetDefs.GetAt(name);
+      if (id == keepId || !string.Equals(TryReadSetKeyStamp(id, tr), setKey, StringComparison.OrdinalIgnoreCase))
+      {
+        continue;
+      }
+      try
+      {
+        ((AAECPDB.PropertySetDefinition)tr.GetObject(id, ADB.OpenMode.ForWrite)).Erase();
+        _logger.LogWarning("Erased stale retry copy {Name} of property set {SetName}", name, setName);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        _logger.LogWarning(ex, "Could not erase stale retry copy {Name}", name);
       }
     }
-    return false;
   }
 
   /// <summary>The set_key recipe computed over a LIVE definition's fields, for reuse-if-identical. Mirrors
