@@ -110,6 +110,7 @@ public class PropertySetBaker
   {
     _propertySetDefinitionMap.Clear();
     _bucketToFieldNameBySet.Clear();
+    ResetRunCounters();
 
     if (definitions.Count == 0)
     {
@@ -167,6 +168,7 @@ public class PropertySetBaker
   {
     _propertySetDefinitionMap.Clear();
     _bucketToFieldNameBySet.Clear();
+    ResetRunCounters();
     if (schemas.Count == 0)
     {
       return;
@@ -196,11 +198,16 @@ public class PropertySetBaker
         if (TryFindExistingDefinition(schema.SetName, tr, out ADB.ObjectId existingId))
         {
           string incomingKey = PropertySetDefinitionLadder.EffectiveSetKey(schema);
-          string existingKey = ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
+          // Stamp first: a def RECREATED by a previous receive hashes differently from the authored one
+          // (UnitType is not restorable from the schema, and the recipe includes the unit), so recomputing over
+          // the live fields wrongly took the "differs" branch on every re-receive [ENG-9328].
+          string existingKey =
+            TryReadSetKeyStamp(existingId, tr) ?? ComputeExistingDefinitionKey(schema.SetName, existingId, tr);
           if (string.Equals(incomingKey, existingKey, StringComparison.OrdinalIgnoreCase))
           {
             _propertySetDefinitionMap[schema.SetName] = existingId;
             AddBucketMap(schema);
+            DefinitionsReused++;
             continue;
           }
           _logger.LogWarning(
@@ -264,14 +271,50 @@ public class PropertySetBaker
           "Reusing existing property set definition {RecordName}: it could not be erased",
           recordName
         );
+        DefinitionsReused++;
         propSetDef.Dispose();
         return existingId;
       }
     }
 
-    propSetDefs.AddNewRecord(recordName, propSetDef);
+    // An erased same-key entry can still occupy the dictionary until commit, so a same-name AddNewRecord may
+    // throw eDuplicateKey inside this very transaction — fall back to a unique record name rather than losing
+    // the definition (the attach path maps by ObjectId; the record name is only a label) [ENG-9328].
+    string name = recordName;
+    for (int attempt = 2; ; attempt++)
+    {
+      try
+      {
+        propSetDefs.AddNewRecord(name, propSetDef);
+        break;
+      }
+      catch (Exception ex) when (!ex.IsFatal() && attempt <= 4)
+      {
+        _logger.LogWarning(
+          ex,
+          "AddNewRecord collided for {RecordName}; retrying as {NewName}",
+          name,
+          $"{recordName}-r{attempt}"
+        );
+        name = $"{recordName}-r{attempt}";
+      }
+    }
     tr.AddNewlyCreatedDBObject(propSetDef, true);
+    DefinitionsCreated++;
     return propSetDef.ObjectId;
+  }
+
+  /// <summary>Per-run definition outcome counters, reset by the bake entry points — surfaced into the artefact
+  /// session log so a broken re-receive is diagnosable offline [ENG-9328].</summary>
+  public int DefinitionsCreated { get; private set; }
+  public int DefinitionsReused { get; private set; }
+
+  public int DefinitionCount => _propertySetDefinitionMap.Count;
+
+  private void ResetRunCounters()
+  {
+    DefinitionsCreated = 0;
+    DefinitionsReused = 0;
   }
 
   private void AddBucketMap(PropertySetSchema schema)
@@ -287,6 +330,71 @@ public class PropertySetBaker
     if (bucketMap.Count > 0)
     {
       _bucketToFieldNameBySet[schema.SetName] = bucketMap;
+    }
+  }
+
+  private const string SET_KEY_XRECORD = "SPECKLE_SET_KEY";
+
+  /// <summary>Stamps the authoritative set_key on a definition (xrecord in its extension dictionary), so a later
+  /// receive can compare against the AUTHORED identity instead of rehashing lossy recreated fields [ENG-9328].</summary>
+  private void StampSetKey(ADB.ObjectId defId, string setKey, ADB.Transaction tr)
+  {
+    try
+    {
+      var def = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForWrite);
+      if (def.ExtensionDictionary.IsNull)
+      {
+        def.CreateExtensionDictionary();
+      }
+      var ext = (ADB.DBDictionary)tr.GetObject(def.ExtensionDictionary, ADB.OpenMode.ForWrite);
+      using var xrec = new ADB.Xrecord
+      {
+        Data = new ADB.ResultBuffer(new ADB.TypedValue((int)ADB.DxfCode.Text, setKey)),
+      };
+      if (ext.Contains(SET_KEY_XRECORD))
+      {
+        ext.Remove(SET_KEY_XRECORD);
+      }
+      ext.SetAt(SET_KEY_XRECORD, xrec);
+      tr.AddNewlyCreatedDBObject(xrec, true);
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Could not stamp set_key on property set definition");
+    }
+  }
+
+  private string? TryReadSetKeyStamp(ADB.ObjectId defId, ADB.Transaction tr)
+  {
+    try
+    {
+      var def = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForRead);
+      if (def.ExtensionDictionary.IsNull)
+      {
+        return null;
+      }
+      var ext = (ADB.DBDictionary)tr.GetObject(def.ExtensionDictionary, ADB.OpenMode.ForRead);
+      if (!ext.Contains(SET_KEY_XRECORD))
+      {
+        return null;
+      }
+      var xrec = (ADB.Xrecord)tr.GetObject(ext.GetAt(SET_KEY_XRECORD), ADB.OpenMode.ForRead);
+      using ADB.ResultBuffer? data = xrec.Data;
+      if (data is not null)
+      {
+        foreach (ADB.TypedValue tv in data)
+        {
+          if (tv.Value is string s && s.Length > 0)
+          {
+            return s;
+          }
+        }
+      }
+      return null;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      return null;
     }
   }
 
@@ -386,7 +494,14 @@ public class PropertySetBaker
       propSetDef.Definitions.Add(propDef);
     }
 
-    return AddDefinitionRecord(propSetDefs, recordName, propSetDef, tr);
+    ADB.ObjectId defId = AddDefinitionRecord(propSetDefs, recordName, propSetDef, tr);
+    if (!defId.IsNull)
+    {
+      // Stamp created AND reused defs with the authored set_key — the identity every later receive compares
+      // against (recomputing from the recreated fields is lossy; see the stamp read in BakeSchemas).
+      StampSetKey(defId, PropertySetDefinitionLadder.EffectiveSetKey(schema), tr);
+    }
+    return defId;
   }
 
   /// <summary>
@@ -459,11 +574,6 @@ public class PropertySetBaker
       if (propertySetDefId.IsNull)
       {
         return false;
-      }
-
-      if (ObjectHasPropertySet(entity, propertySetDefId))
-      {
-        throw new SpeckleException($"Property set '{setName}' already exists on entity.");
       }
 
       return AddPropertySetToEntity(entity, setName, propertySetDefId, setData, tr);
@@ -593,7 +703,12 @@ public class PropertySetBaker
         entity.UpgradeOpen();
       }
 
-      AAECPDB.PropertyDataServices.AddPropertySet(entity, propertySetDefId);
+      // Idempotent attach: a set already on the entity (whatever put it there) gets its VALUES written instead of
+      // aborting — the previous already-exists throw silently left re-received sets empty [ENG-9328].
+      if (!ObjectHasPropertySet(entity, propertySetDefId))
+      {
+        AAECPDB.PropertyDataServices.AddPropertySet(entity, propertySetDefId);
+      }
 
       return TrySetPropertyValues(entity, setName, propertySetDefId, setData, tr);
     }

@@ -167,7 +167,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
 
-    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName);
+    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName, session);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
@@ -253,7 +253,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   }
                   // The handle is read while the entity is still open in this transaction (it is assigned on append).
                   baked.Add((entity.ObjectId, entity.GetSpeckleApplicationId()));
-                  PostBakeEntity(entity, props, tr); // Civil3D hook (property sets) — fires for fallback bakes too
+                  PostBakeEntity(entity, props, tr, session); // Civil3D hook (property sets) — fires for fallback bakes too
                 }
               }
             }
@@ -1648,9 +1648,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   protected virtual void PreCleanAdditional(string baseLayerName) { }
 
-  protected virtual void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName) { }
+  protected virtual void ParseAndBakeAdditionalDefinitions(
+    ArtefactBundle bundle,
+    string baseLayerName,
+    ArtefactSessionLog session
+  ) { }
 
-  protected virtual void PostBakeEntity(AcadEntity entity, Dictionary<string, object?>? properties, Transaction tr) { }
+  protected virtual void PostBakeEntity(
+    AcadEntity entity,
+    Dictionary<string, object?>? properties,
+    Transaction tr,
+    ArtefactSessionLog session
+  ) { }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
     props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0
