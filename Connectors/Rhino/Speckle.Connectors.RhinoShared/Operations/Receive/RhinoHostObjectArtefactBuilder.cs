@@ -1200,11 +1200,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   ) CreateMaterials(RhinoDoc doc, ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var guidByMaterialNode = new Dictionary<int, Guid>();
-    // Render materials this receive already created, by name. Nothing else in the receive is name-owned by accident:
-    // Speckle's material identity IS the name (the send side keys its proxies by it and the unpacker reads it back), so
-    // a name hit on re-receive is this operation's own material. Without this every run added a fresh copy of every
-    // material node and the table grew without bound, since DeepClean purges objects/layers/definitions but not
-    // materials [ENG-9217]. Indexed once — the table is walked per node otherwise.
+    // The document's render materials, by name. Speckle's material identity IS the name (the send side keys its
+    // proxies by it and the unpacker reads it back), so a name hit — this operation's own from a prior receive,
+    // another card's, or one the user authored — is reused rather than re-added: without this every run added a
+    // fresh copy of every material node and the table grew without bound, since DeepClean purges
+    // objects/layers/definitions but not materials [ENG-9217]. Indexed once — the table is walked per node otherwise.
     var existingByName = new Dictionary<string, RhinoRenderMaterial>(StringComparer.Ordinal);
     foreach (var existingMaterial in doc.RenderMaterials)
     {
@@ -1252,17 +1252,20 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
         if (existingByName.TryGetValue(matName, out var existing))
         {
-          if (MaterialMatches(existing, rhinoMaterial))
+          // A name hit reuses the document's material unconditionally — id, channels and every object referencing
+          // it stay untouched. Rhino references materials by id, so removing-and-re-adding here stripped the
+          // material off everything this receive does not own: another card's objects, and objects the user
+          // assigned it to by hand [ENG-9378]. Same policy as the legacy RhinoMaterialBaker; the known trade-off
+          // (a same-named material whose definition changed upstream keeps the document's channels) is main's too.
+          if (!MaterialMatches(existing, rhinoMaterial))
           {
-            // Unchanged version re-received: keep the material AND its id, so every object still pointing at it
-            // (another model card's, or one the user assigned by hand) keeps rendering.
-            guidByMaterialNode[kv.Key] = existing.Id;
-            continue;
+            _logger.LogDebug(
+              "Reusing existing render material '{Material}' whose channels differ from the incoming one",
+              matName
+            );
           }
-          // The version's material moved on. Drop the stale one so the refreshed material can take its name back
-          // instead of the two of them piling up.
-          doc.RenderMaterials.Remove(existing);
-          existingByName.Remove(matName);
+          guidByMaterialNode[kv.Key] = existing.Id;
+          continue;
         }
 
         // FromMaterial returns null on headless docs (importer) — same fallback as RhinoMaterialUnpacker.
@@ -1324,10 +1327,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return result;
   }
 
-  // True when an already-present render material still carries the values this bundle asks for, i.e. re-receiving hasn't
-  // changed it — the case worth keeping the existing id alive for. Compared against the material's simulated form, the
-  // only shape a RenderContent's values can be read back in; a mismatch it can't represent (a non-PBR simulation where
-  // a PBR channel is expected, say) reads as "changed", which costs a rebuild of the material but never a duplicate.
+  // True when an already-present render material still carries the values this bundle asks for. Diagnostic only
+  // [ENG-9378]: a name hit reuses the existing material either way, this merely makes the channels-differ case
+  // visible in the session log. Compared against the material's simulated form, the only shape a RenderContent's
+  // values can be read back in; a mismatch it can't represent (a non-PBR simulation where a PBR channel is
+  // expected, say) reads as "changed", which now costs a log line, never a material.
   // SimulateMaterial(ref, …) rather than the tidier SimulatedMaterial/ToMaterial: it is the one overload that is
   // current in both Rhino 7 and Rhino 8, and this file compiles for both.
   private static bool MaterialMatches(RhinoRenderMaterial existing, Material desired)
