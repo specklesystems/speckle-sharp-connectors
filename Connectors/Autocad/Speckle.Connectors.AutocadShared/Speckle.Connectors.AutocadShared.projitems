@@ -42,6 +42,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectArtefactBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBaseBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Receive\AutocadHostObjectBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Operations\ModelPlacementSettings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadArtifactRootObjectBuilder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadRootObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Operations\Send\AutocadContinuousTraversalBaseBuilder.cs" />

@@ -19,6 +19,7 @@ public class ToSpeckleSettingsManager(
   // cache invalidation process run with ModelCardId since the settings are model specific
   private readonly Dictionary<string, DetailLevelType> _detailLevelCache = [];
   private readonly Dictionary<string, Transform?> _referencePointCache = [];
+  private readonly Dictionary<string, bool?> _applyTransformCache = [];
   private readonly Dictionary<string, bool?> _sendNullParamsCache = [];
   private readonly Dictionary<string, bool?> _sendLinkedModelsCache = [];
   private readonly Dictionary<string, bool?> _sendRebarsAsVolumetricCache = [];
@@ -97,6 +98,16 @@ public class ToSpeckleSettingsManager(
 
     return SendReferencePointSetting.DEFAULT_VALUE;
   }
+
+  public bool GetApplyTransformSetting(Document document, SenderModelCard modelCard) =>
+    GetBooleanSettingWithCache(
+      document,
+      SendApplyTransformSetting.SETTING_ID,
+      SendApplyTransformSetting.DEFAULT_VALUE,
+      modelCard,
+      _applyTransformCache,
+      "Apply transform"
+    );
 
   public bool GetSendParameterNullOrEmptyStringsSetting(Document document, SenderModelCard modelCard) =>
     GetBooleanSettingWithCache(

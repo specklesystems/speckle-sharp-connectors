@@ -70,6 +70,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // reports the actual cause instead of the opaque "did not convert to any native geometry" [ENG-8819]. Set by
   // DecodeAndAppend, consumed + reset per object by the caller — the bake is single-threaded on the main thread.
   private string? _lastDecodeFailure;
+  private Matrix3d? _receivePlacementTransform;
 
   public AutocadHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
@@ -134,6 +135,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var doc = _converterSettings.Current.Document;
     var db = doc.Database;
     var docUnits = _converterSettings.Current.SpeckleUnits;
+    _receivePlacementTransform = ReadModelPlacementTransform(bundle, docUnits);
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
     // Baked entities are identified by their AutoCAD HANDLE (decimal, as GetSpeckleApplicationId spells it) — the id
@@ -267,6 +269,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   : null;
                 foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
                 {
+                  if (_receivePlacementTransform is Matrix3d placement)
+                  {
+                    entity.TransformBy(placement);
+                  }
                   entity.Layer = layerName;
                   if (materialId != ObjectId.Null)
                   {
@@ -1089,6 +1095,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           instNode.Units is { Length: > 0 } u ? u : docUnits,
           docUnits
         );
+        if (_receivePlacementTransform is Matrix3d placement)
+        {
+          matrix = matrix.PreMultiplyBy(placement);
+        }
         Point3d insertion = Point3d.Origin.TransformBy(matrix);
         string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
         var blockRef = new BlockReference(insertion, defId) { BlockTransform = matrix, Layer = layerName };
@@ -1760,6 +1770,27 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
+  private Matrix3d? ReadModelPlacementTransform(ArtefactBundle bundle, string docUnits)
+  {
+    if (
+      !_converterSettings.Current.ApplyTransform
+      || !bundle.ModelProperties.TryGetValue("modelPlacement", out object? placementObject)
+      || placementObject is not Dictionary<string, object?> placement
+      || !placement.TryGetValue("appliedToGeometry", out object? appliedObject)
+      || appliedObject is not bool appliedToGeometry
+      || appliedToGeometry
+      || !placement.TryGetValue("transform", out object? transformObject)
+      || transformObject is not string transform
+    )
+    {
+      return null;
+    }
+
+    string sourceUnits =
+      placement.TryGetValue("units", out object? unitsObject) && unitsObject is string units ? units : bundle.Units;
+    return BuildMatrix3d(transform, sourceUnits, docUnits);
+  }
+
   private Matrix3d BuildMatrix3d(string? csv, string units, string docUnits)
   {
     var d = new double[16];

@@ -44,6 +44,10 @@ public sealed class RevitReceiveBinding(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
               toHostSettingsManager.GetReferencePointSetting(card),
+              // applyTransform: true so the factory keeps the receiver's reference-point transform (it nulls the
+              // transform otherwise). Receive has no Apply Transform card setting — baked bundles are always
+              // unbaked, un-baked bundles always keep their stored coordinates (see ReadSourceReferencePointTransform).
+              true,
               false,
               true,
               false,

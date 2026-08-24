@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -43,7 +44,7 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
       .Initialize(
-        _autocadConversionSettingsFactory.Create(document) with
+        _autocadConversionSettingsFactory.Create(document, ModelPlacementSettings.GetReceiveApplyTransform(mc)) with
         {
           SpeckleUnits = civilSettings.SpeckleUnits,
         }
