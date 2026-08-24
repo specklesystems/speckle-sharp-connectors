@@ -76,32 +76,9 @@ public class ParameterExtractor
       return null;
     }
 
+    // NOTE: compound structure used to be grafted on here as a pseudo type parameter. It now lives at the top of
+    // `properties` beside Material Quantities — see CompoundStructureExtractor [ENG-9338].
     typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
-    if (type is DB.HostObjAttributes hostObjectAttr)
-    {
-      // NOTE: this could be paired up and merged with material quantities - they're pretty much the same :/
-      var factor = _scalingServiceToSpeckle.ScaleLength(1);
-      if (hostObjectAttr.GetCompoundStructure() is DB.CompoundStructure structure) // GetCompoundStructure can return null
-      {
-        Dictionary<string, object?> structureDictionary = new();
-        foreach (var layer in structure.GetLayers())
-        {
-          if (_settingsStore.Current.Document.GetElement(layer.MaterialId) is DB.Material material)
-          {
-            var uniqueLayerName = $"{material.Name} ({layer.LayerId})";
-            structureDictionary[uniqueLayerName] = new Dictionary<string, object>()
-            {
-              ["material"] = material.Name,
-              ["function"] = layer.Function.ToString(),
-              ["thickness"] = layer.Width * factor,
-              ["units"] = _settingsStore.Current.SpeckleUnits,
-            };
-          }
-        }
-
-        typeParameterDictionary["Structure"] = structureDictionary;
-      }
-    }
 
     _typeParameterCache[typeId] = typeParameterDictionary;
     return typeParameterDictionary;

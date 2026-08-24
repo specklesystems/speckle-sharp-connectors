@@ -52,6 +52,7 @@ public static class ServiceRegistration
     serviceCollection.AddScoped<ParameterDefinitionHandler>();
     serviceCollection.AddScoped<ParameterExtractor>();
     serviceCollection.AddScoped<ClassPropertiesExtractor>();
+    serviceCollection.AddScoped<CompoundStructureExtractor>();
     serviceCollection.AddScoped<PropertiesExtractor>();
     serviceCollection.AddScoped<StructuralMaterialAssetExtractor>();
     serviceCollection.AddSingleton<CategoryExtractor>();

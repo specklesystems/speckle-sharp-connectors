@@ -6,16 +6,19 @@ public class PropertiesExtractor
 {
   private readonly ClassPropertiesExtractor _classPropertiesExtractor;
   private readonly ParameterExtractor _parameterExtractor;
+  private readonly CompoundStructureExtractor _compoundStructureExtractor;
   private readonly ITypedConverter<DB.Element, Dictionary<string, object>> _materialQuantityConverter;
 
   public PropertiesExtractor(
     ClassPropertiesExtractor classPropertiesExtractor,
     ParameterExtractor parameterExtractor,
+    CompoundStructureExtractor compoundStructureExtractor,
     ITypedConverter<DB.Element, Dictionary<string, object>> materialQuantityConverter
   )
   {
     _classPropertiesExtractor = classPropertiesExtractor;
     _parameterExtractor = parameterExtractor;
+    _compoundStructureExtractor = compoundStructureExtractor;
     _materialQuantityConverter = materialQuantityConverter;
   }
 
@@ -29,6 +32,12 @@ public class PropertiesExtractor
     if (matQuantities.Count > 0)
     {
       properties.Add("Material Quantities", matQuantities);
+    }
+
+    // add the compound element layer buildup, if this element's type has one
+    if (_compoundStructureExtractor.GetCompoundStructure(element) is Dictionary<string, object?> structure)
+    {
+      properties.Add("Structure", structure);
     }
 
     // add parameters
