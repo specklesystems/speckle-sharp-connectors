@@ -1321,9 +1321,30 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       return (null, null);
     }
-    string layer = ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    string layer = ResolveMemberLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
     bundle.Properties.TryGetValue(memberObjK, out var memberProps);
     return (layer, NativeColorFromProperties(memberProps));
+  }
+
+  // AutoCAD's layer-0 convention: a definition member authored on layer "0" is a chameleon — at draw time it takes
+  // the PLACING REFERENCE's layer, so ByLayer resolves through the reference, not through layer 0 itself. That rule
+  // fires only on the layer named literally "0", so such a member must bake there — putting it on the prefixed card
+  // layer ("SPK-…-0") froze it to source layer 0's own (usually white) colour and the member stopped following its
+  // reference [ENG-9344]. Layer "0" always exists and can't be deleted, so no creation is needed.
+  private string ResolveMemberLayer(
+    ArtefactBundle bundle,
+    int memberObjK,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    var segments = SceneViewResolver.Segments(bundle, memberObjK);
+    return segments.Count == 1 && segments[0] == "0"
+      ? "0"
+      : ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
   }
 
   // A nested-block member's identity join: it owns no geometry K, so layer, material and colour source all hang off
@@ -1348,7 +1369,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       return;
     }
-    nestedRef.Layer = ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    nestedRef.Layer = ResolveMemberLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
     if (
       bundle.ObjectAppIds.TryGetValue(memberObjK, out var appId)
       && materialIdByObject.TryGetValue(appId, out ObjectId material)
