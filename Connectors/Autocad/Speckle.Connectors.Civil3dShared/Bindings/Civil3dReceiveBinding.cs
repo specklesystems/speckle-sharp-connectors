@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Speckle.Connectors.Autocad.Bindings;
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -34,12 +35,19 @@ public sealed class Civil3dReceiveBinding : AutocadReceiveBaseBinding
   // POC: We need a separate receive binding for civil3d due to using a different unit converter (needed for conversion settings construction)
   protected override void InitializeSettings(IServiceProvider serviceProvider, ModelCard mc)
   {
-    serviceProvider
-      .GetRequiredService<IConverterSettingsStore<Civil3dConversionSettings>>()
-      .Initialize(_civil3dConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+    var document = Application.DocumentManager.CurrentDocument;
+    Civil3dConversionSettings civilSettings = _civil3dConversionSettingsFactory.Create(document);
+    serviceProvider.GetRequiredService<IConverterSettingsStore<Civil3dConversionSettings>>().Initialize(civilSettings);
 
+    // The receive scales incoming geometry into the AutoCAD store's unit — which must be the Civil drawing unit,
+    // not INSUNITS, or a feet model lands unscaled in a metre drawing [ENG-9326]. Mirrors Civil3dSendBinding.
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
-      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+      .Initialize(
+        _autocadConversionSettingsFactory.Create(document, ModelPlacementSettings.GetReceiveApplyTransform(mc)) with
+        {
+          SpeckleUnits = civilSettings.SpeckleUnits,
+        }
+      );
   }
 }

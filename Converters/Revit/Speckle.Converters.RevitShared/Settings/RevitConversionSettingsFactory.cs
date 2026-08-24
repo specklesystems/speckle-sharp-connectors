@@ -14,6 +14,7 @@ public class RevitConversionSettingsFactory(
   public RevitConversionSettings Create(
     DetailLevelType detailLevelType,
     DB.Transform? referencePointTransform,
+    bool applyTransform,
     bool sendEmptyOrNullParams,
     bool sendLinkedModels,
     bool sendRebarsAsVolumetric,
@@ -27,7 +28,8 @@ public class RevitConversionSettingsFactory(
     return new(
       document,
       detailLevelType,
-      referencePointTransform,
+      applyTransform ? referencePointTransform : null,
+      applyTransform,
       unitConverter.ConvertOrThrow(document.GetUnits().GetFormatOptions(DB.SpecTypeId.Length).GetUnitTypeId()),
       sendEmptyOrNullParams,
       sendLinkedModels,
@@ -35,7 +37,8 @@ public class RevitConversionSettingsFactory(
       sendAreasAsMesh,
       receiveInstancesAsFamilies,
       tolerance,
-      referencePointKind
+      referencePointKind,
+      referencePointTransform
     );
   }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Microsoft.Extensions.Logging;
@@ -186,10 +187,11 @@ public class AutocadArtifactRootObjectBuilder(
 
     // Materials/colors are keyed by name and list OBJECT ids (resolved to geometry K(s) in phase 2). Colours: only
     // explicit object-level sources are emitted (the unpacker skips ByLayer) — layer colours ride the layer
-    // COLLECTION nodes' argb instead (mirrors Rhino), so ByLayer objects inherit the restored layer colour on
-    // receive with no edge. Materials have no such container channel, so the layer stage IS unpacked and its
-    // proxies are resolved onto the inheriting objects' geometry in phase 2 [ENG-9118].
-    var (materials, layerMaterialInheritors) = UnpackMaterialsWithLayers(atomicObjects);
+    // COLLECTION nodes' NODE_HAS_COLOR edge instead (mirrors Rhino), so ByLayer objects inherit the restored layer
+    // colour on receive with no edge. A layer's authored material rides its COLLECTION node the same way
+    // (NODE_HAS_MATERIAL [ENG-9346]); the flatten onto inheriting objects' geometry stays the render carrier
+    // [ENG-9118].
+    var (materials, layerMaterialInheritors, layerNameByAppId) = UnpackMaterialsWithLayers(atomicObjects);
     var colors = colorUnpacker.UnpackColors(atomicObjects, new List<LayerTableRecord>());
     var layerArgbByName = CollectLayerColors(atomicObjects);
 
@@ -205,6 +207,11 @@ public class AutocadArtifactRootObjectBuilder(
       instanceDefinitionProxies,
       groups,
       layerMaterialInheritors,
+      layerNameByAppId,
+      converterSettings.Current.ApplyTransform,
+      converterSettings.Current.ModelPlacementSource,
+      converterSettings.Current.ModelPlacementOptions,
+      converterSettings.Current.CoordinateMetadata,
       results
     );
   }
@@ -220,13 +227,17 @@ public class AutocadArtifactRootObjectBuilder(
   // every recorded object is guaranteed to resolve to a MATERIAL node.
   //
   // AutoCAD-API-bound (transaction) → phase 1 only. The layer records must stay OPEN across the UnpackMaterials call,
-  // hence the single transaction wrapping both.
+  // hence the single transaction wrapping both. LayerNameByAppId keys the layer-stage proxies (which list LAYER
+  // application ids) back to the layer names the COLLECTION nodes are interned by, so phase 2 can hang each layer's
+  // authored material on its node (NODE_HAS_MATERIAL) [ENG-9346].
   private (
     List<RenderMaterialProxy> Materials,
-    Dictionary<string, string> LayerMaterialInheritors
+    Dictionary<string, string> LayerMaterialInheritors,
+    Dictionary<string, string> LayerNameByAppId
   ) UnpackMaterialsWithLayers(List<AutocadRootObject> atomicObjects)
   {
     var inheritors = new Dictionary<string, string>(StringComparer.Ordinal);
+    var layerNameByAppId = new Dictionary<string, string>(StringComparer.Ordinal);
     var usedLayers = new List<LayerTableRecord>();
     try
     {
@@ -247,6 +258,7 @@ public class AutocadArtifactRootObjectBuilder(
           record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
           recordsByName[layerName] = record;
           usedLayers.Add(record);
+          layerNameByAppId[record.GetSpeckleApplicationId()] = layerName;
         }
 
         if (entity.Material == "ByLayer" && LayerHasRenderMaterial(record, tr))
@@ -257,13 +269,17 @@ public class AutocadArtifactRootObjectBuilder(
 
       var unpacked = materialUnpacker.UnpackMaterials(atomicObjects, usedLayers);
       tr.Commit();
-      return (unpacked, inheritors);
+      return (unpacked, inheritors, layerNameByAppId);
     }
     catch (Exception ex) when (!ex.IsFatal())
     {
       logger.LogError(ex, "Failed to unpack layer render materials for the artefact bundle");
       // Object-level materials must still make it into the bundle even if the layer pass fell over.
-      return (materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>()), inheritors);
+      return (
+        materialUnpacker.UnpackMaterials(atomicObjects, new List<LayerTableRecord>()),
+        inheritors,
+        layerNameByAppId
+      );
     }
   }
 
@@ -377,21 +393,14 @@ public class AutocadArtifactRootObjectBuilder(
 
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-      return new CollectedObject(
-        applicationId,
-        sourceType,
-        entity.Layer,
-        instanceProps,
-        instanceProxy,
-        entity.Color.IsByLayer
-      );
+      return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy);
     }
 
     Base converted = converter.Convert(entity);
     // AutoCAD wraps entities in AutocadObject, Civil3D in Civil3dObject — both are DataObjects carrying the
     // converted properties + display meshes.
     var properties = converted is DataObject dataObject ? dataObject.properties : new Dictionary<string, object?>();
-    return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted, entity.Color.IsByLayer);
+    return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted);
   }
 
   // ── Phase 2 (worker thread): pure-Speckle snapshot → parquet bundle ──────────────────────────────────
@@ -419,8 +428,14 @@ public class AutocadArtifactRootObjectBuilder(
     var instanceKByObjectId = new Dictionary<string, int>(StringComparer.Ordinal);
 
     // Block-definition members are interned as atomic objects too, but they render ONLY through their definition
-    // (via a placed instance's transform). They get NO standalone top-level render edges — suppressed in EmitObject.
+    // (via a placed instance's transform). They get NO standalone top-level RENDER edges — suppressed in EmitObject —
+    // while keeping their scene membership (IN_COLLECTION) and joining the definition graph via DEFINES_MEMBER /
+    // PLACES (see EmitValueNodes), so their layer, properties and colour source stay reachable [ENG-9344].
     var definitionMemberIds = model.Definitions.SelectMany(d => d.objects).ToHashSet(StringComparer.Ordinal);
+
+    // Every selected object, known up-front so a Civil3D child that is ALSO a top-level object (a subassembly under a
+    // corridor) defers its properties/geometry to its own EmitObject regardless of which is visited first [ENG-9333].
+    var topLevelIds = model.Objects.Select(o => o.ApplicationId).ToHashSet(StringComparer.Ordinal);
 
     // AutoCAD colour SEMANTICS the ARGB-only COLOR node cannot carry [ENG-9117] — see CollectColorSemantics.
     var colorSemantics = CollectColorSemantics(model.Colors);
@@ -439,11 +454,6 @@ public class AutocadArtifactRootObjectBuilder(
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, co.LayerName, model.LayerArgbByName, layerCollectionKByName);
-      // A ByLayer DEFINITION MEMBER sits outside the layer-container inheritance (it rides DEFINES, no
-      // IN_COLLECTION), so a consumer would fall back to the placing instance's colour — wrong in AutoCAD
-      // semantics, where ByLayer keeps the member's own layer colour. Resolve it at send time [ENG-8825].
-      int? memberLayerArgb =
-        co.ColorIsByLayer && model.LayerArgbByName.TryGetValue(co.LayerName, out int layerArgb) ? layerArgb : null;
       string? dropReason = EmitObject(
         pipeline,
         co,
@@ -452,7 +462,7 @@ public class AutocadArtifactRootObjectBuilder(
         geometryKsByObjectId,
         instanceKByObjectId,
         definitionMemberIds,
-        memberLayerArgb,
+        topLevelIds,
         colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
       );
       if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
@@ -463,9 +473,10 @@ public class AutocadArtifactRootObjectBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId);
+    EmitValueNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, layerCollectionKByName);
     EmitGroups(pipeline, model.Groups, definitionMemberIds);
     EmitCivilNetworkTopology(pipeline, model.Objects);
+    EmitModelPlacement(pipeline, model);
     EmitAdditionalNodes(pipeline);
 
     // Default scene view: the (flat) AutoCAD layer namespace via IN_COLLECTION.
@@ -504,20 +515,20 @@ public class AutocadArtifactRootObjectBuilder(
     Dictionary<string, List<int>> geometryKsByObjectId,
     Dictionary<string, int> instanceKByObjectId,
     HashSet<string> definitionMemberIds,
-    int? memberLayerArgb,
+    HashSet<string> topLevelIds,
     ColorSemantics? colorSemantics
   )
   {
     // A block-definition member renders ONLY through its definition (via a placed instance's transform), so it gets
-    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) and NO scene-tree membership
-    // (IN_COLLECTION). Its geometry/instance K is still registered below so DEFINES / DEFINES_INSTANCE resolve.
+    // NO standalone top-level render edge (DISPLAY / DISPLAY_INSTANCE / SOLID) — that would draw it untransformed at
+    // the model origin. It DOES keep the ordinary object-sourced IN_COLLECTION, which is how its layer travels
+    // [ENG-9344]; render-less objects are skipped by every consumer that walks objects, so carrying the membership
+    // costs nothing in the scene tree. Its geometry/instance K is still registered below so DEFINES /
+    // DEFINES_INSTANCE resolve, and DEFINES_MEMBER / PLACES join it back to this object row (EmitValueNodes).
     bool isDefinitionMember = definitionMemberIds.Contains(co.ApplicationId);
 
     int objK = pipeline.InternObject(co.ApplicationId);
-    if (!isDefinitionMember)
-    {
-      pipeline.InCollection(objK, collK, 0);
-    }
+    pipeline.InCollection(objK, collK, 0);
     pipeline.AddProperties(
       co.ApplicationId,
       co.Properties,
@@ -551,7 +562,9 @@ public class AutocadArtifactRootObjectBuilder(
       {
         displayGeometry = WithCivilBaseCurveFallback(displayGeometry, civil);
       }
-      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding;
+      // Civil3D's Solid3d converter (Civil3dObject, not AutocadObject) parks the SAT under "encodedValue", which is
+      // also what the v1 receive accepted; without this fallback a Civil solid shipped no SOLID rel [ENG-9325].
+      rawEncoding = (co.Converted as AutocadObject)?.rawEncoding ?? dataObject["encodedValue"] as RawEncoding;
     }
     else
     {
@@ -589,7 +602,10 @@ public class AutocadArtifactRootObjectBuilder(
     {
       gKs.Add(msk); // member's solid rides DEFINES alongside its display meshes; receive prefers the SAT per member
     }
-    int ord = 0;
+    // A Civil3D entity already reached through a corridor's .elements tree (EmitCivilChild) has that copy's corridor
+    // solids registered under its id; this object's own display is appended after them, not in their place [ENG-9333].
+    geometryKsByObjectId.TryGetValue(co.ApplicationId, out List<int>? priorGKs);
+    int ord = priorGKs?.Count ?? 0;
     foreach (Base fragment in displayGeometry)
     {
       try
@@ -615,9 +631,19 @@ public class AutocadArtifactRootObjectBuilder(
       }
     }
 
-    geometryKsByObjectId[co.ApplicationId] = gKs;
+    if (priorGKs is not null)
+    {
+      priorGKs.AddRange(gKs);
+    }
+    else
+    {
+      geometryKsByObjectId[co.ApplicationId] = gKs;
+    }
 
-    EmitMemberLayerColor(pipeline, isDefinitionMember, memberLayerArgb, gKs);
+    // A ByLayer definition member deliberately gets NO colour edge: its layer rides IN_COLLECTION and the layer's
+    // colour rides NODE_HAS_COLOR, so consumers resolve the inheritance from the graph (DEFINES_MEMBER joins the
+    // member back to this object row) — pinning the resolved layer colour here (the retired ENG-8825 flatten) came
+    // back as an EXPLICIT colour on the member after a round trip, losing its ByLayer-ness [ENG-9344].
 
     // Every display fragment was dropped and no solid landed → the bundle carries nothing renderable for this
     // object; report it instead of standing on the Collect-phase SUCCESS. An object that never had display
@@ -636,7 +662,7 @@ public class AutocadArtifactRootObjectBuilder(
       int childOrd = 0;
       foreach (Base child in civilParent.elements)
       {
-        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId);
+        EmitCivilChild(pipeline, child, collK, units, objK, childOrd++, geometryKsByObjectId, topLevelIds);
       }
       if (childOrd > 0)
       {
@@ -662,29 +688,15 @@ public class AutocadArtifactRootObjectBuilder(
       ? baseCurves.Cast<Base>().ToList()
       : displayGeometry;
 
-  // ByLayer member: pin its resolved layer colour onto its geometry so it doesn't inherit the instance's
-  // colour override — the fallback stays reserved for ByBlock members [ENG-8825].
-  private static void EmitMemberLayerColor(
-    ObjectsArtifactPipeline pipeline,
-    bool isDefinitionMember,
-    int? memberLayerArgb,
-    List<int> gKs
-  )
-  {
-    if (!isDefinitionMember || memberLayerArgb is not int mla || gKs.Count == 0)
-    {
-      return;
-    }
-    int layerColorK = pipeline.AddColor(mla);
-    foreach (var gK in gKs)
-    {
-      pipeline.HasColor(gK, layerColorK);
-    }
-  }
-
-  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always; interns + emits the child's own
-  // geometry/properties only once (a child may also be a top-level object — geometryKsByObjectId is the guard);
-  // recurses into its own .elements.
+  // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always, then:
+  //  - properties + IN_COLLECTION once per child id — and NEVER for a child that is also a top-level object (a
+  //    subassembly entity under its corridor): the corridor copy carries an EMPTY properties bag, and emitting it here
+  //    too wrote the root scalars (name/type/units/speckle_type) twice whenever the corridor was visited before the
+  //    entity, or replaced the real properties with the empty bag in the other order [ENG-9333];
+  //  - display geometry for EVERY copy: the same subassembly entity appears under each region that applies its
+  //    assembly and each copy carries THAT region's corridor solids, which are distinct from the entity's own
+  //    (2D shape) display that EmitObject emits.
+  // Recurses into its own .elements.
   private void EmitCivilChild(
     ObjectsArtifactPipeline pipeline,
     Base child,
@@ -692,45 +704,49 @@ public class AutocadArtifactRootObjectBuilder(
     string units,
     int parentObjK,
     int subOrd,
-    Dictionary<string, List<int>> geometryKsByObjectId
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    HashSet<string> topLevelIds
   )
   {
     string childAppId = child.applicationId ?? Guid.NewGuid().ToString();
     int childK = pipeline.InternObject(childAppId);
     pipeline.Subelement(parentObjK, childK, subOrd);
 
-    if (!geometryKsByObjectId.ContainsKey(childAppId))
+    if (!geometryKsByObjectId.TryGetValue(childAppId, out List<int>? gKs))
     {
-      pipeline.InCollection(childK, collK, 0);
-      var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
-      string childName = child is DataObject dn ? dn.name : child.speckle_type;
-      string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
-      pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
-
-      var display = child is Civil3dObject cc
-        ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
-        : new List<Base> { child };
-      var gKs = new List<int>();
-      int ord = 0;
-      foreach (Base fragment in display)
-      {
-        try
-        {
-          int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
-          pipeline.Display(childK, gK, ord++);
-          gKs.Add(gK);
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          logger.LogWarning(
-            ex,
-            "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
-            fragment.speckle_type,
-            childAppId
-          );
-        }
-      }
+      gKs = new List<int>();
       geometryKsByObjectId[childAppId] = gKs;
+      if (!topLevelIds.Contains(childAppId))
+      {
+        pipeline.InCollection(childK, collK, 0);
+        var props = child is DataObject d ? d.properties : new Dictionary<string, object?>();
+        string childName = child is DataObject dn ? dn.name : child.speckle_type;
+        string childType = child is Civil3dObject ct ? ct.type : child.speckle_type;
+        pipeline.AddProperties(childAppId, props, RootScalars(child.speckle_type, childName, units, childType));
+      }
+    }
+
+    var display = child is Civil3dObject cc
+      ? WithCivilBaseCurveFallback(new List<Base>(cc.displayValue), cc)
+      : new List<Base> { child };
+    foreach (Base fragment in display)
+    {
+      try
+      {
+        int ord = gKs.Count;
+        int gK = pipeline.AddGeometry(fragment.applicationId ?? $"{childAppId}:g{ord}", fragment);
+        pipeline.Display(childK, gK, ord);
+        gKs.Add(gK);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(
+          ex,
+          "Skipped unsupported Civil3D child geometry {Type} on {AppId}",
+          fragment.speckle_type,
+          childAppId
+        );
+      }
     }
 
     if (child is Civil3dObject civilChild)
@@ -738,7 +754,7 @@ public class AutocadArtifactRootObjectBuilder(
       int grandOrd = 0;
       foreach (Base grandChild in civilChild.elements)
       {
-        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId);
+        EmitCivilChild(pipeline, grandChild, collK, units, childK, grandOrd++, geometryKsByObjectId, topLevelIds);
       }
     }
   }
@@ -798,7 +814,8 @@ public class AutocadArtifactRootObjectBuilder(
     ObjectsArtifactPipeline pipeline,
     CollectedModel model,
     Dictionary<string, List<int>> geometryKsByObjectId,
-    Dictionary<string, int> instanceKByObjectId
+    Dictionary<string, int> instanceKByObjectId,
+    IReadOnlyDictionary<string, int> layerCollectionKByName
   )
   {
     // 1) instance definitions → DEFINES (member meshes) / DEFINES_INSTANCE (nested block placements).
@@ -811,6 +828,7 @@ public class AutocadArtifactRootObjectBuilder(
         if (instanceKByObjectId.TryGetValue(memberId, out var instK))
         {
           pipeline.DefinesInstance(defK, instK, memberOrd);
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK);
         }
         else if (geometryKsByObjectId.TryGetValue(memberId, out var memberGKs))
         {
@@ -820,14 +838,39 @@ public class AutocadArtifactRootObjectBuilder(
           {
             pipeline.Defines(defK, gK, memberOrd);
           }
+          EmitMemberGraphJoin(pipeline, defK, memberId, memberOrd, instK: null);
         }
         memberOrd++;
       }
     }
 
-    // 2) render materials → HAS_MATERIAL (geometry → material node). Material proxies list OBJECT ids.
-    // A LAYER-sourced proxy lists a LAYER id instead, which owns no geometry — invert the object → layer map so
-    // those land on the geometry of every object inheriting that layer's material (ByLayer) [ENG-9118].
+    // The layer-stage material proxies list LAYER application ids — key them to the layer COLLECTION nodes so the
+    // authored layer → material assignment itself makes the bundle (NODE_HAS_MATERIAL below) [ENG-9346].
+    var collKByLayerId = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var kv in model.LayerNameByAppId)
+    {
+      if (layerCollectionKByName.TryGetValue(kv.Value, out int layerCollK))
+      {
+        collKByLayerId[kv.Key] = layerCollK;
+      }
+    }
+
+    EmitMaterialNodes(pipeline, model, geometryKsByObjectId, instanceKByObjectId, collKByLayerId);
+    EmitColorNodes(pipeline, model.Colors, geometryKsByObjectId, instanceKByObjectId);
+  }
+
+  // 2) render materials → HAS_MATERIAL (geometry → material node). Material proxies list OBJECT ids.
+  // A LAYER-sourced proxy lists a LAYER id instead, which owns no geometry — the authored assignment lands on the
+  // layer's COLLECTION node (NODE_HAS_MATERIAL [ENG-9346]) and the flatten below lands it on the geometry of every
+  // object inheriting that layer's material (ByLayer) [ENG-9118].
+  private void EmitMaterialNodes(
+    ObjectsArtifactPipeline pipeline,
+    CollectedModel model,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId,
+    Dictionary<string, int> collKByLayerId
+  )
+  {
     var inheritorsByLayerId = new Dictionary<string, List<string>>(StringComparer.Ordinal);
     foreach (var kv in model.LayerMaterialInheritors)
     {
@@ -860,28 +903,38 @@ public class AutocadArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
-        else if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
+        else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          // layer-sourced: the layer owns no geometry, so the inherited material lands on each object that draws
-          // with it — block-definition members included, since their geometry Ks are registered too.
-          foreach (var inheritorId in inheritors)
+          // A material assigned directly to a block REFERENCE: it owns no geometry to hang a HAS_MATERIAL edge on,
+          // so it rides the object plane instead [bundle-spec rel 26 OBJECT_HAS_MATERIAL] — FILL semantics: members
+          // with their own geometry-level material keep it, ByBlock members inherit this one [ENG-9119].
+          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
+        }
+        else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
+        {
+          // The authored layer → material assignment itself [bundle-spec rel 28 NODE_HAS_MATERIAL] — receive
+          // restores it on the rebuilt layer record, so ByLayer objects keep inheriting after a round trip
+          // [ENG-9346]. Weakest ladder tier; the flatten below stays the render carrier.
+          pipeline.NodeHasMaterial(layerCollK, matK);
+          // layer-sourced: the layer owns no geometry, so the inherited material also lands on each object that
+          // draws with it — block-definition members included, since their geometry Ks are registered too.
+          if (inheritorsByLayerId.TryGetValue(objectId, out var inheritors))
           {
-            if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
+            foreach (var inheritorId in inheritors)
             {
-              foreach (var gK in inheritorGKs)
+              if (geometryKsByObjectId.TryGetValue(inheritorId, out var inheritorGKs))
               {
-                pipeline.HasMaterial(gK, matK);
+                foreach (var gK in inheritorGKs)
+                {
+                  pipeline.HasMaterial(gK, matK);
+                }
               }
-            }
-            else
-            {
-              // A block INSTANCE inheriting from its layer: it owns no geometry, and an object-sourced
-              // HAS_MATERIAL needs the namespace tag HAS_COLOR got in ENG-8822 — tracked as ENG-9119.
-              logger.LogWarning(
-                "Layer material '{Material}' not applied to {AppId}: the object owns no geometry to carry it",
-                materialProxy.value.name,
-                inheritorId
-              );
+              else if (instanceKByObjectId.ContainsKey(inheritorId))
+              {
+                // A block REFERENCE inheriting from its layer: no geometry of its own, so its effective material
+                // rides the object plane — ByBlock members fill from it, exactly as in AutoCAD [ENG-9119].
+                pipeline.ObjectHasMaterial(pipeline.InternObject(inheritorId), matK);
+              }
             }
           }
         }
@@ -895,12 +948,20 @@ public class AutocadArtifactRootObjectBuilder(
         }
       }
     }
+  }
 
-    // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids. A block INSTANCE has
-    // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour edge is
-    // emitted OBJECT-sourced instead — spec HAS_COLOR src is geometry|object, and the viewer looks up both
-    // namespaces — so per-placement colour overrides survive [ENG-8825].
-    foreach (var colorProxy in model.Colors)
+  // 3) object colors → HAS_COLOR (geometry → color node). Color proxies list OBJECT ids. A block INSTANCE has
+  // no geometry of its own (it enters instanceKByObjectId, not geometryKsByObjectId), so its colour rides the
+  // object plane instead [bundle-spec rel 27 OBJECT_HAS_COLOR] — OVERRIDE semantics: object > geometry >
+  // container — so per-placement colour overrides survive [ENG-8825] [ENG-9369].
+  private static void EmitColorNodes(
+    ObjectsArtifactPipeline pipeline,
+    IReadOnlyList<ColorProxy> colors,
+    Dictionary<string, List<int>> geometryKsByObjectId,
+    Dictionary<string, int> instanceKByObjectId
+  )
+  {
+    foreach (var colorProxy in colors)
     {
       // A "block"-sourced proxy is INHERITANCE, not an explicit colour: a ByBlock member must take its placing
       // instance's colour — exactly the object-sourced edge below — and the unpacker itself notes ByBlock's
@@ -921,15 +982,97 @@ public class AutocadArtifactRootObjectBuilder(
         }
         else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          // srcIsObject: the object and geometry K-spaces overlap numerically, so the edge carries a namespace
-          // tag (ord=1) — without it receive can't tell this from a geometry-sourced colour [ENG-8822].
-          pipeline.HasColor(pipeline.InternObject(objectId), colorK, srcIsObject: true);
+          // Successor of the tagged HAS_COLOR (rel 6, ord=1) stopgap from ENG-8822: rel 27 is object-sourced by
+          // definition, so no namespace tag is needed. Receive folds both vintages into ColorByObject [ENG-9369].
+          pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
         }
       }
     }
   }
 
+  // Graph-native member join [bundle-spec rels 24 PLACES / 25 DEFINES_MEMBER]: DEFINES_MEMBER def → member OBJECT
+  // with ord = the same member ordinal the member's DEFINES/DEFINES_INSTANCE rows carry (join key (definition, ord) —
+  // immune to content-hash dedup, which can hand two members in different definitions the same geometry K); PLACES
+  // member object → its nested INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's
+  // job). This is what keeps a member's identity — its layer, eav properties and colour source — reachable from the
+  // definition graph [ENG-9344]. Mirrors RhinoArtifactRootObjectBuilder.
+  private static void EmitMemberGraphJoin(
+    ObjectsArtifactPipeline pipeline,
+    int defK,
+    string memberId,
+    int memberOrd,
+    int? instK
+  )
+  {
+    int memberObjK = pipeline.InternObject(memberId);
+    pipeline.DefinesMember(defK, memberObjK, memberOrd);
+    if (instK is { } placementK)
+    {
+      pipeline.Places(memberObjK, placementK);
+    }
+  }
+
   protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
+
+  private static void EmitModelPlacement(ObjectsArtifactPipeline pipeline, CollectedModel model)
+  {
+    var options = model.ModelPlacementOptions ?? new Dictionary<string, Matrix3d>();
+    Matrix3d bakedWcsToStored = Matrix3d.Identity;
+    if (model.ApplyTransform && options.TryGetValue(model.ModelPlacementSource, out Matrix3d selectedWcsToStored))
+    {
+      bakedWcsToStored = selectedWcsToStored;
+    }
+    Matrix3d storedToWcs = bakedWcsToStored.Inverse();
+    Matrix3d defaultPlacement = Matrix3d.Identity;
+
+    foreach (var option in options)
+    {
+      Matrix3d storedToOption = option.Value.PostMultiplyBy(storedToWcs);
+      pipeline.AddModelProperty($"modelPlacement.options.{option.Key}.transform", MatrixToCsv(storedToOption));
+      if (option.Key == model.ModelPlacementSource)
+      {
+        defaultPlacement = storedToOption;
+      }
+    }
+
+    pipeline.AddModelProperty("modelPlacement.default", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.source", model.ModelPlacementSource);
+    pipeline.AddModelProperty("modelPlacement.transform", MatrixToCsv(defaultPlacement));
+    pipeline.AddModelProperty("modelPlacement.units", model.Units);
+    pipeline.AddModelProperty("modelPlacement.appliedToGeometry", model.ApplyTransform);
+
+    if (model.CoordinateMetadata is not null)
+    {
+      foreach (var property in model.CoordinateMetadata)
+      {
+        pipeline.AddModelProperty(property.Key, property.Value.Value, property.Value.Units);
+      }
+    }
+  }
+
+  private static string MatrixToCsv(Matrix3d matrix) =>
+    string.Join(
+      ",",
+      new[]
+      {
+        matrix[0, 0],
+        matrix[0, 1],
+        matrix[0, 2],
+        matrix[0, 3],
+        matrix[1, 0],
+        matrix[1, 1],
+        matrix[1, 2],
+        matrix[1, 3],
+        matrix[2, 0],
+        matrix[2, 1],
+        matrix[2, 2],
+        matrix[2, 3],
+        matrix[3, 0],
+        matrix[3, 1],
+        matrix[3, 2],
+        matrix[3, 3],
+      }.Select(x => x.ToString("R", CultureInfo.InvariantCulture))
+    );
 
   // Authored scene groups → CONTAINER("Group") nodes + IN_GROUP membership. A SEPARATE axis from IN_COLLECTION:
   // an object keeps its layer AND its group(s); memberships overlap, so an object may carry several IN_GROUP
@@ -1074,8 +1217,7 @@ public class AutocadArtifactRootObjectBuilder(
     string SourceType,
     string LayerName,
     Dictionary<string, object?> Properties,
-    Base Converted, // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
-    bool ColorIsByLayer = false // captured on the UI thread; drives member layer-colour resolution [ENG-8825]
+    Base Converted // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
   );
 
   private sealed record CollectedGroup(string Id, string? Name, List<string> MemberIds);
@@ -1090,6 +1232,12 @@ public class AutocadArtifactRootObjectBuilder(
     IReadOnlyList<CollectedGroup> Groups,
     // object id → the id of the layer whose render material it inherits (ByLayer material only) [ENG-9118]
     IReadOnlyDictionary<string, string> LayerMaterialInheritors,
+    // layer application id → layer name, keying the layer-stage material proxies to the COLLECTION nodes [ENG-9346]
+    IReadOnlyDictionary<string, string> LayerNameByAppId,
+    bool ApplyTransform,
+    string ModelPlacementSource,
+    IReadOnlyDictionary<string, Matrix3d>? ModelPlacementOptions,
+    IReadOnlyDictionary<string, AutocadModelProperty>? CoordinateMetadata,
     IReadOnlyList<SendConversionResult> Results
   );
 

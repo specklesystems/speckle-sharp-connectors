@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.GraphicsInterface;
+using Autodesk.AutoCAD.LayerManager;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.HostApp.Extensions;
@@ -61,11 +62,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly AutocadContext _autocadContext;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<AutocadHostObjectArtefactBuilder> _logger;
+  private readonly AutocadLayerBaker _layerBaker;
+  private readonly AutocadInstanceBaker _instanceBaker;
+  private readonly IAutocadMaterialBaker _materialBaker;
 
   // Why the last geometry blob produced no entities (missing blob / decode / convert), so an object that bakes nothing
   // reports the actual cause instead of the opaque "did not convert to any native geometry" [ENG-8819]. Set by
   // DecodeAndAppend, consumed + reset per object by the caller — the bake is single-threaded on the main thread.
   private string? _lastDecodeFailure;
+  private Matrix3d? _receivePlacementTransform;
 
   public AutocadHostObjectArtefactBuilder(
     IConverterSettingsStore<AutocadConversionSettings> converterSettings,
@@ -73,7 +78,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     IThreadContext threadContext,
     AutocadContext autocadContext,
     ISdkActivityFactory activityFactory,
-    ILogger<AutocadHostObjectArtefactBuilder> logger
+    ILogger<AutocadHostObjectArtefactBuilder> logger,
+    AutocadLayerBaker layerBaker,
+    AutocadInstanceBaker instanceBaker,
+    IAutocadMaterialBaker materialBaker
   )
   {
     _converterSettings = converterSettings;
@@ -82,6 +90,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _autocadContext = autocadContext;
     _activityFactory = activityFactory;
     _logger = logger;
+    _layerBaker = layerBaker;
+    _instanceBaker = instanceBaker;
+    _materialBaker = materialBaker;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -103,7 +114,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    var baseLayerName = _autocadContext.RemoveInvalidChars($"Project {projectName}: Model {modelName}");
+    // The SAME card stamp the legacy connector uses [ENG-9377]: both paths' pre-receive cleanups match on it
+    // (Contains), so a legacy bake is replaced by an artefact receive of the same card and vice versa, instead of
+    // the two conventions stacking a second copy of the model next to each other's orphans.
+    var baseLayerName = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
     using var activity = _activityFactory.Start("Build (artefact)");
     using var session = ArtefactSessionLog.Start(
       "Autocad",
@@ -121,6 +135,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var doc = _converterSettings.Current.Document;
     var db = doc.Database;
     var docUnits = _converterSettings.Current.SpeckleUnits;
+    _receivePlacementTransform = ReadModelPlacementTransform(bundle, docUnits);
     var rels = bundle.Relations;
     var objByGeom = rels.ObjectByGeometry();
     // Baked entities are identified by their AutoCAD HANDLE (decimal, as GetSpeckleApplicationId spells it) — the id
@@ -138,6 +153,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // 0 - clean previous receive of this model (entities on this model's layers + its block definitions).
     PreClean(db, baseLayerName);
     PreCleanAdditional(baseLayerName);
+    EnsureLayerFilter(db, projectName, modelName, baseLayerName);
 
     // Transaction discipline: each phase/object gets its OWN short-lived transaction, started on the DOCUMENT
     // TransactionManager, committed immediately. BOTH halves are load-bearing — three other variants were tried
@@ -161,11 +177,28 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
     var (materialIdByGeometry, materialIdByObject) = MapMaterials(bundle, rels, objByGeom, materialIdByNode);
 
+    // Layer materials (NODE_HAS_MATERIAL → container node): projected onto the created materials so ResolveLayer can
+    // write each rebuilt layer record's MaterialId — the authored assignment, not just the flattened render carrier
+    // [ENG-9346].
+    var layerMaterialByNode = new Dictionary<int, ObjectId>();
+    foreach (var kv in rels.MaterialByNode)
+    {
+      if (materialIdByNode.TryGetValue(kv.Value, out ObjectId layerMatId))
+      {
+        layerMaterialByNode[kv.Key] = layerMatId;
+      }
+    }
+
     // 1b - by-object display colours (HAS_COLOR → COLOR nodes). Applied as explicit entity colour on bake; objects
     // with no edge keep AutoCAD's ByLayer default and inherit the restored layer colour (see ResolveLayer).
     var (colorArgbByGeometry, colorArgbByObject) = MapColors(bundle, rels, objByGeom);
 
-    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName);
+    // The rel-built member index (DEFINES_MEMBER/PLACES): geometry K / INSTANCE node K → member object K, restoring
+    // each block-definition member's identity — its layer, colour source and properties [ENG-9344]. Empty on a
+    // pre-vocab bundle (AutoCAD never wrote the Rhino-style @speckle.* stamps, so there is no stamp fallback).
+    var memberIndex = BuildMemberIndexFromRels(rels);
+
+    ParseAndBakeAdditionalDefinitions(bundle, baseLayerName, session);
 
     // 2 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
     int count = 0;
@@ -201,7 +234,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           string layerName;
           using (var ltr = doc.TransactionManager.StartTransaction())
           {
-            layerName = ResolveLayer(bundle, objK, baseLayerName, db, ltr, layerCache);
+            layerName = ResolveLayer(bundle, objK, baseLayerName, db, ltr, layerCache, layerMaterialByNode);
             ltr.Commit();
           }
           materialIdByObject.TryGetValue(appId, out ObjectId objMaterial);
@@ -236,6 +269,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   : null;
                 foreach (var entity in DecodeAndAppend(geomK, bundle, modelSpace, tr, ObjectUnits(bundle, objK)))
                 {
+                  if (_receivePlacementTransform is Matrix3d placement)
+                  {
+                    entity.TransformBy(placement);
+                  }
                   entity.Layer = layerName;
                   if (materialId != ObjectId.Null)
                   {
@@ -251,7 +288,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
                   }
                   // The handle is read while the entity is still open in this transaction (it is assigned on append).
                   baked.Add((entity.ObjectId, entity.GetSpeckleApplicationId()));
-                  PostBakeEntity(entity, props, tr); // Civil3D hook (property sets) — fires for fallback bakes too
+                  PostBakeEntity(entity, props, tr, session); // Civil3D hook (property sets) — fires for fallback bakes too
                 }
               }
             }
@@ -297,6 +334,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           itr,
           baseLayerName,
           layerCache,
+          layerMaterialByNode,
+          memberIndex,
           materialIdByGeometry,
           materialIdByObject,
           colorArgbByGeometry,
@@ -757,6 +796,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Transaction tr,
     string baseLayerName,
     HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
+    DefinitionMemberIndex memberIndex,
     Dictionary<int, ObjectId> materialIdByGeometry,
     Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<int, int> colorArgbByGeometry,
@@ -772,10 +813,15 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var defIdByNode = BuildDefinitions(
       bundle,
       rels,
+      db,
       blockTable,
       tr,
       baseLayerName,
+      layerCache,
+      layerMaterialByNode,
+      memberIndex,
       materialIdByGeometry,
+      materialIdByObject,
       colorArgbByGeometry,
       session
     );
@@ -789,6 +835,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       tr,
       baseLayerName,
       layerCache,
+      layerMaterialByNode,
       materialIdByObject,
       colorArgbByObject,
       defIdByNode,
@@ -804,13 +851,21 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // geometry directly (DEFINES → geometry, grouped by member ordinal with the authoritative SAT solid preferred over
   // its display-mesh shadow) and may contain nested block placements (DEFINES_INSTANCE → INSTANCE node), built
   // depth-first (memoized, cycle-guarded) as nested BlockReferences — mirrors RhinoHostObjectArtefactBuilder.
+  // Each member's identity rides the memberIndex join (geometry/INSTANCE K → member object K): its own LAYER (the
+  // same ResolveLayer every top-level object uses, shared layerCache) and its native colour source (ACI / explicit
+  // ByBlock from its eav row) [ENG-9344]. An unindexed member (pre-vocab bundle) bakes exactly as before.
   private Dictionary<int, ObjectId> BuildDefinitions(
     ArtefactBundle bundle,
     ArtefactRelations rels,
+    Database db,
     BlockTable blockTable,
     Transaction tr,
     string baseLayerName,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
+    DefinitionMemberIndex memberIndex,
     Dictionary<int, ObjectId> materialIdByGeometry,
+    Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<int, int> colorArgbByGeometry,
     ArtefactSessionLog session
   )
@@ -870,16 +925,30 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             materialIdByGeometry.TryGetValue(geomK, out ObjectId geomMaterial);
             bool hasGeomColor = colorArgbByGeometry.TryGetValue(geomK, out int geomArgb);
+            // The member's own identity, joined through DEFINES_MEMBER (geometry K → member object K): its LAYER and
+            // its native colour semantics (ACI index / explicit ByBlock) restore from its object row exactly as a
+            // top-level object's would [ENG-9344]. Unindexed (pre-vocab bundle) → the pre-join behaviour below.
+            var (memberLayer, memberNativeColor) = ResolveMemberIdentity(
+              bundle,
+              geomK,
+              memberIndex,
+              baseLayerName,
+              db,
+              tr,
+              layerCache,
+              layerMaterialByNode
+            );
             foreach (var entity in DecodeAndAppend(geomK, bundle, btr, tr, bundle.Units))
             {
+              if (memberLayer is not null)
+              {
+                entity.Layer = memberLayer;
+              }
               if (geomMaterial != ObjectId.Null)
               {
                 entity.MaterialId = geomMaterial;
               }
-              // A member with an explicit colour edge keeps it (an explicit override, or the resolved layer colour
-              // a ByLayer member carries). A member with NO edge was ByBlock on send — bake it ByBlock so it
-              // inherits the placing BlockReference's colour instead of the block table record's default [ENG-8822].
-              entity.Color = hasGeomColor ? ToAcadColor(geomArgb) : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0);
+              entity.Color = ResolveMemberColor(memberNativeColor, hasGeomColor, geomArgb, memberLayer);
               memberCount++;
             }
           }
@@ -911,6 +980,21 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             BlockTransform = nestedMatrix,
           };
+          // A nested-block member owns no geometry K, so its whole identity join — layer, colour source, material —
+          // hangs off its INSTANCE node K instead (PLACES, inverted into ObjectByInstance) [ENG-9344].
+          ApplyNestedMemberIdentity(
+            nestedRef,
+            bundle,
+            rels,
+            instNodeK,
+            memberIndex,
+            materialIdByObject,
+            baseLayerName,
+            db,
+            tr,
+            layerCache,
+            layerMaterialByNode
+          );
           btr.AppendEntity(nestedRef);
           tr.AddNewlyCreatedDBObject(nestedRef, true);
           memberCount++;
@@ -955,6 +1039,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Transaction tr,
     string baseLayerName,
     HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode,
     Dictionary<string, ObjectId> materialIdByObject,
     Dictionary<string, int> colorArgbByObject,
     Dictionary<int, ObjectId> defIdByNode,
@@ -1010,8 +1095,12 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           instNode.Units is { Length: > 0 } u ? u : docUnits,
           docUnits
         );
+        if (_receivePlacementTransform is Matrix3d placement)
+        {
+          matrix = matrix.PreMultiplyBy(placement);
+        }
         Point3d insertion = Point3d.Origin.TransformBy(matrix);
-        string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache);
+        string layerName = ResolveLayer(bundle, objK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
         var blockRef = new BlockReference(insertion, defId) { BlockTransform = matrix, Layer = layerName };
         if (materialIdByObject.TryGetValue(appId, out ObjectId objMaterial) && objMaterial != ObjectId.Null)
         {
@@ -1158,6 +1247,163 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
+  // The rel-built member index [ENG-9344]: DEFINES_MEMBER (25, def → member object, ord = member ordinal) joined
+  // against the definition's DEFINES ords recovers geometry K → member object K; PLACES (24, member object →
+  // INSTANCE node) inverts to INSTANCE K → member object K. Both maps are empty on a pre-vocab bundle (no rel 25
+  // rows), and every consumer of the index degrades to the pre-join behaviour. Mirrors
+  // RhinoHostObjectArtefactBuilder.TryBuildMemberIndexFromRels, minus the @speckle.* stamp fallback AutoCAD never wrote.
+  private static DefinitionMemberIndex BuildMemberIndexFromRels(ArtefactRelations rels)
+  {
+    var byGeometry = new Dictionary<int, int>();
+    var byInstance = new Dictionary<int, int>();
+    foreach (var kv in rels.MemberObjectsByDefinition)
+    {
+      // member ordinal → member object K for this definition
+      var objByOrd = new Dictionary<int, int>();
+      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
+      for (int m = 0; m < kv.Value.Count; m++)
+      {
+        objByOrd[memberOrds[m]] = kv.Value[m];
+      }
+      if (
+        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
+        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
+      )
+      {
+        continue;
+      }
+      for (int i = 0; i < geomKs.Count; i++)
+      {
+        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
+        {
+          byGeometry[geomKs[i]] = memberObjK;
+        }
+      }
+    }
+    foreach (var kv in rels.PlacesByObject)
+    {
+      byInstance[kv.Value] = kv.Key;
+    }
+    return new DefinitionMemberIndex(byGeometry, byInstance);
+  }
+
+  /// <summary>Geometry K / INSTANCE node K → the definition member OBJECT K that owns it (DEFINES_MEMBER + PLACES),
+  /// restoring member identity — layer, colour source, properties — inside rebuilt block definitions [ENG-9344].</summary>
+  private sealed record DefinitionMemberIndex(
+    Dictionary<int, int> ObjectByGeometry,
+    Dictionary<int, int> ObjectByInstance
+  );
+
+  // A definition member's colour: native semantics (ACI / explicit ByBlock from its eav row) outrank the flattened
+  // ARGB [ENG-9117]; an explicit colour edge is kept as an explicit override. A member with NEITHER is ByLayer —
+  // the source default; it sits on its own restored layer (memberLayer), so ByLayer inherits the right colour
+  // natively [ENG-9344]. Only a pre-vocab bundle (no member identity, and ByLayer members carried the retired
+  // ENG-8825 pinned edge) keeps the ByBlock fallback, so an edge-less member still inherits its placing
+  // BlockReference's colour there [ENG-8822].
+  private static AcadColor ResolveMemberColor(
+    AcadColor? nativeColor,
+    bool hasGeomColor,
+    int geomArgb,
+    string? memberLayer
+  ) =>
+    nativeColor
+    ?? (
+      hasGeomColor ? ToAcadColor(geomArgb)
+      : memberLayer is not null ? AcadColor.FromColorIndex(ColorMethod.ByLayer, 256)
+      : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0)
+    );
+
+  // A direct member's identity join (geometry K → member object K): the member's own LAYER — resolved through the
+  // SAME ResolveLayer every top-level object uses, shared layerCache — and its native colour semantics (ACI index /
+  // explicit ByBlock) from its eav row [ENG-9344]. Unindexed (pre-vocab bundle) → (null, null), the pre-join bake.
+  private (string? Layer, AcadColor? NativeColor) ResolveMemberIdentity(
+    ArtefactBundle bundle,
+    int geomK,
+    DefinitionMemberIndex memberIndex,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    if (!memberIndex.ObjectByGeometry.TryGetValue(geomK, out int memberObjK))
+    {
+      return (null, null);
+    }
+    string layer = ResolveMemberLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    bundle.Properties.TryGetValue(memberObjK, out var memberProps);
+    return (layer, NativeColorFromProperties(memberProps));
+  }
+
+  // AutoCAD's layer-0 convention: a definition member authored on layer "0" is a chameleon — at draw time it takes
+  // the PLACING REFERENCE's layer, so ByLayer resolves through the reference, not through layer 0 itself. That rule
+  // fires only on the layer named literally "0", so such a member must bake there — putting it on the prefixed card
+  // layer ("SPK-…-0") froze it to source layer 0's own (usually white) colour and the member stopped following its
+  // reference [ENG-9344]. Layer "0" always exists and can't be deleted, so no creation is needed.
+  private string ResolveMemberLayer(
+    ArtefactBundle bundle,
+    int memberObjK,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    var segments = SceneViewResolver.Segments(bundle, memberObjK);
+    return segments.Count == 1 && segments[0] == "0"
+      ? "0"
+      : ResolveLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+  }
+
+  // A nested-block member's identity join: it owns no geometry K, so layer, material and colour source all hang off
+  // its INSTANCE node K (PLACES, inverted into ObjectByInstance) [ENG-9344]. Its material is object-plane
+  // (OBJECT_HAS_MATERIAL → materialIdByObject via its appId) and its colour is object-sourced (OBJECT_HAS_COLOR /
+  // the legacy tagged HAS_COLOR), mirroring what PlaceInstances applies to a top-level placement.
+  private void ApplyNestedMemberIdentity(
+    BlockReference nestedRef,
+    ArtefactBundle bundle,
+    ArtefactRelations rels,
+    int instNodeK,
+    DefinitionMemberIndex memberIndex,
+    Dictionary<string, ObjectId> materialIdByObject,
+    string baseLayerName,
+    Database db,
+    Transaction tr,
+    HashSet<string> layerCache,
+    Dictionary<int, ObjectId> layerMaterialByNode
+  )
+  {
+    if (!memberIndex.ObjectByInstance.TryGetValue(instNodeK, out int memberObjK))
+    {
+      return;
+    }
+    nestedRef.Layer = ResolveMemberLayer(bundle, memberObjK, baseLayerName, db, tr, layerCache, layerMaterialByNode);
+    if (
+      bundle.ObjectAppIds.TryGetValue(memberObjK, out var appId)
+      && materialIdByObject.TryGetValue(appId, out ObjectId material)
+      && material != ObjectId.Null
+    )
+    {
+      nestedRef.MaterialId = material;
+    }
+    bundle.Properties.TryGetValue(memberObjK, out var props);
+    if (NativeColorFromProperties(props) is AcadColor native)
+    {
+      nestedRef.Color = native; // ACI / explicit ByBlock recorded by the sender [ENG-9117]
+    }
+    else if (
+      rels.ColorByObject.TryGetValue(memberObjK, out int colorK)
+      && bundle.Nodes.TryGetValue(colorK, out var colorNode)
+      && colorNode.Kind == NodeKind.Color
+      && colorNode.Argb is int argb
+    )
+    {
+      nestedRef.Color = ToAcadColor(argb); // the placement's own colour (OBJECT_HAS_COLOR)
+    }
+  }
+
   private static string UniqueBlockName(BlockTable blockTable, string baseName)
   {
     string name = baseName;
@@ -1178,12 +1424,16 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     string baseLayerName,
     Database db,
     Transaction tr,
-    HashSet<string> cache
+    HashSet<string> cache,
+    Dictionary<int, ObjectId> layerMaterialByNode
   )
   {
-    var segments = SceneViewResolver.SegmentsWithColor(bundle, objK); // (name, argb) so layers get their source colour
+    // (name, argb, nodeK) — colour + the segment's node K, so the flattened layer also recovers the source layer's
+    // authored render material (NODE_HAS_MATERIAL) [ENG-9346].
+    var segments = SceneViewResolver.SegmentsWithAppearance(bundle, objK);
+    // baseLayerName is the legacy card prefix and already ends with a dash [ENG-9377].
     string name =
-      segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments.Select(s => s.Name))}";
+      segments.Count == 0 ? baseLayerName : $"{baseLayerName}{string.Join("-", segments.Select(s => s.Name))}";
     name = _autocadContext.RemoveInvalidChars(name);
 
     // The flattened AutoCAD layer stands in for the whole segment chain — colour it from the innermost
@@ -1197,7 +1447,17 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         break;
       }
     }
-    return GetOrCreateLayer(name, db, tr, cache, argb);
+    // Same innermost-wins rule for the layer's authored material.
+    ObjectId materialId = ObjectId.Null;
+    for (int i = segments.Count - 1; i >= 0; i--)
+    {
+      if (segments[i].NodeK is int nodeK && layerMaterialByNode.TryGetValue(nodeK, out ObjectId m))
+      {
+        materialId = m;
+        break;
+      }
+    }
+    return GetOrCreateLayer(name, db, tr, cache, argb, materialId);
   }
 
   private static string GetOrCreateLayer(
@@ -1205,7 +1465,8 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Database db,
     Transaction tr,
     HashSet<string> cache,
-    int? argb
+    int? argb,
+    ObjectId materialId
   )
   {
     if (cache.Contains(layerName))
@@ -1221,11 +1482,103 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       {
         record.Color = ToAcadColor(a);
       }
+      if (materialId != ObjectId.Null)
+      {
+        // The source layer's authored render material — restored on the record itself so ByLayer objects keep
+        // inheriting it after the round trip, not just drawing with a flattened copy [ENG-9346].
+        record.MaterialId = materialId;
+      }
       layerTable.Add(record);
       tr.AddNewlyCreatedDBObject(record, true);
     }
+    else if (argb is int a)
+    {
+      // PreClean keeps emptied layers for reuse, so a re-receive must push the sender's CURRENT colour onto the
+      // existing record — most baked entities are ByLayer, so this is the colour the user sees. Sender wins over a
+      // receiver-side manual recolour, as the v1 delete-and-recreate did [ENG-9330]. No sender colour → untouched.
+      var record = (LayerTableRecord)tr.GetObject(layerTable[layerName], OpenMode.ForRead);
+      AcadColor color = ToAcadColor(a);
+      if (!record.Color.Equals(color))
+      {
+        record.UpgradeOpen();
+        record.Color = color;
+      }
+    }
     cache.Add(layerName);
     return layerName;
+  }
+
+  // ── layer filter ──────────────────────────────────────────────────────────────────────────────────────
+  // Layer Properties Manager filter tree: "Speckle" → "{project}-{model}", the nested one selecting exactly this
+  // model's layers. Ports the v1 AutocadLayerBaker.CreateLayerFilter onto the artefact stamp ("Project X Model Y-…")
+  // and is idempotent — a re-receive refreshes the nested filter's expression instead of adding a duplicate
+  // [ENG-9331]. Best-effort: a filter failure must not block the receive. (AutoCAD only repaints the tree after the
+  // palette is closed and reopened.)
+  private void EnsureLayerFilter(Database db, string projectName, string modelName, string baseLayerName)
+  {
+    const string ROOT_FILTER_NAME = "Speckle";
+    try
+    {
+      LayerFilterTree tree = db.LayerFilters;
+      LayerFilterCollection rootFilters = tree.Root.NestedFilters;
+      LayerFilter? group = null;
+      foreach (LayerFilter existing in rootFilters)
+      {
+        if (existing.Name == ROOT_FILTER_NAME)
+        {
+          group = existing;
+          break;
+        }
+      }
+      if (group is null)
+      {
+        group = new LayerFilter { Name = ROOT_FILTER_NAME, FilterExpression = "NAME==\"Project * Model *\"" };
+        rootFilters.Add(group);
+      }
+
+      string filterName = _autocadContext.RemoveInvalidChars($"{projectName}-{modelName}");
+      string expression = $"NAME==\"{EscapeWildcards(baseLayerName)}*\"";
+      LayerFilter? modelFilter = null;
+      foreach (LayerFilter nested in group.NestedFilters)
+      {
+        if (nested.Name == filterName)
+        {
+          modelFilter = nested;
+          break;
+        }
+      }
+      if (modelFilter is null)
+      {
+        group.NestedFilters.Add(new LayerFilter { Name = filterName, FilterExpression = expression });
+      }
+      else
+      {
+        modelFilter.FilterExpression = expression;
+      }
+      db.LayerFilters = tree;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(ex, "Could not create the Speckle layer filter for '{BaseLayer}'", baseLayerName);
+    }
+  }
+
+  // AutoCAD wildcard specials inside a NAME== pattern must be escaped with a reverse quote, or a model named
+  // "v1.2" / "a,b" matches the wrong layers.
+  private static readonly char[] s_wildcardSpecials = "`#@.*?~[],".ToCharArray();
+
+  private static string EscapeWildcards(string s)
+  {
+    var sb = new System.Text.StringBuilder(s.Length);
+    foreach (char c in s)
+    {
+      if (Array.IndexOf(s_wildcardSpecials, c) >= 0)
+      {
+        sb.Append('`');
+      }
+      sb.Append(c);
+    }
+    return sb.ToString();
   }
 
   // ── materials ─────────────────────────────────────────────────────────────────────────────────────────
@@ -1289,6 +1642,20 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
       byGeometry[kv.Key] = id;
       if (objByGeom.TryGetValue(kv.Key, out int objK) && bundle.ObjectAppIds.TryGetValue(objK, out var appId))
+      {
+        byObject[appId] = id;
+      }
+    }
+
+    // Object-plane edges (OBJECT_HAS_MATERIAL, rel 26): a material assigned to a block REFERENCE, which owns no
+    // geometry and so never appears in objByGeom — resolve it straight through the object dictionary, mirroring
+    // MapColors' ColorByObject pass [ENG-9119].
+    foreach (var kv in rels.MaterialByObject)
+    {
+      if (
+        materialIdByNode.TryGetValue(kv.Value, out ObjectId id)
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+      )
       {
         byObject[appId] = id;
       }
@@ -1403,6 +1770,27 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────
+  private Matrix3d? ReadModelPlacementTransform(ArtefactBundle bundle, string docUnits)
+  {
+    if (
+      !_converterSettings.Current.ApplyTransform
+      || !bundle.ModelProperties.TryGetValue("modelPlacement", out object? placementObject)
+      || placementObject is not Dictionary<string, object?> placement
+      || !placement.TryGetValue("appliedToGeometry", out object? appliedObject)
+      || appliedObject is not bool appliedToGeometry
+      || appliedToGeometry
+      || !placement.TryGetValue("transform", out object? transformObject)
+      || transformObject is not string transform
+    )
+    {
+      return null;
+    }
+
+    string sourceUnits =
+      placement.TryGetValue("units", out object? unitsObject) && unitsObject is string units ? units : bundle.Units;
+    return BuildMatrix3d(transform, sourceUnits, docUnits);
+  }
+
   private Matrix3d BuildMatrix3d(string? csv, string units, string docUnits)
   {
     var d = new double[16];
@@ -1469,28 +1857,23 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ? s
       : bundle.Units;
 
-  // Deletes the previous receive of this model: model-space entities on its layers + its block definitions. Empty
-  // layers are left for reuse. Best-effort — a clean failure must not block the receive.
+  // Deletes the previous receive of this model — through the SAME per-card janitors the legacy builder's
+  // PreReceiveDeepClean uses (they match on Contains, and both paths now stamp with the same SPK- prefix), so a
+  // legacy bake is replaced by an artefact receive of the same card and vice versa [ENG-9377]: entities AND their
+  // layer records (so re-created layers pick up the sender's current colour + material), block references and
+  // definitions, render materials [ENG-9329]. Groups are artefact-only (the legacy path has no group cleanup), so
+  // they keep a hand-rolled purge by name stamp. Best-effort — a clean failure must not block the receive.
   private void PreClean(Database db, string baseLayerName)
   {
     try
     {
-      using var tr = db.TransactionManager.StartTransaction();
-      var modelSpace = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
-      foreach (ObjectId id in modelSpace)
-      {
-        if (
-          tr.GetObject(id, OpenMode.ForRead) is AcadEntity entity
-          && entity.Layer.StartsWith(baseLayerName, StringComparison.Ordinal)
-        )
-        {
-          entity.UpgradeOpen();
-          entity.Erase();
-        }
-      }
+      _layerBaker.DeleteAllLayersByPrefix(baseLayerName);
+      _instanceBaker.PurgeInstances(baseLayerName);
+      _materialBaker.PurgeMaterials(baseLayerName);
 
       // purge this model's groups from the prior receive — they carry the baseLayerName suffix (BakeGroups).
       // Collect first, then erase: erasing while enumerating the dictionary invalidates the enumerator.
+      using var tr = db.TransactionManager.StartTransaction();
       var groupDictionary = (DBDictionary)tr.GetObject(db.GroupDictionaryId, OpenMode.ForRead);
       var staleGroupIds = new List<ObjectId>();
       foreach (DBDictionaryEntry entry in groupDictionary)
@@ -1507,25 +1890,6 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           staleGroup.Erase();
         }
       }
-
-      var blockTable = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-      foreach (ObjectId btrId in blockTable)
-      {
-        var btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
-        if (!btr.IsLayout && !btr.IsAnonymous && btr.Name.Contains(baseLayerName))
-        {
-          try
-          {
-            btr.UpgradeOpen();
-            btr.Erase();
-          }
-          catch (Exception ex) when (!ex.IsFatal())
-          {
-            _logger.LogWarning(ex, "Could not erase prior block definition {Name}", btr.Name);
-          }
-        }
-      }
-
       tr.Commit();
     }
     catch (Exception ex) when (!ex.IsFatal())
@@ -1536,9 +1900,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   protected virtual void PreCleanAdditional(string baseLayerName) { }
 
-  protected virtual void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName) { }
+  protected virtual void ParseAndBakeAdditionalDefinitions(
+    ArtefactBundle bundle,
+    string baseLayerName,
+    ArtefactSessionLog session
+  ) { }
 
-  protected virtual void PostBakeEntity(AcadEntity entity, Dictionary<string, object?>? properties, Transaction tr) { }
+  protected virtual void PostBakeEntity(
+    AcadEntity entity,
+    Dictionary<string, object?>? properties,
+    Transaction tr,
+    ArtefactSessionLog session
+  ) { }
 
   private static string SrcType(Dictionary<string, object?>? props) =>
     props is not null && props.TryGetValue("speckle_type", out var v) && v is string s && s.Length > 0

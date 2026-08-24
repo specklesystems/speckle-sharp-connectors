@@ -58,7 +58,6 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
 
   private void EmitPropertySetDefinitionRows(ObjectsArtifactPipeline pipeline)
   {
-    // Requires Speckle.Objects ≥ speckle-sharp-sdk@oguzhan/bundle-vocab-additions (AddPropertySetDefinition API).
     // Rows are emitted in AUTHORED field order (the file's row-order-is-field-order contract).
     foreach (var setEntry in _propertySetDefinitionHandler.Definitions)
     {

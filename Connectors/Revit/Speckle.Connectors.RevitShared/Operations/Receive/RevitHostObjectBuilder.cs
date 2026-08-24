@@ -83,6 +83,9 @@ public sealed class RevitHostObjectBuilder(
     // ENG-9099: computed once so BakeObjects (via the settings push below) and BakeInstancesAsFamilies (which runs
     // OUTSIDE that push, after it's disposed — see step 5/"Bakes instances as families" below) apply the SAME
     // effective reference-point transform to their respective outermost placements.
+    // Composed unconditionally (NOT gated on the Apply Transform receive setting): a v1 root object records
+    // REFERENCE_POINT_TRANSFORM only when the send actually baked it, so presence implies baked geometry that
+    // must be unbaked — and the receiver's own reference-point setting must stay effective either way.
     var effectiveReferencePointTransform = ReferencePointHelper.CalculateNewTransform(
       converterSettings.Current.ReferencePointTransform,
       referencePointTransformFromRootObject

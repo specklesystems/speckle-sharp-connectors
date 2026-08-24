@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Reflection;
 using Autodesk.Civil.Runtime;
 using Speckle.Converters.Civil3dShared.Extensions;
 using Speckle.Converters.Civil3dShared.Helpers;
 using Speckle.Converters.Common;
+using Speckle.Sdk;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -416,37 +418,6 @@ public class ClassPropertiesExtractor
     return partAssignments;
   }
 
-  private void ProcessCorridorFeaturelinePoints(
-    CDB.CorridorFeatureLine featureline,
-    Dictionary<string, Dictionary<string, object?>> featureLinesDict
-  )
-  {
-    if (featureLinesDict.TryGetValue(featureline.CodeName, out Dictionary<string, object?>? value))
-    {
-      Dictionary<string, object?> pointsDict = new(featureline.FeatureLinePoints.Count);
-      int pointCount = 0;
-      foreach (CDB.FeatureLinePoint point in featureline.FeatureLinePoints)
-      {
-        Dictionary<string, object?> pointPropertiesDict = new()
-        {
-          ["station"] = point.Station,
-          ["x"] = point.XYZ.X,
-          ["y"] = point.XYZ.Y,
-          ["z"] = point.XYZ.Z,
-          ["isBreak"] = point.IsBreak,
-        };
-
-        PropertyHandler propHandler = new();
-        propHandler.TryAddToDictionary(pointPropertiesDict, "offset", () => point.Offset); // not all points have offsets, will throw
-
-        pointsDict[pointCount.ToString()] = pointPropertiesDict;
-        pointCount++;
-      }
-
-      value["featureLinePoints"] = pointsDict;
-    }
-  }
-
   private Dictionary<string, object?> ExtractCorridorProperties(CDB.Corridor corridor)
   {
     static void AddArrayToDict(string[] array, Dictionary<string, object?> dict, string key)
@@ -467,56 +438,8 @@ public class ClassPropertiesExtractor
     AddArrayToDict(corridor.GetPointCodes(), codesDict, POINTS_PROP);
     AddDictionaryToDictionary(codesDict, properties, CODES_PROP);
 
-    // get feature lines props
-    // this is pretty complicated: need to extract featureline points as dicts, but can only do this by iterating through baselines. Need to match the iterated featurelines with the featureline code info.
-    Dictionary<string, Dictionary<string, object?>> featureLinesDict = new();
-    // first build dict from the code info
-    foreach (CDB.FeatureLineCodeInfo featureLineCode in corridor.FeatureLineCodeInfos)
-    {
-      featureLinesDict[featureLineCode.CodeName] = new Dictionary<string, object?>()
-      {
-        ["codeName"] = featureLineCode.CodeName,
-        ["isConnected"] = featureLineCode.IsConnected,
-        ["payItems"] = featureLineCode.PayItems,
-      };
-    }
-
-    // then iterate through baseline featurelines to populate point info
-    foreach (CDB.Baseline baseline in corridor.Baselines)
-    {
-      // main featurelines
-      foreach (
-        CDB.FeatureLineCollection mainFeaturelineCollection in baseline
-          .MainBaselineFeatureLines
-          .FeatureLineCollectionMap
-      )
-      {
-        foreach (CDB.CorridorFeatureLine featureline in mainFeaturelineCollection)
-        {
-          ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
-        }
-      }
-
-      // offset featurelines
-      foreach (CDB.BaselineFeatureLines offsetFeaturelineCollection in baseline.OffsetBaselineFeatureLinesCol)
-      {
-        foreach (
-          CDB.FeatureLineCollection featurelineCollection in offsetFeaturelineCollection.FeatureLineCollectionMap
-        )
-        {
-          foreach (CDB.CorridorFeatureLine featureline in featurelineCollection)
-          {
-            ProcessCorridorFeaturelinePoints(featureline, featureLinesDict);
-          }
-        }
-      }
-    }
-
-    if (featureLinesDict.Count > 0)
-    {
-      properties["Feature Lines"] = featureLinesDict;
-    }
-
+    // Feature line points are NOT dumped here: each corridor feature line is already a child object with polyline
+    // display geometry (CorridorHandler.FeatureLineToSpeckle), which also carries the code info [ENG-9334].
     return properties;
   }
 
@@ -619,6 +542,40 @@ public class ClassPropertiesExtractor
     };
   }
 
+  // Stock (.NET catalog) subassemblies hand back the UNRESOLVED string-resource id of the label as DisplayName
+  // ("803"); the palette resolves it against the subassembly's resource DLL, which is not reachable here. The
+  // parameter's logical Key ("CutSlope") is the readable stand-in, and the bare id stays as the last resort so no
+  // parameter is dropped. Each param is isolated: one unreadable param must not take out the group [ENG-9332].
+  private static void AddSubassemblyParam(
+    Dictionary<string, object?> dict,
+    Func<string> displayName,
+    Func<string> key,
+    Func<object?> value
+  )
+  {
+    string? name = null;
+    try
+    {
+      name = displayName();
+      if (int.TryParse(name, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+      {
+        string logicalKey = key();
+        if (!string.IsNullOrWhiteSpace(logicalKey))
+        {
+          name = logicalKey;
+        }
+      }
+      dict[name] = value();
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      if (name is not null && !dict.ContainsKey(name))
+      {
+        dict[name] = null;
+      }
+    }
+  }
+
   private Dictionary<string, object?> ExtractSubassemblyProperties(CDB.Subassembly subassembly)
   {
     static void AddCodesToDict(CDB.CodeCollection codes, Dictionary<string, object?> dict)
@@ -648,19 +605,19 @@ public class ClassPropertiesExtractor
     Dictionary<string, object?> parametersDict = new();
     foreach (ParamBool p in subassembly.ParamsBool)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamDouble p in subassembly.ParamsDouble)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamString p in subassembly.ParamsString)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     foreach (ParamLong p in subassembly.ParamsLong)
     {
-      parametersDict[p.DisplayName] = p.Value;
+      AddSubassemblyParam(parametersDict, () => p.DisplayName, () => p.Key, () => p.Value);
     }
     AddDictionaryToDictionary(parametersDict, properties, "Parameters");
 

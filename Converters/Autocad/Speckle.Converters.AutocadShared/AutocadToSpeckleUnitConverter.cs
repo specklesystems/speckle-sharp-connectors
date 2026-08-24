@@ -19,9 +19,13 @@ public class AutocadToSpeckleUnitConverter : IHostToSpeckleUnitConverter<UnitsVa
     dict[UnitsValue.Meters] = Units.Meters;
     dict[UnitsValue.Kilometers] = Units.Kilometers;
     dict[UnitsValue.Inches] = Units.Inches;
+    dict[UnitsValue.USSurveyInch] = Units.Inches;
     dict[UnitsValue.Feet] = Units.Feet;
+    dict[UnitsValue.USSurveyFeet] = Units.Feet;
     dict[UnitsValue.Yards] = Units.Yards;
+    dict[UnitsValue.USSurveyYard] = Units.Yards;
     dict[UnitsValue.Miles] = Units.Miles;
+    dict[UnitsValue.USSurveyMile] = Units.Miles;
     return dict;
   }
 

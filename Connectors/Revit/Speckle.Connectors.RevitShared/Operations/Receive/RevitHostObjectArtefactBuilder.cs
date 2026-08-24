@@ -155,6 +155,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every atomic vertex, and
     // BuildInstanceTransform re-bases every instance placement. Mirrors v1 RevitHostObjectBuilder's composition.
     // No recorded transform + no local setting = no-op.
+    // BAKED bundles (legacy sends and migrated old models — appliedToGeometry absent or true) are unbaked
+    // UNCONDITIONALLY, regardless of the Apply Transform receive setting: their stored coordinates already carry
+    // the source datum, so skipping the unbake would land them displaced. ReadSourceReferencePointTransform
+    // returns null for un-baked bundles (appliedToGeometry=false), which keep their stored coordinates.
     var sourceReferencePoint = ReadSourceReferencePointTransform(bundle);
     using var referencePointScope = _converterSettings.Push(s =>
       s with
@@ -1503,6 +1507,30 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     {
       return null;
     }
+
+    // New bundles store this source-independent state under modelPlacement. Fall back to the temporary
+    // referencePoint location emitted by earlier builds of this branch; absence means a legacy baked bundle.
+    bool? appliedToGeometry = null;
+    if (
+      bundle.ModelProperties.TryGetValue("modelPlacement", out var placementObj)
+      && placementObj is Dictionary<string, object?> placement
+      && placement.TryGetValue("appliedToGeometry", out var placementAppliedObj)
+      && placementAppliedObj is bool placementApplied
+    )
+    {
+      appliedToGeometry = placementApplied;
+    }
+    else if (
+      rp.TryGetValue("appliedToGeometry", out var referenceAppliedObj) && referenceAppliedObj is bool referenceApplied
+    )
+    {
+      appliedToGeometry = referenceApplied;
+    }
+    if (appliedToGeometry is false)
+    {
+      return null;
+    }
+
     var parts = transformCsv.Split(',');
     if (parts.Length != 16)
     {

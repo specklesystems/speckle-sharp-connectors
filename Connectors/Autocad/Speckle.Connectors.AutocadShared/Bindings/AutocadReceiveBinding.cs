@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Speckle.Connectors.Autocad.Operations;
 using Speckle.Connectors.Common.Cancellation;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Connectors.DUI.Bindings;
@@ -29,6 +30,11 @@ public sealed class AutocadReceiveBinding : AutocadReceiveBaseBinding
   {
     serviceProvider
       .GetRequiredService<IConverterSettingsStore<AutocadConversionSettings>>()
-      .Initialize(_autocadConversionSettingsFactory.Create(Application.DocumentManager.CurrentDocument));
+      .Initialize(
+        _autocadConversionSettingsFactory.Create(
+          Application.DocumentManager.CurrentDocument,
+          ModelPlacementSettings.GetReceiveApplyTransform(mc)
+        )
+      );
   }
 }

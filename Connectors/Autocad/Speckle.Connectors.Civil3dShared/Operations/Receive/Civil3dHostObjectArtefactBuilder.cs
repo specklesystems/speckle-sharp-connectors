@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Receive;
 using Speckle.Connectors.Civil3dShared.HostApp;
+using Speckle.Connectors.Common.Diagnostics;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Connectors.Common.Threading;
 using Speckle.Converters.Autocad;
@@ -23,9 +24,22 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     AutocadContext autocadContext,
     ISdkActivityFactory activityFactory,
     ILogger<AutocadHostObjectArtefactBuilder> logger,
+    AutocadLayerBaker layerBaker,
+    AutocadInstanceBaker instanceBaker,
+    IAutocadMaterialBaker materialBaker,
     PropertySetBaker propertySetBaker
   )
-    : base(converterSettings, converter, threadContext, autocadContext, activityFactory, logger)
+    : base(
+      converterSettings,
+      converter,
+      threadContext,
+      autocadContext,
+      activityFactory,
+      logger,
+      layerBaker,
+      instanceBaker,
+      materialBaker
+    )
   {
     _propertySetBaker = propertySetBaker;
   }
@@ -33,18 +47,24 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
   protected override void PreCleanAdditional(string baseLayerName) =>
     _propertySetBaker.PurgePropertySets(baseLayerName);
 
-  protected override void ParseAndBakeAdditionalDefinitions(ArtefactBundle bundle, string baseLayerName)
+  protected override void ParseAndBakeAdditionalDefinitions(
+    ArtefactBundle bundle,
+    string baseLayerName,
+    ArtefactSessionLog session
+  )
   {
     // The definition ladder, most- to least-faithful. Tier 1: the eav.property_set_definitions file.
     if (PropertySetDefinitionLadder.FromSpecRows(bundle.PropertySetDefinitions) is { } fromFile)
     {
       _propertySetBaker.BakeSchemas(fromFile, baseLayerName);
+      RecordDefinitionStats(session, "specRows");
       return;
     }
     // Tier 2: the legacy carrier pseudo-object (old managed bundles).
     if (FindDefinitions(bundle) is { } definitions)
     {
       _propertySetBaker.ParseAndBakePropertySetDefinitions(definitions, baseLayerName);
+      RecordDefinitionStats(session, "carrier");
       return;
     }
     // Tier 3: neither shipped (e.g. dwgextract today) — synthesize minimal defs from the value rows so the
@@ -52,7 +72,17 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     if (PropertySetDefinitionLadder.SynthesizeFromValues(EnumeratePropertyTrees(bundle)) is { } synthesized)
     {
       _propertySetBaker.BakeSchemas(synthesized, baseLayerName);
+      RecordDefinitionStats(session, "synthesis");
     }
+  }
+
+  // Property-set outcomes into the session ndjson/summary: the ILogger warnings only reach Seq, which made the
+  // silent second-receive value loss undiagnosable offline [ENG-9328].
+  private void RecordDefinitionStats(ArtefactSessionLog session, string tier)
+  {
+    session.SetStat($"propertySetDefs({tier})", _propertySetBaker.DefinitionCount);
+    session.SetStat("propertySetDefsCreated", _propertySetBaker.DefinitionsCreated);
+    session.SetStat("propertySetDefsReused", _propertySetBaker.DefinitionsReused);
   }
 
   private static IEnumerable<Dictionary<string, object?>> EnumeratePropertyTrees(ArtefactBundle bundle)
@@ -66,15 +96,23 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     }
   }
 
-  protected override void PostBakeEntity(Entity entity, Dictionary<string, object?>? properties, Transaction tr)
+  protected override void PostBakeEntity(
+    Entity entity,
+    Dictionary<string, object?>? properties,
+    Transaction tr,
+    ArtefactSessionLog session
+  )
   {
     if (
       properties is not null
       && properties.TryGetValue("properties", out var tree)
       && tree is Dictionary<string, object?> propertyTree
+      && propertyTree.ContainsKey("Property Sets")
     )
     {
-      _propertySetBaker.TryBakePropertySets(entity, propertyTree, tr);
+      session.Increment(
+        _propertySetBaker.TryBakePropertySets(entity, propertyTree, tr) ? "propertySetsBaked" : "propertySetsFailed"
+      );
     }
   }
 
