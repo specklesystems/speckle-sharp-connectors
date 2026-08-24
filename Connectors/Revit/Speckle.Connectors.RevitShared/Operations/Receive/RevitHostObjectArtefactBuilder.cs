@@ -155,9 +155,11 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every atomic vertex, and
     // BuildInstanceTransform re-bases every instance placement. Mirrors v1 RevitHostObjectBuilder's composition.
     // No recorded transform + no local setting = no-op.
-    var sourceReferencePoint = _converterSettings.Current.ApplyTransform
-      ? ReadSourceReferencePointTransform(bundle)
-      : null;
+    // BAKED bundles (legacy sends and migrated old models — appliedToGeometry absent or true) are unbaked
+    // UNCONDITIONALLY, regardless of the Apply Transform receive setting: their stored coordinates already carry
+    // the source datum, so skipping the unbake would land them displaced. ReadSourceReferencePointTransform
+    // returns null for un-baked bundles (appliedToGeometry=false), which keep their stored coordinates.
+    var sourceReferencePoint = ReadSourceReferencePointTransform(bundle);
     using var referencePointScope = _converterSettings.Push(s =>
       s with
       {
