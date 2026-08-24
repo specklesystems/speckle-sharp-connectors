@@ -942,13 +942,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
               {
                 entity.MaterialId = geomMaterial;
               }
-              // Native colour semantics outrank the flattened ARGB [ENG-9117]. Otherwise: a member with an explicit
-              // colour edge keeps it (an explicit override, or the resolved layer colour a ByLayer member carries),
-              // and a member with NO edge was ByBlock on send — bake it ByBlock so it inherits the placing
-              // BlockReference's colour instead of the block table record's default [ENG-8822].
-              entity.Color =
-                memberNativeColor
-                ?? (hasGeomColor ? ToAcadColor(geomArgb) : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0));
+              entity.Color = ResolveMemberColor(memberNativeColor, hasGeomColor, geomArgb, memberLayer);
               memberCount++;
             }
           }
@@ -1289,6 +1283,25 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<int, int> ObjectByGeometry,
     Dictionary<int, int> ObjectByInstance
   );
+
+  // A definition member's colour: native semantics (ACI / explicit ByBlock from its eav row) outrank the flattened
+  // ARGB [ENG-9117]; an explicit colour edge is kept as an explicit override. A member with NEITHER is ByLayer —
+  // the source default; it sits on its own restored layer (memberLayer), so ByLayer inherits the right colour
+  // natively [ENG-9344]. Only a pre-vocab bundle (no member identity, and ByLayer members carried the retired
+  // ENG-8825 pinned edge) keeps the ByBlock fallback, so an edge-less member still inherits its placing
+  // BlockReference's colour there [ENG-8822].
+  private static AcadColor ResolveMemberColor(
+    AcadColor? nativeColor,
+    bool hasGeomColor,
+    int geomArgb,
+    string? memberLayer
+  ) =>
+    nativeColor
+    ?? (
+      hasGeomColor ? ToAcadColor(geomArgb)
+      : memberLayer is not null ? AcadColor.FromColorIndex(ColorMethod.ByLayer, 256)
+      : AcadColor.FromColorIndex(ColorMethod.ByBlock, 0)
+    );
 
   // A direct member's identity join (geometry K → member object K): the member's own LAYER — resolved through the
   // SAME ResolveLayer every top-level object uses, shared layerCache — and its native colour semantics (ACI index /

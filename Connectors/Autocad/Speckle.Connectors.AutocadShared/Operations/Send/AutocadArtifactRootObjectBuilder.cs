@@ -388,21 +388,14 @@ public class AutocadArtifactRootObjectBuilder(
 
       var instanceProps =
         instanceProxy["properties"] as Dictionary<string, object?> ?? new Dictionary<string, object?>();
-      return new CollectedObject(
-        applicationId,
-        sourceType,
-        entity.Layer,
-        instanceProps,
-        instanceProxy,
-        entity.Color.IsByLayer
-      );
+      return new CollectedObject(applicationId, sourceType, entity.Layer, instanceProps, instanceProxy);
     }
 
     Base converted = converter.Convert(entity);
     // AutoCAD wraps entities in AutocadObject, Civil3D in Civil3dObject — both are DataObjects carrying the
     // converted properties + display meshes.
     var properties = converted is DataObject dataObject ? dataObject.properties : new Dictionary<string, object?>();
-    return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted, entity.Color.IsByLayer);
+    return new CollectedObject(applicationId, sourceType, entity.Layer, properties, converted);
   }
 
   // ── Phase 2 (worker thread): pure-Speckle snapshot → parquet bundle ──────────────────────────────────
@@ -456,11 +449,6 @@ public class AutocadArtifactRootObjectBuilder(
     {
       cancellationToken.ThrowIfCancellationRequested();
       int collK = GetOrAddLayerCollection(pipeline, co.LayerName, model.LayerArgbByName, layerCollectionKByName);
-      // A ByLayer DEFINITION MEMBER sits outside the layer-container inheritance (it rides DEFINES, no
-      // IN_COLLECTION), so a consumer would fall back to the placing instance's colour — wrong in AutoCAD
-      // semantics, where ByLayer keeps the member's own layer colour. Resolve it at send time [ENG-8825].
-      int? memberLayerArgb =
-        co.ColorIsByLayer && model.LayerArgbByName.TryGetValue(co.LayerName, out int layerArgb) ? layerArgb : null;
       string? dropReason = EmitObject(
         pipeline,
         co,
@@ -470,7 +458,6 @@ public class AutocadArtifactRootObjectBuilder(
         instanceKByObjectId,
         definitionMemberIds,
         topLevelIds,
-        memberLayerArgb,
         colorSemantics.TryGetValue(co.ApplicationId, out var semantics) ? semantics : null
       );
       if (dropReason is not null && resultIndexByAppId.TryGetValue(co.ApplicationId, out int ri))
@@ -523,7 +510,6 @@ public class AutocadArtifactRootObjectBuilder(
     Dictionary<string, int> instanceKByObjectId,
     HashSet<string> definitionMemberIds,
     HashSet<string> topLevelIds,
-    int? memberLayerArgb,
     ColorSemantics? colorSemantics
   )
   {
@@ -648,7 +634,10 @@ public class AutocadArtifactRootObjectBuilder(
       geometryKsByObjectId[co.ApplicationId] = gKs;
     }
 
-    EmitMemberLayerColor(pipeline, isDefinitionMember, memberLayerArgb, gKs);
+    // A ByLayer definition member deliberately gets NO colour edge: its layer rides IN_COLLECTION and the layer's
+    // colour rides NODE_HAS_COLOR, so consumers resolve the inheritance from the graph (DEFINES_MEMBER joins the
+    // member back to this object row) — pinning the resolved layer colour here (the retired ENG-8825 flatten) came
+    // back as an EXPLICIT colour on the member after a round trip, losing its ByLayer-ness [ENG-9344].
 
     // Every display fragment was dropped and no solid landed → the bundle carries nothing renderable for this
     // object; report it instead of standing on the Collect-phase SUCCESS. An object that never had display
@@ -692,26 +681,6 @@ public class AutocadArtifactRootObjectBuilder(
     displayGeometry.Count == 0 && civil.baseCurves is { Count: > 0 } baseCurves
       ? baseCurves.Cast<Base>().ToList()
       : displayGeometry;
-
-  // ByLayer member: pin its resolved layer colour onto its geometry so it doesn't inherit the instance's
-  // colour override — the fallback stays reserved for ByBlock members [ENG-8825].
-  private static void EmitMemberLayerColor(
-    ObjectsArtifactPipeline pipeline,
-    bool isDefinitionMember,
-    int? memberLayerArgb,
-    List<int> gKs
-  )
-  {
-    if (!isDefinitionMember || memberLayerArgb is not int mla || gKs.Count == 0)
-    {
-      return;
-    }
-    int layerColorK = pipeline.AddColor(mla);
-    foreach (var gK in gKs)
-    {
-      pipeline.HasColor(gK, layerColorK);
-    }
-  }
 
   // One Civil3D child in the .elements tree. Emits a SUBELEMENT edge always, then:
   //  - properties + IN_COLLECTION once per child id — and NEVER for a child that is also a top-level object (a
@@ -1182,8 +1151,7 @@ public class AutocadArtifactRootObjectBuilder(
     string SourceType,
     string LayerName,
     Dictionary<string, object?> Properties,
-    Base Converted, // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
-    bool ColorIsByLayer = false // captured on the UI thread; drives member layer-colour resolution [ENG-8825]
+    Base Converted // InstanceProxy for block instances, otherwise the AutocadObject carrier (display meshes + SAT)
   );
 
   private sealed record CollectedGroup(string Id, string? Name, List<string> MemberIds);
