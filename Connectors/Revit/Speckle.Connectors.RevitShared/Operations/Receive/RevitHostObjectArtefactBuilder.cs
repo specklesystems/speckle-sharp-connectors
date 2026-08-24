@@ -1047,7 +1047,10 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         continue;
       }
       bundle.Properties.TryGetValue(edge.Src, out var props);
-      return PropString(props, "builtInCategory") ?? PropString(props, "category");
+      // Only the OST_* identifier is usable here: FamilyCategoryUtils.SetFamilyCategory feeds it to
+      // Enum.TryParse, so the localized display name could never resolve and every received family
+      // silently defaulted its category [ENG-9337].
+      return ReadBuiltInCategory(props);
     }
     return null;
   }
@@ -1462,22 +1465,21 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     Dictionary<string, ElementId> cache
   )
   {
-    var bic = PropString(props, "builtInCategory");
+    var bic = ReadBuiltInCategory(props);
     var display = PropString(props, "category");
-    var key = bic ?? display ?? "";
+    // Both values in the key: it was `bic ?? display`, which changes meaning the moment bic resolves.
+    var key = $"{bic}|{display}";
     if (cache.TryGetValue(key, out var cached))
     {
       return cached;
     }
 
+    // A ladder, not an either/or: a builtInCategory this document cannot use still gets to try the display
+    // name before defaulting.
     ElementId resolved = new(BuiltInCategory.OST_GenericModel);
-    if (bic is not null && Enum.TryParse(bic, out BuiltInCategory cat))
+    if (bic is not null && Enum.TryParse(bic, out BuiltInCategory cat) && IsValidDirectShapeCategory(doc, cat))
     {
-      var c = Category.GetCategory(doc, cat);
-      if (c is not null && DirectShape.IsValidCategoryId(c.Id, doc))
-      {
-        resolved = new ElementId(cat);
-      }
+      resolved = new ElementId(cat);
     }
     else if (display is not null && validCategories.TryGetValue(display, out var byName))
     {
@@ -1487,6 +1489,29 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     cache[key] = resolved;
     return resolved;
   }
+
+  private static bool IsValidDirectShapeCategory(Document doc, BuiltInCategory cat)
+  {
+    try
+    {
+      // Enum.TryParse also accepts numeric strings, so a foreign producer's value can parse to something
+      // Revit rejects outright rather than merely returning null.
+      return Category.GetCategory(doc, cat) is { } c && DirectShape.IsValidCategoryId(c.Id, doc);
+    }
+    catch (Autodesk.Revit.Exceptions.ApplicationException)
+    {
+      return false;
+    }
+  }
+
+  /// <summary>
+  /// The locale-independent <c>OST_*</c> category identifier. The sender writes it inside the element's
+  /// property tree, so its eav path is <c>properties.builtInCategory</c> and <c>ArtefactBundle.SetNested</c>
+  /// rebuilds it one level down — reading it off the top level, as both resolvers used to, always found
+  /// nothing, leaving the localized display name as the only branch that ever ran [ENG-9337].
+  /// </summary>
+  private static string? ReadBuiltInCategory(Dictionary<string, object?>? props) =>
+    PropStringNested(props, "properties", "builtInCategory");
 
   // ENG-8947 / ENG-9099: the transform that restores the source model's INTERNAL coordinates from stored
   // geometry, or null when nothing was applied. Read from modelPlacement (the only placement record):
@@ -1643,6 +1668,14 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   private static string? PropString(Dictionary<string, object?>? props, string key) =>
     props is not null && props.TryGetValue(key, out var v) && v is string s && s.Length > 0 ? s : null;
+
+  /// <summary>Reads a string one level down, e.g. <c>props["properties"]["builtInCategory"]</c> — the shape
+  /// <c>ArtefactBundle.SetNested</c> rebuilds from a dotted eav path. Root scalars use
+  /// <see cref="PropString"/>; anything the sender wrote under <c>properties</c> needs this.</summary>
+  private static string? PropStringNested(Dictionary<string, object?>? props, string outerKey, string key) =>
+    props is not null && props.TryGetValue(outerKey, out var outer) && outer is Dictionary<string, object?> nested
+      ? PropString(nested, key)
+      : null;
 
   // The object's real Speckle type for the conversion report (so it shows e.g. "Objects.Data.RevitObject > Direct
   // Shape" instead of "Base > …" — the report's Base source is only a UI placeholder, not reconstructed data).
