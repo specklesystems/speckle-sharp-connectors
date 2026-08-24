@@ -62,6 +62,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private readonly AutocadContext _autocadContext;
   private readonly ISdkActivityFactory _activityFactory;
   private readonly ILogger<AutocadHostObjectArtefactBuilder> _logger;
+  private readonly AutocadLayerBaker _layerBaker;
+  private readonly AutocadInstanceBaker _instanceBaker;
+  private readonly IAutocadMaterialBaker _materialBaker;
 
   // Why the last geometry blob produced no entities (missing blob / decode / convert), so an object that bakes nothing
   // reports the actual cause instead of the opaque "did not convert to any native geometry" [ENG-8819]. Set by
@@ -74,7 +77,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     IThreadContext threadContext,
     AutocadContext autocadContext,
     ISdkActivityFactory activityFactory,
-    ILogger<AutocadHostObjectArtefactBuilder> logger
+    ILogger<AutocadHostObjectArtefactBuilder> logger,
+    AutocadLayerBaker layerBaker,
+    AutocadInstanceBaker instanceBaker,
+    IAutocadMaterialBaker materialBaker
   )
   {
     _converterSettings = converterSettings;
@@ -83,6 +89,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     _autocadContext = autocadContext;
     _activityFactory = activityFactory;
     _logger = logger;
+    _layerBaker = layerBaker;
+    _instanceBaker = instanceBaker;
+    _materialBaker = materialBaker;
   }
 
   public Task<HostObjectBuilderResult> Build(
@@ -104,7 +113,10 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     CancellationToken cancellationToken
   )
   {
-    var baseLayerName = _autocadContext.RemoveInvalidChars($"Project {projectName}: Model {modelName}");
+    // The SAME card stamp the legacy connector uses [ENG-9377]: both paths' pre-receive cleanups match on it
+    // (Contains), so a legacy bake is replaced by an artefact receive of the same card and vice versa, instead of
+    // the two conventions stacking a second copy of the model next to each other's orphans.
+    var baseLayerName = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
     using var activity = _activityFactory.Start("Build (artefact)");
     using var session = ArtefactSessionLog.Start(
       "Autocad",
@@ -1375,8 +1387,9 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // (name, argb, nodeK) — colour + the segment's node K, so the flattened layer also recovers the source layer's
     // authored render material (NODE_HAS_MATERIAL) [ENG-9346].
     var segments = SceneViewResolver.SegmentsWithAppearance(bundle, objK);
+    // baseLayerName is the legacy card prefix and already ends with a dash [ENG-9377].
     string name =
-      segments.Count == 0 ? baseLayerName : $"{baseLayerName}-{string.Join("-", segments.Select(s => s.Name))}";
+      segments.Count == 0 ? baseLayerName : $"{baseLayerName}{string.Join("-", segments.Select(s => s.Name))}";
     name = _autocadContext.RemoveInvalidChars(name);
 
     // The flattened AutoCAD layer stands in for the whole segment chain — colour it from the innermost
@@ -1779,28 +1792,23 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       ? s
       : bundle.Units;
 
-  // Deletes the previous receive of this model: model-space entities on its layers + its block definitions. Empty
-  // layers are left for reuse. Best-effort — a clean failure must not block the receive.
+  // Deletes the previous receive of this model — through the SAME per-card janitors the legacy builder's
+  // PreReceiveDeepClean uses (they match on Contains, and both paths now stamp with the same SPK- prefix), so a
+  // legacy bake is replaced by an artefact receive of the same card and vice versa [ENG-9377]: entities AND their
+  // layer records (so re-created layers pick up the sender's current colour + material), block references and
+  // definitions, render materials [ENG-9329]. Groups are artefact-only (the legacy path has no group cleanup), so
+  // they keep a hand-rolled purge by name stamp. Best-effort — a clean failure must not block the receive.
   private void PreClean(Database db, string baseLayerName)
   {
     try
     {
-      using var tr = db.TransactionManager.StartTransaction();
-      var modelSpace = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
-      foreach (ObjectId id in modelSpace)
-      {
-        if (
-          tr.GetObject(id, OpenMode.ForRead) is AcadEntity entity
-          && entity.Layer.StartsWith(baseLayerName, StringComparison.Ordinal)
-        )
-        {
-          entity.UpgradeOpen();
-          entity.Erase();
-        }
-      }
+      _layerBaker.DeleteAllLayersByPrefix(baseLayerName);
+      _instanceBaker.PurgeInstances(baseLayerName);
+      _materialBaker.PurgeMaterials(baseLayerName);
 
       // purge this model's groups from the prior receive — they carry the baseLayerName suffix (BakeGroups).
       // Collect first, then erase: erasing while enumerating the dictionary invalidates the enumerator.
+      using var tr = db.TransactionManager.StartTransaction();
       var groupDictionary = (DBDictionary)tr.GetObject(db.GroupDictionaryId, OpenMode.ForRead);
       var staleGroupIds = new List<ObjectId>();
       foreach (DBDictionaryEntry entry in groupDictionary)
@@ -1817,49 +1825,6 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           staleGroup.Erase();
         }
       }
-
-      var blockTable = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-      foreach (ObjectId btrId in blockTable)
-      {
-        var btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
-        if (!btr.IsLayout && !btr.IsAnonymous && btr.Name.Contains(baseLayerName))
-        {
-          try
-          {
-            btr.UpgradeOpen();
-            btr.Erase();
-          }
-          catch (Exception ex) when (!ex.IsFatal())
-          {
-            _logger.LogWarning(ex, "Could not erase prior block definition {Name}", btr.Name);
-          }
-        }
-      }
-
-      // purge this model's render materials — CreateMaterials names them with the material's node index, which
-      // shifts between versions, so without this every re-receive left the previous set orphaned [ENG-9329].
-      // Entities referencing them were erased above; the stamp suffix keeps user/other-model materials out.
-      var materialDict = (DBDictionary)tr.GetObject(db.MaterialDictionaryId, OpenMode.ForRead);
-      var staleMaterialIds = new List<ObjectId>();
-      foreach (DBDictionaryEntry entry in materialDict)
-      {
-        if (entry.Key.Contains(baseLayerName))
-        {
-          staleMaterialIds.Add(entry.Value);
-        }
-      }
-      foreach (var materialId in staleMaterialIds)
-      {
-        try
-        {
-          tr.GetObject(materialId, OpenMode.ForWrite).Erase();
-        }
-        catch (Exception ex) when (!ex.IsFatal())
-        {
-          _logger.LogWarning(ex, "Could not erase prior render material {Handle}", materialId.Handle);
-        }
-      }
-
       tr.Commit();
     }
     catch (Exception ex) when (!ex.IsFatal())

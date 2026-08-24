@@ -24,9 +24,22 @@ public class Civil3dHostObjectArtefactBuilder : AutocadHostObjectArtefactBuilder
     AutocadContext autocadContext,
     ISdkActivityFactory activityFactory,
     ILogger<AutocadHostObjectArtefactBuilder> logger,
+    AutocadLayerBaker layerBaker,
+    AutocadInstanceBaker instanceBaker,
+    IAutocadMaterialBaker materialBaker,
     PropertySetBaker propertySetBaker
   )
-    : base(converterSettings, converter, threadContext, autocadContext, activityFactory, logger)
+    : base(
+      converterSettings,
+      converter,
+      threadContext,
+      autocadContext,
+      activityFactory,
+      logger,
+      layerBaker,
+      instanceBaker,
+      materialBaker
+    )
   {
     _propertySetBaker = propertySetBaker;
   }
