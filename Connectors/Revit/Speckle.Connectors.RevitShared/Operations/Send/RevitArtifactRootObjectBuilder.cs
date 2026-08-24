@@ -542,56 +542,42 @@ public class RevitArtifactRootObjectBuilder(
     // ActiveProjectLocation and GetProjectPosition are both nullable — a document without a resolvable project
     // position must not fail the whole publish; the angle row is simply omitted.
     double? trueNorthAngle = documentContext.Doc.ActiveProjectLocation?.GetProjectPosition(XYZ.Zero)?.Angle;
-    EmitReferencePointModelRows(
-      pipeline,
-      referencePointKind,
-      requestedKind,
-      referencePointTransform,
-      placementData,
-      trueNorthAngle
-    );
+    EmitReferencePointModelRows(pipeline, referencePointKind, requestedKind, placementData, trueNorthAngle);
   }
 
-  // referencePoint.transform retains Revit's selected source datum for round-tripping. Every
-  // modelPlacement.options.*.transform is viewer-ready and maps STORED geometry into that option's coordinate
-  // space. This remains true for legacy baked sends: the selected source transform first restores internal
-  // coordinates, then the option's inverse datum transform places them in the requested space.
+  // modelPlacement.* is the single source of truth for where the model sits [ENG-9099]:
+  //   transform          — the datum the user selected on the producer, as Revit INTERNAL → that datum's space.
+  //                        Always emitted, whether or not it was applied to stored geometry.
+  //   appliedToGeometry  — true when the sender already applied `transform` to stored coordinates (Apply
+  //                        Transform on). Consumers then place the geometry as-is; a Revit receive inverts
+  //                        `transform` to land back in internal coordinates. False → stored coordinates ARE
+  //                        internal, consumers apply `transform`, a Revit receive applies nothing.
+  //   options.*.transform — every available datum, same INTERNAL → datum convention, for switching.
+  //   default / source   — the selected datum kind (source keeps the internalOriginFallback marker).
   private void EmitReferencePointModelRows(
     ObjectsArtifactPipeline pipeline,
     string referencePointKind,
     string requestedKind,
-    Transform? selectedSourceTransform,
     RevitModelPlacementData placementData,
     double? trueNorthAngle
   )
   {
-    pipeline.AddModelProperty("referencePoint.kind", referencePointKind);
-    if (selectedSourceTransform is { } t)
-    {
-      pipeline.AddModelProperty("referencePoint.transform", FormatReferencePointTransform(t));
-      pipeline.AddModelProperty("referencePoint.units", converterSettings.Current.SpeckleUnits);
-    }
-
     string effectiveDefault = referencePointKind == "internalOriginFallback" ? "internalOrigin" : requestedKind;
     Transform defaultPlacement = Transform.Identity;
     foreach (string optionKind in new[] { "internalOrigin", "projectBasePoint", "surveyPoint", "sharedCoordinates" })
     {
-      Transform? storedToOption = placementData.GetStoredToOptionTransform(
-        optionKind,
-        converterSettings.Current.ApplyTransform,
-        selectedSourceTransform
-      );
-      if (storedToOption is null)
+      Transform? internalToOption = placementData.GetInternalToOptionTransform(optionKind);
+      if (internalToOption is null)
       {
         continue;
       }
       pipeline.AddModelProperty(
         $"modelPlacement.options.{optionKind}.transform",
-        FormatReferencePointTransform(storedToOption)
+        FormatReferencePointTransform(internalToOption)
       );
       if (optionKind == effectiveDefault)
       {
-        defaultPlacement = storedToOption;
+        defaultPlacement = internalToOption;
       }
     }
 
@@ -666,9 +652,9 @@ public class RevitArtifactRootObjectBuilder(
     }
   }
 
-  // ENG-9099 referencePoint.transform: the full rigid transform subtracted from
-  // world-space output, as 16 row-major doubles — same layout Flatten/BuildInstanceTransform already use for
-  // InstanceProxy transforms (basis columns unscaled/unit vectors, translation column in display units).
+  // ENG-9099 modelPlacement.*.transform: a full rigid transform as 16 row-major doubles — same layout
+  // Flatten/BuildInstanceTransform already use for InstanceProxy transforms (basis columns unscaled/unit vectors,
+  // translation column in display units).
   private string FormatReferencePointTransform(Transform transform)
   {
     var scaled = Transform.Identity;
