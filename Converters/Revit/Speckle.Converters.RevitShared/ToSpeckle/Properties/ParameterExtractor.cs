@@ -89,15 +89,12 @@ public class ParameterExtractor
 
   /// <summary>
   /// Guarantees the Identity Data ▸ Type Name entry that ODA's <c>.rvt</c> reader always publishes, so the two
-  /// producers agree about it [ENG-8684]. <c>ALL_MODEL_TYPE_NAME</c> is read-only: it is not reliably enumerated by
-  /// <c>ElementType.Parameters</c>, <c>AsString()</c> can come back null, and a null value is then discarded unless
-  /// <c>SendParameterNullOrEmptyStrings</c> is on — so the type's own name reaches the bundle by luck rather than by
-  /// contract. Fill it in from <c>ElementType.Name</c>; a real parameter that already produced a value always wins.
-  /// </summary>
-  /// <remarks>
+  /// producers agree [ENG-8684]. <c>ALL_MODEL_TYPE_NAME</c> is read-only, is not reliably enumerated by
+  /// <c>ElementType.Parameters</c>, and a null <c>AsString()</c> is discarded unless
+  /// <c>SendParameterNullOrEmptyStrings</c> is on — so today it arrives by luck. A real parameter value always wins.
   /// The group label is resolved the same way its siblings' are, so the entry lands inside "Identitätsdaten" with
-  /// the rest of the identity parameters on a German install instead of stranding a lone English group beside them.
-  /// </remarks>
+  /// them on a German install rather than stranding a lone English group.
+  /// </summary>
   private void EnsureTypeName(DB.ElementType type, Dictionary<string, Dictionary<string, object?>> typeParameters)
   {
     string humanReadableName = "Type Name";

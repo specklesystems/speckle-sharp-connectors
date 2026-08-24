@@ -10,21 +10,12 @@ namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 /// floors, roofs and ceilings alike. One record per layer: material name, layer function, thickness and units.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Lives beside <c>Material Quantities</c> at the top of <c>properties</c>, NOT inside
+/// Lives beside <c>Material Quantities</c> at the top of <c>properties</c>, not inside
 /// <c>Parameters.Type Parameters</c> where <see cref="ParameterExtractor"/> used to build it [ENG-9338]. A compound
-/// structure is not a Revit parameter and never was — the old home is what routed it into the type-scoped eav
-/// table, where it could only be read back through a join, and what made the property flattener drop it as
-/// something it had no shape for. The extractor it was cohabiting with said as much: "this could be paired up and
-/// merged with material quantities - they're pretty much the same".
-/// </para>
-/// <para>
-/// Layers are keyed by ORDINAL in <c>GetLayers()</c> order, which is exterior → interior. The former
-/// <c>{material} ({layerId})</c> key carried no order at all — and a buildup without its order is not a buildup —
-/// minted one eav path per distinct material name, and broke the dot-delimited property paths whenever a material
-/// name contained a full stop ("Insulation 2.5mm"). A layer with no assigned material keeps its slot with a null
-/// material rather than being dropped, so the list never silently shortens.
-/// </para>
+/// structure is not a Revit parameter; the old home routed it into the type-scoped eav table, readable only through
+/// a join. Layers are keyed by ORDINAL in <c>GetLayers()</c> order (exterior → interior) — the former
+/// <c>{material} ({layerId})</c> key carried no order, minted one eav path per material name, and broke the
+/// dot-delimited paths on a name like "Insulation 2.5mm". A layer with no assigned material keeps its slot.
 /// </remarks>
 public class CompoundStructureExtractor
 {

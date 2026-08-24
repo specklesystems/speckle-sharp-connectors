@@ -1494,8 +1494,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   {
     try
     {
-      // Enum.TryParse also accepts numeric strings, so a foreign producer's value can parse to something
-      // Revit rejects outright rather than merely returning null.
+      // Enum.TryParse also accepts numeric strings, so a bad value can parse to something Revit rejects outright.
       return Category.GetCategory(doc, cat) is { } c && DirectShape.IsValidCategoryId(c.Id, doc);
     }
     catch (Autodesk.Revit.Exceptions.ApplicationException)
@@ -1504,12 +1503,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     }
   }
 
-  /// <summary>
-  /// The locale-independent <c>OST_*</c> category identifier. The sender writes it inside the element's
-  /// property tree, so its eav path is <c>properties.builtInCategory</c> and <c>ArtefactBundle.SetNested</c>
-  /// rebuilds it one level down — reading it off the top level, as both resolvers used to, always found
-  /// nothing, leaving the localized display name as the only branch that ever ran [ENG-9337].
-  /// </summary>
+  // The locale-independent OST_* identifier. The sender writes it under `properties`, so SetNested rebuilds it one
+  // level down — reading it off the top level, as both resolvers did, always found nothing [ENG-9337].
   private static string? ReadBuiltInCategory(Dictionary<string, object?>? props) =>
     PropStringNested(props, "properties", "builtInCategory");
 
@@ -1669,9 +1664,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   private static string? PropString(Dictionary<string, object?>? props, string key) =>
     props is not null && props.TryGetValue(key, out var v) && v is string s && s.Length > 0 ? s : null;
 
-  /// <summary>Reads a string one level down, e.g. <c>props["properties"]["builtInCategory"]</c> — the shape
-  /// <c>ArtefactBundle.SetNested</c> rebuilds from a dotted eav path. Root scalars use
-  /// <see cref="PropString"/>; anything the sender wrote under <c>properties</c> needs this.</summary>
+  /// <summary>Reads a string one level down, e.g. <c>props["properties"]["builtInCategory"]</c>.</summary>
   private static string? PropStringNested(Dictionary<string, object?>? props, string outerKey, string key) =>
     props is not null && props.TryGetValue(outerKey, out var outer) && outer is Dictionary<string, object?> nested
       ? PropString(nested, key)

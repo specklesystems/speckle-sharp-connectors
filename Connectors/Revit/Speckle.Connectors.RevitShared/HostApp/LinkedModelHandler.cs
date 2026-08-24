@@ -113,34 +113,22 @@ public class LinkedModelHandler
 
   /// <summary>
   /// The identity of one linked-model placement: the placing <see cref="RevitLinkInstance"/>'s UniqueId, or
-  /// <c>host</c> for the host document. Unique by construction, stable across sessions, traceable back to a
-  /// real Revit element.
+  /// <c>host</c> for the host document.
   /// </summary>
   public string GetIdFromDocumentToConvert(DocumentToConvert documentToConvert) =>
     documentToConvert.LinkInstance?.UniqueId ?? "host";
 
   /// <summary>
   /// The <c>_t{hash}</c> suffix appended to every source UniqueId of a linked-model placement, so occurrences of
-  /// the same linked file under different placements stay distinct identities. Empty for the host document.
+  /// the same linked file under different placements stay distinct. Empty for the host document.
   /// </summary>
   /// <remarks>
-  /// <para>
-  /// Derived from the placing link instance, NOT from the placement transform. The transform hash it replaces
-  /// summarised a 3×3 basis by its three diagonal terms at one decimal place, discarding the off-diagonal terms —
-  /// exactly what separates one rotation from another. Two placements of the same link at a shared origin rotated
-  /// +90° and −90° hashed identically, and both then interned to a single object, silently losing one occurrence.
-  /// </para>
-  /// <para>
-  /// Keyed off <see cref="DocumentToConvert.LinkInstance"/> rather than "has a transform": the HOST document also
-  /// carries a Transform whenever the reference-point setting is Project Base, Survey or Shared Coordinates, so the
-  /// old test suffixed every host element too — which made the parameter editor refuse them as linked
-  /// (<c>ContainsLinkedModelTransformHash</c>) and rewrote every application ID whenever the setting changed.
-  /// </para>
-  /// <para>
-  /// Still a hash, and still <c>_t</c> + lowercase hex, so the <c>_t[a-f0-9]+$</c> probe in
-  /// <c>RevitParametersBinding</c> and the suffix-stripping convention both keep working — a raw UniqueId contains
-  /// hyphens and would break them.
-  /// </para>
+  /// Derived from the placing link instance, not from the placement transform: the transform hash it replaces kept
+  /// only the basis diagonal at 1dp, so +90° and −90° about a shared origin hashed alike and both placements
+  /// interned to one object [ENG-9263]. Keyed off <see cref="DocumentToConvert.LinkInstance"/> rather than "has a
+  /// transform" because the HOST document also has one under Project Base / Survey / Shared Coordinates, which
+  /// suffixed host elements and made the parameter editor refuse them as linked. Still <c>_t</c> + lowercase hex,
+  /// so the <c>_t[a-f0-9]+$</c> probe and the suffix-stripping convention keep working — a raw UniqueId has hyphens.
   /// </remarks>
   public string GetPlacementSuffix(DocumentToConvert documentToConvert)
   {
