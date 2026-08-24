@@ -26,11 +26,7 @@ public sealed class RevitReceiveBinding(
 
 #pragma warning disable CA1024
   public List<ICardSetting> GetReceiveSettings() =>
-    [
-      new Operations.Receive.Settings.ReceiveReferencePointSetting(),
-      new ReceiveApplyTransformSetting(),
-      new ReceiveInstancesAsFamiliesSetting(),
-    ];
+    [new Operations.Receive.Settings.ReceiveReferencePointSetting(), new ReceiveInstancesAsFamiliesSetting()];
 #pragma warning restore CA1024
 
   public void CancelReceive(string modelCardId) => cancellationManager.CancelOperation(modelCardId);
@@ -48,7 +44,10 @@ public sealed class RevitReceiveBinding(
             revitConversionSettingsFactory.Create(
               DetailLevelType.Coarse, // TODO figure out
               toHostSettingsManager.GetReferencePointSetting(card),
-              toHostSettingsManager.GetApplyTransformSetting(card),
+              // applyTransform: true so the factory keeps the receiver's reference-point transform (it nulls the
+              // transform otherwise). Receive has no Apply Transform card setting — baked bundles are always
+              // unbaked, un-baked bundles always keep their stored coordinates (see ReadSourceReferencePointTransform).
+              true,
               false,
               true,
               false,

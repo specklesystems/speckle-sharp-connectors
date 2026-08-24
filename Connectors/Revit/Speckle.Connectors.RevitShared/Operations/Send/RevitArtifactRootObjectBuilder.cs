@@ -539,7 +539,9 @@ public class RevitArtifactRootObjectBuilder(
       placementData.SetSourceTransform(requestedKind, referencePointTransform);
     }
 
-    double trueNorthAngle = documentContext.Doc.ActiveProjectLocation!.GetProjectPosition(XYZ.Zero).Angle;
+    // ActiveProjectLocation and GetProjectPosition are both nullable — a document without a resolvable project
+    // position must not fail the whole publish; the angle row is simply omitted.
+    double? trueNorthAngle = documentContext.Doc.ActiveProjectLocation?.GetProjectPosition(XYZ.Zero)?.Angle;
     EmitReferencePointModelRows(
       pipeline,
       referencePointKind,
@@ -560,7 +562,7 @@ public class RevitArtifactRootObjectBuilder(
     string requestedKind,
     Transform? selectedSourceTransform,
     RevitModelPlacementData placementData,
-    double trueNorthAngle
+    double? trueNorthAngle
   )
   {
     pipeline.AddModelProperty("referencePoint.kind", referencePointKind);
@@ -602,7 +604,10 @@ public class RevitArtifactRootObjectBuilder(
     EmitReferencePointPosition(pipeline, "projectBasePoint", placementData.ProjectBasePointPosition);
     EmitReferencePointPosition(pipeline, "surveyPoint", placementData.SurveyPointPosition);
     EmitModelPosition(pipeline, "referencePoints.surveyPoint.sharedPosition", placementData.SurveyPointSharedPosition);
-    pipeline.AddModelProperty("projectLocation.trueNorthAngle", trueNorthAngle, "rad");
+    if (trueNorthAngle is { } angle)
+    {
+      pipeline.AddModelProperty("projectLocation.trueNorthAngle", angle, "rad");
+    }
     EmitSiteLocation(pipeline, placementData);
   }
 

@@ -174,7 +174,9 @@ public static class ReferencePointHelper
         m.M42,
         m.M43,
         m.M44,
-      }.Select(value => value.ToString(CultureInfo.InvariantCulture))
+        // "R" (round-trip) so parsing recovers the exact double on net48 too (plain ToString caps at 15 significant
+        // digits there); matches the AutoCAD writer of the same modelPlacement.*.transform field family.
+      }.Select(value => value.ToString("R", CultureInfo.InvariantCulture))
     );
   }
 
