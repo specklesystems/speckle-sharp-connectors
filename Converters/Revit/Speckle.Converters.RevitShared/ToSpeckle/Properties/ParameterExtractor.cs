@@ -31,10 +31,12 @@ public class ParameterExtractor
     _scalingServiceToSpeckle = scalingServiceToSpeckle;
   }
 
-  private readonly Dictionary<DB.ElementId, Dictionary<string, Dictionary<string, object?>>> _typeParameterCache =
-    new();
+  // All three caches are keyed by UniqueId, NOT ElementId. An ElementId is only unique WITHIN a document, and this
+  // extractor is scoped to the whole send operation — host document plus every linked model — so an ElementId key
+  // served a linked type's parameters from whichever document got there first.
+  private readonly Dictionary<string, Dictionary<string, Dictionary<string, object?>>> _typeParameterCache = new();
 
-  private readonly Dictionary<DB.ElementId, Dictionary<string, Dictionary<string, object?>>> _systemTypeParameterCache =
+  private readonly Dictionary<string, Dictionary<string, Dictionary<string, object?>>> _systemTypeParameterCache =
     new();
 
   /// <summary>
@@ -61,9 +63,14 @@ public class ParameterExtractor
       return null;
     }
 
+    if (_settingsStore.Current.Document.GetElement(typeId) is not DB.ElementType type)
+    {
+      return null;
+    }
+
     if (
       _typeParameterCache.TryGetValue(
-        typeId,
+        type.UniqueId,
         out Dictionary<string, Dictionary<string, object?>>? typeParameterDictionary
       )
     )
@@ -71,17 +78,12 @@ public class ParameterExtractor
       return typeParameterDictionary;
     }
 
-    if (_settingsStore.Current.Document.GetElement(typeId) is not DB.ElementType type)
-    {
-      return null;
-    }
-
     // NOTE: compound structure used to be grafted on here as a pseudo type parameter. It now lives at the top of
     // `properties` beside Material Quantities — see CompoundStructureExtractor [ENG-9338].
     typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
     EnsureTypeName(type, typeParameterDictionary);
 
-    _typeParameterCache[typeId] = typeParameterDictionary;
+    _typeParameterCache[type.UniqueId] = typeParameterDictionary;
     return typeParameterDictionary;
   }
 
@@ -142,11 +144,11 @@ public class ParameterExtractor
 
     if (system != null)
     {
-      DB.ElementId systemTypeId = system.GetTypeId();
+      DB.Element systemType = _settingsStore.Current.Document.GetElement(system.GetTypeId());
 
       if (
         _systemTypeParameterCache.TryGetValue(
-          systemTypeId,
+          systemType.UniqueId,
           out Dictionary<string, Dictionary<string, object?>>? systemTypeParameterDictionary
         )
       )
@@ -154,9 +156,8 @@ public class ParameterExtractor
         return systemTypeParameterDictionary;
       }
 
-      DB.Element systemType = _settingsStore.Current.Document.GetElement(systemTypeId);
       systemTypeParameterDictionary = ParseParameterSet(systemType.Parameters);
-      _systemTypeParameterCache[systemTypeId] = systemTypeParameterDictionary;
+      _systemTypeParameterCache[systemType.UniqueId] = systemTypeParameterDictionary;
       return systemTypeParameterDictionary;
     }
 
@@ -270,7 +271,7 @@ public class ParameterExtractor
     return dict;
   }
 
-  private readonly Dictionary<DB.ElementId, object?> _elementNameCache = new();
+  private readonly Dictionary<string, object?> _elementNameCache = new();
 
   private object? GetValue(DB.Parameter parameter)
   {
@@ -297,12 +298,17 @@ public class ParameterExtractor
           return null;
         }
 
-        if (_elementNameCache.TryGetValue(elId, out object? value))
+        var docElement = _settingsStore.Current.Document.GetElement(elId);
+        if (docElement is null)
+        {
+          return null;
+        }
+
+        if (_elementNameCache.TryGetValue(docElement.UniqueId, out object? value))
         {
           return value;
         }
 
-        var docElement = _settingsStore.Current.Document.GetElement(elId);
         object? docElementName;
 
         // Note: for element types, different params point at the same element. We're getting the right value out in the parent function
@@ -313,10 +319,10 @@ public class ParameterExtractor
         }
         else
         {
-          docElementName = docElement?.Name ?? null;
+          docElementName = docElement.Name;
         }
 
-        _elementNameCache[parameter.AsElementId()] = docElementName;
+        _elementNameCache[docElement.UniqueId] = docElementName;
         return docElementName;
       case DB.StorageType.String:
       default:
