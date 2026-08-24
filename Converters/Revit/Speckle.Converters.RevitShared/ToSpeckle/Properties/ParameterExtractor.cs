@@ -79,9 +79,61 @@ public class ParameterExtractor
     // NOTE: compound structure used to be grafted on here as a pseudo type parameter. It now lives at the top of
     // `properties` beside Material Quantities — see CompoundStructureExtractor [ENG-9338].
     typeParameterDictionary = ParseParameterSet(type.Parameters); // NOTE: type parameters should be ideally proxied out for a better data layout.
+    EnsureTypeName(type, typeParameterDictionary);
 
     _typeParameterCache[typeId] = typeParameterDictionary;
     return typeParameterDictionary;
+  }
+
+  /// <summary>
+  /// Guarantees the Identity Data ▸ Type Name entry that ODA's <c>.rvt</c> reader always publishes, so the two
+  /// producers agree about it [ENG-8684]. <c>ALL_MODEL_TYPE_NAME</c> is read-only: it is not reliably enumerated by
+  /// <c>ElementType.Parameters</c>, <c>AsString()</c> can come back null, and a null value is then discarded unless
+  /// <c>SendParameterNullOrEmptyStrings</c> is on — so the type's own name reaches the bundle by luck rather than by
+  /// contract. Fill it in from <c>ElementType.Name</c>; a real parameter that already produced a value always wins.
+  /// </summary>
+  /// <remarks>
+  /// The group label is resolved the same way its siblings' are, so the entry lands inside "Identitätsdaten" with
+  /// the rest of the identity parameters on a German install instead of stranding a lone English group beside them.
+  /// </remarks>
+  private void EnsureTypeName(DB.ElementType type, Dictionary<string, Dictionary<string, object?>> typeParameters)
+  {
+    string humanReadableName = "Type Name";
+    string groupName;
+
+    if (type.get_Parameter(DB.BuiltInParameter.ALL_MODEL_TYPE_NAME) is DB.Parameter parameter)
+    {
+      (_, humanReadableName, groupName, _) = _parameterDefinitionHandler.HandleDefinition(parameter);
+    }
+    else
+    {
+      groupName = DB.LabelUtils.GetLabelForGroup(DB.GroupTypeId.IdentityData);
+    }
+
+    if (!typeParameters.TryGetValue(groupName, out Dictionary<string, object?>? group))
+    {
+      group = new Dictionary<string, object?>();
+      typeParameters[groupName] = group;
+    }
+
+    // ParseParameterSet already got a real value out of Revit — leave it exactly as it found it.
+    if (
+      group.TryGetValue(humanReadableName, out var existing)
+      && existing is Dictionary<string, object?> record
+      && record.TryGetValue("value", out var existingValue)
+      && existingValue is string existingName
+      && !string.IsNullOrEmpty(existingName)
+    )
+    {
+      return;
+    }
+
+    group[humanReadableName] = new Dictionary<string, object?>()
+    {
+      ["value"] = type.Name,
+      ["name"] = humanReadableName,
+      ["internalDefinitionName"] = "ALL_MODEL_TYPE_NAME",
+    };
   }
 
   private Dictionary<string, Dictionary<string, object?>>? GetSystemTypeParameterDictionary(DB.Element element)
