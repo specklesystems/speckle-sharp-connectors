@@ -306,16 +306,16 @@ internal sealed class RevitSendBinding : RevitBaseBinding, ISendBinding
             document,
             modelCard.SendFilter,
             linkedDoc,
-            transform
+            linkedModel
           );
-          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements));
+          linkedDocumentContexts.Add(new(transform, linkedDoc, linkedElements, linkedModel));
         }
         // ⚠️ when disabled, still adds empty contexts to maintain warning generation in RevitRootObjectBuilder
         // this approach (to signal that warnings are needed) relies on empty element lists which smells and is a bit of an implicit mechanism
         // buuuuut, it works (for now 👀).
         else
         {
-          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>()));
+          linkedDocumentContexts.Add(new(transform, linkedDoc, new List<Element>(), linkedModel));
         }
       }
       documentElementContexts.AddRange(linkedDocumentContexts);
