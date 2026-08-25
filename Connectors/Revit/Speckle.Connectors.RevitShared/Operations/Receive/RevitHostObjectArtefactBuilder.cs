@@ -466,8 +466,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       );
       // Solids are pulled out of the shared definition and kept to be transformed per placement — see
       // BuiltDefinition. Everything else (meshes) still goes into the DirectShapeLibrary and is shared.
-      var solids = geometry.OfType<Solid>().ToList();
-      geometry.RemoveAll(o => o is Solid);
+      var solids = _solidImporter.ExtractSolids(geometry);
       // captured now — a recursive BuildDefinition call below resets _lastDecodeFailure for the child definition.
       var directGeometryFailure = _lastDecodeFailure;
 
@@ -494,13 +493,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             nestedInst.Units is { Length: > 0 } u ? u : docUnits,
             applyReferencePoint: false
           );
-          // The child's mesh part instances as before; its solids compose into ours, already carrying the nested
-          // transform, so the outer placement transform then lands them in world space.
-          if (childDef.MeshDefKey is { } childMeshDefKey)
-          {
-            geometry.AddRange(DirectShape.CreateGeometryInstance(doc, childMeshDefKey, nestedTransform));
-          }
-          solids.AddRange(childDef.Solids.Select(s => SolidUtils.CreateTransformed(s, nestedTransform)));
+          // The child's solids compose into ours already carrying the nested transform, so the outer placement
+          // transform then lands them in world space.
+          AddPlacement(doc, childDef, nestedTransform, geometry, solids);
           session.Increment("nestedInstancesPlaced");
         }
       }
@@ -586,12 +581,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           instNode.Units is { Length: > 0 } u ? u : docUnits,
           applyReferencePoint: true
         );
+        // One flat list for SetShape — the mesh/solid split only matters while building the definition.
         var geometry = new List<GeometryObject>();
-        if (builtDef.MeshDefKey is { } meshDefKey)
-        {
-          geometry.AddRange(DirectShape.CreateGeometryInstance(doc, meshDefKey, transform));
-        }
-        geometry.AddRange(builtDef.Solids.Select(s => SolidUtils.CreateTransformed(s, transform)));
+        AddPlacement(doc, builtDef, transform, geometry, geometry);
 
         var ds = DirectShape.CreateElement(doc, ResolveCategory(doc, props, validCategories, categoryCache));
         SetNameSafe(ds, PropString(props, "name"));
@@ -1701,9 +1693,26 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   /// TypeLoader only accepts assembly-scanned registered types — never a custom subclass).</summary>
   private static Base Source(string appId) => new() { applicationId = appId, id = appId };
 
+  // Adds one placement of a definition: the mesh part instances from the shared library, the solid part is copied
+  // and transformed. Callers that want a single flat list pass the same list twice.
+  private void AddPlacement(
+    Document doc,
+    BuiltDefinition def,
+    Transform transform,
+    List<GeometryObject> meshParts,
+    List<GeometryObject> solidParts
+  )
+  {
+    if (def.MeshDefKey is { } meshDefKey)
+    {
+      meshParts.AddRange(DirectShape.CreateGeometryInstance(doc, meshDefKey, transform));
+    }
+    solidParts.AddRange(_solidImporter.TransformSolids(def.Solids, transform));
+  }
+
   // A built instance definition, split by how each part places [ENG-9166]. Meshes share one DirectShapeLibrary
   // definition; solids imported from a 3dm blob don't pick up the CreateGeometryInstance transform (every placement
   // landed at the origin — a regression from ENG-8800), so they stay in definition space and are transformed per
   // placement instead. Costs sharing for solid-backed definitions; also makes them paintable.
-  private sealed record BuiltDefinition(string? MeshDefKey, List<Solid> Solids);
+  private sealed record BuiltDefinition(string? MeshDefKey, List<GeometryObject> Solids);
 }
