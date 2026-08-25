@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.HostApp;
@@ -90,7 +90,8 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       string setKey = PropertySetDefinitionLadder.ComputeSetKey(setName, keyFields);
 
       _propertySetDefinitionHandler.SetDescriptions.TryGetValue(setName, out string? setDescription);
-      _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByField);
+      _propertySetDefinitionHandler.DefinitionFieldBucketIds.TryGetValue(setName, out var bucketByFieldFromDefinition);
+      _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByFieldObserved);
 
       foreach (var fieldName in fieldOrder)
       {
@@ -108,13 +109,18 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
             : null;
         string? defaultString =
           defaultBoolean is null && defaultDouble is null && defaultValue?.ToString() is { Length: > 0 } dv ? dv : null;
+        // The definition's own FieldBucketId covers every authored field; the ids observed on instance values
+        // are the fallback for a throwing getter [ENG-9361].
         string? bucketId = null;
-        bucketByField?.TryGetValue(fieldName, out bucketId);
+        if (bucketByFieldFromDefinition?.TryGetValue(fieldName, out bucketId) != true)
+        {
+          bucketByFieldObserved?.TryGetValue(fieldName, out bucketId);
+        }
         pipeline.AddPropertySetDefinition(
           setName,
           setKey,
           fieldName,
-          bucketId, // null when the definition was never attached to a sent object — receive matches by name
+          bucketId, // null only if BOTH the definition getter threw and no instance value was seen
           Field(fd, PropertySetDefinitionHandler.PROP_DEF_TYPE_KEY) as string,
           defaultString,
           defaultDouble,
