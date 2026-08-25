@@ -1505,8 +1505,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // The locale-independent OST_* identifier. The sender writes it under `properties`, so SetNested rebuilds it one
   // level down — reading it off the top level, as both resolvers did, always found nothing [ENG-9337].
+  // The top-level fallback keeps a producer that emits builtInCategory as a root scalar working.
   private static string? ReadBuiltInCategory(Dictionary<string, object?>? props) =>
-    PropStringNested(props, "properties", "builtInCategory");
+    PropStringNested(props, "properties", "builtInCategory") ?? PropString(props, "builtInCategory");
 
   // ENG-8947 / ENG-9099: the transform that restores the source model's INTERNAL coordinates from stored
   // geometry, or null when nothing was applied. Read from modelPlacement (the only placement record):
