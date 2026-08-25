@@ -230,22 +230,20 @@ public class RevitArtifactRootObjectBuilder(
       int modelK = pipeline.AddContainer(modelKey, modelName, null, "Model");
       modelContainerKeys.Add(modelKey);
 
-      // This placement's own identity map. Keyed per modelKey rather than freshly allocated so two contexts that
-      // DO share a placement key (coincident transforms — see ENG-9263) degrade to merging, exactly as their
-      // interned object Ks already merge, instead of silently splitting the topology of one merged model.
+      // This placement's own identity map. Keyed per modelKey, which now derives from the SAME source as the
+      // application-id suffix below — the placing link instance — so the container tier and the object tier can no
+      // longer disagree about what one placement is [ENG-9263].
       if (!objectKsByPlacement.TryGetValue(modelKey, out var placementIndex))
       {
         placementIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         objectKsByPlacement[modelKey] = placementIndex;
       }
 
-      // Transformed (linked) elements get a transform hash appended so occurrences of the same linked file under
-      // different placements stay distinct — same convention as the v1 builder. Constant per placement, so hash
-      // once here instead of per element, and apply it to children as well as atomic objects [ENG-9212].
+      // Linked elements get a placement hash appended so occurrences of the same linked file under different
+      // placements stay distinct. Constant per placement, so hash once here instead of per element, and apply it
+      // to children as well as atomic objects [ENG-9212].
       var placement = new PlacementContext(
-        documentContext.Transform is { } placementTransform
-          ? $"_t{linkedModelHandler.GetTransformHash(placementTransform)}"
-          : string.Empty,
+        linkedModelHandler.GetPlacementSuffix(documentContext),
         placementIndex,
         new HashSet<string>(documentContext.Elements.Select(e => e.UniqueId), StringComparer.Ordinal)
       );
@@ -469,7 +467,7 @@ public class RevitArtifactRootObjectBuilder(
     pipeline.InModel(objK, modelK, 0);
 
     // Indexer, not Add: ElementUnpacker already dedups by ElementId so one UniqueId maps to one K per placement,
-    // but a coincident-transform placement key (ENG-9263) must degrade quietly rather than throw mid-send.
+    // and a placement key that somehow repeats must degrade quietly rather than throw mid-send.
     placement.ObjectKsByUniqueId[revitElement.UniqueId] = objK;
 
     if (converted is not DataObject dataObject)
@@ -1118,8 +1116,8 @@ public class RevitArtifactRootObjectBuilder(
   /// ONE linked-model placement [ENG-9212]. A linked file placed N times produces N of these over the same source
   /// document, and nothing may leak between them.
   /// </summary>
-  /// <param name="Suffix">Appended to every source UniqueId in this placement: <c>_t{transformHash}</c> for a linked
-  /// document, empty for the host document.</param>
+  /// <param name="Suffix">Appended to every source UniqueId in this placement: <c>_t{placementHash}</c>, derived
+  /// from the placing link instance, for a linked document; empty for the host document.</param>
   /// <param name="ObjectKsByUniqueId">Source UniqueId → interned object K, for THIS placement only. Element→element
   /// relations resolve here, which is what keeps them from crossing placements.</param>
   /// <param name="AtomicUniqueIds">The UniqueIds converted as atomic objects in this placement — a composite child

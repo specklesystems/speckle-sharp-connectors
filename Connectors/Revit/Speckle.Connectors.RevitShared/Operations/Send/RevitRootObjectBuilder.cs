@@ -14,7 +14,6 @@ using Speckle.Converters.Common;
 using Speckle.Converters.RevitShared.Helpers;
 using Speckle.Converters.RevitShared.Settings;
 using Speckle.Sdk;
-using Speckle.Sdk.Common;
 using Speckle.Sdk.Models;
 using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Pipelines.Progress;
@@ -206,14 +205,9 @@ public class RevitRootObjectBuilder(
             // not in cache means we convert
             else
             {
-              // if it has a transform we append transform hash to the applicationId to distinguish the elements from other instances
-              if (hasTransform)
-              {
-                string transformHash = linkedModelHandler.GetTransformHash(
-                  atomicObjectByDocumentAndTransform.Transform.NotNull()
-                );
-                applicationId = $"{applicationId}_t{transformHash}";
-              }
+              // linked elements get a placement hash appended to distinguish them from other placements of the
+              // same linked file [ENG-9263]
+              applicationId += linkedModelHandler.GetPlacementSuffix(atomicObjectByDocumentAndTransform);
               // normal conversions
               converted = converter.Convert(revitElement);
               converted.applicationId = applicationId;
