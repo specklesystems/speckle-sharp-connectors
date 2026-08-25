@@ -4,6 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Conversion;
+using Speckle.Connectors.Common.Instances;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.RevitShared.Helpers;
@@ -18,6 +19,7 @@ using Speckle.Sdk.Models.Collections;
 using Speckle.Sdk.Models.GraphTraversal;
 using Speckle.Sdk.Models.Instances;
 using Speckle.Sdk.Pipelines.Progress;
+using Speckle.Sdk.Pipelines.Receive.Artifacts;
 using DB = Autodesk.Revit.DB;
 using Document = Autodesk.Revit.DB.Document;
 
@@ -316,6 +318,27 @@ public sealed class RevitFamilyBaker : IDisposable
   }
 
   /// <summary>
+  /// Each definition member's source layer, keyed by the member's geometry K, for use as a Revit subcategory name
+  /// [ENG-9343]. A member carries no <c>DISPLAY</c> edge so <c>ObjectByGeometry()</c> cannot reach its object row —
+  /// and its layer lives on that row — so this goes through the definition-member join [ENG-9110], the same one
+  /// Rhino receive uses. The LEAF container name, not the full path, matching v1's "nearest named Collection".
+  /// </summary>
+  public Dictionary<int, string> BuildMemberSubcategoryNames(ArtefactBundle bundle, ArtefactRelations rels)
+  {
+    var names = new Dictionary<int, string>();
+    var memberIndex = DefinitionMemberIndexes.Build(rels, bundle.Properties);
+    foreach (var kv in memberIndex.ObjectByGeometry)
+    {
+      var segments = SceneViewResolver.Segments(bundle, kv.Value);
+      if (segments.Count > 0 && segments[^1] is { Length: > 0 } leaf)
+      {
+        names[kv.Key] = leaf;
+      }
+    }
+    return names;
+  }
+
+  /// <summary>
   /// Bundle-native counterpart of <see cref="CreateFamilyFromDefinition"/> (ENG-9101): builds/reuses a real Revit
   /// family straight from already-decoded artifact geometry — no Base graph, no <see cref="TraversalContext"/>.
   /// </summary>
@@ -329,7 +352,7 @@ public sealed class RevitFamilyBaker : IDisposable
     string definitionKey,
     string? definitionName,
     string? categoryString,
-    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey, string? subcategoryName)> members,
     IReadOnlyDictionary<int, RenderMaterial> familyMaterialsByNode,
     IReadOnlyDictionary<int, ElementId> projectMaterialIdByNode,
     IReadOnlyList<(string childDefinitionKey, Matrix4x4 transform, string units)> nestedPlacements
@@ -388,7 +411,7 @@ public sealed class RevitFamilyBaker : IDisposable
     string familyName,
     string definitionKey,
     string? categoryString,
-    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey, string? subcategoryName)> members,
     IReadOnlyDictionary<int, RenderMaterial> familyMaterialsByNode,
     IReadOnlyList<(string childDefinitionKey, Matrix4x4 transform, string units)> nestedPlacements
   )
