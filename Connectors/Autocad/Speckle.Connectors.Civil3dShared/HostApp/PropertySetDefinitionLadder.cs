@@ -1,4 +1,4 @@
-using Speckle.Sdk.Pipelines.Receive.Artifacts;
+﻿using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.Civil3dShared.HostApp;
 
@@ -155,8 +155,9 @@ public static class PropertySetDefinitionLadder
   /// <summary>THE set_key recipe — the single implementation both send (emission) and receive (existing-def
   /// comparison) use, so the two sides can never drift. Cross-producer, byte-exact (keep in sync with
   /// dwgextract): sha256_hex_uppercase( utf8( set_name + "\n" + join("\n", for each field in AUTHORED
-  /// order: field_name + "|" + data_type + "|" + (unit ?? "")) ) ). Unit is the raw captured display text —
-  /// deliberately NOT "(none)"-filtered, mirroring PropertySetDefinitionHandler's capture.</summary>
+  /// order: field_name + "|" + data_type + "|" + (unit ?? "")) ) ). Unit is the FILTERED display text
+  /// (PropertyHandler.TryGetUnitDisplay: throw and "(none)" both → null), so a unitless field hashes the empty
+  /// string — which is what dwgextract hashes for one too [ENG-9360].</summary>
   public static string ComputeSetKey(string setName, IEnumerable<(string Name, string? DataType, string? Unit)> fields)
   {
     var parts = new List<string> { setName };

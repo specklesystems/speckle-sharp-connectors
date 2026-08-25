@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Common.Operations;
 using Speckle.Converters.Civil3dShared;
@@ -431,15 +431,16 @@ public class PropertySetBaker
   }
 
   /// <summary>The set_key recipe computed over a LIVE definition's fields, for reuse-if-identical. Mirrors
-  /// the send-side capture exactly: DataType.ToString(), unit = UnitType display text (throw → absent, and
-  /// deliberately NOT "(none)"-filtered — the send handler doesn't filter it either).</summary>
+  /// the send-side capture exactly: DataType.ToString(), unit = PropertyHandler.TryGetUnitDisplay (throw and
+  /// "(none)" both → null). Must stay in step with PropertySetDefinitionHandler: filter here without filtering
+  /// there (or vice versa) and every re-receive of an unchanged schema mints a "-{prefix}" copy [ENG-9360].</summary>
   private string ComputeExistingDefinitionKey(string setName, ADB.ObjectId defId, ADB.Transaction tr)
   {
     var setDefinition = (AAECPDB.PropertySetDefinition)tr.GetObject(defId, ADB.OpenMode.ForRead);
     var fields = new List<(string Name, string? DataType, string? Unit)>();
     foreach (AAECPDB.PropertyDefinition propDef in setDefinition.Definitions)
     {
-      _propertyHandler.TryGetValue(() => propDef.UnitType.GetTypeDisplayName(true), out string? unit);
+      string? unit = _propertyHandler.TryGetUnitDisplay(() => propDef.UnitType.GetTypeDisplayName(true));
       fields.Add((propDef.Name, propDef.DataType.ToString(), unit));
     }
     return PropertySetDefinitionLadder.ComputeSetKey(setName, fields);

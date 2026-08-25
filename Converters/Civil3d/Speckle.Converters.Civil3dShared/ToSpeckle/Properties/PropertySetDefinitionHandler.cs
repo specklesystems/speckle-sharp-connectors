@@ -1,4 +1,4 @@
-using Speckle.Converters.Civil3dShared.Helpers;
+﻿using Speckle.Converters.Civil3dShared.Helpers;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 
@@ -78,9 +78,14 @@ public class PropertySetDefinitionHandler
         [PROP_DEF_DEFAULT_VALUE_KEY] = propertyDefinition.DefaultData,
       };
 
-      // accessing unit type prop can be expected to throw if it's not applicable to the definition
+      // Accessing unit type can throw when it's not applicable to the definition, and a unitless definition
+      // reports Autodesk's "(none)" placeholder — TryGetUnitDisplay collapses both to null so the definition
+      // rows, the value rows and set_key all agree on real-unit-or-absent [ENG-9360].
       PropertyHandler propHandler = new();
-      propHandler.TryAddToDictionary(propertyDict, "units", () => propertyDefinition.UnitType.GetTypeDisplayName(true));
+      if (propHandler.TryGetUnitDisplay(() => propertyDefinition.UnitType.GetTypeDisplayName(true)) is { } unit)
+      {
+        propertyDict["units"] = unit;
+      }
 
       propertyDefinitionsDict[propertyName] = propertyDict;
     }
