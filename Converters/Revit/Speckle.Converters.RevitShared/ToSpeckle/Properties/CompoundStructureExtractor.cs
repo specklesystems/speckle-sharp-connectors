@@ -24,7 +24,7 @@ public class CompoundStructureExtractor
 
   // Keyed by the type's UniqueId, which is unique across documents — an ElementId is not, and this extractor is
   // scoped to the whole send operation: host document plus every linked model.
-  private readonly Dictionary<string, Dictionary<string, object?>> _structureCache = new();
+  private readonly Dictionary<string, Dictionary<string, object?>?> _structureCache = new();
 
   public CompoundStructureExtractor(
     IConverterSettingsStore<RevitConversionSettings> settingsStore,
@@ -51,8 +51,11 @@ public class CompoundStructureExtractor
       return cached;
     }
 
+    // Cache the miss too: a curtain-wall type is a HostObjAttributes with no compound structure, and without a
+    // negative entry every one of its elements pays another GetCompoundStructure call.
     if (type.GetCompoundStructure() is not DB.CompoundStructure structure) // GetCompoundStructure can return null
     {
+      _structureCache[type.UniqueId] = null;
       return null;
     }
 
@@ -71,7 +74,9 @@ public class CompoundStructureExtractor
       };
     }
 
-    _structureCache[type.UniqueId] = structureDictionary;
-    return structureDictionary;
+    // A structure with no layers is not a buildup — don't put an empty dict on the object.
+    var result = structureDictionary.Count > 0 ? structureDictionary : null;
+    _structureCache[type.UniqueId] = result;
+    return result;
   }
 }
