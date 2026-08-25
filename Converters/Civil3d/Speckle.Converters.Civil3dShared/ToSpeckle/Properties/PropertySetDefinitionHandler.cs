@@ -26,6 +26,14 @@ public class PropertySetDefinitionHandler
   /// Kept OUT of <see cref="Definitions"/> so the carrier-object shape stays byte-compatible.</summary>
   public Dictionary<string, string> SetDescriptions { get; } = new();
 
+  /// <summary>Csv of the host entity-type filters a set applies to, per set name; absent = apply-to-all, which
+  /// is what the bundle's NULL applies_to means [ENG-9362]. STYLE-based filters are deliberately not captured:
+  /// PropertySetDefinition's filter carries an object-vs-style dimension (SetAppliesToFilter's byStyle param,
+  /// IsStyleBased getter) that the spec's flat csv column has nowhere to put, and publishing a style filter as
+  /// an object filter would scope the received set to the wrong things. Those sets stay apply-to-all, as they
+  /// are today, and warn.</summary>
+  public Dictionary<string, string> SetAppliesTo { get; } = new();
+
   /// <summary>Authored field order per set name. Dictionary enumeration order is not contractual, and the
   /// bundle's property_set_definitions file promises ROW ORDER = FIELD ORDER — this list is that promise.</summary>
   public Dictionary<string, List<string>> FieldOrders { get; } = new();
@@ -161,8 +169,6 @@ public class PropertySetDefinitionHandler
     FieldOrders[name] = fieldOrder;
     DefinitionFieldBucketIds[name] = fieldBucketIdsByField;
     // Set-level description (member confirmed: PropertySetBaker once wrote propSetDef.Description).
-    // applies_to is NOT captured: only AppliesToAll has repo evidence; the expected filter member is
-    // AAECPDB.PropertySetDefinition.AppliesToFilter — wire it here once confirmed on the real API.
     PropertyHandler setPropHandler = new();
     if (
       setPropHandler.TryGetValue(() => setDefinition.Description, out string? setDescription)
@@ -172,6 +178,56 @@ public class PropertySetDefinitionHandler
       SetDescriptions[name] = setDescription!;
     }
 
+    CaptureAppliesTo(setDefinition, name, setPropHandler);
+
     return propertyDefinitionNames;
+  }
+
+  /// <summary>Records the set's entity-type filter for the bundle's applies_to column (see
+  /// <see cref="SetAppliesTo"/>). Apply-to-all sets record nothing — that is what NULL means.</summary>
+  private void CaptureAppliesTo(
+    AAECPDB.PropertySetDefinition setDefinition,
+    string name,
+    PropertyHandler setPropHandler
+  )
+  {
+    if (!setPropHandler.TryGetValue(() => setDefinition.AppliesToAll, out bool appliesToAll) || appliesToAll)
+    {
+      return;
+    }
+
+    setPropHandler.TryGetValue(() => setDefinition.IsStyleBased, out bool isStyleBased);
+    if (isStyleBased)
+    {
+      _logger.LogWarning(
+        "Property set definition {SetName} filters by STYLE; applies_to carries object-type names only, so it publishes as apply-to-all",
+        name
+      );
+      return;
+    }
+
+    if (
+      !setPropHandler.TryGetValue(
+        () => setDefinition.AppliesToFilter,
+        out System.Collections.Specialized.StringCollection? filter
+      ) || filter is null
+    )
+    {
+      return;
+    }
+
+    List<string> classNames = new();
+    foreach (string? className in filter)
+    {
+      if (className is { Length: > 0 })
+      {
+        classNames.Add(className);
+      }
+    }
+
+    if (classNames.Count > 0)
+    {
+      SetAppliesTo[name] = string.Join(",", classNames);
+    }
   }
 }

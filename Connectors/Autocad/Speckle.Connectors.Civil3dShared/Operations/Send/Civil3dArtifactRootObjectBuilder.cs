@@ -90,6 +90,9 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       string setKey = PropertySetDefinitionLadder.ComputeSetKey(setName, keyFields);
 
       _propertySetDefinitionHandler.SetDescriptions.TryGetValue(setName, out string? setDescription);
+      // Absent = apply-to-all, which is what a NULL applies_to means. Deliberately NOT part of set_key: the
+      // recipe is shared with dwgextract, which cannot enumerate the filter at all [ENG-9362].
+      _propertySetDefinitionHandler.SetAppliesTo.TryGetValue(setName, out string? appliesTo);
       _propertySetDefinitionHandler.DefinitionFieldBucketIds.TryGetValue(setName, out var bucketByFieldFromDefinition);
       _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByFieldObserved);
 
@@ -128,7 +131,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
           Field(fd, "units") as string,
           Field(fd, PropertySetDefinitionHandler.PROP_DEF_DESCRIPTION_KEY) as string,
           setDescription,
-          appliesTo: null // only AppliesToAll is repo-confirmed; expected member: PropertySetDefinition.AppliesToFilter
+          appliesTo
         );
       }
     }

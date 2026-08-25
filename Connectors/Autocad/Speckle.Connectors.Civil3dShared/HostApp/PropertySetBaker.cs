@@ -446,6 +446,39 @@ public class PropertySetBaker
     return PropertySetDefinitionLadder.ComputeSetKey(setName, fields);
   }
 
+  /// <summary>Scopes the definition to the entity types the sender captured in applies_to; a NULL/empty column
+  /// means apply-to-all — the sender either had an apply-to-all set, or is a producer that cannot enumerate the
+  /// filter (dwgextract) [ENG-9362]. Object-based only: the sender never publishes style filters, so byStyle is
+  /// false. A class name the receiving Civil 3D release does not know makes SetAppliesToFilter throw — that
+  /// degrades to apply-to-all rather than losing the definition.</summary>
+  private void ApplyAppliesTo(AAECPDB.PropertySetDefinition propSetDef, PropertySetSchema schema)
+  {
+    string[] classNames = schema.AppliesTo?.Split(',').Select(n => n.Trim()).Where(n => n.Length > 0).ToArray() ?? [];
+    if (classNames.Length == 0)
+    {
+      propSetDef.AppliesToAll = true;
+      return;
+    }
+
+    try
+    {
+      System.Collections.Specialized.StringCollection filter = new();
+      filter.AddRange(classNames);
+      propSetDef.SetAppliesToFilter(filter, false);
+      propSetDef.AppliesToAll = false;
+    }
+    catch (Exception ex) when (!ex.IsFatal())
+    {
+      _logger.LogWarning(
+        ex,
+        "Could not scope property set definition {SetName} to {AppliesTo}; it applies to all object types",
+        schema.SetName,
+        schema.AppliesTo
+      );
+      propSetDef.AppliesToAll = true;
+    }
+  }
+
   private ADB.ObjectId CreatePropertySetDefinitionFromSchema(
     PropertySetSchema schema,
     string recordName,
@@ -462,9 +495,7 @@ public class PropertySetBaker
     {
       propSetDef.Description = schema.SetDescription;
     }
-    // schema.AppliesTo is shipped but not applied: only AppliesToAll has repo-confirmed API surface
-    // (expected filter member: PropertySetDefinition.AppliesToFilter — wire when confirmed on Windows).
-    propSetDef.AppliesToAll = true;
+    ApplyAppliesTo(propSetDef, schema);
 
     foreach (var field in schema.Fields)
     {
@@ -611,6 +642,8 @@ public class PropertySetBaker
     propSetDef.SetToStandard(db);
     propSetDef.SubSetDatabaseDefaults(db);
     //propSetDef.Description = "Property Set Definition added by Speckle"; // POC: should use the description that was published. can this back in if needed
+    // The tier-2 carrier never shipped an entity-type filter, so apply-to-all is all this path can honour;
+    // tier-1 schemas go through ApplyAppliesTo instead [ENG-9362].
     propSetDef.AppliesToAll = true;
 
     foreach (var propertyDefinition in propertyDefinitions)
