@@ -105,6 +105,18 @@ public sealed class RevitArtefactSolidImporter
     return result;
   }
 
+  /// <summary>Pulls the solids out of a decoded geometry list, leaving the rest (meshes) in place.</summary>
+  public List<GeometryObject> ExtractSolids(List<GeometryObject> geometry)
+  {
+    var solids = geometry.OfType<Solid>().Cast<GeometryObject>().ToList();
+    geometry.RemoveAll(o => o is Solid);
+    return solids;
+  }
+
+  /// <summary>Copies definition-space solids into one placement's coordinates — see <c>BuiltDefinition</c>.</summary>
+  public List<GeometryObject> TransformSolids(IReadOnlyList<GeometryObject> solids, Transform transform) =>
+    solids.OfType<Solid>().Select(s => (GeometryObject)SolidUtils.CreateTransformed(s, transform)).ToList();
+
   private static List<GeometryObject> ImportShape(Document doc, byte[] content)
   {
     var filePath = TempFileProvider.GetTempFile("RevitArtefact", RawEncodingFormats.RHINO_3DM);

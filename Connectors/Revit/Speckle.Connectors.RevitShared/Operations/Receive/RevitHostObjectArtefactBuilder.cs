@@ -49,7 +49,8 @@ namespace Speckle.Connectors.Revit.Operations.Receive;
 /// can't deliver (foreign/degraded/absent blobs).</para>
 /// <para><b>ReceiveInstancesAsFamilies (ENG-9101).</b> Atomic objects always bake as <see cref="DirectShape"/>s,
 /// regardless of the setting. Only instance/definition handling branches: off bakes <see cref="DirectShape"/>
-/// instances via the <see cref="DirectShapeLibrary"/> (<see cref="BakeInstances"/>); on bakes real Revit families
+/// instances via the <see cref="DirectShapeLibrary"/> for meshes and per-placement transformed solids (<see
+/// cref="BakeInstances"/>, see <c>BuiltDefinition</c>); on bakes real Revit families
 /// via <see cref="RevitFamilyBaker"/> (<see cref="BakeInstancesAsFamilies"/>), reading the same
 /// DEFINES/DEFINES_INSTANCE/DISPLAY_INSTANCE edges and the same <see cref="DecodeGeometry"/>-derived geometry
 /// selection. Neither branch reconstructs a <c>Base</c> graph or delegates to the v1
@@ -429,13 +430,13 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // RhinoHostObjectArtefactBuilder.BuildDefinitions. Nested definitions are built depth-first (memoized in
     // defKeyByNode) so a parent can reference the child via a DirectShape.CreateGeometryInstance member
     // (GeometryInstance derives from GeometryObject, so it slots into the parent's geometry list like any solid/mesh).
-    var defKeyByNode = new Dictionary<int, string>();
+    var defKeyByNode = new Dictionary<int, BuiltDefinition>();
     var defBuilding = new HashSet<int>();
     // Definitions whose geometry came from imported 3dm solids, and the single material to paint onto each placement
     // (solids carry none of their own). Ambiguous definitions — several materials across members — stay unpainted.
     var defPaintMaterialByNode = new Dictionary<int, ElementId>();
 
-    string? BuildDefinition(int defNodeK)
+    BuiltDefinition? BuildDefinition(int defNodeK)
     {
       if (defKeyByNode.TryGetValue(defNodeK, out var already))
       {
@@ -463,6 +464,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         session,
         out var solidPaintMaterial
       );
+      // Solids are pulled out of the shared definition and kept to be transformed per placement — see
+      // BuiltDefinition. Everything else (meshes) still goes into the DirectShapeLibrary and is shared.
+      var solids = _solidImporter.ExtractSolids(geometry);
       // captured now — a recursive BuildDefinition call below resets _lastDecodeFailure for the child definition.
       var directGeometryFailure = _lastDecodeFailure;
 
@@ -478,8 +482,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           {
             continue;
           }
-          var childDefKey = BuildDefinition(childDefNodeK);
-          if (childDefKey is null)
+          var childDef = BuildDefinition(childDefNodeK);
+          if (childDef is null)
           {
             session.Increment("nestedInstancesUnresolved");
             continue;
@@ -489,14 +493,16 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             nestedInst.Units is { Length: > 0 } u ? u : docUnits,
             applyReferencePoint: false
           );
-          geometry.AddRange(DirectShape.CreateGeometryInstance(doc, childDefKey, nestedTransform));
+          // The child's solids compose into ours already carrying the nested transform, so the outer placement
+          // transform then lands them in world space.
+          AddPlacement(doc, childDef, nestedTransform, geometry, solids);
           session.Increment("nestedInstancesPlaced");
         }
       }
 
       defBuilding.Remove(defNodeK);
 
-      if (geometry.Count == 0)
+      if (geometry.Count == 0 && solids.Count == 0)
       {
         session.Increment("definitionsEmpty");
         if (directGeometryFailure is not null)
@@ -506,14 +512,19 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         return null;
       }
 
-      var defKey = $"spk-def-{defNodeK.ToString(CultureInfo.InvariantCulture)}";
-      library.AddDefinition(defKey, geometry);
-      defKeyByNode[defNodeK] = defKey;
+      string? meshDefKey = null;
+      if (geometry.Count > 0)
+      {
+        meshDefKey = $"spk-def-{defNodeK.ToString(CultureInfo.InvariantCulture)}";
+        library.AddDefinition(meshDefKey, geometry);
+      }
+      var built = new BuiltDefinition(meshDefKey, solids);
+      defKeyByNode[defNodeK] = built;
       if (solidPaintMaterial is { } paint)
       {
         defPaintMaterialByNode[defNodeK] = paint;
       }
-      return defKey;
+      return built;
     }
 
     foreach (var kv in bundle.Nodes)
@@ -541,7 +552,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       var source = Source(appId);
       var srcType = SrcType(props);
       var sw = Stopwatch.StartNew();
-      if (instNode.DefRef is not int defNodeK || !defKeyByNode.TryGetValue(defNodeK, out var defKey))
+      if (instNode.DefRef is not int defNodeK || !defKeyByNode.TryGetValue(defNodeK, out var builtDef))
       {
         session.RecordObject(
           appId,
@@ -570,7 +581,9 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           instNode.Units is { Length: > 0 } u ? u : docUnits,
           applyReferencePoint: true
         );
-        var geometry = DirectShape.CreateGeometryInstance(doc, defKey, transform);
+        // One flat list for SetShape — the mesh/solid split only matters while building the definition.
+        var geometry = new List<GeometryObject>();
+        AddPlacement(doc, builtDef, transform, geometry, geometry);
 
         var ds = DirectShape.CreateElement(doc, ResolveCategory(doc, props, validCategories, categoryCache));
         SetNameSafe(ds, PropString(props, "name"));
@@ -1679,4 +1692,27 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   /// <summary>Minimal plain <see cref="Base"/> used only as the <c>source</c> of a conversion report entry (the
   /// TypeLoader only accepts assembly-scanned registered types — never a custom subclass).</summary>
   private static Base Source(string appId) => new() { applicationId = appId, id = appId };
+
+  // Adds one placement of a definition: the mesh part instances from the shared library, the solid part is copied
+  // and transformed. Callers that want a single flat list pass the same list twice.
+  private void AddPlacement(
+    Document doc,
+    BuiltDefinition def,
+    Transform transform,
+    List<GeometryObject> meshParts,
+    List<GeometryObject> solidParts
+  )
+  {
+    if (def.MeshDefKey is { } meshDefKey)
+    {
+      meshParts.AddRange(DirectShape.CreateGeometryInstance(doc, meshDefKey, transform));
+    }
+    solidParts.AddRange(_solidImporter.TransformSolids(def.Solids, transform));
+  }
+
+  // A built instance definition, split by how each part places [ENG-9166]. Meshes share one DirectShapeLibrary
+  // definition; solids imported from a 3dm blob don't pick up the CreateGeometryInstance transform (every placement
+  // landed at the origin — a regression from ENG-8800), so they stay in definition space and are transformed per
+  // placement instead. Costs sharing for solid-backed definitions; also makes them paintable.
+  private sealed record BuiltDefinition(string? MeshDefKey, List<GeometryObject> Solids);
 }
