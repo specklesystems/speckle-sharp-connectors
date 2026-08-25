@@ -37,7 +37,7 @@ public class PropertiesExtractor
     // add the compound element layer buildup, if this element's type has one
     if (_compoundStructureExtractor.GetCompoundStructure(element) is Dictionary<string, object?> structure)
     {
-      properties.Add("Compound Structure", structure);
+      properties.Add("Structure", structure);
     }
 
     // add parameters

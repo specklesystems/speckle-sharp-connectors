@@ -7,15 +7,17 @@ namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 
 /// <summary>
 /// The layer buildup of a compound element type — every <see cref="DB.HostObjAttributes"/> subclass, so walls,
-/// floors, roofs and ceilings alike. One record per layer: material name, layer function, thickness and units.
+/// floors, roofs and ceilings alike. One record per layer: material, function and thickness.
 /// </summary>
 /// <remarks>
 /// Lives beside <c>Material Quantities</c> at the top of <c>properties</c>, not inside
-/// <c>Parameters.Type Parameters</c> where <see cref="ParameterExtractor"/> used to build it [ENG-9338]. A compound
-/// structure is not a Revit parameter; the old home routed it into the type-scoped eav table, readable only through
-/// a join. Layers are keyed by ORDINAL in <c>GetLayers()</c> order (exterior → interior) — the former
-/// <c>{material} ({layerId})</c> key carried no order, minted one eav path per material name, and broke the
-/// dot-delimited paths on a name like "Insulation 2.5mm". A layer with no assigned material keeps its slot.
+/// <c>Parameters.Type Parameters</c> where <see cref="ParameterExtractor"/> used to build it [ENG-9338]. The old
+/// home routed it into the type-scoped eav table, readable only through a join, and the property flattener dropped
+/// it there outright. Each layer field is parameter-shaped (<c>{ name, value, units }</c>) — the same shape ODA
+/// publishes and the shape the flatten already collapses to one row per field with the unit on the row — so this
+/// needs no special-casing downstream. Layers are keyed by ORDINAL in <c>GetLayers()</c> order (exterior →
+/// interior); the former <c>{material} ({layerId})</c> key carried no order at all, and a buildup without its order
+/// is not a buildup.
 /// </remarks>
 public class CompoundStructureExtractor
 {
@@ -67,16 +69,33 @@ public class CompoundStructureExtractor
       var layer = layers[i];
       structureDictionary[i.ToString(CultureInfo.InvariantCulture)] = new Dictionary<string, object?>()
       {
-        ["material"] = (_settingsStore.Current.Document.GetElement(layer.MaterialId) as DB.Material)?.Name,
-        ["function"] = layer.Function.ToString(),
-        ["thickness"] = layer.Width * factor,
-        ["units"] = _settingsStore.Current.SpeckleUnits,
+        ["material"] = Field(
+          "Material",
+          (_settingsStore.Current.Document.GetElement(layer.MaterialId) as DB.Material)?.Name
+        ),
+        ["function"] = Field("Function", layer.Function.ToString()),
+        ["thickness"] = Field("Thickness", layer.Width * factor, _settingsStore.Current.SpeckleUnits),
       };
     }
 
     // A structure with no layers is not a buildup — don't put an empty dict on the object.
     var result = structureDictionary.Count > 0 ? structureDictionary : null;
     _structureCache[type.UniqueId] = result;
+
     return result;
+  }
+
+  // The parameter shape the whole pipeline already understands — { name, value, units } — which is also what ODA
+  // publishes for every Revit property. EavExtraction's generic walk collapses it to one row per field with the
+  // unit on the row, so the layer buildup needs no special-casing anywhere downstream. A layer with no assigned
+  // material carries a null value and simply produces no material row.
+  private static Dictionary<string, object?> Field(string name, object? value, string? units = null)
+  {
+    var field = new Dictionary<string, object?>() { ["name"] = name, ["value"] = value };
+    if (units is not null)
+    {
+      field["units"] = units;
+    }
+    return field;
   }
 }
