@@ -1,4 +1,5 @@
 using System.Globalization;
+using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.Common.Instances;
 
@@ -115,3 +116,60 @@ public sealed record DefinitionMemberIndex(
   IReadOnlyDictionary<int, int> ObjectByGeometry,
   IReadOnlyDictionary<int, int> ObjectByInstance
 );
+
+/// <summary>
+/// Builds the <see cref="DefinitionMemberIndex"/> for a bundle, preferring the graph-native join over the eav
+/// stamps. Shared because Rhino, SketchUp and Revit all need the same member → object direction [ENG-9110].
+/// </summary>
+public static class DefinitionMemberIndexes
+{
+  /// <summary>
+  /// The graph-native join (<c>DEFINES_MEMBER</c> 25 / <c>PLACES</c> 24) when the bundle carries it, else the
+  /// <c>@speckle.*</c> stamps. Both invert the same direction; a bundle predating the vocab has only the stamps.
+  /// </summary>
+  public static DefinitionMemberIndex Build(
+    ArtefactRelations rels,
+    IReadOnlyDictionary<int, Dictionary<string, object?>> propertiesByObject
+  ) => TryFromRels(rels) ?? DefinitionMemberStamps.Read(propertiesByObject);
+
+  // Member ↔ geometry joins on (definition, member ordinal), which is immune to the content-hash-dedup collision a
+  // geometry-K-keyed inversion cannot distinguish.
+  private static DefinitionMemberIndex? TryFromRels(ArtefactRelations rels)
+  {
+    if (rels.MemberObjectsByDefinition.Count == 0)
+    {
+      return null;
+    }
+    var byGeometry = new Dictionary<int, int>();
+    var byInstance = new Dictionary<int, int>();
+    foreach (var kv in rels.MemberObjectsByDefinition)
+    {
+      // member ordinal → member object K for this definition
+      var objByOrd = new Dictionary<int, int>();
+      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
+      for (int m = 0; m < kv.Value.Count; m++)
+      {
+        objByOrd[memberOrds[m]] = kv.Value[m];
+      }
+      if (
+        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
+        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
+      )
+      {
+        continue;
+      }
+      for (int i = 0; i < geomKs.Count; i++)
+      {
+        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
+        {
+          byGeometry[geomKs[i]] = memberObjK;
+        }
+      }
+    }
+    foreach (var kv in rels.PlacesByObject)
+    {
+      byInstance[kv.Value] = kv.Key;
+    }
+    return new DefinitionMemberIndex(byGeometry, byInstance);
+  }
+}

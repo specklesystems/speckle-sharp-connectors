@@ -266,23 +266,69 @@ public class FamilyGeometryBaker
     }
   }
 
+  // Looks a subcategory up on the family category and creates it when absent — the same lookup-or-create v1's
+  // ProcessObjectForFamily did. Revit rejects names containing \ : { } [ ] | ; < > ? ` * ~, so the catch is
+  // load-bearing: an unusable layer name logs and bakes without a subcategory rather than failing the definition.
+  private Category? GetOrCreateSubcategory(Document famDoc, string? name, Dictionary<string, Category?> cache)
+  {
+    if (string.IsNullOrWhiteSpace(name))
+    {
+      return null;
+    }
+    if (cache.TryGetValue(name!, out var cached))
+    {
+      return cached;
+    }
+
+    Category? resolved = null;
+    var familyCategory = famDoc.OwnerFamily.FamilyCategory;
+    if (familyCategory != null)
+    {
+      if (familyCategory.SubCategories.Contains(name))
+      {
+        resolved = familyCategory.SubCategories.get_Item(name);
+      }
+      else
+      {
+        try
+        {
+          resolved = famDoc.Settings.Categories.NewSubcategory(familyCategory, name);
+        }
+        catch (Autodesk.Revit.Exceptions.ArgumentException)
+        {
+          _logger.LogWarning("Failed to create Revit subcategory with name: {SubcategoryName}", name);
+        }
+      }
+    }
+    cache[name!] = resolved;
+    return resolved;
+  }
+
   // ENG-9101: bundle-native counterpart of BakeFamilyGeometry above — bakes already-decoded GeometryObjects (the
   // caller resolved these from the artifact bundle via the same DecodeGeometry path DirectShape receive uses)
-  // instead of walking a Base/TraversalContext graph. No subcategory grouping (that's cosmetic, tied to the v1
-  // Collection tree, which the bundle's DEFINES members don't carry) — materials still apply via family parameters.
+  // instead of walking a Base/TraversalContext graph. Members carry their source layer as a subcategory name, which
+  // the caller recovered through the definition-member join [ENG-9343]; materials apply via family parameters.
   public void BakeFamilyGeometryFromArtifact(
     Document famDoc,
-    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey)> members,
+    IReadOnlyList<(GeometryObject geometry, int? materialNodeKey, string? subcategoryName)> members,
     FamilyMaterialManager materialManager
   )
   {
-    foreach (var (geometry, materialNodeKey) in members)
+    // NewSubcategory throws on a name that already exists, and Contains on every member of a large definition is not
+    // free — so resolve each name once per family document.
+    var subcategoryCache = new Dictionary<string, Category?>(StringComparer.Ordinal);
+    foreach (var (geometry, materialNodeKey, subcategoryName) in members)
     {
       try
       {
         if (geometry is Solid solid && !solid.Faces.IsEmpty)
         {
           using var freeFormElement = FreeFormElement.Create(famDoc, solid);
+          // Solid/FreeFormElement only — the DirectShape fallback below never carried a subcategory in v1 either.
+          if (GetOrCreateSubcategory(famDoc, subcategoryName, subcategoryCache) is { } subcategory)
+          {
+            freeFormElement.Subcategory = subcategory;
+          }
           if (
             materialNodeKey is int mk
             && materialManager.FamilyParameters.TryGetValue(mk.ToString(CultureInfo.InvariantCulture), out var famParam)

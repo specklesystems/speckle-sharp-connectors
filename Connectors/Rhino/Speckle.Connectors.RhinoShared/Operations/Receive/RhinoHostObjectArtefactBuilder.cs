@@ -123,7 +123,7 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // on the object plane — member↔geometry joins on (definition, member ordinal), immune to the content-hash-dedup
     // collision a geometry-K-keyed inversion cannot distinguish. Bundles predating the vocab (no rel 25) fall back
     // to the @speckle.* member stamps [ENG-9110].
-    var memberIndex = TryBuildMemberIndexFromRels(rels) ?? DefinitionMemberStamps.Read(bundle.Properties);
+    var memberIndex = DefinitionMemberIndexes.Build(rels, bundle.Properties);
     session.SetStat("memberStamps", memberIndex.ObjectByGeometry.Count + memberIndex.ObjectByInstance.Count);
     var bakedObjectIds = new HashSet<string>();
     var conversionResults = new HashSet<ReceiveConversionResult>();
@@ -774,52 +774,6 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         .ToList();
       yield return solids.Count > 0 ? solids : geoms;
     }
-  }
-
-  // The rel-built member index: DEFINES_MEMBER (25, def → member object, ord = member ordinal) joined against the
-  // definition's DEFINES ords recovers geometry K → member object K; PLACES (24, member object → INSTANCE node)
-  // inverts to INSTANCE K → member object K. Returns null when the bundle predates the vocabulary (no rel 25 rows)
-  // so the caller falls back to the legacy @speckle.* stamps.
-  private static DefinitionMemberIndex? TryBuildMemberIndexFromRels(ArtefactRelations rels)
-  {
-    //   rels.MemberObjectsByDefinition / rels.MemberOrdByDefinition : def K → member object Ks + MEMBER ordinals,
-    //                                                                index-aligned (DEFINES_MEMBER, rel 25)
-    //   rels.PlacesByObject            : member object K → INSTANCE node K (PLACES, rel 24)
-    if (rels.MemberObjectsByDefinition.Count == 0)
-    {
-      return null;
-    }
-    var byGeometry = new Dictionary<int, int>();
-    var byInstance = new Dictionary<int, int>();
-    foreach (var kv in rels.MemberObjectsByDefinition)
-    {
-      // member ordinal → member object K for this definition
-      var objByOrd = new Dictionary<int, int>();
-      var memberOrds = rels.MemberOrdByDefinition[kv.Key];
-      for (int m = 0; m < kv.Value.Count; m++)
-      {
-        objByOrd[memberOrds[m]] = kv.Value[m];
-      }
-      if (
-        !rels.DefinesByDefinition.TryGetValue(kv.Key, out var geomKs)
-        || !rels.DefinesOrdByDefinition.TryGetValue(kv.Key, out var geomOrds)
-      )
-      {
-        continue;
-      }
-      for (int i = 0; i < geomKs.Count; i++)
-      {
-        if (objByOrd.TryGetValue(geomOrds[i], out int memberObjK))
-        {
-          byGeometry[geomKs[i]] = memberObjK;
-        }
-      }
-    }
-    foreach (var kv in rels.PlacesByObject)
-    {
-      byInstance[kv.Value] = kv.Key;
-    }
-    return new DefinitionMemberIndex(byGeometry, byInstance);
   }
 
   // Builds every DEFINITION node into a Rhino InstanceDefinition, returning node K → Rhino defIndex. A DEFINITION owns

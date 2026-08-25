@@ -789,6 +789,8 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // definitions built depth-first (memoized here) so a parent can nest an already-baked child.
     var symbolByDefNode = new Dictionary<int, FamilySymbol>();
     var defBuilding = new HashSet<int>();
+    // Each member's source layer, keyed by its geometry K — the family baker owns the join [ENG-9343].
+    var subcategoryNames = _familyBaker.BuildMemberSubcategoryNames(bundle, rels);
 
     foreach (var kv in bundle.Nodes)
     {
@@ -800,6 +802,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           rels,
           materialIdByNode,
           familyMaterialsByNode,
+          subcategoryNames,
           kv.Key,
           symbolByDefNode,
           defBuilding,
@@ -831,6 +834,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     ArtefactRelations rels,
     Dictionary<int, ElementId> materialIdByNode,
     Dictionary<int, RenderMaterial> familyMaterialsByNode,
+    IReadOnlyDictionary<int, string> subcategoryNames,
     int defNodeK,
     Dictionary<int, FamilySymbol> symbolByDefNode,
     HashSet<int> defBuilding,
@@ -855,16 +859,17 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
     // direct geometry members (DEFINES → geometry). Definition/local-space — no reference-point re-basing here;
     // it's applied once, to the outer instance placement, in PlaceFamilyInstances [ENG-9099].
-    var members = new List<(GeometryObject geometry, int? materialNodeKey)>();
+    var members = new List<(GeometryObject geometry, int? materialNodeKey, string? subcategoryName)>();
     _lastDecodeFailure = null;
     if (rels.DefinesByDefinition.TryGetValue(defNodeK, out var geomKs))
     {
       foreach (var geomK in geomKs)
       {
         int? matNodeK = rels.MaterialByGeometry.TryGetValue(geomK, out var mk) ? mk : null;
+        subcategoryNames.TryGetValue(geomK, out var subcategoryName);
         foreach (var geom in DecodeFamilyGeometry(bundle, geomK))
         {
-          members.Add((geom, matNodeK));
+          members.Add((geom, matNodeK, subcategoryName));
         }
       }
     }
@@ -888,6 +893,7 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             rels,
             materialIdByNode,
             familyMaterialsByNode,
+            subcategoryNames,
             childDefNodeK,
             symbolByDefNode,
             defBuilding,
