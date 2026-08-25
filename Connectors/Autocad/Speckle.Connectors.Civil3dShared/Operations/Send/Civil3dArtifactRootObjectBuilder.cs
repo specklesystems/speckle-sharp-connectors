@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Speckle.Connectors.Autocad.HostApp;
 using Speckle.Connectors.Autocad.Operations.Send;
 using Speckle.Connectors.Civil3dShared.HostApp;
@@ -45,7 +45,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
 
   protected override void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline)
   {
-    if (_propertySetDefinitionHandler.Definitions.Count == 0)
+    if (_propertySetDefinitionHandler.DefinitionsByHandle.Count == 0)
     {
       return;
     }
@@ -58,25 +58,19 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
 
   private void EmitPropertySetDefinitionRows(ObjectsArtifactPipeline pipeline)
   {
-    // Rows are emitted in AUTHORED field order (the file's row-order-is-field-order contract).
-    foreach (var setEntry in _propertySetDefinitionHandler.Definitions)
+    // Handle-addressed, so two same-named definitions both reach the file [ENG-9363]. Rows are emitted in
+    // AUTHORED field order (the file's row-order-is-field-order contract).
+    var emittedSetKeys = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var record in _propertySetDefinitionHandler.DefinitionsByHandle.Values)
     {
-      string setName = setEntry.Key;
-      if (
-        !setEntry.Value.TryGetValue(PropertySetDefinitionHandler.PROP_SET_PROP_DEFS_KEY, out object? defsObj)
-        || defsObj is not Dictionary<string, object?> fieldDefs
-        || !_propertySetDefinitionHandler.FieldOrders.TryGetValue(setName, out var fieldOrder)
-      )
-      {
-        continue;
-      }
+      string setName = record.Name;
 
       // set_key: the shared recipe in PropertySetDefinitionLadder.ComputeSetKey — receive compares
       // existing in-document definitions with the same code, so reuse-if-identical cannot drift.
       var keyFields = new List<(string Name, string? DataType, string? Unit)>();
-      foreach (var fieldName in fieldOrder)
+      foreach (var fieldName in record.FieldOrder)
       {
-        if (Field(fieldDefs, fieldName) is Dictionary<string, object?> fdk)
+        if (Field(record.Fields, fieldName) is Dictionary<string, object?> fdk)
         {
           keyFields.Add(
             (
@@ -89,16 +83,24 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
       }
       string setKey = PropertySetDefinitionLadder.ComputeSetKey(setName, keyFields);
 
-      _propertySetDefinitionHandler.SetDescriptions.TryGetValue(setName, out string? setDescription);
+      // Same name, different fields → two sets, told apart by set_key. Two definitions that hash the same ARE
+      // the same schema, so they collapse to one set of rows — the spec's dedupe-identical-schemas promise.
+      if (!emittedSetKeys.Add(setKey))
+      {
+        continue;
+      }
+
       // Absent = apply-to-all, which is what a NULL applies_to means. Deliberately NOT part of set_key: the
       // recipe is shared with dwgextract, which cannot enumerate the filter at all [ENG-9362].
-      _propertySetDefinitionHandler.SetAppliesTo.TryGetValue(setName, out string? appliesTo);
-      _propertySetDefinitionHandler.DefinitionFieldBucketIds.TryGetValue(setName, out var bucketByFieldFromDefinition);
+      string? setDescription = record.Description;
+      string? appliesTo = record.AppliesTo;
+      // Observed-on-instance ids are name-keyed, so they can only serve as the fallback for the FIRST
+      // definition of a given name; the per-record ids read off the definition cover all of them [ENG-9361].
       _propertySetDefinitionHandler.FieldBucketIds.TryGetValue(setName, out var bucketByFieldObserved);
 
-      foreach (var fieldName in fieldOrder)
+      foreach (var fieldName in record.FieldOrder)
       {
-        if (Field(fieldDefs, fieldName) is not Dictionary<string, object?> fd)
+        if (Field(record.Fields, fieldName) is not Dictionary<string, object?> fd)
         {
           continue;
         }
@@ -114,8 +116,7 @@ public class Civil3dArtifactRootObjectBuilder : AutocadArtifactRootObjectBuilder
           defaultBoolean is null && defaultDouble is null && defaultValue?.ToString() is { Length: > 0 } dv ? dv : null;
         // The definition's own FieldBucketId covers every authored field; the ids observed on instance values
         // are the fallback for a throwing getter [ENG-9361].
-        string? bucketId = null;
-        if (bucketByFieldFromDefinition?.TryGetValue(fieldName, out bucketId) != true)
+        if (!record.FieldBucketIds.TryGetValue(fieldName, out string? bucketId))
         {
           bucketByFieldObserved?.TryGetValue(fieldName, out bucketId);
         }

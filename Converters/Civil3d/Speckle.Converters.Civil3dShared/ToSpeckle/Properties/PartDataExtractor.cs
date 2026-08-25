@@ -1,4 +1,4 @@
-﻿using Speckle.Converters.Civil3dShared.Helpers;
+using Speckle.Converters.Civil3dShared.Helpers;
 
 namespace Speckle.Converters.Civil3dShared.ToSpeckle;
 

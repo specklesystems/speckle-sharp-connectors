@@ -1,4 +1,4 @@
-﻿using Speckle.Sdk.Pipelines.Receive.Artifacts;
+using Speckle.Sdk.Pipelines.Receive.Artifacts;
 
 namespace Speckle.Connectors.Civil3dShared.HostApp;
 

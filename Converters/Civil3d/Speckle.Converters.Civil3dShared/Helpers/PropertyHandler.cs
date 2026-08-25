@@ -1,4 +1,4 @@
-﻿namespace Speckle.Converters.Civil3dShared.Helpers;
+namespace Speckle.Converters.Civil3dShared.Helpers;
 
 /// <summary>
 /// Used to help with properties on classes that may throw exceptions when accessed
