@@ -70,6 +70,11 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // reports the actual cause instead of the opaque "did not convert to any native geometry" [ENG-8819]. Set by
   // DecodeAndAppend, consumed + reset per object by the caller — the bake is single-threaded on the main thread.
   private string? _lastDecodeFailure;
+
+  /// <summary>Every received layer starts with this — the receive stamp the pre-clean, the material purge and the
+  /// Layer Properties Manager root filter all key on. ONE definition: the root filter expression was once a
+  /// separate hardcode of a previous stamp and silently matched nothing after the stamp changed [ENG-9331].</summary>
+  private const string LAYER_STAMP_PREFIX = "SPK-";
   private Matrix3d? _receivePlacementTransform;
 
   public AutocadHostObjectArtefactBuilder(
@@ -117,7 +122,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     // The SAME card stamp the legacy connector uses [ENG-9377]: both paths' pre-receive cleanups match on it
     // (Contains), so a legacy bake is replaced by an artefact receive of the same card and vice versa, instead of
     // the two conventions stacking a second copy of the model next to each other's orphans.
-    var baseLayerName = _autocadContext.RemoveInvalidChars($"SPK-{projectName}-{modelName}-");
+    var baseLayerName = _autocadContext.RemoveInvalidChars($"{LAYER_STAMP_PREFIX}{projectName}-{modelName}-");
     using var activity = _activityFactory.Start("Build (artefact)");
     using var session = ArtefactSessionLog.Start(
       "Autocad",
@@ -1510,7 +1515,7 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
 
   // ── layer filter ──────────────────────────────────────────────────────────────────────────────────────
   // Layer Properties Manager filter tree: "Speckle" → "{project}-{model}", the nested one selecting exactly this
-  // model's layers. Ports the v1 AutocadLayerBaker.CreateLayerFilter onto the artefact stamp ("Project X Model Y-…")
+  // model's layers. Ports the v1 AutocadLayerBaker.CreateLayerFilter onto the artefact stamp ("SPK-{project}-{model}-…")
   // and is idempotent — a re-receive refreshes the nested filter's expression instead of adding a duplicate
   // [ENG-9331]. Best-effort: a filter failure must not block the receive. (AutoCAD only repaints the tree after the
   // palette is closed and reopened.)
@@ -1530,10 +1535,18 @@ public class AutocadHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           break;
         }
       }
+      // AutoCAD intersects a nested filter with its parent, so the root MUST match the stamp or every nested
+      // per-model filter shows "0 of N layers". Derived from the stamp and re-applied on every receive, so a
+      // drawing that still carries a stale root expression heals itself [ENG-9331].
+      string rootExpression = $"NAME==\"{EscapeWildcards(LAYER_STAMP_PREFIX)}*\"";
       if (group is null)
       {
-        group = new LayerFilter { Name = ROOT_FILTER_NAME, FilterExpression = "NAME==\"Project * Model *\"" };
+        group = new LayerFilter { Name = ROOT_FILTER_NAME, FilterExpression = rootExpression };
         rootFilters.Add(group);
+      }
+      else if (group.FilterExpression != rootExpression)
+      {
+        group.FilterExpression = rootExpression;
       }
 
       string filterName = _autocadContext.RemoveInvalidChars($"{projectName}-{modelName}");
