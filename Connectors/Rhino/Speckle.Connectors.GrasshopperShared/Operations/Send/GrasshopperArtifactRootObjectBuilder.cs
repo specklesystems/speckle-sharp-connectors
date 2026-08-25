@@ -531,10 +531,11 @@ public class GrasshopperArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
-        else if (instanceKByAppId.TryGetValue(objectId, out var instK))
+        else if (instanceKByAppId.ContainsKey(objectId))
         {
-          // a placement paints its own material: no geometry of its own, so the edge sources the INSTANCE node
-          pipeline.HasMaterial(instK, matK, srcIsInstance: true);
+          // a placement paints its own material: no geometry of its own, so it lives on the object plane as
+          // OBJECT_HAS_MATERIAL [bundle-spec rel 26] — the retired HAS_MATERIAL ord=1 INSTANCE-src overload is gone.
+          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
         }
       }
     }

@@ -802,12 +802,12 @@ public class RhinoArtifactRootObjectBuilder(
             pipeline.HasMaterial(gK, matK);
           }
         }
-        else if (instanceKByObjectId.TryGetValue(objectId, out var instK))
+        else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          // instance-sourced: a material painted directly on a block placement (MaterialFromObject set on the
-          // instance itself) owns no geometry of its own to hang the edge on — it rides the placement's own
-          // INSTANCE node K instead [ENG-9109].
-          pipeline.HasMaterial(instK, matK, srcIsInstance: true);
+          // placement-painted: a material set directly on a block placement (MaterialFromObject on the instance
+          // itself) owns no geometry to hang HAS_MATERIAL on — it lives on the object plane as
+          // OBJECT_HAS_MATERIAL [bundle-spec rel 26], which retired the HAS_MATERIAL ord=1 INSTANCE-src overload.
+          pipeline.ObjectHasMaterial(pipeline.InternObject(objectId), matK);
         }
         else if (collKByLayerId.TryGetValue(objectId, out int layerCollK))
         {

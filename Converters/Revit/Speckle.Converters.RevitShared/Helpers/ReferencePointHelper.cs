@@ -245,15 +245,9 @@ public sealed class RevitModelPlacementData(
 
   public void SetSourceTransform(string kind, Transform transform) => sourceTransforms[kind] = transform;
 
-  public Transform? GetStoredToOptionTransform(string kind, bool appliedToGeometry, Transform? selectedSourceTransform)
-  {
-    if (!sourceTransforms.TryGetValue(kind, out Transform? sourceTransform))
-    {
-      return null;
-    }
-
-    Transform storedToInternal =
-      appliedToGeometry && selectedSourceTransform is not null ? selectedSourceTransform : Transform.Identity;
-    return sourceTransform.Inverse.Multiply(storedToInternal);
-  }
+  /// <summary>Revit INTERNAL coordinates → the datum's coordinate space (the inverse of the datum's source
+  /// transform). Independent of whether the sender baked anything into stored geometry — that is what
+  /// <c>modelPlacement.appliedToGeometry</c> records.</summary>
+  public Transform? GetInternalToOptionTransform(string kind) =>
+    sourceTransforms.TryGetValue(kind, out Transform? sourceTransform) ? sourceTransform.Inverse : null;
 }

@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging;
 using Speckle.Converters.Common;
 using Speckle.Converters.Common.Objects;
 using Speckle.Converters.Common.Registration;
 using Speckle.Objects.Data;
+using Speckle.Sdk;
 using Speckle.Sdk.Models;
 
 namespace Speckle.Converters.Plant3dShared;
@@ -11,7 +13,8 @@ public class Plant3dRootToSpeckleConverter(
   IConverterManager<IToSpeckleTopLevelConverter> toSpeckle,
   IConverterSettingsStore<Plant3dConversionSettings> settingsStore,
   ToSpeckle.PropertiesExtractor propertiesExtractor,
-  ToSpeckle.Plant3dDataExtractor dataExtractor
+  ToSpeckle.Plant3dDataExtractor dataExtractor,
+  ILogger<Plant3dRootToSpeckleConverter> logger
 ) : IRootToSpeckleConverter
 {
   public Base Convert(object target)
@@ -33,11 +36,28 @@ public class Plant3dRootToSpeckleConverter(
 
     if (target is ADB.Entity autocadEntity)
     {
+      // Property extraction is best-effort: a failure here must not discard already-converted geometry.
       // Extract AEC property sets and extension dictionaries
-      var properties = propertiesExtractor.GetProperties(autocadEntity);
+      Dictionary<string, object?> properties = new();
+      try
+      {
+        properties = propertiesExtractor.GetProperties(autocadEntity);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Failed to extract AEC properties on object {HandleValue}", autocadEntity.Handle.Value);
+      }
 
       // Extract Plant3D project database properties (Tag, NominalDiameter, etc.)
-      var dataProperties = dataExtractor.GetDataProperties(autocadEntity);
+      Dictionary<string, object?> dataProperties = new();
+      try
+      {
+        dataProperties = dataExtractor.GetDataProperties(autocadEntity);
+      }
+      catch (Exception ex) when (!ex.IsFatal())
+      {
+        logger.LogWarning(ex, "Failed to extract P&ID properties on object {HandleValue}", autocadEntity.Handle.Value);
+      }
 
       if (result is DataObject dataObject)
       {

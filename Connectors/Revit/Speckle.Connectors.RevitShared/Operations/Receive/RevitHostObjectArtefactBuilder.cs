@@ -148,17 +148,15 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     var doc = _converterSettings.Current.Document;
     var rels = bundle.Relations;
 
-    // ENG-8808 / ENG-9099: undo/redo the sender's reference-point re-basing (translation + rotation, e.g. Shared
-    // Coordinates' true-north angle). The send pipeline baked its main-model reference-point transform into
-    // geometry and recorded it in the bundle; compose it with the receiver's own reference-point setting
-    // (Source = no local transform → apply the sender's as-is, restoring the source model's internal coordinates)
-    // and push it so ToInternalPoints/ConvertToInternalCoordinates re-bases every atomic vertex, and
-    // BuildInstanceTransform re-bases every instance placement. Mirrors v1 RevitHostObjectBuilder's composition.
-    // No recorded transform + no local setting = no-op.
-    // BAKED bundles (legacy sends and migrated old models — appliedToGeometry absent or true) are unbaked
-    // UNCONDITIONALLY, regardless of the Apply Transform receive setting: their stored coordinates already carry
-    // the source datum, so skipping the unbake would land them displaced. ReadSourceReferencePointTransform
-    // returns null for un-baked bundles (appliedToGeometry=false), which keep their stored coordinates.
+    // ENG-8808 / ENG-9099: undo the sender's reference-point re-basing (translation + rotation, e.g. Shared
+    // Coordinates' true-north angle). When the sender applied its selected datum to stored geometry
+    // (modelPlacement.appliedToGeometry = true) the inverse of modelPlacement.transform restores the source
+    // model's internal coordinates; compose it with the receiver's own reference-point setting and push it so
+    // ToInternalPoints/ConvertToInternalCoordinates re-bases every atomic vertex and BuildInstanceTransform
+    // re-bases every instance placement. Mirrors v1 RevitHostObjectBuilder's composition. Baked bundles are
+    // unbaked UNCONDITIONALLY, regardless of the Apply Transform receive setting — skipping it would land them
+    // displaced. Un-baked bundles (the default) store internal coordinates already → ReadSourceReferencePointTransform
+    // returns null and only the local setting applies.
     var sourceReferencePoint = ReadSourceReferencePointTransform(bundle);
     using var referencePointScope = _converterSettings.Push(s =>
       s with
@@ -1490,43 +1488,22 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return resolved;
   }
 
-  // ENG-8947 / ENG-9099: rebuild the sender's reference-point transform from the eav.model record
-  // (referencePoint.transform — the FULL rigid transform as a 16-value row-major CSV, same layout ParseMatrix
-  // already uses for InstanceProxy transforms; referencePoint.units, falling back to the bundle's display
-  // units). Scale the translation to internal feet so the result composes with the receive setting and applies
-  // through ConvertToInternalCoordinates. No record / internalOriginFallback (kind row without a transform) →
-  // no source re-basing. The former meta.reference_point_* columns are removed from the spec and NOT read.
+  // ENG-8947 / ENG-9099: the transform that restores the source model's INTERNAL coordinates from stored
+  // geometry, or null when nothing was applied. Read from modelPlacement (the only placement record):
+  // appliedToGeometry must be true, transform is INTERNAL → selected datum (16-value row-major CSV, same layout
+  // ParseMatrix uses for InstanceProxy transforms) so its inverse is stored → internal; units fall back to the
+  // bundle's display units. The translation is scaled to internal feet so the result composes with the receive
+  // setting and applies through ConvertToInternalCoordinates.
   private Transform? ReadSourceReferencePointTransform(ArtefactBundle bundle)
   {
     if (
-      !bundle.ModelProperties.TryGetValue("referencePoint", out var rpObj)
-      || rpObj is not Dictionary<string, object?> rp
-      || !rp.TryGetValue("transform", out var tObj)
+      !bundle.ModelProperties.TryGetValue("modelPlacement", out var placementObj)
+      || placementObj is not Dictionary<string, object?> placement
+      || !placement.TryGetValue("appliedToGeometry", out var appliedObj)
+      || appliedObj is not true
+      || !placement.TryGetValue("transform", out var tObj)
       || tObj is not string transformCsv
     )
-    {
-      return null;
-    }
-
-    // New bundles store this source-independent state under modelPlacement. Fall back to the temporary
-    // referencePoint location emitted by earlier builds of this branch; absence means a legacy baked bundle.
-    bool? appliedToGeometry = null;
-    if (
-      bundle.ModelProperties.TryGetValue("modelPlacement", out var placementObj)
-      && placementObj is Dictionary<string, object?> placement
-      && placement.TryGetValue("appliedToGeometry", out var placementAppliedObj)
-      && placementAppliedObj is bool placementApplied
-    )
-    {
-      appliedToGeometry = placementApplied;
-    }
-    else if (
-      rp.TryGetValue("appliedToGeometry", out var referenceAppliedObj) && referenceAppliedObj is bool referenceApplied
-    )
-    {
-      appliedToGeometry = referenceApplied;
-    }
-    if (appliedToGeometry is false)
     {
       return null;
     }
@@ -1544,18 +1521,18 @@ public sealed class RevitHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         return null;
       }
     }
-    string units = rp.TryGetValue("units", out var uObj) && uObj is string u && u.Length > 0 ? u : bundle.Units;
+    string units = placement.TryGetValue("units", out var uObj) && uObj is string u && u.Length > 0 ? u : bundle.Units;
     var fTypeId = ResolveForge(units);
-    var full = Transform.Identity;
-    full.BasisX = new XYZ(d[0], d[4], d[8]);
-    full.BasisY = new XYZ(d[1], d[5], d[9]);
-    full.BasisZ = new XYZ(d[2], d[6], d[10]);
-    full.Origin = new XYZ(
+    var internalToDatum = Transform.Identity;
+    internalToDatum.BasisX = new XYZ(d[0], d[4], d[8]);
+    internalToDatum.BasisY = new XYZ(d[1], d[5], d[9]);
+    internalToDatum.BasisZ = new XYZ(d[2], d[6], d[10]);
+    internalToDatum.Origin = new XYZ(
       _scalingService.ScaleToNative(d[3], fTypeId),
       _scalingService.ScaleToNative(d[7], fTypeId),
       _scalingService.ScaleToNative(d[11], fTypeId)
     );
-    return full;
+    return internalToDatum.Inverse;
   }
 
   // ── transforms ────────────────────────────────────────────────────────────────────────────────────────

@@ -702,9 +702,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       bundle.TypePropertiesByObject.TryGetValue(objK, out var instTypeProps);
       RhinoArtefactUserStrings.Apply(atts, instTypeProps);
       RhinoArtefactUserStrings.Apply(atts, instProps);
-      // Prefer a material painted directly on THIS placement (instance-sourced HAS_MATERIAL) over the object-level
-      // fallback, so a per-instance override survives instead of always rendering the definition's own material
-      // [ENG-9109].
+      // Prefer a material painted directly on THIS placement (OBJECT_HAS_MATERIAL re-keyed onto its INSTANCE node,
+      // or the legacy HAS_MATERIAL ord=1 shape) over the object-level fallback, so a per-instance override survives
+      // instead of always rendering the definition's own material [ENG-9109].
       if (
         materialByInstance.TryGetValue(instNodeK, out Guid materialGuid)
         || materialByObject.TryGetValue(appId, out materialGuid)
@@ -932,8 +932,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
             docUnits
           );
           // A nested-block member owns no geometry K, so its whole join — layer, name, user strings, colour — hangs
-          // off its INSTANCE node K instead. Its material is instance-sourced (HAS_MATERIAL ord=1) for the same
-          // reason, and its colour is object-sourced (HAS_COLOR ord=1), so no geometry K goes in [ENG-9213].
+          // off its INSTANCE node K instead. Its material is placement paint (OBJECT_HAS_MATERIAL re-keyed via
+          // PLACES, or legacy HAS_MATERIAL ord=1), and its colour is object-sourced (HAS_COLOR ord=1), so no
+          // geometry K goes in [ENG-9213].
           materialByInstance.TryGetValue(instNodeK, out Guid nestedMaterial);
           var nestedAtts = BuildMemberAttributes(
             doc,
@@ -1299,15 +1300,67 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
 
-    // Instance-sourced (ord=1): a material painted directly on a block placement (Rhino MaterialFromObject on
-    // the instance itself), keyed by the placement's INSTANCE node K rather than any geometry it owns — a
-    // placement owns no geometry of its own, so it's invisible to the geometry loop above [ENG-9109].
-    var byInstance = ProjectMaterialGuids(bundle.Relations.MaterialByInstance, guidByMaterialNode);
+    // Placement-painted (OBJECT_HAS_MATERIAL, rel 26): a material set directly on a block placement (Rhino
+    // MaterialFromObject on the instance itself). A placement owns no geometry, so it's invisible to the geometry
+    // loop above; the edge sources the placement's OBJECT K and is re-keyed here onto the INSTANCE node K the
+    // bake sites join on — top-level placements via DISPLAY_INSTANCE, nested block members via PLACES.
+    var byInstance = ProjectPlacementMaterialGuids(bundle.Relations, guidByMaterialNode);
+    // Legacy fallback: pre-split bundles carried placement paint as HAS_MATERIAL ord=1 with an INSTANCE-node src
+    // [ENG-9109]; honoured only where rel 26 said nothing.
+    foreach (var kv in ProjectMaterialGuids(bundle.Relations.MaterialByInstance, guidByMaterialNode))
+    {
+      if (!byInstance.ContainsKey(kv.Key))
+      {
+        byInstance[kv.Key] = kv.Value;
+      }
+    }
 
     // Node-sourced (NODE_HAS_MATERIAL): a container's authored render material — e.g. a Rhino layer material —
     // keyed by the container node K; GetOrCreateLayer assigns it to the rebuilt layer.
     var byNode = ProjectMaterialGuids(bundle.Relations.MaterialByNode, guidByMaterialNode);
     return (byObject, byGeometry, byInstance, byNode);
+  }
+
+  // OBJECT_HAS_MATERIAL (rel 26, object K → material node K) re-keyed onto the INSTANCE node K the bake sites join on:
+  // a top-level placement via its DISPLAY_INSTANCE edges, a nested block member via its PLACES edge.
+  private static Dictionary<int, Guid> ProjectPlacementMaterialGuids(
+    ArtefactRelations rels,
+    Dictionary<int, Guid> guidByMaterialNode
+  )
+  {
+    var result = new Dictionary<int, Guid>();
+    if (rels.MaterialByObject.Count == 0)
+    {
+      return result;
+    }
+    var instKsByObject = new Dictionary<int, List<int>>();
+    foreach (var edge in rels.DisplayInstanceEdges)
+    {
+      if (!instKsByObject.TryGetValue(edge.Src, out var list))
+      {
+        instKsByObject[edge.Src] = list = new List<int>();
+      }
+      list.Add(edge.Dst);
+    }
+    foreach (var kv in rels.MaterialByObject)
+    {
+      if (!guidByMaterialNode.TryGetValue(kv.Value, out Guid guid))
+      {
+        continue;
+      }
+      if (rels.PlacesByObject.TryGetValue(kv.Key, out int placedInstK))
+      {
+        result[placedInstK] = guid;
+      }
+      if (instKsByObject.TryGetValue(kv.Key, out var instKs))
+      {
+        foreach (int instK in instKs)
+        {
+          result[instK] = guid;
+        }
+      }
+    }
+    return result;
   }
 
   // K → material-node-K rel map, projected onto the render-material guids this receive created.

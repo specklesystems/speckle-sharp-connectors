@@ -1014,24 +1014,20 @@ public class AutocadArtifactRootObjectBuilder(
 
   protected virtual void EmitAdditionalNodes(ObjectsArtifactPipeline pipeline) { }
 
+  // modelPlacement.* — same contract as the Revit producer: transform / options.*.transform map WCS (the drawing's
+  // internal frame) → that datum's space and are emitted regardless of baking; appliedToGeometry says whether the
+  // sender already applied `transform` to stored coordinates.
   private static void EmitModelPlacement(ObjectsArtifactPipeline pipeline, CollectedModel model)
   {
     var options = model.ModelPlacementOptions ?? new Dictionary<string, Matrix3d>();
-    Matrix3d bakedWcsToStored = Matrix3d.Identity;
-    if (model.ApplyTransform && options.TryGetValue(model.ModelPlacementSource, out Matrix3d selectedWcsToStored))
-    {
-      bakedWcsToStored = selectedWcsToStored;
-    }
-    Matrix3d storedToWcs = bakedWcsToStored.Inverse();
     Matrix3d defaultPlacement = Matrix3d.Identity;
 
     foreach (var option in options)
     {
-      Matrix3d storedToOption = option.Value.PostMultiplyBy(storedToWcs);
-      pipeline.AddModelProperty($"modelPlacement.options.{option.Key}.transform", MatrixToCsv(storedToOption));
+      pipeline.AddModelProperty($"modelPlacement.options.{option.Key}.transform", MatrixToCsv(option.Value));
       if (option.Key == model.ModelPlacementSource)
       {
-        defaultPlacement = storedToOption;
+        defaultPlacement = option.Value;
       }
     }
 
