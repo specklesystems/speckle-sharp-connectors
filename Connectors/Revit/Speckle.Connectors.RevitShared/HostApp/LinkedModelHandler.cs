@@ -120,15 +120,15 @@ public class LinkedModelHandler
 
   /// <summary>
   /// The <c>_t{hash}</c> suffix appended to every source UniqueId of a linked-model placement, so occurrences of
-  /// the same linked file under different placements stay distinct. Empty for the host document.
+  /// the same linked file stay distinct identities. Empty for the host document.
   /// </summary>
   /// <remarks>
-  /// Derived from the placing link instance, not from the placement transform: the transform hash it replaces kept
-  /// only the basis diagonal at 1dp, so +90° and −90° about a shared origin hashed alike and both placements
-  /// interned to one object [ENG-9263]. Keyed off <see cref="DocumentToConvert.LinkInstance"/> rather than "has a
-  /// transform" because the HOST document also has one under Project Base / Survey / Shared Coordinates, which
-  /// suffixed host elements and made the parameter editor refuse them as linked. Still <c>_t</c> + lowercase hex,
-  /// so the <c>_t[a-f0-9]+$</c> probe and the suffix-stripping convention keep working — a raw UniqueId has hyphens.
+  /// Hashes the placing link instance, not the transform: the old hash kept only the basis diagonal at 1dp, so
+  /// +90° and −90° about a shared origin collided into one object [ENG-9263]. Keyed off
+  /// <see cref="DocumentToConvert.LinkInstance"/> rather than "has a transform" because the host document also has
+  /// one under Project Base / Survey / Shared Coordinates, which suffixed host elements and made the parameter
+  /// editor refuse them as linked. Still <c>_t</c> + lowercase hex, so the existing <c>_t[a-f0-9]+$</c> probe and
+  /// suffix-stripping keep working — a raw UniqueId has hyphens.
   /// </remarks>
   public string GetPlacementSuffix(DocumentToConvert documentToConvert)
   {

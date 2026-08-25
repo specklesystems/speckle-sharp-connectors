@@ -6,19 +6,11 @@ using Speckle.Converters.RevitShared.Settings;
 namespace Speckle.Converters.RevitShared.ToSpeckle.Properties;
 
 /// <summary>
-/// The layer buildup of a compound element type — every <see cref="DB.HostObjAttributes"/> subclass, so walls,
-/// floors, roofs and ceilings alike. One record per layer: material, function and thickness.
+/// The layer buildup of a compound element type — walls, floors, roofs, ceilings [ENG-9338]. Sits beside
+/// <c>Material Quantities</c> at the top of <c>properties</c>, not in <c>Parameters.Type Parameters</c>, which
+/// routed it into the type-scoped eav table where the flattener dropped it. Layers are keyed by ordinal in
+/// <c>GetLayers()</c> order (exterior → interior).
 /// </summary>
-/// <remarks>
-/// Lives beside <c>Material Quantities</c> at the top of <c>properties</c>, not inside
-/// <c>Parameters.Type Parameters</c> where <see cref="ParameterExtractor"/> used to build it [ENG-9338]. The old
-/// home routed it into the type-scoped eav table, readable only through a join, and the property flattener dropped
-/// it there outright. Each layer field is parameter-shaped (<c>{ name, value, units }</c>) — the same shape ODA
-/// publishes and the shape the flatten already collapses to one row per field with the unit on the row — so this
-/// needs no special-casing downstream. Layers are keyed by ORDINAL in <c>GetLayers()</c> order (exterior →
-/// interior); the former <c>{material} ({layerId})</c> key carried no order at all, and a buildup without its order
-/// is not a buildup.
-/// </remarks>
 public class CompoundStructureExtractor
 {
   private readonly IConverterSettingsStore<RevitConversionSettings> _settingsStore;
@@ -85,10 +77,8 @@ public class CompoundStructureExtractor
     return result;
   }
 
-  // The parameter shape the whole pipeline already understands — { name, value, units } — which is also what ODA
-  // publishes for every Revit property. EavExtraction's generic walk collapses it to one row per field with the
-  // unit on the row, so the layer buildup needs no special-casing anywhere downstream. A layer with no assigned
-  // material carries a null value and simply produces no material row.
+  // The parameter shape ODA publishes and the flatten already collapses to one row per field, unit on the row —
+  // so the buildup needs no special-casing downstream. A null value simply produces no row.
   private static Dictionary<string, object?> Field(string name, object? value, string? units = null)
   {
     var field = new Dictionary<string, object?>() { ["name"] = name, ["value"] = value };
