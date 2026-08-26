@@ -383,7 +383,9 @@ internal sealed class GrasshopperArtefactObjectBuilder
         ObjectIndex = objK,
         ApplicationId = totalCount == 1 ? appId : $"{appId}:g{ord++}",
         Color = colorByObject.TryGetValue(appId, out var iArgb) ? System.Drawing.Color.FromArgb(iArgb) : null,
-        // the placement's own material sources the INSTANCE node, so try that before the object-keyed map [ENG-9163]
+        // A placement's own paint arrives object-keyed (OBJECT_HAS_MATERIAL) or, in pre-split bundles, keyed by its
+        // INSTANCE node K (legacy HAS_MATERIAL ord=1) — a bundle carries one vintage or the other, never both, so
+        // either lookup hitting is decisive [ENG-9163, ENG-9368].
         Material =
           materialByInstance.TryGetValue(e.Dst, out var instMat) ? instMat
           : materialByObject.TryGetValue(appId, out var iMat) ? iMat
@@ -490,7 +492,8 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // display-mesh geometry K → material node K) to BOTH a geometry-K lookup (covers standalone DEFINITION/instance
   // geometry, which has no owning object) and an object-appId lookup (covers atomic display objects, resolved via the
   // Display-edges reverse map — robust to whether the object's decoded geometry actually came from its SOLID or
-  // DISPLAY blob, since HAS_MATERIAL only ever targets the display-mesh K). Mirrors
+  // DISPLAY blob, since HAS_MATERIAL only ever targets the display-mesh K). Placement paint arrives separately, on
+  // OBJECT_HAS_MATERIAL (object plane) or the legacy INSTANCE-keyed ord=1 shape — see below. Mirrors
   // RhinoHostObjectArtefactBuilder.CreateMaterials exactly; reuses the same SpeckleMaterialWrapperGoo.CastFrom(RenderMaterial)
   // construction path the v1 GH receive uses (GrasshopperMaterialUnpacker), so a bake/re-send round-trips the same way.
   private static (
@@ -553,8 +556,24 @@ internal sealed class GrasshopperArtefactObjectBuilder
       }
     }
 
-    // Instance-sourced: a material painted on a block placement, keyed by its INSTANCE node K. A placement owns no
-    // geometry of its own, so it's invisible to the loop above [ENG-9163]. Mirrors RhinoHostObjectArtefactBuilder.
+    // Placement paint (OBJECT_HAS_MATERIAL, rel 26): a material set directly on a block placement. A placement owns
+    // no geometry, so it's invisible to the geometry loop above — resolve it straight through the object dictionary,
+    // the same appId key the placement's own wrapper joins on [ENG-9368]. FILL semantics (rel 26): a geometry-level
+    // HAS_MATERIAL already recorded above wins, so this only fills where that said nothing.
+    foreach (var kv in bundle.Relations.MaterialByObject)
+    {
+      if (
+        wrapperByMaterialNode.TryGetValue(kv.Value, out var wrapper)
+        && bundle.ObjectAppIds.TryGetValue(kv.Key, out var appId)
+        && !byObject.ContainsKey(appId)
+      )
+      {
+        byObject[appId] = wrapper;
+      }
+    }
+
+    // Legacy fallback: pre-split bundles carried placement paint as HAS_MATERIAL ord=1 keyed by the INSTANCE node K
+    // [ENG-9163]. Kept for bundles published before rel 26 existed. Mirrors RhinoHostObjectArtefactBuilder.
     var byInstance = new Dictionary<int, SpeckleMaterialWrapper>();
     foreach (var kv in bundle.Relations.MaterialByInstance)
     {
