@@ -41,7 +41,7 @@ namespace Speckle.Connectors.Rhino.Operations.Receive;
 /// COLLECTION tree; materials from MATERIAL nodes (HAS_MATERIAL). Instances follow the host-agnostic model used by
 /// Revit and Rhino alike: a DEFINITION node owns its geometry directly (DEFINES → geometry), and each DISPLAY_INSTANCE
 /// edge (object → INSTANCE node) places that definition with the instance node's transform. The receive-side twin of
-/// the send-side <c>RhinoArtifactRootObjectBuilder</c>.
+/// the send-side <c>RhinoBundleBuilder</c>.
 /// </summary>
 [SuppressMessage(
   "Maintainability",

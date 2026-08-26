@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Headless (DUI3-free) slice of Speckle.Connectors.RhinoShared: the artefact send path around
-       RhinoArtifactRootObjectBuilder, linked file-by-file because the shared project hard-requires
+       RhinoBundleBuilder, linked file-by-file because the shared project hard-requires
        DUI3 WebView/WPF/RhinoWindows and cannot be consumed headless wholesale. Consumed by the
        speckle-converters host via sibling-checkout project references. -->
   <PropertyGroup>
@@ -36,8 +36,8 @@
 
   <ItemGroup>
     <Compile
-      Include="..\Speckle.Connectors.RhinoShared\Operations\Send\RhinoArtifactRootObjectBuilder.cs"
-      Link="Operations\Send\RhinoArtifactRootObjectBuilder.cs"
+      Include="..\Speckle.Connectors.RhinoShared\Operations\Send\RhinoBundleBuilder.cs"
+      Link="Operations\Send\RhinoBundleBuilder.cs"
     />
     <Compile
       Include="..\Speckle.Connectors.RhinoShared\HostApp\RhinoInstanceUnpacker.cs"

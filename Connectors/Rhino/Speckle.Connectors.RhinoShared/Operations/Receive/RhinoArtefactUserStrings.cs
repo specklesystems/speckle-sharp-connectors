@@ -21,7 +21,7 @@ internal static class RhinoArtefactUserStrings
 
   /// <summary>
   /// Bundle plumbing rather than user data: the root scalars every object carries
-  /// (<c>RhinoArtifactRootObjectBuilder.RootScalars</c>) and the hatch styling the send side stashes for
+  /// (<c>RhinoBundleBuilder.RootScalars</c>) and the hatch styling the send side stashes for
   /// <see cref="RhinoHatchStyler"/>. All of it is either already applied to the native object (name, units, hatch
   /// pattern) or reconstructed on the next send, so writing it as user text would only add noise the user then
   /// sees in the Rhino properties panel.

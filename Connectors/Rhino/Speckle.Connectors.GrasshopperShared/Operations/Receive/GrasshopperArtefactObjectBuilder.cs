@@ -64,7 +64,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     var collectionTopologies = CreateCollectionTopologies(bundle);
 
     // HAS_MATERIAL/HAS_COLOR bind to an object's *display-mesh* geometry K specifically — never its SOLID (3dm) K, per
-    // both RhinoArtifactRootObjectBuilder and GrasshopperArtifactRootObjectBuilder's send-side comments. DecodeObjectGeometry
+    // both RhinoBundleBuilder and GrasshopperArtifactRootObjectBuilder's send-side comments. DecodeObjectGeometry
     // prefers the solid when both exist, so for a solid-backed object the geomK actually decoded never appears in
     // MaterialByGeometry/ColorByGeometry at all. Resolve via the object instead (through the Display-edges reverse map),
     // matching RhinoHostObjectArtefactBuilder.CreateMaterials/CreateColors, so material/color don't depend on which of

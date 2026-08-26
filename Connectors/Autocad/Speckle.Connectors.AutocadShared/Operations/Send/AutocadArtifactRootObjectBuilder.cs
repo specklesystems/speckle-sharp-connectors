@@ -42,7 +42,7 @@ namespace Speckle.Connectors.Autocad.Operations.Send;
 /// the bundle via <see cref="ArtifactPipeline"/>.
 /// </summary>
 /// <remarks>
-/// <para>Mirrors <c>RhinoArtifactRootObjectBuilder</c>. Two AutoCAD-specific shapes:</para>
+/// <para>Mirrors <c>RhinoBundleBuilder</c>. Two AutoCAD-specific shapes:</para>
 /// <list type="number">
 ///   <item><b>Solids.</b> A <c>Solid3d</c> is kept losslessly as the raw ACIS-SAT blob the converter already
 ///   produced (<see cref="AutocadObject.rawEncoding"/>, base64 SAT). It is written to <c>geometries.parquet</c>
@@ -995,7 +995,7 @@ public class AutocadArtifactRootObjectBuilder(
   // immune to content-hash dedup, which can hand two members in different definitions the same geometry K); PLACES
   // member object → its nested INSTANCE node (association ONLY — never a render root, that is DISPLAY_INSTANCE's
   // job). This is what keeps a member's identity — its layer, eav properties and colour source — reachable from the
-  // definition graph [ENG-9344]. Mirrors RhinoArtifactRootObjectBuilder.
+  // definition graph [ENG-9344]. Mirrors RhinoBundleBuilder.
   private static void EmitMemberGraphJoin(
     ObjectsArtifactPipeline pipeline,
     int defK,

@@ -437,7 +437,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     // The authoritative 3dm blob, kept verbatim so a closed Brep, Extrusion or SubD comes back as itself rather than
     // as its display mesh. A standalone object links it with a SOLID edge; a definition member has no standalone
     // placement, so its solid rides DEFINES instead - added to gKs below, alongside the display meshes, and the
-    // receiver prefers it per member [ENG-9160]. Mirrors RhinoArtifactRootObjectBuilder.
+    // receiver prefers it per member [ENG-9160]. Mirrors RhinoBundleBuilder.
     int? memberSolidK = null;
     if (rawEncoding is not null && rawEncoding.format == RawEncodingFormats.RHINO_3DM)
     {
@@ -499,7 +499,7 @@ public class GrasshopperArtifactRootObjectBuilder(
         else if (geometryKsByAppId.TryGetValue(memberId, out var memberGKs))
         {
           // All geometry of one member shares its member ordinal, so receive can group the member's authoritative solid
-          // + its display mesh(es) and pick the solid over its shadow (mirrors RhinoArtifactRootObjectBuilder).
+          // + its display mesh(es) and pick the solid over its shadow (mirrors RhinoBundleBuilder).
           foreach (var gK in memberGKs)
           {
             pipeline.Defines(defK, gK, memberOrd);
