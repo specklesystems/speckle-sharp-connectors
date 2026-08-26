@@ -78,7 +78,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     // SpeckleBlockDefinitionWrapper per DEFINITION node, built once and shared by every placement, so a placement
     // becomes a SpeckleBlockInstanceWrapper referencing the shared definition instead of duplicated+transformed geometry.
     var definitions = new Dictionary<int, SpeckleBlockDefinitionWrapper>();
-    var instEdgesByObject = new Dictionary<int, List<ArtefactEdge>>();
+    var instEdgesByObject = new Dictionary<int, List<RelationRow>>();
     var nestedInstanceNodes = new HashSet<int>();
     if (rels.DisplayInstanceEdges.Count > 0)
     {
@@ -204,9 +204,9 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // Filters an object's DISPLAY_INSTANCE edges down to the ones this receive path can actually place: not a nested
   // placement already represented inside its parent definition (see nestedInstanceNodes), and resolving to a
   // successfully-built SpeckleBlockDefinitionWrapper.
-  private static List<ArtefactEdge>? ResolveValidInstanceEdges(
+  private static List<RelationRow>? ResolveValidInstanceEdges(
     int objK,
-    Dictionary<int, List<ArtefactEdge>> instEdgesByObject,
+    Dictionary<int, List<RelationRow>> instEdgesByObject,
     HashSet<int> nestedInstanceNodes,
     ArtefactBundle bundle,
     Dictionary<int, SpeckleBlockDefinitionWrapper> definitions
@@ -216,7 +216,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
     {
       return null;
     }
-    List<ArtefactEdge>? valid = null;
+    List<RelationRow>? valid = null;
     foreach (var e in instEdges)
     {
       if (nestedInstanceNodes.Contains(e.Dst))
@@ -231,7 +231,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         continue;
       }
-      (valid ??= new List<ArtefactEdge>()).Add(e);
+      (valid ??= new List<RelationRow>()).Add(e);
     }
     return valid;
   }
@@ -345,7 +345,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
   // SpeckleBlockDefinitionWrapper (see BuildDefinitions) instead of duplicating its geometry.
   private static void EmitInstanceWrappers(
     int objK,
-    List<ArtefactEdge> validInstEdges,
+    List<RelationRow> validInstEdges,
     ArtefactBundle bundle,
     Dictionary<int, SpeckleBlockDefinitionWrapper> definitions,
     int totalCount,
