@@ -22,6 +22,13 @@ public abstract class SpeckleWrapper
   }
 
   /// <summary>
+  /// Dense index in the source bundle's <c>eav.objects</c>, or null when it didn't come from one (canvas-authored, or
+  /// legacy receive). With <see cref="ModelContext"/>, enough to resolve this object in the graph. Null on a
+  /// collection - those are container nodes, not objects.
+  /// </summary>
+  public int? ObjectIndex { get; set; }
+
+  /// <summary>
   /// The wrapped <see cref="Base"/>
   /// </summary>
   public abstract Base Base { get; set; }

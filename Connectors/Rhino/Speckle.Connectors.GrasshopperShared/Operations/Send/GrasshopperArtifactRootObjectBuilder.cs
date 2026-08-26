@@ -453,11 +453,14 @@ public class GrasshopperArtifactRootObjectBuilder(
       }
     }
 
+    // One geometry can be walked twice - bare in a collection and again as a member of an object - and both objects
+    // genuinely display it. The DISPLAY edges below are per-object so both are right, but the K must be listed once:
+    // EmitValueNodes multiplies this list by the packer's object ids, so a repeat squares the appearance [ENG-9382].
     var gKs = ctx.GeometryKsByAppId.TryGetValue(geometryAppId, out var existing)
       ? existing
       : ctx.GeometryKsByAppId[geometryAppId] = new List<int>();
 
-    if (memberSolidK is int msk)
+    if (memberSolidK is int msk && !gKs.Contains(msk))
     {
       gKs.Add(msk);
     }
@@ -471,7 +474,10 @@ public class GrasshopperArtifactRootObjectBuilder(
       {
         ctx.Pipeline.Display(objK, gK, displayOrd++); // members render only via DEFINES through a placed instance's transform
       }
-      gKs.Add(gK);
+      if (!gKs.Contains(gK))
+      {
+        gKs.Add(gK);
+      }
     }
   }
 
@@ -522,7 +528,8 @@ public class GrasshopperArtifactRootObjectBuilder(
         value.emissive,
         value["ior"] as double? // dynamic prop (v1 unpacker convention); null when the host has no IOR [ENG-8791]
       );
-      foreach (var objectId in materialProxy.objects)
+      // Distinct: the packer appends per walk, so geometry reached twice lists its id twice
+      foreach (var objectId in materialProxy.objects.Distinct())
       {
         if (geometryKsByAppId.TryGetValue(objectId, out var gKs))
         {
@@ -543,7 +550,7 @@ public class GrasshopperArtifactRootObjectBuilder(
     foreach (var colorProxy in colorPacker.ColorProxies.Values)
     {
       int colorK = pipeline.AddColor(colorProxy.value);
-      foreach (var objectId in colorProxy.objects)
+      foreach (var objectId in colorProxy.objects.Distinct())
       {
         if (geometryKsByAppId.TryGetValue(objectId, out var gKs))
         {

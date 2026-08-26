@@ -332,9 +332,7 @@ public abstract class ReceiveComponentBase(
         new GrasshopperArtefactObjectBuilder().Build(
           bundle,
           receiveInfo.ModelName,
-          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId),
-          // only the deprecated variant reaches here as a fallback, and its scripts expect DataObjects
-          groupAsDataObjects: !PreferArtefacts
+          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
         );
 
       foreach (var warning in buildWarnings)
