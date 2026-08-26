@@ -83,7 +83,7 @@ public class CreateCollection : VariableParameterComponentBase
     {
       AddRuntimeMessage(
         GH_RuntimeMessageLevel.Error,
-        "Collection contains no valid content. Ensure inputs are Speckle Geometry, Speckle Data Objects, or sub-collections."
+        "Collection contains no valid content. Ensure inputs are Speckle Geometry, Speckle Objects, or sub-collections."
       );
       return;
     }

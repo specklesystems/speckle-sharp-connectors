@@ -36,13 +36,13 @@ public partial class SpeckleDataObjectWrapperGoo : GH_Goo<SpeckleDataObjectWrapp
   }
 
   public override bool IsValid => Value?.DataObject is not null && Value.ApplicationId is not null;
-  public override string TypeName => "Speckle Data Object";
+  public override string TypeName => "Speckle Object";
   public override string TypeDescription => "Represents a Speckle data object";
 
   public override IGH_Goo Duplicate() => new SpeckleDataObjectWrapperGoo(Value.DeepCopy());
 
   public override string ToString() =>
-    $"Speckle Data Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
+    $"Speckle Object : {(string.IsNullOrWhiteSpace(Value.Name) ? Value.Base.speckle_type : Value.Name)}";
 
   /// <summary>
   /// Handles casting from other types to DataObject wrapper.

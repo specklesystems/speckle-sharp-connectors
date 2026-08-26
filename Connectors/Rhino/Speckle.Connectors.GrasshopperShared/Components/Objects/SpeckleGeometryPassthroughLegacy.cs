@@ -9,25 +9,32 @@ using Speckle.Sdk.Common;
 namespace Speckle.Connectors.GrasshopperShared.Components.Objects;
 
 /// <summary>
-/// Geometry, colour and material only. Name and properties belong to a Speckle Object - eav is keyed by object, and
-/// geometry rows are content-hash deduped, so attributes can't live there [ENG-9382].
+/// Deprecated. Kept working, unchanged, for scripts authored before name and properties moved to
+/// <see cref="SpeckleDataObjectPassthrough"/> [ENG-9382].
 /// </summary>
-[Guid("6B4E1D07-9A83-4F2C-B5D1-7E0C3A9F4128")]
-public class SpeckleGeometryPassthrough()
+/// <remarks>
+/// Its Name and Properties inputs were always dropped when the geometry went into an object - EmitDataObject reads
+/// shape, colour and material and nothing else - so nothing changes for an existing script.
+/// </remarks>
+[Guid("F9418610-ACAE-4417-B010-19EBEA6A121F")]
+public class SpeckleGeometryPassthroughLegacy()
   : SpecklePassthroughComponentBase(
-    "Speckle Geometry",
+    // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
+    "Speckle Geometry (legacy)",
     "SG",
-    "Create or modify a Speckle Geometry. Name and properties live on the Speckle Object that contains it.",
+    "Create or modify a Speckle Geometry. Deprecated - use the new Speckle Geometry component.",
     ComponentCategories.PRIMARY_RIBBON,
     ComponentCategories.OBJECTS
   )
 {
   public override Guid ComponentGuid => GetType().GUID;
   protected override Bitmap Icon => Resources.speckle_objects_geometry;
-  public override GH_Exposure Exposure => GH_Exposure.secondary;
+  public override GH_Exposure Exposure => GH_Exposure.hidden;
 
-  protected override int FixedInputCount => 4;
-  protected override int FixedOutputCount => 5;
+  public override bool Obsolete => true;
+
+  protected override int FixedInputCount => 6;
+  protected override int FixedOutputCount => 7;
 
   protected override void RegisterInputParams(GH_InputParamManager pManager)
   {
@@ -47,6 +54,18 @@ public class SpeckleGeometryPassthrough()
     );
     Params.Input[geoIndex].Optional = true;
 
+    int nameIndex = pManager.AddTextParameter("Name", "N", "Name of the Speckle Geometry", GH_ParamAccess.item);
+    Params.Input[nameIndex].Optional = true;
+
+    int propIndex = pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "P",
+      "The properties of the Speckle Geometry. Speckle Properties and User Content are accepted.",
+      GH_ParamAccess.item
+    );
+    Params.Input[propIndex].Optional = true;
+
     int colorIndex = pManager.AddColourParameter(
       "Color",
       "c",
@@ -63,6 +82,16 @@ public class SpeckleGeometryPassthrough()
       GH_ParamAccess.item
     );
     Params.Input[matIndex].Optional = true;
+
+    /* POC: disable for now as we are doing anything with this
+    pManager.AddTextParameter(
+      "Path",
+      "p",
+      "The Collection Path of the Speckle Object. Should be delimited with `:`",
+      GH_ParamAccess.item
+    );
+    Params.Input[6].Optional = true;
+    */
   }
 
   protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -70,6 +99,16 @@ public class SpeckleGeometryPassthrough()
     pManager.AddGenericParameter("Speckle Geometry", "SG", "Speckle Geometry", GH_ParamAccess.item);
 
     pManager.AddGeometryParameter("Geometry", "G", "Geometry of the Speckle Geometry.", GH_ParamAccess.item);
+
+    pManager.AddTextParameter("Name", "N", "Name of the Speckle Geometry", GH_ParamAccess.item);
+
+    pManager.AddParameter(
+      new SpecklePropertyGroupParam(),
+      "Properties",
+      "P",
+      "The properties of the Speckle Geometry",
+      GH_ParamAccess.item
+    );
 
     pManager.AddColourParameter("Color", "c", "The color of the Speckle Geometry", GH_ParamAccess.item);
 
@@ -91,7 +130,8 @@ public class SpeckleGeometryPassthrough()
 
   protected override void SolveInstance(IGH_DataAccess da)
   {
-    // deep copy so we don't mutate the input
+    // process the object
+    // deep copy so we don't mutate the object
     IGH_Goo? inputObject = null;
     SpeckleGeometryWrapper? result = null;
     if (da.GetData(0, ref inputObject))
@@ -116,12 +156,20 @@ public class SpeckleGeometryPassthrough()
       return;
     }
 
+    string? inputName = null;
+    da.GetData(2, ref inputName);
+
+    SpecklePropertyGroupGoo? inputProperties = null;
+    da.GetData(3, ref inputProperties);
+
     Color? inputColor = null;
-    da.GetData(2, ref inputColor);
+    da.GetData(4, ref inputColor);
 
     SpeckleMaterialWrapperGoo? inputMaterial = null;
-    da.GetData(3, ref inputMaterial);
+    da.GetData(5, ref inputMaterial);
 
+    // process geometry
+    // deep copy so we don't mutate the input geo which may be speckle objects
     if (inputGeometry != null)
     {
       if (inputGeometry.ToSpeckleGeometryWrapper() is SpeckleGeometryWrapper geoWrapper)
@@ -133,7 +181,7 @@ public class SpeckleGeometryPassthrough()
         }
         else
         {
-          // switch to the incoming geo's wrapper type if this is a mutation on the object
+          // we need to switch to the actual object wrapper type of the incoming geo if this is a mutation on the object
           if (mutatingGeo is SpeckleBlockInstanceWrapper mutatingInstance && result is not SpeckleBlockInstanceWrapper)
           {
             MatchNonGeometryProps(mutatingInstance, result);
@@ -145,24 +193,10 @@ public class SpeckleGeometryPassthrough()
             result = mutatingGeo;
           }
 
-          // the base carries the properties, so swapping it below takes the incoming geometry's - the name is
-          // carried across explicitly, the properties are not
-          bool dropsProperties = result.Properties.Value.Count > 0 && !result.Properties.Equals(mutatingGeo.Properties);
-
-          // assign before the base, otherwise wrapper name and app id reset
-          mutatingGeo.Base[Constants.NAME_PROP] = result.Name;
-          mutatingGeo.Base.applicationId = result.ApplicationId;
+          mutatingGeo.Base[Constants.NAME_PROP] = result.Name; // assign these before assigning base since otherwise wrapper name and app will reset
+          mutatingGeo.Base.applicationId = result.ApplicationId; // assign these before assigning base since otherwise wrapper name and app will reset
           result.Base = mutatingGeo.Base;
           result.GeometryBase = mutatingGeo.GeometryBase;
-
-          if (dropsProperties)
-          {
-            AddRuntimeMessage(
-              GH_RuntimeMessageLevel.Warning,
-              "Replacing the geometry dropped its properties. The name was kept. Use a Speckle Object if you need "
-                + "the properties."
-            );
-          }
         }
       }
       else
@@ -176,34 +210,52 @@ public class SpeckleGeometryPassthrough()
     }
 
     result.NotNull();
+    // process name
+    if (inputName != null)
+    {
+      result.Name = inputName;
+    }
 
+    // process properties
+    if (inputProperties != null)
+    {
+      result.Properties = inputProperties;
+    }
+
+    // process color (no mutation)
     if (inputColor != null)
     {
       result.Color = inputColor;
     }
 
+    // process material (no mutation)
     if (inputMaterial != null)
     {
       result.Material = inputMaterial.Value;
     }
 
+    // process application id (only if user provided one, otherwise preserve existing)
     if (TryGetApplicationIdInput(da, out string? inputAppId))
     {
       result.ApplicationId = inputAppId;
     }
 
+    // get the path
     string? path =
       result.Path.Count > 1 ? string.Join(Constants.LAYER_PATH_DELIMITER, result.Path) : result.Path.FirstOrDefault();
 
+    // set all the data
     da.SetData(0, result.CreateGoo());
     da.SetData(1, result.GeometryBase);
-    da.SetData(2, result.Color);
-    da.SetData(3, result.Material);
-    da.SetData(4, path);
+    da.SetData(2, result.Name);
+    da.SetData(3, result.Properties);
+    da.SetData(4, result.Color);
+    da.SetData(5, result.Material);
+    da.SetData(6, path);
     SetApplicationIdOutput(da, result.ApplicationId);
   }
 
-  /// <summary>Keeps geometry and wrapped base, assigns everything else from the input wrapper.</summary>
+  // keeps the geometry and wrapped base the same while assigning all other props from the inut wrapper
   private void MatchNonGeometryProps(SpeckleGeometryWrapper wrapper, SpeckleGeometryWrapper wrapperToMatch)
   {
     wrapper.Name = wrapperToMatch.Name;
