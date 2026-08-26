@@ -833,8 +833,9 @@ public class RhinoArtifactRootObjectBuilder(
       }
     }
 
-    // 3) by-object display colors → HAS_COLOR (geometry → COLOR node). Same shape as materials: Rhino color proxies
-    // list OBJECT ids, so resolve each to its display-mesh geometry K(s).
+    // 3) by-object display colors → HAS_COLOR (geometry → COLOR node), or OBJECT_HAS_COLOR for a geometry-less
+    // placement. Same shape as materials: Rhino color proxies list OBJECT ids, so resolve each to its
+    // display-mesh geometry K(s).
     foreach (var colorProxy in model.Colors)
     {
       int colorK = pipeline.AddColor(colorProxy.value);
@@ -849,11 +850,12 @@ public class RhinoArtifactRootObjectBuilder(
         }
         else if (instanceKByObjectId.ContainsKey(objectId))
         {
-          // block instance: no geometry of its own — emit the colour OBJECT-sourced (spec HAS_COLOR src is
-          // geometry|object; the viewer looks up both) so per-placement overrides survive [ENG-8825].
-          // srcIsObject: the object and geometry K-spaces overlap numerically, so the edge carries a namespace
-          // tag (ord=1) — without it receive can't tell this from a geometry-sourced colour [ENG-8822].
-          pipeline.HasColor(pipeline.InternObject(objectId), colorK, srcIsObject: true);
+          // A colour set directly on a block placement: it owns no geometry to hang HAS_COLOR on, so it rides the
+          // object plane instead [bundle-spec rel 27 OBJECT_HAS_COLOR] — successor of the tagged HAS_COLOR (rel 6,
+          // ord=1) stopgap from ENG-8822. Rel 27 is object-sourced by definition, so no namespace tag is needed;
+          // receive folds both vintages into ColorByObject, so pre-split bundles keep resolving [ENG-9368].
+          // OVERRIDE semantics: the placement's colour beats the definition geometry's own [ENG-8825].
+          pipeline.ObjectHasColor(pipeline.InternObject(objectId), colorK);
         }
       }
     }

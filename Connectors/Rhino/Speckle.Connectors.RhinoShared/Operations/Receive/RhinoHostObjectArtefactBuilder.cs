@@ -153,7 +153,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       );
     }
 
-    // By-object display colours (HAS_COLOR → COLOR node), resolved to owning object like materials. appId → argb.
+    // By-object display colours (HAS_COLOR / OBJECT_HAS_COLOR → COLOR node), resolved to owning object like
+    // materials. appId → argb.
     var colorByObject = CreateColors(bundle, objByGeom);
 
     // 3 - atomic geometry (objects with a direct DISPLAY/SOLID). Instances + non-geometric elements handled below.
@@ -713,7 +714,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
         atts.RenderMaterial = RenderContent.FromId(doc, materialGuid) as RhinoRenderMaterial;
         atts.MaterialSource = ObjectMaterialSource.MaterialFromObject;
       }
-      // the placement's own colour (object-sourced HAS_COLOR), so a per-instance override survives [ENG-9114]
+      // the placement's own colour (OBJECT_HAS_COLOR, or legacy HAS_COLOR ord=1), so a per-instance override
+      // survives [ENG-9114]
       if (colorByObject.TryGetValue(appId, out int instArgb))
       {
         atts.ObjectColor = Color.FromArgb(instArgb);
@@ -887,8 +889,8 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
           );
           // A nested-block member owns no geometry K, so its whole join — layer, name, user strings, colour — hangs
           // off its INSTANCE node K instead. Its material is placement paint (OBJECT_HAS_MATERIAL re-keyed via
-          // PLACES, or legacy HAS_MATERIAL ord=1), and its colour is object-sourced (HAS_COLOR ord=1), so no
-          // geometry K goes in [ENG-9213].
+          // PLACES, or legacy HAS_MATERIAL ord=1), and its colour is object-plane (OBJECT_HAS_COLOR, or legacy
+          // HAS_COLOR ord=1), so no geometry K goes in [ENG-9213].
           materialByInstance.TryGetValue(instNodeK, out Guid nestedMaterial);
           var nestedAtts = BuildMemberAttributes(
             doc,
@@ -1039,8 +1041,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   /// <param name="geometryK">The member's geometry K when it has one, else null. Geometry and INSTANCE node Ks
   /// overlap numerically, so this must stay null for a nested member or its colour would be looked up in the wrong
   /// K-space and could hit an unrelated geometry's HAS_COLOR.</param>
-  /// <param name="materialGuid">Resolved by the caller — geometry-sourced (ord=0) for a direct member,
-  /// instance-sourced (ord=1) for a nested placement. <see cref="Guid.Empty"/> leaves the material by-layer.</param>
+  /// <param name="materialGuid">Resolved by the caller — geometry-sourced (HAS_MATERIAL) for a direct member,
+  /// placement paint (OBJECT_HAS_MATERIAL, or legacy HAS_MATERIAL ord=1) for a nested placement.
+  /// <see cref="Guid.Empty"/> leaves the material by-layer.</param>
   private static ObjectAttributes BuildMemberAttributes(
     RhinoDoc doc,
     ArtefactBundle bundle,
@@ -1089,9 +1092,10 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
     return atts;
   }
 
-  // A member's by-object colour: geometry-sourced (HAS_COLOR ord=0) for a direct member, object-sourced (ord=1) for a
-  // nested placement — the same two shapes CreateColors handles, except CreateColors resolves through
-  // ObjectByGeometry, which is built from the DISPLAY edges a member deliberately never has.
+  // A member's by-object colour: geometry-sourced (HAS_COLOR) for a direct member, object-plane (OBJECT_HAS_COLOR,
+  // or legacy HAS_COLOR ord=1 — the reader folds both into ColorByObject) for a nested placement. The same two
+  // shapes CreateColors handles, except CreateColors resolves through ObjectByGeometry, which is built from the
+  // DISPLAY edges a member deliberately never has.
   private static int? MemberColor(ArtefactBundle bundle, int memberObjK, int? geometryK)
   {
     var rels = bundle.Relations;
@@ -1370,8 +1374,9 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
   // comparison would report every material as changed.
   private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-6;
 
-  // By-object display colours: HAS_COLOR (geometry → COLOR node) resolved to the owning object's appId → argb, mirroring
-  // CreateMaterials. Applied as ObjectColor + ColorSource.ColorFromObject on bake.
+  // By-object display colours: HAS_COLOR (geometry → COLOR node) and OBJECT_HAS_COLOR (object → COLOR node) resolved
+  // to the owning object's appId → argb, mirroring CreateMaterials. Applied as ObjectColor +
+  // ColorSource.ColorFromObject on bake.
   private static Dictionary<string, int> CreateColors(ArtefactBundle bundle, Dictionary<int, int> objByGeom)
   {
     var byObject = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -1387,9 +1392,11 @@ public class RhinoHostObjectArtefactBuilder : IArtifactHostObjectBuilder
       }
     }
 
-    // Object-sourced edges (ord=1): a block placement's own colour. A placement owns no geometry, so it never appears
-    // in objByGeom — resolve it straight through the object dictionary [ENG-8822, ENG-9114]. Same shape as the Autocad
-    // artefact builder's MapColors.
+    // Object-plane edges (OBJECT_HAS_COLOR, rel 27 — the reader folds the legacy ord=1-tagged HAS_COLOR object src
+    // into the same map, so pre-split bundles keep resolving): a block placement's own colour. A placement owns no
+    // geometry, so it never appears in objByGeom — resolve it straight through the object dictionary [ENG-8822,
+    // ENG-9114, ENG-9368]. Runs after the geometry loop, so the object colour OVERRIDES the geometry one, which is
+    // rel 27's precedence [spec #16]. Same shape as the Autocad artefact builder's MapColors.
     foreach (var kv in bundle.Relations.ColorByObject)
     {
       if (
