@@ -185,12 +185,13 @@ public class ExploreComponent : GH_Component, IGH_VariableParameterComponent
 
     var values = wrapper switch
     {
-      SpeckleGeometryWrapper { ObjectIndex: { } objK } => ResolveObject(graph, objK),
-      // no object index means it didn't come out of a bundle - don't fall through to the model-scoped branch and
-      // hand back levels for an object the graph doesn't know
-      SpeckleGeometryWrapper => Explain(Constants.EXPLORE_NO_REFERENCE_MESSAGE),
+      // a collection is a container node, never an object - check it before the index
       SpeckleCollectionWrapper => ResolveModel(graph),
-      _ => Explain($"Nothing to explore for a {wrapper.GetType().Name}."),
+      // geometry and Speckle Objects both carry the index; a Speckle Object is the object the graph knows
+      SpeckleWrapper { ObjectIndex: { } objK } => ResolveObject(graph, objK),
+      // no index means it didn't come out of a bundle - don't fall through to the model-scoped branch and hand back
+      // levels for an object the graph doesn't know
+      _ => Explain(Constants.EXPLORE_NO_REFERENCE_MESSAGE),
     };
 
     if (values is { Count: 0 })

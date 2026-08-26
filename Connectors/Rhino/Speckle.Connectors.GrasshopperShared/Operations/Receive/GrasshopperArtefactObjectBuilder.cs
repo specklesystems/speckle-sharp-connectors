@@ -151,7 +151,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
         && (geometryWrappers.Count > 0 || instCount == 0)
       )
       {
-        collection.Elements.Add(BuildDataObject(appId, name, props, geometryWrappers, collection));
+        collection.Elements.Add(BuildDataObject(objK, appId, name, props, geometryWrappers, collection));
       }
       else
       {
@@ -307,6 +307,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
   /// same as the v1 receive path does.
   /// </summary>
   private static SpeckleDataObjectWrapper BuildDataObject(
+    int objK,
     string appId,
     string? name,
     Dictionary<string, object?>? props,
@@ -332,6 +333,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       Name = dataObject.name,
       Properties = new SpecklePropertyGroupGoo(properties),
       ApplicationId = appId,
+      ObjectIndex = objK,
     };
   }
 
