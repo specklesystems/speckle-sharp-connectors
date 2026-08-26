@@ -17,7 +17,7 @@ public class SpeckleGeometryPassthrough()
   : SpecklePassthroughComponentBase(
     "Speckle Geometry",
     "SG",
-    "Create or modify a Speckle Geometry",
+    "Create or modify a Speckle Geometry. Name and properties live on the Speckle Object that contains it.",
     ComponentCategories.PRIMARY_RIBBON,
     ComponentCategories.OBJECTS
   )

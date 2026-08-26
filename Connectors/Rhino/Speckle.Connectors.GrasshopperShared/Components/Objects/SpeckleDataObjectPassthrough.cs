@@ -171,10 +171,12 @@ public class SpeckleDataObjectPassthrough()
     if (hasGeometries)
     {
       result.Geometries.Clear();
+      bool replacedAttributes = false;
       foreach (var inputGeo in inputGeometry)
       {
         // deep copy so we don't mutate the input geo which may be speckle geometry
         SpeckleGeometryWrapper mutatingGeo = inputGeo.Value.DeepCopy();
+        replacedAttributes |= HasOwnAttributes(mutatingGeo, result);
 
         // assign fields before adding, otherwise they will be out of sync with wrapper
         mutatingGeo.Base[Constants.NAME_PROP] = result.Name;
@@ -183,6 +185,15 @@ public class SpeckleDataObjectPassthrough()
         mutatingGeo.Path = result.Path;
 
         result.Geometries.Add(mutatingGeo);
+      }
+
+      if (replacedAttributes)
+      {
+        AddRuntimeMessage(
+          GH_RuntimeMessageLevel.Warning,
+          "The name or properties on the incoming geometry were replaced by this object's. Name and properties "
+            + "belong to the object, not to its geometry."
+        );
       }
     }
     else if (inputName != null || inputProperties != null)
@@ -226,6 +237,11 @@ public class SpeckleDataObjectPassthrough()
     da.SetData(4, path);
     SetApplicationIdOutput(da, result.ApplicationId);
   }
+
+  /// <summary>Whether the geometry carries a name or properties of its own that this object is about to replace.</summary>
+  private static bool HasOwnAttributes(SpeckleGeometryWrapper geometry, SpeckleDataObjectWrapper owner) =>
+    (!string.IsNullOrEmpty(geometry.Name) && geometry.Name != owner.Name)
+    || (geometry.Properties.Value.Count > 0 && !geometry.Properties.Equals(owner.Properties));
 
   public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
   {
