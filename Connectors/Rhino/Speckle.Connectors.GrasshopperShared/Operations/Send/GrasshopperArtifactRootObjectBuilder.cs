@@ -397,8 +397,8 @@ public class GrasshopperArtifactRootObjectBuilder(
       ctx.Pipeline.DisplayInstance(objK, instK, 0);
     }
 
-    // A placement's own colour and material are object-sourced, so they carry the ord=1 namespace tag the reader
-    // expects (HAS_COLOR / HAS_MATERIAL on the object, not on a geometry) [ENG-9163].
+    // A placement's own colour and material hang off its OBJECT K, not any geometry — EmitValueNodes turns these
+    // into OBJECT_HAS_COLOR / OBJECT_HAS_MATERIAL [bundle-spec rels 27/26] [ENG-9163].
     ctx.ColorPacker.ProcessColor(appId, instance.Color);
     ctx.MaterialPacker.ProcessMaterial(appId, instance.Material);
 
@@ -554,8 +554,9 @@ public class GrasshopperArtifactRootObjectBuilder(
         }
         else if (instanceObjectKByAppId.TryGetValue(objectId, out var objK))
         {
-          // by-object colour on a placement: the object and geometry namespaces overlap, hence the tag
-          pipeline.HasColor(objK, colorK, srcIsObject: true);
+          // a placement paints its own colour: no geometry of its own, so it lives on the object plane as
+          // OBJECT_HAS_COLOR [bundle-spec rel 27] — the retired HAS_COLOR ord=1 object-src overload is gone.
+          pipeline.ObjectHasColor(objK, colorK);
         }
       }
     }
