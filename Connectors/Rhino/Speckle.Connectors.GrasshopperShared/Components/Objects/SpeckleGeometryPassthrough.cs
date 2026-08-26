@@ -145,11 +145,24 @@ public class SpeckleGeometryPassthrough()
             result = mutatingGeo;
           }
 
+          // the base carries the properties, so swapping it below takes the incoming geometry's - the name is
+          // carried across explicitly, the properties are not
+          bool dropsProperties = result.Properties.Value.Count > 0 && !result.Properties.Equals(mutatingGeo.Properties);
+
           // assign before the base, otherwise wrapper name and app id reset
           mutatingGeo.Base[Constants.NAME_PROP] = result.Name;
           mutatingGeo.Base.applicationId = result.ApplicationId;
           result.Base = mutatingGeo.Base;
           result.GeometryBase = mutatingGeo.GeometryBase;
+
+          if (dropsProperties)
+          {
+            AddRuntimeMessage(
+              GH_RuntimeMessageLevel.Warning,
+              "Replacing the geometry dropped its properties. The name was kept. Use a Speckle Object if you need "
+                + "the properties."
+            );
+          }
         }
       }
       else
