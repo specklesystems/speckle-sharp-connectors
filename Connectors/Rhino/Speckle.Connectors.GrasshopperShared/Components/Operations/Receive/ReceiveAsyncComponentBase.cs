@@ -605,9 +605,7 @@ public sealed class ReceiveComponentWorker : WorkerInstance<ReceiveAsyncComponen
         new GrasshopperArtefactObjectBuilder().Build(
           bundle,
           receiveInfo.ModelName,
-          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId),
-          // only the deprecated variant reaches here as a fallback, and its scripts expect DataObjects
-          groupAsDataObjects: !Parent.PreferArtefacts
+          new SpeckleModelContext(receiveInfo.ProjectId, receiveInfo.SelectedVersionId)
         );
 
       foreach (var warning in buildWarnings)

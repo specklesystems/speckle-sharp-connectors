@@ -20,9 +20,10 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
 
   public SpeckleDataObjectParam(GH_ParamAccess access)
     : base(
-      "Speckle Data Object",
-      "SDO",
-      "A Speckle data object with structured properties and display geometries",
+      // display name only - Grasshopper binds by ComponentGuid, so this is cosmetic and safe to change
+      "Speckle Object",
+      "SO",
+      "A Speckle object with structured properties and one or more geometries",
       ComponentCategories.PRIMARY_RIBBON,
       ComponentCategories.PARAMETERS,
       access
@@ -30,22 +31,7 @@ public class SpeckleDataObjectParam : GH_Param<SpeckleDataObjectWrapperGoo>, IGH
 
   public override Guid ComponentGuid => new("47B930F9-587B-4A88-8CEB-19986E60BA61");
   protected override Bitmap Icon => Resources.speckle_param_dataobject;
-  public override GH_Exposure Exposure => GH_Exposure.hidden;
-
-  /// <remarks>
-  /// Marks this param as obsolete in the Grasshopper UI (hides it from the ribbon, adds the
-  /// "obsolete" overlay icon on canvas).
-  /// </remarks>
-  public override bool Obsolete => true;
-
-  public override void AddedToDocument(GH_Document document)
-  {
-    base.AddedToDocument(document);
-    AddRuntimeMessage(
-      GH_RuntimeMessageLevel.Remark,
-      "The 'Speckle Data Object' parameter is deprecated. We recommend using the 'Speckle Geometry' parameter/component(s) instead."
-    );
-  }
+  public override GH_Exposure Exposure => GH_Exposure.secondary;
 
   bool IGH_BakeAwareObject.IsBakeCapable => !VolatileData.IsEmpty;
 

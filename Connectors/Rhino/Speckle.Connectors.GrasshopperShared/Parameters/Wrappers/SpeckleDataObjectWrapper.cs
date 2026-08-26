@@ -103,7 +103,7 @@ public class SpeckleDataObjectWrapper : SpeckleWrapper, ISpeckleCollectionObject
   public override IGH_Goo CreateGoo() => new SpeckleDataObjectWrapperGoo(this);
 
   public override string ToString() =>
-    $"Speckle Data Object : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
+    $"Speckle Object : {(string.IsNullOrWhiteSpace(Name) ? Base.speckle_type : Name)}";
 
   /// <summary>
   /// Draws preview for all geometries contained in this data object.

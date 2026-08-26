@@ -34,16 +34,10 @@ internal sealed class GrasshopperArtefactObjectBuilder
 {
   // (root, per-fragment decode/convert warnings) — the caller (ReceiveComponent/ReceiveAsyncComponent) surfaces these
   // as GH runtime messages so an undecodable fragment is visible instead of a silent skip.
-  /// <param name="groupAsDataObjects">
-  /// Regroups an object's geometry into a single <see cref="SpeckleDataObjectWrapper"/> instead of emitting one
-  /// wrapper per geometry. The deprecated Load components pass true so a script that was written against v3 sees the
-  /// object counts and shapes it already expects; the 4.0 components pass false and get the flat geometry.
-  /// </param>
   public (SpeckleCollectionWrapper Root, IReadOnlyList<string> Warnings) Build(
     ArtefactBundle bundle,
     string rootName,
-    SpeckleModelContext context,
-    bool groupAsDataObjects
+    SpeckleModelContext context
   )
   {
     var warnings = new List<string>();
@@ -117,7 +111,7 @@ internal sealed class GrasshopperArtefactObjectBuilder
       {
         // A room, level or area carried properties and no geometry in v3, and still counts as an object [ENG-9159].
         // Only re-emit one when the source really was a DataObject - WasDataObject reads speckle_type.
-        if (!groupAsDataObjects || !WasDataObject(props, 0))
+        if (!WasDataObject(props, 0))
         {
           continue;
         }
@@ -148,11 +142,12 @@ internal sealed class GrasshopperArtefactObjectBuilder
         materialByGeometry
       );
 
-      // An empty DataObject is only right for a genuinely property-only object: one placed as a block already comes
-      // through as its instance wrapper, and adding an empty one beside it would double the count.
+      // Never fan one object out into several wrappers: name and properties would be copied onto each, and a sum over
+      // them double-counts [ENG-9382]. An empty object is only right for a genuinely property-only source - one
+      // placed as a block already comes through as its instance wrapper, and adding an empty one beside it would
+      // double the count.
       if (
-        groupAsDataObjects
-        && WasDataObject(props, geometryWrappers.Count)
+        (WasDataObject(props, geometryWrappers.Count) || geometryWrappers.Count > 1)
         && (geometryWrappers.Count > 0 || instCount == 0)
       )
       {
