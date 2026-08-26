@@ -19,6 +19,10 @@ internal static class RhinoArtefactUserStrings
 {
   private const string PROPERTY_PATH_DELIMITER = ".";
 
+  /// <summary>The bundle root every object property lives under (<c>properties.a</c> is Rhino user text <c>a</c>).
+  /// It is storage layout, not user data, so it never reaches the user-string key.</summary>
+  private const string PROPERTIES_ROOT_PREFIX = "properties" + PROPERTY_PATH_DELIMITER;
+
   /// <summary>
   /// Bundle plumbing rather than user data: the root scalars every object carries
   /// (<c>RhinoBundleBuilder.RootScalars</c>) and the hatch styling the send side stashes for
@@ -52,13 +56,19 @@ internal static class RhinoArtefactUserStrings
   /// <summary>
   /// Writes <paramref name="properties"/> onto <paramref name="atts"/> as user strings. The keys are the bundle's
   /// dotted paths already (a Rhino user dictionary, or the area/volume records the send side writes, arrive as
-  /// <c>group.key</c>), so nothing needs flattening. An empty view is a no-op, so an object with no eav row costs nothing.
+  /// <c>group.key</c>), so nothing needs flattening — only the <c>properties.</c> root is stripped, so user text
+  /// <c>a</c> round-trips as <c>a</c>, not <c>properties.a</c>. An empty view is a no-op, so an object with no eav row
+  /// costs nothing.
   /// </summary>
   public static void Apply(ObjectAttributes atts, PropertyView properties)
   {
     foreach (var kvp in properties)
     {
       string key = kvp.Key;
+      if (key.StartsWith(PROPERTIES_ROOT_PREFIX, StringComparison.Ordinal))
+      {
+        key = key[PROPERTIES_ROOT_PREFIX.Length..];
+      }
       if (key.Length == 0)
       {
         continue;
