@@ -532,13 +532,56 @@ public class RhinoBundleBuilder(
       onOperationProgressed.Report(new("Building", (double)++count / model.Objects.Count));
     }
 
-    // Definition members: geometry rides DEFINES on the member's ordinal (a member's solid + its display meshes share
-    // it, so receive can prefer the 3dm per member); nested placements ride DEFINES_INSTANCE + PLACES.
+    EmitDefinitionMembers(
+      bundle,
+      model,
+      definitions,
+      memberGeometry,
+      memberPlacements,
+      geometriesByObjectId,
+      placedObjectIds,
+      results,
+      resultIndexByAppId,
+      session
+    );
+
+    EmitAppearance(bundle, model, geometriesByObjectId, placedObjectIds, layerByLayerId);
+    EmitGroups(bundle, model.Groups, definitionMemberIds);
+
+    // Named camera viewpoints (collected on the UI thread in phase 1) → envelope.camera_views.parquet.
+    foreach (var cameraView in model.CameraViews)
+    {
+      bundle.CameraView(cameraView);
+    }
+    // Default scene view = the Rhino layer tree (IN_COLLECTION): BundleBuilder declares it when none is set.
+  }
+
+  // Definition members: geometry rides DEFINES on the member's ordinal (a member's solid + its display meshes share
+  // it, so receive can prefer the 3dm per member); nested placements ride DEFINES_INSTANCE + PLACES.
+  private void EmitDefinitionMembers(
+    BundleBuilder bundle,
+    CollectedModel model,
+    IReadOnlyDictionary<string, BundleDefinition> definitions,
+    IReadOnlyDictionary<string, (List<Base> Display, byte[]? Solid)> memberGeometry,
+    IReadOnlyDictionary<string, InstanceProxy> memberPlacements,
+    Dictionary<string, List<BundleGeometry>> geometriesByObjectId,
+    HashSet<string> placedObjectIds,
+    List<SendConversionResult> results,
+    IReadOnlyDictionary<string, int> resultIndexByAppId,
+    ArtefactSessionLog session
+  )
+  {
     foreach (var defProxy in model.Definitions)
     {
       var def = definitions[defProxy.applicationId.NotNull()];
       foreach (string memberId in defProxy.objects)
       {
+        // A member with neither geometry nor a placement (its conversion failed, or an unsupported type) is not
+        // interned — an object row with no rows, no edges and no layer would be pure noise in the bundle.
+        if (!memberPlacements.ContainsKey(memberId) && !memberGeometry.ContainsKey(memberId))
+        {
+          continue;
+        }
         var member = bundle.GetOrAddObject(memberId);
         if (memberPlacements.TryGetValue(memberId, out var nestedProxy))
         {
@@ -551,16 +594,21 @@ public class RhinoBundleBuilder(
         else if (memberGeometry.TryGetValue(memberId, out var mg))
         {
           int ord = def.NextMemberOrdinal();
-          var gs = new List<BundleGeometry>();
+          bool hasSolid = mg.Solid is not null;
           if (mg.Solid is { } solidBytes)
           {
-            gs.Add(def.AddMemberRawGeometry(member, solidBytes, RawEncodingFormats.RHINO_3DM, ord));
+            def.AddMemberRawGeometry(member, solidBytes, RawEncodingFormats.RHINO_3DM, ord);
           }
-          gs.AddRange(AddMemberDisplay(def, member, mg.Display, ord, out string? memberSkip));
-          geometriesByObjectId[memberId] = gs;
+          var gs = AddMemberDisplay(def, member, mg.Display, ord, out string? memberSkip).ToList();
+          geometriesByObjectId[memberId] = gs; // display meshes only, as for standalone objects
           // Same rule as a standalone object: display fragments present, none encodable, no solid → nothing
           // renderable made the bundle, so the report card must not stand on the Collect-phase SUCCESS.
-          if (mg.Display.Count > 0 && gs.Count == 0 && resultIndexByAppId.TryGetValue(memberId, out int mri))
+          if (
+            mg.Display.Count > 0
+            && gs.Count == 0
+            && !hasSolid
+            && resultIndexByAppId.TryGetValue(memberId, out int mri)
+          )
           {
             string reason = memberSkip ?? "no display geometry could be encoded";
             results[mri] = new(Status.ERROR, memberId, results[mri].SourceType, null, new SpeckleException(reason));
@@ -569,16 +617,6 @@ public class RhinoBundleBuilder(
         }
       }
     }
-
-    EmitAppearance(bundle, model, geometriesByObjectId, placedObjectIds, layerByLayerId);
-    EmitGroups(bundle, model.Groups, definitionMemberIds);
-
-    // Named camera viewpoints (collected on the UI thread in phase 1) → envelope.camera_views.parquet.
-    foreach (var cameraView in model.CameraViews)
-    {
-      bundle.CameraView(cameraView);
-    }
-    // Default scene view = the Rhino layer tree (IN_COLLECTION): BundleBuilder declares it when none is set.
   }
 
   // Split display meshes from the lossless raw encoding (pure Speckle): Brep/Extrusion/SubD carry BOTH; a plain
@@ -620,10 +658,12 @@ public class RhinoBundleBuilder(
     Dictionary<string, List<BundleGeometry>> geometriesByObjectId
   )
   {
+    // Only the display meshes carry geometry-plane appearance (HAS_MATERIAL / HAS_COLOR); the raw 3dm solid is
+    // the lossless receive-as-solid payload and gets none — same as before the BundleBuilder port.
     var gs = new List<BundleGeometry>();
     if (solid is not null)
     {
-      gs.Add(obj.AddRawGeometry(solid, RawEncodingFormats.RHINO_3DM, $"{obj.ApplicationId}:solid"));
+      obj.AddRawGeometry(solid, RawEncodingFormats.RHINO_3DM, $"{obj.ApplicationId}:solid");
     }
     string? lastSkip = null;
     int displayCount = 0;
@@ -649,7 +689,7 @@ public class RhinoBundleBuilder(
         );
       }
     }
-    geometriesByObjectId[obj.ApplicationId] = gs;
+    geometriesByObjectId[obj.ApplicationId] = gs; // display meshes only — see above
     return display.Count > 0 && displayCount == 0 && solid is null
       ? lastSkip ?? "no display geometry could be encoded"
       : null;
