@@ -66,7 +66,7 @@ namespace Speckle.Connectors.Rhino.Operations.Send;
   "CA1506:Avoid excessive class coupling",
   Justification = "Top-level artefact send orchestrator; coupling to converters, unpackers, host API and the pipeline façade is inherent."
 )]
-public class RhinoArtifactRootObjectBuilder(
+public class RhinoBundleBuilder(
   IRootToSpeckleConverter converter,
   IConverterSettingsStore<RhinoConversionSettings> converterSettings,
   RhinoInstanceUnpacker instanceUnpacker,
@@ -75,15 +75,15 @@ public class RhinoArtifactRootObjectBuilder(
   PropertiesExtractor propertiesExtractor,
   IThreadContext threadContext,
   ISpeckleApplication speckleApplication,
-  ILogger<RhinoArtifactRootObjectBuilder> logger
-) : IArtifactBundleBuilder<RhinoObject>
+  ILogger<RhinoBundleBuilder> logger
+) : IBundleBuilder<RhinoObject>
 {
   /// <summary>
   /// Converts <paramref name="objects"/> into a <see cref="BundleBuilder"/> (unbuilt — the caller finishes and
   /// uploads it, or <see cref="BundleBuilder.Build"/>s it for an out-of-process upload). Collect runs on the Rhino UI
   /// thread, the bundle write on a worker — see the class remarks.
   /// </summary>
-  public async Task<ArtifactBundleBuild> Build(
+  public async Task<BundleBuild> Build(
     IReadOnlyList<RhinoObject> objects,
     string? projectId,
     IProgress<CardProgress> onOperationProgressed,
@@ -401,7 +401,7 @@ public class RhinoArtifactRootObjectBuilder(
 
   // ── Phase 2 (worker thread): pure-Speckle snapshot → BundleBuilder (streams to parquet) ────────────
   [SuppressMessage("Maintainability", "CA1506:Avoid excessive class coupling")]
-  private ArtifactBundleBuild WriteBundle(
+  private BundleBuild WriteBundle(
     CollectedModel model,
     ArtefactSessionLog session,
     IProgress<CardProgress> onOperationProgressed,
@@ -414,7 +414,7 @@ public class RhinoArtifactRootObjectBuilder(
     {
       WriteInto(bundle, model, session, onOperationProgressed, cancellationToken, out var results);
       session.SetStat("objects", results.Count(r => r.Status == Status.SUCCESS));
-      return new ArtifactBundleBuild(bundle, results);
+      return new BundleBuild(bundle, results);
     }
     catch
     {

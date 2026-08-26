@@ -40,7 +40,7 @@ public sealed class SendOperation<T>(
   IAssemblyCompatibilityCheck compatabilityCheck,
   IRootContinuousTraversalBuilder<T>? rootContinuousTraversalBuilder = null,
   IArtifactRootObjectBuilder<T>? artifactRootObjectBuilder = null,
-  IArtifactBundleBuilder<T>? artifactBundleBuilder = null,
+  IBundleBuilder<T>? bundleBuilder = null,
   IBundleSender? bundleSender = null
 ) : ISendOperation<T>
 {
@@ -71,7 +71,7 @@ public sealed class SendOperation<T>(
       // creates the version via the v2 endpoints. Takes precedence over the packfile / legacy ingestion paths.
       // useArtifacts is a Grasshopper-only opt-out - see the param docs.
       // Preferred: the connector converts into a BundleBuilder and the SDK ships it (Send3 / IBundleSender).
-      if (artifactBundleBuilder != null && bundleSender != null && useArtifacts)
+      if (bundleBuilder != null && bundleSender != null && useArtifacts)
       {
         return await SendViaBundle(objects, sendInfo, fileName, fileSizeBytes, uiProgress, cancellationToken);
       }
@@ -217,7 +217,7 @@ public sealed class SendOperation<T>(
   }
 
   /// <summary>
-  /// The Speckle 2026.9.0 send: the connector's <see cref="IArtifactBundleBuilder{T}"/> converts into a
+  /// The Speckle 2026.9.0 send: the connector's <see cref="IBundleBuilder{T}"/> converts into a
   /// <see cref="BundleBuilder"/>, then <see cref="IBundleSender"/> creates the ingestion (server pre-allocated
   /// version id), finishes the bundle under that id, uploads it over the v2 artifacts rail and reports failure or
   /// cancellation to the server. The version's <c>referencedObject</c> is the bundle reference.
@@ -231,12 +231,7 @@ public sealed class SendOperation<T>(
     CancellationToken cancellationToken
   )
   {
-    ArtifactBundleBuild built = await artifactBundleBuilder!.Build(
-      objects,
-      sendInfo.ProjectId,
-      uiProgress,
-      cancellationToken
-    );
+    BundleBuild built = await bundleBuilder!.Build(objects, sendInfo.ProjectId, uiProgress, cancellationToken);
     using BundleBuilder bundle = built.Bundle;
 
     // Finish + upload on a worker thread: the parquet finalize is sync-over-async and deadlocks on a UI dispatcher.
